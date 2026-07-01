@@ -158,10 +158,9 @@ fun DataManagementSection(
     onEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
-    var retentionSliderPosition by remember(uiState.retentionDays) {
-        mutableFloatStateOf(((uiState.retentionDays - 90) / 90f))
+    var retentionMonths by remember(uiState.retentionDays) {
+        mutableFloatStateOf(kotlin.math.round(uiState.retentionDays / 30f))
     }
-    val retentionMonths = retentionSliderPosition * 3 + 3
 
     Column {
         ListItem(
@@ -206,14 +205,13 @@ fun DataManagementSection(
                     )
                 }
                 Slider(
-                    value = retentionSliderPosition,
-                    onValueChange = { retentionSliderPosition = it },
+                    value = retentionMonths,
+                    onValueChange = { retentionMonths = it },
                     onValueChangeFinished = {
-                        val months = retentionSliderPosition * 3 + 3
-                        onEvent(SettingsEvent.RetentionDaysChanged((months.toInt() * 30)))
+                        onEvent(SettingsEvent.RetentionDaysChanged((retentionMonths.toInt() * 30)))
                     },
-                    valueRange = 0f..19f,
-                    steps = 19,
+                    valueRange = 3f..60f,
+                    steps = 18,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
