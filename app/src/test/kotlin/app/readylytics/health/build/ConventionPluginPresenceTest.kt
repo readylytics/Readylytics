@@ -10,10 +10,11 @@ class ConventionPluginPresenceTest {
         run {
             var dir: File? =
                 File(
-                    javaClass.protectionDomain.codeSource.location
-                        .toURI(),
+                    javaClass.protectionDomain?.codeSource?.location
+                        ?.toURI()
+                        ?: File(".").toURI(),
                 ).parentFile
-            while (dir != null && !File(dir, "settings.gradle.kts").exists()) {
+            while ((dir != null) && (!File(dir, "settings.gradle.kts").exists())) {
                 dir = dir.parentFile
             }
             checkNotNull(dir) { "Could not locate repo root (no settings.gradle.kts in parent chain)" }
