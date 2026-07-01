@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import app.readylytics.health.feature.settings.common.SettingsConstants
 @Composable
 fun AdvancedSettingsSection(
     sleepState: SleepSettingsState,
+    hrrToleranceSeconds: Int,
     rasScalingFactor: Float,
     trimpModel: TrimpModel,
     banisterMultiplier: Float,
@@ -185,6 +187,22 @@ fun AdvancedSettingsSection(
                 )
             }
         }
+        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+
+        var hrrTolerance by rememberSaveable(hrrToleranceSeconds) { mutableStateOf(hrrToleranceSeconds.toFloat()) }
+        ThresholdSliderItem(
+            label = stringResource(R.string.advanced_hrr_tolerance_label),
+            value = hrrTolerance,
+            onValueChange = { hrrTolerance = it },
+            onValueChangeFinished = {
+                onUIEvent(SettingsEvent.HrrToleranceSecondsChanged(hrrTolerance.toInt()))
+            },
+            valueRange = 15f..60f,
+            steps = 8,
+            displayValue = "${hrrTolerance.toInt()} s",
+            description = stringResource(R.string.advanced_hrr_tolerance_tooltip),
+        )
+
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
         var rasScaling by remember(rasScalingFactor) { mutableFloatStateOf(rasScalingFactor) }
