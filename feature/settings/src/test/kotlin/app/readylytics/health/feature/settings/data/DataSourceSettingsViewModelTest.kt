@@ -72,6 +72,7 @@ class DataSourceSettingsViewModelTest {
                     prefsFlow.value = prefsFlow.value.copy(deviceByDataType = deviceByDataType.value)
                 }
                 coEvery { applyDeviceOverrides(any()) } coAnswers {
+                    @Suppress("UNCHECKED_CAST")
                     val overrides = it.invocation.args[0] as Map<String, String?>
                     val updated = deviceByDataType.value.toMutableMap()
                     overrides.forEach { (key, value) ->

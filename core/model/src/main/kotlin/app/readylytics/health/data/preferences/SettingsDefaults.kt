@@ -56,7 +56,7 @@ object SettingsDefaults {
     const val RAS_SCALING_FACTOR = 0.20f
     const val STEP_GOAL = 10000
     const val RETENTION_DAYS_ENABLED = true
-    const val RETENTION_DAYS = 365
+    const val RETENTION_DAYS = 360 // 12 months (30 days per month)
     const val COLLAPSE_HEALTH_CONNECT = true
     const val COLLAPSE_BASELINES_THRESHOLDS = true
     const val COLLAPSE_DISPLAY = true
