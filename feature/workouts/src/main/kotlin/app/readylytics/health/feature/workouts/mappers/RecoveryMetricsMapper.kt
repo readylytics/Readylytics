@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.workouts.mappers
 
-import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.feature.workouts.HeartRatePoint
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -16,6 +15,7 @@ object RecoveryMetricsMapper {
         samples: List<HeartRatePoint>,
         workoutEnd: Long,
         endHr: Int?,
+        toleranceSeconds: Long = 30L,
     ): RecoveryMetrics {
         if (endHr == null) {
             return RecoveryMetrics(null, null, null)
@@ -24,9 +24,9 @@ object RecoveryMetricsMapper {
         val workoutEndInstant = Instant.ofEpochMilli(workoutEnd)
         val recoverySamples = samples.filter { it.timestamp > workoutEndInstant }
 
-        val hrr1Min = findRecoveryHr(recoverySamples, workoutEndInstant, 1)
-        val hrr2Min = findRecoveryHr(recoverySamples, workoutEndInstant, 2)
-        val hrr3Min = findRecoveryHr(recoverySamples, workoutEndInstant, 3)
+        val hrr1Min = findRecoveryHr(recoverySamples, workoutEndInstant, 1, toleranceSeconds)
+        val hrr2Min = findRecoveryHr(recoverySamples, workoutEndInstant, 2, toleranceSeconds)
+        val hrr3Min = findRecoveryHr(recoverySamples, workoutEndInstant, 3, toleranceSeconds)
 
         return RecoveryMetrics(
             hrr1Min = if (hrr1Min != null) endHr - hrr1Min else null,
@@ -39,9 +39,9 @@ object RecoveryMetricsMapper {
         samples: List<HeartRatePoint>,
         target: Instant,
         minutes: Int,
+        toleranceSeconds: Long,
     ): Int? {
         val targetTime = target.plus(minutes.toLong(), ChronoUnit.MINUTES)
-        val toleranceSeconds = ScoringConstants.Workout.HRR_TOLERANCE_SECONDS
         return samples
             .filter { sample ->
                 val diff =

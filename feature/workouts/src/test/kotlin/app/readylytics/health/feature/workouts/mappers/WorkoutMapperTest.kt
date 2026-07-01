@@ -61,7 +61,7 @@ class WorkoutMapperTest {
         val now = Instant.now()
         val samples = listOf(HeartRatePoint(now.plusSeconds(60), 80))
 
-        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, now.toEpochMilli(), null)
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, now.toEpochMilli(), null, 30L)
 
         assertNull(result.hrr1Min)
         assertNull(result.hrr2Min)
@@ -73,7 +73,7 @@ class WorkoutMapperTest {
         val now = Instant.now()
         val samples = listOf(HeartRatePoint(now.minusSeconds(30), 120))
 
-        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, now.toEpochMilli(), 150)
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, now.toEpochMilli(), 150, 30L)
 
         assertNull(result.hrr1Min)
         assertNull(result.hrr2Min)
@@ -91,11 +91,68 @@ class WorkoutMapperTest {
                 HeartRatePoint(workoutEnd.plusSeconds(180), 120),
             )
 
-        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, workoutEnd.toEpochMilli(), endHr)
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, workoutEnd.toEpochMilli(), endHr, 30L)
 
         assertEquals(18, result.hrr1Min)
         assertEquals(30, result.hrr2Min)
         assertEquals(40, result.hrr3Min)
+    }
+
+    @Test
+    fun recoveryMetricsMapper_sparseSamplesWithinThirtySeconds_resolveClosestMatches() {
+        val workoutEnd = Instant.now()
+        val endHr = 170
+        val samples =
+            listOf(
+                HeartRatePoint(workoutEnd.plusSeconds(89), 149),
+                HeartRatePoint(workoutEnd.plusSeconds(140), 136),
+                HeartRatePoint(workoutEnd.plusSeconds(209), 128),
+            )
+
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, workoutEnd.toEpochMilli(), endHr, 30L)
+
+        assertEquals(21, result.hrr1Min)
+        assertEquals(34, result.hrr2Min)
+        assertEquals(42, result.hrr3Min)
+    }
+
+    @Test
+    fun recoveryMetricsMapper_samplesOutsideThirtySeconds_allNull() {
+        val workoutEnd = Instant.now()
+        val endHr = 165
+        val samples =
+            listOf(
+                HeartRatePoint(workoutEnd.plusSeconds(28), 150),
+                HeartRatePoint(workoutEnd.plusSeconds(212), 132),
+            )
+
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, workoutEnd.toEpochMilli(), endHr, 30L)
+
+        assertNull(result.hrr1Min)
+        assertNull(result.hrr2Min)
+        assertNull(result.hrr3Min)
+    }
+
+    @Test
+    fun recoveryMetricsMapper_customToleranceTenSeconds_rejectsTwentySecondOffsetSample() {
+        val workoutEnd = Instant.now()
+        val endHr = 168
+        val samples = listOf(HeartRatePoint(workoutEnd.plusSeconds(80), 145))
+
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, workoutEnd.toEpochMilli(), endHr, 10L)
+
+        assertNull(result.hrr1Min)
+    }
+
+    @Test
+    fun recoveryMetricsMapper_exactThirtySecondBoundary_isAccepted() {
+        val workoutEnd = Instant.now()
+        val endHr = 162
+        val samples = listOf(HeartRatePoint(workoutEnd.plusSeconds(90), 140))
+
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, workoutEnd.toEpochMilli(), endHr, 30L)
+
+        assertEquals(22, result.hrr1Min)
     }
 
     @Test
