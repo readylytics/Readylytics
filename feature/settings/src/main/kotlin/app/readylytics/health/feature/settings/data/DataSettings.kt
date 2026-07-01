@@ -159,7 +159,7 @@ fun DataManagementSection(
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
     var retentionMonths by remember(uiState.retentionDays) {
-        mutableFloatStateOf((uiState.retentionDays / 30).toFloat())
+        mutableFloatStateOf(kotlin.math.round(uiState.retentionDays / 30f))
     }
 
     Column {
@@ -211,7 +211,7 @@ fun DataManagementSection(
                         onEvent(SettingsEvent.RetentionDaysChanged((retentionMonths.toInt() * 30)))
                     },
                     valueRange = 3f..60f,
-                    steps = 19,
+                    steps = 18,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(

@@ -49,7 +49,7 @@ class SpecificValidationRulesTest {
     fun retentionDaysRule_invalidValue_0_returnsInvalid() {
         val rule = RetentionDaysRule()
         val result = rule.validate("0")
-        assertEquals(ValidationResult.Invalid("Months: 3–60"), result)
+        assertEquals(ValidationResult.Invalid("Days: 90–1,800"), result)
     }
 
     // StepGoalRule tests (0–100,000)
