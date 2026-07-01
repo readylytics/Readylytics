@@ -44,6 +44,7 @@ data class UserPreferencesBackup(
     val hrvWarningThreshold: Float? = null,
     val rhrOptimalThreshold: Float? = null,
     val rhrWarningThreshold: Float? = null,
+    val hrrToleranceSeconds: Int? = null,
     val restingHrBeforeMinutes: Int? = null,
     val restingHrAfterMinutes: Int? = null,
     val appTheme: String? = null,

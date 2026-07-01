@@ -485,6 +485,7 @@ class LocalRestoreManager
                 backup.hrvWarningThreshold?.let { hrvWarningThreshold = it }
                 backup.rhrOptimalThreshold?.let { rhrOptimalThreshold = it }
                 backup.rhrWarningThreshold?.let { rhrWarningThreshold = it }
+                backup.hrrToleranceSeconds?.let { hrrToleranceSeconds = it.coerceIn(15, 60) }
                 backup.restingHrBeforeMinutes?.let { restingHrBeforeMinutes = it }
                 backup.restingHrAfterMinutes?.let { restingHrAfterMinutes = it }
 

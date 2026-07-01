@@ -188,6 +188,30 @@ class LocalRestoreManagerTest {
         }
 
     @Test
+    fun applyRestore_restoresHrrToleranceSeconds() =
+        runTest {
+            val json = createValidBackupJson()
+            json.getJSONObject("preferences").put("hrrToleranceSeconds", 45)
+            val zipFile = createBackupZipFile("hrr_tolerance_backup.zip", json)
+
+            val builderSlot =
+                io.mockk
+                    .slot<app.readylytics.health.data.preferences.UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val builder =
+                app.readylytics.health.data.preferences.UserPreferencesProto
+                    .newBuilder()
+            builderSlot.captured(builder)
+            assertEquals(45, builder.hrrToleranceSeconds)
+            zipFile.delete()
+        }
+
+    @Test
     fun applyRestore_restoresDashboardCards() =
         runTest {
             val json = createValidBackupJson()
