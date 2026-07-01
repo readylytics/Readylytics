@@ -14,7 +14,7 @@ class DateRangeServiceTest {
         val end = LocalDate.of(2026, 6, 30)
         val result = DateRange.create(start, end)
         assertTrue(result is Result.Success)
-        val range = (result as Result.Success).data
+        val range = result.data
         assertEquals(start, range.start)
         assertEquals(end, range.end)
     }
@@ -25,7 +25,7 @@ class DateRangeServiceTest {
         val end = LocalDate.of(2026, 6, 1)
         val result = DateRange.create(start, end)
         assertTrue(result is Result.Failure)
-        assertEquals(DateRangeService.Codes.END_BEFORE_START, (result as Result.Failure).code)
+        assertEquals(DateRangeService.Codes.END_BEFORE_START, result.code)
     }
 
     @Test
@@ -33,7 +33,7 @@ class DateRangeServiceTest {
         val date = LocalDate.of(2026, 6, 15)
         val result = DateRange.create(date, date)
         assertTrue(result is Result.Success)
-        val range = (result as Result.Success).data
+        val range = result.data
         assertEquals(1, range.days)
     }
 

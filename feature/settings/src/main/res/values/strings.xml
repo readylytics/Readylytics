@@ -86,6 +86,8 @@
 <string name="data_sources_apply_description">Save your device selection and resync your Health Connect
         data so it reflects the new selection.</string>
 <string name="data_sources_calibrating">Calibrating…</string>
+<string name="data_sources_loading">Loading…</string>
+<string name="data_sources_no_devices">No devices found</string>
 <string name="data_sources_description">Pick the source device individually for each health data
         type. "All devices" (the default) applies no source filter.</string>
 <string name="data_sources_title">Data sources</string>

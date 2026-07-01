@@ -118,4 +118,5 @@ data class DataSourceSettingsState(
     val hasPendingChanges: Boolean = false,
     val isResyncing: Boolean = false,
     val showDeviceChangeNotice: Boolean = false,
+    val isLoadingDevices: Boolean = false,
 )
