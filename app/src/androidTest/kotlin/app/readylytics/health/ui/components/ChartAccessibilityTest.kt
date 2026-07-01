@@ -44,6 +44,7 @@ class ChartAccessibilityTest {
 
     @Test
     fun hrTimelineChart_accessibilitySemantics() {
+        composeTestRule.mainClock.autoAdvance = false
         val samples =
             listOf(
                 HrSample(1700000000000L, 70, 1),
@@ -77,18 +78,22 @@ class ChartAccessibilityTest {
 
         // Perform "Next point" action (should select the first point)
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: 70 bpm at "))
 
         // Perform "Next point" again (should select the second point)
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: 75 bpm at "))
 
         // Perform "Previous point" (should select the first point again)
         canvasNode.performCustomAccessibilityActionWithLabel("Previous point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: 70 bpm at "))
 
         // Perform "Clear selection"
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 
@@ -152,6 +157,7 @@ class ChartAccessibilityTest {
 
     @Test
     fun stepsBar_accessibilitySemantics() {
+        composeTestRule.mainClock.autoAdvance = false
         composeTestRule.setContent {
             Surface {
                 StepsBar(
@@ -170,16 +176,19 @@ class ChartAccessibilityTest {
 
         // Select the steps bar
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionContains("5"))
         canvasNode.assert(stateDescriptionContains("10"))
 
         // Clear selection
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 
     @Test
     fun trimpBreakdownChart_accessibilitySemantics() {
+        composeTestRule.mainClock.autoAdvance = false
         val chartData =
             listOf(
                 0.0 to 120.0,
@@ -205,14 +214,17 @@ class ChartAccessibilityTest {
 
         // Select first point
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("Selected: 120 bpm at 0 min"))
 
         // Select next point
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("Selected: 130 bpm at 1 min"))
 
         // Clear selection
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 }

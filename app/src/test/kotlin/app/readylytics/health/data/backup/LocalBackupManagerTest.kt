@@ -16,6 +16,7 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -65,25 +66,25 @@ class LocalBackupManagerTest {
 
         settingsRepo =
             mockk<SettingsRepository>().apply {
-                coEvery { userPreferences } returns
+                every { userPreferences } returns
                     flowOf(
-                        mockk(relaxed = true) {
-                            coEvery { goalSleepHours } returns 8.0f
-                            coEvery { syncPreference } returns SyncPreference.ALWAYS
-                            coEvery { backgroundSyncEnabled } returns true
-                            coEvery { backgroundSyncIntervalMinutes } returns 180
-                            coEvery { appTheme } returns AppTheme.DARK
-                            coEvery { backupSchedule } returns BackupSchedule.DAILY
-                            coEvery { birthDate } returns "2000-01-01"
-                            coEvery { backupDirectoryUri } returns null
-                            coEvery { backupPasswordHash } returns "hashed_password"
-                        },
+                        app.readylytics.health.data.preferences.UserPreferences(
+                            goalSleepHours = 8.0f,
+                            syncPreference = SyncPreference.ALWAYS,
+                            backgroundSyncEnabled = true,
+                            backgroundSyncIntervalMinutes = 180,
+                            appTheme = AppTheme.DARK,
+                            backupSchedule = BackupSchedule.DAILY,
+                            birthDate = "2000-01-01",
+                            backupDirectoryUri = null,
+                            backupPasswordHash = "hashed_password",
+                        ),
                     )
             }
 
         cardConfigRepo =
             mockk<CardConfigurationRepository>(relaxed = true).apply {
-                coEvery { dashboardCardConfigurations() } returns flowOf(emptyList())
+                every { dashboardCardConfigurations() } returns flowOf(emptyList())
             }
         auditTrailRepository = FakeAuditTrailRepository()
         manager =
@@ -287,11 +288,11 @@ class LocalBackupManagerTest {
 
             settingsRepo =
                 mockk<SettingsRepository>().apply {
-                    coEvery { userPreferences } returns
+                    every { userPreferences } returns
                         flowOf(
-                            mockk(relaxed = true) {
-                                coEvery { backupDirectoryUri } returns safUri.toString()
-                            },
+                            app.readylytics.health.data.preferences.UserPreferences(
+                                backupDirectoryUri = safUri.toString(),
+                            ),
                         )
                 }
             manager =
@@ -348,7 +349,7 @@ class LocalBackupManagerTest {
         runTest {
             settingsRepo =
                 mockk<SettingsRepository>().apply {
-                    coEvery { userPreferences } returns
+                    every { userPreferences } returns
                         flowOf(
                             app.readylytics.health.data.preferences.UserPreferences(
                                 backupPasswordHash = null,
