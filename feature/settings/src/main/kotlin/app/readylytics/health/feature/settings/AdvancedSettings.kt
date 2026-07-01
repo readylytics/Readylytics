@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.components.MetricTooltip
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
@@ -189,7 +189,11 @@ fun AdvancedSettingsSection(
         }
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        var hrrTolerance by rememberSaveable(hrrToleranceSeconds) { mutableStateOf(hrrToleranceSeconds.toFloat()) }
+        var hrrTolerance by remember(hrrToleranceSeconds) {
+            mutableFloatStateOf(hrrToleranceSeconds.toFloat())
+        }
+        val hrrToleranceRange =
+            SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS.toFloat()..SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS.toFloat()
         ThresholdSliderItem(
             label = stringResource(R.string.advanced_hrr_tolerance_label),
             value = hrrTolerance,
@@ -197,7 +201,7 @@ fun AdvancedSettingsSection(
             onValueChangeFinished = {
                 onUIEvent(SettingsEvent.HrrToleranceSecondsChanged(hrrTolerance.toInt()))
             },
-            valueRange = 15f..60f,
+            valueRange = hrrToleranceRange,
             steps = 8,
             displayValue = "${hrrTolerance.toInt()} s",
             description = stringResource(R.string.advanced_hrr_tolerance_tooltip),

@@ -60,7 +60,10 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             if (hrrToleranceSeconds == 0) {
                 SettingsDefaults.HRR_TOLERANCE_SECONDS
             } else {
-                hrrToleranceSeconds.coerceIn(15, 60)
+                hrrToleranceSeconds.coerceIn(
+                    SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS,
+                    SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS,
+                )
             },
         rasScalingFactor = rasScalingFactor,
         stepGoal = stepGoal,
