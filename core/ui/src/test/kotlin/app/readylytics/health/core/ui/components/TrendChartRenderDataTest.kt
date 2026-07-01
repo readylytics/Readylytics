@@ -1,9 +1,12 @@
 package app.readylytics.health.core.ui.components
 
+import androidx.compose.ui.geometry.Offset
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class TrendChartRenderDataTest {
     @Test
@@ -44,5 +47,25 @@ class TrendChartRenderDataTest {
             )
 
         assertEquals(20f, result.calculatedBaseline)
+    }
+
+    @Test
+    fun `tooltip formatting preserves chart output contract`() {
+        assertEquals("—", formatTrendTooltipValue(null, 0, false, "ms"))
+        assertEquals("42 ms", formatTrendTooltipValue(42.4f, 0, false, "ms"))
+        assertEquals("42.4 %", formatTrendTooltipValue(42.44f, 1, false, "%"))
+        assertEquals("42", formatTrendTooltipValue(42f, 0, true, "steps"))
+    }
+
+    @Test
+    fun `marker work is suppressed during parent scroll`() {
+        assertFalse(shouldProcessTrendMarker(parentScrollInProgress = true))
+        assertTrue(shouldProcessTrendMarker(parentScrollInProgress = false))
+    }
+
+    @Test
+    fun `equivalent marker state is not assigned`() {
+        assertFalse(shouldAssignTrendMarkerState(current = Offset(4f, 8f), next = Offset(4f, 8f)))
+        assertTrue(shouldAssignTrendMarkerState(current = Offset(4f, 8f), next = Offset(5f, 8f)))
     }
 }
