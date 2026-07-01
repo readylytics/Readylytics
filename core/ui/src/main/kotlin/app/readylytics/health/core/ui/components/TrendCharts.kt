@@ -245,7 +245,9 @@ fun TrendChart(
                 DataPointTooltipData(
                     valueText = valueText,
                     dateText = ChartUtils.formatTooltipDate(date),
-                    offset = androidx.compose.ui.unit.IntOffset(canvasX.toInt(), canvasY.toInt()),
+                    offset =
+                        androidx.compose.ui.unit
+                            .IntOffset(canvasX.toInt(), canvasY.toInt()),
                 )
             if (shouldAssignTrendMarkerState(selectedPointOffset, nextOffset)) {
                 selectedPointOffset = nextOffset
@@ -422,4 +424,7 @@ internal fun formatTrendTooltipValue(
 
 internal fun shouldProcessTrendMarker(parentScrollInProgress: Boolean): Boolean = !parentScrollInProgress
 
-internal fun <T> shouldAssignTrendMarkerState(current: T, next: T): Boolean = current != next
+internal fun <T> shouldAssignTrendMarkerState(
+    current: T,
+    next: T,
+): Boolean = current != next
