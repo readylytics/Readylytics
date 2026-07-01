@@ -136,6 +136,24 @@ class SettingsRepositoryTest {
             assertEquals(45, prefs.hrrToleranceSeconds)
         }
 
+    @Test
+    fun `updateHrrToleranceSeconds persists minimum supported value when too low`() =
+        runTest {
+            repository.updateHrrToleranceSeconds(10)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(15, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `updateHrrToleranceSeconds persists maximum supported value when too high`() =
+        runTest {
+            repository.updateHrrToleranceSeconds(70)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(60, prefs.hrrToleranceSeconds)
+        }
+
     /**
      * US-03 acceptance criterion: switching a load-source preference must never write to
      * daily_summaries. SettingsRepository (the sole owner of preference setters) has no
