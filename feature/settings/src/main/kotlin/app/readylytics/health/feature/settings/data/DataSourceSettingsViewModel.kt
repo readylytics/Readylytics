@@ -74,8 +74,10 @@ class DataSourceSettingsViewModel
             ) { args: Array<Any?> ->
                 @Suppress("UNCHECKED_CAST")
                 val persisted = args[0] as Map<String, String>
+
                 @Suppress("UNCHECKED_CAST")
                 val availableDevices = args[1] as List<String>
+
                 @Suppress("UNCHECKED_CAST")
                 val pending = args[2] as Map<HealthDataType, String?>
                 val resyncState = args[3] as HistoricalResyncState

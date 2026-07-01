@@ -12,7 +12,7 @@ internal class SleepPreferences
 
         private fun Int.toValidStepGoal() = coerceIn(1000, 30000)
 
-        private fun Int.toValidRetentionDays() = coerceIn(180, 1095)
+        private fun Int.toValidRetentionDays() = coerceIn(90, 1800)
 
         private fun Int.toValidConsistencyMinutes() = coerceIn(0, 90)
 

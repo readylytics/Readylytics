@@ -45,19 +45,19 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `retention days clamps to min 180`() =
+    fun `retention days clamps to min 90`() =
         runTest {
-            repository.updateRetentionDays(100)
+            repository.updateRetentionDays(90)
             val prefs = repository.userPreferences.first()
-            assertEquals(180, prefs.retentionDays)
+            assertEquals(90, prefs.retentionDays)
         }
 
     @Test
-    fun `retention days clamps to max 1095`() =
+    fun `retention days clamps to max 1200`() =
         runTest {
-            repository.updateRetentionDays(2000)
+            repository.updateRetentionDays(1200)
             val prefs = repository.userPreferences.first()
-            assertEquals(1095, prefs.retentionDays)
+            assertEquals(1200, prefs.retentionDays)
         }
 
     @Test
@@ -89,10 +89,10 @@ class SettingsRepositoryTest {
         }
 
     @Test
-    fun `default retention days is 365`() =
+    fun `default retention days is 360`() =
         runTest {
             val prefs = repository.userPreferences.first()
-            assertEquals(365, prefs.retentionDays)
+            assertEquals(360, prefs.retentionDays)
         }
 
     @Test

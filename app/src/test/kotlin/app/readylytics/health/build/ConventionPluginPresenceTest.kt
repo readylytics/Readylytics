@@ -10,7 +10,9 @@ class ConventionPluginPresenceTest {
         run {
             var dir: File? =
                 File(
-                    javaClass.protectionDomain?.codeSource?.location
+                    javaClass.protectionDomain
+                        ?.codeSource
+                        ?.location
                         ?.toURI()
                         ?: File(".").toURI(),
                 ).parentFile

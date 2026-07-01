@@ -36,7 +36,7 @@ class SpecificValidationRulesTest {
         assertEquals(ValidationResult.Invalid("RAS: 0.1–0.3"), result)
     }
 
-    // RetentionDaysRule tests (1–3650)
+    // RetentionDaysRule tests (90–1800 days = 3–60 months)
 
     @Test
     fun retentionDaysRule_validValue_365_returnsValid() {
@@ -49,7 +49,7 @@ class SpecificValidationRulesTest {
     fun retentionDaysRule_invalidValue_0_returnsInvalid() {
         val rule = RetentionDaysRule()
         val result = rule.validate("0")
-        assertEquals(ValidationResult.Invalid("Days: 1–3,650"), result)
+        assertEquals(ValidationResult.Invalid("Days: 90–1,800"), result)
     }
 
     // StepGoalRule tests (0–100,000)
