@@ -28,7 +28,7 @@ internal fun buildTrendChartRenderData(points: List<DailyDataPoint>): TrendChart
         validPoints = validPoints,
         pointByDayOffset = validPoints.associateBy(DailyDataPoint::dayOffset),
         calculatedBaseline = median,
-        minimum = values.minOrNull(),
-        maximum = values.maxOrNull(),
+        minimum = sortedValues.firstOrNull(),
+        maximum = sortedValues.lastOrNull(),
     )
 }

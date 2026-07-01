@@ -20,7 +20,7 @@ class BmiServiceTest {
     fun `calculates BMI correctly for metric inputs`() {
         val result = service.calculateBmi(weight = 70f, height = 175f, units = UnitSystem.METRIC)
         assertTrue(result is Result.Success)
-        val bmi = (result as Result.Success).data.bmi
+        val bmi = result.data.bmi
         assertEquals(22.86f, bmi, 0.1f)
     }
 
@@ -62,7 +62,7 @@ class BmiServiceTest {
     fun `rejects negative weight`() {
         val result = service.calculateBmi(weight = -70f, height = 175f, units = UnitSystem.METRIC)
         assertTrue(result is Result.Failure)
-        assertEquals(BmiService.Codes.WEIGHT_NOT_POSITIVE, (result as Result.Failure).code)
+        assertEquals(BmiService.Codes.WEIGHT_NOT_POSITIVE, result.code)
     }
 
     @Test
@@ -75,7 +75,7 @@ class BmiServiceTest {
     fun `rejects negative height`() {
         val result = service.calculateBmi(weight = 70f, height = -175f, units = UnitSystem.METRIC)
         assertTrue(result is Result.Failure)
-        assertEquals(BmiService.Codes.HEIGHT_NOT_POSITIVE, (result as Result.Failure).code)
+        assertEquals(BmiService.Codes.HEIGHT_NOT_POSITIVE, result.code)
     }
 
     @Test
@@ -88,14 +88,14 @@ class BmiServiceTest {
     fun `rejects weight exceeding maximum`() {
         val result = service.calculateBmi(weight = 1001f, height = 175f, units = UnitSystem.METRIC)
         assertTrue(result is Result.Failure)
-        assertEquals(BmiService.Codes.WEIGHT_TOO_HIGH, (result as Result.Failure).code)
+        assertEquals(BmiService.Codes.WEIGHT_TOO_HIGH, result.code)
     }
 
     @Test
     fun `rejects height exceeding maximum`() {
         val result = service.calculateBmi(weight = 70f, height = 301f, units = UnitSystem.METRIC)
         assertTrue(result is Result.Failure)
-        assertEquals(BmiService.Codes.HEIGHT_TOO_HIGH, (result as Result.Failure).code)
+        assertEquals(BmiService.Codes.HEIGHT_TOO_HIGH, result.code)
     }
 
     @Test
@@ -116,7 +116,8 @@ class BmiServiceTest {
         val weight = 75f
         val height = 180f
         val result = service.calculateBmi(weight, height, UnitSystem.METRIC)
-        val calculatedBmi = (result as Result.Success).data.bmi
+        assertTrue(result is Result.Success)
+        val calculatedBmi = result.data.bmi
         val expectedBmi = weight / ((height / 100f) * (height / 100f))
         assertEquals(expectedBmi, calculatedBmi, 0.01f)
     }
@@ -127,8 +128,8 @@ class BmiServiceTest {
         val heightInches = 70f
         val result = service.calculateBmi(weightLbs, heightInches, UnitSystem.IMPERIAL)
         assertTrue(result is Result.Success)
-        val bmi = (result as Result.Success).data.bmi
-        assertTrue(bmi in 20f..22f)
+        val bmi = result.data.bmi
+        assertTrue(bmi in (20f..22f))
     }
 
     @Test

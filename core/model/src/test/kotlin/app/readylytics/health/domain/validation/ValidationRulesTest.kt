@@ -157,17 +157,17 @@ class RetentionDaysRuleTest {
 
     @Test
     fun `valid days in range returns Valid`() {
-        assertTrue(rule.validate("30") is ValidationResult.Valid)
+        assertTrue(rule.validate("360") is ValidationResult.Valid)
     }
 
     @Test
-    fun `minimum 1 day returns Valid`() {
-        assertTrue(rule.validate("1") is ValidationResult.Valid)
+    fun `minimum 90 day returns Valid`() {
+        assertTrue(rule.validate("90") is ValidationResult.Valid)
     }
 
     @Test
-    fun `maximum 3650 days returns Valid`() {
-        assertTrue(rule.validate("3650") is ValidationResult.Valid)
+    fun `maximum 1200 days returns Valid`() {
+        assertTrue(rule.validate("1200") is ValidationResult.Valid)
     }
 
     @Test

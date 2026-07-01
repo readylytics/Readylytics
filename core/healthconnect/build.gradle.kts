@@ -36,7 +36,7 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
         },
     )
     classDirectories.setFrom(
-        fileTree("${project.buildDir}/tmp/kotlin-classes/debug") {
+        fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
             fileFilter.forEach { exclude(it) }
         },
     )
