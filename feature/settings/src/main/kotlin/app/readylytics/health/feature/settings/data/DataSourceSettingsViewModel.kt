@@ -102,6 +102,8 @@ class DataSourceSettingsViewModel
                 try {
                     deviceSettings.clearDeviceCache()
                     availableDevicesFlow.value = deviceSettings.getAvailableDevices()
+                } catch (e: Exception) {
+                    availableDevicesFlow.value = emptyList()
                 } finally {
                     isLoadingDevicesFlow.value = false
                 }

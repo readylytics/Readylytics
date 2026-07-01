@@ -211,7 +211,7 @@ fun DataManagementSection(
                         onEvent(SettingsEvent.RetentionDaysChanged(retentionDays.toInt()))
                     },
                     valueRange = 180f..730f,
-                    steps = 36,
+                    steps = 109,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
