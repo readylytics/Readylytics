@@ -158,8 +158,8 @@ fun DataManagementSection(
     onEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
-    var retentionDays by remember(uiState.retentionDays) {
-        mutableFloatStateOf(uiState.retentionDays.toFloat())
+    var retentionMonths by remember(uiState.retentionDays) {
+        mutableFloatStateOf((uiState.retentionDays / 30).toFloat())
     }
 
     Column {
@@ -196,22 +196,22 @@ fun DataManagementSection(
                     Text(
                         text =
                             pluralStringResource(
-                                R.plurals.settings_retention_days,
-                                retentionDays.toInt(),
-                                retentionDays.toInt(),
+                                R.plurals.settings_retention_months,
+                                retentionMonths.toInt(),
+                                retentionMonths.toInt(),
                             ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Slider(
-                    value = retentionDays,
-                    onValueChange = { retentionDays = it },
+                    value = retentionMonths,
+                    onValueChange = { retentionMonths = it },
                     onValueChangeFinished = {
-                        onEvent(SettingsEvent.RetentionDaysChanged(retentionDays.toInt()))
+                        onEvent(SettingsEvent.RetentionDaysChanged((retentionMonths.toInt() * 30)))
                     },
-                    valueRange = 180f..730f,
-                    steps = 109,
+                    valueRange = 3f..60f,
+                    steps = 19,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
