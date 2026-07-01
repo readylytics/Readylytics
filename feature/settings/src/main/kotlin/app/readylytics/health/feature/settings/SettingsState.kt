@@ -85,6 +85,7 @@ data class UIState(
     val appTheme: AppTheme = SettingsDefaults.APP_THEME,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
     val fallbackThemeColor: FallbackThemeColor = SettingsDefaults.FALLBACK_THEME_COLOR,
+    val hrrToleranceSeconds: Int = SettingsDefaults.HRR_TOLERANCE_SECONDS,
     val rasScalingFactor: Float = SettingsDefaults.RAS_SCALING_FACTOR,
     val stepGoal: Int = SettingsDefaults.STEP_GOAL,
     val retentionDaysEnabled: Boolean = SettingsDefaults.RETENTION_DAYS_ENABLED,
