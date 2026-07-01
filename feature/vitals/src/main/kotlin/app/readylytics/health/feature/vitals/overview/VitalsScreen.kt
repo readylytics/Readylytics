@@ -53,13 +53,10 @@ fun VitalsRoute(
     viewModel: VitalsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val baselines by viewModel.baselinesFlow.collectAsStateWithLifecycle()
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
 
     VitalsScreen(
         uiState = uiState,
-        baselineHrv = baselines.hrv,
-        baselineRhr = baselines.rhr,
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
@@ -74,8 +71,6 @@ fun VitalsRoute(
 @Composable
 fun VitalsScreen(
     uiState: VitalsUiState,
-    baselineHrv: Float?,
-    baselineRhr: Int?,
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -93,6 +88,10 @@ fun VitalsScreen(
             key = "vitals-${uiState.selectedRange}",
         )
     val scrollState = rememberScrollState()
+    val chartSeries = uiState.chartSeries
+    val presentation = uiState.presentation
+    val baselineHrv = presentation.baselineHrv
+    val baselineRhr = presentation.baselineRhr
 
     Column(modifier = modifier.fillMaxSize()) {
         ScreenHeaderSection(isLoading = uiState.isLoading) { isDisabled ->
@@ -159,8 +158,8 @@ fun VitalsScreen(
                             }
                         val rhrStatus =
                             summary?.rhrStatus(
-                                optimalThreshold = uiState.rhrOptimalThreshold,
-                                warningThreshold = uiState.rhrWarningThreshold,
+                                optimalThreshold = presentation.rhrOptimalThreshold,
+                                warningThreshold = presentation.rhrWarningThreshold,
                             ) ?: MetricStatus.CALIBRATING
                         val rhrTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_sleep_rhr)
 
@@ -196,8 +195,8 @@ fun VitalsScreen(
                         val hrvMax = if (baselineHrv != null && baselineHrv > 0f) baselineHrv * 2.0f else 150f
                         val hrvStatus =
                             summary?.hrvStatus(
-                                optimalThreshold = uiState.hrvOptimalThreshold,
-                                warningThreshold = uiState.hrvWarningThreshold,
+                                optimalThreshold = presentation.hrvOptimalThreshold,
+                                warningThreshold = presentation.hrvWarningThreshold,
                             ) ?: MetricStatus.CALIBRATING
                         val hrvTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv)
 
@@ -278,7 +277,7 @@ fun VitalsScreen(
                         modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
                     ) {
                         TrendChart(
-                            points = uiState.dailyHrv,
+                            points = chartSeries.hrv,
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(CoreUiR.string.label_hrv),
@@ -287,7 +286,7 @@ fun VitalsScreen(
                             showBaseline = !isCalibrating,
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
-                            zoneBands = uiState.hrvZoneBands,
+                            zoneBands = presentation.hrvZoneBands,
                             parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
@@ -312,7 +311,7 @@ fun VitalsScreen(
                         modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
                     ) {
                         TrendChart(
-                            points = uiState.dailyRhr,
+                            points = chartSeries.rhr,
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(CoreUiR.string.label_rhr),
@@ -321,7 +320,7 @@ fun VitalsScreen(
                             showBaseline = !isCalibrating,
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
-                            zoneBands = uiState.rhrZoneBands,
+                            zoneBands = presentation.rhrZoneBands,
                             parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
@@ -345,7 +344,7 @@ fun VitalsScreen(
                         modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
                     ) {
                         TrendChart(
-                            points = uiState.dailySpo2,
+                            points = chartSeries.spo2,
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(CoreUiR.string.label_spo2),
@@ -355,7 +354,7 @@ fun VitalsScreen(
                             showBaseline = true,
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
-                            zoneBands = uiState.spo2ZoneBands,
+                            zoneBands = presentation.spo2ZoneBands,
                             axisDecimalPlaces = 0,
                             baselineDecimalPlaces = 0,
                             minYOverride = 90.0,
