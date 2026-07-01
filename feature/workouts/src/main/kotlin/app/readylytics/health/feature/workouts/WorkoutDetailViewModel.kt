@@ -81,18 +81,20 @@ class WorkoutDetailViewModel
 
                 val start = Instant.ofEpochMilli(workout.startTime)
                 val end = Instant.ofEpochMilli(workout.endTime)
-                val endPlus3Min = end.plus(3, ChronoUnit.MINUTES)
+                val prefs = settingsRepo.userPreferences.first()
+                val toleranceSeconds = prefs.hrrToleranceSeconds.toLong()
+                val recoveryWindowEnd = end.plus(3, ChronoUnit.MINUTES).plusSeconds(toleranceSeconds)
 
                 val hcSamples =
                     hcRepo
-                        .readHeartRateSamples(start, endPlus3Min)
+                        .readHeartRateSamples(start, recoveryWindowEnd)
                         .asSequence()
                         .flatMap { record ->
                             record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute) }
                         }.toList()
                 val dbSamples =
                     heartRateRepository
-                        .getByTimeRange(start.toEpochMilli(), endPlus3Min.toEpochMilli())
+                        .getByTimeRange(start.toEpochMilli(), recoveryWindowEnd.toEpochMilli())
                         .map { HeartRatePoint(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
                 val allSamples =
                     (hcSamples + dbSamples)
@@ -117,11 +119,11 @@ class WorkoutDetailViewModel
                         .toEpochMilli()
                 val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
 
-                val prefs = settingsRepo.userPreferences.first()
                 val rasBreakdown =
                     DailyRasBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries, prefs.rasSourceMode)
 
-                val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
+                val recoveryMetrics =
+                    RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr, toleranceSeconds)
 
                 val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
                 val displayMetrics =

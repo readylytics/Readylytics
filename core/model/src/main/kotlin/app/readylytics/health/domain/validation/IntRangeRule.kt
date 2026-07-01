@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.validation
 
-class IntRangeRule(
+open class IntRangeRule(
     private val min: Int,
     private val max: Int,
     override val errorMessage: String,

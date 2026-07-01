@@ -29,6 +29,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
@@ -134,6 +135,61 @@ class SettingsViewModelTest {
             viewModel.onEvent(SettingsEvent.CustomPrimaryColorChanged(0xFF556677L))
             advanceUntilIdle()
             coVerify { displaySettings.updateCustomPrimaryColor(0xFF556677L) }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `hrrTolerancePreference maps to ui state`() =
+        runTest {
+            val preferences = MutableStateFlow(UserPreferences(hrrToleranceSeconds = 45))
+            settingsReader =
+                mockk {
+                    every { userPreferences } returns preferences
+                }
+            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            viewModel.sharingStarted = SharingStarted.Eagerly
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect { }
+            }
+            advanceUntilIdle()
+
+            assertEquals(45, viewModel.uiState.value.hrrToleranceSeconds)
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `HrrToleranceSecondsChanged persists without refreshing health data`() =
+        runTest {
+            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.HrrToleranceSecondsChanged(45))
+            advanceUntilIdle()
+
+            coVerify { displaySettings.updateHrrToleranceSeconds(45) }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `HrrToleranceSecondsChanged rejects invalid values`() =
+        runTest {
+            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.HrrToleranceSecondsChanged(61))
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { displaySettings.updateHrrToleranceSeconds(any()) }
 
             viewModel.viewModelScope.cancel()
             advanceUntilIdle()

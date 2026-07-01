@@ -14,6 +14,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.PhysiologyProfileProto
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
@@ -485,6 +486,13 @@ class LocalRestoreManager
                 backup.hrvWarningThreshold?.let { hrvWarningThreshold = it }
                 backup.rhrOptimalThreshold?.let { rhrOptimalThreshold = it }
                 backup.rhrWarningThreshold?.let { rhrWarningThreshold = it }
+                backup.hrrToleranceSeconds?.let {
+                    hrrToleranceSeconds =
+                        it.coerceIn(
+                            SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS,
+                            SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS,
+                        )
+                }
                 backup.restingHrBeforeMinutes?.let { restingHrBeforeMinutes = it }
                 backup.restingHrAfterMinutes?.let { restingHrAfterMinutes = it }
 

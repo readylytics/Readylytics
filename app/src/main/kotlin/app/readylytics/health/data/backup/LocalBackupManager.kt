@@ -461,6 +461,7 @@ class LocalBackupManager
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                     rhrWarningThreshold = prefs.rhrWarningThreshold,
+                    hrrToleranceSeconds = prefs.hrrToleranceSeconds,
                     appTheme = prefs.appTheme.name,
                     backupSchedule = prefs.backupSchedule.name,
                     lastBackupTimestamp = prefs.lastBackupTimestamp,

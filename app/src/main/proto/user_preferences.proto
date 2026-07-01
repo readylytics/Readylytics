@@ -193,6 +193,10 @@ message UserPreferencesProto {
     // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
     // SettingsDefaults.RAS_SOURCE_MODE at the domain read boundary.
     LoadSourceModeProto ras_source_mode = 74;
+
+    // Maximum offset from each 1/2/3-minute HRR target used for nearest-sample matching.
+    // Zero means unset and resolves to SettingsDefaults.HRR_TOLERANCE_SECONDS.
+    int32 hrr_tolerance_seconds = 75;
 }
 
 enum TrimpMethodProto {

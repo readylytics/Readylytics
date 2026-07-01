@@ -70,6 +70,7 @@ interface DisplaySettings {
     suspend fun updateCustomSecondaryColor(color: Long)
     suspend fun updateCustomTertiaryColor(color: Long)
     suspend fun updateUnitSystem(unitSystem: UnitSystem)
+    suspend fun updateHrrToleranceSeconds(value: Int)
     suspend fun updateRasScalingFactor(value: Float)
     suspend fun updateStepGoal(steps: Int)
     suspend fun updateRetentionDaysEnabled(enabled: Boolean)

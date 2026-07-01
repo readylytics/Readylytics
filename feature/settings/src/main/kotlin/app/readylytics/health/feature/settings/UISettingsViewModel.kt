@@ -36,6 +36,7 @@ class UISettingsViewModel
                         appTheme = prefs.appTheme,
                         dynamicColorEnabled = prefs.dynamicColorEnabled,
                         fallbackThemeColor = prefs.fallbackThemeColor,
+                        hrrToleranceSeconds = prefs.hrrToleranceSeconds,
                         rasScalingFactor = prefs.rasScalingFactor,
                         stepGoal = prefs.stepGoal,
                         retentionDaysEnabled = prefs.retentionDaysEnabled,
@@ -83,6 +84,14 @@ class UISettingsViewModel
                         viewModelScope.launch {
                             displaySettings.updateStepGoal(steps = event.steps)
                             healthDataRefresh.refreshAffectedWindow()
+                        }
+                    }
+                }
+                is SettingsEvent.HrrToleranceSecondsChanged -> {
+                    val validation = SettingsValidators.HRR_TOLERANCE_RULE.validate(event.value.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            displaySettings.updateHrrToleranceSeconds(event.value)
                         }
                     }
                 }

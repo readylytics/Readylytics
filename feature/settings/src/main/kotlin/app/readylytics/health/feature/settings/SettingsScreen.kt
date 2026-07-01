@@ -510,6 +510,7 @@ fun SettingsScreen(
                     ) {
                         AdvancedSettingsSection(
                             sleepState = sleepState,
+                            hrrToleranceSeconds = uiState.hrrToleranceSeconds,
                             rasScalingFactor = uiState.rasScalingFactor,
                             trimpModel = uiState.trimpModel,
                             banisterMultiplier = uiState.banisterMultiplier,
