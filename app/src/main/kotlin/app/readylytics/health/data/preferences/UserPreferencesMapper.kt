@@ -56,6 +56,12 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         consistencyThresholdMinutes = consistencyThresholdMinutes,
         consistencyEvaluationDays = consistencyEvaluationDays,
         consistencyBaselineDays = consistencyBaselineDays,
+        hrrToleranceSeconds =
+            if (hrrToleranceSeconds == 0) {
+                SettingsDefaults.HRR_TOLERANCE_SECONDS
+            } else {
+                hrrToleranceSeconds.coerceIn(15, 60)
+            },
         rasScalingFactor = rasScalingFactor,
         stepGoal = stepGoal,
         retentionDaysEnabled = retentionDaysEnabled,

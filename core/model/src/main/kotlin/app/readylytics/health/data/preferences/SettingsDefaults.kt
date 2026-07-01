@@ -45,6 +45,7 @@ object SettingsDefaults {
     const val CONSISTENCY_THRESHOLD_MINUTES = 30
     const val CONSISTENCY_EVALUATION_DAYS = 7
     const val CONSISTENCY_BASELINE_DAYS = 14
+    const val HRR_TOLERANCE_SECONDS = 30
 
     /**
      * Authoritative runtime value for RAS scaling.
