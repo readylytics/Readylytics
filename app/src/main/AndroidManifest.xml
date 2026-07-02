@@ -88,11 +88,8 @@
             tools:node="merge" />
 
         <activity
-            android:name="com.google.android.gms.oss.licenses.OssLicensesMenuActivity"
-            android:theme="@style/Theme.AppCompat.DayNight" />
-        <activity
-            android:name="com.google.android.gms.oss.licenses.OssLicensesActivity"
-            android:theme="@style/Theme.AppCompat.DayNight" />
+            android:name="com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
 
         <activity-alias
             android:name="ViewPermissionUsageActivity"

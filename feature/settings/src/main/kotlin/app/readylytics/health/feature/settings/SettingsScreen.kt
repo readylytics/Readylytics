@@ -63,15 +63,14 @@ import app.readylytics.health.feature.settings.data.SyncSettingsSection
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
 import kotlinx.coroutines.flow.collectLatest
 
-@Suppress("DEPRECATION")
 private fun openOssLicenses(
     context: android.content.Context,
     licensesTitle: String,
 ) {
-    com.google.android.gms.oss.licenses.OssLicensesMenuActivity
+    com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
         .setActivityTitle(licensesTitle)
     context.startActivity(
-        Intent(context, com.google.android.gms.oss.licenses.OssLicensesMenuActivity::class.java),
+        Intent(context, com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity::class.java),
     )
 }
 
