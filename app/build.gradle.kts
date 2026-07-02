@@ -350,6 +350,7 @@ dependencies {
     androidTestImplementation(libs.androidx.benchmark.macro)
     androidTestImplementation(libs.play.services.stats)
     androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.startup.runtime)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
