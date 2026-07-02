@@ -12,6 +12,7 @@ import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
@@ -372,7 +373,104 @@ class WorkoutsViewModelTest {
         }
 
     @Test
-    fun `stats state computes todayStrainIncrease correctly`() =
+    fun `stats state sums todayStrainIncrease from workout-only gains`() =
+        runTest(testDispatcher) {
+            // Default strainLoadSourceMode is WORKOUT_ONLY: the daily delta must equal the sum
+            // of the already-rounded per-workout gains shown in History, not an independent
+            // whole-day ATL/CTL recompute.
+            val today = LocalDate.of(2026, 7, 2)
+            val zoneId = java.time.ZoneId.of("UTC")
+            val todayMidnight = today.atStartOfDay(zoneId)
+            val workout1 =
+                WorkoutData(
+                    id = "strength-1",
+                    startTime = todayMidnight.plusHours(8).toInstant().toEpochMilli(),
+                    endTime =
+                        todayMidnight
+                            .plusHours(8)
+                            .plusMinutes(41)
+                            .toInstant()
+                            .toEpochMilli(),
+                    exerciseType = "strength_training",
+                    durationMinutes = 41,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 0f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 20f,
+                    avgHr = 103f,
+                )
+            val workout2 =
+                WorkoutData(
+                    id = "running-1",
+                    startTime = todayMidnight.plusHours(18).toInstant().toEpochMilli(),
+                    endTime =
+                        todayMidnight
+                            .plusHours(18)
+                            .plusMinutes(27)
+                            .toInstant()
+                            .toEpochMilli(),
+                    exerciseType = "running",
+                    durationMinutes = 27,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 0f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 25f,
+                    avgHr = 116f,
+                )
+            workoutsFlow.value = listOf(workout1, workout2)
+            summariesFlow.value =
+                listOf(
+                    DailySummary(
+                        date = today,
+                        readinessWorkoutOnly = 72.5f,
+                        strainRatioWorkoutOnly = 0.365f,
+                        trimpWorkoutOnly = 45f,
+                    ),
+                )
+            every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
+                today
+                    .minusDays(10)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(workout = workout1, samples = emptyList())
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 20f,
+                    computedTrimp = 20,
+                    trimpDisplay = "20",
+                    gainedStrain = 0.09f,
+                    gainedStrainDisplay = "0.09",
+                )
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(workout = workout2, samples = emptyList())
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 25f,
+                    computedTrimp = 25,
+                    trimpDisplay = "25",
+                    gainedStrain = 0.09f,
+                    gainedStrainDisplay = "0.09",
+                )
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val state = viewModel.uiState.first { it.todayStrainIncrease != null }
+
+            assertEquals(0.18f, state.todayStrainIncrease!!, 0.001f)
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `stats state computes todayStrainIncrease from whole-day ATL-CTL diff in everyday-HR mode`() =
         runTest(testDispatcher) {
             val today = LocalDate.now()
             summariesFlow.value =
@@ -385,6 +483,8 @@ class WorkoutsViewModelTest {
                     ),
                 )
             every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))
             coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
                 today
                     .minusDays(10)
