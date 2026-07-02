@@ -113,7 +113,11 @@ fun WorkoutStatsSection(
                         if (uiState.todayStrainIncrease != null) {
                             if (uiState.todayStrainIncrease > 0.005f) {
                                 val diffFormatted = MetricFormatter.formatStrain(uiState.todayStrainIncrease)
-                                stringResource(app.readylytics.health.core.ui.R.string.delta_up_format, stringResource(app.readylytics.health.core.ui.R.string.delta_up), diffFormatted)
+                                stringResource(
+                                    app.readylytics.health.core.ui.R.string.delta_up_format,
+                                    stringResource(app.readylytics.health.core.ui.R.string.delta_up),
+                                    diffFormatted,
+                                )
                             } else {
                                 stringResource(app.readylytics.health.core.ui.R.string.delta_no_change)
                             }
