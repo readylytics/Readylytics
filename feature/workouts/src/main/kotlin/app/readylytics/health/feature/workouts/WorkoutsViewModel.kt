@@ -348,7 +348,13 @@ class WorkoutsViewModel
                                     if (prefs.strainLoadSourceMode == LoadSourceMode.WORKOUT_ONLY) {
                                         // Sum the already-rounded per-workout gains shown in History so the
                                         // card total always exactly matches the rows below it.
-                                        val selectedDayEndMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                                        val selectedDayEndMs =
+                                            date
+                                                .plusDays(
+                                                    1,
+                                                ).atStartOfDay(zoneId)
+                                                .toInstant()
+                                                .toEpochMilli()
                                         recentItems
                                             .filter {
                                                 it.workout.startTime in selectedMidnightMs until selectedDayEndMs
