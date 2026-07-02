@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -61,21 +62,20 @@ import app.readylytics.health.feature.settings.data.DataManagementSection
 import app.readylytics.health.feature.settings.data.DataSourceSettingsSection
 import app.readylytics.health.feature.settings.data.SyncSettingsSection
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
+import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
 
-@Suppress("DEPRECATION")
 private fun openOssLicenses(
-    context: android.content.Context,
+    context: Context,
     licensesTitle: String,
 ) {
-    com.google.android.gms.oss.licenses.OssLicensesMenuActivity
-        .setActivityTitle(licensesTitle)
+    OssLicensesMenuActivity.setActivityTitle(licensesTitle)
     context.startActivity(
-        Intent(context, com.google.android.gms.oss.licenses.OssLicensesMenuActivity::class.java),
+        Intent(context, OssLicensesMenuActivity::class.java),
     )
 }
 
-private fun openPrivacyPolicy(context: android.content.Context) {
+private fun openPrivacyPolicy(context: Context) {
     val url = context.getString(R.string.privacy_policy_url)
     context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
 }

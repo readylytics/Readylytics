@@ -58,3 +58,4 @@ ktlint
 .agents/
 .codex-remote-attachments/
 build-logic/bin/
+.artifacts/

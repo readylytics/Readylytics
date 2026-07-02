@@ -17,11 +17,11 @@ extensions.configure<LibraryExtension> {
 
 val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 dependencies {
-    add("implementation", platform(libs.findLibrary("androidx-compose-bom").get()))
-    add("implementation", libs.findLibrary("androidx-compose-ui").get())
-    add("implementation", libs.findLibrary("androidx-compose-foundation").get())
-    add("implementation", libs.findLibrary("androidx-compose-material3").get())
-    add("implementation", libs.findLibrary("androidx-compose-ui-tooling-preview").get())
-    add("testImplementation", libs.findLibrary("junit").get())
-    add("debugImplementation", libs.findLibrary("androidx-compose-ui-tooling").get())
+    implementation(platform(libs.findLibrary("androidx-compose-bom").get()))
+    implementation(libs.findLibrary("androidx-compose-ui").get())
+    implementation(libs.findLibrary("androidx-compose-foundation").get())
+    implementation(libs.findLibrary("androidx-compose-material3").get())
+    implementation(libs.findLibrary("androidx-compose-ui-tooling-preview").get())
+    testImplementation(libs.findLibrary("junit").get())
+    debugImplementation(libs.findLibrary("androidx-compose-ui-tooling").get())
 }
