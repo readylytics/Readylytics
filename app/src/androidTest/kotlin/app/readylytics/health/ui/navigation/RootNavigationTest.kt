@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.rule.GrantPermissionRule
 import app.readylytics.health.MainActivity
 import org.junit.After
 import org.junit.Before
@@ -17,6 +18,20 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class RootNavigationTest {
+    // Grant the Health Connect read permissions the app requires so the launch routes
+    // to the main tab shell instead of the onboarding permission flow. Without these,
+    // a fresh emulator reports them missing and MainActivity never shows the tab bar.
+    @get:Rule
+    val permissionRule: GrantPermissionRule =
+        GrantPermissionRule.grant(
+            "android.permission.health.READ_SLEEP",
+            "android.permission.health.READ_HEART_RATE",
+            "android.permission.health.READ_HEART_RATE_VARIABILITY",
+            "android.permission.health.READ_EXERCISE",
+            "android.permission.health.READ_STEPS",
+            "android.permission.health.READ_HEALTH_DATA_HISTORY",
+        )
+
     @get:Rule
     val composeRule = createEmptyComposeRule()
 

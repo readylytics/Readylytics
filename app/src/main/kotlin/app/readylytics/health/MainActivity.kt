@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -27,6 +28,13 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private companion object {
+        // Upper bound on how long the splash screen may block the first frame while
+        // waiting for user preferences. Prevents an indefinite splash (and Espresso
+        // idle deadlock) if the DataStore read stalls.
+        const val SPLASH_MAX_WAIT_MS = 2000L
+    }
+
     @Inject
     lateinit var sqlCipherKeyManager: SqlCipherKeyManager
 
@@ -72,8 +80,16 @@ class MainActivity : ComponentActivity() {
                 val viewModel: SyncViewModel = hiltViewModel()
                 val prefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
 
-                // Keep splash screen on until preferences are loaded to prevent theme flash
-                splashScreen.setKeepOnScreenCondition { prefs == null }
+                // Keep splash screen on until preferences are loaded to prevent theme
+                // flash, but bound the wait so a stalled/slow DataStore read can never
+                // trap the app (or an instrumented test) on the splash indefinitely.
+                // While the keep-condition returns true the first frame is withheld,
+                // which keeps the main looper busy and blocks Espresso idle sync.
+                val splashStartMillis = remember { System.currentTimeMillis() }
+                splashScreen.setKeepOnScreenCondition {
+                    prefs == null &&
+                        System.currentTimeMillis() - splashStartMillis < SPLASH_MAX_WAIT_MS
+                }
 
                 val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
 
