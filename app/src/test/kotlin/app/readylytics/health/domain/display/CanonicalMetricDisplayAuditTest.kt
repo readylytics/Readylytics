@@ -44,7 +44,9 @@ class CanonicalMetricDisplayAuditTest {
         val commonDecimalFormatting =
             listOf(
                 "\"%.2f\".format",
-                "String.format(\"%.2f\"",
+                // Catches String.format("%.2f", ...) as well as locale-qualified variants like
+                // String.format(Locale.US, "%.2f", ...), which the old call-site-only pattern missed.
+                "\"%.2f\"",
             )
         return when (file.name) {
             "WorkoutStatsSection.kt" -> commonDecimalFormatting + ".roundToPercentInt()"

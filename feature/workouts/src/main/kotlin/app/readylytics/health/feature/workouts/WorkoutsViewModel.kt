@@ -18,6 +18,7 @@ import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
@@ -344,16 +345,35 @@ class WorkoutsViewModel
 
                             val todayStrainIncrease =
                                 if (dataTenureDaysForDate >= 7) {
-                                    val trimpByDateWithout = trimpByDate.toMutableMap().apply { put(date, 0f) }
-                                    val ctlWith = ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-                                    val atlWith = atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-                                    val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
+                                    if (prefs.strainLoadSourceMode == LoadSourceMode.WORKOUT_ONLY) {
+                                        // Sum the already-rounded per-workout gains shown in History so the
+                                        // card total always exactly matches the rows below it.
+                                        val selectedDayEndMs =
+                                            date
+                                                .plusDays(
+                                                    1,
+                                                ).atStartOfDay(zoneId)
+                                                .toInstant()
+                                                .toEpochMilli()
+                                        recentItems
+                                            .filter {
+                                                it.workout.startTime in selectedMidnightMs until selectedDayEndMs
+                                            }.sumOf { it.gainedStrain.toDouble() }
+                                            .toFloat()
+                                    } else {
+                                        val trimpByDateWithout = trimpByDate.toMutableMap().apply { put(date, 0f) }
+                                        val ctlWith = ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                        val atlWith = atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                        val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
 
-                                    val ctlWithout = scoringCalculator.computeCtlEmaWithDecay(trimpByDateWithout, date)
-                                    val atlWithout = scoringCalculator.computeAtlEmaWithDecay(trimpByDateWithout, date)
-                                    val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
+                                        val ctlWithout =
+                                            scoringCalculator.computeCtlEmaWithDecay(trimpByDateWithout, date)
+                                        val atlWithout =
+                                            scoringCalculator.computeAtlEmaWithDecay(trimpByDateWithout, date)
+                                        val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
 
-                                    (srWith - srWithout).coerceAtLeast(0f)
+                                        (srWith - srWithout).coerceAtLeast(0f)
+                                    }
                                 } else {
                                     null
                                 }
