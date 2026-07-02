@@ -24,9 +24,7 @@ class RootNavigationTest {
 
     @Before
     fun launchActivity() {
-        composeRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        advanceFrame()
     }
 
     @After
@@ -55,11 +53,6 @@ class RootNavigationTest {
                 .onFirst()
 
         tab.performClick()
-        advanceFrame()
         tab.assertIsSelected()
-    }
-
-    private fun advanceFrame() {
-        composeRule.mainClock.advanceTimeByFrame()
     }
 }
