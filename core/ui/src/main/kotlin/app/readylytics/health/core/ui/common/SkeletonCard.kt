@@ -1,5 +1,6 @@
 package app.readylytics.health.core.ui.common
 
+import android.animation.ValueAnimator
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -24,6 +25,13 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 private fun Modifier.shimmerAnimation(): Modifier {
+    // When the OS disables animations (accessibility "remove animations", or CI
+    // setting animator_duration_scale=0), skip the infinite transition. An
+    // ever-running Compose animation keeps the frame clock non-idle, which makes
+    // Espresso/Compose waitForIdle block forever and hangs instrumented UI tests.
+    if (!ValueAnimator.areAnimatorsEnabled()) {
+        return this.graphicsLayer { this.alpha = 0.6f }
+    }
     val transition = rememberInfiniteTransition(label = "skeleton_shimmer")
     val alpha =
         transition.animateFloat(
