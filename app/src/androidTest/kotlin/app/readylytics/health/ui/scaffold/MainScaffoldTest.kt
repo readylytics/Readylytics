@@ -1,18 +1,21 @@
 package app.readylytics.health.ui.scaffold
 
+import androidx.activity.compose.setContent
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ForcedSize
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.MainActivity
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -22,14 +25,22 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class MainScaffoldTest {
     @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    val composeRule = createEmptyComposeRule()
 
-    // Pause the test clock so MainScaffold's indefinite pull-to-refresh indicator
-    // (driven by isSyncing on launch) does not keep the Compose clock busy and
-    // block waitForIdle() forever. Finders/interactions still operate normally.
+    private lateinit var scenario: ActivityScenario<MainActivity>
+
     @Before
-    fun pauseClock() {
+    fun launchActivity() {
         composeRule.mainClock.autoAdvance = false
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        advanceFrame()
+    }
+
+    @After
+    fun closeActivity() {
+        if (::scenario.isInitialized) {
+            scenario.close()
+        }
     }
 
     @Test
@@ -43,13 +54,16 @@ class MainScaffoldTest {
 
     @Test
     fun compactWidth_rendersBottomNavigation() {
-        composeRule.setContent {
-            DeviceConfigurationOverride(
-                DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp)),
-            ) {
-                MainScaffold()
+        scenario.onActivity { activity ->
+            activity.setContent {
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp)),
+                ) {
+                    MainScaffold()
+                }
             }
         }
+        advanceFrame()
 
         // Verify Dashboard item exists and is displayed
         val dashboardNode =
@@ -70,13 +84,16 @@ class MainScaffoldTest {
 
     @Test
     fun mediumWidth_rendersNavigationRail() {
-        composeRule.setContent {
-            DeviceConfigurationOverride(
-                DeviceConfigurationOverride.ForcedSize(DpSize(700.dp, 800.dp)),
-            ) {
-                MainScaffold()
+        scenario.onActivity { activity ->
+            activity.setContent {
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.ForcedSize(DpSize(700.dp, 800.dp)),
+                ) {
+                    MainScaffold()
+                }
             }
         }
+        advanceFrame()
 
         val dashboardNode =
             composeRule
@@ -96,13 +113,16 @@ class MainScaffoldTest {
 
     @Test
     fun expandedWidth_rendersNavigationRailOrDrawer() {
-        composeRule.setContent {
-            DeviceConfigurationOverride(
-                DeviceConfigurationOverride.ForcedSize(DpSize(1000.dp, 800.dp)),
-            ) {
-                MainScaffold()
+        scenario.onActivity { activity ->
+            activity.setContent {
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.ForcedSize(DpSize(1000.dp, 800.dp)),
+                ) {
+                    MainScaffold()
+                }
             }
         }
+        advanceFrame()
 
         val dashboardNode =
             composeRule
@@ -117,5 +137,9 @@ class MainScaffoldTest {
         assert(bounds.top < 200.dp) {
             "Dashboard item should be at the top/left of the screen in expanded layout, but top was ${bounds.top}"
         }
+    }
+
+    private fun advanceFrame() {
+        composeRule.mainClock.advanceTimeByFrame()
     }
 }

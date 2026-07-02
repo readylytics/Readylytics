@@ -78,8 +78,10 @@ jobs:
           disable-animations: true
           script: |
             adb logcat -c || true
-            ./gradlew connectedDebugAndroidTest -x :benchmark:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.timeout_msec=180000 --stacktrace --console=plain
+            test_status=0
+            timeout --signal=TERM --kill-after=1m 25m ./gradlew connectedDebugAndroidTest -x :benchmark:connectedDebugAndroidTest --stacktrace --console=plain || test_status=$?
             adb logcat -d > logcat.txt || true
+            exit "$test_status"
 
       - name: Upload test results
         if: always()
