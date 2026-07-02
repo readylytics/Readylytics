@@ -378,14 +378,19 @@ class WorkoutsViewModelTest {
             // Default strainLoadSourceMode is WORKOUT_ONLY: the daily delta must equal the sum
             // of the already-rounded per-workout gains shown in History, not an independent
             // whole-day ATL/CTL recompute.
-            val today = LocalDate.now()
-            val zoneId = java.time.ZoneId.systemDefault()
+            val today = LocalDate.of(2026, 7, 2)
+            val zoneId = java.time.ZoneId.of("UTC")
             val todayMidnight = today.atStartOfDay(zoneId)
             val workout1 =
                 WorkoutData(
                     id = "strength-1",
                     startTime = todayMidnight.plusHours(8).toInstant().toEpochMilli(),
-                    endTime = todayMidnight.plusHours(8).plusMinutes(41).toInstant().toEpochMilli(),
+                    endTime =
+                        todayMidnight
+                            .plusHours(8)
+                            .plusMinutes(41)
+                            .toInstant()
+                            .toEpochMilli(),
                     exerciseType = "strength_training",
                     durationMinutes = 41,
                     zone1Minutes = 0f,
@@ -400,7 +405,12 @@ class WorkoutsViewModelTest {
                 WorkoutData(
                     id = "running-1",
                     startTime = todayMidnight.plusHours(18).toInstant().toEpochMilli(),
-                    endTime = todayMidnight.plusHours(18).plusMinutes(27).toInstant().toEpochMilli(),
+                    endTime =
+                        todayMidnight
+                            .plusHours(18)
+                            .plusMinutes(27)
+                            .toInstant()
+                            .toEpochMilli(),
                     exerciseType = "running",
                     durationMinutes = 27,
                     zone1Minutes = 0f,
