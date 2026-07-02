@@ -89,7 +89,8 @@
 
         <activity
             android:name="com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity"
-            android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            tools:replace="android:theme" />
 
         <activity-alias
             android:name="ViewPermissionUsageActivity"
