@@ -7,6 +7,9 @@ set -uo pipefail
 echo "==> Clearing adb logcat..."
 adb logcat -c || true
 
+echo "==> Disabling background Bugle/RCS churn that contends for emulator CPU..."
+adb shell pm disable-user --user 0 com.google.android.apps.messaging || true
+
 echo "==> Running instrumented tests..."
 test_status=0
 

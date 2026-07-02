@@ -124,10 +124,12 @@ android {
         versionName = computedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
 
         testOptions {
             unitTests.isReturnDefaultValues = true
             unitTests.isIncludeAndroidResources = true
+            execution = "ANDROIDX_TEST_ORCHESTRATOR"
         }
     }
 
@@ -351,6 +353,7 @@ dependencies {
     androidTestImplementation(libs.play.services.stats)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.startup.runtime)
+    androidTestUtil(libs.androidx.test.orchestrator)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

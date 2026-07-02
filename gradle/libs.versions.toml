@@ -34,6 +34,7 @@ mockk = "1.14.11"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"
 androidxTestRunner = "1.7.0"
+androidxTestOrchestrator = "1.5.1"
 archCore = "2.2.0"
 documentfile = "1.1.0"
 benchmarkMacro = "1.4.1"
@@ -109,6 +110,7 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 androidx-test-rules = { group = "androidx.test", name = "rules", version = "1.6.1" }
+androidx-test-orchestrator = { group = "androidx.test", name = "orchestrator", version.ref = "androidxTestOrchestrator" }
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 material = { group = "com.google.android.material", name = "material", version = "1.14.0" }
 material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities", version.ref = "materialColorUtilities" }
