@@ -154,6 +154,20 @@ Switching either setting is instant; no recalculation needed. Both are calculate
 
 ---
 
+## Recovery match window
+
+This setting controls how the app matches post-workout heart-rate samples to the 1-, 2-, and 3-minute heart-rate recovery (HRR) checkpoints.
+
+**Find it:** Settings → Advanced Settings → Recovery match window
+
+- **Range:** 15–60 seconds
+- **Default:** 30 seconds
+- **How matching works:** for each 1-, 2-, and 3-minute checkpoint after workout end, the app chooses the nearest heart-rate sample inside the inclusive `±` match window.
+- **When to raise it:** if your watch logs heart rate infrequently after workouts, a wider window helps the app capture valid recovery samples.
+- **When to lower it:** if you want stricter matching to the exact 1/2/3-minute marks, a narrower window reduces how far the app can drift from those targets.
+
+---
+
 ## Device filtering
 
 If you have multiple devices syncing to Health Connect, you can choose which device(s) feed data into each metric category.

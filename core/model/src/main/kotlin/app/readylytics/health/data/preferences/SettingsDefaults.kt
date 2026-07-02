@@ -45,6 +45,9 @@ object SettingsDefaults {
     const val CONSISTENCY_THRESHOLD_MINUTES = 30
     const val CONSISTENCY_EVALUATION_DAYS = 7
     const val CONSISTENCY_BASELINE_DAYS = 14
+    const val MIN_HRR_TOLERANCE_SECONDS = 15
+    const val MAX_HRR_TOLERANCE_SECONDS = 60
+    const val HRR_TOLERANCE_SECONDS = 30
 
     /**
      * Authoritative runtime value for RAS scaling.
@@ -53,7 +56,7 @@ object SettingsDefaults {
     const val RAS_SCALING_FACTOR = 0.20f
     const val STEP_GOAL = 10000
     const val RETENTION_DAYS_ENABLED = true
-    const val RETENTION_DAYS = 365
+    const val RETENTION_DAYS = 360 // 12 months (30 days per month)
     const val COLLAPSE_HEALTH_CONNECT = true
     const val COLLAPSE_BASELINES_THRESHOLDS = true
     const val COLLAPSE_DISPLAY = true

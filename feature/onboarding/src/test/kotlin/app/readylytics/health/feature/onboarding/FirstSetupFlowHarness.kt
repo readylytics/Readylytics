@@ -122,6 +122,10 @@ class FirstSetupFlowHarness(
 
         override suspend fun updateRetentionDays(days: Int) = error("Unexpected call: updateRetentionDays")
 
+        override suspend fun updateHrrToleranceSeconds(value: Int) {
+            error("Unexpected call: updateHrrToleranceSeconds")
+        }
+
         override suspend fun updateTrimpModel(model: TrimpModel) = error("Unexpected call: updateTrimpModel")
 
         override suspend fun updateBanisterMultiplier(value: Float) = error("Unexpected call: updateBanisterMultiplier")

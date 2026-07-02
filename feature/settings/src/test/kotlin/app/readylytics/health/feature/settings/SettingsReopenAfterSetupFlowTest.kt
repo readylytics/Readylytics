@@ -105,6 +105,9 @@ class SettingsReopenAfterSetupFlowTest {
                     preferences.update { it.copy(unitSystem = unitSystem) }
                 }
 
+                override suspend fun updateHrrToleranceSeconds(value: Int) =
+                    error("Unexpected call: updateHrrToleranceSeconds")
+
                 override suspend fun updateAppTheme(theme: app.readylytics.health.data.preferences.AppTheme) =
                     error("Unexpected call: updateAppTheme")
 

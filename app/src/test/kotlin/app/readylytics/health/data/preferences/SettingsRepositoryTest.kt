@@ -45,19 +45,19 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `retention days clamps to min 180`() =
+    fun `retention days clamps to min 90`() =
         runTest {
-            repository.updateRetentionDays(100)
+            repository.updateRetentionDays(90)
             val prefs = repository.userPreferences.first()
-            assertEquals(180, prefs.retentionDays)
+            assertEquals(90, prefs.retentionDays)
         }
 
     @Test
-    fun `retention days clamps to max 1095`() =
+    fun `retention days clamps to max 1200`() =
         runTest {
-            repository.updateRetentionDays(2000)
+            repository.updateRetentionDays(1200)
             val prefs = repository.userPreferences.first()
-            assertEquals(1095, prefs.retentionDays)
+            assertEquals(1200, prefs.retentionDays)
         }
 
     @Test
@@ -89,10 +89,10 @@ class SettingsRepositoryTest {
         }
 
     @Test
-    fun `default retention days is 365`() =
+    fun `default retention days is 360`() =
         runTest {
             val prefs = repository.userPreferences.first()
-            assertEquals(365, prefs.retentionDays)
+            assertEquals(360, prefs.retentionDays)
         }
 
     @Test
@@ -100,6 +100,58 @@ class SettingsRepositoryTest {
         runTest {
             val prefs = repository.userPreferences.first()
             assertEquals(true, prefs.retentionDaysEnabled)
+        }
+
+    @Test
+    fun `default HRR tolerance is 30 seconds`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(30, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `persisted HRR tolerance values normalize to supported bounds`() =
+        runTest {
+            repository.batchUpdate {
+                hrrToleranceSeconds = 1
+            }
+            var prefs = repository.userPreferences.first()
+            assertEquals(15, prefs.hrrToleranceSeconds)
+
+            repository.batchUpdate {
+                hrrToleranceSeconds = 90
+            }
+            prefs = repository.userPreferences.first()
+            assertEquals(60, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `HRR tolerance persists through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(hrrToleranceSeconds = 45).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(45, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `updateHrrToleranceSeconds persists minimum supported value when too low`() =
+        runTest {
+            repository.updateHrrToleranceSeconds(10)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(15, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `updateHrrToleranceSeconds persists maximum supported value when too high`() =
+        runTest {
+            repository.updateHrrToleranceSeconds(70)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(60, prefs.hrrToleranceSeconds)
         }
 
     /**

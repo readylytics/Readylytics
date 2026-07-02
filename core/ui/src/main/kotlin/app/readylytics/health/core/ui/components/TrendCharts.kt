@@ -105,6 +105,7 @@ fun TrendChart(
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+    val renderData = remember(points) { buildTrendChartRenderData(points) }
 
     // Clear highlight when tooltip is hidden
     LaunchedEffect(tooltipState) {
@@ -136,32 +137,22 @@ fun TrendChart(
 
     val resolvedBaselineLabel = baselineLabel ?: stringResource(R.string.label_baseline)
 
-    if (points.none { it.value != null }) {
+    if (renderData.validPoints.isEmpty()) {
         EmptyChartPlaceholder(modifier = modifier)
         return
     }
 
-    val calculatedBaseline =
-        remember(points) {
-            val values = points.mapNotNull { it.value }.sorted()
-            if (values.isEmpty()) return@remember 0f
-            val mid = values.size / 2
-            if (values.size % 2 == 0) (values[mid - 1] + values[mid]) / 2f else values[mid]
-        }
+    val calculatedBaseline = requireNotNull(renderData.calculatedBaseline)
 
     // Use provided baseline if available, otherwise fall back to calculated baseline
     val baselineValue = baseline ?: calculatedBaseline
 
     val (minY, maxY) =
-        remember(points, minYOverride, maxYOverride) {
-            val values = points.mapNotNull { it.value }
-            if (values.isEmpty()) return@remember (minYOverride ?: 0.0) to (maxYOverride ?: 0.0)
-            val lo = values.minOrNull() ?: 0f
-            val hi = values.maxOrNull() ?: 0f
-            val scaledMin = lo * 0.9f
-            val scaledMax = hi * 1.1f
-            val computedMin = kotlin.math.floor(scaledMin).toDouble()
-            val computedMax = kotlin.math.ceil(scaledMax).toDouble()
+        remember(renderData, minYOverride, maxYOverride) {
+            val lo = requireNotNull(renderData.minimum)
+            val hi = requireNotNull(renderData.maximum)
+            val computedMin = kotlin.math.floor(lo * 0.9f).toDouble()
+            val computedMax = kotlin.math.ceil(hi * 1.1f).toDouble()
             (minYOverride ?: computedMin) to (maxYOverride ?: computedMax)
         }
 
@@ -179,13 +170,12 @@ fun TrendChart(
 
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
 
-    LaunchedEffect(points) {
+    LaunchedEffect(renderData.validPoints) {
         modelProducer.runTransaction {
-            val validPoints = points.filter { it.value != null }
             lineModel {
                 series(
-                    x = validPoints.map { it.dayOffset },
-                    y = validPoints.mapNotNull { it.value?.toDouble() },
+                    x = renderData.validPoints.map(DailyDataPoint::dayOffset),
+                    y = renderData.validPoints.map { requireNotNull(it.value).toDouble() },
                 )
             }
         }
@@ -236,36 +226,35 @@ fun TrendChart(
 
     val markerVisibilityListener =
         rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
+            if (!shouldProcessTrendMarker(currentParentScrollInProgress())) {
+                return@rememberChartMarkerVisibilityListener
+            }
+
             val dayOffset = x.toInt()
+            val nearest = renderData.pointByDayOffset[dayOffset]
             val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-            val dateText = ChartUtils.formatTooltipDate(date)
-            val nearest = points.firstOrNull { it.dayOffset == dayOffset }
-            val value = nearest?.value
             val valueText =
-                if (value != null) {
-                    val formattedValue =
-                        if (tooltipDecimalPlaces == 0) {
-                            value.roundToInt().toString()
-                        } else {
-                            String.format("%.${tooltipDecimalPlaces}f", value)
-                        }
-                    if (hideUnitInTooltip) {
-                        formattedValue
-                    } else {
-                        "$formattedValue $baselineUnit"
-                    }
-                } else {
-                    "—"
-                }
-            selectedPointOffset = Offset(canvasX, canvasY)
-            tooltipState =
+                formatTrendTooltipValue(
+                    value = nearest?.value,
+                    decimalPlaces = tooltipDecimalPlaces,
+                    hideUnit = hideUnitInTooltip,
+                    unit = baselineUnit,
+                )
+            val nextOffset = Offset(canvasX, canvasY)
+            val nextTooltip =
                 DataPointTooltipData(
                     valueText = valueText,
-                    dateText = dateText,
+                    dateText = ChartUtils.formatTooltipDate(date),
                     offset =
                         androidx.compose.ui.unit
                             .IntOffset(canvasX.toInt(), canvasY.toInt()),
                 )
+            if (shouldAssignTrendMarkerState(selectedPointOffset, nextOffset)) {
+                selectedPointOffset = nextOffset
+            }
+            if (shouldAssignTrendMarkerState(tooltipState, nextTooltip)) {
+                tooltipState = nextTooltip
+            }
         }
 
     val lineProvider = remember(line) { LineCartesianLayer.LineProvider.series(line) }
@@ -420,3 +409,22 @@ fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
         )
     }
 }
+
+internal fun formatTrendTooltipValue(
+    value: Float?,
+    decimalPlaces: Int,
+    hideUnit: Boolean,
+    unit: String,
+): String {
+    if (value == null) return "—"
+    val formatted =
+        if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
+    return if (hideUnit) formatted else "$formatted $unit"
+}
+
+internal fun shouldProcessTrendMarker(parentScrollInProgress: Boolean): Boolean = !parentScrollInProgress
+
+internal fun <T> shouldAssignTrendMarkerState(
+    current: T,
+    next: T,
+): Boolean = current != next

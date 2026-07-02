@@ -21,6 +21,9 @@
 <string name="advanced_cheng_beta_desc">Sedentary=0.11, Active=0.09, Athlete=0.07.</string>
 <string name="advanced_cheng_beta_label">Cheng Beta</string>
 <string name="advanced_hrv_baseline_label">HRV Baseline (ms)</string>
+<string name="advanced_hrr_tolerance_label">Recovery match window</string>
+<string name="advanced_hrr_tolerance_seconds">%1$d s</string>
+<string name="advanced_hrr_tolerance_tooltip">Maximum time before or after each 1, 2, and 3 minute recovery mark used to match a heart-rate sample. Increase this if your watch records heart rate infrequently after workouts. Default: 30 s.</string>
 <string name="advanced_itrimp_b_factor_desc">Sedentary=1.5, Active=2.1, Athlete=2.9.</string>
 <string name="advanced_itrimp_b_factor_label">iTRIMP B Factor</string>
 <string name="advanced_ras_scaling_label">RAS Scaling Factor</string>
@@ -86,6 +89,8 @@
 <string name="data_sources_apply_description">Save your device selection and resync your Health Connect
         data so it reflects the new selection.</string>
 <string name="data_sources_calibrating">Calibrating…</string>
+<string name="data_sources_loading">Loading…</string>
+<string name="data_sources_no_devices">No devices found</string>
 <string name="data_sources_description">Pick the source device individually for each health data
         type. "All devices" (the default) applies no source filter.</string>
 <string name="data_sources_title">Data sources</string>
@@ -221,5 +226,9 @@
 <plurals name="settings_retention_days">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="settings_retention_months">
+        <item quantity="one">%1$d month</item>
+        <item quantity="other">%1$d months</item>
     </plurals>
 </resources>

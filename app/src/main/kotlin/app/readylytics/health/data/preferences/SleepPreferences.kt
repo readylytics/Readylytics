@@ -12,11 +12,17 @@ internal class SleepPreferences
 
         private fun Int.toValidStepGoal() = coerceIn(1000, 30000)
 
-        private fun Int.toValidRetentionDays() = coerceIn(180, 1095)
+        private fun Int.toValidRetentionDays() = coerceIn(90, 1800)
 
         private fun Int.toValidConsistencyMinutes() = coerceIn(0, 90)
 
         private fun Int.toValidConsistencyDays() = coerceIn(3, 30)
+
+        private fun Int.toValidHrrTolerance() =
+            coerceIn(
+                SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS,
+                SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS,
+            )
 
         suspend fun updateGoalSleepHours(hours: Float) {
             dataStore.updateData { it.toBuilder().setGoalSleepHours(hours).build() }
@@ -57,5 +63,11 @@ internal class SleepPreferences
 
         suspend fun updateRetentionDays(days: Int) {
             dataStore.updateData { it.toBuilder().setRetentionDays(days.toValidRetentionDays()).build() }
+        }
+
+        suspend fun updateHrrToleranceSeconds(value: Int) {
+            dataStore.updateData {
+                it.toBuilder().setHrrToleranceSeconds(value.toValidHrrTolerance()).build()
+            }
         }
     }

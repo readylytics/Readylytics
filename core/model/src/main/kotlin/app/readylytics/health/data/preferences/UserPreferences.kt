@@ -43,6 +43,7 @@ data class UserPreferences(
     val consistencyThresholdMinutes: Int = SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES,
     val consistencyEvaluationDays: Int = SettingsDefaults.CONSISTENCY_EVALUATION_DAYS,
     val consistencyBaselineDays: Int = SettingsDefaults.CONSISTENCY_BASELINE_DAYS,
+    val hrrToleranceSeconds: Int = SettingsDefaults.HRR_TOLERANCE_SECONDS,
     val rasScalingFactor: Float = SettingsDefaults.RAS_SCALING_FACTOR,
     val stepGoal: Int = SettingsDefaults.STEP_GOAL,
     val retentionDaysEnabled: Boolean = SettingsDefaults.RETENTION_DAYS_ENABLED,

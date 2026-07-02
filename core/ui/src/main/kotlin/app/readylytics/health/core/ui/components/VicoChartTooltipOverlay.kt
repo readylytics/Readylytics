@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
@@ -111,6 +112,8 @@ fun rememberChartMarkerVisibilityListener(
  * A high-fidelity overlay that draws standard vertical guideline indicators and concentric circles.
  * It is passive and accepts pre-snapped coordinate bounds in the chart's canvas space.
  */
+internal const val VICO_POINT_HALO_TAG = "vico_point_halo"
+
 @Composable
 fun VicoChartTooltipOverlay(
     selectedPointOffset: Offset?,
@@ -124,29 +127,6 @@ fun VicoChartTooltipOverlay(
 ) {
     var containerWidthPx by remember { mutableFloatStateOf(0f) }
     var containerHeightPx by remember { mutableFloatStateOf(0f) }
-
-    // Breathing halo animation on selection
-    val infiniteTransition = rememberInfiniteTransition(label = "vicoHaloTransition")
-    val haloRadiusCoeff by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.6f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "vicoHaloRadiusCoeff",
-    )
-    val haloAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.4f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "vicoHaloAlpha",
-    )
 
     Box(
         modifier =
@@ -182,28 +162,63 @@ fun VicoChartTooltipOverlay(
             val primaryColor = MaterialTheme.colorScheme.primary
 
             Canvas(modifier = Modifier.fillMaxSize()) {
-                // Vertical indicator line through the chart
                 drawLine(
                     color = primaryColor.copy(alpha = 0.4f),
                     start = Offset(clampedTapX, 0f),
                     end = Offset(clampedTapX, size.height),
                     strokeWidth = 1.5.dp.toPx(),
                 )
+            }
 
-                if (tapY != null) {
-                    // Concentric highlight circles with breathing pulsing animation
-                    drawCircle(
-                        color = pulseColor.copy(alpha = haloAlpha),
-                        center = Offset(clampedTapX, tapY),
-                        radius = (8.dp.toPx() * haloRadiusCoeff),
-                    )
-                    drawCircle(
-                        color = pulseColor,
-                        center = Offset(clampedTapX, tapY),
-                        radius = 4.dp.toPx(),
-                    )
-                }
+            if (tapY != null) {
+                PulsingPointHalo(
+                    center = Offset(clampedTapX, tapY),
+                    color = pulseColor,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun PulsingPointHalo(
+    center: Offset,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "vicoHaloTransition")
+    val haloRadiusCoeff by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.6f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "vicoHaloRadiusCoeff",
+    )
+    val haloAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.4f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "vicoHaloAlpha",
+    )
+
+    Canvas(modifier = modifier.testTag(VICO_POINT_HALO_TAG)) {
+        drawCircle(
+            color = color.copy(alpha = haloAlpha),
+            center = center,
+            radius = 8.dp.toPx() * haloRadiusCoeff,
+        )
+        drawCircle(
+            color = color,
+            center = center,
+            radius = 4.dp.toPx(),
+        )
     }
 }
