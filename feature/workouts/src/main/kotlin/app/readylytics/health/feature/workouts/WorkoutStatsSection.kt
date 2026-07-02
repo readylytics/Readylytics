@@ -31,6 +31,7 @@ import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.feature.workouts.R
@@ -111,12 +112,7 @@ fun WorkoutStatsSection(
                     val strainDelta =
                         if (uiState.todayStrainIncrease != null) {
                             if (uiState.todayStrainIncrease > 0.005f) {
-                                val diffFormatted =
-                                    String.format(
-                                        java.util.Locale.US,
-                                        "%.2f",
-                                        uiState.todayStrainIncrease,
-                                    )
+                                val diffFormatted = MetricFormatter.formatStrain(uiState.todayStrainIncrease)
                                 stringResource(R.string.delta_up) + " $diffFormatted"
                             } else {
                                 stringResource(R.string.delta_no_change)
