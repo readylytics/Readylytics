@@ -76,12 +76,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-metrics
           disable-animations: true
-          script: |
-            adb logcat -c || true
-            test_status=0
-            timeout --signal=TERM --kill-after=1m 25m ./gradlew connectedDebugAndroidTest -x :benchmark:connectedDebugAndroidTest --stacktrace --console=plain || test_status=$?
-            adb logcat -d > logcat.txt || true
-            exit "$test_status"
+          script: bash scripts/run-instrumented-tests.sh
 
       - name: Upload test results
         if: always()
