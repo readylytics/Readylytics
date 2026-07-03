@@ -41,12 +41,12 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.data.preferences.Gender
+import app.readylytics.health.domain.validation.HeartRateConstants
 import app.readylytics.health.feature.settings.HeartRateZonesState
 import app.readylytics.health.feature.settings.PhysiologySettingsState
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SettingsExpandState
-import app.readylytics.health.feature.settings.common.SettingsConstants
 import kotlin.math.roundToInt
 
 @Composable
@@ -315,10 +315,10 @@ fun ZoneRow(
     maxEditable: Boolean,
 ) {
     val minValid =
-        minValue.toIntOrNull()?.let { it in SettingsConstants.MIN_HEART_RATE..SettingsConstants.MAX_HEART_RATE }
+        minValue.toIntOrNull()?.let { it in HeartRateConstants.MIN_HEART_RATE..HeartRateConstants.MAX_HEART_RATE }
             ?: false
     val maxValid =
-        maxValue.toIntOrNull()?.let { it in SettingsConstants.MIN_HEART_RATE..SettingsConstants.MAX_HEART_RATE }
+        maxValue.toIntOrNull()?.let { it in HeartRateConstants.MIN_HEART_RATE..HeartRateConstants.MAX_HEART_RATE }
             ?: false
 
     Row(
