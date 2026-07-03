@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.insights.detail.InsightConfidence
 import app.readylytics.health.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.domain.insights.detail.InsightDetailType
@@ -37,7 +38,10 @@ fun InsightDetailSheet(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                    .padding(
+                        horizontal = MaterialTheme.spacing.pageSectionGapLarge,
+                        vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                    ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -86,7 +90,7 @@ fun InsightDetailSheet(
             if (!safetyNote.isNullOrBlank()) {
                 Section(stringResource(R.string.insight_detail_safety_note), safetyNote)
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageBottom))
         }
     }
 }
