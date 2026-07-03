@@ -83,7 +83,7 @@ fun WorkoutDetailScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(MaterialTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         WorkoutMetricsDisplay(
             workout = workout,
