@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.domain.display.MetricFormatter
@@ -40,16 +41,16 @@ fun WorkoutMetricsDisplay(
     gainedStrainDisplay: String,
     ras: Float?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
         WorkoutHeader(workout)
 
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
             ) {
                 MetricCard(
                     title = stringResource(R.string.workout_metric_training_load),
@@ -71,7 +72,7 @@ fun WorkoutMetricsDisplay(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
             ) {
                 MetricCard(
                     title = stringResource(R.string.workout_metric_gained_strain),
