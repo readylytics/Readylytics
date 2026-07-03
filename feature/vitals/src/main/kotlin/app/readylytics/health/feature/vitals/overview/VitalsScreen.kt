@@ -248,12 +248,12 @@ fun VitalsScreen(
                 title = stringResource(R.string.label_physiological_trends),
                 enabled = !uiState.isLoading,
             )
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
             SingleChoiceSegmentedButtonRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = MaterialTheme.spacing.medium),
+                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 TimeRange.entries.forEachIndexed { index, range ->
                     SegmentedButton(
@@ -270,14 +270,14 @@ fun VitalsScreen(
                 }
             }
 
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
             // Chart 1: HRV Trend
             CardLoader(
                 isLoading = uiState.isLoading,
                 skeleton = {
                     SkeletonCard(
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                         height = 250.dp,
                     )
                 },
@@ -287,7 +287,7 @@ fun VitalsScreen(
                         title = stringResource(R.string.label_hrv_rmssd),
                         modifier =
                             Modifier
-                                .padding(horizontal = MaterialTheme.spacing.medium)
+                                .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                                 .graphicsLayer { },
                     ) {
                         TrendChart(
@@ -307,14 +307,14 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
             // Chart 2: Resting HR Trend
             CardLoader(
                 isLoading = uiState.isLoading,
                 skeleton = {
                     SkeletonCard(
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                         height = 250.dp,
                     )
                 },
@@ -324,7 +324,7 @@ fun VitalsScreen(
                         title = stringResource(R.string.label_resting_heart_rate),
                         modifier =
                             Modifier
-                                .padding(horizontal = MaterialTheme.spacing.medium)
+                                .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                                 .graphicsLayer { },
                     ) {
                         TrendChart(
@@ -344,14 +344,14 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
             // Chart 3: SpO2 Trend
             CardLoader(
                 isLoading = uiState.isLoading,
                 skeleton = {
                     SkeletonCard(
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                         height = 250.dp,
                     )
                 },
@@ -360,7 +360,7 @@ fun VitalsScreen(
                         title = stringResource(R.string.label_oxygen_saturation),
                         modifier =
                             Modifier
-                                .padding(horizontal = MaterialTheme.spacing.medium)
+                                .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                                 .graphicsLayer { },
                     ) {
                         TrendChart(
