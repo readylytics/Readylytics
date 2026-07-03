@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.MainActivity
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,13 +25,9 @@ class MainScaffoldTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
 
-    @Before
-    fun launchActivity() {
-        renderScaffold()
-    }
-
     @Test
     fun navigationBarItemsExist() {
+        renderScaffold()
         val dashboardNode = composeRule.onNodeWithText("Dashboard")
         waitUntilDisplayed(dashboardNode)
         dashboardNode.assertIsEnabled()
