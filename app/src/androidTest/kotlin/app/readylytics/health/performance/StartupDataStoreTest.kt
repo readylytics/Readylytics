@@ -32,9 +32,13 @@ class StartupDataStoreTest {
                 val elapsedMs = (System.nanoTime() - start) / 1_000_000
 
                 assertNotNull(prefs)
+                // Generous ceiling: this is a cold-start sanity check, not a performance
+                // regression gate (that belongs in :benchmark's macrobenchmarks). Shared CI
+                // runners see enough scheduling/IO noise on a first disk read + classloading
+                // that a tight threshold (previously 50ms) flakes on CPU contention alone.
                 assertTrue(
-                    "DataStore read should be <50ms, was ${elapsedMs}ms",
-                    elapsedMs < 50,
+                    "DataStore read should be <200ms, was ${elapsedMs}ms",
+                    elapsedMs < 200,
                 )
             }
         } finally {

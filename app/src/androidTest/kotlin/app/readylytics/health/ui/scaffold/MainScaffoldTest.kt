@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ForcedSize
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -45,11 +46,16 @@ class MainScaffoldTest {
 
     @Test
     fun navigationBarItemsExist() {
-        // Check if at least one tab exists (Dashboard is usually the first)
-        composeRule
-            .onAllNodesWithContentDescription("Dashboard", substring = true)
-            .onFirst()
-            .assertIsEnabled()
+        // Check if at least one tab exists (Dashboard is usually the first). The Health Connect
+        // permission grant flow can briefly steal window focus via
+        // InstrumentationActivityInvoker$EmptyActivity right after MainActivity resumes, so wait
+        // for the window to settle instead of asserting on the very first frame.
+        val dashboardNode =
+            composeRule
+                .onAllNodesWithContentDescription("Dashboard", substring = true)
+                .onFirst()
+        waitUntilDisplayed(dashboardNode)
+        dashboardNode.assertIsEnabled()
     }
 
     @Test
@@ -71,7 +77,7 @@ class MainScaffoldTest {
                 .onAllNodesWithContentDescription("Dashboard", substring = true)
                 .onFirst()
 
-        dashboardNode.assertIsDisplayed()
+        waitUntilDisplayed(dashboardNode)
 
         // In compact width (bottom navigation), the item should be at the bottom of the screen.
         // Screen height is 800.dp. Bottom bar height is around 80.dp.
@@ -100,7 +106,7 @@ class MainScaffoldTest {
                 .onAllNodesWithContentDescription("Dashboard", substring = true)
                 .onFirst()
 
-        dashboardNode.assertIsDisplayed()
+        waitUntilDisplayed(dashboardNode)
 
         // In medium width (navigation rail), the item should be on the left/top of the screen.
         // Rail items are usually positioned near the top of the screen.
@@ -129,7 +135,7 @@ class MainScaffoldTest {
                 .onAllNodesWithContentDescription("Dashboard", substring = true)
                 .onFirst()
 
-        dashboardNode.assertIsDisplayed()
+        waitUntilDisplayed(dashboardNode)
 
         // In expanded width, it renders rail/drawer, so the item should be on the left/top of the screen.
         // So the Y coordinate should be < 200.dp.
@@ -141,5 +147,14 @@ class MainScaffoldTest {
 
     private fun advanceFrame() {
         composeRule.mainClock.advanceTimeByFrame()
+    }
+
+    private fun waitUntilDisplayed(
+        node: SemanticsNodeInteraction,
+        timeoutMillis: Long = 10_000,
+    ) {
+        composeRule.waitUntil(timeoutMillis = timeoutMillis) {
+            runCatching { node.assertIsDisplayed() }.isSuccess
+        }
     }
 }

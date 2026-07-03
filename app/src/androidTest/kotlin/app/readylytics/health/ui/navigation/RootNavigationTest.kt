@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.navigation
 
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -51,12 +52,16 @@ class RootNavigationTest {
 
     @Test
     fun verifyTabSwitching() {
-        // Dashboard should be visible by default
-        composeRule
-            .onAllNodesWithContentDescription("Dashboard", substring = true)
-            .onFirst()
-            .assertIsDisplayed()
-            .assertIsSelected()
+        // Dashboard should be visible by default. GrantPermissionRule's Health Connect grant
+        // flow can briefly steal window focus via InstrumentationActivityInvoker$EmptyActivity
+        // right after MainActivity resumes, so wait for the window to settle instead of
+        // asserting on the very first frame.
+        val dashboardTab =
+            composeRule
+                .onAllNodesWithContentDescription("Dashboard", substring = true)
+                .onFirst()
+        waitUntilDisplayed(dashboardTab)
+        dashboardTab.assertIsSelected()
 
         listOf("Sleep", "Vitals", "Workouts", "Settings").forEach(::selectTab)
     }
@@ -69,5 +74,14 @@ class RootNavigationTest {
 
         tab.performClick()
         tab.assertIsSelected()
+    }
+
+    private fun waitUntilDisplayed(
+        node: SemanticsNodeInteraction,
+        timeoutMillis: Long = 10_000,
+    ) {
+        composeRule.waitUntil(timeoutMillis = timeoutMillis) {
+            runCatching { node.assertIsDisplayed() }.isSuccess
+        }
     }
 }
