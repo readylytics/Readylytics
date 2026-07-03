@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import java.time.Instant
 import java.time.LocalDate
@@ -75,7 +76,10 @@ fun DateSwitcher(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = 4.dp,
+                )
                 .graphicsLayer {
                     alpha = if (enabled) 1.0f else 0.5f
                 },

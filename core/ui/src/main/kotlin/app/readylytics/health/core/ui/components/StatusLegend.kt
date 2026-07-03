@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.core.designsystem.spacing
 
 data class StatusItem(
     val label: String,
@@ -56,7 +57,10 @@ fun StatusLegend(modifier: Modifier = Modifier) {
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                ),
         colors =
             CardDefaults.outlinedCardColors(
                 containerColor = colorScheme.surfaceContainerLow,
