@@ -16,6 +16,7 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +66,7 @@ class LocalBackupManagerTest {
 
         settingsRepo =
             mockk<SettingsRepository>().apply {
-                coEvery { userPreferences } returns
+                every { userPreferences } returns
                     flowOf(
                         mockk(relaxed = true) {
                             coEvery { goalSleepHours } returns 8.0f
@@ -84,7 +85,7 @@ class LocalBackupManagerTest {
 
         cardConfigRepo =
             mockk<CardConfigurationRepository>(relaxed = true).apply {
-                coEvery { dashboardCardConfigurations() } returns flowOf(emptyList())
+                every { dashboardCardConfigurations() } returns flowOf(emptyList())
             }
         auditTrailRepository = FakeAuditTrailRepository()
         manager =
@@ -308,11 +309,11 @@ class LocalBackupManagerTest {
 
             settingsRepo =
                 mockk<SettingsRepository>().apply {
-                    coEvery { userPreferences } returns
+                    every { userPreferences } returns
                         flowOf(
-                            mockk(relaxed = true) {
-                                coEvery { backupDirectoryUri } returns safUri.toString()
-                            },
+                            app.readylytics.health.data.preferences.UserPreferences(
+                                backupDirectoryUri = safUri.toString(),
+                            ),
                         )
                 }
             manager =
@@ -369,7 +370,7 @@ class LocalBackupManagerTest {
         runTest {
             settingsRepo =
                 mockk<SettingsRepository>().apply {
-                    coEvery { userPreferences } returns
+                    every { userPreferences } returns
                         flowOf(
                             app.readylytics.health.data.preferences.UserPreferences(
                                 backupPasswordHash = null,

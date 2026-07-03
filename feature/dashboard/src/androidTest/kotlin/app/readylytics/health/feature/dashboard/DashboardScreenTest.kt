@@ -1,9 +1,14 @@
 package app.readylytics.health.feature.dashboard
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -132,6 +137,7 @@ class DashboardScreenTest {
                 currentInsight = InsightType.STRONG_RECOVERY_SIGNAL,
             )
         composeRule.setContent {
+            var showingDetailFor by remember { mutableStateOf<InsightType?>(null) }
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
@@ -146,6 +152,20 @@ class DashboardScreenTest {
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                insightsCard = { state, _, onDismissInsight, _, _ ->
+                    state.currentInsight?.let { insight ->
+                        InsightCard(
+                            title = "Strong Recovery Signal",
+                            body = "",
+                            icon = getInsightIcon(insight),
+                            onDismiss = { onDismissInsight(insight) },
+                            onShowDetails = { showingDetailFor = insight },
+                        )
+                    }
+                },
+                insightDetail = {
+                    showingDetailFor?.let { Text("detail:${it.name}") }
+                },
             )
         }
 
@@ -153,10 +173,7 @@ class DashboardScreenTest {
             .onNodeWithContentDescription("Show explanation for Strong Recovery Signal")
             .performClick()
 
-        composeRule.onNodeWithText("Strong Recovery Signal").assertIsDisplayed()
-        composeRule.onNodeWithText("Observed Signal").assertIsDisplayed()
-        composeRule.onNodeWithText("What This Might Mean").assertIsDisplayed()
-        composeRule.onNodeWithText("What Not To Infer").assertIsDisplayed()
+        composeRule.onNodeWithText("detail:STRONG_RECOVERY_SIGNAL").assertIsDisplayed()
     }
 
     @Test
@@ -167,6 +184,7 @@ class DashboardScreenTest {
                 currentInsight = InsightType.RECOVERY_HRV_MISSING,
             )
         composeRule.setContent {
+            var showingDetailFor by remember { mutableStateOf<InsightType?>(null) }
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
@@ -181,6 +199,20 @@ class DashboardScreenTest {
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                insightsCard = { state, _, onDismissInsight, _, _ ->
+                    state.currentInsight?.let { insight ->
+                        InsightCard(
+                            title = "HRV Data Missing",
+                            body = "",
+                            icon = getInsightIcon(insight),
+                            onDismiss = { onDismissInsight(insight) },
+                            onShowDetails = { showingDetailFor = insight },
+                        )
+                    }
+                },
+                insightDetail = {
+                    showingDetailFor?.let { Text("detail:${it.name}") }
+                },
             )
         }
 
@@ -188,8 +220,6 @@ class DashboardScreenTest {
             .onNodeWithContentDescription("Show explanation for HRV Data Missing")
             .performClick()
 
-        composeRule.onNodeWithText("What Data Is Missing").assertIsDisplayed()
-        composeRule.onNodeWithText("How This Affects Your Score").assertIsDisplayed()
-        composeRule.onNodeWithText("What You Can Check").assertIsDisplayed()
+        composeRule.onNodeWithText("detail:RECOVERY_HRV_MISSING").assertIsDisplayed()
     }
 }

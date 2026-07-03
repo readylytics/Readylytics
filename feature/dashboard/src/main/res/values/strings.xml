@@ -2,7 +2,7 @@
     <string name="action_cancel_editing">Cancel editing</string>
     <string name="action_customize">Customize</string>
     <string name="action_done">Done</string>
-    <string name="action_done_editing">Save changes</string>
+    <string name="action_done_editing">Done editing</string>
     <string name="action_reset_to_defaults">Reset to defaults</string>
 
     <string name="card_title_acute_chronic_ratio">Acute/Chronic Ratio</string>

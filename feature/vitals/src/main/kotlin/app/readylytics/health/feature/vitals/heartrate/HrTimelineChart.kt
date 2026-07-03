@@ -151,26 +151,28 @@ private fun HrTimelineChartContent(
 ) {
     // Pulsing animation for selected point highlight
     val infiniteTransition = rememberInfiniteTransition(label = "hrPulseTransition")
-    val pulseRadiusCoeff by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.6f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "hrPulseRadiusCoeff",
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.4f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "hrPulseAlpha",
-    )
+    val pulseRadiusCoeffState =
+        infiniteTransition.animateFloat(
+            initialValue = 1.0f,
+            targetValue = 1.6f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(1200, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "hrPulseRadiusCoeff",
+        )
+    val pulseAlphaState =
+        infiniteTransition.animateFloat(
+            initialValue = 0.15f,
+            targetValue = 0.4f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(1200, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "hrPulseAlpha",
+        )
 
     val zoneColors = hrZoneColors()
     val lineColor = MaterialTheme.colorScheme.primary
@@ -482,8 +484,8 @@ private fun HrTimelineChartContent(
 
                     // Draw pulsing breathing outer glow/halo
                     drawCircle(
-                        color = lineColor.copy(alpha = pulseAlpha),
-                        radius = 8.dp.toPx() * pulseRadiusCoeff,
+                        color = lineColor.copy(alpha = pulseAlphaState.value),
+                        radius = 8.dp.toPx() * pulseRadiusCoeffState.value,
                         center = Offset(selectedX, selectedY),
                     )
 

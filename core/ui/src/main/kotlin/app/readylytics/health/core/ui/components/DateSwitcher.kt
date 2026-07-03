@@ -41,10 +41,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
@@ -204,11 +201,7 @@ private fun DatePill(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp, max = 72.dp)
-                .testTag("date_pill")
-                .clearAndSetSemantics {
-                    contentDescription = pillDescription
-                    role = Role.Button
-                },
+                .testTag("date_pill"),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium, vertical = 10.dp),

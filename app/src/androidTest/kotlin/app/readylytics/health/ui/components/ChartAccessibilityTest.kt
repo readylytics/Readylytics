@@ -5,9 +5,10 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.model.HrSample
+import app.readylytics.health.domain.model.SleepStageType
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.feature.sleep.SleepStagesChart
@@ -43,6 +44,7 @@ class ChartAccessibilityTest {
 
     @Test
     fun hrTimelineChart_accessibilitySemantics() {
+        composeTestRule.mainClock.autoAdvance = false
         val samples =
             listOf(
                 HrSample(1700000000000L, 70, 1),
@@ -76,23 +78,32 @@ class ChartAccessibilityTest {
 
         // Perform "Next point" action (should select the first point)
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: 70 bpm at "))
 
         // Perform "Next point" again (should select the second point)
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: 75 bpm at "))
 
         // Perform "Previous point" (should select the first point again)
         canvasNode.performCustomAccessibilityActionWithLabel("Previous point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: 70 bpm at "))
 
         // Perform "Clear selection"
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 
     @Test
     fun sleepStagesChart_accessibilitySemantics() {
+        // SleepStagesChart runs an infiniteRepeatable halo animation while a segment is selected.
+        // Disabling clock auto-advance prevents awaitIdle() from spinning forever on that animation;
+        // pending recompositions from state changes still settle before each assertion.
+        composeTestRule.mainClock.autoAdvance = false
+
         val session =
             SleepSessionData(
                 id = "session1",
@@ -108,8 +119,8 @@ class ChartAccessibilityTest {
             )
         val stages =
             listOf(
-                SleepStageData("deep", 1700000000000L, 1700000060000L, 1),
-                SleepStageData("light", 1700000060000L, 1700000120000L, 1),
+                SleepStageData(SleepStageType.DEEP.value, 1700000000000L, 1700000060000L, 1),
+                SleepStageData(SleepStageType.LIGHT.value, 1700000060000L, 1700000120000L, 1),
             )
         composeTestRule.setContent {
             Surface {
@@ -130,19 +141,23 @@ class ChartAccessibilityTest {
 
         // Perform "Next point" to select first segment
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: Deep stage, duration 1m, starting at "))
 
         // Perform "Next point" to select second segment
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: Light stage, duration 1m, starting at "))
 
         // Perform "Clear selection"
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 
     @Test
     fun stepsBar_accessibilitySemantics() {
+        composeTestRule.mainClock.autoAdvance = false
         composeTestRule.setContent {
             Surface {
                 StepsBar(
@@ -161,16 +176,19 @@ class ChartAccessibilityTest {
 
         // Select the steps bar
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionContains("5"))
         canvasNode.assert(stateDescriptionContains("10"))
 
         // Clear selection
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 
     @Test
     fun trimpBreakdownChart_accessibilitySemantics() {
+        composeTestRule.mainClock.autoAdvance = false
         val chartData =
             listOf(
                 0.0 to 120.0,
@@ -196,14 +214,17 @@ class ChartAccessibilityTest {
 
         // Select first point
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("Selected: 120 bpm at 0 min"))
 
         // Select next point
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("Selected: 130 bpm at 1 min"))
 
         // Clear selection
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 }

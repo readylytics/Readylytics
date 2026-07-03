@@ -4,6 +4,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 
 val releaseSigningEnvironmentVariables =
@@ -145,6 +146,12 @@ android {
         debug {
             enableUnitTestCoverage = true
         }
+        create("benchmark") {
+            initWith(buildTypes.getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -158,7 +165,6 @@ android {
         abortOnError = true
         warningsAsErrors = true
         xmlReport = true
-        baseline = file("lint-baseline.xml")
         disable += listOf("GradleDependency", "NewerVersionAvailable")
     }
 }
@@ -341,14 +347,14 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.compose.ui.test)
-    androidTestImplementation(libs.androidx.benchmark.macro)
     androidTestImplementation(libs.play.services.stats)
     androidTestImplementation(libs.androidx.test.rules)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+tasks.withType<Test>().configureEach {
+    jvmArgs("-Xshare:off")
     systemProperty("robolectric.coverage.enabled", "true")
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
