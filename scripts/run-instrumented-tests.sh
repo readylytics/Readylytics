@@ -12,10 +12,16 @@ adb shell pm disable-user --user 0 com.google.android.apps.messaging || true
 
 echo "==> Running instrumented tests..."
 
-# The emulator occasionally hits an intermittent ART/zygote race
-# (ClassNotFoundException on androidx.startup.InitializationProvider during an
-# app process restart), which stalls the UTP driver instead of failing cleanly.
 # Retry once on a timeout (exit 124) only -- a real test failure is not retried.
+# (A prior version of this comment attributed hangs to a ClassNotFoundException on
+# androidx.startup.InitializationProvider in the app.readylytics.health.test process.
+# That was root-caused: androidx.benchmark.macro (pulled into app's androidTestImplementation
+# for the unused BaselineProfileGenerator) transitively required androidx.tracing:tracing-perfetto,
+# which added an InitializationProvider <provider> to the test APK manifest whose class AGP then
+# excluded from the test APK dex as "already present in the app APK" -- fine for the shared-process
+# instrumentation, but fatal for InstrumentationActivityInvoker$EmptyActivity, which runs in the
+# test package's own separate process. Fixed by dropping the unused BaselineProfileGenerator and
+# its androidx.benchmark.macro dependency from app/build.gradle.kts.)
 max_attempts=2
 attempt=1
 test_status=0
