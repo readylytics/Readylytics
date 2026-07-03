@@ -14,5 +14,3 @@ cache/
 
 # Hook markers
 .dirty
-*.pid
-*.lock
