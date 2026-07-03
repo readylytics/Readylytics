@@ -26,8 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.readylytics.health.feature.workouts.R
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.feature.workouts.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
