@@ -85,10 +85,10 @@ class MainActivity : ComponentActivity() {
                 // trap the app (or an instrumented test) on the splash indefinitely.
                 // While the keep-condition returns true the first frame is withheld,
                 // which keeps the main looper busy and blocks Espresso idle sync.
-                val splashStartMillis = remember { System.currentTimeMillis() }
+                val splashStartMillis = remember { android.os.SystemClock.elapsedRealtime() }
                 splashScreen.setKeepOnScreenCondition {
                     prefs == null &&
-                        System.currentTimeMillis() - splashStartMillis < SPLASH_MAX_WAIT_MS
+                        android.os.SystemClock.elapsedRealtime() - splashStartMillis < SPLASH_MAX_WAIT_MS
                 }
 
                 val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
