@@ -7,5 +7,6 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:designsystem"))
     implementation(project(":core:scoring"))
 }

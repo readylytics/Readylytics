@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.model.MetricStatus
 
 @Composable
@@ -27,7 +27,11 @@ fun StatusPill(
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.smallMedium,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ),
             style = MaterialTheme.typography.labelSmall,
             color = status.onContainerColor(),
         )

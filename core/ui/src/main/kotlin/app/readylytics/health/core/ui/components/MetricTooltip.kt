@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 
 @Composable
@@ -38,7 +40,7 @@ fun MetricTooltip(
         Box(
             modifier =
                 Modifier
-                    .size(24.dp)
+                    .size(MaterialTheme.dimens.iconStandard)
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
@@ -50,7 +52,7 @@ fun MetricTooltip(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = stringResource(R.string.accessibility_more_information),
                 tint = iconTint,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
             )
         }
 
@@ -65,13 +67,13 @@ fun MetricTooltip(
                     modifier =
                         Modifier
                             .widthIn(max = 260.dp)
-                            .padding(horizontal = 4.dp),
+                            .padding(horizontal = MaterialTheme.spacing.extraSmall),
                 ) {
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.inverseOnSurface,
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
                     )
                 }
             }

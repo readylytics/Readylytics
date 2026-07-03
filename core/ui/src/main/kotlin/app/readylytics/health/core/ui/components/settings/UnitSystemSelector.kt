@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.data.preferences.UnitSystem
 
@@ -28,7 +28,7 @@ fun UnitSystemSelector(
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -38,7 +38,7 @@ fun UnitSystemSelector(
                 onClick = { onUnitSelected(UnitSystem.METRIC) },
             )
             Text(stringResource(R.string.unit_system_metric_label), style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.medium))
             RadioButton(
                 selected = selectedUnit == UnitSystem.IMPERIAL,
                 onClick = { onUnitSelected(UnitSystem.IMPERIAL) },

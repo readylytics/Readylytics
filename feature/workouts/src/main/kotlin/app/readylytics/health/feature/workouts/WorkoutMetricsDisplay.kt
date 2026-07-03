@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.domain.display.MetricFormatter
@@ -40,16 +41,16 @@ fun WorkoutMetricsDisplay(
     gainedStrainDisplay: String,
     ras: Float?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         WorkoutHeader(workout)
 
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
             ) {
                 MetricCard(
                     title = stringResource(R.string.workout_metric_training_load),
@@ -71,7 +72,7 @@ fun WorkoutMetricsDisplay(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
             ) {
                 MetricCard(
                     title = stringResource(R.string.workout_metric_gained_strain),
@@ -98,7 +99,7 @@ fun WorkoutMetricsDisplay(
 
 @Composable
 private fun WorkoutHeader(workout: WorkoutData) {
-    val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType) }
+    val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType).trim() }
 
     val (start, end, date) =
         remember(workout.startTime, workout.endTime) {
@@ -110,16 +111,23 @@ private fun WorkoutHeader(workout: WorkoutData) {
                 startInstant.format(DateFormatUtils.getWorkoutDateFormatter()),
             )
         }
+    val headerTime = remember(start, end, workout.durationMinutes) { "$start - $end (${workout.durationMinutes} min)" }
+
+    val hasHeaderContent = date.isNotBlank() && headerTime.isNotBlank()
+
+    if (!hasHeaderContent) return
+
+    val displayType = type.ifBlank { stringResource(R.string.workout_header_type_fallback) }
 
     Column {
-        Text(text = type, style = MaterialTheme.typography.headlineMedium)
+        Text(text = displayType, style = MaterialTheme.typography.headlineMedium)
         Text(
             text = date,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = "$start - $end (${workout.durationMinutes} min)",
+            text = headerTime,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -146,13 +154,13 @@ private fun ZoneBreakdownCard(workout: WorkoutData) {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(MaterialTheme.spacing.medium)) {
             Text(
                 text = stringResource(R.string.workout_zones_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
             zones.forEach { (label, minutes, color) ->
                 ZoneRow(label, minutes, totalMinutes, color)
             }
@@ -168,6 +176,7 @@ private fun ZoneRow(
     color: Color,
 ) {
     Row(
+        // 3.dp: no grid token, preserves exact gap
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -187,7 +196,7 @@ private fun ZoneRow(
             color = color,
             trackColor = color.copy(alpha = 0.15f),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
         Text(
             text = "%.0f min".format(minutes),
             modifier = Modifier.width(44.dp),

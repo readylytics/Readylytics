@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
@@ -340,7 +341,7 @@ fun TrendChart(
     }
 
     if (shouldShowBaseline) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
         BaselineLegend(
             value = baselineValue,
             unit = baselineUnit,
@@ -370,7 +371,7 @@ fun BaselineLegend(
                     .size(width = 12.dp, height = 2.dp)
                     .background(color),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
         val formattedValue =
             if (decimalPlaces == 0) {
                 value.roundToInt().toString()
@@ -401,7 +402,7 @@ fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.size(36.dp),
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
         Text(
             text = stringResource(R.string.message_no_data_available),
             style = MaterialTheme.typography.bodyMedium,

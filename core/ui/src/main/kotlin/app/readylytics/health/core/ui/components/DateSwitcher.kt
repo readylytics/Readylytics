@@ -46,6 +46,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import java.time.Instant
 import java.time.LocalDate
@@ -75,11 +77,13 @@ fun DateSwitcher(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .graphicsLayer {
+                .padding(
+                    horizontal = MaterialTheme.spacing.small,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ).graphicsLayer {
                     alpha = if (enabled) 1.0f else 0.5f
                 },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         FilledIconButton(
@@ -93,7 +97,7 @@ fun DateSwitcher(
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
                     disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 ),
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(MaterialTheme.dimens.avatarMedium),
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -118,7 +122,7 @@ fun DateSwitcher(
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
                     disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 ),
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(MaterialTheme.dimens.avatarMedium),
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -207,7 +211,7 @@ private fun DatePill(
                 },
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -235,7 +239,7 @@ private fun DatePill(
                 contentDescription = null,
                 modifier =
                     Modifier
-                        .padding(start = 8.dp)
+                        .padding(start = MaterialTheme.spacing.small)
                         .size(22.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

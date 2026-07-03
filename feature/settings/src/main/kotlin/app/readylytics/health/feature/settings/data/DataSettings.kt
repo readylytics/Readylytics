@@ -37,11 +37,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
@@ -53,7 +54,6 @@ import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SyncSettingsState
 import app.readylytics.health.feature.settings.UIState
-import app.readylytics.health.feature.settings.common.SettingsConstants
 
 @Composable
 fun SyncSettingsSection(
@@ -135,8 +135,8 @@ private fun BackgroundSyncIntervalItem(
         optionLabel = { intervalLabels[it] ?: it.name },
         modifier =
             Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                horizontal = MaterialTheme.spacing.medium,
+                vertical = MaterialTheme.spacing.extraSmall,
             ),
     )
 }
@@ -183,8 +183,8 @@ fun DataManagementSection(
             Column(
                 modifier =
                     Modifier.padding(
-                        horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                        vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
                     ),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -218,7 +218,7 @@ fun DataManagementSection(
                     text = stringResource(R.string.settings_retention_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER_SMALL),
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
                 )
             }
         }
@@ -226,8 +226,8 @@ fun DataManagementSection(
         Column(
             modifier =
                 Modifier.padding(
-                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                    vertical = SettingsConstants.VERTICAL_SPACER_LARGE,
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.smallMedium,
                 ),
         ) {
             Button(
@@ -237,10 +237,10 @@ fun DataManagementSection(
             ) {
                 if (isResyncing) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
-                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                 }
                 Text(stringResource(R.string.resync_button_label))
             }
@@ -248,7 +248,7 @@ fun DataManagementSection(
                 text = stringResource(R.string.resync_button_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER_SMALL),
+                modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
             )
         }
     }
@@ -320,8 +320,8 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
                 Modifier.padding(
-                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                    vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.extraSmall,
                 ),
         )
 
@@ -354,8 +354,8 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                             Modifier
                                 .fillMaxWidth()
                                 .padding(
-                                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                                    vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                                    horizontal = MaterialTheme.spacing.medium,
+                                    vertical = MaterialTheme.spacing.extraSmall,
                                 ),
                         enabled = hasDevices || selected != null,
                     )
@@ -365,8 +365,8 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
         Column(
             modifier =
                 Modifier.padding(
-                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                    vertical = SettingsConstants.VERTICAL_SPACER_LARGE,
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.smallMedium,
                 ),
         ) {
             Button(
@@ -376,10 +376,10 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
             ) {
                 if (uiState.isResyncing) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
-                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                 }
                 Text(stringResource(R.string.data_sources_apply_button))
             }
@@ -387,7 +387,7 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                 text = stringResource(R.string.data_sources_apply_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER_SMALL),
+                modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
             )
         }
     }
@@ -417,10 +417,10 @@ private fun DeviceChangeNoticeDialog(onAcknowledged: (dismissPermanently: Boolea
                                 value = dontShowAgain,
                                 role = Role.Checkbox,
                                 onValueChange = { dontShowAgain = it },
-                            ).padding(top = SettingsConstants.VERTICAL_SPACER),
+                            ).padding(top = MaterialTheme.spacing.small),
                 ) {
                     Checkbox(checked = dontShowAgain, onCheckedChange = null)
-                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER_SMALL))
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.extraSmall))
                     Text(
                         text = stringResource(R.string.device_change_notice_dont_show_again),
                         style = MaterialTheme.typography.bodyMedium,

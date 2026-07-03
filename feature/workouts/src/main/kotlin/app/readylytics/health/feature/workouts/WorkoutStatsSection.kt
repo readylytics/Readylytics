@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -88,8 +89,11 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.small,
+                            ),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
@@ -101,8 +105,11 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.small,
+                            ),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val strainRatio = uiState.latestMetrics?.strainRatioRaw
@@ -168,7 +175,7 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },
             content = {
@@ -176,11 +183,11 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                             .graphicsLayer { },
                     shape = MaterialTheme.shapes.large,
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -192,7 +199,7 @@ fun WorkoutStatsSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 uiState.latestMetrics?.rasRounded?.let { total ->
@@ -207,7 +214,7 @@ fun WorkoutStatsSection(
                                 )
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
                         RasWeeklyBar(
                             dailyBreakdown = uiState.rasDailyBreakdown,
                             totalRas = uiState.latestMetrics?.rasRounded?.toFloat() ?: 0f,
@@ -218,17 +225,17 @@ fun WorkoutStatsSection(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         SectionHeader(
             title = stringResource(R.string.workout_stats_acwr_title),
             enabled = !uiState.isLoading,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         SingleChoiceSegmentedButtonRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         ) {
             TimeRange.entries.forEachIndexed { index, range ->
                 SegmentedButton(
@@ -245,7 +252,7 @@ fun WorkoutStatsSection(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         CardLoader(
             isLoading = uiState.isLoading,
@@ -255,7 +262,7 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },
             content = {
@@ -269,12 +276,12 @@ fun WorkoutStatsSection(
                     parentScrollInProgress = parentScrollInProgress,
                     modifier =
                         Modifier
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                             .graphicsLayer { },
                 )
             },
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.large))
     }
 }

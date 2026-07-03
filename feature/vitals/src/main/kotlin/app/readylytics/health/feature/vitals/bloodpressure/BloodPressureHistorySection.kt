@@ -2,13 +2,14 @@ package app.readylytics.health.feature.vitals.bloodpressure
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.FitDashboardTheme
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.SectionHeader
@@ -30,7 +31,11 @@ fun BloodPressureHistorySection(
         items.forEach { item ->
             BloodPressureHistoryCard(
                 item = item,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
         }
     }
@@ -81,7 +86,11 @@ private fun BloodPressureHistoryCardPreview() {
                         diastolic = 75,
                         status = BloodPressureStatus.Optimal,
                     ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
             BloodPressureHistoryCard(
                 item =
@@ -91,7 +100,11 @@ private fun BloodPressureHistoryCardPreview() {
                         diastolic = 78,
                         status = BloodPressureStatus.Neutral,
                     ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
             BloodPressureHistoryCard(
                 item =
@@ -101,7 +114,11 @@ private fun BloodPressureHistoryCardPreview() {
                         diastolic = 86,
                         status = BloodPressureStatus.HypertensionStage1,
                     ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
             BloodPressureHistoryCard(
                 item =
@@ -111,7 +128,11 @@ private fun BloodPressureHistoryCardPreview() {
                         diastolic = 96,
                         status = BloodPressureStatus.HypertensionStage2,
                     ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
         }
     }

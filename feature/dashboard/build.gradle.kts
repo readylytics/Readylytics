@@ -5,6 +5,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:designsystem"))
     implementation(project(":core:scoring"))
     implementation(libs.androidx.compose.material.icons.extended)
 }

@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -67,13 +68,13 @@ fun TrimpBreakdownChart(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(MaterialTheme.spacing.medium)) {
             Text(
                 text = stringResource(app.readylytics.health.core.ui.R.string.heart_rate_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
             if (chartData.isEmpty()) {
                 Text(stringResource(R.string.message_no_hr_data))
             } else {

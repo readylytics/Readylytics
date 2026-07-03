@@ -22,7 +22,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun StepsCard(
@@ -43,7 +44,7 @@ fun StepsCard(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
             Row(
                 modifier =
                     Modifier
@@ -58,17 +59,17 @@ fun StepsCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
             LinearProgressIndicator(
                 progress = {
                     val count = stepCount ?: 0
                     val max = stepGoal / 0.75f
                     (count.toFloat() / max.coerceAtLeast(1f)).coerceIn(0f, 1f)
                 },
-                modifier = Modifier.fillMaxWidth().height(28.dp),
+                modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.miniBarHeight),
                 strokeCap = StrokeCap.Round,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
@@ -79,7 +80,7 @@ fun StepsCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.extraSmall))
                 Text(
                     text = "/ $stepGoal",
                     style = MaterialTheme.typography.labelSmall,

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
+import app.readylytics.health.core.designsystem.spacing
 
 data class DataPointTooltipData(
     val valueText: String,
@@ -137,14 +138,18 @@ fun DataPointTooltip(
                     modifier =
                         modifier
                             .widthIn(min = 70.dp, max = 150.dp)
-                            .padding(horizontal = 8.dp),
+                            .padding(horizontal = MaterialTheme.spacing.small),
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier =
                             Modifier
-                                .padding(horizontal = 8.dp, vertical = 6.dp)
-                                .padding(bottom = 6.dp), // extra padding to clear caret
+                                .padding(
+                                    horizontal = MaterialTheme.spacing.small,
+                                    vertical = MaterialTheme.spacing.extraSmallMedium,
+                                )
+                                // extra padding to clear caret
+                                .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
                     ) {
                         Text(
                             text = data.valueText,

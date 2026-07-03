@@ -5,5 +5,6 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.health.connect.client)
+    implementation(project(":core:designsystem"))
     testImplementation(kotlin("test"))
 }

@@ -25,7 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
@@ -51,7 +51,11 @@ fun WorkoutListSection(
             WorkoutHistoryItem(
                 item = item,
                 onClick = { onWorkoutClick(item.workout.id) },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.pageHorizontal,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
         }
 
@@ -60,7 +64,10 @@ fun WorkoutListSection(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp, horizontal = 16.dp),
+                        .padding(
+                            vertical = MaterialTheme.spacing.pageSectionGap,
+                            horizontal = MaterialTheme.spacing.pageHorizontal,
+                        ),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -73,7 +80,7 @@ fun WorkoutListSection(
                         contentDescription = stringResource(R.string.workout_history_button_prev),
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.medium))
                 Text(
                     text =
                         stringResource(
@@ -84,7 +91,7 @@ fun WorkoutListSection(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.medium))
                 OutlinedIconButton(
                     onClick = onNextPage,
                     enabled = currentPage < totalPages,
@@ -174,7 +181,11 @@ private fun IntensityBadge(
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.smallMedium,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ),
             style = MaterialTheme.typography.labelSmall,
             color = status.onContainerColor(),
         )

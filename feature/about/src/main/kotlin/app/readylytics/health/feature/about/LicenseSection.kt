@@ -3,11 +3,12 @@ package app.readylytics.health.feature.about
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.about.R
 
 @Composable
@@ -22,7 +23,7 @@ fun LicenseSection() {
         BulletItem(stringResource(R.string.about_bullet_sleep_hrv))
         BulletItem(stringResource(R.string.about_bullet_exercise_hr))
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         BodyText(stringResource(R.string.about_reads_only))
         BodyText(stringResource(R.string.about_missing_data))
         BulletItem(stringResource(R.string.about_missing_data_partial))
@@ -37,7 +38,7 @@ fun LicenseSection() {
         BulletItem(stringResource(R.string.about_phase_maturing))
         BulletItem(stringResource(R.string.about_phase_mature))
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         BodyText(stringResource(R.string.about_tracker_frequency))
 
         SectionDivider()
