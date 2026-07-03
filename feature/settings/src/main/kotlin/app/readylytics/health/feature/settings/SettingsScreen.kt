@@ -47,6 +47,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
 import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
@@ -258,7 +259,7 @@ fun SettingsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = MaterialTheme.spacing.pageSectionGapSmall),
             ) {
                 // Search
                 OutlinedTextField(
@@ -267,7 +268,10 @@ fun SettingsScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                            ),
                     placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
                     leadingIcon = {
                         Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.accessibility_search))

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
+import app.readylytics.health.core.designsystem.spacing
 
 /**
  * Premium recovery screen displayed when the database encryption key is lost or corrupted.
@@ -81,7 +82,7 @@ fun DatabaseRecoveryScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
+                    .padding(MaterialTheme.spacing.pageSectionGapLarge)
                     .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -90,7 +91,7 @@ fun DatabaseRecoveryScreen(
                 imageVector = Icons.Default.Warning,
                 contentDescription = stringResource(R.string.accessibility_security_alert),
                 tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = MaterialTheme.spacing.pageSectionGap),
             )
 
             Text(
@@ -110,7 +111,7 @@ fun DatabaseRecoveryScreen(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
             if (errorMessage != null) {
                 Card(
@@ -119,13 +120,13 @@ fun DatabaseRecoveryScreen(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                         ),
                     shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.pageSectionGap),
                 ) {
                     Text(
                         text = errorMessage!!,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(MaterialTheme.spacing.pageSectionGap),
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -138,14 +139,14 @@ fun DatabaseRecoveryScreen(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                         ),
                     shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.pageSectionGap),
                 ) {
                     Text(
                         text = successMessage!!,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(MaterialTheme.spacing.pageSectionGap),
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -154,7 +155,7 @@ fun DatabaseRecoveryScreen(
             if (isRestoring) {
                 CircularProgressIndicator(
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(MaterialTheme.spacing.pageSectionGap),
                 )
                 Text(
                     text = stringResource(R.string.recovery_restoring_message),
@@ -171,7 +172,7 @@ fun DatabaseRecoveryScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(MaterialTheme.spacing.large),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
@@ -187,7 +188,7 @@ fun DatabaseRecoveryScreen(
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
                         Button(
                             onClick = { filePickerLauncher.launch("application/zip") },
                             modifier = Modifier.fillMaxWidth(),
@@ -197,7 +198,7 @@ fun DatabaseRecoveryScreen(
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
                 Card(
                     colors =
@@ -208,7 +209,7 @@ fun DatabaseRecoveryScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(MaterialTheme.spacing.large),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
@@ -224,7 +225,7 @@ fun DatabaseRecoveryScreen(
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
                         OutlinedButton(
                             onClick = onResetDatabase,
                             colors =
