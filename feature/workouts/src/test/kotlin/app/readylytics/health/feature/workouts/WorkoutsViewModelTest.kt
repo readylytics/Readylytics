@@ -378,7 +378,7 @@ class WorkoutsViewModelTest {
             // Default strainLoadSourceMode is WORKOUT_ONLY: the daily delta must equal the sum
             // of the already-rounded per-workout gains shown in History, not an independent
             // whole-day ATL/CTL recompute.
-            val today = LocalDate.of(2026, 7, 2)
+            val today = LocalDate.now()
             val zoneId = java.time.ZoneId.of("UTC")
             val todayMidnight = today.atStartOfDay(zoneId)
             val workout1 =
