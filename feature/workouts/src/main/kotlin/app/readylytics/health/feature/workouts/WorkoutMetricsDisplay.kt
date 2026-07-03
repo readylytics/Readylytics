@@ -99,7 +99,7 @@ fun WorkoutMetricsDisplay(
 
 @Composable
 private fun WorkoutHeader(workout: WorkoutData) {
-    val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType) }
+    val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType).trim() }
 
     val (start, end, date) =
         remember(workout.startTime, workout.endTime) {
@@ -111,6 +111,14 @@ private fun WorkoutHeader(workout: WorkoutData) {
                 startInstant.format(DateFormatUtils.getWorkoutDateFormatter()),
             )
         }
+    val headerTime = remember(start, end, workout.durationMinutes) { "$start - $end (${workout.durationMinutes} min)" }
+
+    val hasHeaderContent =
+        type.isNotBlank() &&
+            date.isNotBlank() &&
+            headerTime.isNotBlank()
+
+    if (!hasHeaderContent) return
 
     Column {
         Text(text = type, style = MaterialTheme.typography.headlineMedium)
@@ -120,7 +128,7 @@ private fun WorkoutHeader(workout: WorkoutData) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = "$start - $end (${workout.durationMinutes} min)",
+            text = headerTime,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
