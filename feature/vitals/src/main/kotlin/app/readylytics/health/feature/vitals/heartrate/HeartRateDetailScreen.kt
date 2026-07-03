@@ -105,7 +105,7 @@ fun HeartRateDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(vertical = MaterialTheme.spacing.pageBottom)
+                    .padding(vertical = MaterialTheme.spacing.pageBottom),
         ) {
             if (uiState.isLoading) {
                 Row(

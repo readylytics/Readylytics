@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
@@ -49,7 +50,6 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.feature.onboarding.R
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreR
-import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun OnboardingScreen(

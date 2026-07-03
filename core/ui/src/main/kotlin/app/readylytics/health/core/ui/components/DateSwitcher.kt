@@ -79,8 +79,7 @@ fun DateSwitcher(
                 .padding(
                     horizontal = MaterialTheme.spacing.pageHorizontal,
                     vertical = 4.dp,
-                )
-                .graphicsLayer {
+                ).graphicsLayer {
                     alpha = if (enabled) 1.0f else 0.5f
                 },
         horizontalArrangement = Arrangement.spacedBy(8.dp),
