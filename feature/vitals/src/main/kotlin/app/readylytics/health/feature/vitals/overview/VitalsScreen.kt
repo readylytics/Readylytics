@@ -132,7 +132,7 @@ fun VitalsScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(
-                                    horizontal = MaterialTheme.spacing.medium,
+                                    horizontal = MaterialTheme.spacing.pageHorizontal,
                                     vertical = MaterialTheme.spacing.small,
                                 ),
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
@@ -148,7 +148,7 @@ fun VitalsScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(
-                                    horizontal = MaterialTheme.spacing.medium,
+                                    horizontal = MaterialTheme.spacing.pageHorizontal,
                                     vertical = MaterialTheme.spacing.small,
                                 ),
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),

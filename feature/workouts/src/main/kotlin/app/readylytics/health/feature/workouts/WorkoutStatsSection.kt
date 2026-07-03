@@ -43,7 +43,6 @@ import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 
-
 internal enum class RasSummaryValueTextStyle {
     TITLE,
 }
@@ -271,7 +270,7 @@ fun WorkoutStatsSection(
                     parentScrollInProgress = parentScrollInProgress,
                     modifier =
                         Modifier
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
                             .graphicsLayer { },
                 )
             },
