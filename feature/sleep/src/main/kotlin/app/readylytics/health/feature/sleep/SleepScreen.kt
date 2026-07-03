@@ -236,7 +236,7 @@ fun SleepScreen(
                 )
             }
         }
-        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         if (uiState.isLoading) {
             SleepTrendSkeleton(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal))
