@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.R
+import app.readylytics.health.core.designsystem.spacing
 
 /**
  * Shown after Health Connect permissions are granted and device discovery has completed.
@@ -45,7 +46,7 @@ fun DeviceSelectionScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
+                    .padding(MaterialTheme.spacing.pageSectionGapLarge),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -54,7 +55,7 @@ fun DeviceSelectionScreen(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
             Text(
                 text = stringResource(R.string.device_selection_description),
@@ -63,7 +64,7 @@ fun DeviceSelectionScreen(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
             if (devices.isEmpty()) {
                 Column(
@@ -85,8 +86,8 @@ fun DeviceSelectionScreen(
                         Modifier
                             .weight(1f, fill = true)
                             .fillMaxWidth(),
-                    contentPadding = PaddingValues(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = MaterialTheme.spacing.extraSmall),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
                 ) {
                     items(
                         items = devices,
@@ -100,7 +101,7 @@ fun DeviceSelectionScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
             TextButton(
                 onClick = { onDeviceSelected(null) },
@@ -109,7 +110,7 @@ fun DeviceSelectionScreen(
                 Text(stringResource(R.string.device_selection_use_all))
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
             OutlinedButton(
                 onClick = { onDeviceSelected(devices.firstOrNull()) },
@@ -145,7 +146,7 @@ private fun DeviceCard(
         Text(
             text = name,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.pageHorizontal),
         )
     }
 }

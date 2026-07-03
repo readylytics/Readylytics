@@ -49,6 +49,7 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.feature.onboarding.R
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreR
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun OnboardingScreen(
@@ -100,7 +101,7 @@ private fun WelcomeScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(MaterialTheme.spacing.pageSectionGapLarge)
                 .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -112,7 +113,7 @@ private fun WelcomeScreen(
             tint = MaterialTheme.colorScheme.primary,
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         Text(
             text = stringResource(R.string.onboarding_welcome_title),
@@ -120,7 +121,7 @@ private fun WelcomeScreen(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         Text(
             text = stringResource(R.string.onboarding_welcome_subtitle),
@@ -129,14 +130,14 @@ private fun WelcomeScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
 
         FeatureItem(
             icon = { Icon(Icons.Filled.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = stringResource(R.string.onboarding_feature_sleep_title),
             description = stringResource(R.string.onboarding_feature_sleep_desc),
         )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
         FeatureItem(
             icon = {
                 Icon(
@@ -148,7 +149,7 @@ private fun WelcomeScreen(
             title = stringResource(R.string.onboarding_feature_hrv_title),
             description = stringResource(R.string.onboarding_feature_hrv_desc),
         )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
         FeatureItem(
             icon = {
                 Icon(
@@ -161,7 +162,7 @@ private fun WelcomeScreen(
             description = stringResource(R.string.onboarding_feature_training_desc),
         )
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
 
         Text(
             text = stringResource(R.string.onboarding_privacy_note),
@@ -170,7 +171,7 @@ private fun WelcomeScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
 
         Button(
             onClick = onNext,
@@ -179,7 +180,7 @@ private fun WelcomeScreen(
             Text(stringResource(R.string.onboarding_get_started))
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         TextButton(
             onClick = onRestoreFromBackupClick,
@@ -198,7 +199,7 @@ fun FinishingSetupScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center,
     ) {
         CircularProgressIndicator()
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
         Text(
             text = stringResource(R.string.onboarding_finishing_setup),
             style = MaterialTheme.typography.bodyMedium,
@@ -216,7 +217,7 @@ fun PermissionsRequiredScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(MaterialTheme.spacing.pageSectionGapLarge)
                 .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -227,7 +228,7 @@ fun PermissionsRequiredScreen(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         Text(
             text = stringResource(R.string.onboarding_permissions_required_message),
@@ -236,7 +237,7 @@ fun PermissionsRequiredScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         Button(
             onClick = onGrantPermissionsClick,
@@ -245,7 +246,7 @@ fun PermissionsRequiredScreen(
             Text(stringResource(R.string.onboarding_grant_permissions_retry))
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
 
         TextButton(onClick = onOpenSettingsClick) {
             Text(stringResource(R.string.onboarding_open_hc_settings))
@@ -292,7 +293,7 @@ private fun ProfileSetupScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(MaterialTheme.spacing.pageSectionGapLarge)
                 .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -303,7 +304,7 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         Text(
             text = stringResource(R.string.onboarding_profile_subtitle),
@@ -311,21 +312,21 @@ private fun ProfileSetupScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.large))
 
         Text(
             text = stringResource(R.string.onboarding_activity_profile_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         PhysiologyProfilePicker(
             selectedProfile = physiologyProfile,
             onProfileSelected = { physiologyProfile = it },
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         BirthdayDatePickerField(
             birthDate = birthDate,
@@ -335,7 +336,7 @@ private fun ProfileSetupScreen(
             onFieldClick = { showBirthdatePicker = true },
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         Text(
             text = stringResource(CoreR.string.label_gender),
@@ -349,15 +350,15 @@ private fun ProfileSetupScreen(
             // onClick uses English domain key; label uses translated string resource
             RadioButton(selected = gender == "Male", onClick = { gender = "Male" })
             Text(stringResource(CoreR.string.gender_male), style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.pageSectionGapSmall))
             RadioButton(selected = gender == "Female", onClick = { gender = "Female" })
             Text(stringResource(CoreR.string.gender_female), style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.pageSectionGapSmall))
             RadioButton(selected = gender == "Other", onClick = { gender = "Other" })
             Text(stringResource(CoreR.string.gender_other), style = MaterialTheme.typography.bodyMedium)
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         HeightInputField(
             heightCm = heightCm,
@@ -367,14 +368,14 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         Text(
             text = stringResource(R.string.onboarding_appearance_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         SettingsToggleItem(
             label = stringResource(CoreR.string.onboarding_dynamic_color_label),
@@ -384,14 +385,14 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         Text(
             text = stringResource(R.string.onboarding_units_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         UnitSystemSelector(
             selectedUnit = unitSystem,
@@ -399,21 +400,21 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         Text(
             text = stringResource(R.string.onboarding_hc_permissions_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
         Text(
             text = stringResource(R.string.onboarding_hc_permissions_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         val isInputValid =
             !birthDate.isAfter(LocalDate.now()) &&
@@ -437,7 +438,7 @@ private fun ProfileSetupScreen(
             Text(stringResource(R.string.onboarding_grant_access))
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
 
         TextButton(onClick = onOpenSettingsClick) {
             Text(stringResource(R.string.onboarding_open_hc_settings))

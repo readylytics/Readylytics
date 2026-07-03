@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun PrivacyRationaleContent(
@@ -24,7 +25,7 @@ fun PrivacyRationaleContent(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(MaterialTheme.spacing.pageSectionGapLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -32,13 +33,13 @@ fun PrivacyRationaleContent(
             text = stringResource(R.string.privacy_rationale_title),
             style = MaterialTheme.typography.headlineMedium,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
         Text(
             text = stringResource(R.string.privacy_rationale_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
         Button(onClick = onBackClick) {
             Text(stringResource(app.readylytics.health.core.ui.R.string.back))
         }

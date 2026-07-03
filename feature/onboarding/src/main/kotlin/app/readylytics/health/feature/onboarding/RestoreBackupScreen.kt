@@ -49,6 +49,7 @@ import androidx.documentfile.provider.DocumentFile
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.feature.onboarding.R
 import app.readylytics.health.core.ui.R as CoreR
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun RestoreBackupScreen(
@@ -81,7 +82,7 @@ fun RestoreBackupScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(MaterialTheme.spacing.pageSectionGapLarge)
                 .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
     ) {
@@ -89,14 +90,14 @@ fun RestoreBackupScreen(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreR.string.back))
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         Text(
             text = stringResource(R.string.onboarding_restore_title),
             style = MaterialTheme.typography.headlineSmall,
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         Text(
             text = stringResource(R.string.onboarding_restore_subtitle),
@@ -104,7 +105,7 @@ fun RestoreBackupScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         OutlinedButton(
             onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
@@ -112,11 +113,11 @@ fun RestoreBackupScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Filled.Description, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.pageSectionGapSmall))
             Text(selectedFileName ?: stringResource(R.string.onboarding_restore_select_file_button))
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         OutlinedTextField(
             value = password,
@@ -158,7 +159,7 @@ fun RestoreBackupScreen(
         )
 
         if (resolvedError != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = resolvedError,
@@ -172,7 +173,7 @@ fun RestoreBackupScreen(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         Button(
             onClick = { selectedUri?.let { onRestoreClick(it, password) } },
