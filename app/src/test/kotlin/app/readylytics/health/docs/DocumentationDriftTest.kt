@@ -49,7 +49,6 @@ class DocumentationDriftTest {
             ".claude/CLAUDE.md",
             "GEMINI.md",
             "AGENTS.md",
-            ".gemini/instructions.md",
         )
     private val configFactory = ScoringConfigFactory()
 
