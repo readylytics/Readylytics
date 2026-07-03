@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 
 @Composable
@@ -65,13 +66,13 @@ fun MetricTooltip(
                     modifier =
                         Modifier
                             .widthIn(max = 260.dp)
-                            .padding(horizontal = 4.dp),
+                            .padding(horizontal = MaterialTheme.spacing.extraSmall),
                 ) {
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.inverseOnSurface,
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
                     )
                 }
             }

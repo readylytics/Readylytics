@@ -133,7 +133,7 @@ private fun WorkoutListSectionSkeleton() {
         repeat(3) {
             SkeletonCard(
                 height = 80.dp,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.small),
             )
         }
     }

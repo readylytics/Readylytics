@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.feature.settings.R
 
@@ -42,13 +42,21 @@ fun LoadSourcesSection(
             text = stringResource(R.string.load_sources_required_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ),
         )
         Text(
             text = stringResource(R.string.load_sources_zone_caveat),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ),
         )
     }
 }
@@ -73,7 +81,7 @@ private fun LoadSourcePicker(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
     ) {
         LoadSourceMode.entries.forEachIndexed { index, mode ->
             SegmentedButton(
@@ -102,6 +110,10 @@ private fun LoadSourcePicker(
         text = stringResource(helpRes),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.pageHorizontal,
+                vertical = MaterialTheme.spacing.small,
+            ),
     )
 }

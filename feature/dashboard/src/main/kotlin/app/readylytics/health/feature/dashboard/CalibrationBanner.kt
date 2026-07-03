@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun CalibrationBanner(modifier: Modifier = Modifier) {
@@ -25,8 +25,12 @@ fun CalibrationBanner(modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.smallMedium,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(

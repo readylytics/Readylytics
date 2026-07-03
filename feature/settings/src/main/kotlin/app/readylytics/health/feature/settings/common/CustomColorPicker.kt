@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.designsystem.toHexCode
 import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.feature.settings.R
@@ -94,7 +95,7 @@ fun CustomColorPicker(
                     .alpha(contentAlpha),
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         if (showPresets) {
             // Presets Row
@@ -105,7 +106,7 @@ fun CustomColorPicker(
                         .horizontalScroll(rememberScrollState())
                         .selectableGroup()
                         .alpha(contentAlpha),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
             ) {
                 FallbackThemeColor.entries.forEach { option ->
                     val optionColor = Color(option.seedColor)
@@ -154,14 +155,14 @@ fun CustomColorPicker(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
         }
 
         // Hex Input Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
         ) {
             var textState by remember(selectedColor) {
                 mutableStateOf(selectedColor.toHexCode())

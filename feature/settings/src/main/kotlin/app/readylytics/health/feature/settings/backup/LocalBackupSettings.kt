@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.data.preferences.BackupSchedule
@@ -50,7 +51,6 @@ import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.feature.settings.LocalBackupState
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
-import app.readylytics.health.feature.settings.common.SettingsConstants
 import java.text.DateFormat
 import java.util.Date
 
@@ -78,25 +78,25 @@ fun LocalBackupSection(
     Column(
         modifier =
             Modifier.padding(
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                vertical = MaterialTheme.spacing.extraSmall,
             ),
     ) {
         Text(
             text = stringResource(R.string.backup_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
         )
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         BackupDirectoryItem(uiState = uiState, onEvent = onEvent)
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         BackupPasswordSection(uiState = uiState, onEvent = onEvent)
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         Button(
             onClick = { onEvent(SettingsEvent.CreateLocalBackup) },
@@ -104,7 +104,7 @@ fun LocalBackupSection(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+                    .padding(horizontal = MaterialTheme.spacing.medium),
         ) {
             if (uiState.isBackingUp) {
                 CircularProgressIndicator(
@@ -118,34 +118,34 @@ fun LocalBackupSection(
         }
 
         if (uiState.isReencrypting) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Text(
                     text = stringResource(R.string.backup_reencrypting_message),
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = MaterialTheme.spacing.small),
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         BackupScheduleItem(uiState = uiState, onEvent = onEvent)
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         Text(
             text = stringResource(R.string.backup_section_available),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
         )
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
 
         if (uiState.availableBackups.isEmpty()) {
             Text(
@@ -154,8 +154,8 @@ fun LocalBackupSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier =
                     Modifier.padding(
-                        horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                        vertical = 8.dp,
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.small,
                     ),
             )
         } else {
@@ -169,8 +169,8 @@ fun LocalBackupSection(
                 HorizontalDivider(
                     modifier =
                         Modifier.padding(
-                            horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                            vertical = 4.dp,
+                            horizontal = MaterialTheme.spacing.medium,
+                            vertical = MaterialTheme.spacing.extraSmall,
                         ),
                     thickness = 0.5.dp,
                 )
@@ -178,10 +178,10 @@ fun LocalBackupSection(
         }
 
         if (resolvedBackupError != null) {
-            Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
             ) {
                 Text(
                     text = resolvedBackupError,
@@ -206,17 +206,17 @@ private fun BackupPasswordSection(
     var showTestPassword by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
     ) {
         Text(
             text = stringResource(R.string.backup_security_section),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
         )
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -241,7 +241,7 @@ private fun BackupPasswordSection(
             }
         }
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         OutlinedTextField(
             value = testPassword,
@@ -320,7 +320,7 @@ private fun SetPasswordDialog(
                 Text(
                     stringResource(R.string.dialog_set_password_body),
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 16.dp),
+                    modifier = Modifier.padding(bottom = MaterialTheme.spacing.medium),
                 )
                 OutlinedTextField(
                     value = password,
@@ -353,7 +353,7 @@ private fun SetPasswordDialog(
                     },
                     singleLine = true,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                 OutlinedTextField(
                     value = repeatPassword,
                     onValueChange = { repeatPassword = it },
@@ -375,7 +375,7 @@ private fun SetPasswordDialog(
                         text = stringResource(R.string.error_passwords_do_not_match),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
                     )
                 }
             }
@@ -511,7 +511,7 @@ private fun BackupScheduleItem(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+                .padding(horizontal = MaterialTheme.spacing.medium),
     )
 }
 

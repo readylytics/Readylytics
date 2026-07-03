@@ -34,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
 import app.readylytics.health.core.designsystem.spacing
 
@@ -102,7 +101,7 @@ fun DatabaseRecoveryScreen(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
 
             Text(
                 text = stringResource(R.string.recovery_description),
@@ -181,7 +180,7 @@ fun DatabaseRecoveryScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(MaterialTheme.spacing.small))
                         Text(
                             text = stringResource(R.string.recovery_recommended_body),
                             style = MaterialTheme.typography.bodySmall,
@@ -218,7 +217,7 @@ fun DatabaseRecoveryScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error,
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(MaterialTheme.spacing.small))
                         Text(
                             text = stringResource(R.string.recovery_danger_body),
                             style = MaterialTheme.typography.bodySmall,

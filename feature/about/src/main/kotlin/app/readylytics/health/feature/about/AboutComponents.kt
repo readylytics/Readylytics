@@ -16,7 +16,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 
 @Composable
@@ -78,7 +77,7 @@ fun BulletItem(text: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.pageHorizontal, vertical = 2.dp),
+                .padding(horizontal = MaterialTheme.spacing.pageHorizontal, vertical = MaterialTheme.spacing.hairline),
     ) {
         Text(
             text = "•",

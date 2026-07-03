@@ -23,9 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.feature.settings.R
-import app.readylytics.health.feature.settings.common.SettingsConstants
 import kotlin.math.roundToInt
 
 @Composable
@@ -53,7 +53,7 @@ fun ThresholdSettingsSection(
             valueRange = 0.8f..1.0f,
             description = stringResource(R.string.threshold_hrv_warning_desc),
         )
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         var rhrOptimal by remember(uiState.rhrOptimalThreshold) { mutableFloatStateOf(uiState.rhrOptimalThreshold) }
         ThresholdSliderItem(
@@ -122,8 +122,8 @@ fun ActivitySettingsSection(
     Column(
         modifier =
             Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                horizontal = MaterialTheme.spacing.medium,
+                vertical = MaterialTheme.spacing.extraSmall,
             ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -160,8 +160,8 @@ fun SleepSettingsSection(
         Column(
             modifier =
                 Modifier.padding(
-                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                    vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.extraSmall,
                 ),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -202,8 +202,8 @@ fun ThresholdSliderItem(
     Column(
         modifier =
             Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                horizontal = MaterialTheme.spacing.medium,
+                vertical = MaterialTheme.spacing.extraSmall,
             ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

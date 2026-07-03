@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.components.ChartDefaults
@@ -344,7 +345,7 @@ fun BloodPressureTrendChart(
         }
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -355,14 +356,14 @@ fun BloodPressureTrendChart(
                     .size(width = 12.dp, height = 2.dp)
                     .background(systolicColor),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
         Text(
             text = stringResource(R.string.label_systolic_ref),
             style = MaterialTheme.typography.labelSmall,
             color = systolicColor,
         )
 
-        Spacer(Modifier.width(24.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.large))
 
         Box(
             modifier =
@@ -370,7 +371,7 @@ fun BloodPressureTrendChart(
                     .size(width = 12.dp, height = 2.dp)
                     .background(diastolicColor),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
         Text(
             text = stringResource(R.string.label_diastolic_ref),
             style = MaterialTheme.typography.labelSmall,

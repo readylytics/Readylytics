@@ -78,11 +78,11 @@ fun DateSwitcher(
                 .fillMaxWidth()
                 .padding(
                     horizontal = MaterialTheme.spacing.pageHorizontal,
-                    vertical = 4.dp,
+                    vertical = MaterialTheme.spacing.extraSmall,
                 ).graphicsLayer {
                     alpha = if (enabled) 1.0f else 0.5f
                 },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         FilledIconButton(
@@ -210,7 +210,7 @@ private fun DatePill(
                 },
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -238,7 +238,7 @@ private fun DatePill(
                 contentDescription = null,
                 modifier =
                     Modifier
-                        .padding(start = 8.dp)
+                        .padding(start = MaterialTheme.spacing.small)
                         .size(22.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

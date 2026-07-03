@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.workouts.R
 
 /**
@@ -38,7 +39,7 @@ fun AcwrChartLegends(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // ── Bar legend ──────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ fun AcwrChartLegends(
                             shape = MaterialTheme.shapes.extraSmall,
                         ),
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
             Text(
                 text = stringResource(R.string.acwr_legend_daily_trimp),
                 style = MaterialTheme.typography.labelSmall,
@@ -68,7 +69,7 @@ fun AcwrChartLegends(
                         .size(width = 16.dp, height = 2.dp)
                         .background(ratioColor),
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
             Text(
                 text = stringResource(R.string.acwr_legend_strain_ratio),
                 style = MaterialTheme.typography.labelSmall,

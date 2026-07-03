@@ -155,13 +155,13 @@ private fun ZoneBreakdownCard(workout: WorkoutData) {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(MaterialTheme.spacing.medium)) {
             Text(
                 text = stringResource(R.string.workout_zones_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
             zones.forEach { (label, minutes, color) ->
                 ZoneRow(label, minutes, totalMinutes, color)
             }
@@ -177,6 +177,7 @@ private fun ZoneRow(
     color: Color,
 ) {
     Row(
+        // 3.dp: no grid token, preserves exact gap
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -196,7 +197,7 @@ private fun ZoneRow(
             color = color,
             trackColor = color.copy(alpha = 0.15f),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
         Text(
             text = "%.0f min".format(minutes),
             modifier = Modifier.width(44.dp),

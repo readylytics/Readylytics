@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.model.MetricStatus
 import kotlin.math.cos
 import kotlin.math.sin
@@ -166,7 +167,10 @@ private fun GaugeCardContent(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.smallMedium,
+                ),
     ) {
         // Header Row: Title and Tooltip
         Row(
@@ -209,7 +213,7 @@ private fun GaugeCardContent(
                     Modifier
                         .width(120.dp)
                         .height(60.dp)
-                        .padding(bottom = 6.dp),
+                        .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
             ) {
                 val strokeWidthPx = 8.dp.toPx()
                 val dotRadiusPx = 5.dp.toPx()
@@ -304,7 +308,7 @@ private fun GaugeCardContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.hairline))
 
         // Footer: Baseline Chip
         Box(
@@ -323,7 +327,11 @@ private fun GaugeCardContent(
                     Text(
                         text = deltaText,
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        modifier =
+                            Modifier.padding(
+                                horizontal = MaterialTheme.spacing.small,
+                                vertical = MaterialTheme.spacing.hairline,
+                            ),
                         textAlign = TextAlign.Center,
                     )
                 }

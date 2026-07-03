@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.feature.sleep.R
 
@@ -127,7 +128,7 @@ fun SleepArchitectureBar(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -163,7 +164,7 @@ internal fun CalibrationBar(
                 cornerRadius = CornerRadius(size.height / 2f),
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
         Text(
             text = stringResource(R.string.message_sleep_no_data_calibrating),
             style = MaterialTheme.typography.labelSmall,
@@ -183,7 +184,7 @@ private fun StageLegendItem(
         Canvas(modifier = Modifier.size(8.dp)) {
             drawCircle(color = color)
         }
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.extraSmall))
         Column {
             Text(
                 text = label,

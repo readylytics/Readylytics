@@ -13,7 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun TrendCard(
@@ -29,7 +29,7 @@ fun TrendCard(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = title,
@@ -37,7 +37,7 @@ fun TrendCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
             content()
         }
     }

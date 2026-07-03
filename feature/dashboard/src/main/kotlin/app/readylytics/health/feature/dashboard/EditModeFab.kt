@@ -19,7 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 /**
  * Reusable FAB for edit mode toggle that animates in/out based on edit state.
@@ -48,7 +48,7 @@ fun EditModeFab(
         modifier = modifier,
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
             horizontalAlignment = Alignment.End,
         ) {
             SmallFloatingActionButton(

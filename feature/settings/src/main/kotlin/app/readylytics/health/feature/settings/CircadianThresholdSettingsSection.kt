@@ -19,10 +19,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.feature.settings.R
-import app.readylytics.health.feature.settings.common.SettingsConstants
 
 private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)
 
@@ -43,7 +43,7 @@ fun CircadianThresholdSettingsSection(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(SettingsConstants.VERTICAL_SPACER),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         if (isLoading) {
             LinearProgressIndicator(
@@ -58,7 +58,10 @@ fun CircadianThresholdSettingsSection(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING, vertical = 4.dp),
+                        .padding(
+                            horizontal = MaterialTheme.spacing.medium,
+                            vertical = MaterialTheme.spacing.extraSmall,
+                        ),
                 colors =
                     CardDefaults.elevatedCardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -68,8 +71,8 @@ fun CircadianThresholdSettingsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            .padding(MaterialTheme.spacing.smallMedium),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -86,7 +89,11 @@ fun CircadianThresholdSettingsSection(
                     )
                     TextButton(
                         onClick = onErrorDismissed,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = MaterialTheme.spacing.small,
+                                vertical = MaterialTheme.spacing.extraSmall,
+                            ),
                         modifier = Modifier.heightIn(min = 32.dp),
                     ) {
                         Text(stringResource(R.string.action_dismiss), style = MaterialTheme.typography.labelMedium)
@@ -108,7 +115,7 @@ fun CircadianThresholdSettingsSection(
                 thresholdValue = profileDefault.toFloat()
                 onOverrideChanged(null)
             },
-            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
         )
     }
 }
@@ -123,14 +130,14 @@ private fun ThresholdSlider(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         // Profile default label
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = MaterialTheme.spacing.extraSmall),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -141,7 +148,7 @@ private fun ThresholdSlider(
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
             ) {
                 Text(
                     stringResource(R.string.circadian_profile_default, profileDefault),
@@ -185,7 +192,7 @@ private fun ThresholdSlider(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = MaterialTheme.spacing.extraSmall),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -216,7 +223,7 @@ private fun ThresholdSlider(
             },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
         )
     }
 }
@@ -226,8 +233,8 @@ private fun ThresholdSlider(
 fun CircadianThresholdSettingsSectionPreview() {
     MaterialTheme {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
         ) {
             Text(stringResource(R.string.circadian_preview_active_label), style = MaterialTheme.typography.titleSmall)
             CircadianThresholdSettingsSection(

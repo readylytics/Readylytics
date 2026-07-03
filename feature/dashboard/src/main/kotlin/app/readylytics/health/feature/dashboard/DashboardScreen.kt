@@ -322,6 +322,7 @@ fun DashboardScreen(
                         start = MaterialTheme.spacing.pageHorizontal,
                         end = MaterialTheme.spacing.pageHorizontal,
                         top = MaterialTheme.spacing.pageSectionGap,
+                        // 88.dp: no grid token, clears the edit-mode FAB height exactly
                         bottom = if (uiState.isManagingCards) 88.dp else MaterialTheme.spacing.pageBottom,
                     ),
             snackbar = { data ->

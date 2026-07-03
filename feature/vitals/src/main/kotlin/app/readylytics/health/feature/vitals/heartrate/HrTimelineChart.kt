@@ -545,6 +545,7 @@ fun HrSparkline(
     val range = (maxBpm - minBpm).coerceAtLeast(10)
 
     Canvas(modifier = modifier.padding(vertical = 2.dp)) {
+        // 2dp: off-grid, no matching spacing token
         val path = Path()
         hourlySamples.forEachIndexed { i, (hour, bpm) ->
             val x = hour / 23f * size.width

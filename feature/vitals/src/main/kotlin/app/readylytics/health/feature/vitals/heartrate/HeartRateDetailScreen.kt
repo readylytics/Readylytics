@@ -163,7 +163,7 @@ fun HeartRateDetailScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(MaterialTheme.spacing.smallMedium),
                     )
                 }
             }
@@ -180,7 +180,7 @@ fun HeartRateDetailScreen(
                         .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 shape = MaterialTheme.shapes.large,
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
                     val zoneDefs =
                         listOf(
                             Triple(
@@ -269,7 +269,7 @@ private fun HrStatCard(
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -277,7 +277,7 @@ private fun HrStatCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.hairline))
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleSmall,
@@ -308,7 +308,7 @@ private fun ZoneRow(
                     .size(12.dp)
                     .background(color = zoneColor, shape = CircleShape),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodySmall)
             Text(

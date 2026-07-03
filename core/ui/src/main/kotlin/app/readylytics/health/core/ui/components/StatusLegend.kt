@@ -73,7 +73,7 @@ fun StatusLegend(modifier: Modifier = Modifier) {
                     Modifier
                         .fillMaxWidth()
                         .clickable { isExpanded = !isExpanded }
-                        .padding(12.dp),
+                        .padding(MaterialTheme.spacing.smallMedium),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -82,7 +82,7 @@ fun StatusLegend(modifier: Modifier = Modifier) {
                     modifier = Modifier.size(18.dp),
                     tint = colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MaterialTheme.spacing.small))
                 Text(
                     text = "Status Guide",
                     style = MaterialTheme.typography.titleSmall,
@@ -101,14 +101,14 @@ fun StatusLegend(modifier: Modifier = Modifier) {
                 HorizontalDivider(color = colorScheme.outlineVariant)
                 // Using a simpler layout to avoid FlowRow binary compatibility issues in some environments
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 ) {
                     val chunks = items.chunked(2)
                     chunks.forEach { chunk ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
                         ) {
                             chunk.forEach { item ->
                                 Box(modifier = Modifier.weight(1f)) {
@@ -132,7 +132,7 @@ private fun LegendItemRow(item: StatusItem) {
                     .size(10.dp)
                     .background(item.color, CircleShape),
         )
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
         Text(
             text = item.label,
             style = MaterialTheme.typography.labelMedium,

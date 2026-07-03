@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.insights.detail.InsightConfidence
 import app.readylytics.health.domain.insights.detail.InsightDetailContent
@@ -42,7 +41,7 @@ fun InsightDetailSheet(
                         horizontal = MaterialTheme.spacing.pageSectionGapLarge,
                         vertical = MaterialTheme.spacing.pageSectionGapSmall,
                     ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
         ) {
             Text(
                 text = content.title,
@@ -100,7 +99,7 @@ private fun Section(
     title: String,
     body: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -115,7 +114,7 @@ private fun ListSection(
     title: String,
     values: List<String>,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmallMedium)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,

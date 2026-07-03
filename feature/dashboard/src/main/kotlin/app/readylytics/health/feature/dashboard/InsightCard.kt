@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun InsightCard(
@@ -48,7 +49,7 @@ fun InsightCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.smallMedium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -57,7 +58,7 @@ fun InsightCard(
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.smallMedium))
             Column(
                 modifier = Modifier.weight(1f),
             ) {
@@ -130,7 +131,7 @@ fun InsightRerunCard(
                 Modifier
                     .fillMaxWidth()
                     .height(48.dp)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = MaterialTheme.spacing.medium),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -140,7 +141,7 @@ fun InsightRerunCard(
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,

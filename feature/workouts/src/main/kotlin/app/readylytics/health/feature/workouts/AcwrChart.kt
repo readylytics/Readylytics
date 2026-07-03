@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.components.ChartDefaults
@@ -69,13 +70,13 @@ internal fun AcwrChartCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
             Text(
                 text = stringResource(R.string.acwr_training_load),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
             if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {
                 EmptyAcwrChartPlaceholder()
             } else {
@@ -415,7 +416,7 @@ private fun AcwrChart(
     }
 
     // ── Legends (below chart) ─────────────────────────────────────────────────
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(MaterialTheme.spacing.small))
     AcwrChartLegends(
         trimpColor = trimpColor,
         ratioColor = ratioColor,

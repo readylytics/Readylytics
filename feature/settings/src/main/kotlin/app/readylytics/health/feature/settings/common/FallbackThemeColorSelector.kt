@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.feature.settings.R
 
@@ -58,10 +59,10 @@ fun FallbackThemeColorSelector(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
+                    .padding(top = MaterialTheme.spacing.small)
                     .horizontalScroll(rememberScrollState())
                     .selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
         ) {
             FallbackThemeColor.entries.forEach { option ->
                 val isSelected = option == selectedColor
