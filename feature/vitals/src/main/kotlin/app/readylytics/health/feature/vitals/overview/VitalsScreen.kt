@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -24,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
@@ -105,8 +107,8 @@ fun VitalsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 16.dp),
+                        .padding(horizontal = MaterialTheme.spacing.medium)
+                        .padding(top = MaterialTheme.spacing.medium),
             )
         }
 
@@ -116,7 +118,10 @@ fun VitalsScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(scrollState)
-                    .padding(top = 8.dp, bottom = 16.dp),
+                    .padding(
+                        top = MaterialTheme.spacing.small,
+                        bottom = MaterialTheme.spacing.medium,
+                    ),
         ) {
             // Twin gauges side-by-side
             CardLoader(
@@ -126,8 +131,11 @@ fun VitalsScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                .padding(
+                                    horizontal = MaterialTheme.spacing.medium,
+                                    vertical = MaterialTheme.spacing.small,
+                                ),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ScoreDialSkeleton(modifier = Modifier.weight(1f))
@@ -139,8 +147,11 @@ fun VitalsScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                .padding(
+                                    horizontal = MaterialTheme.spacing.medium,
+                                    vertical = MaterialTheme.spacing.small,
+                                ),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val summary = uiState.latestSummary
@@ -237,12 +248,12 @@ fun VitalsScreen(
                 title = stringResource(R.string.label_physiological_trends),
                 enabled = !uiState.isLoading,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
             SingleChoiceSegmentedButtonRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = MaterialTheme.spacing.medium),
             ) {
                 TimeRange.entries.forEachIndexed { index, range ->
                     SegmentedButton(
@@ -259,14 +270,14 @@ fun VitalsScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
 
             // Chart 1: HRV Trend
             CardLoader(
                 isLoading = uiState.isLoading,
                 skeleton = {
                     SkeletonCard(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
                         height = 250.dp,
                     )
                 },
@@ -274,7 +285,10 @@ fun VitalsScreen(
                     val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
                     TrendCard(
                         title = stringResource(R.string.label_hrv_rmssd),
-                        modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
+                        modifier =
+                            Modifier
+                                .padding(horizontal = MaterialTheme.spacing.medium)
+                                .graphicsLayer { },
                     ) {
                         TrendChart(
                             points = chartSeries.hrv,
@@ -293,14 +307,14 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
 
             // Chart 2: Resting HR Trend
             CardLoader(
                 isLoading = uiState.isLoading,
                 skeleton = {
                     SkeletonCard(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
                         height = 250.dp,
                     )
                 },
@@ -308,7 +322,10 @@ fun VitalsScreen(
                     val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
                     TrendCard(
                         title = stringResource(R.string.label_resting_heart_rate),
-                        modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
+                        modifier =
+                            Modifier
+                                .padding(horizontal = MaterialTheme.spacing.medium)
+                                .graphicsLayer { },
                     ) {
                         TrendChart(
                             points = chartSeries.rhr,
@@ -327,21 +344,24 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
 
             // Chart 3: SpO2 Trend
             CardLoader(
                 isLoading = uiState.isLoading,
                 skeleton = {
                     SkeletonCard(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
                         height = 250.dp,
                     )
                 },
                 content = {
                     TrendCard(
                         title = stringResource(R.string.label_oxygen_saturation),
-                        modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
+                        modifier =
+                            Modifier
+                                .padding(horizontal = MaterialTheme.spacing.medium)
+                                .graphicsLayer { },
                     ) {
                         TrendChart(
                             points = chartSeries.spo2,
@@ -365,7 +385,7 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.large))
 
             StatusLegend()
         }
