@@ -29,7 +29,10 @@ fun SectionHeader(text: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                ),
     )
 }
 
@@ -43,7 +46,10 @@ fun SubHeader(text: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.extraSmall),
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ),
     )
 }
 
@@ -59,7 +65,10 @@ fun BodyText(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.extraSmall),
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ),
     )
 }
 
@@ -69,13 +78,13 @@ fun BulletItem(text: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium, vertical = 2.dp),
+                .padding(horizontal = MaterialTheme.spacing.pageHorizontal, vertical = 2.dp),
     ) {
         Text(
             text = "•",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(end = MaterialTheme.spacing.small),
+            modifier = Modifier.padding(end = MaterialTheme.spacing.pageSectionGapSmall),
         )
         Text(
             text = parseMarkdown(text),
@@ -92,18 +101,25 @@ fun HighlightBox(content: @Composable () -> Unit) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                ),
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)) { content() }
+        Column(modifier = Modifier.padding(vertical = MaterialTheme.spacing.pageSectionGapSmall)) { content() }
     }
 }
 
 @Composable
 fun SectionDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.pageHorizontal,
+                vertical = MaterialTheme.spacing.pageSectionGapSmall,
+            ),
         color = MaterialTheme.colorScheme.outlineVariant,
     )
 }
