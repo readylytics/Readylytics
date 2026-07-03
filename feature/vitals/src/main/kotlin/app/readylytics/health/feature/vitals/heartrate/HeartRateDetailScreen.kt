@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.MetricCardSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.SectionHeader
@@ -104,15 +105,15 @@ fun HeartRateDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = MaterialTheme.spacing.pageBottom)
         ) {
             if (uiState.isLoading) {
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
                 ) {
                     MetricCardSkeleton(modifier = Modifier.weight(1f), height = 72.dp)
                     MetricCardSkeleton(modifier = Modifier.weight(1f), height = 72.dp)
@@ -123,8 +124,8 @@ fun HeartRateDetailScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
                 ) {
                     HrStatCard(stringResource(CoreUiR.string.label_min), "${uiState.minBpm} bpm", Modifier.weight(1f))
                     HrStatCard(stringResource(CoreUiR.string.label_max), "${uiState.maxBpm} bpm", Modifier.weight(1f))
@@ -132,22 +133,22 @@ fun HeartRateDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
 
             SectionHeader(title = stringResource(CoreUiR.string.label_timeline))
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
 
             if (uiState.isLoading) {
                 SkeletonCard(
                     height = 300.dp,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             } else {
                 Card(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                     shape = MaterialTheme.shapes.large,
                 ) {
                     HrTimelineChart(
@@ -167,16 +168,16 @@ fun HeartRateDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
 
             SectionHeader(title = stringResource(CoreUiR.string.label_zone_breakdown))
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
 
             Card(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 shape = MaterialTheme.shapes.large,
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -239,7 +240,7 @@ fun HeartRateDetailScreen(
                     } else {
                         zoneDefs.forEachIndexed { index, (zone, label, range) ->
                             if (index > 0) {
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(MaterialTheme.spacing.small))
                             }
                             ZoneRow(
                                 zoneNumber = zone,
@@ -252,7 +253,7 @@ fun HeartRateDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
         }
     }
 }

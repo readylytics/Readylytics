@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
@@ -51,7 +52,11 @@ fun WorkoutListSection(
             WorkoutHistoryItem(
                 item = item,
                 onClick = { onWorkoutClick(item.workout.id) },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.pageHorizontal,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
         }
 
@@ -60,7 +65,10 @@ fun WorkoutListSection(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp, horizontal = 16.dp),
+                        .padding(
+                            vertical = MaterialTheme.spacing.pageSectionGap,
+                            horizontal = MaterialTheme.spacing.pageHorizontal,
+                        ),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {

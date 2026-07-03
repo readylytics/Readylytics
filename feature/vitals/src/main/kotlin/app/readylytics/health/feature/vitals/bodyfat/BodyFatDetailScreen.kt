@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -28,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
@@ -101,14 +103,17 @@ fun BodyFatDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = MaterialTheme.spacing.pageBottom),
         ) {
             if (uiState.isLoading) {
                 ScoreDialSkeleton(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                            ),
                 )
             } else if (uiState.optimalRangeMax > 0f) {
                 val genderStringRes =
@@ -123,7 +128,10 @@ fun BodyFatDetailScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                            ),
                     title = stringResource(R.string.label_body_fat),
                     score = uiState.latestBodyFat,
                     displayText = uiState.bodyFatDisplay ?: "—",
@@ -143,12 +151,12 @@ fun BodyFatDetailScreen(
             }
 
             SectionHeader(title = stringResource(R.string.label_trends))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
             SingleChoiceSegmentedButtonRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 TimeRange.entries.forEachIndexed { index, range ->
                     SegmentedButton(
@@ -165,17 +173,17 @@ fun BodyFatDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
 
             if (uiState.isLoading) {
                 SkeletonCard(
                     height = 250.dp,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             } else {
                 TrendCard(
                     title = stringResource(R.string.label_body_fat_trend),
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 ) {
                     TrendChart(
                         points = uiState.dailyBodyFat,
@@ -199,7 +207,7 @@ fun BodyFatDetailScreen(
                 BodyFatHistorySection(items = uiState.historyItems)
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageBottom))
         }
     }
 }
