@@ -4,8 +4,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
@@ -29,9 +28,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class RootNavigationTest {
-    // Grant the Health Connect read permissions the app requires so the launch routes
-    // to the main tab shell instead of the onboarding permission flow. Without these,
-    // a fresh emulator reports them missing and MainActivity never shows the tab bar.
     @get:Rule
     val permissionRule: GrantPermissionRule =
         GrantPermissionRule.grant(
@@ -87,26 +83,15 @@ class RootNavigationTest {
 
     @Test
     fun verifyTabSwitching() {
-        // Dashboard should be visible by default. GrantPermissionRule's Health Connect grant
-        // flow can briefly steal window focus via InstrumentationActivityInvoker$EmptyActivity
-        // right after MainActivity resumes, so wait for the window to settle instead of
-        // asserting on the very first frame.
-        val dashboardTab =
-            composeRule
-                .onAllNodesWithContentDescription("Dashboard", substring = true)
-                .onFirst()
+        val dashboardTab = composeRule.onNodeWithText("Dashboard")
         waitUntilDisplayed(dashboardTab)
         dashboardTab.assertIsSelected()
 
         listOf("Sleep", "Vitals", "Workouts", "Settings").forEach(::selectTab)
     }
 
-    private fun selectTab(contentDescription: String) {
-        val tab =
-            composeRule
-                .onAllNodesWithContentDescription(contentDescription, substring = true)
-                .onFirst()
-
+    private fun selectTab(label: String) {
+        val tab = composeRule.onNodeWithText(label)
         tab.performClick()
         tab.assertIsSelected()
     }
