@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
@@ -171,14 +172,18 @@ fun DashboardScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
-            contentPadding = PaddingValues(vertical = 16.dp),
+            contentPadding =
+                PaddingValues(
+                    top = MaterialTheme.spacing.pageTop,
+                    bottom = MaterialTheme.spacing.pageBottom,
+                ),
         ) {
             item(key = "date_switcher") {
                 Column(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 ) {
                     DateSwitcher(
                         selectedDate = uiState.selectedDate,
@@ -193,7 +198,7 @@ fun DashboardScreen(
             }
 
             item(key = "date_switcher_spacer") {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
             }
 
             if (uiState.isCalibrating) {
@@ -202,7 +207,10 @@ fun DashboardScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                .padding(
+                                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                                    vertical = MaterialTheme.spacing.extraSmall,
+                                ),
                     )
                 }
             }
@@ -213,7 +221,7 @@ fun DashboardScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 48.dp),
+                                .padding(vertical = MaterialTheme.spacing.doubleExtraLarge),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -264,12 +272,12 @@ fun DashboardScreen(
                             onCardVisibilityChanged(cardId, false)
                         },
                         onCardReorder = onReorderCards,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                     )
                 }
             }
 
-            item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
+            item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap)) }
 
             item(key = "status_legend") {
                 StatusLegend()
@@ -281,7 +289,7 @@ fun DashboardScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp),
+                                .padding(vertical = MaterialTheme.spacing.pageSectionGap),
                         contentAlignment = Alignment.Center,
                     ) {
                         FilledTonalButton(
@@ -311,10 +319,10 @@ fun DashboardScreen(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 16.dp,
-                        bottom = if (uiState.isManagingCards) 88.dp else 16.dp,
+                        start = MaterialTheme.spacing.pageHorizontal,
+                        end = MaterialTheme.spacing.pageHorizontal,
+                        top = MaterialTheme.spacing.pageSectionGap,
+                        bottom = if (uiState.isManagingCards) 88.dp else MaterialTheme.spacing.pageBottom,
                     ),
             snackbar = { data ->
                 Snackbar(
@@ -329,7 +337,7 @@ fun DashboardScreen(
             isVisible = uiState.isManagingCards,
             onDoneClick = onToggleCardManagement,
             onCancelClick = onCancelCardManagement,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
 
         insightDetail?.invoke()

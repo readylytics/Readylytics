@@ -24,7 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 
@@ -47,13 +47,17 @@ fun CardManagementBottomSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = MaterialTheme.spacing.pageSectionGap),
         ) {
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        .padding(
+                            start = MaterialTheme.spacing.pageHorizontal,
+                            end = MaterialTheme.spacing.pageHorizontal,
+                            bottom = MaterialTheme.spacing.pageSectionGap,
+                        ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -85,7 +89,7 @@ fun CardManagementBottomSheet(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = MaterialTheme.spacing.extraSmall),
                     )
                 }
             }
@@ -95,7 +99,10 @@ fun CardManagementBottomSheet(
                 modifier =
                     Modifier
                         .align(Alignment.End)
-                        .padding(end = 16.dp, top = 16.dp),
+                        .padding(
+                            end = MaterialTheme.spacing.pageHorizontal,
+                            top = MaterialTheme.spacing.pageSectionGap,
+                        ),
             ) {
                 Text(stringResource(R.string.action_done))
             }
