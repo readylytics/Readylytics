@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.designsystem.toHexCode
 import app.readylytics.health.data.preferences.FallbackThemeColor
@@ -115,7 +116,7 @@ fun CustomColorPicker(
                     Box(
                         modifier =
                             Modifier
-                                .size(48.dp)
+                                .size(MaterialTheme.dimens.avatarMedium)
                                 .selectable(
                                     selected = isSelected && enabled,
                                     onClick = {
@@ -133,11 +134,11 @@ fun CustomColorPicker(
                         Box(
                             modifier =
                                 Modifier
-                                    .size(40.dp)
+                                    .size(MaterialTheme.dimens.avatarSmall)
                                     .clip(CircleShape)
                                     .background(optionColor)
                                     .border(
-                                        width = if (isSelected) 3.dp else 0.dp,
+                                        width = if (isSelected) MaterialTheme.dimens.borderSelected else 0.dp,
                                         color = MaterialTheme.colorScheme.outline,
                                         shape = CircleShape,
                                     ),
@@ -201,7 +202,7 @@ fun CustomColorPicker(
                         .clip(MaterialTheme.shapes.medium)
                         .background(selectedColor.copy(alpha = selectedColor.alpha * swatchBackgroundAlpha))
                         .border(
-                            width = 1.dp,
+                            width = MaterialTheme.dimens.borderThin,
                             color = MaterialTheme.colorScheme.outline.copy(alpha = swatchBorderAlpha),
                             shape = MaterialTheme.shapes.medium,
                         ),

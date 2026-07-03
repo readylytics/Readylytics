@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.feature.settings.R
@@ -70,7 +71,7 @@ fun FallbackThemeColorSelector(
                 Box(
                     modifier =
                         Modifier
-                            .size(48.dp)
+                            .size(MaterialTheme.dimens.avatarMedium)
                             .selectable(
                                 selected = isSelected,
                                 onClick = { onColorSelected(option) },
@@ -83,11 +84,11 @@ fun FallbackThemeColorSelector(
                     Box(
                         modifier =
                             Modifier
-                                .size(40.dp)
+                                .size(MaterialTheme.dimens.avatarSmall)
                                 .clip(CircleShape)
                                 .background(Color(option.seedColor))
                                 .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
+                                    width = if (isSelected) MaterialTheme.dimens.borderSelected else 0.dp,
                                     color = MaterialTheme.colorScheme.outline,
                                     shape = CircleShape,
                                 ),

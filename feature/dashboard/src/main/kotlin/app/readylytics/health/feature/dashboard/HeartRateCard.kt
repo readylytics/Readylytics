@@ -20,7 +20,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
@@ -38,7 +38,7 @@ fun HeartRateCard(
         onClick = onClick,
         modifier =
             modifier
-                .height(156.dp)
+                .height(MaterialTheme.dimens.cardHeight)
                 .semantics { role = Role.Button },
         shape = MaterialTheme.shapes.large,
         colors =

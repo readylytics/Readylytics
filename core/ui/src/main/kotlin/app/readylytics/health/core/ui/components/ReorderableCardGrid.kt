@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.components.reorder.DragController
@@ -343,7 +344,7 @@ private fun RenderCardItem(
         if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
             @Composable {
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(156.dp),
+                    modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.cardHeight),
                     contentAlignment = Alignment.Center,
                 ) { cardContent() }
             }

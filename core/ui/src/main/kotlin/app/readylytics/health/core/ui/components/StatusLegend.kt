@@ -31,8 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 
 data class StatusItem(
@@ -79,7 +79,7 @@ fun StatusLegend(modifier: Modifier = Modifier) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                     tint = colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.width(MaterialTheme.spacing.small))
@@ -129,7 +129,7 @@ private fun LegendItemRow(item: StatusItem) {
         Box(
             modifier =
                 Modifier
-                    .size(10.dp)
+                    .size(MaterialTheme.dimens.indicatorDot)
                     .background(item.color, CircleShape),
         )
         Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))

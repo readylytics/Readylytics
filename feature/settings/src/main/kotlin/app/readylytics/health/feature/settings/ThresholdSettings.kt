@@ -22,7 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.feature.settings.R
@@ -218,7 +218,7 @@ fun ThresholdSliderItem(
             if (onReset != null) {
                 IconButton(
                     onClick = onReset,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(MaterialTheme.dimens.iconContainerLarge),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,

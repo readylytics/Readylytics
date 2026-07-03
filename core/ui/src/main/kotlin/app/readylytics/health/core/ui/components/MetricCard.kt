@@ -20,7 +20,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.model.MetricStatus
 
@@ -44,7 +44,7 @@ fun MetricCard(
         enabled = onClick != null,
         modifier =
             modifier
-                .height(156.dp)
+                .height(MaterialTheme.dimens.cardHeight)
                 .let {
                     if (onClick != null) it.semantics { role = Role.Button } else it
                 },

@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.feature.onboarding.R
@@ -183,7 +184,7 @@ fun RestoreBackupScreen(
             if (isBusy) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
+                    strokeWidth = MaterialTheme.dimens.progressStrokeWidth,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {

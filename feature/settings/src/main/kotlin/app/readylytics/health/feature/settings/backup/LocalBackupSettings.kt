@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
@@ -108,8 +109,8 @@ fun LocalBackupSection(
         ) {
             if (uiState.isBackingUp) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(MaterialTheme.dimens.iconSmall),
+                    strokeWidth = MaterialTheme.dimens.progressStrokeWidth,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
@@ -123,7 +124,10 @@ fun LocalBackupSection(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(MaterialTheme.dimens.iconSmall),
+                    strokeWidth = MaterialTheme.dimens.progressStrokeWidth,
+                )
                 Text(
                     text = stringResource(R.string.backup_reencrypting_message),
                     style = MaterialTheme.typography.bodySmall,
@@ -460,7 +464,7 @@ private fun BackupFileItem(
             Icon(
                 imageVector = Icons.Default.History,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(MaterialTheme.dimens.iconStandard),
                 tint = MaterialTheme.colorScheme.primary,
             )
         },

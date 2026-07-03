@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
@@ -79,7 +80,7 @@ fun CircadianThresholdSettingsSection(
                         imageVector = Icons.Default.Error,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                     )
                     Text(
                         error,
@@ -157,7 +158,7 @@ private fun ThresholdSlider(
                 )
                 IconButton(
                     onClick = onReset,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(MaterialTheme.dimens.iconContainerLarge),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,

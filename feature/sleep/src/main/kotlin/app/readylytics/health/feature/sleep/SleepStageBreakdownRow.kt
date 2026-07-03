@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.sleep.R
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -41,7 +41,7 @@ fun SleepStageBreakdownRow(
         Box(
             modifier =
                 Modifier
-                    .size(8.dp)
+                    .size(MaterialTheme.dimens.indicatorDot)
                     .background(color = color, shape = CircleShape),
         )
 

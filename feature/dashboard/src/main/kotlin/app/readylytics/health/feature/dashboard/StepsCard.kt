@@ -22,7 +22,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 
 @Composable
@@ -66,7 +66,7 @@ fun StepsCard(
                     val max = stepGoal / 0.75f
                     (count.toFloat() / max.coerceAtLeast(1f)).coerceIn(0f, 1f)
                 },
-                modifier = Modifier.fillMaxWidth().height(28.dp),
+                modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.miniBarHeight),
                 strokeCap = StrokeCap.Round,
             )
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))

@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.components.DataPointTooltip
@@ -174,7 +175,7 @@ fun StepsBar(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(28.dp)
+                        .height(MaterialTheme.dimens.miniBarHeight)
                         .testTag("StepsBarCanvas")
                         .semantics {
                             contentDescription = chartSummary

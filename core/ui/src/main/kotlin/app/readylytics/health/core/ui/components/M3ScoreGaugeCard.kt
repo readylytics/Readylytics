@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.model.MetricStatus
 import kotlin.math.cos
@@ -90,7 +91,7 @@ fun M3ScoreGaugeCard(
             "$title: $displayText $unitText"
         }
 
-    val baseModifier = modifier.height(156.dp)
+    val baseModifier = modifier.height(MaterialTheme.dimens.cardHeight)
     val semanticsModifier =
         if (isClickable) {
             baseModifier.semantics {

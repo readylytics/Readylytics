@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
@@ -376,7 +377,7 @@ fun CompactOutlinedTextField(
                     MaterialTheme.colorScheme.surface,
                     MaterialTheme.shapes.small,
                 ).border(
-                    width = 1.dp,
+                    width = MaterialTheme.dimens.borderThin,
                     color =
                         if (isError) {
                             MaterialTheme.colorScheme.error

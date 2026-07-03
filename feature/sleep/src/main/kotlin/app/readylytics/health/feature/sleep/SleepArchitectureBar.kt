@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.feature.sleep.R
@@ -85,7 +86,7 @@ fun SleepArchitectureBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp)
+                    .height(MaterialTheme.dimens.miniBarHeight)
                     .semantics {
                         contentDescription = chartSummary
                     },
@@ -157,7 +158,7 @@ internal fun CalibrationBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp),
+                    .height(MaterialTheme.dimens.miniBarHeight),
         ) {
             drawRoundRect(
                 color = color,

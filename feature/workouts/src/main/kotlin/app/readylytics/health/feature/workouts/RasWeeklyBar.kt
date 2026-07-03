@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
@@ -56,7 +57,7 @@ fun RasWeeklyBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp)
+                    .height(MaterialTheme.dimens.miniBarHeight)
                     .semantics { contentDescription = chartSummary },
             color = fillColor,
             trackColor = trackColor,
