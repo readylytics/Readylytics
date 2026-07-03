@@ -94,13 +94,13 @@ fun SleepScreen(
             modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(vertical = MaterialTheme.spacing.medium),
+                .padding(top = MaterialTheme.spacing.pageTop, bottom = MaterialTheme.spacing.pageBottom),
     ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = MaterialTheme.spacing.medium),
+                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         ) {
             DateSwitcher(
                 selectedDate = uiState.selectedDate,
@@ -117,12 +117,12 @@ fun SleepScreen(
                 Modifier
                     .fillMaxWidth()
                     .padding(
-                        start = MaterialTheme.spacing.medium,
-                        end = MaterialTheme.spacing.medium,
-                        top = MaterialTheme.spacing.medium,
-                        bottom = MaterialTheme.spacing.small,
+                        start = MaterialTheme.spacing.pageHorizontal,
+                        end = MaterialTheme.spacing.pageHorizontal,
+                        top = MaterialTheme.spacing.pageSectionGap,
+                        bottom = MaterialTheme.spacing.pageSectionGapSmall,
                     ),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (uiState.isLoading) {
@@ -173,13 +173,13 @@ fun SleepScreen(
 
         if (uiState.isLoading) {
             SkeletonCard(
-                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 height = 120.dp,
             )
         } else {
             TrendCard(
                 title = stringResource(R.string.sleep_breakdown_title),
-                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 SleepArchitectureBar(
                     session = uiState.latestSession,
@@ -188,17 +188,17 @@ fun SleepScreen(
             }
         }
 
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         if (uiState.isLoading) {
             SkeletonCard(
-                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 height = 260.dp,
             )
         } else {
             TrendCard(
                 title = stringResource(R.string.sleep_timeline_title),
-                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 SleepStagesChart(
                     session = uiState.latestSession,
@@ -208,19 +208,19 @@ fun SleepScreen(
             }
         }
 
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         SectionHeader(
             title = stringResource(R.string.sleep_trend_section_title),
             enabled = !uiState.isLoading,
         )
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         SingleChoiceSegmentedButtonRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = MaterialTheme.spacing.medium),
+                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         ) {
             TimeRange.entries.forEachIndexed { index, range ->
                 SegmentedButton(
@@ -236,10 +236,10 @@ fun SleepScreen(
                 )
             }
         }
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         if (uiState.isLoading) {
-            SleepTrendSkeleton(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium))
+            SleepTrendSkeleton(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal))
         } else {
             SleepTrendCard(
                 selectedRange = uiState.selectedTrendRange,
@@ -250,14 +250,14 @@ fun SleepScreen(
                 scrollState = trendScrollState,
                 zoomState = trendZoomState,
                 parentScrollInProgress = { scrollState.isScrollInProgress },
-                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )
         }
 
-        Spacer(Modifier.height(MaterialTheme.spacing.large))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         SectionHeader(title = stringResource(R.string.sleep_metrics_title))
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         if (uiState.isLoading) {
             MetricsGridSkeleton()
@@ -265,11 +265,11 @@ fun SleepScreen(
             MetricsGrid(
                 uiState = uiState,
                 circadianResult = circadianConsistency,
-                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )
         }
 
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         StatusLegend()
     }
@@ -291,11 +291,11 @@ private fun MetricsGrid(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 val scoreText =
@@ -357,7 +357,7 @@ private fun MetricsGrid(
         }
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
@@ -387,11 +387,11 @@ private fun MetricsGrid(
 private fun MetricsGridSkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCardSkeleton()
@@ -402,7 +402,7 @@ private fun MetricsGridSkeleton(modifier: Modifier = Modifier) {
         }
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCardSkeleton()
