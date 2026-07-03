@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -41,6 +42,7 @@ import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+
 
 internal enum class RasSummaryValueTextStyle {
     TITLE,
@@ -218,17 +220,17 @@ fun WorkoutStatsSection(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         SectionHeader(
             title = stringResource(R.string.workout_stats_acwr_title),
             enabled = !uiState.isLoading,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         SingleChoiceSegmentedButtonRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         ) {
             TimeRange.entries.forEachIndexed { index, range ->
                 SegmentedButton(
@@ -245,7 +247,7 @@ fun WorkoutStatsSection(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         CardLoader(
             isLoading = uiState.isLoading,
@@ -255,7 +257,7 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },
             content = {
