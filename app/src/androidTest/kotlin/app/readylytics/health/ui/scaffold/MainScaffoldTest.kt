@@ -8,15 +8,13 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.MainActivity
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -26,30 +24,15 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class MainScaffoldTest {
     @get:Rule
-    val composeRule = createEmptyComposeRule()
-
-    private lateinit var scenario: ActivityScenario<MainActivity>
+    val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Before
     fun launchActivity() {
-        composeRule.mainClock.autoAdvance = false
-        scenario = ActivityScenario.launch(MainActivity::class.java)
-        advanceFrame()
-    }
-
-    @After
-    fun closeActivity() {
-        if (::scenario.isInitialized) {
-            scenario.close()
-        }
+        renderScaffold()
     }
 
     @Test
     fun navigationBarItemsExist() {
-        // Check if at least one tab exists (Dashboard is usually the first). The Health Connect
-        // permission grant flow can briefly steal window focus via
-        // InstrumentationActivityInvoker$EmptyActivity right after MainActivity resumes, so wait
-        // for the window to settle instead of asserting on the very first frame.
         val dashboardNode =
             composeRule
                 .onAllNodesWithContentDescription("Dashboard", substring = true)
@@ -60,16 +43,7 @@ class MainScaffoldTest {
 
     @Test
     fun compactWidth_rendersBottomNavigation() {
-        scenario.onActivity { activity ->
-            activity.setContent {
-                DeviceConfigurationOverride(
-                    DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp)),
-                ) {
-                    MainScaffold()
-                }
-            }
-        }
-        advanceFrame()
+        renderScaffold(width = 400.dp, height = 800.dp)
 
         // Verify Dashboard item exists and is displayed
         val dashboardNode =
@@ -90,16 +64,7 @@ class MainScaffoldTest {
 
     @Test
     fun mediumWidth_rendersNavigationRail() {
-        scenario.onActivity { activity ->
-            activity.setContent {
-                DeviceConfigurationOverride(
-                    DeviceConfigurationOverride.ForcedSize(DpSize(700.dp, 800.dp)),
-                ) {
-                    MainScaffold()
-                }
-            }
-        }
-        advanceFrame()
+        renderScaffold(width = 700.dp, height = 800.dp)
 
         val dashboardNode =
             composeRule
@@ -119,16 +84,7 @@ class MainScaffoldTest {
 
     @Test
     fun expandedWidth_rendersNavigationRailOrDrawer() {
-        scenario.onActivity { activity ->
-            activity.setContent {
-                DeviceConfigurationOverride(
-                    DeviceConfigurationOverride.ForcedSize(DpSize(1000.dp, 800.dp)),
-                ) {
-                    MainScaffold()
-                }
-            }
-        }
-        advanceFrame()
+        renderScaffold(width = 1000.dp, height = 800.dp)
 
         val dashboardNode =
             composeRule
@@ -145,8 +101,22 @@ class MainScaffoldTest {
         }
     }
 
-    private fun advanceFrame() {
-        composeRule.mainClock.advanceTimeByFrame()
+    private fun renderScaffold(
+        width: androidx.compose.ui.unit.Dp? = null,
+        height: androidx.compose.ui.unit.Dp? = null,
+    ) {
+        composeRule.activity.setContent {
+            if (width != null && height != null) {
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.ForcedSize(DpSize(width, height)),
+                ) {
+                    MainScaffold()
+                }
+            } else {
+                MainScaffold()
+            }
+        }
+        composeRule.waitForIdle()
     }
 
     private fun waitUntilDisplayed(

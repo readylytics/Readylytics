@@ -1,5 +1,12 @@
 package app.readylytics.health.ui.navigation
 
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.StepsRecord
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -9,8 +16,11 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import app.readylytics.health.MainActivity
+import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeTrue
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -40,6 +50,31 @@ class RootNavigationTest {
 
     @Before
     fun launchActivity() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        assumeTrue(
+            "Health Connect SDK not available — test skipped",
+            HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE,
+        )
+        val granted =
+            runBlocking {
+                HealthConnectClient
+                    .getOrCreate(context)
+                    .permissionController
+                    .getGrantedPermissions()
+            }
+        val requiredPermissions =
+            setOf(
+                HealthPermission.getReadPermission(SleepSessionRecord::class),
+                HealthPermission.getReadPermission(HeartRateRecord::class),
+                HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+                HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+                HealthPermission.getReadPermission(StepsRecord::class),
+                "android.permission.health.READ_HEALTH_DATA_HISTORY",
+            )
+        assumeTrue(
+            "Health Connect read permissions not granted — test skipped",
+            granted.containsAll(requiredPermissions),
+        )
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
 
