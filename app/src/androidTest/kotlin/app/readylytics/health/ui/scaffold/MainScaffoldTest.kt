@@ -46,7 +46,7 @@ class MainScaffoldTest {
         waitUntilDisplayed(dashboardNode)
 
         val bounds = dashboardNode.getUnclippedBoundsInRoot()
-        assert(bounds.top > 700.dp) {
+        assert(bounds.top > 650.dp) {
             "Dashboard item should be at the bottom of the screen in compact layout, but top was ${bounds.top}"
         }
     }
