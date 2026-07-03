@@ -285,29 +285,28 @@ fun DashboardScreen(
 
             if (!uiState.isManagingCards) {
                 item(key = "customize_button") {
-                    Box(
+                    FilledTonalButton(
+                        onClick = {
+                            showCardManagement = true
+                            onToggleCardManagement()
+                        },
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = MaterialTheme.spacing.pageSectionGap),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        FilledTonalButton(
-                            onClick = {
-                                showCardManagement = true
-                                onToggleCardManagement()
-                            },
-                            colors =
-                                ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                .padding(
+                                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                                    vertical = MaterialTheme.spacing.pageSectionGap,
                                 ),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.action_customize),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
+                        colors =
+                            ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            ),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_customize),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 }
             }
