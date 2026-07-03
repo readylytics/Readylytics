@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -29,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
@@ -94,14 +96,20 @@ fun StepDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(vertical = 16.dp),
+                    .padding(
+                        top = MaterialTheme.spacing.pageTop,
+                        bottom = MaterialTheme.spacing.pageBottom,
+                    ),
         ) {
             if (uiState.isLoading) {
                 ScoreDialSkeleton(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.small,
+                            ),
                 )
             } else {
                 val stepCount = uiState.latestSummary?.stepCount
@@ -122,7 +130,10 @@ fun StepDetailScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.small,
+                            ),
                     title = stringResource(R.string.label_steps_today),
                     score = stepCount?.toFloat(),
                     displayText = stepCount?.let { String.format(java.util.Locale.US, "%,d", it) } ?: "—",
@@ -135,12 +146,12 @@ fun StepDetailScreen(
             }
 
             SectionHeader(title = stringResource(CoreUiR.string.label_trends))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
             SingleChoiceSegmentedButtonRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 TimeRange.entries.forEachIndexed { index, range ->
                     SegmentedButton(
@@ -157,17 +168,17 @@ fun StepDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
             if (uiState.isLoading) {
                 SkeletonCard(
                     height = 250.dp,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             } else {
                 TrendCard(
                     title = stringResource(app.readylytics.health.core.ui.R.string.label_daily_steps),
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 ) {
                     TrendChart(
                         points = uiState.dailySteps,
@@ -185,7 +196,7 @@ fun StepDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
         }
     }
 }

@@ -16,7 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.sleep.R
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -31,17 +32,20 @@ fun SleepStageBreakdownRow(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 16.dp),
+                .padding(
+                    vertical = MaterialTheme.spacing.smallMedium,
+                    horizontal = MaterialTheme.spacing.medium,
+                ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier =
                 Modifier
-                    .size(8.dp)
+                    .size(MaterialTheme.dimens.indicatorDot)
                     .background(color = color, shape = CircleShape),
         )
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
 
         val hours = durationMinutes / 60
         val minutes = durationMinutes % 60

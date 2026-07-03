@@ -12,7 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun AppInfoSection() {
@@ -48,13 +48,16 @@ private fun ScoreTable() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                ),
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.large,
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
@@ -77,7 +80,7 @@ private fun ScoreTable() {
                 )
             }
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
+                modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
                 color = MaterialTheme.colorScheme.outlineVariant,
             )
 
@@ -94,7 +97,7 @@ private fun ScoreTableRow(
     col2: String,
     col3: String,
 ) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.hairline)) {
         Text(parseMarkdown(col1), Modifier.weight(1.5f), style = MaterialTheme.typography.bodySmall)
         Text(col2, Modifier.weight(3f), style = MaterialTheme.typography.bodySmall)
         Text(col3, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)

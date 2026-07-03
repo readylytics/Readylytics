@@ -14,6 +14,18 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class ThemeTest {
     @Test
+    fun spacingAliasesMapToExistingTierTokens() {
+        val spacing = Spacing()
+
+        assertEquals(spacing.medium, spacing.pageHorizontal)
+        assertEquals(spacing.medium, spacing.pageTop)
+        assertEquals(spacing.medium, spacing.pageBottom)
+        assertEquals(spacing.medium, spacing.pageSectionGap)
+        assertEquals(spacing.small, spacing.pageSectionGapSmall)
+        assertEquals(spacing.large, spacing.pageSectionGapLarge)
+    }
+
+    @Test
     fun testPaletteCalculations() {
         val primary = Color(0xFFAA78FF)
         val secondary = calculateSecondarySeedColor(primary)

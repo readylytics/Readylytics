@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -75,8 +77,8 @@ fun WorkoutsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 16.dp),
+                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
+                        .padding(top = MaterialTheme.spacing.pageTop),
             )
         }
 
@@ -86,7 +88,10 @@ fun WorkoutsScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(scrollState)
-                    .padding(top = 8.dp, bottom = 16.dp),
+                    .padding(
+                        top = MaterialTheme.spacing.pageSectionGapSmall,
+                        bottom = MaterialTheme.spacing.pageBottom,
+                    ),
         ) {
             WorkoutStatsSection(
                 uiState = uiState,
@@ -119,12 +124,16 @@ fun WorkoutsScreen(
 @Composable
 private fun WorkoutListSectionSkeleton() {
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.pageHorizontal,
+                vertical = MaterialTheme.spacing.pageSectionGap,
+            ),
     ) {
         repeat(3) {
             SkeletonCard(
                 height = 80.dp,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.small),
             )
         }
     }

@@ -19,7 +19,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.vitals.R
 
 @Composable
@@ -44,7 +44,7 @@ fun StepsCard(
         Column(
             modifier =
                 Modifier
-                    .padding(16.dp),
+                    .padding(MaterialTheme.spacing.medium),
         ) {
             Row(
                 modifier =
@@ -60,7 +60,7 @@ fun StepsCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
             StepsBar(
                 stepCount = stepCount,
                 stepGoal = stepGoal,

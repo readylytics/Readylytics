@@ -24,7 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun InsightCard(
@@ -42,22 +43,22 @@ fun InsightCard(
             CardDefaults.outlinedCardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
             ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(MaterialTheme.dimens.borderThin, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.smallMedium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(MaterialTheme.dimens.iconStandard),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.smallMedium))
             Column(
                 modifier = Modifier.weight(1f),
             ) {
@@ -75,7 +76,7 @@ fun InsightCard(
             if (onShowDetails != null) {
                 IconButton(
                     onClick = onShowDetails,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(MaterialTheme.dimens.iconContainerLarge),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
@@ -90,7 +91,7 @@ fun InsightCard(
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(MaterialTheme.dimens.iconContainerLarge),
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -117,30 +118,30 @@ fun InsightRerunCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(MaterialTheme.dimens.avatarMedium),
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.outlinedCardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
             ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(MaterialTheme.dimens.borderThin, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
-                    .padding(horizontal = 16.dp),
+                    .height(MaterialTheme.dimens.avatarMedium)
+                    .padding(horizontal = MaterialTheme.spacing.medium),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = stringResource(app.readylytics.health.core.ui.R.string.insight_rerun_description),
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,

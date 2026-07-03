@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.feature.workouts.R
 
@@ -26,7 +26,7 @@ fun WorkoutRecoverySection(uiState: WorkoutDetailUiState) {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -42,7 +42,7 @@ fun WorkoutRecoverySection(uiState: WorkoutDetailUiState) {
                     iconTint = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
             HrrItem(stringResource(R.string.workout_recovery_item_1min), uiState.hrr1Min, 18)
             HrrItem(stringResource(R.string.workout_recovery_item_2min), uiState.hrr2Min, 35)
             HrrItem(stringResource(R.string.workout_recovery_item_3min), uiState.hrr3Min, null)
@@ -59,7 +59,7 @@ private fun HrrItem(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = MaterialTheme.spacing.extraSmall),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)

@@ -10,7 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun AboutScreen(
@@ -23,10 +23,10 @@ fun AboutScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = MaterialTheme.spacing.pageBottom),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGap),
         ) {
-            item { Spacer(Modifier.height(32.dp)) }
+            item { Spacer(Modifier.height(MaterialTheme.spacing.extraLarge)) }
 
             item { AppInfoSection() }
 

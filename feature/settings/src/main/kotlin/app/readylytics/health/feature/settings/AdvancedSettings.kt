@@ -31,14 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import app.readylytics.health.feature.settings.R
-import app.readylytics.health.feature.settings.common.SettingsConstants
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,11 +75,11 @@ fun AdvancedSettingsSection(
     val rhrValidation = SettingsValidators.RHR_BASELINE_RULE.validate(rhrText)
 
     Column {
-        Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
+        Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
             Text(
                 stringResource(R.string.advanced_baseline_overrides_title),
                 style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(bottom = SettingsConstants.VERTICAL_SPACER),
+                modifier = Modifier.padding(bottom = MaterialTheme.spacing.small),
             )
             OutlinedTextField(
                 value = hrvText,
@@ -117,7 +116,7 @@ fun AdvancedSettingsSection(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             OutlinedTextField(
                 value = rhrText,
                 onValueChange = { value ->
@@ -155,16 +154,16 @@ fun AdvancedSettingsSection(
             )
         }
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
-        Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
+        Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.advanced_resting_hr_percentile_label))
                 MetricTooltip(
                     description = stringResource(R.string.advanced_resting_hr_percentile_tooltip),
                 )
             }
-            Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = percentileValue.toFloat(),
@@ -182,12 +181,12 @@ fun AdvancedSettingsSection(
                 )
                 Text(
                     "$percentileValue",
-                    modifier = Modifier.padding(start = 16.dp),
+                    modifier = Modifier.padding(start = MaterialTheme.spacing.medium),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         var hrrTolerance by remember(hrrToleranceSeconds) {
             mutableFloatStateOf(hrrToleranceSeconds.toFloat())
@@ -207,7 +206,7 @@ fun AdvancedSettingsSection(
             description = stringResource(R.string.advanced_hrr_tolerance_tooltip),
         )
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         var rasScaling by remember(rasScalingFactor) { mutableFloatStateOf(rasScalingFactor) }
         ThresholdSliderItem(
@@ -222,13 +221,13 @@ fun AdvancedSettingsSection(
             description = stringResource(R.string.advanced_ras_scaling_tooltip),
         )
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
         Text(
             stringResource(R.string.advanced_training_load_label),
             style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
         )
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
         val selectedModelLabel =
             trimpModelOptions.firstOrNull { it.first == trimpModel }?.second
                 ?: stringResource(R.string.advanced_trimp_banister)
@@ -239,7 +238,7 @@ fun AdvancedSettingsSection(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+                    .padding(horizontal = MaterialTheme.spacing.medium),
         ) {
             OutlinedTextField(
                 value = selectedModelLabel,
@@ -267,7 +266,7 @@ fun AdvancedSettingsSection(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
         when (trimpModel) {
             TrimpModel.BANISTER -> {
                 var multiplier by remember(banisterMultiplier) { mutableFloatStateOf(banisterMultiplier) }

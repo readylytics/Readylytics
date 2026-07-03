@@ -2,13 +2,14 @@ package app.readylytics.health.feature.vitals.weight
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.FitDashboardTheme
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.WeightHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.SectionHeader
@@ -33,7 +34,11 @@ fun WeightHistorySection(
         items.forEach { item ->
             WeightHistoryCard(
                 item = item,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
         }
     }
@@ -95,7 +100,11 @@ private fun WeightHistoryCardPreview() {
                         unitSystem = UnitSystem.METRIC,
                         bmiStatus = BmiStatus.Optimal,
                     ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
             WeightHistoryCard(
                 item =
@@ -106,7 +115,11 @@ private fun WeightHistoryCardPreview() {
                         unitSystem = UnitSystem.METRIC,
                         bmiStatus = BmiStatus.Warning,
                     ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
             WeightHistoryCard(
                 item =
@@ -117,7 +130,11 @@ private fun WeightHistoryCardPreview() {
                         unitSystem = UnitSystem.METRIC,
                         bmiStatus = null,
                     ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.extraSmall,
+                    ),
             )
         }
     }

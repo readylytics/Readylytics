@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 private fun Modifier.shimmerAnimation(): Modifier {
@@ -70,7 +71,7 @@ fun SkeletonCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(MaterialTheme.spacing.medium)
                     .background(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(
                             alpha = 0.2f,
@@ -99,7 +100,7 @@ fun MetricCardSkeleton(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(MaterialTheme.spacing.medium)
                     .shimmerAnimation(),
         ) {
             Box(
@@ -114,7 +115,7 @@ fun MetricCardSkeleton(
                             MaterialTheme.shapes.extraSmall,
                         ),
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
             Box(
                 modifier =
                     Modifier
@@ -149,7 +150,7 @@ fun ScoreDialSkeleton(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(MaterialTheme.spacing.medium)
                     .background(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(
                             alpha = 0.15f,

@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.DateFormatUtils
@@ -82,13 +83,13 @@ fun SleepTrendCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
             Text(
                 text = stringResource(R.string.sleep_trend_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
 
             SleepTrendChart(
                 selectedRange = selectedRange,
@@ -493,7 +494,7 @@ fun SleepTrendChart(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.medium))
 
         SleepTrendChartLegends(
             barColor = barColor,
@@ -510,7 +511,7 @@ fun SleepTrendChartLegends(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -520,7 +521,7 @@ fun SleepTrendChartLegends(
                         .size(width = 12.dp, height = 8.dp)
                         .background(color = barColor, shape = MaterialTheme.shapes.extraSmall),
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
             Text(
                 text = stringResource(R.string.sleep_trend_legend_window),
                 style = MaterialTheme.typography.labelSmall,
@@ -535,7 +536,7 @@ fun SleepTrendChartLegends(
                         .size(width = 16.dp, height = 2.dp)
                         .background(lineColor),
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.extraSmallMedium))
             Text(
                 text = stringResource(R.string.sleep_trend_legend_duration),
                 style = MaterialTheme.typography.labelSmall,

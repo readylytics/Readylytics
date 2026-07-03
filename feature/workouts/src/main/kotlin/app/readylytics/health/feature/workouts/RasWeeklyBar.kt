@@ -20,6 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
@@ -55,14 +57,14 @@ fun RasWeeklyBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp)
+                    .height(MaterialTheme.dimens.miniBarHeight)
                     .semantics { contentDescription = chartSummary },
             color = fillColor,
             trackColor = trackColor,
             strokeCap = StrokeCap.Round,
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -91,7 +93,7 @@ private fun RasDayLegendItem(
         Canvas(modifier = Modifier.size(8.dp)) {
             drawCircle(color = color)
         }
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.hairline))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,

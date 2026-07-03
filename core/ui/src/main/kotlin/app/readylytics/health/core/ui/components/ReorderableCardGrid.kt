@@ -39,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.components.reorder.DragController
 import app.readylytics.health.domain.dashboard.CardConfiguration
@@ -179,7 +181,7 @@ fun ReorderableCardGrid(
                         Modifier
                     },
                 ),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         var cardIndex = 0
         while (cardIndex < displayableCards.size) {
@@ -209,7 +211,7 @@ fun ReorderableCardGrid(
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 ) {
                     val leftCard = displayableCards[cardIndex]
                     Box(
@@ -275,7 +277,7 @@ fun ReorderableCardGrid(
 
         // Deletion drop zone at the bottom when editing.
         if (isEditing) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
             val isHovered = dragController.hoveringDeleteZone
             Surface(
                 modifier =
@@ -310,7 +312,7 @@ fun ReorderableCardGrid(
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
                     Text(
                         text = stringResource(R.string.action_delete_drop_zone),
                         style = MaterialTheme.typography.labelSmall,
@@ -342,7 +344,7 @@ private fun RenderCardItem(
         if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
             @Composable {
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(156.dp),
+                    modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.cardHeight),
                     contentAlignment = Alignment.Center,
                 ) { cardContent() }
             }
@@ -398,7 +400,10 @@ private fun ReorderableCardItem(
                     .fillMaxHeight()
                     .then(
                         if (isEditing) {
-                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            Modifier.padding(
+                                horizontal = MaterialTheme.spacing.small,
+                                vertical = MaterialTheme.spacing.extraSmall,
+                            )
                         } else {
                             Modifier
                         },
@@ -409,7 +414,7 @@ private fun ReorderableCardItem(
                 Icon(
                     imageVector = Icons.Outlined.DragIndicator,
                     contentDescription = stringResource(R.string.accessibility_drag_to_reorder),
-                    modifier = Modifier.padding(end = 8.dp),
+                    modifier = Modifier.padding(end = MaterialTheme.spacing.small),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

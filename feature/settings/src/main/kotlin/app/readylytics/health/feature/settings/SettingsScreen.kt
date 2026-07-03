@@ -41,12 +41,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
 import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
@@ -171,7 +171,7 @@ fun SettingsRoute(
                             text = stringResource(R.string.recalculating_progress, current, total),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                         LinearProgressIndicator(
                             progress = { current.toFloat() / total.toFloat() },
                             modifier = Modifier.fillMaxWidth(),
@@ -181,7 +181,7 @@ fun SettingsRoute(
                             text = stringResource(R.string.resync_notification_preparing),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                 }
@@ -258,7 +258,7 @@ fun SettingsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = MaterialTheme.spacing.pageSectionGapSmall),
             ) {
                 // Search
                 OutlinedTextField(
@@ -267,7 +267,10 @@ fun SettingsScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                            ),
                     placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
                     leadingIcon = {
                         Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.accessibility_search))
@@ -303,7 +306,7 @@ fun SettingsScreen(
                                 uiState = localBackupState,
                                 onEvent = onLocalBackupEvent,
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_data_management))
                             DataManagementSection(
                                 uiState = uiState,
@@ -311,12 +314,12 @@ fun SettingsScreen(
                                 onEvent = onUIEvent,
                                 onSyncEvent = onSyncEvent,
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_health_connect))
                             SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)
                         }
                     }
-                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
                 }
 
                 // Data Sources (per–data-type source device selection)
@@ -332,7 +335,7 @@ fun SettingsScreen(
                     ) {
                         DataSourceSettingsSection()
                     }
-                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
                 }
 
                 // Baselines & Thresholds
@@ -349,10 +352,10 @@ fun SettingsScreen(
                         Column {
                             SectionHeader(stringResource(R.string.label_daily_step_goal))
                             ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onUIEvent)
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.label_sleep))
                             SleepSettingsSection(uiState = sleepState, onEvent = onSleepEvent)
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_heart_rate_zones))
                             HeartRateZoneSection(
                                 uiState = heartRateState,
@@ -362,16 +365,16 @@ fun SettingsScreen(
                                 expandState = expandState,
                                 onExpandStateChange = { expandState = it },
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             PhysiologyProfilePicker(
                                 selectedProfile = physiologyState.physiologyProfile,
                                 onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.load_sources_section_title))
                             LoadSourcesSection(uiState = sleepState, onEvent = onSleepEvent)
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             SectionHeader(
                                 stringResource(app.readylytics.health.core.ui.R.string.label_circadian_consistency),
                             )
@@ -387,12 +390,12 @@ fun SettingsScreen(
                                 error = resolvedThresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_thresholds))
                             ThresholdSettingsSection(uiState = thresholdState, onEvent = onThresholdEvent)
                         }
                     }
-                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
                 }
 
                 // Display
@@ -425,7 +428,11 @@ fun SettingsScreen(
                                             )
                                         },
                                         enabled = true,
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                        modifier =
+                                            Modifier.fillMaxWidth().padding(
+                                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                                vertical = MaterialTheme.spacing.small,
+                                            ),
                                     )
                                     SettingsToggleItem(
                                         label = stringResource(R.string.settings_customize_palette_label),
@@ -455,7 +462,11 @@ fun SettingsScreen(
                                             )
                                         },
                                         enabled = uiState.isCustomPaletteEnabled,
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                        modifier =
+                                            Modifier.fillMaxWidth().padding(
+                                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                                vertical = MaterialTheme.spacing.small,
+                                            ),
                                         onReset = {
                                             onUIEvent(
                                                 SettingsEvent.CustomSecondaryColorChanged(
@@ -474,7 +485,11 @@ fun SettingsScreen(
                                             )
                                         },
                                         enabled = uiState.isCustomPaletteEnabled,
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                        modifier =
+                                            Modifier.fillMaxWidth().padding(
+                                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                                vertical = MaterialTheme.spacing.small,
+                                            ),
                                         onReset = {
                                             onUIEvent(
                                                 SettingsEvent.CustomTertiaryColorChanged(
@@ -486,15 +501,18 @@ fun SettingsScreen(
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             UnitSystemSelector(
                                 selectedUnit = uiState.unitSystem,
                                 onUnitSelected = { onUIEvent(SettingsEvent.UnitSystemChanged(it)) },
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                modifier =
+                                    Modifier.fillMaxWidth().padding(
+                                        horizontal = MaterialTheme.spacing.pageHorizontal,
+                                    ),
                             )
                         }
                     }
-                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
                 }
 
                 // Advanced
@@ -521,7 +539,7 @@ fun SettingsScreen(
                             onUIEvent = onUIEvent,
                         )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
                 }
 
                 // Miscellaneous (About & Licenses)
@@ -546,7 +564,7 @@ fun SettingsScreen(
                                 },
                                 modifier = Modifier.clickable { onNavigateToAbout() },
                             )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 headlineContent = {
@@ -557,7 +575,7 @@ fun SettingsScreen(
                                 },
                                 modifier = Modifier.clickable { onNavigateToLicenses() },
                             )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 headlineContent = {
@@ -590,6 +608,10 @@ private fun AppThemeItem(
         options = AppTheme.entries,
         onOptionSelected = { onEvent(SettingsEvent.AppThemeChanged(it)) },
         optionLabel = { it.name.lowercase().replaceFirstChar { it.uppercase() } },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            Modifier.fillMaxWidth().padding(
+                horizontal = MaterialTheme.spacing.pageHorizontal,
+                vertical = MaterialTheme.spacing.small,
+            ),
     )
 }

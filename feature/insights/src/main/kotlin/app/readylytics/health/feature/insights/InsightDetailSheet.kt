@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.insights.detail.InsightConfidence
 import app.readylytics.health.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.domain.insights.detail.InsightDetailType
@@ -37,8 +37,11 @@ fun InsightDetailSheet(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(
+                        horizontal = MaterialTheme.spacing.pageSectionGapLarge,
+                        vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                    ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
         ) {
             Text(
                 text = content.title,
@@ -86,7 +89,7 @@ fun InsightDetailSheet(
             if (!safetyNote.isNullOrBlank()) {
                 Section(stringResource(R.string.insight_detail_safety_note), safetyNote)
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageBottom))
         }
     }
 }
@@ -96,7 +99,7 @@ private fun Section(
     title: String,
     body: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -111,7 +114,7 @@ private fun ListSection(
     title: String,
     values: List<String>,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmallMedium)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,

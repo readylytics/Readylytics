@@ -16,7 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 // Visual indicator showing whether cards are in edit/reorder mode
 // Animates between primary and surface color schemes based on editing state
@@ -51,8 +51,11 @@ fun EditModeIndicator(
                 .background(
                     color = backgroundColor,
                     shape = CircleShape,
-                ).padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ).padding(
+                    horizontal = MaterialTheme.spacing.smallMedium,
+                    vertical = MaterialTheme.spacing.extraSmallMedium,
+                ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmallMedium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -60,7 +63,7 @@ fun EditModeIndicator(
             // Provide accessibility description for screen readers
             contentDescription = if (isEditing) "Currently in editing mode" else "Enter editing mode",
             tint = contentColor,
-            modifier = Modifier.padding(2.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.hairline),
         )
         Text(
             text = if (isEditing) "Editing" else "Edit",

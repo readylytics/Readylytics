@@ -36,6 +36,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.data.preferences.Gender
@@ -62,7 +64,7 @@ fun HeartRateZoneSection(
     var showBirthdatePicker by rememberSaveable { mutableStateOf(false) }
     var genderExpanded by rememberSaveable { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
+    Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
         Row(
             modifier = Modifier,
             verticalAlignment = Alignment.CenterVertically,
@@ -81,7 +83,7 @@ fun HeartRateZoneSection(
             )
         }
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         AnimatedVisibility(visible = uiState.autoCalculateMaxHr) {
             Column {
@@ -94,20 +96,20 @@ fun HeartRateZoneSection(
                     showDialog = showBirthdatePicker,
                     onDialogDismiss = { showBirthdatePicker = false },
                 )
-                Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
                 Text(
                     stringResource(R.string.hr_age_display, physiologyState.age),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                 GenderSelector(
                     selectedGender = physiologyState.gender,
                     expanded = genderExpanded,
                     onExpandedChange = { genderExpanded = it },
                     onGenderSelected = { onPhysiologyEvent(SettingsEvent.GenderChanged(it)) },
                 )
-                Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                 HeightInputField(
                     heightCm = physiologyState.heightCm,
                     onHeightChange = { onPhysiologyEvent(SettingsEvent.HeightChanged(it)) },
@@ -116,7 +118,7 @@ fun HeartRateZoneSection(
             }
         }
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         OutlinedTextField(
             value = maxHrText,
@@ -138,7 +140,7 @@ fun HeartRateZoneSection(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         Row(
             modifier = Modifier,
@@ -158,7 +160,7 @@ fun HeartRateZoneSection(
             )
         }
 
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         if (uiState.manualZoneEditing) {
             ZoneEditingSection(uiState = uiState, onEvent = onEvent)
@@ -168,7 +170,7 @@ fun HeartRateZoneSection(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
             HeartRateZonesDisplay(
                 maxHr = uiState.maxHeartRate,
                 z1MinP = uiState.zone1MinPercent,
@@ -183,7 +185,7 @@ fun HeartRateZoneSection(
             stringResource(app.readylytics.health.core.ui.R.string.hr_zones_footer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER),
+            modifier = Modifier.padding(top = MaterialTheme.spacing.small),
         )
     }
 }
@@ -198,7 +200,7 @@ fun HeartRateZonesDisplay(
     z4p: Float,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(SettingsConstants.VERTICAL_SPACER_SMALL),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
         modifier = Modifier.fillMaxWidth(),
     ) {
         val zones =
@@ -259,7 +261,7 @@ fun ZoneEditingSection(
                 vals[4] <= maxHr
         }
 
-    Column(verticalArrangement = Arrangement.spacedBy(SettingsConstants.VERTICAL_SPACER)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         Text(
             stringResource(R.string.hr_zones_section_title),
             style = MaterialTheme.typography.labelLarge,
@@ -288,7 +290,7 @@ fun ZoneEditingSection(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(top = SettingsConstants.VERTICAL_SPACER),
+                        .padding(top = MaterialTheme.spacing.small),
             ) {
                 Text(stringResource(R.string.hr_save_zones_button))
             }
@@ -323,9 +325,9 @@ fun ZoneRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = SettingsConstants.VERTICAL_SPACER_SMALL),
+                .padding(vertical = MaterialTheme.spacing.extraSmall),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(SettingsConstants.VERTICAL_SPACER),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         Text(
             zoneLabel,
@@ -375,7 +377,7 @@ fun CompactOutlinedTextField(
                     MaterialTheme.colorScheme.surface,
                     MaterialTheme.shapes.small,
                 ).border(
-                    width = 1.dp,
+                    width = MaterialTheme.dimens.borderThin,
                     color =
                         if (isError) {
                             MaterialTheme.colorScheme.error
@@ -385,7 +387,7 @@ fun CompactOutlinedTextField(
                             MaterialTheme.colorScheme.outline
                         },
                     shape = MaterialTheme.shapes.small,
-                ).padding(horizontal = 12.dp, vertical = SettingsConstants.VERTICAL_SPACER),
+                ).padding(horizontal = MaterialTheme.spacing.smallMedium, vertical = MaterialTheme.spacing.small),
         textStyle =
             MaterialTheme.typography.bodySmall.copy(
                 color =

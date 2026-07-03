@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.components.DataPointTooltip
@@ -168,9 +169,9 @@ fun BloodPressureSplitChart(
                 parentScrollInProgress = parentScrollInProgress,
             )
             // Combined legend – mirrors the one from the original BloodPressureTrendChart
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Systolic legend box
@@ -180,13 +181,13 @@ fun BloodPressureSplitChart(
                             .size(width = 12.dp, height = 2.dp)
                             .background(MaterialTheme.colorScheme.primary),
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MaterialTheme.spacing.small))
                 Text(
                     text = "Systolic",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                Spacer(Modifier.width(24.dp))
+                Spacer(Modifier.width(MaterialTheme.spacing.large))
                 // Diastolic legend box
                 Box(
                     modifier =
@@ -194,7 +195,7 @@ fun BloodPressureSplitChart(
                             .size(width = 12.dp, height = 2.dp)
                             .background(MaterialTheme.colorScheme.tertiaryContainer),
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MaterialTheme.spacing.small))
                 Text(
                     text = "Diastolic",
                     style = MaterialTheme.typography.labelSmall,

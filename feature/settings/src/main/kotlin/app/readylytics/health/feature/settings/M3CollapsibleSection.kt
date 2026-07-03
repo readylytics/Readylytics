@@ -19,7 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun M3CollapsibleSection(
@@ -33,7 +33,7 @@ fun M3CollapsibleSection(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.small)
                 .background(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     shape = MaterialTheme.shapes.large,
@@ -45,7 +45,7 @@ fun M3CollapsibleSection(
                     Modifier
                         .fillMaxWidth()
                         .clickable { onExpandedChange(!expanded) }
-                        .padding(16.dp),
+                        .padding(MaterialTheme.spacing.medium),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -72,7 +72,7 @@ fun M3CollapsibleSection(
                         Modifier
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
                 ) {
                     content()
                 }
