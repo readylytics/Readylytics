@@ -96,7 +96,10 @@ fun StepDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(vertical = MaterialTheme.spacing.medium),
+                    .padding(
+                        top = MaterialTheme.spacing.pageTop,
+                        bottom = MaterialTheme.spacing.pageBottom,
+                    ),
         ) {
             if (uiState.isLoading) {
                 ScoreDialSkeleton(

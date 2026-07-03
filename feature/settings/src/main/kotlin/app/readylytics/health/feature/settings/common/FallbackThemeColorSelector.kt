@@ -29,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.data.preferences.FallbackThemeColor
@@ -81,6 +80,8 @@ fun FallbackThemeColorSelector(
                             },
                     contentAlignment = Alignment.Center,
                 ) {
+                    val swatchBorderWidth =
+                        if (isSelected) MaterialTheme.dimens.borderSelected else MaterialTheme.spacing.default
                     Box(
                         modifier =
                             Modifier
@@ -88,7 +89,7 @@ fun FallbackThemeColorSelector(
                                 .clip(CircleShape)
                                 .background(Color(option.seedColor))
                                 .border(
-                                    width = if (isSelected) MaterialTheme.dimens.borderSelected else 0.dp,
+                                    width = swatchBorderWidth,
                                     color = MaterialTheme.colorScheme.outline,
                                     shape = CircleShape,
                                 ),

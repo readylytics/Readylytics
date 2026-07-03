@@ -113,15 +113,14 @@ private fun WorkoutHeader(workout: WorkoutData) {
         }
     val headerTime = remember(start, end, workout.durationMinutes) { "$start - $end (${workout.durationMinutes} min)" }
 
-    val hasHeaderContent =
-        type.isNotBlank() &&
-            date.isNotBlank() &&
-            headerTime.isNotBlank()
+    val hasHeaderContent = date.isNotBlank() && headerTime.isNotBlank()
 
     if (!hasHeaderContent) return
 
+    val displayType = type.ifBlank { stringResource(R.string.workout_header_type_fallback) }
+
     Column {
-        Text(text = type, style = MaterialTheme.typography.headlineMedium)
+        Text(text = displayType, style = MaterialTheme.typography.headlineMedium)
         Text(
             text = date,
             style = MaterialTheme.typography.bodyMedium,

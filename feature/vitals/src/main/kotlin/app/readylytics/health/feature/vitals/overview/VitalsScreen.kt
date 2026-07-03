@@ -107,8 +107,8 @@ fun VitalsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = MaterialTheme.spacing.medium)
-                        .padding(top = MaterialTheme.spacing.medium),
+                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
+                        .padding(top = MaterialTheme.spacing.pageTop),
             )
         }
 
@@ -119,8 +119,8 @@ fun VitalsScreen(
                     .weight(1f)
                     .verticalScroll(scrollState)
                     .padding(
-                        top = MaterialTheme.spacing.small,
-                        bottom = MaterialTheme.spacing.medium,
+                        top = MaterialTheme.spacing.pageSectionGapSmall,
+                        bottom = MaterialTheme.spacing.pageBottom,
                     ),
         ) {
             // Twin gauges side-by-side
@@ -385,7 +385,7 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(MaterialTheme.spacing.large))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
             StatusLegend()
         }

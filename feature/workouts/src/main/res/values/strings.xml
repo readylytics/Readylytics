@@ -10,6 +10,9 @@
     <string name="workout_recovery_bpm_value">%1$d bpm</string>
     <string name="workout_recovery_na">N/A</string>
 
+    <!-- Workout Header -->
+    <string name="workout_header_type_fallback">Workout</string>
+
     <!-- Workout Metrics -->
     <string name="workout_metric_training_load">Training load</string>
     <string name="workout_metric_avg_pulse">Avg Pulse</string>

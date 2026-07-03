@@ -78,7 +78,7 @@ fun DateSwitcher(
             modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    horizontal = MaterialTheme.spacing.small,
                     vertical = MaterialTheme.spacing.extraSmall,
                 ).graphicsLayer {
                     alpha = if (enabled) 1.0f else 0.5f

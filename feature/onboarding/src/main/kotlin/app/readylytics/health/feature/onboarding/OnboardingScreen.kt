@@ -312,6 +312,7 @@ private fun ProfileSetupScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        // Original gap was 20.dp; large (24dp) is a deliberate +4dp rounding, no exact token exists for 20dp.
         Spacer(Modifier.height(MaterialTheme.spacing.large))
 
         Text(

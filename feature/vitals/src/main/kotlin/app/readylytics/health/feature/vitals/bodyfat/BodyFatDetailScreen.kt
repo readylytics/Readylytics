@@ -103,7 +103,10 @@ fun BodyFatDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(vertical = MaterialTheme.spacing.pageBottom),
+                    .padding(
+                        top = MaterialTheme.spacing.pageTop,
+                        bottom = MaterialTheme.spacing.pageBottom,
+                    ),
         ) {
             if (uiState.isLoading) {
                 ScoreDialSkeleton(

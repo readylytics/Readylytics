@@ -131,6 +131,8 @@ fun CustomColorPicker(
                                 },
                         contentAlignment = Alignment.Center,
                     ) {
+                        val swatchBorderWidth =
+                            if (isSelected) MaterialTheme.dimens.borderSelected else MaterialTheme.spacing.default
                         Box(
                             modifier =
                                 Modifier
@@ -138,7 +140,7 @@ fun CustomColorPicker(
                                     .clip(CircleShape)
                                     .background(optionColor)
                                     .border(
-                                        width = if (isSelected) MaterialTheme.dimens.borderSelected else 0.dp,
+                                        width = swatchBorderWidth,
                                         color = MaterialTheme.colorScheme.outline,
                                         shape = CircleShape,
                                     ),

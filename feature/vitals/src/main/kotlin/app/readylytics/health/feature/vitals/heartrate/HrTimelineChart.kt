@@ -47,6 +47,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.DayTimelineScale
@@ -544,8 +545,7 @@ fun HrSparkline(
     val maxBpm = hourlySamples.maxOf { it.second }
     val range = (maxBpm - minBpm).coerceAtLeast(10)
 
-    Canvas(modifier = modifier.padding(vertical = 2.dp)) {
-        // 2dp: off-grid, no matching spacing token
+    Canvas(modifier = modifier.padding(vertical = MaterialTheme.spacing.hairline)) {
         val path = Path()
         hourlySamples.forEachIndexed { i, (hour, bpm) ->
             val x = hour / 23f * size.width
