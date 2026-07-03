@@ -15,7 +15,25 @@ data class Spacing(
     val large: Dp = 24.dp,
     val extraLarge: Dp = 32.dp,
     val doubleExtraLarge: Dp = 48.dp,
-)
+) {
+    val pageHorizontal: Dp
+        get() = medium
+
+    val pageTop: Dp
+        get() = medium
+
+    val pageBottom: Dp
+        get() = medium
+
+    val pageSectionGap: Dp
+        get() = medium
+
+    val pageSectionGapSmall: Dp
+        get() = small
+
+    val pageSectionGapLarge: Dp
+        get() = large
+}
 
 val LocalSpacing = staticCompositionLocalOf { Spacing() }
 
