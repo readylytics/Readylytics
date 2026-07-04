@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package app.readylytics.health.data.preferences;
+
+option java_package = "app.readylytics.health.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "ResyncCheckpointProtoFile";
+
+enum ResyncPhaseProto {
+  RESYNC_PHASE_UNSPECIFIED = 0;
+  INGEST = 1;
+  PRUNE = 2;
+  RECONCILE = 3;
+  RECOMPUTE = 4;
+}
+
+message ResyncCheckpointProto {
+  int64 start_epoch_day = 1;
+  int64 end_epoch_day = 2;
+  ResyncPhaseProto phase = 3;
+  int64 next_epoch_day = 4;
+  string selection_hash = 5;
+  map<string, string> baseline_change_tokens = 6;
+}

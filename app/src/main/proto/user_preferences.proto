@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package app.readylytics.health.data.preferences;
+
+option java_package = "app.readylytics.health.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "UserPreferencesProtoFile";
+
+enum SyncPreferenceProto {
+    SYNC_NEVER = 0;
+    SYNC_ALWAYS = 1;
+    SYNC_BY_TIME = 2;
+}
+
+enum AppThemeProto {
+    THEME_SYSTEM = 0;
+    THEME_LIGHT = 1;
+    THEME_DARK = 2;
+}
+
+enum BackupScheduleProto {
+    BACKUP_MANUAL = 0;
+    BACKUP_DAILY = 1;
+    BACKUP_WEEKLY = 2;
+}
+
+enum PhysiologyProfileProto {
+    // PROFILE_GENERAL (the proto3 zero/default) and PROFILE_SHIFT_WORKER are removed product
+    // profiles. The enumerators are kept reserved (never reused) so older payloads/backups still
+    // deserialize; both map to ACTIVE at the domain read boundary (UserPreferences.toDomainProfile).
+    PROFILE_GENERAL = 0;
+    PROFILE_ATHLETE = 1;
+    PROFILE_ACTIVE = 2;
+    PROFILE_SEDENTARY = 3;
+    PROFILE_SHIFT_WORKER = 4;
+}
+
+enum UnitSystemProto {
+    UNIT_METRIC = 0;
+    UNIT_IMPERIAL = 1;
+}
+
+enum FallbackThemeColorProto {
+    FALLBACK_GREEN_PERFORMANCE = 0;
+    FALLBACK_BLUE_TRUST = 1;
+    FALLBACK_PURPLE_INSIGHT = 2;
+    FALLBACK_ICON_SIGNATURE = 3;
+    FALLBACK_ICON_ELEMENTS = 4;
+}
+
+enum LoadSourceModeProto {
+    LOAD_SOURCE_UNSET = 0;
+    LOAD_SOURCE_WORKOUT_ONLY = 1;
+    LOAD_SOURCE_EVERYDAY_HEART_RATE = 2;
+}
+
+
+message UserPreferencesProto {
+    float goal_sleep_hours = 1;
+    
+    oneof hrv_baseline_override_oneof {
+        float hrv_baseline_override = 2;
+    }
+    oneof rhr_baseline_override_oneof {
+        float rhr_baseline_override = 3;
+    }
+    
+    SyncPreferenceProto sync_preference = 4;
+    
+    int32 sync_interval_hours = 5;
+    int64 last_sync_timestamp = 6;
+    int32 max_heart_rate = 7;
+    bool auto_calculate_max_hr = 8;
+    bool manual_zone_editing = 9;
+    
+    float zone_1_min_percent = 10;
+    float zone_1_max_percent = 11;
+    float zone_2_max_percent = 12;
+    float zone_3_max_percent = 13;
+    float zone_4_max_percent = 14;
+    
+    int32 zone_1_min_bpm = 15;
+    int32 zone_1_max_bpm = 16;
+    int32 zone_2_max_bpm = 17;
+    int32 zone_3_max_bpm = 18;
+    int32 zone_4_max_bpm = 19;
+    
+    int32 age = 20;
+    int32 birth_day = 21;
+    int32 birth_month = 22;
+    int32 birth_year = 23;
+    
+    oneof gender_oneof {
+        string gender = 24;
+    }
+
+    oneof height_cm_oneof {
+        float height_cm = 61;
+    }
+
+    float hrv_optimal_threshold = 25;
+    float hrv_warning_threshold = 26;
+    float rhr_optimal_threshold = 27;
+    float rhr_warning_threshold = 28;
+    
+    int32 resting_hr_before_minutes = 29;
+    int32 resting_hr_after_minutes = 30;
+    int32 resting_hr_percentile = 60;
+
+    AppThemeProto app_theme = 31;
+    bool dynamic_color_enabled = 51;
+    
+    reserved 32, 42;
+    reserved "drive_account_email", "collapse_cloud_data";
+    
+    BackupScheduleProto backup_schedule = 33;
+    
+    int64 last_backup_timestamp = 34;
+    int32 consistency_threshold_minutes = 35;
+    int32 consistency_evaluation_days = 36;
+    int32 consistency_baseline_days = 37;
+    
+    float ras_scaling_factor = 38;
+    int32 step_goal = 39;
+    
+    bool retention_days_enabled = 40;
+    int32 retention_days = 41;
+    
+    bool collapse_health_connect = 43;
+    bool collapse_baselines_thresholds = 44;
+    bool collapse_display = 45;
+    bool collapse_advanced = 46;
+    
+    bool about_dismissed = 47;
+    
+    PhysiologyProfileProto physiology_profile = 48;
+    
+    int64 install_date = 49;
+    
+    oneof circadian_threshold_override_oneof {
+        string circadian_threshold_override = 50;
+    }
+
+    TrimpMethodProto trimp_method = 52;
+    float cheng_beta = 53;
+    float itrimp_b = 54;
+    float ras_calibration = 55;
+
+    oneof primary_device_name_oneof {
+        string primary_device_name = 56;
+    }
+
+    oneof backup_directory_uri_oneof {
+        string backup_directory_uri = 57;
+    }
+
+    oneof backup_password_hash_oneof {
+        string backup_password_hash = 58;
+    }
+
+    bool is_birthday_configured = 59;
+
+    UnitSystemProto unit_system = 62;
+
+    // Per–data-type source device selection. Key = HealthDataType.name,
+    // value = device label (as produced by DeviceLabel). An absent key means
+    // "All devices" (no source filtering) for that data type.
+    map<string, string> device_by_data_type = 63;
+
+    FallbackThemeColorProto fallback_theme_color = 64;
+    bool background_sync_enabled = 65;
+    int32 background_sync_interval_minutes = 66;
+    bool is_custom_palette_enabled = 67;
+    int64 custom_secondary_color = 68;
+    int64 custom_tertiary_color = 69;
+    int64 custom_primary_color = 70;
+
+    // IANA timezone id used for all scoring day-boundary math. Stored so scores are
+    // reproducible across devices for identical data + preferences. Empty = un-seeded
+    // (falls back to the device zone until the seed migration / first run sets it).
+    string scoring_zone_id = 71;
+
+    // Permanent dismissal of the "press Apply to resync" info dialog shown
+    // when the user changes a Data Sources device selection.
+    bool device_change_notice_dismissed = 72;
+
+    // Source of heart-rate data used for Strain Ratio (load score) computations.
+    // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // SettingsDefaults.STRAIN_LOAD_SOURCE_MODE at the domain read boundary.
+    LoadSourceModeProto strain_load_source_mode = 73;
+
+    // Source of heart-rate data used for RAS computations.
+    // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // SettingsDefaults.RAS_SOURCE_MODE at the domain read boundary.
+    LoadSourceModeProto ras_source_mode = 74;
+
+    // Maximum offset from each 1/2/3-minute HRR target used for nearest-sample matching.
+    // Zero means unset and resolves to SettingsDefaults.HRR_TOLERANCE_SECONDS.
+    int32 hrr_tolerance_seconds = 75;
+}
+
+enum TrimpMethodProto {
+    TRIMP_BANISTER = 0;
+    TRIMP_ITRIMP = 1;
+    TRIMP_CHENG = 2;
+}

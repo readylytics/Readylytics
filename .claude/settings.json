@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew ktlintCheck)",
+      "Bash(./gradlew ktlintFormat)",
+      "Bash(./gradlew lint *)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(./gradlew assembleDebug --info)",
+      "Bash(./gradlew ktlintCheck assembleDebug)",
+      "Bash(./gradlew compileDebugKotlin)",
+      "Bash(./gradlew assembleDebug --no-daemon)",
+      "Bash(./gradlew compileDebugKotlin --no-daemon)"
+    ]
+  }
+}

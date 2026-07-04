@@ -1,0 +1,34 @@
+package app.readylytics.health.domain.dashboard
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+enum class CardId {
+    SLEEP_SCORE,
+    READINESS,
+    STEPS,
+    HRV,
+    SLEEP_RHR,
+    SLEEP_DURATION,
+    SLEEP_ARCHITECTURE,
+    STRAIN_RATIO,
+    RAS_DAILY,
+    CIRCADIAN_CONSISTENCY,
+    RESTING_HR,
+    RECOVERY_INDEX,
+    ACUTE_CHRONIC_RATIO,
+    SLEEP_EFFICIENCY,
+    HEART_RATE,
+    WEIGHT,
+    BODY_FAT,
+    BLOOD_PRESSURE,
+    OXYGEN_SATURATION,
+    INSIGHTS,
+}
+
+@Serializable
+data class CardConfiguration(
+    val cardId: CardId,
+    val isVisible: Boolean = true,
+    val position: Int = 0,
+)

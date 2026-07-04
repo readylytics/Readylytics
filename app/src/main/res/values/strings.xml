@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources xmlns:ns0="http://schemas.android.com/tools">
+    <string name="app_name">Readylytics</string>
+    <string name="tab_dashboard">Dashboard</string>
+    <string name="tab_sleep">Sleep</string>
+    <string name="tab_workouts">Workouts</string>
+    <string name="tab_settings">Settings</string>
+    <string name="sync_completed">Sync and recalculation completed</string>
+
+    <string name="resync_notification_title">Recalculating health history</string>
+    
+    <string name="resync_channel_name">Health resync</string>
+    <string name="resync_channel_description">Progress while recalculating your full Health Connect
+        history.</string>
+
+    <string name="background_sync_notification_title">Readylytics is syncing health data…</string>
+    <string name="background_sync_channel_name">Background sync</string>
+    <string name="background_sync_channel_description">Silent notification shown briefly while
+        background Health Connect sync runs.</string>
+    <string name="health_connect_unavailable_message">Health Connect is not installed on this
+        device.\nInstall it from the Play Store.</string>
+
+
+
+    <string name="recovery_title">Database access problem</string>
+    <string name="recovery_description">The secure encryption key for your database could not be
+        decrypted. This typically happens if the Android Keystore was cleared or corrupted.</string>
+    <string name="recovery_success">Database restored. Restart the app.</string>
+    <string name="recovery_error_default">Could not restore backup. Make sure you selected the
+        correct file.</string>
+    <string name="recovery_restoring_message">Restoring database…</string>
+    <string name="recovery_recommended_title">Recommended recovery option</string>
+    <string name="recovery_recommended_body">If you have a previously exported backup file (.zip),
+        you can select it to restore your data safely.</string>
+    <string name="recovery_restore_button">Restore from backup file</string>
+    <string name="recovery_danger_title">Danger zone</string>
+    <string name="recovery_danger_body">If you don\'t have a backup, you can reset the database.
+        This will permanently delete all existing local health dashboards and records.</string>
+    <string name="recovery_reset_button">Reset database &amp; start fresh</string>
+
+    <string name="accessibility_security_alert">Security Alert</string>
+
+    <string name="restore_partial_success_title" ns0:ignore="UnusedResources">Restore partly completed</string>
+    <string name="restore_stage_preferences" ns0:ignore="UnusedResources">settings</string>
+</resources>
+

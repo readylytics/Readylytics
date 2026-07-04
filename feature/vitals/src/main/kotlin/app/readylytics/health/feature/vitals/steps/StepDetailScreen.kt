@@ -1,0 +1,202 @@
+package app.readylytics.health.feature.vitals.steps
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.common.ScoreDialSkeleton
+import app.readylytics.health.core.ui.common.SkeletonCard
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
+import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.core.ui.components.TrendChart
+import app.readylytics.health.domain.model.stepsStatus
+import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.core.ui.R as CoreUiR
+
+@Composable
+fun StepDetailRoute(
+    onBack: () -> Unit,
+    viewModel: StepDetailViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    StepDetailScreen(
+        uiState = uiState,
+        onBack = onBack,
+        onRangeSelected = viewModel::onRangeSelected,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StepDetailScreen(
+    uiState: StepDetailUiState,
+    onBack: () -> Unit,
+    onRangeSelected: (TimeRange) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val (chartScrollState, chartZoomState) =
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedRange.days,
+            key = uiState.selectedRange,
+        )
+    val scrollState = rememberScrollState()
+
+    Scaffold(
+        modifier = modifier,
+        contentWindowInsets = WindowInsets(0),
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(app.readylytics.health.core.ui.R.string.label_daily_steps)) },
+                windowInsets = WindowInsets(0),
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiR.string.back),
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier =
+                Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(
+                        top = MaterialTheme.spacing.pageTop,
+                        bottom = MaterialTheme.spacing.pageBottom,
+                    ),
+        ) {
+            if (uiState.isLoading) {
+                ScoreDialSkeleton(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.small,
+                            ),
+                )
+            } else {
+                val stepCount = uiState.latestSummary?.stepCount
+                val stepGoal = uiState.stepGoal
+                val stepsDelta =
+                    if (stepCount != null && stepGoal > 0) {
+                        val diff = stepCount - stepGoal
+                        val formattedDiff = String.format(java.util.Locale.US, "%,d", kotlin.math.abs(diff))
+                        when {
+                            diff > 0 -> stringResource(CoreUiR.string.delta_up) + " $formattedDiff"
+                            diff < 0 -> stringResource(CoreUiR.string.delta_down) + " $formattedDiff"
+                            else -> stringResource(CoreUiR.string.delta_no_change)
+                        }
+                    } else {
+                        null
+                    }
+                M3ScoreGaugeCard(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = MaterialTheme.spacing.pageHorizontal,
+                                vertical = MaterialTheme.spacing.small,
+                            ),
+                    title = stringResource(R.string.label_steps_today),
+                    score = stepCount?.toFloat(),
+                    displayText = stepCount?.let { String.format(java.util.Locale.US, "%,d", it) } ?: "—",
+                    unitText = stringResource(CoreUiR.string.unit_steps),
+                    maxScore = (stepGoal * 1.5f),
+                    status = stepCount?.let { stepsStatus(it, stepGoal) },
+                    deltaText = stepsDelta,
+                    tooltipDescription = pluralStringResource(R.plurals.tooltip_steps_today, stepGoal, stepGoal),
+                )
+            }
+
+            SectionHeader(title = stringResource(CoreUiR.string.label_trends))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+            SingleChoiceSegmentedButtonRow(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+            ) {
+                TimeRange.entries.forEachIndexed { index, range ->
+                    SegmentedButton(
+                        selected = uiState.selectedRange == range,
+                        onClick = { onRangeSelected(range) },
+                        shape =
+                            SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = TimeRange.entries.size,
+                            ),
+                        enabled = !uiState.isLoading,
+                        label = { Text(range.label) },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+
+            if (uiState.isLoading) {
+                SkeletonCard(
+                    height = 250.dp,
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                )
+            } else {
+                TrendCard(
+                    title = stringResource(app.readylytics.health.core.ui.R.string.label_daily_steps),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                ) {
+                    TrendChart(
+                        points = uiState.dailySteps,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        metricName = stringResource(CoreUiR.string.label_steps),
+                        baselineUnit = stringResource(CoreUiR.string.unit_steps),
+                        hideUnitInTooltip = true,
+                        baseline = uiState.stepGoal.toFloat(),
+                        baselineLabel = stringResource(R.string.label_goal),
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                        parentScrollInProgress = { scrollState.isScrollInProgress },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+        }
+    }
+}

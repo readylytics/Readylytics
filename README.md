@@ -1,54 +1,57 @@
-# MyHealthStatus 🩺
+# Readylytics
 
-MyHealthStatus is a native Android health dashboard application that integrates directly with Huawei wearables via the **Huawei Health Kit SDK**. Rather than just showing raw numbers, the app calculates dynamic 30-day historical baselines to provide actionable, color-coded insights into your daily health metrics.
+![Readylytics Logo](docs/assets/img/logo_slogan.png)
 
-## ✨ Key Features
+[![GitHub stars](https://img.shields.io/github/stars/gregorlauritz/MyHealthStatus?style=social)](https://github.com/gregorlauritz/MyHealthStatus)
+[![CI](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml/badge.svg)](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml)
 
-- **Native Huawei Integration:** Secure, seamless authentication using HMS Core Account Kit and on-device data syncing via Health Kit (No backend server required).
-- **Smart Dashboard:** Daily overview of core metrics (HRV, SpO2, Resting Heart Rate, Skin Temperature, Sleep, Workouts).
-- **Dynamic Baselines:** Calculates up to a 30-day rolling average to determine personal baselines.
-- **Intelligent Color Coding:** Automatically highlights metrics in Red (negative deviation) or Green (optimal/positive deviation) based on your personal historical data.
-- **Trend Analysis:** Detailed line/bar charts with 7-day, 30-day, 180-day, and 1-year interactive views.
-- **Offline Caching:** Utilizes a local SQLite database (Room) to minimize API calls and allow fully offline viewing of historical data.
-- **Data Portability:** Complete freedom over your health data with JSON Export and Restore capabilities via the Android Storage Access Framework.
-- **Theme Support:** Full System, Light, and Dark mode integration.
+Know your readiness, balance your training load, and optimize recovery with advanced health and performance analytics. Readylytics transforms sleep, HRV, resting heart rate, strain, and training data into actionable insights that help you train smarter and recover better.
 
-## 🛠️ Tech Stack
+This is an offline‑first Android app that turns health data from Android **Health Connect** into daily wellness scores (Sleep, Readiness, Strain, and more).
 
-- **Platform:** Android (100% Kotlin)
-- **UI Framework:** Jetpack Compose
-- **Architecture:** MVVM (Model-View-ViewModel) + Repository Pattern
-- **Local Database:** Room (SQLite)
-- **Preferences:** Preferences DataStore
-- **SDKs:**
-  - Huawei Mobile Services (HMS) Account Kit
-  - Huawei Mobile Services (HMS) Health Kit
-- **Charting:** [Vico](https://github.com/patrykandpatrick/vico) / MPAndroidChart
+For full details and user guides, please visit our [website](https://readylytics.com) or explore the local [docs/](docs/) directory.
 
-## 🚀 Getting Started
+---
+
+## Key Features
+
+- **Health Connect Ingestion:** Locally imports sleep, heart rate, HRV, and exercise data.
+- **Offline-First scoring:** All physiological calculations run locally in Kotlin without network calls.
+- **Material 3 UI:** Built using native Jetpack Compose components, support for dynamic color theming, and beautiful charts powered by Vico.
+- **Secure Backups:** Local, user-controlled encrypted backups.
+
+## Getting Started
 
 ### Prerequisites
 
-To build and run this app, you must configure it with the Huawei Developer Console:
+- Android 8.0 (API 26) or higher
+- Android Health Connect configured on-device
+- Android Studio (latest stable version)
 
-1. Register a developer account at [Huawei Developers](https://developer.huawei.com/).
-2. Create a project in **AppGallery Connect**.
-3. Enable the **Health Kit** API for your project.
-4. Generate an `agconnect-services.json` file and place it in the `app/` directory of this project.
-5. Generate a signing certificate (Keystore), extract the SHA-256 fingerprint, and register it in AppGallery Connect.
+### Quick Setup
 
-### Installation
+1. **Clone the repository:**
 
-1. Clone this repository: `git clone https://github.com/yourusername/MyHealthStatus.git`
-2. Open the project in Android Studio.
-3. Sync Gradle and build the project.
-4. Run on a physical Android device with Huawei Mobile Services (HMS Core) installed (Emulators may not support Health Kit auth flows reliably).
+   ```bash
+   git clone https://github.com/gregorlauritz/MyHealthStatus.git
+   cd MyHealthStatus
+   ```
 
-## 📁 Architecture Notes
+2. **Open in Android Studio** and sync the project dependencies.
+3. **Build & Install:**
 
-This project adheres to a "Single Source of Truth" pattern.
-The UI strictly observes the local Room Database. When a user requests a timeframe, the Repository calculates the delta between the requested dates and the fully cached dates (checked against an 11:59:59 PM timestamp rule) to ensure the Huawei SDK is only queried for missing or incomplete days.
+   ```bash
+   ./gradlew installDebug
+   ```
 
-## 📝 License
+## Development & Documentation
 
-[MIT License](LICENSE)
+Detailed guidelines are available in:
+
+- [Architecture & Data Flow Details](internal-docs/DATA_FLOW.md)
+- [Release Signing Setup](internal-docs/RELEASE_SIGNING.md)
+- [Privacy Policy](docs/privacy.md)
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).

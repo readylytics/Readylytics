@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
+    <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
+    
+    <string name="sleep_timeline_title">Sleep timeline</string>
+    <string name="sleep_breakdown_title">Sleep breakdown</string>
+    <string name="sleep_stage_awake">Awake</string>
+    <string name="sleep_stage_rem">REM</string>
+    <string name="sleep_stage_light">Light</string>
+    <string name="sleep_stage_deep">Deep</string>
+    <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
+    <string name="sleep_trend_section_title">Sleep durations and bedtimes</string>
+    <string name="sleep_trend_title">Sleep trend</string>
+    <string name="sleep_trend_legend_window">Sleep window</string>
+    <string name="sleep_trend_legend_duration">Sleep duration</string>
+    <string name="sleep_trend_tooltip_duration_format">Duration: %1$s</string>
+    <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
+
+    <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
+    <string name="chart_accessibility_sleep_architecture_summary">Sleep architecture bar showing proportion of sleep spent in Deep, REM, Light, and Awake stages.</string>
+    <string name="card_title_deep_sleep">Deep Sleep</string>
+    <string name="card_target_deep_sleep">Target: 15–25%</string>
+    <string name="card_title_rem_sleep">REM Sleep</string>
+    <string name="card_target_rem_sleep">Target: 20–25%</string>
+    <string name="message_sleep_no_data_calibrating">No data — calibrating</string>
+    <string name="sleep_metrics_title">Metrics</string>
+    <string name="sleep_score_gauge_title">Sleep Score</string>
+    <string name="sleep_time_gauge_title">Sleep Time</string>
+</resources>

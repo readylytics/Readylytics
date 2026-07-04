@@ -1,0 +1,8 @@
+title: Readylytics
+description: Offline-first health and recovery dashboard
+url: "https://readylytics.com"
+baseurl: "/"
+future_play_store_url: "https://play.google.com/store/apps/details?id=app.readylytics.health"
+permalink: pretty
+exclude:
+  - README.md
