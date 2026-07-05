@@ -185,7 +185,7 @@ Always weight confidence when deciding how to act. A **medium-confidence HRV dec
 
 ## Insights aren't medical advice
 
-Insights point out patterns in your data, but they're **wellness indicators, not diagnoses**. 
+Insights point out patterns in your data, but they're **readiness and training indicators, not diagnoses**. 
 
 - A low HRV streak *can* signal illness, but it can also mean stress, poor sleep, or even a noisy measurement.
 - An elevated resting heart rate *might* mean overtraining, but it could also mean caffeine, dehydration, or a fever.

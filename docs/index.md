@@ -95,3 +95,9 @@ title: Readylytics
 </section>
 
 <p class="closing-tagline">Train with confidence. Recover with purpose. Be ready to train smarter.</p>
+
+---
+
+<p class="disclaimer">
+<strong>Note on AI-Assisted Development:</strong> This application was developed with the assistance of AI. While thoroughly reviewed by both human and AI review processes, both can produce errors. We encourage you to report any issues or concerns you discover.
+</p>

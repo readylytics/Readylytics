@@ -417,7 +417,7 @@ This document defines the user-facing details, signal meanings, possible causes,
 - **Caveats**:
   - This does not diagnose an infection or identify the cause of the signal.
 - **Safety note**: If you have fever, chest pain, shortness of breath, fainting, severe symptoms, or persistent abnormal readings, seek medical advice.
-- **Source notes / rationale**: Wellness indicator for physical stress, non-diagnostic.
+- **Source notes / rationale**: Readiness indicator for physical stress, non-diagnostic.
 
 ---
 
