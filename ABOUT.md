@@ -294,3 +294,9 @@ _Selected primary sources informing the scoring: Buysse 1989 (PSQI); Buysse 2014
 This app describes a wellness-oriented monitoring framework derived from consumer wearable signals and sports-science literature. The framework is **not validated for medical diagnosis, disease screening, treatment guidance, or injury prediction**. Profiles and their associated thresholds optimize _estimated_ recovery signals and are engineering heuristics chosen for practical usability, not clinical validation.
 
 If you have concerns about your health, sleep, or recovery, consult a qualified healthcare provider.
+
+---
+
+## Development Transparency
+
+This application was developed with the assistance of AI. While the implementation and scoring logic have been thoroughly reviewed, both AI and human developers can make errors. We encourage community review and welcome issue reports to help improve the application.

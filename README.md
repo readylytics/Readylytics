@@ -52,6 +52,10 @@ Detailed guidelines are available in:
 - [Release Signing Setup](internal-docs/RELEASE_SIGNING.md)
 - [Privacy Policy](docs/privacy.md)
 
+## Note on AI-Assisted Development
+
+This application was developed with the assistance of AI. While thoroughly reviewed, both AI and human developers can make errors. If you encounter any issues, please report them so we can address them.
+
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE).
