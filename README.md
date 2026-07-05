@@ -7,7 +7,7 @@
 
 Know your readiness, balance your training load, and optimize recovery with advanced health and performance analytics. Readylytics transforms sleep, HRV, resting heart rate, strain, and training data into actionable insights that help you train smarter and recover better.
 
-This is an offline‑first Android app that turns health data from Android **Health Connect** into daily wellness scores (Sleep, Readiness, Strain, and more).
+This is an offline‑first Android app that turns health data from Android **Health Connect** into daily readiness, recovery, and training load scores (Sleep, Readiness, Strain, and more).
 
 For full details and user guides, please visit our [website](https://readylytics.com) or explore the local [docs/](docs/) directory.
 

@@ -18,7 +18,7 @@ When you first open the app, you select a **Physiological Profile** — Athlete,
 
 ## A note on measurement
 
-Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic algorithms. These estimates may contain significant measurement error compared to clinical systems like polysomnography or ECG. The scores shown here are wellness-oriented estimates, not clinical measurements. Profile settings optimize _estimated_ recovery signals, which are influenced by many factors (stress, sleep environment, caffeine, hydration, illness, etc.). Scores are wellness indicators, not diagnoses.
+Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic algorithms. These estimates may contain significant measurement error compared to clinical systems like polysomnography or ECG. The scores shown here are fitness-focused estimates, not clinical measurements. Profile settings optimize _estimated_ recovery signals, which are influenced by many factors (stress, sleep environment, caffeine, hydration, illness, etc.). Scores are readiness indicators, not diagnoses.
 
 ---
 
@@ -271,7 +271,7 @@ Your scores are computed against a stored scoring timezone, so the same underlyi
 
 ## Honest limitations
 
-1. **Wearable stage detection is imperfect.** Even premium devices misclassify deep and REM sleep on individual nights. We use age-adjusted targets and treat architecture scores as approximate wellness indicators. Architecture differences on individual nights should not be over-interpreted.
+1. **Wearable stage detection is imperfect.** Even premium devices misclassify deep and REM sleep on individual nights. We use age-adjusted targets and treat architecture scores as approximate readiness indicators. Architecture differences on individual nights should not be over-interpreted.
 
 2. **Population norms are not destiny.** The age-banded deep sleep ranges come from polysomnography studies of healthy adults. Your healthy normal may sit anywhere in your age band. Our scoring uses age-banded targets so the ceiling shifts with you.
 
@@ -291,7 +291,7 @@ _Selected primary sources informing the scoring: Buysse 1989 (PSQI); Buysse 2014
 
 ## Scientific and medical disclaimer
 
-This app describes a wellness-oriented monitoring framework derived from consumer wearable signals and sports-science literature. The framework is **not validated for medical diagnosis, disease screening, treatment guidance, or injury prediction**. Profiles and their associated thresholds optimize _estimated_ recovery signals and are engineering heuristics chosen for practical usability, not clinical validation.
+This app describes a fitness and training-readiness monitoring framework derived from consumer wearable signals and sports-science literature. The framework is **not validated for medical diagnosis, disease screening, treatment guidance, or injury prediction**. Profiles and their associated thresholds optimize _estimated_ recovery signals and are engineering heuristics chosen for practical usability, not clinical validation.
 
 If you have concerns about your health, sleep, or recovery, consult a qualified healthcare provider.
 

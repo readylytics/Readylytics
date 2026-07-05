@@ -8,7 +8,7 @@ permalink: /privacy/
 
 <p class="policy-meta">Last updated: 2026-06-20</p>
 
-Readylytics is an offline-first wellness app for Android. This policy explains
+Readylytics is an offline-first fitness and training analytics app for Android. This policy explains
 what data Readylytics processes and how that data is handled.
 
 ## Who operates Readylytics
@@ -30,8 +30,8 @@ this can include:
 - Optional body metrics, such as weight, body fat, blood pressure, or oxygen
   saturation, if supported and permitted
 
-Readylytics reads this data to calculate wellness trends, sleep insights,
-readiness, and training-load context.
+Readylytics reads this data to calculate fitness and training load trends, sleep insights,
+readiness, and recovery context.
 
 ## Local storage
 
@@ -88,7 +88,7 @@ children. Readylytics does not knowingly collect data from children.
 
 ## Medical disclaimer
 
-Readylytics is a wellness app, not a medical device. It does not diagnose,
+Readylytics is a fitness and training analytics app, not medical or health guidance. It does not diagnose,
 treat, prevent, or cure any disease or medical condition. Wearable metrics can
 be incomplete or inaccurate, and any health concern should be discussed with a
 qualified clinician.
