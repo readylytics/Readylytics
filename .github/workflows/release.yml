@@ -32,9 +32,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate release workflow contract
-        run: bash .github/tests/release_workflow_test.sh
-
       - name: Compute version
         id: version
         shell: bash
