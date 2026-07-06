@@ -107,7 +107,7 @@ jobs:
         shell: bash
         run: |
           AAB_PATH="app/build/outputs/bundle/release/app-release.aab"
-          actual_fingerprint="$(keytool -printcert -jarfile "$AAB_PATH" | sed -n 's/^SHA256: //p' | head -n 1 | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
+          actual_fingerprint="$(keytool -printcert -jarfile "$AAB_PATH" | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | head -n 1 | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
           expected_fingerprint="$(printf '%s' "$READYLYTICS_UPLOAD_CERT_SHA256" | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
           test -n "$actual_fingerprint"
           test -n "$expected_fingerprint"
