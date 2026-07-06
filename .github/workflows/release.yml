@@ -109,7 +109,7 @@ jobs:
           export_environment_variables: true
 
       - name: Publish to Google Play
-        run: ./gradlew publishBundle --track "$PLAY_TRACK"
+        run: ./gradlew publishReleaseBundle --track "$PLAY_TRACK"
 
       - name: Delete temporary credential files
         if: ${{ always() }}
