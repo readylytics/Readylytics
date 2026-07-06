@@ -19,7 +19,7 @@ concurrency:
 jobs:
   signed-release:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_type == 'tag' && 'production-release' || 'beta-release' }}
+    environment: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, '-RC')) && 'production-release' || 'beta-release' }}
     env:
       READYLYTICS_UPLOAD_STORE_PASSWORD: ${{ secrets.READYLYTICS_UPLOAD_STORE_PASSWORD }}
       READYLYTICS_UPLOAD_KEY_ALIAS: ${{ secrets.READYLYTICS_UPLOAD_KEY_ALIAS }}
@@ -34,49 +34,7 @@ jobs:
 
       - name: Compute version
         id: version
-        shell: bash
-        env:
-          RAW_TAG: ${{ github.ref_name }}
-        run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            if ! [[ "$RAW_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "Release tags must match vMAJOR.MINOR.PATCH; got: $RAW_TAG" >&2
-              exit 1
-            fi
-            VERSION_NAME="${RAW_TAG#v}"
-            RELEASE_KIND="prod"
-            PLAY_TRACK="production"
-          else
-            if [ "${{ github.ref }}" != "refs/heads/main" ]; then
-              echo "Beta releases must target main; got: ${{ github.ref }}" >&2
-              exit 1
-            fi
-            LATEST_TAG="$(git tag --merged HEAD --list 'v*' --sort=-version:refname | grep -Em1 '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)"
-            if [ -n "$LATEST_TAG" ]; then
-              BASE_VERSION="${LATEST_TAG#v}"
-            else
-              BASE_VERSION="$(sed -n 's/^baseVersionName=//p' gradle.properties)"
-            fi
-            test -n "$BASE_VERSION"
-            VERSION_NAME="${BASE_VERSION}-RC${GITHUB_RUN_NUMBER}"
-            RELEASE_KIND="beta"
-            PLAY_TRACK="beta"
-          fi
-          VERSION_CODE="$((100000 + GITHUB_RUN_NUMBER))"
-
-          echo "Resolved versionName=$VERSION_NAME versionCode=$VERSION_CODE kind=$RELEASE_KIND track=$PLAY_TRACK"
-
-          {
-            echo "version_name=$VERSION_NAME"
-            echo "version_code=$VERSION_CODE"
-            echo "release_kind=$RELEASE_KIND"
-            echo "play_track=$PLAY_TRACK"
-          } >> "$GITHUB_OUTPUT"
-          {
-            echo "READYLYTICS_VERSION_NAME=$VERSION_NAME"
-            echo "READYLYTICS_VERSION_CODE=$VERSION_CODE"
-            echo "PLAY_TRACK=$PLAY_TRACK"
-          } >> "$GITHUB_ENV"
+        run: bash ./scripts/compute-release-version.sh
 
       - name: Set up JDK 17
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
