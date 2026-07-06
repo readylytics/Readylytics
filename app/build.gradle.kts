@@ -69,6 +69,20 @@ fun envVar(name: String): String? = providers.environmentVariable(name).orNull
 
 fun computeVersion(): Pair<Int, String> {
     val isCI = envVar("GITHUB_ACTIONS") == "true"
+    val suppliedVersionCode = envVar("READYLYTICS_VERSION_CODE")
+    val suppliedVersionName = envVar("READYLYTICS_VERSION_NAME")
+
+    if ((suppliedVersionCode == null) != (suppliedVersionName == null)) {
+        throw GradleException("READYLYTICS_VERSION_CODE and READYLYTICS_VERSION_NAME must be supplied together.")
+    }
+    if (suppliedVersionCode != null && suppliedVersionName != null) {
+        val code = suppliedVersionCode.toIntOrNull()
+            ?: throw GradleException("READYLYTICS_VERSION_CODE must be an integer.")
+        require(code > 0) { "READYLYTICS_VERSION_CODE must be positive." }
+        require(suppliedVersionName.isNotBlank()) { "READYLYTICS_VERSION_NAME must not be blank." }
+        return Pair(code, suppliedVersionName)
+    }
+
     val isTag = isCI && envVar("GITHUB_REF_TYPE") == "tag"
     val refName = envVar("GITHUB_REF_NAME") ?: ""
     val isReleaseTag = isTag && refName.matches(Regex("^v?\\d+\\.\\d+\\.\\d+$"))
@@ -193,11 +207,7 @@ room {
 }
 
 play {
-    serviceAccountCredentials.set(
-        providers
-            .environmentVariable("PLAY_SERVICE_ACCOUNT_JSON_FILE")
-            .map { layout.projectDirectory.file(it) },
-    )
+    useApplicationDefaultCredentials = true
     track.set("production")
     releaseStatus.set(ReleaseStatus.COMPLETED)
     defaultToAppBundles.set(true)
