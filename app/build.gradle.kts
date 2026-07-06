@@ -76,8 +76,9 @@ fun computeVersion(): Pair<Int, String> {
         throw GradleException("READYLYTICS_VERSION_CODE and READYLYTICS_VERSION_NAME must be supplied together.")
     }
     if (suppliedVersionCode != null && suppliedVersionName != null) {
-        val code = suppliedVersionCode.toIntOrNull()
-            ?: throw GradleException("READYLYTICS_VERSION_CODE must be an integer.")
+        val code =
+            suppliedVersionCode.toIntOrNull()
+                ?: throw GradleException("READYLYTICS_VERSION_CODE must be an integer.")
         require(code > 0) { "READYLYTICS_VERSION_CODE must be positive." }
         require(suppliedVersionName.isNotBlank()) { "READYLYTICS_VERSION_NAME must not be blank." }
         return Pair(code, suppliedVersionName)
