@@ -39,7 +39,9 @@ class CrashReportViewModelTest {
         assertEquals(1, store.deleteCallCount)
     }
 
-    private class FakeCrashReportStore(private var hasReport: Boolean) : CrashReportStore {
+    private class FakeCrashReportStore(
+        private var hasReport: Boolean,
+    ) : CrashReportStore {
         var deleteCallCount = 0
             private set
 
