@@ -81,6 +81,11 @@ private fun openPrivacyPolicy(context: Context) {
     context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
 }
 
+private fun openSourceCode(context: Context) {
+    val url = context.getString(R.string.source_code_url)
+    context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+}
+
 @Composable
 fun SettingsRoute(
     thresholdViewModel: ThresholdSettingsViewModel = hiltViewModel(),
@@ -151,6 +156,9 @@ fun SettingsRoute(
         onOpenPrivacyPolicy = {
             openPrivacyPolicy(context)
         },
+        onOpenSourceCode = {
+            openSourceCode(context)
+        },
         hasCrashReport = hasCrashReport,
         onSendCrashReport = { channel ->
             onSendCrashReport(channel)
@@ -220,6 +228,7 @@ fun SettingsScreen(
     onNavigateToAbout: () -> Unit = {},
     onNavigateToLicenses: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenSourceCode: () -> Unit = {},
     hasCrashReport: Boolean = false,
     onSendCrashReport: (CrashReportChannel) -> Unit = {},
 ) {
@@ -624,6 +633,17 @@ fun SettingsScreen(
                                     )
                                 },
                                 modifier = Modifier.clickable { onOpenPrivacyPolicy() },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.settings_item_source_code),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                },
+                                modifier = Modifier.clickable { onOpenSourceCode() },
                             )
                         }
                     }

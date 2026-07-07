@@ -180,6 +180,7 @@
 <string name="settings_item_privacy_policy">Privacy Policy</string>
 <string name="settings_item_send_crash_report_email">Send crash report by email</string>
 <string name="settings_item_send_crash_report_github">Report crash on GitHub (public)</string>
+<string name="settings_item_source_code">View Source Code</string>
 <string name="settings_label_app_theme">App Theme</string>
 <string name="settings_reset_color_desc">Reset to calculated color</string>
 <string name="settings_retention_description">Automatically delete data older than the retention
@@ -201,6 +202,7 @@
 <string name="settings_sub_local_backup">Local backup</string>
 <string name="settings_sub_thresholds">Thresholds</string>
 <string name="settings_tertiary_color_label">Tertiary color</string>
+<string name="source_code_url" translatable="false">https://github.com/readylytics/Readylytics</string>
 <string name="sync_on_app_open_label">Sync on app open</string>
 <string name="threshold_baseline_window_desc">Number of past sleep sessions used to calculate
         your median bedtime anchor. Default: 14.</string>
