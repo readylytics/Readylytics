@@ -30,7 +30,6 @@ import app.readylytics.health.R
 import app.readylytics.health.crashreport.buildBugReportIntent
 import app.readylytics.health.crashreport.buildCrashReportShareIntent
 import app.readylytics.health.crashreport.buildFeatureRequestIntent
-import app.readylytics.health.crashreport.buildGithubIssueIntent
 import app.readylytics.health.domain.crashreport.CrashReportChannel
 import app.readylytics.health.domain.githubissue.GitHubIssueType
 import app.readylytics.health.domain.insights.InsightParams
@@ -359,8 +358,6 @@ fun MainNavHost(
                         when (channel) {
                             CrashReportChannel.EMAIL ->
                                 buildCrashReportShareIntent(context, crashReportViewModel.reportFile())
-                            CrashReportChannel.GITHUB ->
-                                buildGithubIssueIntent(context, crashReportViewModel.reportText())
                         }
                     context.startActivity(intent)
                     crashReportViewModel.consumeReport()

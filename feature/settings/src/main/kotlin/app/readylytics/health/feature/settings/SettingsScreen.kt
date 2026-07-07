@@ -168,6 +168,7 @@ fun SettingsRoute(
         },
         onSendGitHubIssue = { issueType, hasCrash ->
             onSendGitHubIssue(issueType, hasCrash)
+            if (hasCrash) crashReportViewModel.markSent()
         },
     )
 
@@ -634,19 +635,6 @@ fun SettingsScreen(
                                         )
                                     },
                                     modifier = Modifier.clickable { onSendCrashReport(CrashReportChannel.EMAIL) },
-                                )
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-                                )
-                                ListItem(
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    headlineContent = {
-                                        Text(
-                                            text = stringResource(R.string.settings_item_send_crash_report_github),
-                                            style = MaterialTheme.typography.bodyLarge,
-                                        )
-                                    },
-                                    modifier = Modifier.clickable { onSendCrashReport(CrashReportChannel.GITHUB) },
                                 )
                                 HorizontalDivider(
                                     modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),

@@ -183,7 +183,6 @@
 <string name="settings_item_request_feature">Request Feature</string>
 
 <string name="settings_item_send_crash_report_email">Send crash report by email</string>
-<string name="settings_item_send_crash_report_github">Report crash on GitHub (public)</string>
 <string name="settings_item_source_code">View Source Code</string>
 <string name="settings_label_app_theme">App Theme</string>
 <string name="settings_reset_color_desc">Reset to calculated color</string>
