@@ -166,6 +166,9 @@ fun SettingsRoute(
             onSendCrashReport(channel)
             crashReportViewModel.markSent()
         },
+        onSendGitHubIssue = { issueType, hasCrash ->
+            onSendGitHubIssue(issueType, hasCrash)
+        },
     )
 
     // Determinate, non-blocking progress dialog during resync. The work runs durably in WorkManager
@@ -233,6 +236,7 @@ fun SettingsScreen(
     onOpenSourceCode: () -> Unit = {},
     hasCrashReport: Boolean = false,
     onSendCrashReport: (CrashReportChannel) -> Unit = {},
+    onSendGitHubIssue: (GitHubIssueType, hasCrashReport: Boolean) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }

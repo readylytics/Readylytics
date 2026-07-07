@@ -114,8 +114,8 @@ internal fun buildBugReportBody(context: Context, crashReportText: String?): Str
             appendLine("**Crash Details:**")
             appendLine("```")
             append(crashData)
-            if (truncated) append("\n…truncated")
-            appendLine("\n```")
+            if (truncated) appendLine("\n…truncated") else appendLine()
+            appendLine("```")
             append(deviceInfo)
         }
     } else {
