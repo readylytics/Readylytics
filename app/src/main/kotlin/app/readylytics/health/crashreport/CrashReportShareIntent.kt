@@ -2,6 +2,7 @@ package app.readylytics.health.crashreport
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -80,19 +81,27 @@ fun buildFeatureRequestIntent(
 }
 
 internal fun buildDeviceInfoSection(context: Context): String {
-    val appVersionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName
-    val appVersionCode = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
-    val androidRelease = Build.VERSION.RELEASE
-    val androidSdkInt = Build.VERSION.SDK_INT
-    val deviceManufacturer = Build.MANUFACTURER
-    val deviceModel = Build.MODEL
+    val packageInfo = try {
+        context.packageManager.getPackageInfo(context.packageName, 0)
+    } catch (e: PackageManager.NameNotFoundException) {
+        return buildString {
+            appendLine()
+            appendLine("**Device Info:**")
+            appendLine("- App Version: (unknown)")
+            appendLine("- Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("- Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+        }
+    }
+
+    val appVersionName = packageInfo.versionName ?: "(unknown)"
+    val appVersionCode = packageInfo.longVersionCode
 
     return buildString {
         appendLine()
         appendLine("**Device Info:**")
         appendLine("- App Version: $appVersionName ($appVersionCode)")
-        appendLine("- Device: $deviceManufacturer $deviceModel")
-        appendLine("- Android: $androidRelease (SDK $androidSdkInt)")
+        appendLine("- Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+        appendLine("- Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
     }
 }
 
