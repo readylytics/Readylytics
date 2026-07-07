@@ -21,7 +21,7 @@ fun buildCrashReportShareIntent(
         Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
             putExtra(Intent.EXTRA_EMAIL, arrayOf(context.getString(R.string.crash_report_email_address)))
-            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.crash_report_email_subject))
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.crash_report_title))
             putExtra(Intent.EXTRA_TEXT, context.getString(R.string.crash_report_email_body))
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -39,21 +39,23 @@ fun buildGithubIssueIntent(
     context: Context,
     reportText: String,
 ): Intent {
-    val truncated = reportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
-    val body = if (truncated) reportText.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else reportText
-    val bodyWithFence =
-        buildString {
-            append("```\n")
-            append(body)
-            if (truncated) append("\n…truncated, see the email option for the full report")
-            append("\n```")
-        }
     val uri =
         GITHUB_ISSUES_NEW_URL
             .toUri()
             .buildUpon()
-            .appendQueryParameter("title", context.getString(R.string.crash_report_email_subject))
-            .appendQueryParameter("body", bodyWithFence)
+            .appendQueryParameter("title", context.getString(R.string.crash_report_title))
+            .appendQueryParameter("body", buildGithubIssueBody(reportText))
             .build()
     return Intent(Intent.ACTION_VIEW, uri)
+}
+
+internal fun buildGithubIssueBody(reportText: String): String {
+    val truncated = reportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
+    val body = if (truncated) reportText.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else reportText
+    return buildString {
+        append("```\n")
+        append(body)
+        if (truncated) append("\n…truncated, see the email option for the full report")
+        append("\n```")
+    }
 }

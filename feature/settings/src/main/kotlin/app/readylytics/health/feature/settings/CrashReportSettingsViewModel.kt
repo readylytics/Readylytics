@@ -12,12 +12,13 @@ import javax.inject.Inject
 class CrashReportSettingsViewModel
     @Inject
     constructor(
-        crashReportStore: CrashReportStore,
+        private val crashReportStore: CrashReportStore,
     ) : ViewModel() {
         private val _hasCrashReport = MutableStateFlow(crashReportStore.hasReport())
         val hasCrashReport: StateFlow<Boolean> = _hasCrashReport.asStateFlow()
 
         fun markSent() {
+            crashReportStore.delete()
             _hasCrashReport.value = false
         }
     }

@@ -27,7 +27,7 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
         confirmButton = {
             TextButton(onClick = {
                 context.startActivity(buildCrashReportShareIntent(context, viewModel.reportFile()))
-                viewModel.dismiss()
+                viewModel.consumeReport()
             }) {
                 Text(stringResource(R.string.crash_report_dialog_send_email))
             }
@@ -36,7 +36,7 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
             Row {
                 TextButton(onClick = {
                     context.startActivity(buildGithubIssueIntent(context, viewModel.reportText()))
-                    viewModel.dismiss()
+                    viewModel.consumeReport()
                 }) {
                     Text(stringResource(R.string.crash_report_dialog_send_github))
                 }

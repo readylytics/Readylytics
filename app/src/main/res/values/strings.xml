@@ -39,7 +39,7 @@
     <string name="recovery_reset_button">Reset database &amp; start fresh</string>
 
     <string name="crash_report_email_address">readylytics@gmail.com</string>
-    <string name="crash_report_email_subject">Readylytics crash report</string>
+    <string name="crash_report_title">Readylytics crash report</string>
     <string name="crash_report_email_body">A crash report is attached. Feel free to add any details
         about what you were doing when the app crashed.</string>
     <string name="crash_report_chooser_title">Send crash report</string>
