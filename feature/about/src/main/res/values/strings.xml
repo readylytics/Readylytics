@@ -236,7 +236,7 @@
         (phase-response curve); Banister 1991; Foster 1998; Gabbett 2016; Lolli et al. 2019;
         Impellizzeri et al. 2020/2021.*</string>
     <string name="about_header_disclaimer">## Scientific and medical disclaimer</string>
-    <string name="about_disclaimer_p1">This app describes a wellness-oriented monitoring framework
+    <string name="about_disclaimer_p1">This app describes a health tracking and recovery monitoring framework
         derived from consumer wearable signals and sports-science literature. The framework is **not
         validated for medical diagnosis, disease screening, treatment guidance, or injury
         prediction**. Physiological metrics such as HRV, sleep staging, and resting heart rate are
