@@ -62,6 +62,19 @@ a {
   text-align: center;
 }
 
+.footer-links {
+  margin-top: 0.5rem;
+}
+
+.footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  color: var(--accent);
+}
+
 .nav {
   align-items: center;
   display: flex;
