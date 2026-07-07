@@ -28,7 +28,7 @@ fun AppInfoSection() {
         HighlightBox {
             SubHeader("## A note on measurement")
             BodyText(
-                "Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic algorithms. These estimates may contain significant measurement error compared to clinical systems like polysomnography or ECG. The scores shown here are wellness-oriented estimates, not clinical measurements.",
+                "Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic algorithms. These estimates may contain significant measurement error compared to clinical systems like polysomnography or ECG. The scores shown here are health tracking and recovery estimates, not clinical measurements.",
             )
         }
 
