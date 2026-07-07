@@ -10,6 +10,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import app.readylytics.health.BuildConfig
+import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -62,6 +63,9 @@ class HealthDashboardApplication :
 
     override fun onCreate() {
         super.onCreate()
+        Thread.setDefaultUncaughtExceptionHandler(
+            CrashReportHandler(applicationContext, Thread.getDefaultUncaughtExceptionHandler()),
+        )
         installAndroidLogSink()
         if (BuildConfig.DEBUG) {
             setupPerformanceMonitoring()

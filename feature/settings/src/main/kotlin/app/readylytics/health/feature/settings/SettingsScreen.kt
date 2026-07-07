@@ -54,6 +54,7 @@ import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.data.preferences.AppTheme
+import app.readylytics.health.domain.crashreport.CrashReportChannel
 import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
@@ -94,7 +95,9 @@ fun SettingsRoute(
     localBackupViewModel: LocalBackupViewModel = hiltViewModel(),
     syncViewModel: SyncSettingsViewModel = hiltViewModel(),
     uiViewModel: UISettingsViewModel = hiltViewModel(),
+    crashReportViewModel: CrashReportSettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
+    onSendCrashReport: (CrashReportChannel) -> Unit = {},
 ) {
     val thresholdState by thresholdViewModel.consolidatedState.collectAsStateWithLifecycle()
     val sleepState by sleepViewModel.uiState.collectAsStateWithLifecycle()
@@ -103,6 +106,7 @@ fun SettingsRoute(
     val localBackupState by localBackupViewModel.uiState.collectAsStateWithLifecycle()
     val syncState by syncViewModel.uiState.collectAsStateWithLifecycle()
     val uiState by uiViewModel.uiState.collectAsStateWithLifecycle()
+    val hasCrashReport by crashReportViewModel.hasCrashReport.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val licensesTitle = stringResource(R.string.settings_item_licenses_title)
@@ -154,6 +158,11 @@ fun SettingsRoute(
         },
         onOpenSourceCode = {
             openSourceCode(context)
+        },
+        hasCrashReport = hasCrashReport,
+        onSendCrashReport = { channel ->
+            onSendCrashReport(channel)
+            crashReportViewModel.markSent()
         },
     )
 
@@ -220,6 +229,8 @@ fun SettingsScreen(
     onNavigateToLicenses: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenSourceCode: () -> Unit = {},
+    hasCrashReport: Boolean = false,
+    onSendCrashReport: (CrashReportChannel) -> Unit = {},
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
@@ -563,6 +574,34 @@ fun SettingsScreen(
                         },
                     ) {
                         Column {
+                            if (hasCrashReport) {
+                                ListItem(
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    headlineContent = {
+                                        Text(
+                                            text = stringResource(R.string.settings_item_send_crash_report_email),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                    },
+                                    modifier = Modifier.clickable { onSendCrashReport(CrashReportChannel.EMAIL) },
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+                                )
+                                ListItem(
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    headlineContent = {
+                                        Text(
+                                            text = stringResource(R.string.settings_item_send_crash_report_github),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                    },
+                                    modifier = Modifier.clickable { onSendCrashReport(CrashReportChannel.GITHUB) },
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+                                )
+                            }
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 headlineContent = {

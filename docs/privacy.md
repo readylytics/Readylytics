@@ -65,6 +65,15 @@ Diagnostic logging stays on-device and is only enabled in debug builds.
 Production error handling uses sanitized messages rather than exposing raw
 exception text from health data, storage, or cryptographic operations.
 
+If Readylytics crashes, it stores a local, plain-text crash report on your
+device containing only the error's stack trace, app version, Android version,
+and device model — never health data. This report is never sent automatically.
+You can choose to share it, either from the prompt shown after a crash or from
+Settings: by emailing it to readylytics@gmail.com through your own email app
+(private, only seen by the developer), or by filing it as an issue on the
+project's public GitHub repository through your own browser (publicly visible
+to anyone). If you don't send it, it stays local to your device.
+
 ## Your controls
 
 You can revoke Health Connect permissions in Android Health Connect settings.
