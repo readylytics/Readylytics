@@ -55,6 +55,7 @@ import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicke
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.domain.crashreport.CrashReportChannel
+import app.readylytics.health.domain.githubissue.GitHubIssueType
 import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
@@ -98,6 +99,7 @@ fun SettingsRoute(
     crashReportViewModel: CrashReportSettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
     onSendCrashReport: (CrashReportChannel) -> Unit = {},
+    onSendGitHubIssue: (GitHubIssueType, hasCrashReport: Boolean) -> Unit = { _, _ -> },
 ) {
     val thresholdState by thresholdViewModel.consolidatedState.collectAsStateWithLifecycle()
     val sleepState by sleepViewModel.uiState.collectAsStateWithLifecycle()
@@ -558,6 +560,50 @@ fun SettingsScreen(
                             onPhysiologyEvent = onPhysiologyEvent,
                             onUIEvent = onUIEvent,
                         )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
+                }
+
+                // Issue Reporting (Bug reports & Feature requests)
+                if (matchingSections.any { it.id == "issue_reporting" }) {
+                    M3CollapsibleSection(
+                        header = stringResource(R.string.settings_section_issue_reporting),
+                        expanded =
+                            !expandState.collapseIssueReporting ||
+                                shouldExpandSection("issue_reporting"),
+                        onExpandedChange = {
+                            expandState = expandState.copy(collapseIssueReporting = !it)
+                        },
+                    ) {
+                        Column {
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.settings_item_report_bug),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                },
+                                modifier = Modifier.clickable {
+                                    onSendGitHubIssue(GitHubIssueType.BUG_REPORT, hasCrashReport)
+                                },
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+                            )
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.settings_item_request_feature),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                },
+                                modifier = Modifier.clickable {
+                                    onSendGitHubIssue(GitHubIssueType.FEATURE_REQUEST, false)
+                                },
+                            )
+                        }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
                 }

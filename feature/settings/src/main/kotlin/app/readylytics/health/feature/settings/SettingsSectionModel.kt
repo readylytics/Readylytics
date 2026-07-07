@@ -11,6 +11,7 @@ data class SettingsExpandState(
     val collapseBaselinesThresholds: Boolean = false,
     val collapseDisplay: Boolean = false,
     val collapseAdvanced: Boolean = false,
+    val collapseIssueReporting: Boolean = false,
     val collapseMiscellaneous: Boolean = false,
     val aboutDismissed: Boolean = false,
 ) : Parcelable
@@ -82,6 +83,11 @@ val settingsSections =
             id = "advanced",
             name = "Advanced",
             keywords = listOf("advanced", "override", "ras", "resting", "hr timing"),
+        ),
+        SettingsSectionMetadata(
+            id = "issue_reporting",
+            name = "Issue Reporting",
+            keywords = listOf("bug", "report", "feature", "request", "github", "issue"),
         ),
         SettingsSectionMetadata(
             id = "miscellaneous",

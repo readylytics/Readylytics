@@ -2,6 +2,7 @@ package app.readylytics.health.crashreport
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import app.readylytics.health.R
@@ -47,6 +48,74 @@ fun buildGithubIssueIntent(
             .appendQueryParameter("body", buildGithubIssueBody(reportText))
             .build()
     return Intent(Intent.ACTION_VIEW, uri)
+}
+
+fun buildBugReportIntent(
+    context: Context,
+    crashReportText: String? = null,
+): Intent {
+    val uri =
+        GITHUB_ISSUES_NEW_URL
+            .toUri()
+            .buildUpon()
+            .appendQueryParameter("template", "bug_report.md")
+            .appendQueryParameter("title", context.getString(R.string.github_issue_bug_title))
+            .appendQueryParameter("body", buildBugReportBody(context, crashReportText))
+            .build()
+    return Intent(Intent.ACTION_VIEW, uri)
+}
+
+fun buildFeatureRequestIntent(
+    context: Context,
+): Intent {
+    val uri =
+        GITHUB_ISSUES_NEW_URL
+            .toUri()
+            .buildUpon()
+            .appendQueryParameter("template", "feature_request.md")
+            .appendQueryParameter("title", context.getString(R.string.github_issue_feature_title))
+            .appendQueryParameter("body", buildFeatureRequestBody(context))
+            .build()
+    return Intent(Intent.ACTION_VIEW, uri)
+}
+
+internal fun buildDeviceInfoSection(context: Context): String {
+    val appVersionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+    val appVersionCode = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
+    val androidRelease = Build.VERSION.RELEASE
+    val androidSdkInt = Build.VERSION.SDK_INT
+    val deviceManufacturer = Build.MANUFACTURER
+    val deviceModel = Build.MODEL
+
+    return buildString {
+        appendLine()
+        appendLine("**Device Info:**")
+        appendLine("- App Version: $appVersionName ($appVersionCode)")
+        appendLine("- Device: $deviceManufacturer $deviceModel")
+        appendLine("- Android: $androidRelease (SDK $androidSdkInt)")
+    }
+}
+
+internal fun buildBugReportBody(context: Context, crashReportText: String?): String {
+    val deviceInfo = buildDeviceInfoSection(context)
+    return if (crashReportText != null) {
+        val truncated = crashReportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
+        val crashData = if (truncated) crashReportText.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else crashReportText
+        buildString {
+            appendLine("**Crash Details:**")
+            appendLine("```")
+            append(crashData)
+            if (truncated) append("\n…truncated")
+            appendLine("\n```")
+            append(deviceInfo)
+        }
+    } else {
+        deviceInfo
+    }
+}
+
+internal fun buildFeatureRequestBody(context: Context): String {
+    return buildDeviceInfoSection(context)
 }
 
 internal fun buildGithubIssueBody(reportText: String): String {

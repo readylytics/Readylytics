@@ -27,9 +27,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
+import app.readylytics.health.crashreport.buildBugReportIntent
 import app.readylytics.health.crashreport.buildCrashReportShareIntent
+import app.readylytics.health.crashreport.buildFeatureRequestIntent
 import app.readylytics.health.crashreport.buildGithubIssueIntent
 import app.readylytics.health.domain.crashreport.CrashReportChannel
+import app.readylytics.health.domain.githubissue.GitHubIssueType
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -361,6 +364,16 @@ fun MainNavHost(
                         }
                     context.startActivity(intent)
                     crashReportViewModel.consumeReport()
+                },
+                onSendGitHubIssue = { issueType, hasCrashReport ->
+                    val crashText = if (hasCrashReport) crashReportViewModel.reportText() else null
+                    val intent =
+                        when (issueType) {
+                            GitHubIssueType.BUG_REPORT -> buildBugReportIntent(context, crashText)
+                            GitHubIssueType.FEATURE_REQUEST -> buildFeatureRequestIntent(context)
+                        }
+                    context.startActivity(intent)
+                    if (hasCrashReport) crashReportViewModel.consumeReport()
                 },
             )
         }

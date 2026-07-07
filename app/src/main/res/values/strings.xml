@@ -51,6 +51,9 @@
     <string name="crash_report_dialog_send_github">GitHub Issue (public)</string>
     <string name="crash_report_dialog_dismiss">Not now</string>
 
+    <string name="github_issue_bug_title">Bug Report</string>
+    <string name="github_issue_feature_title">Feature Request</string>
+
     <string name="accessibility_security_alert">Security Alert</string>
 
     <string name="restore_partial_success_title" ns0:ignore="UnusedResources">Restore partly completed</string>
