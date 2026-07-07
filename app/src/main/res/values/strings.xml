@@ -45,8 +45,10 @@
     <string name="crash_report_chooser_title">Send crash report</string>
     <string name="crash_report_dialog_title">Readylytics closed unexpectedly</string>
     <string name="crash_report_dialog_body">Send a report to help fix it? It only contains the
-        error details and basic device info, never your health data.</string>
-    <string name="crash_report_dialog_send">Send</string>
+        error details and basic device info, never your health data. Email is private; a GitHub
+        issue is posted publicly.</string>
+    <string name="crash_report_dialog_send_email">Email (private)</string>
+    <string name="crash_report_dialog_send_github">GitHub Issue (public)</string>
     <string name="crash_report_dialog_dismiss">Not now</string>
 
     <string name="accessibility_security_alert">Security Alert</string>

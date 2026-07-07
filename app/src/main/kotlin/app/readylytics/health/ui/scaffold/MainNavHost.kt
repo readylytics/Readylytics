@@ -28,6 +28,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
 import app.readylytics.health.crashreport.buildCrashReportShareIntent
+import app.readylytics.health.crashreport.buildGithubIssueIntent
+import app.readylytics.health.domain.crashreport.CrashReportChannel
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -349,10 +351,15 @@ fun MainNavHost(
                 onNavigateToAbout = {
                     navController.navigate(AppDestination.About)
                 },
-                onSendCrashReport = {
-                    context.startActivity(
-                        buildCrashReportShareIntent(context, crashReportViewModel.reportFile()),
-                    )
+                onSendCrashReport = { channel ->
+                    val intent =
+                        when (channel) {
+                            CrashReportChannel.EMAIL ->
+                                buildCrashReportShareIntent(context, crashReportViewModel.reportFile())
+                            CrashReportChannel.GITHUB ->
+                                buildGithubIssueIntent(context, crashReportViewModel.reportText())
+                        }
+                    context.startActivity(intent)
                     crashReportViewModel.consumeReport()
                 },
             )

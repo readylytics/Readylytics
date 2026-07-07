@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.crashreport
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -10,6 +11,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.R
 import app.readylytics.health.crashreport.buildCrashReportShareIntent
+import app.readylytics.health.crashreport.buildGithubIssueIntent
 
 @Composable
 fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
@@ -26,12 +28,20 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
                 context.startActivity(buildCrashReportShareIntent(context, viewModel.reportFile()))
                 viewModel.dismiss()
             }) {
-                Text(stringResource(R.string.crash_report_dialog_send))
+                Text(stringResource(R.string.crash_report_dialog_send_email))
             }
         },
         dismissButton = {
-            TextButton(onClick = viewModel::dismiss) {
-                Text(stringResource(R.string.crash_report_dialog_dismiss))
+            Row {
+                TextButton(onClick = {
+                    context.startActivity(buildGithubIssueIntent(context, viewModel.reportText()))
+                    viewModel.dismiss()
+                }) {
+                    Text(stringResource(R.string.crash_report_dialog_send_github))
+                }
+                TextButton(onClick = viewModel::dismiss) {
+                    Text(stringResource(R.string.crash_report_dialog_dismiss))
+                }
             }
         },
     )

@@ -20,6 +20,8 @@ class CrashReportViewModel
 
         fun reportFile(): File = crashReportStore.reportFile()
 
+        fun reportText(): String = crashReportStore.read().orEmpty()
+
         fun dismiss() {
             _showPrompt.value = false
         }
