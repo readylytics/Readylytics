@@ -178,6 +178,7 @@
 <string name="settings_item_licenses">Open source licenses</string>
 <string name="settings_item_licenses_title">Open Source Licenses</string>
 <string name="settings_item_privacy_policy">Privacy Policy</string>
+<string name="settings_item_send_crash_report">Send crash report</string>
 <string name="settings_label_app_theme">App Theme</string>
 <string name="settings_reset_color_desc">Reset to calculated color</string>
 <string name="settings_retention_description">Automatically delete data older than the retention

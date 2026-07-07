@@ -18,6 +18,7 @@ import app.readylytics.health.data.backup.LocalRestoreManager
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.backup.RestoreResult
+import app.readylytics.health.ui.crashreport.CrashReportPrompt
 import app.readylytics.health.ui.navigation.AppNavHost
 import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
@@ -112,6 +113,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     AppNavHost(viewModel = viewModel)
+                    CrashReportPrompt()
                 }
             }
         }

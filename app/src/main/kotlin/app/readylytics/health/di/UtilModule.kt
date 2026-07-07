@@ -2,9 +2,11 @@ package app.readylytics.health.di
 
 import app.readylytics.health.data.backup.LocalBackupServiceImpl
 import app.readylytics.health.data.backup.LocalRestoreServiceImpl
+import app.readylytics.health.data.crashreport.CrashReportStoreImpl
 import app.readylytics.health.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreService
+import app.readylytics.health.domain.crashreport.CrashReportStore
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.util.ResourceProvider
 import dagger.Binds
@@ -27,6 +29,10 @@ abstract class UtilModule {
     @Binds
     @Singleton
     abstract fun bindRestoreService(impl: LocalRestoreServiceImpl): RestoreService
+
+    @Binds
+    @Singleton
+    abstract fun bindCrashReportStore(impl: CrashReportStoreImpl): CrashReportStore
 
     @Binds
     @Singleton

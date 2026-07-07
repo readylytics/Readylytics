@@ -89,7 +89,9 @@ fun SettingsRoute(
     localBackupViewModel: LocalBackupViewModel = hiltViewModel(),
     syncViewModel: SyncSettingsViewModel = hiltViewModel(),
     uiViewModel: UISettingsViewModel = hiltViewModel(),
+    crashReportViewModel: CrashReportSettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
+    onSendCrashReport: () -> Unit = {},
 ) {
     val thresholdState by thresholdViewModel.consolidatedState.collectAsStateWithLifecycle()
     val sleepState by sleepViewModel.uiState.collectAsStateWithLifecycle()
@@ -98,6 +100,7 @@ fun SettingsRoute(
     val localBackupState by localBackupViewModel.uiState.collectAsStateWithLifecycle()
     val syncState by syncViewModel.uiState.collectAsStateWithLifecycle()
     val uiState by uiViewModel.uiState.collectAsStateWithLifecycle()
+    val hasCrashReport by crashReportViewModel.hasCrashReport.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val licensesTitle = stringResource(R.string.settings_item_licenses_title)
@@ -146,6 +149,11 @@ fun SettingsRoute(
         },
         onOpenPrivacyPolicy = {
             openPrivacyPolicy(context)
+        },
+        hasCrashReport = hasCrashReport,
+        onSendCrashReport = {
+            onSendCrashReport()
+            crashReportViewModel.markSent()
         },
     )
 
@@ -211,6 +219,8 @@ fun SettingsScreen(
     onNavigateToAbout: () -> Unit = {},
     onNavigateToLicenses: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
+    hasCrashReport: Boolean = false,
+    onSendCrashReport: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
@@ -554,6 +564,21 @@ fun SettingsScreen(
                         },
                     ) {
                         Column {
+                            if (hasCrashReport) {
+                                ListItem(
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    headlineContent = {
+                                        Text(
+                                            text = stringResource(R.string.settings_item_send_crash_report),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                    },
+                                    modifier = Modifier.clickable { onSendCrashReport() },
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+                                )
+                            }
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 headlineContent = {

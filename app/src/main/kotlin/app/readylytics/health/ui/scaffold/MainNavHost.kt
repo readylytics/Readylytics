@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -26,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
+import app.readylytics.health.crashreport.buildCrashReportShareIntent
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -47,6 +49,7 @@ import app.readylytics.health.feature.vitals.steps.StepDetailRoute
 import app.readylytics.health.feature.vitals.weight.WeightDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
+import app.readylytics.health.ui.crashreport.CrashReportViewModel
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -340,9 +343,17 @@ fun MainNavHost(
             )
         }
         composable<TabDestination.Settings> {
+            val context = LocalContext.current
+            val crashReportViewModel: CrashReportViewModel = hiltViewModel()
             SettingsRoute(
                 onNavigateToAbout = {
                     navController.navigate(AppDestination.About)
+                },
+                onSendCrashReport = {
+                    context.startActivity(
+                        buildCrashReportShareIntent(context, crashReportViewModel.reportFile()),
+                    )
+                    crashReportViewModel.consumeReport()
                 },
             )
         }
