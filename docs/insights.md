@@ -55,7 +55,7 @@ When a rule's conditions are met, an insight fires. You see it on your dashboard
 
 **What it watches:** Heart rate variability trends over consecutive nights.
 
-- If your HRV drops more than 1.5 standard deviations below your baseline *for three or more nights in a row*, an insight fires.
+- If your HRV is below your baseline *for three or more nights in a row*, an insight fires.
 - HRV is sensitive to stress, sleep loss, illness, and overtraining.
 
 **Example:** *"Your HRV has been low for 4 nights. This often appears before illness or during high training stress. Monitor for other symptoms (fatigue, soreness, elevated resting HR)."*

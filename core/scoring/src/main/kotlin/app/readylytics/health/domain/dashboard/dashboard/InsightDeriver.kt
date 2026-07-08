@@ -35,7 +35,7 @@ object InsightDeriver {
             InsightType.RAS_WEEKLY_UNDERPERFORMANCE,
             InsightType.WEIGHT_DRIFT_TRAINING_LOAD,
             InsightType.RECOVERY_HRV_MISSING,
-            InsightType.RECOVERY_STAGES_MISSING,
+            InsightType.RECOVERY_SUSPICIOUS_STAGE_RATIO,
         )
 
     // When a more specific, causal insight fires, it replaces the generic

@@ -74,7 +74,7 @@ class ReadinessCapTest {
             setOf(
                 RecoveryFlag.CALIBRATING,
                 RecoveryFlag.HRV_MISSING,
-                RecoveryFlag.STAGES_MISSING,
+                RecoveryFlag.SUSPICIOUS_STAGE_RATIO,
                 RecoveryFlag.NADIR_DELAYED,
                 RecoveryFlag.STRONG_RECOVERY_SIGNAL,
                 RecoveryFlag.OVERREACHING,

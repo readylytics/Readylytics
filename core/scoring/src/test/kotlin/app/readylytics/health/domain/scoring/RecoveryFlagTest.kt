@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -161,8 +162,15 @@ class RecoveryFlagTest {
     }
 
     @Test
-    fun `stages missing flag set when stagesSuspicious is true`() {
-        assertTrue(RecoveryFlag.STAGES_MISSING in flags(stagesSuspicious = true))
+    fun `suspicious stage ratio flag set when stagesSuspicious is true`() {
+        assertTrue(RecoveryFlag.SUSPICIOUS_STAGE_RATIO in flags(stagesSuspicious = true))
+    }
+
+    @Test
+    fun `legacy STAGES_MISSING value still parses so old persisted rows don't lose the flag`() {
+        // RecoveryFlag.STAGES_MISSING is kept in the enum (never emitted by new scoring code)
+        // purely so RecoveryFlag.valueOf still succeeds for rows persisted before the rename.
+        assertEquals(RecoveryFlag.STAGES_MISSING, RecoveryFlag.valueOf("STAGES_MISSING"))
     }
 
     @Test

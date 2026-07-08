@@ -34,8 +34,8 @@
     </plurals>
     <string name="insight_recovery_hrv_missing_title">HRV Data Missing</string>
     <string name="insight_recovery_hrv_missing_body">Today\'s readiness score is based on resting heart rate and sleep only because no HRV reading was recorded last night.</string>
-    <string name="insight_recovery_stages_missing_title">Sleep Stage Data Missing</string>
-    <string name="insight_recovery_stages_missing_body">Sleep stage data wasn\'t recorded last night, so your sleep score reflects duration and restoration only, not architecture.</string>
+    <string name="insight_recovery_suspicious_stage_ratio_title">Unusual Sleep Stage Proportions</string>
+    <string name="insight_recovery_suspicious_stage_ratio_body">Last night\'s deep/REM sleep proportions looked implausible, so your sleep score reflects duration and restoration only, not architecture.</string>
     <string name="insight_hrv_drop_low_spo2_title">Possible Illness or Breathing Disruption</string>
     <string name="insight_hrv_drop_low_spo2_body">Your HRV dropped sharply to a z-score of %1$.1f and your average sleeping blood oxygen fell to %2$.0f%%, which can indicate the onset of illness or a breathing disruption such as sleep apnea.</string>
     <string name="insight_late_nadir_elevated_rhr_title">Delayed Recovery with Elevated Resting Heart Rate</string>
@@ -286,17 +286,17 @@
     <string-array name="insight_detail_recovery_hrv_missing_recommendations">
         <item>Check whether your wearable recorded HRV and whether Health Connect synced overnight data.</item>
     </string-array>
-    <string name="insight_detail_recovery_stages_missing_observed">Sleep stage coverage was missing or suspicious last night.</string>
-    <string name="insight_detail_recovery_stages_missing_meaning">Sleep score may be less complete because sleep architecture could not be evaluated.</string>
-    <string-array name="insight_detail_recovery_stages_missing_causes">
-        <item>Watch not worn consistently|Inconsistent wear can reduce stage coverage.|GENERIC</item>
-        <item>Loose fit|Poor sensor contact can prevent sleep staging.|GENERIC</item>
-        <item>Device did not classify sleep stages|Some nights may not receive stage labels.|GENERIC</item>
-        <item>Short or interrupted sleep|Short or fragmented sleep can reduce stage coverage.|GENERIC</item>
+    <string name="insight_detail_recovery_suspicious_stage_ratio_observed">Last night\'s deep and/or REM sleep proportion was higher than the expected range.</string>
+    <string name="insight_detail_recovery_suspicious_stage_ratio_meaning">Sleep score may be less complete because sleep architecture could not be evaluated.</string>
+    <string-array name="insight_detail_recovery_suspicious_stage_ratio_causes">
+        <item>Watch not worn consistently|Inconsistent wear can lead to skewed stage proportions.|GENERIC</item>
+        <item>Loose fit|Poor sensor contact can cause sleep stage misclassification.|GENERIC</item>
+        <item>Device did not classify sleep stages|Some nights may not receive reliable stage labels.|GENERIC</item>
+        <item>Short or interrupted sleep|Short or fragmented sleep can skew stage proportions.|GENERIC</item>
         <item>Sync delay|Health Connect data may not have arrived yet.|GENERIC</item>
-        <item>Health Connect data gap|The source app may not have shared stage data.|GENERIC</item>
+        <item>Health Connect data gap|The source app may not have shared complete stage data.|GENERIC</item>
     </string-array>
-    <string-array name="insight_detail_recovery_stages_missing_recommendations">
+    <string-array name="insight_detail_recovery_suspicious_stage_ratio_recommendations">
         <item>Check your wearable sleep report and Health Connect sync status.</item>
     </string-array>
     <string name="insight_detail_rest_day_no_impact_observed">Yesterday was a low-load day, but today\'s HRV did not clearly improve.</string>

@@ -20,7 +20,7 @@ object InsightEngine {
             RasWeeklyUnderperformanceRule(),
             WeightDriftTrainingLoadRule(),
             HrvMissingCaveatRule(),
-            StagesMissingCaveatRule(),
+            SuspiciousStageRatioCaveatRule(),
         )
 
     fun evaluate(context: InsightContext): List<InsightFinding> = rules.mapNotNull { it.evaluate(context) }

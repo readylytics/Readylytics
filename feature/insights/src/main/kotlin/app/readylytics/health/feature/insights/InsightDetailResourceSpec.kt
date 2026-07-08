@@ -155,12 +155,12 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_recovery_hrv_missing_recommendations,
                 ),
                 dataQuality(
-                    InsightType.RECOVERY_STAGES_MISSING,
-                    R.string.insight_recovery_stages_missing_title,
-                    R.string.insight_recovery_stages_missing_body,
-                    R.string.insight_detail_recovery_stages_missing_observed,
-                    R.array.insight_detail_recovery_stages_missing_causes,
-                    R.array.insight_detail_recovery_stages_missing_recommendations,
+                    InsightType.RECOVERY_SUSPICIOUS_STAGE_RATIO,
+                    R.string.insight_recovery_suspicious_stage_ratio_title,
+                    R.string.insight_recovery_suspicious_stage_ratio_body,
+                    R.string.insight_detail_recovery_suspicious_stage_ratio_observed,
+                    R.array.insight_detail_recovery_suspicious_stage_ratio_causes,
+                    R.array.insight_detail_recovery_suspicious_stage_ratio_recommendations,
                 ),
                 physiology(
                     InsightType.REST_DAY_NO_IMPACT,
@@ -342,7 +342,8 @@ data class InsightDetailResourceSpec(
                 InsightType.RAS_WEEKLY_UNDERPERFORMANCE ->
                     R.string.insight_detail_ras_weekly_underperformance_meaning
                 InsightType.RECOVERY_HRV_MISSING -> R.string.insight_detail_recovery_hrv_missing_meaning
-                InsightType.RECOVERY_STAGES_MISSING -> R.string.insight_detail_recovery_stages_missing_meaning
+                InsightType.RECOVERY_SUSPICIOUS_STAGE_RATIO ->
+                    R.string.insight_detail_recovery_suspicious_stage_ratio_meaning
                 InsightType.REST_DAY_NO_IMPACT -> R.string.insight_detail_rest_day_no_impact_meaning
                 InsightType.REST_DAY_SUCCESS -> R.string.insight_detail_rest_day_success_meaning
                 InsightType.SICK_INDICATOR -> R.string.insight_detail_sick_indicator_meaning

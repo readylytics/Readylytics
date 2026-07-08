@@ -32,6 +32,6 @@ class HrvMissingCaveatRuleTest {
 
     @Test
     fun `does not fire for other recovery flags`() {
-        assertNull(rule.evaluate(context(setOf(RecoveryFlag.STAGES_MISSING, RecoveryFlag.CALIBRATING))))
+        assertNull(rule.evaluate(context(setOf(RecoveryFlag.SUSPICIOUS_STAGE_RATIO, RecoveryFlag.CALIBRATING))))
     }
 }

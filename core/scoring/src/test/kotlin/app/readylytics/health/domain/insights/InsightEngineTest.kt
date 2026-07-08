@@ -6,6 +6,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.ln
 
 class InsightEngineTest {
     @Test
@@ -59,13 +60,15 @@ class InsightEngineTest {
                         RecoveryFlag.REST_DAY_NO_IMPACT,
                         RecoveryFlag.ILLNESS_ONSET,
                         RecoveryFlag.HRV_MISSING,
-                        RecoveryFlag.STAGES_MISSING,
+                        RecoveryFlag.SUSPICIOUS_STAGE_RATIO,
                     ),
                 strainRatio = 2f,
                 sleepDurationMinutes = 300,
                 lateNadir = true,
                 rhrDeltaBpm = 10f,
                 zLnHrv = -2f,
+                nocturnalHrv = 45,
+                hrvMuMssd = ln(50f),
                 avgSleepingSpo2 = 90f,
                 bloodPressureSystolic = 140,
                 rasScore = 10f,
@@ -84,6 +87,8 @@ class InsightEngineTest {
                         dailySummary(
                             date = today.date.minusDays(offset.toLong()),
                             zLnHrv = -1f,
+                            nocturnalHrv = 45,
+                            hrvMuMssd = ln(50f),
                             bloodPressureSystolic = 110,
                             totalRas = 5f,
                             weightKg = 80f,
@@ -102,7 +107,7 @@ class InsightEngineTest {
                 InsightType.HIGH_STRAIN_SLEEP_DEFICIT,
                 InsightType.LATE_NADIR_SHORT_SLEEP,
                 InsightType.RECOVERY_HRV_MISSING,
-                InsightType.RECOVERY_STAGES_MISSING,
+                InsightType.RECOVERY_SUSPICIOUS_STAGE_RATIO,
                 InsightType.HRV_DROP_LOW_SPO2,
                 InsightType.LATE_NADIR_ELEVATED_RHR,
                 InsightType.BP_ELEVATED_HIGH_STRAIN,

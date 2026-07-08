@@ -472,7 +472,7 @@ fun getInsightIcon(type: InsightType): ImageVector =
         InsightType.HIGH_STRAIN_SLEEP_DEFICIT -> Icons.Default.MonitorHeart
         InsightType.LATE_NADIR_SHORT_SLEEP -> Icons.Default.Schedule
         InsightType.RECOVERY_HRV_MISSING -> Icons.Default.Info
-        InsightType.RECOVERY_STAGES_MISSING -> Icons.Default.Info
+        InsightType.RECOVERY_SUSPICIOUS_STAGE_RATIO -> Icons.Default.Info
         InsightType.HRV_DROP_LOW_SPO2 -> Icons.Default.Air
         InsightType.LATE_NADIR_ELEVATED_RHR -> Icons.Default.MonitorHeart
         InsightType.BP_ELEVATED_HIGH_STRAIN -> Icons.Default.Bloodtype
