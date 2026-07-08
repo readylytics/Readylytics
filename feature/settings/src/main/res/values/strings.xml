@@ -179,8 +179,8 @@
 <string name="settings_item_licenses_title">Open Source Licenses</string>
 <string name="settings_item_privacy_policy">Privacy Policy</string>
 <string name="settings_section_issue_reporting">Issue Reporting</string>
-<string name="settings_item_report_bug">Report Bug or Crash</string>
-<string name="settings_item_request_feature">Request Feature</string>
+<string name="settings_item_report_bug">Bug Report</string>
+<string name="settings_item_request_feature">Feature Request</string>
 <string name="settings_issue_dialog_body">How would you like to send this?</string>
 <string name="settings_issue_dialog_send_email">Email (private)</string>
 <string name="settings_issue_dialog_send_github">GitHub Issue (public)</string>
