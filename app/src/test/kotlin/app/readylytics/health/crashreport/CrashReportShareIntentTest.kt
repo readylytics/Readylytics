@@ -87,4 +87,60 @@ class CrashReportShareIntentTest {
         assertTrue(body.contains("**Device Info:**"))
         assertTrue(body.length < 8000)
     }
+
+    @Test
+    fun templateDeviceInfoSectionContainsExpectedLabels() {
+        val section = buildTemplateDeviceInfoSection(context)
+
+        assertTrue(section.contains("- App Version:"))
+        assertTrue(section.contains("- Device Manufacturer:"))
+        assertTrue(section.contains("- Device Model:"))
+        assertTrue(section.contains("- Android Version:"))
+        assertTrue(section.contains("- Android SDK Level:"))
+    }
+
+    @Test
+    fun bugReportEmailBodyWithNoCrashTextHasNoCrashSection() {
+        val body = buildBugReportEmailBody(context, crashReportText = null)
+
+        assertFalse(body.contains("## Crash Details"))
+        assertFalse(body.contains("{{"))
+        assertTrue(body.contains("## Summary"))
+        assertTrue(body.contains("## Device & App Info"))
+        assertTrue(body.contains(buildTemplateDeviceInfoSection(context)))
+    }
+
+    @Test
+    fun bugReportEmailBodyWithShortCrashTextIncludesCrashSection() {
+        val crashText = "c".repeat(50)
+
+        val body = buildBugReportEmailBody(context, crashText)
+
+        assertTrue(body.contains("## Crash Details"))
+        assertTrue(body.contains(crashText))
+        assertFalse(body.contains("…truncated"))
+        assertFalse(body.contains("{{"))
+        assertTrue(body.contains(buildTemplateDeviceInfoSection(context)))
+    }
+
+    @Test
+    fun bugReportEmailBodyWithLongCrashTextIsTruncated() {
+        val crashText = "c".repeat(MAX_GITHUB_ISSUE_REPORT_LENGTH + 1000)
+
+        val body = buildBugReportEmailBody(context, crashText)
+
+        assertTrue(body.contains("…truncated"))
+        assertFalse(body.contains("c".repeat(MAX_GITHUB_ISSUE_REPORT_LENGTH + 1)))
+        assertFalse(body.contains("{{"))
+    }
+
+    @Test
+    fun featureRequestEmailBodyHasNoLeftoverTokens() {
+        val body = buildFeatureRequestEmailBody(context)
+
+        assertFalse(body.contains("{{"))
+        assertTrue(body.contains("## Description"))
+        assertTrue(body.contains("## Device & App Info"))
+        assertTrue(body.contains(buildTemplateDeviceInfoSection(context)))
+    }
 }
