@@ -103,7 +103,7 @@ fun computeVersion(): Pair<Int, String> {
         val code = 100000 + runNumber
         Pair(code, "$baseVersionName.$runNumber")
     } else {
-        Pair(1, "$baseVersionName-local")
+        Pair(1, baseVersionName)
     }
 }
 
@@ -159,6 +159,8 @@ android {
             )
         }
         debug {
+            applicationIdSuffix = ".local"
+            versionNameSuffix = "-local"
             enableUnitTestCoverage = true
         }
         create("benchmark") {
