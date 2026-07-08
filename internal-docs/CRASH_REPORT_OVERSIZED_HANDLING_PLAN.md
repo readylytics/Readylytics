@@ -17,7 +17,8 @@ be. Two call sites do this today:
 
 - `buildGithubIssueBody` — used by `CrashReportPrompt.kt`'s immediate
   post-crash dialog.
-- `buildBugReportBody` — used by the Settings "Report Bug or Crash" button.
+- `buildBugReportEmailBody` — used by the Settings "Report Bug or Crash"
+  button, for both its email and GitHub-issue-link paths.
 
 ## Proposed design
 

@@ -63,9 +63,9 @@ fun buildBugReportIntent(
         GITHUB_ISSUES_NEW_URL
             .toUri()
             .buildUpon()
-            .appendQueryParameter("template", "bug_report.md")
+            .appendQueryParameter("labels", "bug")
             .appendQueryParameter("title", context.getString(R.string.github_issue_bug_title))
-            .appendQueryParameter("body", buildBugReportBody(context, crashReportText))
+            .appendQueryParameter("body", buildBugReportEmailBody(context, crashReportText))
             .build()
     return Intent(Intent.ACTION_VIEW, uri)
 }
@@ -75,9 +75,9 @@ fun buildFeatureRequestIntent(context: Context): Intent {
         GITHUB_ISSUES_NEW_URL
             .toUri()
             .buildUpon()
-            .appendQueryParameter("template", "feature_request.md")
+            .appendQueryParameter("labels", "enhancement")
             .appendQueryParameter("title", context.getString(R.string.github_issue_feature_title))
-            .appendQueryParameter("body", buildFeatureRequestBody(context))
+            .appendQueryParameter("body", buildFeatureRequestEmailBody(context))
             .build()
     return Intent(Intent.ACTION_VIEW, uri)
 }
@@ -122,81 +122,39 @@ fun buildFeatureRequestEmailIntent(context: Context): Intent =
         body = buildFeatureRequestEmailBody(context),
     )
 
-internal fun buildDeviceInfoSection(context: Context): String {
+// Looks up (versionName, versionCode), tolerating the rare case where the package can't be
+// found. Wraps the SDK-33+ PackageInfoFlags overload since the plain int-flags one is deprecated.
+private fun appVersionInfo(context: Context): Pair<String, Long> {
     val packageInfo =
         try {
-            context.packageManager.getPackageInfo(context.packageName, 0)
-        } catch (e: PackageManager.NameNotFoundException) {
-            return buildString {
-                appendLine()
-                appendLine("**Device Info:**")
-                appendLine("- App Version: (unknown)")
-                appendLine("- Device: ${Build.MANUFACTURER} ${Build.MODEL}")
-                appendLine("- Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0)
             }
+        } catch (e: PackageManager.NameNotFoundException) {
+            return "(unknown)" to 0L
         }
-
-    val appVersionName = packageInfo.versionName ?: "(unknown)"
-    val appVersionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
-
-    return buildString {
-        appendLine()
-        appendLine("**Device Info:**")
-        appendLine("- App Version: $appVersionName ($appVersionCode)")
-        appendLine("- Device: ${Build.MANUFACTURER} ${Build.MODEL}")
-        appendLine("- Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
-    }
+    return (packageInfo.versionName ?: "(unknown)") to PackageInfoCompat.getLongVersionCode(packageInfo)
 }
 
-internal fun buildBugReportBody(
-    context: Context,
-    crashReportText: String?,
-): String {
-    val deviceInfo = buildDeviceInfoSection(context)
-    return if (crashReportText != null) {
-        val truncated = crashReportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
-        val crashData = if (truncated) crashReportText.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else crashReportText
-        buildString {
-            appendLine("**Crash Details:**")
-            appendLine("```")
-            append(crashData)
-            if (truncated) appendLine("\n…truncated") else appendLine()
-            appendLine("```")
-            append(deviceInfo)
-        }
-    } else {
-        deviceInfo
-    }
-}
-
-internal fun buildFeatureRequestBody(context: Context): String = buildDeviceInfoSection(context)
-
-// Matches .github/ISSUE_TEMPLATE/*.md's Device & App Info bullet layout (one line per field),
-// distinct from buildDeviceInfoSection's condensed 3-line format used by the GitHub body builders.
+// Matches .github/ISSUE_TEMPLATE/*.md's Device & App Info bullet layout (one bolded line per field).
 internal fun buildTemplateDeviceInfoSection(context: Context): String {
-    val packageInfo =
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0)
-        } catch (e: PackageManager.NameNotFoundException) {
-            return buildString {
-                appendLine("- App Version: (unknown)")
-                appendLine("- Device Manufacturer: ${Build.MANUFACTURER}")
-                appendLine("- Device Model: ${Build.MODEL}")
-                appendLine("- Android Version: ${Build.VERSION.RELEASE}")
-                appendLine("- Android SDK Level: ${Build.VERSION.SDK_INT}")
-            }
-        }
-
-    val appVersionName = packageInfo.versionName ?: "(unknown)"
-    val appVersionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
-
+    val (appVersionName, appVersionCode) = appVersionInfo(context)
     return buildString {
-        appendLine("- App Version: $appVersionName ($appVersionCode)")
-        appendLine("- Device Manufacturer: ${Build.MANUFACTURER}")
-        appendLine("- Device Model: ${Build.MODEL}")
-        appendLine("- Android Version: ${Build.VERSION.RELEASE}")
-        appendLine("- Android SDK Level: ${Build.VERSION.SDK_INT}")
+        appendLine("- **App Version:** $appVersionName ($appVersionCode)")
+        appendLine("- **Device Manufacturer:** ${Build.MANUFACTURER}")
+        appendLine("- **Device Model:** ${Build.MODEL}")
+        appendLine("- **Android Version:** ${Build.VERSION.RELEASE}")
+        appendLine("- **Android SDK Level:** ${Build.VERSION.SDK_INT}")
     }
+}
+
+// Truncates text at MAX_GITHUB_ISSUE_REPORT_LENGTH, returning whether truncation happened.
+private fun truncateForReport(text: String): Pair<String, Boolean> {
+    val truncated = text.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
+    return (if (truncated) text.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else text) to truncated
 }
 
 internal fun buildBugReportEmailBody(
@@ -205,8 +163,7 @@ internal fun buildBugReportEmailBody(
 ): String {
     val crashSection =
         if (crashReportText != null) {
-            val truncated = crashReportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
-            val crashData = if (truncated) crashReportText.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else crashReportText
+            val (crashData, truncated) = truncateForReport(crashReportText)
             buildString {
                 appendLine("## Crash Details")
                 appendLine("```")
@@ -230,8 +187,7 @@ internal fun buildFeatureRequestEmailBody(context: Context): String =
         .replace(DEVICE_INFO_TOKEN, buildTemplateDeviceInfoSection(context))
 
 internal fun buildGithubIssueBody(reportText: String): String {
-    val truncated = reportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
-    val body = if (truncated) reportText.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else reportText
+    val (body, truncated) = truncateForReport(reportText)
     return buildString {
         append("```\n")
         append(body)
