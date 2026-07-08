@@ -26,6 +26,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,7 +57,8 @@ import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.domain.crashreport.CrashReportChannel
+import app.readylytics.health.domain.githubissue.GitHubIssueType
+import app.readylytics.health.domain.githubissue.ReportChannel
 import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
@@ -97,7 +101,7 @@ fun SettingsRoute(
     uiViewModel: UISettingsViewModel = hiltViewModel(),
     crashReportViewModel: CrashReportSettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
-    onSendCrashReport: (CrashReportChannel) -> Unit = {},
+    onSendIssueReport: (GitHubIssueType, ReportChannel, hasCrashReport: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val thresholdState by thresholdViewModel.consolidatedState.collectAsStateWithLifecycle()
     val sleepState by sleepViewModel.uiState.collectAsStateWithLifecycle()
@@ -160,9 +164,9 @@ fun SettingsRoute(
             openSourceCode(context)
         },
         hasCrashReport = hasCrashReport,
-        onSendCrashReport = { channel ->
-            onSendCrashReport(channel)
-            crashReportViewModel.markSent()
+        onSendIssueReport = { issueType, channel, hasCrash ->
+            onSendIssueReport(issueType, channel, hasCrash)
+            if (hasCrash) crashReportViewModel.markSent()
         },
     )
 
@@ -230,11 +234,12 @@ fun SettingsScreen(
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenSourceCode: () -> Unit = {},
     hasCrashReport: Boolean = false,
-    onSendCrashReport: (CrashReportChannel) -> Unit = {},
+    onSendIssueReport: (GitHubIssueType, ReportChannel, hasCrashReport: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    var pendingReportType by remember { mutableStateOf<GitHubIssueType?>(null) }
     val resolvedThresholdError = thresholdState.thresholdError.resolveOrNull()
 
     val matchingSections by remember(searchQuery) {
@@ -261,6 +266,69 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) {
+                    Text(stringResource(app.readylytics.health.core.ui.R.string.action_cancel))
+                }
+            },
+        )
+    }
+
+    pendingReportType?.let { reportType ->
+        val titleRes =
+            when (reportType) {
+                GitHubIssueType.BUG_REPORT -> R.string.settings_item_report_bug
+                GitHubIssueType.FEATURE_REQUEST -> R.string.settings_item_request_feature
+            }
+        val hasCrash = reportType == GitHubIssueType.BUG_REPORT && hasCrashReport
+        var selectedChannel by remember(reportType) { mutableStateOf(ReportChannel.EMAIL) }
+        AlertDialog(
+            onDismissRequest = { pendingReportType = null },
+            title = { Text(stringResource(titleRes)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.settings_issue_dialog_body))
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        ReportChannel.entries.forEachIndexed { index, channel ->
+                            SegmentedButton(
+                                selected = selectedChannel == channel,
+                                onClick = { selectedChannel = channel },
+                                shape =
+                                    SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = ReportChannel.entries.size,
+                                    ),
+                                label = {
+                                    Text(
+                                        text =
+                                            when (channel) {
+                                                ReportChannel.EMAIL ->
+                                                    stringResource(R.string.settings_issue_dialog_send_email)
+                                                ReportChannel.GITHUB ->
+                                                    stringResource(R.string.settings_issue_dialog_send_github)
+                                            },
+                                    )
+                                },
+                            )
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.settings_issue_dialog_channel_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onSendIssueReport(reportType, selectedChannel, hasCrash)
+                    pendingReportType = null
+                }) {
+                    Text(stringResource(R.string.settings_issue_dialog_submit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingReportType = null }) {
                     Text(stringResource(app.readylytics.health.core.ui.R.string.action_cancel))
                 }
             },
@@ -562,6 +630,52 @@ fun SettingsScreen(
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
                 }
 
+                // Issue Reporting (Bug reports & Feature requests)
+                if (matchingSections.any { it.id == "issue_reporting" }) {
+                    M3CollapsibleSection(
+                        header = stringResource(R.string.settings_section_issue_reporting),
+                        expanded =
+                            !expandState.collapseIssueReporting ||
+                                shouldExpandSection("issue_reporting"),
+                        onExpandedChange = {
+                            expandState = expandState.copy(collapseIssueReporting = !it)
+                        },
+                    ) {
+                        Column {
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.settings_item_report_bug),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        pendingReportType = GitHubIssueType.BUG_REPORT
+                                    },
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+                            )
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.settings_item_request_feature),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        pendingReportType = GitHubIssueType.FEATURE_REQUEST
+                                    },
+                            )
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
+                }
+
                 // Miscellaneous (About & Licenses)
                 if (matchingSections.any { it.id == "miscellaneous" }) {
                     M3CollapsibleSection(
@@ -574,34 +688,6 @@ fun SettingsScreen(
                         },
                     ) {
                         Column {
-                            if (hasCrashReport) {
-                                ListItem(
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    headlineContent = {
-                                        Text(
-                                            text = stringResource(R.string.settings_item_send_crash_report_email),
-                                            style = MaterialTheme.typography.bodyLarge,
-                                        )
-                                    },
-                                    modifier = Modifier.clickable { onSendCrashReport(CrashReportChannel.EMAIL) },
-                                )
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-                                )
-                                ListItem(
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    headlineContent = {
-                                        Text(
-                                            text = stringResource(R.string.settings_item_send_crash_report_github),
-                                            style = MaterialTheme.typography.bodyLarge,
-                                        )
-                                    },
-                                    modifier = Modifier.clickable { onSendCrashReport(CrashReportChannel.GITHUB) },
-                                )
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-                                )
-                            }
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 headlineContent = {

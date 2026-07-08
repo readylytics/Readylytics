@@ -27,9 +27,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
-import app.readylytics.health.crashreport.buildCrashReportShareIntent
-import app.readylytics.health.crashreport.buildGithubIssueIntent
-import app.readylytics.health.domain.crashreport.CrashReportChannel
+import app.readylytics.health.crashreport.buildBugReportEmailIntent
+import app.readylytics.health.crashreport.buildBugReportIntent
+import app.readylytics.health.crashreport.buildFeatureRequestEmailIntent
+import app.readylytics.health.crashreport.buildFeatureRequestIntent
+import app.readylytics.health.domain.githubissue.GitHubIssueType
+import app.readylytics.health.domain.githubissue.ReportChannel
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -351,16 +354,24 @@ fun MainNavHost(
                 onNavigateToAbout = {
                     navController.navigate(AppDestination.About)
                 },
-                onSendCrashReport = { channel ->
+                onSendIssueReport = { issueType, channel, hasCrashReport ->
+                    val crashText = if (hasCrashReport) crashReportViewModel.reportText() else null
+                    val crashFile = if (hasCrashReport) crashReportViewModel.reportFile() else null
                     val intent =
-                        when (channel) {
-                            CrashReportChannel.EMAIL ->
-                                buildCrashReportShareIntent(context, crashReportViewModel.reportFile())
-                            CrashReportChannel.GITHUB ->
-                                buildGithubIssueIntent(context, crashReportViewModel.reportText())
+                        when (issueType) {
+                            GitHubIssueType.BUG_REPORT ->
+                                when (channel) {
+                                    ReportChannel.GITHUB -> buildBugReportIntent(context, crashText)
+                                    ReportChannel.EMAIL -> buildBugReportEmailIntent(context, crashFile, crashText)
+                                }
+                            GitHubIssueType.FEATURE_REQUEST ->
+                                when (channel) {
+                                    ReportChannel.GITHUB -> buildFeatureRequestIntent(context)
+                                    ReportChannel.EMAIL -> buildFeatureRequestEmailIntent(context)
+                                }
                         }
                     context.startActivity(intent)
-                    crashReportViewModel.consumeReport()
+                    if (hasCrashReport) crashReportViewModel.consumeReport()
                 },
             )
         }
