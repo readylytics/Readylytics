@@ -3,6 +3,8 @@ package app.readylytics.health.data.logcat
 import android.content.Context
 import app.readylytics.health.domain.logcat.LogcatCaptureStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -11,9 +13,6 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 
 @Singleton
 class LogcatCaptureStoreImpl

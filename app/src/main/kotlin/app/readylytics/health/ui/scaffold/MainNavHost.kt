@@ -359,9 +359,16 @@ fun MainNavHost(
                         val crashText = if (request.hasCrashReport) crashReportViewModel.reportText() else null
                         val crashFile = if (request.hasCrashReport) crashReportViewModel.reportFile() else null
                         val logcatText =
-                            if (request.includeLogcat) logcatCaptureViewModel.capture(request.logcatDurationMinutes) else null
+                            if (request.includeLogcat) {
+                                logcatCaptureViewModel.capture(
+                                    request.logcatDurationMinutes,
+                                )
+                            } else {
+                                null
+                            }
                         val logcatFile = if (logcatText != null) logcatCaptureViewModel.captureFile() else null
-                        val intent = buildIssueReportIntent(context, request, crashText, crashFile, logcatText, logcatFile)
+                        val intent =
+                            buildIssueReportIntent(context, request, crashText, crashFile, logcatText, logcatFile)
                         context.startActivity(intent)
                         if (request.hasCrashReport) crashReportViewModel.consumeReport()
                     }

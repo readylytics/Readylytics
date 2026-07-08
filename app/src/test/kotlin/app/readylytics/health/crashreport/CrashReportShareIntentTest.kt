@@ -158,10 +158,21 @@ class CrashReportShareIntentTest {
     fun bugReportIntentWithLogcatTextMatchesEmailBody() {
         val logcatText = "m".repeat(50)
 
-        val uri = buildBugReportIntent(context, crashReportText = null, logcatText = logcatText, logcatDurationMinutes = 45).data!!
+        val uri =
+            buildBugReportIntent(
+                context,
+                crashReportText = null,
+                logcatText = logcatText,
+                logcatDurationMinutes = 45,
+            ).data!!
 
         assertEquals(
-            buildBugReportEmailBody(context, crashReportText = null, logcatText = logcatText, logcatDurationMinutes = 45),
+            buildBugReportEmailBody(
+                context,
+                crashReportText = null,
+                logcatText = logcatText,
+                logcatDurationMinutes = 45,
+            ),
             uri.getQueryParameter("body"),
         )
     }

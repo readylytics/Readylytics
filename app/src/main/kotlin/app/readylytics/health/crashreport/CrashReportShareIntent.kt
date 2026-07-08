@@ -73,9 +73,13 @@ fun buildBugReportIntent(
             .appendQueryParameter("title", context.getString(R.string.github_issue_bug_title))
             .appendQueryParameter(
                 "body",
-                buildBugReportEmailBody(context, crashReportText, logcatText, logcatDurationMinutes = logcatDurationMinutes),
-            )
-            .build()
+                buildBugReportEmailBody(
+                    context,
+                    crashReportText,
+                    logcatText,
+                    logcatDurationMinutes = logcatDurationMinutes,
+                ),
+            ).build()
     return Intent(Intent.ACTION_VIEW, uri)
 }
 
