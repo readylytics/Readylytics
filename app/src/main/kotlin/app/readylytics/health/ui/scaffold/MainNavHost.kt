@@ -1,5 +1,7 @@
 package app.readylytics.health.ui.scaffold
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
@@ -28,7 +30,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
+import app.readylytics.health.crashreport.CrashReportFileExport
+import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildIssueReportIntent
+import app.readylytics.health.crashreport.buildOversizedFallbackIntent
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -51,11 +56,19 @@ import app.readylytics.health.feature.vitals.weight.WeightDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
 import app.readylytics.health.ui.crashreport.CrashReportViewModel
+import app.readylytics.health.ui.crashreport.OversizedReportDialog
 import app.readylytics.health.ui.logcat.LogcatCaptureViewModel
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import kotlinx.coroutines.launch
 import app.readylytics.health.core.ui.R as CoreUiR
+
+// Holds an oversized GitHub-issue report awaiting a SAF save-file result, plus whether the
+// crash-report store should be cleared once the fallback issue is opened.
+private data class PendingGithubSave(
+    val oversized: GithubIssueIntentResult.Oversized,
+    val consumeCrashReport: Boolean,
+)
 
 @Composable
 fun MainNavHost(
@@ -350,6 +363,25 @@ fun MainNavHost(
             val crashReportViewModel: CrashReportViewModel = hiltViewModel()
             val logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel()
             val coroutineScope = rememberCoroutineScope()
+
+            var pendingOversized by remember { mutableStateOf<PendingGithubSave?>(null) }
+            var showOversizedDialog by remember { mutableStateOf(false) }
+
+            val saveLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+                    val pending = pendingOversized
+                    pendingOversized = null
+                    if (uri == null || pending == null) return@rememberLauncherForActivityResult
+                    coroutineScope.launch {
+                        val filename =
+                            CrashReportFileExport
+                                .writeReport(context, uri, pending.oversized.fullReport)
+                                .getOrElse { pending.oversized.suggestedFilename }
+                        context.startActivity(buildOversizedFallbackIntent(context, pending.oversized, filename))
+                        if (pending.consumeCrashReport) crashReportViewModel.consumeReport()
+                    }
+                }
+
             SettingsRoute(
                 onNavigateToAbout = {
                     navController.navigate(AppDestination.About)
@@ -367,12 +399,34 @@ fun MainNavHost(
                                 null
                             }
                         val logcatFile = if (logcatText != null) logcatCaptureViewModel.captureFile() else null
-                        val intent =
-                            buildIssueReportIntent(context, request, crashText, crashFile, logcatText, logcatFile)
-                        context.startActivity(intent)
-                        if (request.hasCrashReport) crashReportViewModel.consumeReport()
+                        when (
+                            val result =
+                                buildIssueReportIntent(context, request, crashText, crashFile, logcatText, logcatFile)
+                        ) {
+                            is GithubIssueIntentResult.Ready -> {
+                                context.startActivity(result.intent)
+                                if (request.hasCrashReport) crashReportViewModel.consumeReport()
+                            }
+                            is GithubIssueIntentResult.Oversized -> {
+                                pendingOversized = PendingGithubSave(result, request.hasCrashReport)
+                                showOversizedDialog = true
+                            }
+                        }
                     }
                 },
+            )
+
+            OversizedReportDialog(
+                isShown = showOversizedDialog,
+                onDismiss = {
+                    showOversizedDialog = false
+                    pendingOversized = null
+                },
+                onSaveFile = { filename ->
+                    showOversizedDialog = false
+                    pendingOversized?.let { saveLauncher.launch(filename) }
+                },
+                suggestedFilename = pendingOversized?.oversized?.suggestedFilename ?: "",
             )
         }
     }

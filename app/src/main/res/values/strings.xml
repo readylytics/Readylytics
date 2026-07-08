@@ -51,6 +51,14 @@
     <string name="crash_report_dialog_send_github">GitHub Issue (public)</string>
     <string name="crash_report_dialog_dismiss">Not now</string>
 
+    <string name="crash_report_too_large_title">Report too large</string>
+    <string name="crash_report_too_large_body">This report is too large to open directly in a GitHub
+        issue. Save it to a file first, then attach that file to the issue that opens next.</string>
+    <string name="crash_report_too_large_confirm">Save to file</string>
+    <string name="crash_report_too_large_cancel">Cancel</string>
+    <string name="github_issue_report_saved_to_file">The full crash report was too large to include
+        here and has been saved to %1$s. Please attach that file to this issue.</string>
+
     <string name="github_issue_bug_title">Bug Report</string>
     <string name="github_issue_feature_title">Feature Request</string>
 
