@@ -34,7 +34,6 @@ import app.readylytics.health.crashreport.CrashReportFileExport
 import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildIssueReportIntent
 import app.readylytics.health.crashreport.buildOversizedFallbackIntent
-import app.readylytics.health.ui.crashreport.OversizedReportDialog
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -57,6 +56,7 @@ import app.readylytics.health.feature.vitals.weight.WeightDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
 import app.readylytics.health.ui.crashreport.CrashReportViewModel
+import app.readylytics.health.ui.crashreport.OversizedReportDialog
 import app.readylytics.health.ui.logcat.LogcatCaptureViewModel
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
