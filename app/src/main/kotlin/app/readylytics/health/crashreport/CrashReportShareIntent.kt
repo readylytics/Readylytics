@@ -37,6 +37,9 @@ private const val GITHUB_ISSUES_NEW_URL = "https://github.com/readylytics/Readyl
 // stack trace can expand it 2-3x, so the raw report text is capped well below that.
 private const val MAX_GITHUB_ISSUE_REPORT_LENGTH = 2000
 
+private const val CRASH_DETAILS_TOKEN = "{{CRASH_DETAILS}}"
+private const val DEVICE_INFO_TOKEN = "{{DEVICE_INFO}}"
+
 fun buildGithubIssueIntent(
     context: Context,
     reportText: String,
@@ -79,6 +82,46 @@ fun buildFeatureRequestIntent(
             .build()
     return Intent(Intent.ACTION_VIEW, uri)
 }
+
+private fun buildReportEmailIntent(
+    context: Context,
+    subject: String,
+    body: String,
+    attachmentFile: File? = null,
+): Intent {
+    val sendIntent =
+        Intent(Intent.ACTION_SEND).apply {
+            type = "message/rfc822"
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(context.getString(R.string.crash_report_email_address)))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+            if (attachmentFile != null) {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", attachmentFile)
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
+    return Intent.createChooser(sendIntent, context.getString(R.string.report_email_chooser_title))
+}
+
+fun buildBugReportEmailIntent(
+    context: Context,
+    crashReportFile: File?,
+    crashReportText: String?,
+): Intent =
+    buildReportEmailIntent(
+        context,
+        subject = context.getString(R.string.github_issue_bug_title),
+        body = buildBugReportEmailBody(context, crashReportText),
+        attachmentFile = crashReportFile,
+    )
+
+fun buildFeatureRequestEmailIntent(context: Context): Intent =
+    buildReportEmailIntent(
+        context,
+        subject = context.getString(R.string.github_issue_feature_title),
+        body = buildFeatureRequestEmailBody(context),
+    )
 
 internal fun buildDeviceInfoSection(context: Context): String {
     val packageInfo = try {
@@ -125,6 +168,60 @@ internal fun buildBugReportBody(context: Context, crashReportText: String?): Str
 
 internal fun buildFeatureRequestBody(context: Context): String {
     return buildDeviceInfoSection(context)
+}
+
+// Matches .github/ISSUE_TEMPLATE/*.md's Device & App Info bullet layout (one line per field),
+// distinct from buildDeviceInfoSection's condensed 3-line format used by the GitHub body builders.
+internal fun buildTemplateDeviceInfoSection(context: Context): String {
+    val packageInfo =
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        } catch (e: PackageManager.NameNotFoundException) {
+            return buildString {
+                appendLine("- App Version: (unknown)")
+                appendLine("- Device Manufacturer: ${Build.MANUFACTURER}")
+                appendLine("- Device Model: ${Build.MODEL}")
+                appendLine("- Android Version: ${Build.VERSION.RELEASE}")
+                appendLine("- Android SDK Level: ${Build.VERSION.SDK_INT}")
+            }
+        }
+
+    val appVersionName = packageInfo.versionName ?: "(unknown)"
+    val appVersionCode = packageInfo.longVersionCode
+
+    return buildString {
+        appendLine("- App Version: $appVersionName ($appVersionCode)")
+        appendLine("- Device Manufacturer: ${Build.MANUFACTURER}")
+        appendLine("- Device Model: ${Build.MODEL}")
+        appendLine("- Android Version: ${Build.VERSION.RELEASE}")
+        appendLine("- Android SDK Level: ${Build.VERSION.SDK_INT}")
+    }
+}
+
+internal fun buildBugReportEmailBody(context: Context, crashReportText: String?): String {
+    val crashSection =
+        if (crashReportText != null) {
+            val truncated = crashReportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
+            val crashData = if (truncated) crashReportText.take(MAX_GITHUB_ISSUE_REPORT_LENGTH) else crashReportText
+            buildString {
+                appendLine("## Crash Details")
+                appendLine("```")
+                append(crashData)
+                if (truncated) appendLine("\n…truncated") else appendLine()
+                appendLine("```")
+                appendLine()
+            }
+        } else {
+            ""
+        }
+    return context.getString(R.string.report_email_bug_template)
+        .replace(CRASH_DETAILS_TOKEN, crashSection)
+        .replace(DEVICE_INFO_TOKEN, buildTemplateDeviceInfoSection(context))
+}
+
+internal fun buildFeatureRequestEmailBody(context: Context): String {
+    return context.getString(R.string.report_email_feature_template)
+        .replace(DEVICE_INFO_TOKEN, buildTemplateDeviceInfoSection(context))
 }
 
 internal fun buildGithubIssueBody(reportText: String): String {

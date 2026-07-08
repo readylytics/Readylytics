@@ -181,9 +181,11 @@
 <string name="settings_section_issue_reporting">Issue Reporting</string>
 <string name="settings_item_report_bug">Bug Report</string>
 <string name="settings_item_request_feature">Feature Request</string>
+<string name="settings_issue_dialog_body">How would you like to send this?</string>
+<string name="settings_issue_dialog_send_email">Email (private)</string>
+<string name="settings_issue_dialog_send_github">GitHub Issue (public)</string>
+<string name="settings_issue_dialog_dismiss">Cancel</string>
 
-<string name="settings_item_send_crash_report_email">Send crash report by email</string>
-<string name="settings_item_send_crash_report_github">Report crash on GitHub (public)</string>
 <string name="settings_item_source_code">View Source Code</string>
 <string name="settings_label_app_theme">App Theme</string>
 <string name="settings_reset_color_desc">Reset to calculated color</string>
