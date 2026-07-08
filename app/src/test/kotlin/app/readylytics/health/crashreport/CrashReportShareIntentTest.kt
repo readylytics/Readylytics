@@ -14,18 +14,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-// Must match the private MAX_GITHUB_ISSUE_REPORT_LENGTH in CrashReportShareIntent.kt.
-private const val MAX_GITHUB_ISSUE_REPORT_LENGTH = 2000
-
 @RunWith(AndroidJUnit4::class)
 class CrashReportShareIntentTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
+
+    private fun ready(result: GithubIssueIntentResult): GithubIssueIntentResult.Ready =
+        result as GithubIssueIntentResult.Ready
 
     @Test
     fun shortReportIsFencedButNotTruncated() {
         val reportText = "a".repeat(50)
 
-        val body = buildGithubIssueBody(reportText)
+        val body = buildGithubIssueBodyFull(reportText)
 
         assertTrue(body.startsWith("```\n"))
         assertTrue(body.endsWith("\n```"))
@@ -34,14 +34,13 @@ class CrashReportShareIntentTest {
     }
 
     @Test
-    fun longReportIsTruncatedWithSuffix() {
+    fun longReportIsNotTruncated() {
         val reportText = "a".repeat(MAX_GITHUB_ISSUE_REPORT_LENGTH + 1000)
 
-        val body = buildGithubIssueBody(reportText)
+        val body = buildGithubIssueBodyFull(reportText)
 
-        assertTrue(body.contains("…truncated, see the email option for the full report"))
-        assertFalse(body.contains("a".repeat(MAX_GITHUB_ISSUE_REPORT_LENGTH + 1)))
-        assertTrue(body.length < 8000)
+        assertTrue(body.contains(reportText))
+        assertFalse(body.contains("…truncated"))
     }
 
     @Test
@@ -155,24 +154,33 @@ class CrashReportShareIntentTest {
     }
 
     @Test
-    fun bugReportIntentWithLogcatTextMatchesEmailBody() {
+    fun bugReportGithubBodyIsNeverTruncatedEvenWhenLong() {
+        val crashText = "c".repeat(MAX_GITHUB_ISSUE_REPORT_LENGTH + 1000)
+        val logcatText = "l".repeat(MAX_GITHUB_ISSUE_REPORT_LENGTH + 1000)
+
+        val body = buildBugReportGithubBody(context, crashText, logcatText, 30)
+
+        assertTrue(body.contains(crashText))
+        assertTrue(body.contains(logcatText))
+        assertFalse(body.contains("…truncated"))
+    }
+
+    @Test
+    fun bugReportIntentWithLogcatTextMatchesGithubBody() {
         val logcatText = "m".repeat(50)
 
         val uri =
-            buildBugReportIntent(
-                context,
-                crashReportText = null,
-                logcatText = logcatText,
-                logcatDurationMinutes = 45,
-            ).data!!
+            ready(
+                buildBugReportIntent(
+                    context,
+                    crashReportText = null,
+                    logcatText = logcatText,
+                    logcatDurationMinutes = 45,
+                ),
+            ).intent.data!!
 
         assertEquals(
-            buildBugReportEmailBody(
-                context,
-                crashReportText = null,
-                logcatText = logcatText,
-                logcatDurationMinutes = 45,
-            ),
+            buildBugReportGithubBody(context, null, logcatText, 45),
             uri.getQueryParameter("body"),
         )
     }
@@ -188,27 +196,27 @@ class CrashReportShareIntentTest {
     }
 
     @Test
-    fun bugReportIntentUsesLabelsInsteadOfTemplateAndMatchesEmailBody() {
+    fun bugReportIntentUsesLabelsInsteadOfTemplateAndMatchesGithubBody() {
         val crashText = "d".repeat(50)
 
-        val uri = buildBugReportIntent(context, crashText).data!!
+        val uri = ready(buildBugReportIntent(context, crashText)).intent.data!!
 
         assertEquals("bug", uri.getQueryParameter("labels"))
         assertNull(uri.getQueryParameter("template"))
         assertEquals(context.getString(R.string.github_issue_bug_title), uri.getQueryParameter("title"))
-        assertEquals(buildBugReportEmailBody(context, crashText), uri.getQueryParameter("body"))
+        assertEquals(buildBugReportGithubBody(context, crashText, null, null), uri.getQueryParameter("body"))
     }
 
     @Test
-    fun bugReportIntentWithNoCrashTextStillMatchesEmailBody() {
-        val uri = buildBugReportIntent(context).data!!
+    fun bugReportIntentWithNoCrashTextStillMatchesGithubBody() {
+        val uri = ready(buildBugReportIntent(context)).intent.data!!
 
-        assertEquals(buildBugReportEmailBody(context, null), uri.getQueryParameter("body"))
+        assertEquals(buildBugReportGithubBody(context, null, null, null), uri.getQueryParameter("body"))
     }
 
     @Test
     fun featureRequestIntentUsesLabelsInsteadOfTemplateAndMatchesEmailBody() {
-        val uri = buildFeatureRequestIntent(context).data!!
+        val uri = ready(buildFeatureRequestIntent(context)).intent.data!!
 
         assertEquals("enhancement", uri.getQueryParameter("labels"))
         assertNull(uri.getQueryParameter("template"))
@@ -228,9 +236,11 @@ class CrashReportShareIntentTest {
                 logcatDurationMinutes = 30,
             )
 
-        val uri = buildIssueReportIntent(context, request, crashText, null, null, null).data
+        val result = buildIssueReportIntent(context, request, crashText, null, null, null)
+        val expected = buildBugReportIntent(context, crashText, null, 30)
 
-        assertEquals(buildBugReportIntent(context, crashText, null, 30).data, uri)
+        assertEquals(ready(expected).intent.data, ready(result).intent.data)
+        assertEquals(ready(expected).intent.action, ready(result).intent.action)
     }
 
     @Test
@@ -244,8 +254,77 @@ class CrashReportShareIntentTest {
                 logcatDurationMinutes = 15,
             )
 
-        val uri = buildIssueReportIntent(context, request, null, null, null, null).data
+        val result = buildIssueReportIntent(context, request, null, null, null, null)
+        val expected = buildFeatureRequestIntent(context)
 
-        assertEquals(buildFeatureRequestIntent(context).data, uri)
+        assertEquals(ready(expected).intent.data, ready(result).intent.data)
+        assertEquals(ready(expected).intent.action, ready(result).intent.action)
+    }
+
+    @Test
+    fun githubIssueIntentReadyWhenReportFitsUnderUrlLimit() {
+        // ~3000 raw chars is over the old 2000-char guess but still comfortably under the real
+        // 8000-char URL limit once percent-encoded -- it must no longer be truncated for no reason.
+        val reportText = "z".repeat(3000)
+
+        val result = buildGithubIssueIntent(context, reportText)
+
+        assertTrue(result is GithubIssueIntentResult.Ready)
+        val body = ready(result).intent.data!!.getQueryParameter("body")!!
+        assertTrue(body.contains(reportText))
+    }
+
+    @Test
+    fun githubIssueIntentOversizedWhenReportHuge() {
+        val reportText = "z".repeat(20000)
+
+        val result = buildGithubIssueIntent(context, reportText)
+
+        assertTrue(result is GithubIssueIntentResult.Oversized)
+        val oversized = result as GithubIssueIntentResult.Oversized
+        assertTrue(oversized.fullReport.contains(reportText))
+        assertNull(oversized.labels)
+        assertEquals(context.getString(R.string.crash_report_title), oversized.title)
+        assertTrue(oversized.suggestedFilename.matches(Regex("readylytics_crash_report_.*\\.txt")))
+    }
+
+    @Test
+    fun bugReportIntentOversizedCarriesBugLabel() {
+        val crashText = "z".repeat(20000)
+
+        val result = buildBugReportIntent(context, crashText)
+
+        assertTrue(result is GithubIssueIntentResult.Oversized)
+        val oversized = result as GithubIssueIntentResult.Oversized
+        assertEquals("bug", oversized.labels)
+        assertEquals(context.getString(R.string.github_issue_bug_title), oversized.title)
+    }
+
+    @Test
+    fun oversizedFallbackIntentContainsDeviceInfoAndFilenameNote() {
+        val oversized =
+            GithubIssueIntentResult.Oversized(
+                fullReport = "z".repeat(20000),
+                suggestedFilename = "readylytics_crash_report_2026-01-01_120000.txt",
+                title = context.getString(R.string.github_issue_bug_title),
+                labels = "bug",
+            )
+
+        val intent = buildOversizedFallbackIntent(context, oversized, oversized.suggestedFilename)
+        val uri = intent.data!!
+
+        assertTrue(uri.toString().length <= GITHUB_ISSUE_URL_MAX_LENGTH)
+        assertEquals("bug", uri.getQueryParameter("labels"))
+        val body = uri.getQueryParameter("body")!!
+        assertTrue(body.contains(oversized.suggestedFilename))
+        assertTrue(body.contains(buildTemplateDeviceInfoSection(context)))
+        assertFalse(body.contains("z".repeat(20000)))
+    }
+
+    @Test
+    fun suggestedFilenameMatchesTimestampPattern() {
+        val filename = CrashReportFileExport.suggestedFilename("readylytics_crash_report")
+
+        assertTrue(filename.matches(Regex("readylytics_crash_report_\\d{4}-\\d{2}-\\d{2}_\\d{6}-\\d{3}\\.txt")))
     }
 }
