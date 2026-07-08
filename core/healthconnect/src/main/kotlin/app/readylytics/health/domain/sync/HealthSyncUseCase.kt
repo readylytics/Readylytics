@@ -1,6 +1,10 @@
 package app.readylytics.health.domain.sync
 
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.util.logD
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
@@ -23,6 +27,7 @@ class HealthSyncUseCase
     constructor(
         private val dailySyncUseCase: DailySyncUseCase,
         private val resyncRangeUseCase: ResyncRangeUseCase,
+        private val settingsRepo: SettingsRepository,
     ) {
         private val syncMutex = Mutex()
 
@@ -42,7 +47,24 @@ class HealthSyncUseCase
             }
 
         suspend fun catchUpSync(onProgress: ((current: Int, total: Int) -> Unit)? = null): Result<Unit> =
-            sync(windowDays = 365, onProgress = onProgress)
+            syncMutex.withLock {
+                val prefs = settingsRepo.userPreferences.first()
+                if (prefs.lastSyncTimestamp > 0L) {
+                    logD("HealthSyncUseCase") {
+                        "Catch-up sync skipped: lastSyncTimestamp is already set (${prefs.lastSyncTimestamp})"
+                    }
+                    return@withLock Result.success(Unit)
+                }
+                val zoneId = prefs.scoringZone()
+                val today = LocalDate.now(zoneId)
+                val startDate = today.minusDays(365)
+                resyncRangeUseCase.run(
+                    startDate = startDate,
+                    endDate = today,
+                    chunkDays = 30,
+                    onProgress = onProgress,
+                )
+            }
 
         /**
          * Full historical resync over [startDate]..[endDate] (inclusive), bounded by the caller from
