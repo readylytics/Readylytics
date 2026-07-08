@@ -252,9 +252,9 @@ class CrashReportShareIntentTest {
                 logcatDurationMinutes = 15,
             )
 
-        val uri = ready(buildIssueReportIntent(context, request, null, null, null, null)).intent.data
+        val result = buildIssueReportIntent(context, request, null, null, null, null)
 
-        assertEquals(buildFeatureRequestIntent(context).data, uri)
+        assertEquals(buildFeatureRequestIntent(context), result)
     }
 
     @Test
@@ -321,6 +321,6 @@ class CrashReportShareIntentTest {
     fun suggestedFilenameMatchesTimestampPattern() {
         val filename = CrashReportFileExport.suggestedFilename("readylytics_crash_report")
 
-        assertTrue(filename.matches(Regex("readylytics_crash_report_\\d{4}-\\d{2}-\\d{2}_\\d{6}\\.txt")))
+        assertTrue(filename.matches(Regex("readylytics_crash_report_\\d{4}-\\d{2}-\\d{2}_\\d{6}-\\d{3}\\.txt")))
     }
 }

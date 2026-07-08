@@ -80,31 +80,16 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
         )
     }
 
-    if (showOversizedDialog) {
-        val oversized = pendingOversized
-        AlertDialog(
-            onDismissRequest = {
-                showOversizedDialog = false
-                pendingOversized = null
-            },
-            title = { Text(stringResource(R.string.crash_report_too_large_title)) },
-            text = { Text(stringResource(R.string.crash_report_too_large_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showOversizedDialog = false
-                    oversized?.let { saveLauncher.launch(it.suggestedFilename) }
-                }) {
-                    Text(stringResource(R.string.crash_report_too_large_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showOversizedDialog = false
-                    pendingOversized = null
-                }) {
-                    Text(stringResource(R.string.crash_report_too_large_cancel))
-                }
-            },
-        )
-    }
+    OversizedReportDialog(
+        isShown = showOversizedDialog,
+        onDismiss = {
+            showOversizedDialog = false
+            pendingOversized = null
+        },
+        onSaveFile = { filename ->
+            showOversizedDialog = false
+            saveLauncher.launch(filename)
+        },
+        suggestedFilename = pendingOversized?.suggestedFilename ?: "",
+    )
 }

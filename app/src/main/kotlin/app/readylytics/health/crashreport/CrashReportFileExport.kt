@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter
 // manually once the report no longer fits in the issue-URL body. Mirrors LocalBackupManager's
 // filename and contentResolver.openOutputStream write pattern.
 object CrashReportFileExport {
-    private val FILENAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
+    private val FILENAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss-SSS")
 
     fun suggestedFilename(prefix: String): String {
         val timestamp = Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)

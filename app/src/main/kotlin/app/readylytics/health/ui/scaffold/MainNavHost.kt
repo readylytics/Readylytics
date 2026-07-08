@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +34,7 @@ import app.readylytics.health.crashreport.CrashReportFileExport
 import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildIssueReportIntent
 import app.readylytics.health.crashreport.buildOversizedFallbackIntent
+import app.readylytics.health.ui.crashreport.OversizedReportDialog
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -418,33 +416,18 @@ fun MainNavHost(
                 },
             )
 
-            if (showOversizedDialog) {
-                val pending = pendingOversized
-                AlertDialog(
-                    onDismissRequest = {
-                        showOversizedDialog = false
-                        pendingOversized = null
-                    },
-                    title = { Text(stringResource(R.string.crash_report_too_large_title)) },
-                    text = { Text(stringResource(R.string.crash_report_too_large_body)) },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showOversizedDialog = false
-                            pending?.let { saveLauncher.launch(it.oversized.suggestedFilename) }
-                        }) {
-                            Text(stringResource(R.string.crash_report_too_large_confirm))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = {
-                            showOversizedDialog = false
-                            pendingOversized = null
-                        }) {
-                            Text(stringResource(R.string.crash_report_too_large_cancel))
-                        }
-                    },
-                )
-            }
+            OversizedReportDialog(
+                isShown = showOversizedDialog,
+                onDismiss = {
+                    showOversizedDialog = false
+                    pendingOversized = null
+                },
+                onSaveFile = { filename ->
+                    showOversizedDialog = false
+                    pendingOversized?.let { saveLauncher.launch(filename) }
+                },
+                suggestedFilename = pendingOversized?.oversized?.suggestedFilename ?: "",
+            )
         }
     }
 }

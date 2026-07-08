@@ -125,15 +125,13 @@ fun buildBugReportIntent(
         filenamePrefix = "readylytics_crash_report",
     )
 
-fun buildFeatureRequestIntent(context: Context): Intent {
-    val uri =
-        buildGithubUri(
-            title = context.getString(R.string.github_issue_feature_title),
-            labels = "enhancement",
-            body = buildFeatureRequestEmailBody(context),
-        )
-    return Intent(Intent.ACTION_VIEW, uri)
-}
+fun buildFeatureRequestIntent(context: Context): GithubIssueIntentResult =
+    githubIssueResult(
+        title = context.getString(R.string.github_issue_feature_title),
+        labels = "enhancement",
+        fullBody = buildFeatureRequestEmailBody(context),
+        filenamePrefix = "readylytics_feature_request",
+    )
 
 // Body for the GitHub issue opened once an oversized report has been saved to a file: device info
 // plus a note pointing the user at the saved file, instead of embedding truncated text.
@@ -231,7 +229,7 @@ fun buildIssueReportIntent(
             }
         GitHubIssueType.FEATURE_REQUEST ->
             when (request.channel) {
-                ReportChannel.GITHUB -> GithubIssueIntentResult.Ready(buildFeatureRequestIntent(context))
+                ReportChannel.GITHUB -> buildFeatureRequestIntent(context)
                 ReportChannel.EMAIL -> GithubIssueIntentResult.Ready(buildFeatureRequestEmailIntent(context))
             }
     }
