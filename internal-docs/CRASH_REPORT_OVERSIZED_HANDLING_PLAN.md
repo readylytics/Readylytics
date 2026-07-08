@@ -1,7 +1,9 @@
 # Follow-up plan: oversized crash reports in GitHub issue URLs
 
-Status: **planned, not implemented.** This document captures a design for a
-future change; no code in this repo implements it yet.
+Status: **implemented.** See `CrashReportShareIntent.kt`
+(`GithubIssueIntentResult`, `buildGithubIssueIntent`/`buildBugReportIntent`),
+`CrashReportFileExport.kt`, `CrashReportPrompt.kt`, and the Settings flow in
+`MainNavHost.kt`'s `composable<TabDestination.Settings>` block.
 
 ## Problem
 
