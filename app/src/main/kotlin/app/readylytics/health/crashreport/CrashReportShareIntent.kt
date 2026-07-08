@@ -8,6 +8,9 @@ import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.net.toUri
 import app.readylytics.health.R
+import app.readylytics.health.domain.githubissue.GitHubIssueType
+import app.readylytics.health.domain.githubissue.IssueReportRequest
+import app.readylytics.health.domain.githubissue.ReportChannel
 import java.io.File
 
 fun buildCrashReportShareIntent(
@@ -39,6 +42,7 @@ private const val GITHUB_ISSUES_NEW_URL = "https://github.com/readylytics/Readyl
 private const val MAX_GITHUB_ISSUE_REPORT_LENGTH = 2000
 
 private const val CRASH_DETAILS_TOKEN = "{{CRASH_DETAILS}}"
+private const val LOGCAT_DETAILS_TOKEN = "{{LOGCAT_DETAILS}}"
 private const val DEVICE_INFO_TOKEN = "{{DEVICE_INFO}}"
 
 fun buildGithubIssueIntent(
@@ -58,6 +62,8 @@ fun buildGithubIssueIntent(
 fun buildBugReportIntent(
     context: Context,
     crashReportText: String? = null,
+    logcatText: String? = null,
+    logcatDurationMinutes: Int? = null,
 ): Intent {
     val uri =
         GITHUB_ISSUES_NEW_URL
@@ -65,7 +71,10 @@ fun buildBugReportIntent(
             .buildUpon()
             .appendQueryParameter("labels", "bug")
             .appendQueryParameter("title", context.getString(R.string.github_issue_bug_title))
-            .appendQueryParameter("body", buildBugReportEmailBody(context, crashReportText))
+            .appendQueryParameter(
+                "body",
+                buildBugReportEmailBody(context, crashReportText, logcatText, logcatDurationMinutes = logcatDurationMinutes),
+            )
             .build()
     return Intent(Intent.ACTION_VIEW, uri)
 }
@@ -107,12 +116,22 @@ fun buildBugReportEmailIntent(
     context: Context,
     crashReportFile: File?,
     crashReportText: String?,
+    logcatFile: File? = null,
+    logcatText: String? = null,
+    logcatDurationMinutes: Int? = null,
 ): Intent =
     buildReportEmailIntent(
         context,
         subject = context.getString(R.string.github_issue_bug_title),
-        body = buildBugReportEmailBody(context, crashReportText),
-        attachmentFile = crashReportFile,
+        body =
+            buildBugReportEmailBody(
+                context,
+                crashReportText,
+                logcatText,
+                logcatAttached = logcatFile != null,
+                logcatDurationMinutes = logcatDurationMinutes,
+            ),
+        attachmentFile = crashReportFile ?: logcatFile,
     )
 
 fun buildFeatureRequestEmailIntent(context: Context): Intent =
@@ -121,6 +140,39 @@ fun buildFeatureRequestEmailIntent(context: Context): Intent =
         subject = context.getString(R.string.github_issue_feature_title),
         body = buildFeatureRequestEmailBody(context),
     )
+
+// Picks the right builder above for a submitted issue-report request, given the crash/logcat
+// diagnostics already gathered by the caller (crash text/file when hasCrashReport, logcat
+// text/file when includeLogcat).
+fun buildIssueReportIntent(
+    context: Context,
+    request: IssueReportRequest,
+    crashReportText: String?,
+    crashReportFile: File?,
+    logcatText: String?,
+    logcatFile: File?,
+): Intent =
+    when (request.issueType) {
+        GitHubIssueType.BUG_REPORT ->
+            when (request.channel) {
+                ReportChannel.GITHUB ->
+                    buildBugReportIntent(context, crashReportText, logcatText, request.logcatDurationMinutes)
+                ReportChannel.EMAIL ->
+                    buildBugReportEmailIntent(
+                        context,
+                        crashReportFile,
+                        crashReportText,
+                        logcatFile,
+                        logcatText,
+                        request.logcatDurationMinutes,
+                    )
+            }
+        GitHubIssueType.FEATURE_REQUEST ->
+            when (request.channel) {
+                ReportChannel.GITHUB -> buildFeatureRequestIntent(context)
+                ReportChannel.EMAIL -> buildFeatureRequestEmailIntent(context)
+            }
+    }
 
 // Looks up (versionName, versionCode), tolerating the rare case where the package can't be
 // found. Wraps the SDK-33+ PackageInfoFlags overload since the plain int-flags one is deprecated.
@@ -160,6 +212,9 @@ private fun truncateForReport(text: String): Pair<String, Boolean> {
 internal fun buildBugReportEmailBody(
     context: Context,
     crashReportText: String?,
+    logcatText: String? = null,
+    logcatAttached: Boolean = false,
+    logcatDurationMinutes: Int? = null,
 ): String {
     val crashSection =
         if (crashReportText != null) {
@@ -175,10 +230,33 @@ internal fun buildBugReportEmailBody(
         } else {
             ""
         }
+    val logcatSection = buildLogcatSection(logcatText, logcatAttached, logcatDurationMinutes)
     return context
         .getString(R.string.report_email_bug_template)
         .replace(CRASH_DETAILS_TOKEN, crashSection)
+        .replace(LOGCAT_DETAILS_TOKEN, logcatSection)
         .replace(DEVICE_INFO_TOKEN, buildTemplateDeviceInfoSection(context))
+}
+
+private fun buildLogcatSection(
+    logcatText: String?,
+    logcatAttached: Boolean,
+    logcatDurationMinutes: Int?,
+): String {
+    if (logcatText == null) return ""
+    return buildString {
+        appendLine("## App Logs (last $logcatDurationMinutes min)")
+        if (logcatAttached) {
+            appendLine("Attached as a text file.")
+        } else {
+            val (logcatData, truncated) = truncateForReport(logcatText)
+            appendLine("```")
+            append(logcatData)
+            if (truncated) appendLine("\n…truncated") else appendLine()
+            appendLine("```")
+        }
+        appendLine()
+    }
 }
 
 internal fun buildFeatureRequestEmailBody(context: Context): String =
