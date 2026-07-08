@@ -30,7 +30,8 @@ class HealthSyncUseCaseTest {
     fun setup() {
         coEvery { dailySync.run(any(), any()) } returns Result.success(Unit)
         coEvery { resyncRange.run(any(), any(), any(), any()) } returns Result.success(Unit)
-        coEvery { settingsRepo.userPreferences } returns flowOf(UserPreferences(lastSyncTimestamp = 0L, scoringZoneId = "UTC"))
+        coEvery { settingsRepo.userPreferences } returns
+            flowOf(UserPreferences(lastSyncTimestamp = 0L, scoringZoneId = "UTC"))
         useCase = HealthSyncUseCase(dailySync, resyncRange, settingsRepo)
     }
 

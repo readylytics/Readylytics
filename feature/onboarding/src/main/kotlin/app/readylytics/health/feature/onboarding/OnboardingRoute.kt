@@ -22,6 +22,11 @@ fun OnboardingRoute(
     userPreferencesFlow: Flow<app.readylytics.health.domain.preferences.UserPreferences>,
     allPermissions: Set<String>,
     requiredPermissions: Set<String>,
+    isSyncing: Boolean = false,
+    syncError: String? = null,
+    onRetrySync: () -> Unit = {},
+    onSkipSync: () -> Unit = {},
+    onReportIssue: () -> Unit = {},
     onPermissionsGranted: () -> Unit,
     onPermissionsDenied: () -> Unit,
     onRestartApp: () -> Unit,
@@ -71,9 +76,9 @@ fun OnboardingRoute(
     val skipToPermissions = userPrefs?.isBirthdayConfigured == true
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
-    if (skipToPermissions) {
+    if (skipToPermissions || isSyncing || syncError != null) {
         LaunchedEffect(Unit) {
-            if (!autoLaunchTriggered) {
+            if (skipToPermissions && !autoLaunchTriggered) {
                 autoLaunchTriggered = true
                 app.readylytics.health.domain.util.logD("OnboardingRoute") {
                     "Profile already configured (restored). Launching HC permissions: $permissions"
@@ -90,7 +95,16 @@ fun OnboardingRoute(
                 },
             )
         } else {
-            FinishingSetupScreen()
+            if (syncError != null) {
+                SyncErrorScreen(
+                    errorMessage = syncError,
+                    onRetry = onRetrySync,
+                    onReportIssue = onReportIssue,
+                    onSkip = onSkipSync,
+                )
+            } else {
+                FinishingSetupScreen()
+            }
         }
         return
     }
