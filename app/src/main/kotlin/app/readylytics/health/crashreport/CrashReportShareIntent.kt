@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.FileProvider
+import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.net.toUri
 import app.readylytics.health.R
 import java.io.File
@@ -69,9 +70,7 @@ fun buildBugReportIntent(
     return Intent(Intent.ACTION_VIEW, uri)
 }
 
-fun buildFeatureRequestIntent(
-    context: Context,
-): Intent {
+fun buildFeatureRequestIntent(context: Context): Intent {
     val uri =
         GITHUB_ISSUES_NEW_URL
             .toUri()
@@ -124,20 +123,21 @@ fun buildFeatureRequestEmailIntent(context: Context): Intent =
     )
 
 internal fun buildDeviceInfoSection(context: Context): String {
-    val packageInfo = try {
-        context.packageManager.getPackageInfo(context.packageName, 0)
-    } catch (e: PackageManager.NameNotFoundException) {
-        return buildString {
-            appendLine()
-            appendLine("**Device Info:**")
-            appendLine("- App Version: (unknown)")
-            appendLine("- Device: ${Build.MANUFACTURER} ${Build.MODEL}")
-            appendLine("- Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+    val packageInfo =
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        } catch (e: PackageManager.NameNotFoundException) {
+            return buildString {
+                appendLine()
+                appendLine("**Device Info:**")
+                appendLine("- App Version: (unknown)")
+                appendLine("- Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+                appendLine("- Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+            }
         }
-    }
 
     val appVersionName = packageInfo.versionName ?: "(unknown)"
-    val appVersionCode = packageInfo.longVersionCode
+    val appVersionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
 
     return buildString {
         appendLine()
@@ -148,7 +148,10 @@ internal fun buildDeviceInfoSection(context: Context): String {
     }
 }
 
-internal fun buildBugReportBody(context: Context, crashReportText: String?): String {
+internal fun buildBugReportBody(
+    context: Context,
+    crashReportText: String?,
+): String {
     val deviceInfo = buildDeviceInfoSection(context)
     return if (crashReportText != null) {
         val truncated = crashReportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
@@ -166,9 +169,7 @@ internal fun buildBugReportBody(context: Context, crashReportText: String?): Str
     }
 }
 
-internal fun buildFeatureRequestBody(context: Context): String {
-    return buildDeviceInfoSection(context)
-}
+internal fun buildFeatureRequestBody(context: Context): String = buildDeviceInfoSection(context)
 
 // Matches .github/ISSUE_TEMPLATE/*.md's Device & App Info bullet layout (one line per field),
 // distinct from buildDeviceInfoSection's condensed 3-line format used by the GitHub body builders.
@@ -187,7 +188,7 @@ internal fun buildTemplateDeviceInfoSection(context: Context): String {
         }
 
     val appVersionName = packageInfo.versionName ?: "(unknown)"
-    val appVersionCode = packageInfo.longVersionCode
+    val appVersionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
 
     return buildString {
         appendLine("- App Version: $appVersionName ($appVersionCode)")
@@ -198,7 +199,10 @@ internal fun buildTemplateDeviceInfoSection(context: Context): String {
     }
 }
 
-internal fun buildBugReportEmailBody(context: Context, crashReportText: String?): String {
+internal fun buildBugReportEmailBody(
+    context: Context,
+    crashReportText: String?,
+): String {
     val crashSection =
         if (crashReportText != null) {
             val truncated = crashReportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH
@@ -214,15 +218,16 @@ internal fun buildBugReportEmailBody(context: Context, crashReportText: String?)
         } else {
             ""
         }
-    return context.getString(R.string.report_email_bug_template)
+    return context
+        .getString(R.string.report_email_bug_template)
         .replace(CRASH_DETAILS_TOKEN, crashSection)
         .replace(DEVICE_INFO_TOKEN, buildTemplateDeviceInfoSection(context))
 }
 
-internal fun buildFeatureRequestEmailBody(context: Context): String {
-    return context.getString(R.string.report_email_feature_template)
+internal fun buildFeatureRequestEmailBody(context: Context): String =
+    context
+        .getString(R.string.report_email_feature_template)
         .replace(DEVICE_INFO_TOKEN, buildTemplateDeviceInfoSection(context))
-}
 
 internal fun buildGithubIssueBody(reportText: String): String {
     val truncated = reportText.length > MAX_GITHUB_ISSUE_REPORT_LENGTH

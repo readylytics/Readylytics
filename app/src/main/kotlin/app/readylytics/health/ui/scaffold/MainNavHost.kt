@@ -58,6 +58,7 @@ import app.readylytics.health.ui.crashreport.CrashReportViewModel
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.core.ui.R as CoreUiR
+
 @Composable
 fun MainNavHost(
     navController: NavHostController,

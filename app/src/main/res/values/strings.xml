@@ -8,7 +8,7 @@
     <string name="sync_completed">Sync and recalculation completed</string>
 
     <string name="resync_notification_title">Recalculating health history</string>
-    
+
     <string name="resync_channel_name">Health resync</string>
     <string name="resync_channel_description">Progress while recalculating your full Health Connect
         history.</string>
@@ -56,7 +56,7 @@
 
     <string name="report_email_chooser_title">Send report</string>
     <!-- Mirrors .github/ISSUE_TEMPLATE/bug_report.md's section structure; keep both in sync. -->
-    <string name="report_email_bug_template">## Summary\nA clear and concise description of what the bug is.\n\n## Steps to Reproduce\nSteps to reproduce the behavior:\n1. Go to \'...\'\n2. Click on \'...\'\n3. Scroll down to \'...\'\n4. See error\n\n## Expected Behavior\nA clear and concise description of what you expected to happen.\n\n## Actual Behavior\nWhat actually happened instead of the expected behavior.\n\n## Screenshots\nIf applicable, add screenshots to help explain your problem.\n\n{{CRASH_DETAILS}}## Device &amp; App Info\n{{DEVICE_INFO}}\n## Additional Context\nAdd any other context about the problem here.</string>
+    <string name="report_email_bug_template">## Summary\nA clear and concise description of what the bug is.\n\n## Steps to Reproduce\nSteps to reproduce the behavior:\n1. Go to \'…\'\n2. Click on \'…\'\n3. Scroll down to \'…\'\n4. See error\n\n## Expected Behavior\nA clear and concise description of what you expected to happen.\n\n## Actual Behavior\nWhat actually happened instead of the expected behavior.\n\n## Screenshots\nIf applicable, add screenshots to help explain your problem.\n\n{{CRASH_DETAILS}}## Device &amp; App Info\n{{DEVICE_INFO}}\n## Additional Context\nAdd any other context about the problem here.</string>
     <!-- Mirrors .github/ISSUE_TEMPLATE/feature_request.md's section structure; keep both in sync. -->
     <string name="report_email_feature_template">## Description\nA clear and concise description of what you want to happen.\n\n## Use Case\nExplain the use case or scenario where this feature would be valuable. What problem does it solve?\n\n## Desired Behavior\nDescribe in detail what you\'d like to see implemented.\n\n## Benefits\nWhy should this feature be added? What value does it provide to users?\n\n## Device &amp; App Info\n{{DEVICE_INFO}}\n## Additional Context\nAdd any other context, mockups, or examples here.</string>
 

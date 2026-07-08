@@ -620,9 +620,10 @@ fun SettingsScreen(
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                 },
-                                modifier = Modifier.clickable {
-                                    pendingReportType = GitHubIssueType.BUG_REPORT
-                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        pendingReportType = GitHubIssueType.BUG_REPORT
+                                    },
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
@@ -635,9 +636,10 @@ fun SettingsScreen(
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                 },
-                                modifier = Modifier.clickable {
-                                    pendingReportType = GitHubIssueType.FEATURE_REQUEST
-                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        pendingReportType = GitHubIssueType.FEATURE_REQUEST
+                                    },
                             )
                         }
                     }
