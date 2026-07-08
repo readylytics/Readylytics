@@ -35,8 +35,10 @@ fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel()) {
             val oversized = pendingOversized
             pendingOversized = null
             if (uri == null || oversized == null) return@rememberLauncherForActivityResult
-            val filename = CrashReportFileExport.writeReport(context, uri, oversized.fullReport)
-                .getOrElse { oversized.suggestedFilename }
+            val filename =
+                CrashReportFileExport
+                    .writeReport(context, uri, oversized.fullReport)
+                    .getOrElse { oversized.suggestedFilename }
             context.startActivity(buildOversizedFallbackIntent(context, oversized, filename))
             viewModel.consumeReport()
         }

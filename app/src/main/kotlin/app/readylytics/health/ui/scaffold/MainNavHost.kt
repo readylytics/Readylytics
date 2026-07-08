@@ -375,8 +375,10 @@ fun MainNavHost(
                     pendingOversized = null
                     if (uri == null || pending == null) return@rememberLauncherForActivityResult
                     coroutineScope.launch {
-                        val filename = CrashReportFileExport.writeReport(context, uri, pending.oversized.fullReport)
-                            .getOrElse { pending.oversized.suggestedFilename }
+                        val filename =
+                            CrashReportFileExport
+                                .writeReport(context, uri, pending.oversized.fullReport)
+                                .getOrElse { pending.oversized.suggestedFilename }
                         context.startActivity(buildOversizedFallbackIntent(context, pending.oversized, filename))
                         if (pending.consumeCrashReport) crashReportViewModel.consumeReport()
                     }

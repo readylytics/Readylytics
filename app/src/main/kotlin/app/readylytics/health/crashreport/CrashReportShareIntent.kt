@@ -55,7 +55,9 @@ private const val DEVICE_INFO_TOKEN = "{{DEVICE_INFO}}"
 // GITHUB_ISSUE_URL_MAX_LENGTH and is ready to launch, or it doesn't and the full report needs to
 // be saved to a file instead (see CrashReportFileExport + buildOversizedFallbackIntent).
 sealed interface GithubIssueIntentResult {
-    data class Ready(val intent: Intent) : GithubIssueIntentResult
+    data class Ready(
+        val intent: Intent,
+    ) : GithubIssueIntentResult
 
     data class Oversized(
         val fullReport: String,
