@@ -1,9 +1,12 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.preferences.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -19,6 +22,7 @@ import java.time.LocalDate
 class HealthSyncUseCaseTest {
     private val dailySync = mockk<DailySyncUseCase>()
     private val resyncRange = mockk<ResyncRangeUseCase>()
+    private val settingsRepo = mockk<SettingsRepository>()
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -26,7 +30,8 @@ class HealthSyncUseCaseTest {
     fun setup() {
         coEvery { dailySync.run(any(), any()) } returns Result.success(Unit)
         coEvery { resyncRange.run(any(), any(), any(), any()) } returns Result.success(Unit)
-        useCase = HealthSyncUseCase(dailySync, resyncRange)
+        coEvery { settingsRepo.userPreferences } returns flowOf(UserPreferences(lastSyncTimestamp = 0L, scoringZoneId = "UTC"))
+        useCase = HealthSyncUseCase(dailySync, resyncRange, settingsRepo)
     }
 
     @Test
@@ -38,11 +43,29 @@ class HealthSyncUseCaseTest {
         }
 
     @Test
-    fun `catchUpSync delegates to DailySyncUseCase with a 365-day window`() =
+    fun `catchUpSync delegates to ResyncRangeUseCase with a 365-day window`() =
         runTest {
             useCase.catchUpSync()
 
-            coVerify { dailySync.run(365, null) }
+            coVerify {
+                resyncRange.run(
+                    startDate = any(),
+                    endDate = any(),
+                    chunkDays = 30,
+                    onProgress = null,
+                )
+            }
+        }
+
+    @Test
+    fun `catchUpSync skips sync when lastSyncTimestamp is set`() =
+        runTest {
+            coEvery { settingsRepo.userPreferences } returns flowOf(UserPreferences(lastSyncTimestamp = 123L))
+
+            val result = useCase.catchUpSync()
+
+            assertTrue(result.isSuccess)
+            coVerify(exactly = 0) { resyncRange.run(any(), any(), any(), any()) }
         }
 
     @Test
