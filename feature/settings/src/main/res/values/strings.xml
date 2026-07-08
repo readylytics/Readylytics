@@ -182,9 +182,10 @@
 <string name="settings_item_report_bug">Bug Report</string>
 <string name="settings_item_request_feature">Feature Request</string>
 <string name="settings_issue_dialog_body">How would you like to send this?</string>
-<string name="settings_issue_dialog_send_email">Email (private)</string>
-<string name="settings_issue_dialog_send_github">GitHub Issue (public)</string>
-<string name="settings_issue_dialog_dismiss">Cancel</string>
+<string name="settings_issue_dialog_send_email">Email</string>
+<string name="settings_issue_dialog_send_github">GitHub Issue</string>
+<string name="settings_issue_dialog_channel_help">Email is private and only seen by the developer. GitHub Issues are public.</string>
+<string name="settings_issue_dialog_submit">Submit</string>
 
 <string name="settings_item_source_code">View Source Code</string>
 <string name="settings_label_app_theme">App Theme</string>

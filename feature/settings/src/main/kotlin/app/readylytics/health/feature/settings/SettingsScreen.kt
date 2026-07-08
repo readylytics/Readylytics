@@ -5,7 +5,6 @@ import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +26,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -277,29 +279,57 @@ fun SettingsScreen(
                 GitHubIssueType.FEATURE_REQUEST -> R.string.settings_item_request_feature
             }
         val hasCrash = reportType == GitHubIssueType.BUG_REPORT && hasCrashReport
+        var selectedChannel by remember(reportType) { mutableStateOf(ReportChannel.EMAIL) }
         AlertDialog(
             onDismissRequest = { pendingReportType = null },
             title = { Text(stringResource(titleRes)) },
-            text = { Text(stringResource(R.string.settings_issue_dialog_body)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.settings_issue_dialog_body))
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        ReportChannel.entries.forEachIndexed { index, channel ->
+                            SegmentedButton(
+                                selected = selectedChannel == channel,
+                                onClick = { selectedChannel = channel },
+                                shape =
+                                    SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = ReportChannel.entries.size,
+                                    ),
+                                label = {
+                                    Text(
+                                        text =
+                                            when (channel) {
+                                                ReportChannel.EMAIL ->
+                                                    stringResource(R.string.settings_issue_dialog_send_email)
+                                                ReportChannel.GITHUB ->
+                                                    stringResource(R.string.settings_issue_dialog_send_github)
+                                            },
+                                    )
+                                },
+                            )
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.settings_issue_dialog_channel_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    onSendIssueReport(reportType, ReportChannel.EMAIL, hasCrash)
+                    onSendIssueReport(reportType, selectedChannel, hasCrash)
                     pendingReportType = null
                 }) {
-                    Text(stringResource(R.string.settings_issue_dialog_send_email))
+                    Text(stringResource(R.string.settings_issue_dialog_submit))
                 }
             },
             dismissButton = {
-                Row {
-                    TextButton(onClick = {
-                        onSendIssueReport(reportType, ReportChannel.GITHUB, hasCrash)
-                        pendingReportType = null
-                    }) {
-                        Text(stringResource(R.string.settings_issue_dialog_send_github))
-                    }
-                    TextButton(onClick = { pendingReportType = null }) {
-                        Text(stringResource(R.string.settings_issue_dialog_dismiss))
-                    }
+                TextButton(onClick = { pendingReportType = null }) {
+                    Text(stringResource(app.readylytics.health.core.ui.R.string.action_cancel))
                 }
             },
         )
