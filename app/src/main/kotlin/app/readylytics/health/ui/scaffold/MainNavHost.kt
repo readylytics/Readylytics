@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,12 +28,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
-import app.readylytics.health.crashreport.buildBugReportEmailIntent
-import app.readylytics.health.crashreport.buildBugReportIntent
-import app.readylytics.health.crashreport.buildFeatureRequestEmailIntent
-import app.readylytics.health.crashreport.buildFeatureRequestIntent
-import app.readylytics.health.domain.githubissue.GitHubIssueType
-import app.readylytics.health.domain.githubissue.ReportChannel
+import app.readylytics.health.crashreport.buildIssueReportIntent
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
@@ -55,8 +51,10 @@ import app.readylytics.health.feature.vitals.weight.WeightDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
 import app.readylytics.health.ui.crashreport.CrashReportViewModel
+import app.readylytics.health.ui.logcat.LogcatCaptureViewModel
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
+import kotlinx.coroutines.launch
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -350,28 +348,30 @@ fun MainNavHost(
         composable<TabDestination.Settings> {
             val context = LocalContext.current
             val crashReportViewModel: CrashReportViewModel = hiltViewModel()
+            val logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel()
+            val coroutineScope = rememberCoroutineScope()
             SettingsRoute(
                 onNavigateToAbout = {
                     navController.navigate(AppDestination.About)
                 },
-                onSendIssueReport = { issueType, channel, hasCrashReport ->
-                    val crashText = if (hasCrashReport) crashReportViewModel.reportText() else null
-                    val crashFile = if (hasCrashReport) crashReportViewModel.reportFile() else null
-                    val intent =
-                        when (issueType) {
-                            GitHubIssueType.BUG_REPORT ->
-                                when (channel) {
-                                    ReportChannel.GITHUB -> buildBugReportIntent(context, crashText)
-                                    ReportChannel.EMAIL -> buildBugReportEmailIntent(context, crashFile, crashText)
-                                }
-                            GitHubIssueType.FEATURE_REQUEST ->
-                                when (channel) {
-                                    ReportChannel.GITHUB -> buildFeatureRequestIntent(context)
-                                    ReportChannel.EMAIL -> buildFeatureRequestEmailIntent(context)
-                                }
-                        }
-                    context.startActivity(intent)
-                    if (hasCrashReport) crashReportViewModel.consumeReport()
+                onSendIssueReport = { request ->
+                    coroutineScope.launch {
+                        val crashText = if (request.hasCrashReport) crashReportViewModel.reportText() else null
+                        val crashFile = if (request.hasCrashReport) crashReportViewModel.reportFile() else null
+                        val logcatText =
+                            if (request.includeLogcat) {
+                                logcatCaptureViewModel.capture(
+                                    request.logcatDurationMinutes,
+                                )
+                            } else {
+                                null
+                            }
+                        val logcatFile = if (logcatText != null) logcatCaptureViewModel.captureFile() else null
+                        val intent =
+                            buildIssueReportIntent(context, request, crashText, crashFile, logcatText, logcatFile)
+                        context.startActivity(intent)
+                        if (request.hasCrashReport) crashReportViewModel.consumeReport()
+                    }
                 },
             )
         }

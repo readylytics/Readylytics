@@ -26,9 +26,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,7 +55,7 @@ import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicke
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.domain.githubissue.GitHubIssueType
-import app.readylytics.health.domain.githubissue.ReportChannel
+import app.readylytics.health.domain.githubissue.IssueReportRequest
 import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
@@ -101,7 +98,7 @@ fun SettingsRoute(
     uiViewModel: UISettingsViewModel = hiltViewModel(),
     crashReportViewModel: CrashReportSettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
-    onSendIssueReport: (GitHubIssueType, ReportChannel, hasCrashReport: Boolean) -> Unit = { _, _, _ -> },
+    onSendIssueReport: (IssueReportRequest) -> Unit = {},
 ) {
     val thresholdState by thresholdViewModel.consolidatedState.collectAsStateWithLifecycle()
     val sleepState by sleepViewModel.uiState.collectAsStateWithLifecycle()
@@ -164,9 +161,9 @@ fun SettingsRoute(
             openSourceCode(context)
         },
         hasCrashReport = hasCrashReport,
-        onSendIssueReport = { issueType, channel, hasCrash ->
-            onSendIssueReport(issueType, channel, hasCrash)
-            if (hasCrash) crashReportViewModel.markSent()
+        onSendIssueReport = { request ->
+            onSendIssueReport(request)
+            if (request.hasCrashReport) crashReportViewModel.markSent()
         },
     )
 
@@ -234,7 +231,7 @@ fun SettingsScreen(
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenSourceCode: () -> Unit = {},
     hasCrashReport: Boolean = false,
-    onSendIssueReport: (GitHubIssueType, ReportChannel, hasCrashReport: Boolean) -> Unit = { _, _, _ -> },
+    onSendIssueReport: (IssueReportRequest) -> Unit = {},
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
@@ -273,65 +270,11 @@ fun SettingsScreen(
     }
 
     pendingReportType?.let { reportType ->
-        val titleRes =
-            when (reportType) {
-                GitHubIssueType.BUG_REPORT -> R.string.settings_item_report_bug
-                GitHubIssueType.FEATURE_REQUEST -> R.string.settings_item_request_feature
-            }
-        val hasCrash = reportType == GitHubIssueType.BUG_REPORT && hasCrashReport
-        var selectedChannel by remember(reportType) { mutableStateOf(ReportChannel.EMAIL) }
-        AlertDialog(
-            onDismissRequest = { pendingReportType = null },
-            title = { Text(stringResource(titleRes)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.settings_issue_dialog_body))
-                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        ReportChannel.entries.forEachIndexed { index, channel ->
-                            SegmentedButton(
-                                selected = selectedChannel == channel,
-                                onClick = { selectedChannel = channel },
-                                shape =
-                                    SegmentedButtonDefaults.itemShape(
-                                        index = index,
-                                        count = ReportChannel.entries.size,
-                                    ),
-                                label = {
-                                    Text(
-                                        text =
-                                            when (channel) {
-                                                ReportChannel.EMAIL ->
-                                                    stringResource(R.string.settings_issue_dialog_send_email)
-                                                ReportChannel.GITHUB ->
-                                                    stringResource(R.string.settings_issue_dialog_send_github)
-                                            },
-                                    )
-                                },
-                            )
-                        }
-                    }
-                    Text(
-                        text = stringResource(R.string.settings_issue_dialog_channel_help),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onSendIssueReport(reportType, selectedChannel, hasCrash)
-                    pendingReportType = null
-                }) {
-                    Text(stringResource(R.string.settings_issue_dialog_submit))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingReportType = null }) {
-                    Text(stringResource(app.readylytics.health.core.ui.R.string.action_cancel))
-                }
-            },
+        IssueReportDialog(
+            reportType = reportType,
+            hasCrashReport = hasCrashReport,
+            onDismiss = { pendingReportType = null },
+            onSubmit = onSendIssueReport,
         )
     }
 

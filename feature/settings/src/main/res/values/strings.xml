@@ -185,6 +185,10 @@
 <string name="settings_issue_dialog_send_email">Email</string>
 <string name="settings_issue_dialog_send_github">GitHub Issue</string>
 <string name="settings_issue_dialog_channel_help">Email is private and only seen by the developer. GitHub Issues are public.</string>
+<string name="settings_issue_dialog_logcat_toggle">Include recent app logs</string>
+<string name="settings_issue_dialog_logcat_help">Attaches technical diagnostic logs from this app session to help debug the issue. Shared with the channel you chose above.</string>
+<string name="settings_issue_dialog_logcat_duration">Log duration: %1$d min</string>
+<string name="settings_issue_dialog_logcat_duration_value">%1$d min</string>
 <string name="settings_issue_dialog_submit">Submit</string>
 
 <string name="settings_item_source_code">View Source Code</string>
