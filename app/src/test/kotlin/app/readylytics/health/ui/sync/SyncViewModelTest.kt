@@ -151,4 +151,10 @@ class SyncViewModelTest {
             foregroundSyncController.evaluateAndSync()
         }
     }
+
+    @Test
+    fun skipSync_updatesStateToPermissionsGranted() {
+        viewModel.skipSync()
+        assertIs<SyncUiState.PermissionsGranted>(viewModel.uiState.value)
+    }
 }

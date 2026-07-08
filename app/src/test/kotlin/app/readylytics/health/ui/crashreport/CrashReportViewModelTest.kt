@@ -14,7 +14,9 @@ class CrashReportViewModelTest {
         val withoutReport = CrashReportViewModel(FakeCrashReportStore(hasReport = false))
 
         assertTrue(withReport.showPrompt.value)
+        assertTrue(withReport.hasReport.value)
         assertFalse(withoutReport.showPrompt.value)
+        assertFalse(withoutReport.hasReport.value)
     }
 
     @Test
@@ -25,6 +27,7 @@ class CrashReportViewModelTest {
         viewModel.dismiss()
 
         assertFalse(viewModel.showPrompt.value)
+        assertTrue(viewModel.hasReport.value)
         assertEquals(0, store.deleteCallCount)
     }
 
@@ -36,6 +39,7 @@ class CrashReportViewModelTest {
         viewModel.consumeReport()
 
         assertFalse(viewModel.showPrompt.value)
+        assertFalse(viewModel.hasReport.value)
         assertEquals(1, store.deleteCallCount)
     }
 

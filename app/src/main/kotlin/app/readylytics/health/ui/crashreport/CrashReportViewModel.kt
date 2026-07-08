@@ -18,6 +18,9 @@ class CrashReportViewModel
         private val _showPrompt = MutableStateFlow(crashReportStore.hasReport())
         val showPrompt: StateFlow<Boolean> = _showPrompt.asStateFlow()
 
+        private val _hasReport = MutableStateFlow(crashReportStore.hasReport())
+        val hasReport: StateFlow<Boolean> = _hasReport.asStateFlow()
+
         fun reportFile(): File = crashReportStore.reportFile()
 
         fun reportText(): String = crashReportStore.read().orEmpty()
@@ -29,5 +32,6 @@ class CrashReportViewModel
         fun consumeReport() {
             crashReportStore.delete()
             _showPrompt.value = false
+            _hasReport.value = false
         }
     }
