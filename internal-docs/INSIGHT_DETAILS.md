@@ -88,7 +88,7 @@ This document defines the user-facing details, signal meanings, possible causes,
 ## HRV_DECLINE_STREAK
 
 - **Type**: `PHYSIOLOGY`
-- **Trigger**: Weekly HRV baseline below baseline for three consecutive nights.
+- **Trigger**: HRV z-score below baseline (`zLnHrv < 0`) for three consecutive nights, and the rounded nocturnal HRV is also below the rounded HRV baseline for each of those nights (matching what the dashboard tooltip shows) — this second check prevents a day from counting when it only misses on float-noise-level z-score precision while displaying as "on baseline".
 - **Card title**: HRV Below Baseline Multiple Nights
 - **Card description**: Your HRV has been below your baseline for several consecutive nights, which may suggest accumulating strain.
 - **Observed signal**: Your HRV has been below your baseline for three consecutive nights.
@@ -320,22 +320,22 @@ This document defines the user-facing details, signal meanings, possible causes,
 
 ---
 
-## RECOVERY_STAGES_MISSING
+## RECOVERY_SUSPICIOUS_STAGE_RATIO
 
 - **Type**: `DATA_QUALITY`
-- **Trigger**: Sleep stage data was missing or suspicious last night.
-- **Card title**: Sleep Stage Data Missing
-- **Card description**: Sleep stage data wasn't recorded last night, so your sleep score reflects duration and restoration only, not architecture.
-- **Observed signal**: Sleep stage coverage was missing or suspicious last night.
+- **Trigger**: Last night's deep+REM sleep-stage proportion (of aggregate sleep duration) looked statistically implausible. Formerly named `RECOVERY_STAGES_MISSING`; the underlying `RecoveryFlag.STAGES_MISSING` constant is kept only for backward-compatible parsing of historical persisted rows.
+- **Card title**: Unusual Sleep Stage Proportions
+- **Card description**: Last night's deep/REM sleep proportions looked implausible, so your sleep score reflects duration and restoration only, not architecture.
+- **Observed signal**: Last night's deep and/or REM sleep proportion was higher than the expected range.
 - **Meaning**: Sleep score may be less complete because sleep architecture could not be evaluated.
 - **Confidence**: None.
 - **Possible causes**:
-  - Watch not worn consistently: Inconsistent wear can reduce stage coverage.
-  - Loose fit: Poor sensor contact can prevent sleep staging.
-  - Device did not classify sleep stages: Some nights may not receive stage labels.
-  - Short or interrupted sleep: Short or fragmented sleep can reduce stage coverage.
+  - Watch not worn consistently: Inconsistent wear can lead to skewed stage proportions.
+  - Loose fit: Poor sensor contact can cause sleep stage misclassification.
+  - Device did not classify sleep stages: Some nights may not receive reliable stage labels.
+  - Short or interrupted sleep: Short or fragmented sleep can skew stage proportions.
   - Sync delay: Health Connect data may not have arrived yet.
-  - Health Connect data gap: The source app may not have shared stage data.
+  - Health Connect data gap: The source app may not have shared complete stage data.
 - **Recommendations**:
   - Check your wearable sleep report and Health Connect sync status.
 - **Caveats**: None.

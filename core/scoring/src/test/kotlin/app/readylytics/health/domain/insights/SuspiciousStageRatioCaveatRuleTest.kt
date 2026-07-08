@@ -7,8 +7,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class StagesMissingCaveatRuleTest {
-    private val rule = StagesMissingCaveatRule()
+class SuspiciousStageRatioCaveatRuleTest {
+    private val rule = SuspiciousStageRatioCaveatRule()
 
     private fun context(recoveryFlags: Set<RecoveryFlag>) =
         InsightContext(
@@ -18,15 +18,15 @@ class StagesMissingCaveatRuleTest {
         )
 
     @Test
-    fun `fires when STAGES_MISSING flag is present`() {
-        val finding = rule.evaluate(context(setOf(RecoveryFlag.STAGES_MISSING)))
+    fun `fires when SUSPICIOUS_STAGE_RATIO flag is present`() {
+        val finding = rule.evaluate(context(setOf(RecoveryFlag.SUSPICIOUS_STAGE_RATIO)))
 
-        assertEquals(InsightType.RECOVERY_STAGES_MISSING, finding?.type)
+        assertEquals(InsightType.RECOVERY_SUSPICIOUS_STAGE_RATIO, finding?.type)
         assertEquals(InsightParams.None, finding?.params)
     }
 
     @Test
-    fun `does not fire without STAGES_MISSING flag`() {
+    fun `does not fire without SUSPICIOUS_STAGE_RATIO flag`() {
         assertNull(rule.evaluate(context(emptySet())))
     }
 

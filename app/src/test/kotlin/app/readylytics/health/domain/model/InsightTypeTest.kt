@@ -22,6 +22,7 @@ class InsightTypeTest {
         assertNull(InsightType.fromRecoveryFlag(RecoveryFlag.CALIBRATING))
         assertNull(InsightType.fromRecoveryFlag(RecoveryFlag.HRV_MISSING))
         assertNull(InsightType.fromRecoveryFlag(RecoveryFlag.STAGES_MISSING))
+        assertNull(InsightType.fromRecoveryFlag(RecoveryFlag.SUSPICIOUS_STAGE_RATIO))
     }
 
     @Test

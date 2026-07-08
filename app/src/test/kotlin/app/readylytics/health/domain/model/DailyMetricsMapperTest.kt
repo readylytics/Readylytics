@@ -211,4 +211,20 @@ class DailyMetricsMapperTest {
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertNull(metrics.hrvBaselineRounded)
     }
+
+    // --- hrvBaselineRounded is exposed directly so callers (e.g. insight rules) can reuse
+    // the exact same rounding the dashboard tooltip uses, instead of re-deriving it. ---
+
+    @Test
+    fun `hrvBaselineRounded standalone function matches toMetrics output`() {
+        val mu = ln(50.0).toFloat()
+        val summary = DailySummary(date = date, hrvMuMssd = mu)
+        assertEquals(50, DailyMetricsMapper.hrvBaselineRounded(summary, prefs))
+    }
+
+    @Test
+    fun `hrvBaselineRounded standalone function is null with no mu, override, or arithmetic baseline`() {
+        val summary = DailySummary(date = date, hrvMuMssd = null, hrvBaseline = null)
+        assertNull(DailyMetricsMapper.hrvBaselineRounded(summary, prefs))
+    }
 }

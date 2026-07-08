@@ -119,7 +119,7 @@ class LoadScoringStrategy
             val flags = mutableSetOf<RecoveryFlag>()
             if (isCalibrating) flags += RecoveryFlag.CALIBRATING
             if (hrvMissing) flags += RecoveryFlag.HRV_MISSING
-            if (stagesSuspicious) flags += RecoveryFlag.STAGES_MISSING
+            if (stagesSuspicious) flags += RecoveryFlag.SUSPICIOUS_STAGE_RATIO
             if (isLateNadir) flags += RecoveryFlag.NADIR_DELAYED
 
             val thresholds = emergencyFlags ?: EmergencyFlagThresholds()

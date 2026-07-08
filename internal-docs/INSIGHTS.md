@@ -66,6 +66,7 @@ Trigger:
 Generated when:
 - The last `HRV_DECLINE_STREAK_DAYS` (3) consecutive distinct days have non-null `zLnHrv`.
 - Every one of those `zLnHrv` values is < `0.0f` (indicating HRV below baseline).
+- Every one of those days also has its rounded nocturnal HRV (`DailySummary.nocturnalHrv`) strictly below its rounded HRV baseline (`DailyMetricsMapper.hrvBaselineRounded`) — i.e. the same whole-ms comparison the dashboard tooltip uses to decide `↑`/`↓`/`=`. This guards against a day where `zLnHrv` is a hair negative purely from float noise in the `ln()`/mean pipeline while the displayed HRV rounds to the same ms value as baseline (dashboard would show "on baseline", not "below") — such a day no longer counts toward the streak.
 
 ---
 
@@ -192,18 +193,19 @@ Generated when:
 
 ---
 
-## Sleep Stage Data Missing
+## Unusual Sleep Stage Proportions
 
 Identifier:
-RECOVERY_STAGES_MISSING
+RECOVERY_SUSPICIOUS_STAGE_RATIO
 
 Description:
-Sleep stage data wasn't recorded last night, so your sleep score reflects duration and restoration only, not architecture.
+Last night's deep/REM sleep proportions looked implausible, so your sleep score reflects duration and restoration only, not architecture.
 
 Trigger:
 Generated when:
-- `RecoveryFlag.STAGES_MISSING` is present in today's recovery flags.
-- Note: `RecoveryFlag.STAGES_MISSING` triggers if sleep stage coverage was suspicious/missing last night.
+- `RecoveryFlag.SUSPICIOUS_STAGE_RATIO` is present in today's recovery flags.
+- Note: `RecoveryFlag.SUSPICIOUS_STAGE_RATIO` triggers when the deep+REM fraction of the night's aggregate sleep duration is statistically implausible (deep >40%, REM >45%, or deep+REM sum >70% — see `LoadScoringStrategy.validateNight`). This is a ratio check on aggregate session columns, not a check on whether the per-record stage timeline (used by the hypnogram) is empty — a night can have a full, populated hypnogram while still tripping this flag because the *proportions* look implausible.
+- `RecoveryFlag.STAGES_MISSING` is the retired legacy name for this flag, kept in the `RecoveryFlag` enum only so historical persisted rows (written before the rename) still parse; new scoring code never emits it.
 
 ---
 

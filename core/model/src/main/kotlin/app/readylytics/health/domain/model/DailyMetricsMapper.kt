@@ -27,10 +27,7 @@ object DailyMetricsMapper {
     ): DailyMetrics {
         val rhrBaselineRaw = deriveRhrBaselineRaw(summary, prefs)
         val rhrBaselineRounded = rhrBaselineRaw?.roundToInt()
-        val hrvBaselineRounded =
-            summary.hrvMuMssd?.let { exp(it).roundToInt() }
-                ?: prefs.hrvBaselineOverride?.roundToInt()
-                ?: summary.hrvBaseline
+        val hrvBaselineRoundedValue = hrvBaselineRounded(summary, prefs)
 
         return DailyMetrics(
             date = summary.date,
@@ -47,7 +44,7 @@ object DailyMetricsMapper {
             nocturnalHrvRounded = summary.nocturnalHrv,
             restingHeartRateRounded = summary.restingHeartRate,
             rhrBaselineRounded = rhrBaselineRounded,
-            hrvBaselineRounded = hrvBaselineRounded,
+            hrvBaselineRounded = hrvBaselineRoundedValue,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
             readinessRounded = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt(),
             loadScoreRounded = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt(),
@@ -58,10 +55,10 @@ object DailyMetricsMapper {
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
             // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
-            hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRounded),
+            hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRoundedValue),
             restingHrBaselineDiff = diff(summary.restingHeartRate, summary.rhrBpm?.roundToInt()),
             rhrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
-            hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRounded),
+            hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRoundedValue),
             restingHrBaselineArrow = arrow(summary.restingHeartRate, summary.rhrBpm?.roundToInt()),
             // Display strings
             sleepDurationDisplay = formatSleepDuration(summary.sleepDurationMinutes),
@@ -89,6 +86,20 @@ object DailyMetricsMapper {
         summary.rhrBpm
             ?: prefs.rhrBaselineOverride
             ?: ScoringConstants.DEFAULT_RHR_BPM
+
+    /**
+     * The HRV baseline rounded to whole ms, exactly as shown on the dashboard. Callers
+     * comparing a day's HRV to its baseline (e.g. insight rules) must reuse this instead of
+     * re-deriving the rounding independently, so "below baseline" always agrees with what
+     * the UI displays.
+     */
+    fun hrvBaselineRounded(
+        summary: DailySummary,
+        prefs: UserPreferences,
+    ): Int? =
+        summary.hrvMuMssd?.let { exp(it).roundToInt() }
+            ?: prefs.hrvBaselineOverride?.roundToInt()
+            ?: summary.hrvBaseline
 
     private fun diff(
         current: Int?,
