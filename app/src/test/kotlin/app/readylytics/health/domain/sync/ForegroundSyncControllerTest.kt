@@ -238,4 +238,44 @@ class ForegroundSyncControllerTest {
             job2.cancel()
             job3.cancel()
         }
+
+    @Test
+    fun `evaluateAndSync triggers catchUpSync on first sync ALWAYS when installDate non-zero`() =
+        runTest {
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.ALWAYS,
+                    lastSyncTimestamp = 0L,
+                    installDate = 123456789L,
+                )
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+            coEvery { syncUseCase.catchUpSync(any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 1) { syncUseCase.catchUpSync(any()) }
+            coVerify(exactly = 0) { syncUseCase.sync(any(), any()) }
+        }
+
+    @Test
+    fun `evaluateAndSync triggers catchUpSync on first sync BY_TIME when installDate non-zero`() =
+        runTest {
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.BY_TIME,
+                    lastSyncTimestamp = 0L,
+                    installDate = 123456789L,
+                )
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+            coEvery { syncUseCase.catchUpSync(any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 1) { syncUseCase.catchUpSync(any()) }
+            coVerify(exactly = 0) { syncUseCase.sync(any(), any()) }
+        }
 }
