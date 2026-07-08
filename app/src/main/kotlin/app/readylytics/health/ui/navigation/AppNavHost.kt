@@ -95,6 +95,7 @@ fun AppNavHost(
             hasCrashReport = hasCrashReport,
             onDismiss = { pendingReportType = null },
             onSubmit = { request ->
+                pendingReportType = null
                 coroutineScope.launch {
                     val crashText = if (request.hasCrashReport) crashReportViewModel.reportText() else null
                     val crashFile = if (request.hasCrashReport) crashReportViewModel.reportFile() else null

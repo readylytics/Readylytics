@@ -195,6 +195,7 @@ class ForegroundSyncController
             } catch (e: Exception) {
                 app.readylytics.health.domain.util
                     .logE("ForegroundSyncController", e) { "Sync failed" }
+                throw e
             } finally {
                 _isSyncing.value = false
                 _recalcProgress.value = null

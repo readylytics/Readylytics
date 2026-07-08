@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
-import java.time.ZoneId
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class HealthSyncUseCaseTest {
@@ -52,5 +52,35 @@ class HealthSyncUseCaseTest {
                 onProgress = any(),
             )
         }
+    }
+
+    @Test
+    fun sync_delegatesToDailySyncUseCaseWithRequestedWindow() = runTest {
+        coEvery { dailySyncUseCase.run(any(), any()) } returns Result.success(Unit)
+
+        useCase.sync(windowDays = 3)
+
+        coVerify { dailySyncUseCase.run(3, null) }
+    }
+
+    @Test
+    fun resyncRange_delegatesToResyncRangeUseCaseWithRequestedRange() = runTest {
+        val startDate = LocalDate.of(2024, 6, 1)
+        val endDate = LocalDate.of(2024, 6, 2)
+        coEvery { resyncRangeUseCase.run(any(), any(), any(), any()) } returns Result.success(Unit)
+
+        useCase.resyncRange(startDate, endDate)
+
+        coVerify { resyncRangeUseCase.run(startDate, endDate, 30, null) }
+    }
+
+    @Test
+    fun sync_returnsResultProducedByDailySyncUseCase() = runTest {
+        coEvery { dailySyncUseCase.run(any(), any()) } returns Result.failure("nope", "SYNC_ERROR")
+
+        val result = useCase.sync()
+
+        assertTrue(result is Result.Failure)
+        assertEquals("SYNC_ERROR", (result as Result.Failure).code)
     }
 }
