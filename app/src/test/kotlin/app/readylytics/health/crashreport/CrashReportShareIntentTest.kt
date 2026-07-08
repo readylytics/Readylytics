@@ -216,7 +216,7 @@ class CrashReportShareIntentTest {
 
     @Test
     fun featureRequestIntentUsesLabelsInsteadOfTemplateAndMatchesEmailBody() {
-        val uri = buildFeatureRequestIntent(context).data!!
+        val uri = ready(buildFeatureRequestIntent(context)).intent.data!!
 
         assertEquals("enhancement", uri.getQueryParameter("labels"))
         assertNull(uri.getQueryParameter("template"))
@@ -237,8 +237,10 @@ class CrashReportShareIntentTest {
             )
 
         val result = buildIssueReportIntent(context, request, crashText, null, null, null)
+        val expected = buildBugReportIntent(context, crashText, null, 30)
 
-        assertEquals(buildBugReportIntent(context, crashText, null, 30), result)
+        assertEquals(ready(expected).intent.data, ready(result).intent.data)
+        assertEquals(ready(expected).intent.action, ready(result).intent.action)
     }
 
     @Test
@@ -253,8 +255,10 @@ class CrashReportShareIntentTest {
             )
 
         val result = buildIssueReportIntent(context, request, null, null, null, null)
+        val expected = buildFeatureRequestIntent(context)
 
-        assertEquals(buildFeatureRequestIntent(context), result)
+        assertEquals(ready(expected).intent.data, ready(result).intent.data)
+        assertEquals(ready(expected).intent.action, ready(result).intent.action)
     }
 
     @Test
