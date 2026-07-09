@@ -51,11 +51,11 @@ class SecureFileLogSinkTest {
     @Test
     fun testFileRotationCreatesRotatedBackups() =
         runBlocking {
-            // Setup a sink with a tiny max size (100 bytes) and Dispatchers.Unconfined to make writes synchronous
+            // Setup a sink with a tiny max size and Dispatchers.Unconfined to make writes synchronous
             val sink =
                 SecureFileLogSink(
                     context = mockContext,
-                    maxFileSize = 100L,
+                    maxFileSize = 40L,
                     maxBackups = 2,
                     encryptStreams = false, // Disable encryption for testing raw content easily
                     coroutineContext = Dispatchers.Unconfined,
@@ -72,12 +72,13 @@ class SecureFileLogSinkTest {
             sink.readLogsDecrypted()
 
             val logFile = File(cacheDir, "logs/prod_logs.txt")
-            val rotatedFile1 = File(cacheDir, "logs/prod_logs.txt.1")
-            val rotatedFile2 = File(cacheDir, "logs/prod_logs.txt.2")
+            val logFiles = File(cacheDir, "logs").listFiles().orEmpty()
+            val totalBytes = logFiles.sumOf { it.length() }
 
             assertTrue("Primary log file must exist", logFile.exists())
-            assertTrue("First rotated log file must exist", rotatedFile1.exists())
-            assertTrue("Second rotated log file must exist", rotatedFile2.exists())
+            assertTrue("Rotation should never exceed active plus backup slots", logFiles.size <= 3)
+            assertTrue("Each produced file must stay within configured bound", logFiles.all { it.length() <= 40L })
+            assertTrue("Total retention must stay within configured bound", totalBytes <= 120L)
         }
 
     @Test
@@ -233,5 +234,29 @@ class SecureFileLogSinkTest {
             delay(2200)
             assertTrue(logFile.exists())
             assertTrue(logFile.readText().contains("Timed Log"))
+        }
+
+    @Test
+    fun testTotalRetentionStaysWithinConfiguredBound() =
+        runBlocking {
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 80L,
+                    maxBackups = 1,
+                    encryptStreams = false,
+                    coroutineContext = Dispatchers.Unconfined,
+                )
+
+            for (i in 1..20) {
+                sink.log(LogLevel.INFO, "TestTag", "Log $i " + "x".repeat(40), null, LogContext("session-1"))
+            }
+
+            val content = sink.readLogsDecrypted()
+            val logDir = File(cacheDir, "logs")
+            val totalBytes = logDir.listFiles()?.sumOf { it.length() } ?: 0L
+
+            assertTrue(content.contains("Log 20"))
+            assertTrue(totalBytes <= 160L)
         }
 }

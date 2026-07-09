@@ -23,8 +23,8 @@ import kotlin.coroutines.CoroutineContext
 
 class SecureFileLogSink(
     private val context: Context,
-    private val maxFileSize: Long = 500 * 1024L, // 500 KB
-    private val maxBackups: Int = 2,
+    private val maxFileSize: Long = DEFAULT_MAX_FILE_SIZE_BYTES,
+    private val maxBackups: Int = DEFAULT_MAX_BACKUPS,
     private val encryptStreams: Boolean = true,
     coroutineContext: CoroutineContext = Dispatchers.IO.limitedParallelism(1),
 ) : DomainLogSink {
@@ -110,51 +110,9 @@ class SecureFileLogSink(
         val content = pendingLogs.joinToString("")
         pendingLogs.clear()
 
-        checkRotation()
-
-        if (encryptStreams) {
-            writeEncrypted(content)
-        } else {
-            writePlain(content)
-        }
+        persistLogs(content)
 
         lastWriteTimestamp = System.currentTimeMillis()
-    }
-
-    private fun writeEncrypted(content: String) {
-        val encryptedFile = getEncryptedFile(logFile)
-        val tempFile = File(logDirectory, "temp_write.txt")
-
-        // EncryptedFile doesn't support append cleanly, so we read, append, and rewrite.
-        // Since our max file size is small (500KB), this is fast and safe.
-        val existingContent =
-            if (logFile.exists()) {
-                try {
-                    encryptedFile.openFileInput().use { it.bufferedReader().readText() }
-                } catch (e: Exception) {
-                    ""
-                }
-            } else {
-                ""
-            }
-
-        val updatedContent = existingContent + content
-
-        val tempEncrypted = getEncryptedFile(tempFile)
-        if (tempFile.exists()) tempFile.delete()
-
-        tempEncrypted.openFileOutput().use { output ->
-            output.write(updatedContent.toByteArray(Charsets.UTF_8))
-        }
-
-        if (logFile.exists()) logFile.delete()
-        tempFile.renameTo(logFile)
-    }
-
-    private fun writePlain(content: String) {
-        FileOutputStream(logFile, true).use { output ->
-            output.write(content.toByteArray(Charsets.UTF_8))
-        }
     }
 
     private fun getEncryptedFile(file: File): EncryptedFile {
@@ -168,56 +126,190 @@ class SecureFileLogSink(
             ).build()
     }
 
-    private fun checkRotation() {
-        if (!logFile.exists() || logFile.length() < maxFileSize) return
+    private fun persistLogs(newContent: String) {
+        val allLogs =
+            buildString {
+                append(readAllLogs())
+                append(newContent)
+            }
+        val boundedLogs = retainWithinTotalCapacity(allLogs)
+        val chunks = partitionIntoSlots(boundedLogs)
+        writeChunks(chunks)
+    }
 
-        if (maxBackups <= 0) {
-            logFile.delete()
-            return
-        }
-
-        // Rotate backups
-        for (i in maxBackups - 1 downTo 1) {
-            val src = File(logDirectory, "prod_logs.txt.$i")
-            val dest = File(logDirectory, "prod_logs.txt.${i + 1}")
-            if (src.exists()) {
-                if (dest.exists()) dest.delete()
-                src.renameTo(dest)
+    private fun readAllLogs(): String =
+        buildString {
+            for (file in orderedLogFiles()) {
+                append(readFileContent(file))
             }
         }
 
-        val firstBackup = File(logDirectory, "prod_logs.txt.1")
-        if (firstBackup.exists()) firstBackup.delete()
-        logFile.renameTo(firstBackup)
+    private fun orderedLogFiles(): List<File> {
+        val files = mutableListOf<File>()
+        for (i in maxBackups downTo 1) {
+            files.add(File(logDirectory, "prod_logs.txt.$i"))
+        }
+        files.add(logFile)
+        return files
+    }
+
+    private fun readFileContent(file: File): String {
+        if (!file.exists()) return ""
+        return try {
+            if (encryptStreams) {
+                getEncryptedFile(file).openFileInput().use { it.bufferedReader().readText() }
+            } else {
+                file.readText()
+            }
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun writeChunks(chunks: List<String>) {
+        val slotFiles = orderedLogFiles()
+        val normalizedChunks = chunks.takeLast(slotFiles.size)
+        val emptyPrefixCount = slotFiles.size - normalizedChunks.size
+
+        slotFiles.forEachIndexed { index, file ->
+            val content =
+                if (index < emptyPrefixCount) {
+                    ""
+                } else {
+                    normalizedChunks[index - emptyPrefixCount]
+                }
+            writeFileContent(file, content)
+        }
+    }
+
+    private fun writeFileContent(
+        file: File,
+        content: String,
+    ) {
+        if (file.exists()) {
+            file.delete()
+        }
+        if (content.isEmpty()) return
+
+        if (encryptStreams) {
+            getEncryptedFile(file).openFileOutput().use { output ->
+                output.write(content.toByteArray(Charsets.UTF_8))
+            }
+        } else {
+            FileOutputStream(file, false).use { output ->
+                output.write(content.toByteArray(Charsets.UTF_8))
+            }
+        }
+    }
+
+    private fun retainWithinTotalCapacity(content: String): String {
+        val totalCapacity = maxFileSize * (maxBackups + 1)
+        if (content.toByteArray(Charsets.UTF_8).size <= totalCapacity) return content
+
+        val segments = content.lineSegments().toMutableList()
+        trimSegmentsToCapacity(segments, totalCapacity)
+        return segments.joinToString("")
+    }
+
+    private fun trimSegmentsToCapacity(
+        segments: MutableList<String>,
+        capacityBytes: Long,
+    ) {
+        var totalBytes = segments.sumOf { it.byteSize() }.toLong()
+        while (segments.isNotEmpty() && totalBytes > capacityBytes) {
+            val first = segments.first()
+            val firstBytes = first.byteSize().toLong()
+            if (totalBytes - firstBytes >= capacityBytes) {
+                segments.removeAt(0)
+                totalBytes -= firstBytes
+            } else {
+                val keepBytes = (capacityBytes - (totalBytes - firstBytes)).toInt()
+                segments[0] = first.takeLastUtf8Bytes(keepBytes)
+                totalBytes = segments.sumOf { it.byteSize() }.toLong()
+            }
+        }
+    }
+
+    private fun partitionIntoSlots(content: String): List<String> {
+        if (content.isEmpty()) return emptyList()
+
+        val segments =
+            content
+                .lineSegments()
+                .map { segment ->
+                    if (segment.byteSize().toLong() <= maxFileSize) {
+                        segment
+                    } else {
+                        segment.takeLastUtf8Bytes(maxFileSize.toInt())
+                    }
+                }
+
+        val chunks = mutableListOf<String>()
+        val currentChunk = StringBuilder()
+        var currentChunkBytes = 0
+
+        for (segment in segments) {
+            val segmentBytes = segment.byteSize()
+            if (currentChunkBytes > 0 && currentChunkBytes + segmentBytes > maxFileSize) {
+                chunks.add(currentChunk.toString())
+                currentChunk.clear()
+                currentChunkBytes = 0
+            }
+            currentChunk.append(segment)
+            currentChunkBytes += segmentBytes
+        }
+
+        if (currentChunk.isNotEmpty()) {
+            chunks.add(currentChunk.toString())
+        }
+
+        return chunks.takeLast(maxBackups + 1)
+    }
+
+    private fun String.lineSegments(): List<String> {
+        if (isEmpty()) return emptyList()
+        val result = mutableListOf<String>()
+        var start = 0
+        for (index in indices) {
+            if (this[index] == '\n') {
+                result.add(substring(start, index + 1))
+                start = index + 1
+            }
+        }
+        if (start < length) {
+            result.add(substring(start))
+        }
+        return result
+    }
+
+    private fun String.byteSize(): Int = toByteArray(Charsets.UTF_8).size
+
+    private fun String.takeLastUtf8Bytes(maxBytes: Int): String {
+        if (maxBytes <= 0 || isEmpty()) return ""
+
+        var bytes = 0
+        var startIndex = length
+        while (startIndex > 0) {
+            val codePoint = codePointBefore(startIndex)
+            val charCount = Character.charCount(codePoint)
+            val nextIndex = startIndex - charCount
+            val charBytes = substring(nextIndex, startIndex).byteSize()
+            if (bytes + charBytes > maxBytes) break
+            bytes += charBytes
+            startIndex = nextIndex
+        }
+        return substring(startIndex)
     }
 
     // Safe decryption exposure helper for internal diagnostics use
     suspend fun readLogsDecrypted(): String =
         withContext(writeDispatcher) {
             flush(fromSchedule = false)
-
-            val files = mutableListOf<File>()
-            for (i in maxBackups downTo 1) {
-                files.add(File(logDirectory, "prod_logs.txt.$i"))
-            }
-            files.add(logFile)
-
-            val result = StringBuilder()
-            for (file in files) {
-                if (file.exists()) {
-                    try {
-                        val fileContent =
-                            if (encryptStreams) {
-                                getEncryptedFile(file).openFileInput().use { it.bufferedReader().readText() }
-                            } else {
-                                file.readText()
-                            }
-                        result.append(fileContent)
-                    } catch (e: Exception) {
-                        result.append("Error reading encrypted log file: ${e.message}\n")
-                    }
-                }
-            }
-            result.toString()
+            readAllLogs()
         }
+
+    companion object {
+        const val DEFAULT_MAX_FILE_SIZE_BYTES: Long = 2L * 1024L * 1024L
+        const val DEFAULT_MAX_BACKUPS: Int = 2
+    }
 }

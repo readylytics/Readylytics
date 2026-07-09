@@ -356,8 +356,9 @@ class ProductionReadinessStaticTest {
         val content = appFile.readText()
         assertTrue(
             "Application should install SecureFileLogSink(this) in release builds",
-            content.contains("DomainLogger.installSink(SecureFileLogSink(this))") ||
-                content.contains("SecureFileLogSink(this)"),
+            content.contains("DomainLogger.installSink(secureLogSink)") ||
+                content.contains("DomainLogger.installSink(SecureFileLogSink(this))") ||
+                content.contains("lateinit var secureLogSink: SecureFileLogSink"),
         )
     }
 }

@@ -13,6 +13,7 @@ import app.readylytics.health.BuildConfig
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.sync.ForegroundSyncController
@@ -56,6 +57,10 @@ class HealthDashboardApplication :
     @Inject
     @ApplicationScope
     lateinit var appScope: CoroutineScope
+
+    @Inject
+    @ReleaseLogSink
+    lateinit var secureLogSink: SecureFileLogSink
 
     override val workManagerConfiguration: Configuration
         get() =
@@ -146,7 +151,7 @@ class HealthDashboardApplication :
             )
         } else {
             // Release build secure log file sink (includes sanitized logcat mirroring)
-            DomainLogger.installSink(SecureFileLogSink(this))
+            DomainLogger.installSink(secureLogSink)
         }
     }
 }
