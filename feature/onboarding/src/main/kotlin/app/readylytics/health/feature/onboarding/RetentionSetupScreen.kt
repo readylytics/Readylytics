@@ -1,0 +1,78 @@
+package app.readylytics.health.feature.onboarding
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.settings.RetentionSlider
+import app.readylytics.health.data.preferences.SettingsDefaults
+
+@Composable
+fun RetentionSetupScreen(
+    onContinueClick: (retentionDays: Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var retentionDays by remember { mutableIntStateOf(SettingsDefaults.RETENTION_DAYS) }
+
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(MaterialTheme.spacing.pageSectionGapLarge)
+                .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_retention_title),
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+
+        Text(
+            text = stringResource(R.string.onboarding_retention_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(MaterialTheme.spacing.large))
+
+        RetentionSlider(
+            enabled = true,
+            retentionDays = retentionDays,
+            onEnabledChanged = {},
+            onRetentionDaysChanged = { retentionDays = it },
+            showEnableToggle = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
+
+        Button(
+            onClick = { onContinueClick(retentionDays) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.onboarding_retention_continue))
+        }
+    }
+}
