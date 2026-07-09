@@ -18,6 +18,8 @@ import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
+import app.readylytics.health.domain.util.LogContext
+import app.readylytics.health.domain.util.LogLevel
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.workers.WorkerScheduler
@@ -123,32 +125,25 @@ class HealthDashboardApplication :
     private fun installAndroidLogSink() {
         DomainLogger.installSink(
             object : DomainLogSink {
-                override fun debug(
-                    tag: String,
-                    message: String,
-                ) {
-                    if (BuildConfig.DEBUG) {
-                        Log.d(tag, message)
-                    }
-                }
-
-                override fun warn(
+                override fun log(
+                    level: LogLevel,
                     tag: String,
                     message: String,
                     throwable: Throwable?,
+                    context: LogContext,
                 ) {
                     if (BuildConfig.DEBUG) {
-                        Log.w(tag, message, throwable)
-                    }
-                }
-
-                override fun error(
-                    tag: String,
-                    message: String,
-                    throwable: Throwable?,
-                ) {
-                    if (BuildConfig.DEBUG) {
-                        Log.e(tag, message, throwable)
+                        val formattedMsg =
+                            if (context.sessionId != null) {
+                                "[Session:${context.sessionId}] $message"
+                            } else {
+                                message
+                            }
+                        when (level) {
+                            LogLevel.INFO -> Log.i(tag, formattedMsg)
+                            LogLevel.WARN -> Log.w(tag, formattedMsg, throwable)
+                            LogLevel.ERROR -> Log.e(tag, formattedMsg, throwable)
+                        }
                     }
                 }
             },
