@@ -10,6 +10,8 @@ import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.service.BmiData
 import app.readylytics.health.domain.service.BmiService
+import app.readylytics.health.domain.validation.SettingsValidators
+import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -109,6 +111,20 @@ class OnboardingViewModel
             viewModelScope.launch {
                 deviceSettings.updatePrimaryDevice(deviceName)
                 onComplete()
+            }
+        }
+
+        fun saveRetention(
+            retentionDays: Int,
+            onComplete: () -> Unit,
+        ) {
+            val validation = SettingsValidators.RETENTION_DAYS_RULE.validate(retentionDays.toString())
+            if (validation is ValidationResult.Valid) {
+                viewModelScope.launch {
+                    displaySettings.updateRetentionDaysEnabled(true)
+                    displaySettings.updateRetentionDays(retentionDays)
+                    onComplete()
+                }
             }
         }
     }
