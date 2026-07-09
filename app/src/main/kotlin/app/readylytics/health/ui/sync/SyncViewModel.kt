@@ -247,6 +247,10 @@ class SyncViewModel
             foregroundCheckJob?.cancel()
             _uiState.update { SyncUiState.NeedsPermissions }
         }
+
+        fun skipSync() {
+            _uiState.update { SyncUiState.PermissionsGranted }
+        }
     }
 
 sealed interface SyncEvent {

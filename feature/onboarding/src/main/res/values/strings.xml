@@ -44,4 +44,10 @@
         variability, and exercise data from Health Connect solely to compute your personal recovery
         and readiness scores. All data is processed locally on your device and is never uploaded to
         any server.</string>
+    <string name="onboarding_sync_error_title">Sync failed</string>
+    <string name="onboarding_sync_error_message">An error occurred while fetching your Health Connect data. You can retry the sync now, or proceed to the app and trigger a full resync from settings later.</string>
+    <string name="onboarding_sync_error_retry">Retry Sync</string>
+    <string name="onboarding_sync_error_report">Report Issue</string>
+    <string name="onboarding_sync_error_skip">Proceed to App</string>
+    <string name="onboarding_sync_progress">Fetching data: Day %1$d of %2$d</string>
 </resources>

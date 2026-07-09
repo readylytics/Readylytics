@@ -96,6 +96,7 @@ internal class PhysiologyPreferences
                     .setBirthMonth(validBirthDate.monthValue)
                     .setBirthYear(validBirthDate.year)
                     .setAge(age.toValidAge())
+                    .setIsBirthdayConfigured(true)
                     .build()
             }
         }

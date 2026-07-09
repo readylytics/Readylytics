@@ -67,7 +67,7 @@ class ForegroundSyncController
                         } else {
                             prefs.lastSyncTimestamp
                         }
-                    val isFirst = prefs.lastSyncTimestamp == 0L && startTimestamp == 0L
+                    val isFirst = prefs.lastSyncTimestamp == 0L
                     val windowDays = if (isFirst) null else computeWindowDays(startTimestamp)
                     executeSync(isFirstSync = isFirst, windowDays = windowDays)
                 }
@@ -86,7 +86,7 @@ class ForegroundSyncController
                             } else {
                                 prefs.lastSyncTimestamp
                             }
-                        val isFirst = prefs.lastSyncTimestamp == 0L && startTimestamp == 0L
+                        val isFirst = prefs.lastSyncTimestamp == 0L
                         val windowDays = if (isFirst) null else computeWindowDays(startTimestamp)
                         executeSync(isFirstSync = isFirst, windowDays = windowDays)
                     } else {
@@ -195,6 +195,7 @@ class ForegroundSyncController
             } catch (e: Exception) {
                 app.readylytics.health.domain.util
                     .logE("ForegroundSyncController", e) { "Sync failed" }
+                throw e
             } finally {
                 _isSyncing.value = false
                 _recalcProgress.value = null

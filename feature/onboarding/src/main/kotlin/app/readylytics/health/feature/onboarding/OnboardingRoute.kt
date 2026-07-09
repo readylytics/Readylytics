@@ -2,6 +2,8 @@ package app.readylytics.health.feature.onboarding
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,11 +11,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
@@ -22,6 +26,13 @@ fun OnboardingRoute(
     userPreferencesFlow: Flow<app.readylytics.health.domain.preferences.UserPreferences>,
     allPermissions: Set<String>,
     requiredPermissions: Set<String>,
+    isSyncing: Boolean = false,
+    isSyncError: Boolean = false,
+    syncError: String? = null,
+    recalcProgress: RecalcProgress? = null,
+    onRetrySync: () -> Unit = {},
+    onSkipSync: () -> Unit = {},
+    onReportIssue: () -> Unit = {},
     onPermissionsGranted: () -> Unit,
     onPermissionsDenied: () -> Unit,
     onRestartApp: () -> Unit,
@@ -71,9 +82,9 @@ fun OnboardingRoute(
     val skipToPermissions = userPrefs?.isBirthdayConfigured == true
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
-    if (skipToPermissions) {
+    if (skipToPermissions || isSyncing || isSyncError) {
         LaunchedEffect(Unit) {
-            if (!autoLaunchTriggered) {
+            if (skipToPermissions && !autoLaunchTriggered) {
                 autoLaunchTriggered = true
                 app.readylytics.health.domain.util.logD("OnboardingRoute") {
                     "Profile already configured (restored). Launching HC permissions: $permissions"
@@ -81,16 +92,27 @@ fun OnboardingRoute(
                 permissionLauncher.launch(permissions)
             }
         }
-        if (permissionsDenied) {
-            PermissionsRequiredScreen(
-                onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
-                onOpenSettingsClick = {
-                    val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
-                    runCatching { context.startActivity(intent) }
-                },
-            )
-        } else {
-            FinishingSetupScreen()
+        Surface(modifier = Modifier.fillMaxSize()) {
+            if (permissionsDenied) {
+                PermissionsRequiredScreen(
+                    onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
+                    onOpenSettingsClick = {
+                        val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+                        runCatching { context.startActivity(intent) }
+                    },
+                )
+            } else {
+                if (isSyncError) {
+                    SyncErrorScreen(
+                        errorMessage = syncError,
+                        onRetry = onRetrySync,
+                        onReportIssue = onReportIssue,
+                        onSkip = onSkipSync,
+                    )
+                } else {
+                    FinishingSetupScreen(progress = recalcProgress)
+                }
+            }
         }
         return
     }
