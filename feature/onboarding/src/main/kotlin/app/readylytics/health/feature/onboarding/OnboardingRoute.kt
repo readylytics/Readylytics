@@ -36,6 +36,8 @@ fun OnboardingRoute(
     onPermissionsGranted: () -> Unit,
     onPermissionsDenied: () -> Unit,
     onRestartApp: () -> Unit,
+    onDownloadLogs: () -> Unit = {},
+    onContinueInBackground: () -> Unit = {},
     onboardingViewModel: OnboardingViewModel = hiltViewModel(),
     restoreViewModel: OnboardingRestoreViewModel = hiltViewModel(),
 ) {
@@ -118,13 +120,14 @@ fun OnboardingRoute(
     }
 
     OnboardingScreen(
-        onGrantPermissionsClick = {
+        onProfileSetupComplete = {
             birthDate,
             gender,
             physiologyProfile,
             dynamicColorEnabled,
             unitSystem,
             heightCm,
+            onComplete,
             ->
             app.readylytics.health.domain.util.logD("OnboardingRoute") {
                 "Grant Access clicked. Saving profile first..."
@@ -136,13 +139,16 @@ fun OnboardingRoute(
                 dynamicColorEnabled = dynamicColorEnabled,
                 unitSystem = unitSystem,
                 heightCm = heightCm,
-                onComplete = {
-                    app.readylytics.health.domain.util.logD("OnboardingRoute") {
-                        "Profile saved. Launching HC permissions: $permissions"
-                    }
-                    permissionLauncher.launch(permissions)
-                },
+                onComplete = onComplete,
             )
+        },
+        onRetentionSetupComplete = { retentionDays ->
+            onboardingViewModel.saveRetention(retentionDays) {
+                app.readylytics.health.domain.util.logD("OnboardingRoute") {
+                    "Retention saved. Launching HC permissions: $permissions"
+                }
+                permissionLauncher.launch(permissions)
+            }
         },
         onOpenSettingsClick = {
             val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)

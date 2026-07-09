@@ -55,13 +55,17 @@ import app.readylytics.health.core.ui.R as CoreR
 
 @Composable
 fun OnboardingScreen(
-    onGrantPermissionsClick: (
+    onProfileSetupComplete: (
         birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
         unitSystem: UnitSystem,
         heightCm: Float?,
+        onComplete: () -> Unit,
+    ) -> Unit,
+    onRetentionSetupComplete: (
+        retentionDays: Int,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
     restoreState: OnboardingRestoreState,
@@ -85,9 +89,33 @@ fun OnboardingScreen(
                     onDismissError = onDismissRestoreError,
                     onBack = { step = 0 },
                 )
+            3 ->
+                RetentionSetupScreen(
+                    onContinueClick = { retentionDays ->
+                        onRetentionSetupComplete(retentionDays)
+                    },
+                )
             else ->
                 ProfileSetupScreen(
-                    onGrantPermissionsClick = onGrantPermissionsClick,
+                    onGrantPermissionsClick = {
+                        birthDate,
+                        gender,
+                        physiologyProfile,
+                        dynamicColorEnabled,
+                        unitSystem,
+                        heightCm,
+                        ->
+                        onProfileSetupComplete(
+                            birthDate,
+                            gender,
+                            physiologyProfile,
+                            dynamicColorEnabled,
+                            unitSystem,
+                            heightCm,
+                        ) {
+                            step = 3
+                        }
+                    },
                     onOpenSettingsClick = onOpenSettingsClick,
                 )
         }
