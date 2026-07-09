@@ -212,4 +212,25 @@ class OnboardingViewModelTest {
         coVerify(timeout = 100, inverse = true) { physiologySettings.updateBirthday(any()) }
         assert(!completed) { "onComplete should not be called with future date" }
     }
+
+    // ─── saveRetention ───────────────────────────────────────────────────────
+    @Test
+    fun saveRetention_validRetention_callsRepository() {
+        var completed = false
+        val retentionDays = 360
+        viewModel.saveRetention(retentionDays) { completed = true }
+        coVerify(timeout = 1000) { displaySettings.updateRetentionDaysEnabled(true) }
+        coVerify(timeout = 1000) { displaySettings.updateRetentionDays(retentionDays) }
+        assert(completed) { "onComplete should be called" }
+    }
+
+    @Test
+    fun saveRetention_invalidRetention_doesNotCallRepository() {
+        var completed = false
+        val invalidRetentionDays = 5 // Valid range is 90-1800 days (3-60 months)
+        viewModel.saveRetention(invalidRetentionDays) { completed = true }
+        coVerify(timeout = 100, inverse = true) { displaySettings.updateRetentionDaysEnabled(any()) }
+        coVerify(timeout = 100, inverse = true) { displaySettings.updateRetentionDays(any()) }
+        assert(!completed) { "onComplete should not be called with invalid retention" }
+    }
 }

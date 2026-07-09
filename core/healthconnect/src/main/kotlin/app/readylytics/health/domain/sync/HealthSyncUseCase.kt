@@ -4,6 +4,7 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -57,7 +58,7 @@ class HealthSyncUseCase
                 }
                 val zoneId = prefs.scoringZone()
                 val today = LocalDate.now(zoneId)
-                val startDate = today.minusDays(365)
+                val startDate = RetentionBounds.resolveResyncStartDate(prefs, today)
                 resyncRangeUseCase.run(
                     startDate = startDate,
                     endDate = today,

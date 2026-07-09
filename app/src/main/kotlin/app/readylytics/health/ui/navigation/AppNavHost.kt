@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import app.readylytics.health.R
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildIssueReportIntent
+import app.readylytics.health.crashreport.buildLogFileShareIntent
 import app.readylytics.health.crashreport.buildOversizedFallbackIntent
 import app.readylytics.health.domain.githubissue.GitHubIssueType
 import app.readylytics.health.feature.onboarding.OnboardingRoute
@@ -55,6 +57,7 @@ fun AppNavHost(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    var syncBackgrounded by rememberSaveable { mutableStateOf(false) }
     var pendingReportType by remember { mutableStateOf<GitHubIssueType?>(null) }
     var pendingOversized by remember { mutableStateOf<PendingGithubSave?>(null) }
     var showOversizedDialog by remember { mutableStateOf(false) }
@@ -66,7 +69,11 @@ fun AppNavHost(
             SyncUiState.NeedsPermissions -> {
                 if (currentDest?.hasRoute<AppDestination.Onboarding>() != true) {
                     navController.navigate(AppDestination.Onboarding) {
-                        popUpTo(AppDestination.MainShell) { inclusive = true }
+                        popUpTo(AppDestination.MainShell) {
+                            inclusive = true
+                            saveState = true
+                        }
+                        restoreState = true
                     }
                 }
             }
@@ -80,11 +87,25 @@ fun AppNavHost(
             SyncUiState.PermissionsGranted -> {
                 if (currentDest?.hasRoute<AppDestination.MainShell>() != true) {
                     navController.navigate(AppDestination.MainShell) {
-                        popUpTo(AppDestination.Onboarding) { inclusive = true }
+                        popUpTo(AppDestination.Onboarding) {
+                            inclusive = true
+                            saveState = true
+                        }
+                        restoreState = true
                     }
                 }
             }
-            SyncUiState.SyncingCatchUp -> Unit // Gated
+            SyncUiState.SyncingCatchUp -> {
+                if (syncBackgrounded && currentDest?.hasRoute<AppDestination.MainShell>() != true) {
+                    navController.navigate(AppDestination.MainShell) {
+                        popUpTo(AppDestination.Onboarding) {
+                            inclusive = true
+                            saveState = true
+                        }
+                        restoreState = true
+                    }
+                }
+            }
             else -> Unit
         }
     }
@@ -199,6 +220,22 @@ fun AppNavHost(
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         }
                     context.startActivity(restartIntent)
+                },
+                onDownloadLogs = {
+                    coroutineScope.launch {
+                        val file = logcatCaptureViewModel.captureFile()
+                        context.startActivity(buildLogFileShareIntent(context, file))
+                    }
+                },
+                onContinueInBackground = {
+                    syncBackgrounded = true
+                    navController.navigate(AppDestination.MainShell) {
+                        popUpTo(AppDestination.Onboarding) {
+                            inclusive = true
+                            saveState = true
+                        }
+                        restoreState = true
+                    }
                 },
             )
         }

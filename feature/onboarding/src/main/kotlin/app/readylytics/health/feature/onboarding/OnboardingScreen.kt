@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -18,10 +19,8 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -48,20 +47,23 @@ import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.onboarding.R
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreR
 
 @Composable
 fun OnboardingScreen(
-    onGrantPermissionsClick: (
+    onProfileSetupComplete: (
         birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
         unitSystem: UnitSystem,
         heightCm: Float?,
+        onComplete: () -> Unit,
+    ) -> Unit,
+    onRetentionSetupComplete: (
+        retentionDays: Int,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
     restoreState: OnboardingRestoreState,
@@ -71,7 +73,7 @@ fun OnboardingScreen(
 ) {
     var step by rememberSaveable { mutableIntStateOf(0) }
 
-    Surface(modifier = modifier.fillMaxSize()) {
+    Surface(modifier = modifier.fillMaxSize().safeDrawingPadding()) {
         when (step) {
             0 ->
                 WelcomeScreen(
@@ -85,10 +87,34 @@ fun OnboardingScreen(
                     onDismissError = onDismissRestoreError,
                     onBack = { step = 0 },
                 )
+            3 ->
+                RetentionSetupScreen(
+                    onContinueClick = { retentionDays ->
+                        onRetentionSetupComplete(retentionDays)
+                    },
+                    onOpenSettingsClick = onOpenSettingsClick,
+                )
             else ->
                 ProfileSetupScreen(
-                    onGrantPermissionsClick = onGrantPermissionsClick,
-                    onOpenSettingsClick = onOpenSettingsClick,
+                    onNextClick = {
+                        birthDate,
+                        gender,
+                        physiologyProfile,
+                        dynamicColorEnabled,
+                        unitSystem,
+                        heightCm,
+                        ->
+                        onProfileSetupComplete(
+                            birthDate,
+                            gender,
+                            physiologyProfile,
+                            dynamicColorEnabled,
+                            unitSystem,
+                            heightCm,
+                        ) {
+                            step = 3
+                        }
+                    },
                 )
         }
     }
@@ -194,43 +220,6 @@ private fun WelcomeScreen(
 }
 
 @Composable
-fun FinishingSetupScreen(
-    progress: RecalcProgress?,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(MaterialTheme.spacing.pageSectionGapLarge),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        if (progress != null && progress.total > 0) {
-            val percentage = progress.current.toFloat() / progress.total.toFloat()
-            Text(
-                text = stringResource(R.string.onboarding_sync_progress, progress.current, progress.total),
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-            LinearProgressIndicator(
-                progress = { percentage },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } else {
-            CircularProgressIndicator()
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-            Text(
-                text = stringResource(R.string.onboarding_finishing_setup),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-@Composable
 fun PermissionsRequiredScreen(
     onGrantPermissionsClick: () -> Unit,
     onOpenSettingsClick: () -> Unit,
@@ -292,7 +281,7 @@ private fun FeatureItem(
 
 @Composable
 private fun ProfileSetupScreen(
-    onGrantPermissionsClick: (
+    onNextClick: (
         birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
@@ -300,7 +289,6 @@ private fun ProfileSetupScreen(
         unitSystem: UnitSystem,
         heightCm: Float?,
     ) -> Unit,
-    onOpenSettingsClick: () -> Unit,
 ) {
     var birthDate by remember { mutableStateOf(LocalDate.now().minusYears(30)) }
     var showBirthdatePicker by remember { mutableStateOf(false) }
@@ -426,20 +414,6 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
-        Text(
-            text = stringResource(R.string.onboarding_hc_permissions_label),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-        Text(
-            text = stringResource(R.string.onboarding_hc_permissions_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
-
         val isInputValid =
             !birthDate.isAfter(LocalDate.now()) &&
                 birthDate.year in 1900..LocalDate.now().year &&
@@ -447,7 +421,7 @@ private fun ProfileSetupScreen(
 
         Button(
             onClick = {
-                onGrantPermissionsClick(
+                onNextClick(
                     birthDate,
                     gender,
                     physiologyProfile,
@@ -459,13 +433,7 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = isInputValid,
         ) {
-            Text(stringResource(R.string.onboarding_grant_access))
-        }
-
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
-
-        TextButton(onClick = onOpenSettingsClick) {
-            Text(stringResource(R.string.onboarding_open_hc_settings))
+            Text(stringResource(R.string.onboarding_next))
         }
     }
 }
