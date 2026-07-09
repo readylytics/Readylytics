@@ -22,7 +22,7 @@ internal fun buildSleepTimeGaugeData(
     summary: DailySummary?,
     goalSleepHours: Float,
 ): SleepTimeGaugeData {
-    val actualMinutes = actualSleepMinutes(session)
+    val actualMinutes = resolvedSleepDurationMinutes(session = session, summary = summary)
     val goalMinutes = sleepGoalMinutes(goalSleepHours)
     val maxMinutes = sleepTimeGaugeMaxMinutes(goalMinutes)
 
@@ -62,6 +62,11 @@ internal fun buildSleepTimeGaugeData(
         deltaText = deltaText,
     )
 }
+
+internal fun resolvedSleepDurationMinutes(
+    session: SleepSessionData?,
+    summary: DailySummary?,
+): Int? = summary?.sleepDurationMinutes ?: actualSleepMinutes(session)
 
 internal fun actualSleepMinutes(session: SleepSessionData?): Int? =
     session?.let { (it.durationMinutes - it.awakeMinutes).coerceAtLeast(0) }

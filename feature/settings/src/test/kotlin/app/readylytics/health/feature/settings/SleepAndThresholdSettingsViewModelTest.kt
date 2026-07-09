@@ -14,6 +14,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -91,6 +92,59 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify(exactly = 0) { sleepSettings.updateHrvBaselineOverride(any()) }
+        }
+
+    @Test
+    fun sleepSettingsViewModel_mapsBiphasicSleepPolicyState() =
+        runTest {
+            every { settingsReader.userPreferences } returns
+                MutableStateFlow(
+                    UserPreferences(
+                        coreMergeGapMinutes = 210,
+                        supplementalCutoffMinutesOfDay = 1260,
+                        minimumCountedSleepSegmentMinutes = 20,
+                        supplementalArchitectureCoveragePercent = 80,
+                    ),
+                )
+
+            sleepViewModel =
+                SleepSettingsViewModel(
+                    settingsReader,
+                    sleepSettings,
+                    scoringRepo,
+                    kotlinx.coroutines.CoroutineScope(testDispatcher),
+                )
+
+            val state =
+                sleepViewModel.uiState.first {
+                    it.coreMergeGapMinutes == 210 &&
+                        it.supplementalCutoffMinutesOfDay == 1260 &&
+                        it.minimumCountedSleepSegmentMinutes == 20 &&
+                        it.supplementalArchitectureCoveragePercent == 80
+                }
+            assertEquals(210, state.coreMergeGapMinutes)
+            assertEquals(1260, state.supplementalCutoffMinutesOfDay)
+            assertEquals(20, state.minimumCountedSleepSegmentMinutes)
+            assertEquals(80, state.supplementalArchitectureCoveragePercent)
+        }
+
+    @Test
+    fun sleepSettingsViewModel_coreMergeGapChanged_persisted() =
+        runTest {
+            sleepViewModel.onEvent(SettingsEvent.CoreMergeGapMinutesChanged(210))
+            advanceUntilIdle()
+
+            coVerify { sleepSettings.updateCoreMergeGapMinutes(210) }
+            coVerify { scoringRepo.computeAndPersistDailySummary() }
+        }
+
+    @Test
+    fun sleepSettingsViewModel_invalidSupplementalCutoff_notPersisted() =
+        runTest {
+            sleepViewModel.onEvent(SettingsEvent.SupplementalCutoffMinutesOfDayChanged(845))
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { sleepSettings.updateSupplementalCutoffMinutesOfDay(any()) }
         }
 
     @Test

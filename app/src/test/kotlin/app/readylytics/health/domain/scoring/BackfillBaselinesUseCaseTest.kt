@@ -84,7 +84,7 @@ class BackfillBaselinesUseCaseTest {
         rhr: Float = 60f,
         rhrHistory: List<Int> = emptyList(),
     ) {
-        coEvery { computer.computeBackfillBaselines(any(), any()) } answers {
+        coEvery { computer.computeBackfillBaselines(any(), any(), any()) } answers {
             firstArg<List<DailySummaryEntity>>().associate {
                 it.dateMidnightMs to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
             }
@@ -298,7 +298,7 @@ class BackfillBaselinesUseCaseTest {
     fun `computeHistoricalBaselines skips row absent from the batched result`() =
         runTest {
             // A day with no batched entry (e.g. no usable data) must be skipped.
-            coEvery { baselineComputer.computeBackfillBaselines(any(), any()) } returns emptyMap()
+            coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns emptyMap()
 
             val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 8)), UserPreferences())
 

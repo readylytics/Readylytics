@@ -64,8 +64,17 @@ class ScoringRepositoryImplTest {
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
+        coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.countSince(any()) } returns 10
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
+        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any()) } returns 60f
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any()) } returns
+            BaselineComputer.HrvWindows(
+                muHistory = emptyList(),
+                sigmaHistory = emptyList(),
+                historicalSessions = emptyList(),
+                validHistoricalSessionIds = emptyList(),
+                validHistoricalDayCount = 6,
+            )
     }
 
     @Test
@@ -86,52 +95,37 @@ class ScoringRepositoryImplTest {
 
             // Mock RHR baseline for today
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(todayMs, tomorrowMs, any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(todayMs, tomorrowMs, any(), any())
             } returns 55f
 
             // Mock RHR baseline for yesterday
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any(), any())
             } returns 60f
 
             // Mock sleep sessions so the sleep metrics flow is exercised
             val mockSession =
                 SleepSessionEntity(
                     id = "test_session",
-                    startTime = 0L,
-                    endTime = 0L,
+                    startTime = yesterday.atStartOfDay(zoneId).toInstant().toEpochMilli() + 23 * 3600000L,
+                    endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 7 * 3600000L,
                     durationMinutes = 480,
                     efficiency = 90f,
                     deepSleepMinutes = 90,
                     remSleepMinutes = 90,
                     lightSleepMinutes = 240,
                     awakeMinutes = 60,
-                )
+            )
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
+            coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
 
             // Ensure use case returns different hrvMuMssd values based on date
             coEvery {
                 computeSleepMetricsUseCase(
                     any(),
                     any(),
-                    eq(today),
                     any(),
                     any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
-            } returns
-                Result
-                    .success(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f))
-
-            coEvery {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    eq(yesterday),
                     any(),
                     any(),
                     any(),
@@ -140,9 +134,13 @@ class ScoringRepositoryImplTest {
                     any(),
                     any(),
                 )
-            } returns
-                Result
-                    .success(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f))
+            } answers {
+                when (thirdArg<LocalDate>()) {
+                    today -> Result.success(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f))
+                    yesterday -> Result.success(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f))
+                    else -> Result.success(DailySummaryEntity(0L))
+                }
+            }
 
             val resultToday = repo.computeDailySummary(today)
             val resultYesterday = repo.computeDailySummary(yesterday)
@@ -181,6 +179,7 @@ class ScoringRepositoryImplTest {
                     any(),
                     any(),
                     any(),
+                    any(),
                 )
             } returns
                 Result
@@ -208,8 +207,9 @@ class ScoringRepositoryImplTest {
                     remSleepMinutes = 90,
                     lightSleepMinutes = 210,
                     awakeMinutes = 15,
-                )
+            )
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
+            coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
@@ -225,10 +225,10 @@ class ScoringRepositoryImplTest {
                     any(),
                     any(),
                     any(),
+                    any(),
                 )
             } returns
-                Result
-                    .success(DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f))
+                Result.success(DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f))
 
             val result = repo.computeDailySummary(today)
 
@@ -257,10 +257,10 @@ class ScoringRepositoryImplTest {
                     any(),
                     any(),
                     any(),
+                    any(),
                 )
             } returns
-                Result
-                    .success(DailySummaryEntity(0L))
+                Result.success(DailySummaryEntity(0L))
 
             val result = repo.computeDailySummary(today)
 
@@ -295,7 +295,7 @@ class ScoringRepositoryImplTest {
                     restingHrBaseline = null,
                     restingHrRatio = null,
                 )
-            coEvery { sleepPercentileRhrCalculator.collect(any(), any(), any()) } returns nullWakeHrResult
+            coEvery { sleepPercentileRhrCalculator.collect(any(), any(), any(), any()) } returns nullWakeHrResult
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {

@@ -135,7 +135,7 @@ class SyncScopeDeterminismTest {
                 baselineComputer.computeHrvWindowsBetween(
                     fromMs = targetDayMs,
                     toMs = targetDayEndMs,
-                    excludeSessionId = targetSession.id,
+                    excludeSessionIds = setOf(targetSession.id),
                 )
 
             // Unbounded (buggy): computeHrvWindows — uses getSince, sees all future data.

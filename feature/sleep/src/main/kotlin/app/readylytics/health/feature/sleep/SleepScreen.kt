@@ -21,6 +21,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -47,6 +48,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.deepSleepStatus
 import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
+import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString
@@ -83,6 +85,9 @@ fun SleepScreen(
     earliestDate: java.time.LocalDate? = null,
 ) {
     val scrollState = rememberScrollState()
+    val singleSessionVisual = remember(uiState.latestSession, uiState.latestSummary) {
+        resolveSingleSessionVisual(uiState.latestSession, uiState.latestSummary)
+    }
     val (trendScrollState, trendZoomState) =
         ChartDefaults.rememberChartState(
             rangeDays = uiState.selectedTrendRange.days,
@@ -182,7 +187,7 @@ fun SleepScreen(
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 SleepArchitectureBar(
-                    session = uiState.latestSession,
+                    session = singleSessionVisual,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -201,7 +206,7 @@ fun SleepScreen(
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 SleepStagesChart(
-                    session = uiState.latestSession,
+                    session = singleSessionVisual,
                     stageTimeline = uiState.stageTimeline,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -265,6 +270,7 @@ fun SleepScreen(
             MetricsGrid(
                 uiState = uiState,
                 circadianResult = circadianConsistency,
+                singleSessionVisual = singleSessionVisual,
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )
         }
@@ -279,9 +285,10 @@ fun SleepScreen(
 private fun MetricsGrid(
     uiState: SleepUiState,
     circadianResult: CircadianConsistencyResult,
+    singleSessionVisual: SleepSessionData?,
     modifier: Modifier = Modifier,
 ) {
-    val session = uiState.latestSession
+    val session = singleSessionVisual
     val summary = uiState.latestSummary
     val metrics = uiState.latestMetrics
 
@@ -420,3 +427,17 @@ private data class MetricCardData(
     val status: MetricStatus,
     val tooltip: String,
 )
+
+internal fun resolveSingleSessionVisual(
+    session: SleepSessionData?,
+    summary: app.readylytics.health.domain.model.DailySummary?,
+): SleepSessionData? {
+    val actualMinutes = actualSleepMinutes(session) ?: return session
+    val summaryMinutes = summary?.sleepDurationMinutes ?: return session
+    if (actualMinutes != summaryMinutes) {
+        // Biphasic days can carry aggregate totals that exceed any single session. Keep the
+        // best available session visual instead of collapsing architecture/timeline to blanks.
+        return session
+    }
+    return session
+}

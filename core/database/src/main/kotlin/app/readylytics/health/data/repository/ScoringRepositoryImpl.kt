@@ -13,8 +13,10 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.DailySummaryEntity
 import app.readylytics.health.domain.model.DailySummaryMapper
+import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
+import app.readylytics.health.domain.model.SleepSessionEntity
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
@@ -30,6 +32,10 @@ import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.TrimpDateBucketer
 import app.readylytics.health.domain.scoring.components.Phase
+import app.readylytics.health.domain.scoring.sleep.SleepDayAggregate
+import app.readylytics.health.domain.scoring.sleep.SleepDayAggregator
+import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
+import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
@@ -101,6 +107,14 @@ class ScoringRepositoryImpl
                 val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
                 val dayMidnightMs = dayMidnight.toEpochMilli()
                 val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
+                val sleepDayPolicy =
+                    SleepDayPolicy(
+                        coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                        supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                        minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                        supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                        scoringZoneId = zoneId,
+                    )
 
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
                 val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs)
@@ -117,6 +131,7 @@ class ScoringRepositoryImpl
                             fromMs = dayMidnightMs,
                             toMs = nextDayMidnightMs,
                             percentile = prefs.restingHrPercentile,
+                            sleepDayPolicy = sleepDayPolicy,
                         )
                         ?: ScoringConstants.DEFAULT_RHR_BPM
 
@@ -180,9 +195,12 @@ class ScoringRepositoryImpl
                     dailyTrimpRaw += workoutTrimp
                 }
 
-                // Sleep session is fetched here (before the everyday-HR block) because it provides
-                // the sleep interval(s) that the everyday-HR load calculator must exclude.
-                val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+                // Sleep intervals are resolved before the everyday-HR block because the load calculator
+                // must exclude every sleep segment contributing to this score day. Recovery metrics still
+                // run only against the core cluster via currentSessionIds.
+                val aggregatedSleep = resolveSleepAggregation(targetDate, zoneId, prefs)
+                val session = aggregatedSleep?.scoringSession ?: sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+                val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
 
                 // Everyday-HR load variant: full-day HR samples bucketed into waking, non-workout,
                 // non-sleep minutes (interval exclusion handled inside the calculator).
@@ -196,7 +214,8 @@ class ScoringRepositoryImpl
                             )
                         }
                 val sleepIntervalsMs =
-                    if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
+                    aggregatedSleep?.allSleepIntervals
+                        ?: if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
                 val workoutIntervalsMs = workouts.map { LongInterval(it.startTime, it.endTime) }
                 val everydayResult =
                     EverydayHeartRateLoadCalculator.calculate(
@@ -259,9 +278,17 @@ class ScoringRepositoryImpl
                         bloodPressureDiastolic = latestBP?.diastolicMmHg,
                     )
 
-                val calibrationFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
                 val isCalibrated =
-                    sleepSessionDao.countSince(calibrationFrom) >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+                    dailySummary?.baselineCalculatedAtDate != null ||
+                        baselineComputer
+                            .computeHrvWindowsBetween(
+                                fromMs = dayMidnightMs,
+                                toMs = nextDayMidnightMs,
+                                sleepDayPolicy = sleepDayPolicy,
+                            )?.validHistoricalDayCount
+                            ?.plus(if (session != null) 1 else 0)
+                            ?.let { it >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION }
+                            ?: false
 
                 val avgSpo2 =
                     if (session != null) {
@@ -281,14 +308,30 @@ class ScoringRepositoryImpl
 
                 if (!isCalibrated) {
                     if (session != null) {
-                        val hrvValues = scoringHistoryRepository.getSleepRmssdForSession(session.id)
+                        val hrvValues =
+                            if (currentSessionIds.size <= 1) {
+                                scoringHistoryRepository.getSleepRmssdForSession(session.id)
+                            } else {
+                                scoringHistoryRepository
+                                    .getSleepRmssdForSessionsMap(currentSessionIds.toList())
+                                    .values
+                                    .flatten()
+                            }
                         val avgHrv =
                             if (hrvValues.isNotEmpty()) {
                                 (hrvValues.sum() / hrvValues.size).toInt()
                             } else {
                                 null
                             }
-                        val sleepHrSamples = scoringHistoryRepository.getSleepHrSamplesForSession(session.id)
+                        val sleepHrSamples =
+                            if (currentSessionIds.size <= 1) {
+                                scoringHistoryRepository.getSleepHrSamplesForSession(session.id)
+                            } else {
+                                scoringHistoryRepository
+                                    .getSleepHrProjectionForSessions(currentSessionIds.toList())
+                                    .map { it.beatsPerMinute }
+                                    .sorted()
+                            }
                         val avgRhr =
                             if (sleepHrSamples.isNotEmpty()) {
                                 val idx =
@@ -336,6 +379,7 @@ class ScoringRepositoryImpl
                             fromMs = dayMidnightMs,
                             toMs = nextDayMidnightMs,
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
+                            sleepDayPolicy = sleepDayPolicy,
                         )
 
                     // Calibration bypasses computeSleepMetricsUseCase; collect directly to populate restingHrBaseline + rhrRatio
@@ -345,6 +389,7 @@ class ScoringRepositoryImpl
                                 session = session,
                                 dayMidnight = dayMidnight,
                                 percentile = prefs.restingHrPercentile,
+                                currentSessionIds = currentSessionIds,
                             )
                         } else {
                             null
@@ -419,6 +464,7 @@ class ScoringRepositoryImpl
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
                         hrvBaselineOverride = prefs.hrvBaselineOverride,
+                        sleepDayPolicy = sleepDayPolicy,
                     )
                 summary = summary.copy(hrvBaseline = computedHrvBaseline)
 
@@ -435,6 +481,7 @@ class ScoringRepositoryImpl
                             zoneId = zoneId,
                             rhrBaselineValue = rhrBaselineValue,
                             dayEndMs = nextDayMidnightMs,
+                            currentSessionIds = currentSessionIds,
                         )
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
@@ -506,6 +553,104 @@ class ScoringRepositoryImpl
         }
 
         override suspend fun toReadinessResult(summary: DailySummary): ReadinessResult = summary.readinessResult
+
+        private suspend fun resolveSleepAggregation(
+            targetDate: LocalDate,
+            zoneId: ZoneId,
+            prefs: app.readylytics.health.data.preferences.UserPreferences,
+        ): SleepAggregationContext? {
+            val fetchStartMs =
+                targetDate
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val fetchEndMs = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val sessions = sleepSessionDao.getOverlapping(fetchStartMs, fetchEndMs)
+            if (sessions.isEmpty()) return null
+
+            val policy =
+                SleepDayPolicy(
+                    coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                    supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                    minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                    supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                    scoringZoneId = zoneId,
+                )
+            val aggregate =
+                SleepDayAggregator.aggregateForScoreDay(
+                    scoreDay = targetDate,
+                    segments = sessions.map(::toSleepDaySegment),
+                    policy = policy,
+                ) ?: return null
+
+            val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }.toSet()
+            val coreSessions = sessions.filter { it.id in coreSessionIds }
+            val baseSession = coreSessions.minByOrNull { it.endTime } ?: return null
+            val stageTotals = aggregate.architectureTotals
+            val scoringSession =
+                baseSession.copy(
+                    startTime = aggregate.recoveryWindow.startTimeMs,
+                    endTime = aggregate.recoveryWindow.endTimeMs,
+                    durationMinutes = aggregate.totalDurationMinutes,
+                    efficiency = aggregateEfficiency(coreSessions),
+                    deepSleepMinutes = stageTotals.deepMinutes,
+                    remSleepMinutes = stageTotals.remMinutes,
+                    lightSleepMinutes = stageTotals.lightMinutes,
+                    awakeMinutes = stageTotals.awakeMinutes,
+                )
+            val allSleepIntervals =
+                buildList {
+                    aggregate.coreCluster.segments.forEach { add(LongInterval(it.startTimeMs, it.endTimeMs)) }
+                    aggregate.supplementalBlocks.forEach { add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs)) }
+                }
+
+            return SleepAggregationContext(
+                aggregate = aggregate,
+                scoringSession = scoringSession,
+                coreSessionIds = coreSessionIds,
+                allSleepIntervals = allSleepIntervals,
+            )
+        }
+
+        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment =
+            SleepDaySegment(
+                stableId = session.id,
+                startTimeMs = session.startTime,
+                endTimeMs = session.endTime,
+                durationMinutes = session.durationMinutes,
+                lightSleepMinutes = session.lightSleepMinutes,
+                deepSleepMinutes = session.deepSleepMinutes,
+                remSleepMinutes = session.remSleepMinutes,
+                awakeMinutes = session.awakeMinutes,
+                efficiency = session.efficiency,
+                startZoneOffsetSeconds = session.startZoneOffsetSeconds,
+                endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+                sourcePackageName = session.deviceName,
+            )
+
+        private fun aggregateEfficiency(coreSessions: List<SleepSessionEntity>): Float {
+            val weightedSessions = coreSessions.filter { it.durationMinutes > 0 }
+            if (weightedSessions.isEmpty()) return 0f
+
+            val numerator =
+                weightedSessions.sumOf { session ->
+                    session.efficiency.toDouble() * session.durationMinutes.toDouble()
+                }
+            val denominator = weightedSessions.sumOf { it.durationMinutes }.toDouble()
+            return if (denominator > 0.0) {
+                (numerator / denominator).toFloat()
+            } else {
+                weightedSessions.first().efficiency
+            }
+        }
+
+        private data class SleepAggregationContext(
+            val aggregate: SleepDayAggregate,
+            val scoringSession: SleepSessionEntity,
+            val coreSessionIds: Set<String>,
+            val allSleepIntervals: List<LongInterval>,
+        )
 
         private suspend fun sumRasLastSixDays(
             targetDate: LocalDate,

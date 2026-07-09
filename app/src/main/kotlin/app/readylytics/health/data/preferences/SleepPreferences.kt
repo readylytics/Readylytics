@@ -28,6 +28,35 @@ internal class SleepPreferences
             dataStore.updateData { it.toBuilder().setGoalSleepHours(hours).build() }
         }
 
+        suspend fun updateCoreMergeGapMinutes(minutes: Int) {
+            dataStore.updateData {
+                it.toBuilder().setCoreMergeGapMinutes(normalizeCoreMergeGapMinutes(minutes)).build()
+            }
+        }
+
+        suspend fun updateSupplementalCutoffMinutesOfDay(minutes: Int) {
+            dataStore.updateData {
+                it.toBuilder().setSupplementalCutoffMinutesOfDay(normalizeSupplementalCutoffMinutesOfDay(minutes)).build()
+            }
+        }
+
+        suspend fun updateMinimumCountedSleepSegmentMinutes(minutes: Int) {
+            dataStore.updateData {
+                it.toBuilder()
+                    .setMinimumCountedSleepSegmentMinutes(normalizeMinimumCountedSleepSegmentMinutes(minutes))
+                    .build()
+            }
+        }
+
+        suspend fun updateSupplementalArchitectureCoveragePercent(percent: Int) {
+            dataStore.updateData {
+                it.toBuilder()
+                    .setSupplementalArchitectureCoveragePercent(
+                        normalizeSupplementalArchitectureCoveragePercent(percent),
+                    ).build()
+            }
+        }
+
         suspend fun updateConsistencyThresholdMinutes(minutes: Int) {
             dataStore.updateData {
                 it

@@ -16,6 +16,13 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
     val profile = physiologyProfile.toDomainProfile()
     return UserPreferences(
         goalSleepHours = goalSleepHours,
+        coreMergeGapMinutes = normalizeCoreMergeGapMinutes(coreMergeGapMinutes),
+        supplementalCutoffMinutesOfDay =
+            normalizeSupplementalCutoffMinutesOfDay(supplementalCutoffMinutesOfDay),
+        minimumCountedSleepSegmentMinutes =
+            normalizeMinimumCountedSleepSegmentMinutes(minimumCountedSleepSegmentMinutes),
+        supplementalArchitectureCoveragePercent =
+            normalizeSupplementalArchitectureCoveragePercent(supplementalArchitectureCoveragePercent),
         hrvBaselineOverride = if (hasHrvBaselineOverride()) hrvBaselineOverride else null,
         rhrBaselineOverride = if (hasRhrBaselineOverride()) rhrBaselineOverride else null,
         syncPreference = SyncPreference.valueOf(syncPreference.name.removePrefix("SYNC_")),

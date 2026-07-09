@@ -80,6 +80,7 @@ class ScoringDeterminismRegressionTest {
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
             )
+        coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
     }
 
     private fun frozenSnapshot(

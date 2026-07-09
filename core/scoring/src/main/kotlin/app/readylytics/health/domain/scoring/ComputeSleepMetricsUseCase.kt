@@ -5,6 +5,7 @@ import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.Diagnostics
 import app.readylytics.health.domain.model.Contributors
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.SleepSessionEntity
 import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.persistence.HeartRateDao
@@ -13,6 +14,7 @@ import app.readylytics.health.domain.scoring.components.PhaseCalculator
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
+import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.util.HeartRateFormulas
@@ -54,6 +56,7 @@ class ComputeSleepMetricsUseCase
             zoneId: ZoneId,
             rhrBaselineValue: Float,
             dayEndMs: Long,
+            currentSessionIds: Set<String> = setOf(session.id),
         ): Result<DailySummaryEntity> =
             try {
                 val installDate =
@@ -81,12 +84,21 @@ class ComputeSleepMetricsUseCase
                 }
 
                 val frozenBaseline = summary.baselineCalculatedAtDate != null
+                val sleepDayPolicy =
+                    SleepDayPolicy(
+                        coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                        supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                        minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                        supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                        scoringZoneId = zoneId,
+                    )
 
                 val rhrValues: List<Int>
                 val muHrvHistory: List<Float>
                 val sigmaHrvHistory: List<Float>
                 val historicalSessions: List<SleepSessionEntity>
                 val validHistoricalSessionIds: List<String>
+                val validHistoricalDayCount: Int
                 val frozenHrvMu: Float?
                 val frozenHrvSigma: Float?
                 val frozenRhr: Float?
@@ -99,6 +111,7 @@ class ComputeSleepMetricsUseCase
                     sigmaHrvHistory = emptyList()
                     historicalSessions = emptyList()
                     validHistoricalSessionIds = emptyList()
+                    validHistoricalDayCount = 0
                     frozenHrvMu = summary.hrvMuMssd
                     frozenHrvSigma = summary.hrvSigmaMssd
                     frozenRhr = summary.rhrBpm
@@ -113,12 +126,14 @@ class ComputeSleepMetricsUseCase
                             dayMidnight.toEpochMilli(),
                             dayEndMs,
                             prefs.restingHrPercentile,
+                            sleepDayPolicy = sleepDayPolicy,
                         )
                     val hrvWindows =
                         baselineComputer.computeHrvWindowsBetween(
                             fromMs = dayMidnight.toEpochMilli(),
                             toMs = dayEndMs,
-                            excludeSessionId = session.id,
+                            excludeSessionIds = currentSessionIds,
+                            sleepDayPolicy = sleepDayPolicy,
                         ) ?: BaselineComputer.HrvWindows(
                             muHistory = emptyList(),
                             sigmaHistory = emptyList(),
@@ -127,6 +142,7 @@ class ComputeSleepMetricsUseCase
                         )
                     historicalSessions = hrvWindows.historicalSessions
                     validHistoricalSessionIds = hrvWindows.validHistoricalSessionIds
+                    validHistoricalDayCount = hrvWindows.validHistoricalDayCount
                     sigmaHrvHistory = hrvWindows.sigmaHistory
                     muHrvHistory = hrvWindows.muHistory
                     frozenHrvMu = null
@@ -143,7 +159,7 @@ class ComputeSleepMetricsUseCase
                         .toEpochMilli()
                 val yesterdaySummary = dailySummaryDao.getByDate(yesterdayMidnightMs)
 
-                val hrvResult = hrvResolver.resolve(session)
+                val hrvResult = hrvResolver.resolve(session, currentSessionIds)
                 val sessionHrvSamples = hrvResult.samples
                 val currentHrvMean = hrvResult.mean
                 @Suppress("SENSELESS_COMPARISON")
@@ -155,6 +171,7 @@ class ComputeSleepMetricsUseCase
                         session = session,
                         dayMidnight = dayMidnight,
                         percentile = prefs.restingHrPercentile,
+                        currentSessionIds = currentSessionIds,
                     )
                 val currentRestingHr = wakeHrResult.currentRestingHr
                 val restingHrBaseline = wakeHrResult.restingHrBaseline
@@ -176,6 +193,15 @@ class ComputeSleepMetricsUseCase
                         session.startTime,
                         session.endTime,
                     )
+                val minHrTimestamp =
+                    allWakeHrRecords
+                        .asSequence()
+                        .filter { record ->
+                            record.recordType == RecordType.SLEEP.name &&
+                                (currentSessionIds.isEmpty() || record.sessionId in currentSessionIds)
+                        }.minWithOrNull(
+                            compareBy({ it.beatsPerMinute }, { it.timestampMs }, { it.id }),
+                        )?.timestampMs
                 val currentHrCoverage =
                     coverageValidator.isValid(
                         session.startTime,
@@ -242,12 +268,12 @@ class ComputeSleepMetricsUseCase
 
                 // Compute calibration status early for freeze gate (HIGH-1)
                 val totalValidHrvNights =
-                    validHistoricalSessionIds.size + (if (validation.canContributeToBaseline) 1 else 0)
+                    validHistoricalDayCount + (if (validation.canContributeToBaseline) 1 else 0)
                 val isCalibrating = totalValidHrvNights < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
                 val sessionPhase = PhaseCalculator.calculatePhase(totalValidHrvNights)
 
                 if (currentNocturnalRhr != null) {
-                    val nadirCtx = nadirAnalyzer.analyze(session, historicalSessions)
+                    val nadirCtx = nadirAnalyzer.analyze(session, historicalSessions, minHrTimestamp)
 
                     val zHrv =
                         if (sessionHrvSamples.isNotEmpty()) {

@@ -148,6 +148,21 @@
 
 <string name="label_sleep">Sleep</string>
 <string name="label_sleep_goal">Sleep Goal</string>
+<string name="settings_sleep_core_merge_gap_label">Core merge gap</string>
+<string name="settings_sleep_core_merge_gap_tooltip">Maximum gap between same-day sleep
+    segments before they are treated as separate blocks.</string>
+<string name="settings_sleep_supplemental_cutoff_label">Supplemental cutoff</string>
+<string name="settings_sleep_supplemental_cutoff_tooltip">Sleep sessions starting before this
+    time can count toward previous score day as supplemental sleep.</string>
+<string name="settings_sleep_minimum_segment_label">Minimum counted segment</string>
+<string name="settings_sleep_minimum_segment_tooltip">Ignore shorter sleep segments when
+    grouping score-day sleep totals.</string>
+<string name="settings_sleep_architecture_coverage_label">Supplemental stage coverage</string>
+<string name="settings_sleep_architecture_coverage_tooltip">Required stage coverage before a
+    supplemental block contributes sleep architecture totals.</string>
+<string name="settings_sleep_minutes_value">%1$d min</string>
+<string name="settings_sleep_percent_value">%1$d%%</string>
+<string name="settings_sleep_time_value">%1$02d:%2$02d</string>
 <string name="load_source_option_everyday_hr">Everyday HR load</string>
 <string name="load_source_option_workout_only">Workout only</string>
 <string name="load_sources_ras_help">Controls RAS only, independent of the Strain / Training Load source above.</string>

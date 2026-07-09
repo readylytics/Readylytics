@@ -28,6 +28,22 @@ sealed interface SettingsEvent {
 
     data object RhrBaselineCleared : SettingsEvent
 
+    data class CoreMergeGapMinutesChanged(
+        val minutes: Int,
+    ) : SettingsEvent
+
+    data class SupplementalCutoffMinutesOfDayChanged(
+        val minutes: Int,
+    ) : SettingsEvent
+
+    data class MinimumCountedSleepSegmentMinutesChanged(
+        val minutes: Int,
+    ) : SettingsEvent
+
+    data class SupplementalArchitectureCoveragePercentChanged(
+        val percent: Int,
+    ) : SettingsEvent
+
     data class SyncPreferenceChanged(
         val pref: SyncPreference,
     ) : SettingsEvent

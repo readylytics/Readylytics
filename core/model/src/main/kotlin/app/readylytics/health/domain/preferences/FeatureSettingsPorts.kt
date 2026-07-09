@@ -49,6 +49,10 @@ interface SleepSettings {
     suspend fun updateRestingHrPercentile(percentile: Int)
     suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode)
     suspend fun updateRasSourceMode(mode: LoadSourceMode)
+    suspend fun updateCoreMergeGapMinutes(minutes: Int)
+    suspend fun updateSupplementalCutoffMinutesOfDay(minutes: Int)
+    suspend fun updateMinimumCountedSleepSegmentMinutes(minutes: Int)
+    suspend fun updateSupplementalArchitectureCoveragePercent(percent: Int)
 }
 
 interface ThresholdSettings {

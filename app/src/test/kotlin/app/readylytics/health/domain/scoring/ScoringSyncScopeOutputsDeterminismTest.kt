@@ -300,7 +300,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
         val currentNightHrvResolver = CurrentNightHrvResolver(scoringHistoryRepository)
         val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository)
-        val sleepNadirAnalyzer = SleepNadirAnalyzer(scoringHistoryRepository, scoringCalculator)
+        val sleepNadirAnalyzer = SleepNadirAnalyzer(scoringCalculator)
         val coverageValidator = HrCoverageValidator()
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(

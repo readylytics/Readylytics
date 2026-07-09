@@ -158,7 +158,11 @@ class BaselineComputerBackfillEquivalenceTest {
                 // Reproduce exactly what ComputeHistoricalBaselinesUseCase did per day.
                 val ownSession = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val expectedWindows =
-                    baselineComputer.computeHrvWindowsBetween(dayMidnightMs, nextDayMidnightMs, ownSession?.id)
+                    baselineComputer.computeHrvWindowsBetween(
+                        fromMs = dayMidnightMs,
+                        toMs = nextDayMidnightMs,
+                        excludeSessionIds = ownSession?.id?.let(::setOf).orEmpty(),
+                    )
                 val expectedRhr =
                     baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
                 val expectedRhrHistory =

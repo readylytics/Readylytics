@@ -4,16 +4,20 @@ import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
+import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.mockk
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 
 class DashboardViewModelTest {
     private lateinit var dailySummaryRepository: DailySummaryRepository
@@ -109,4 +113,46 @@ class DashboardViewModelTest {
         viewModel.onNextDay()
         assert(true) { "Should launch without error" }
     }
+
+    @Test
+    fun `dashboard session summary stays when aggregate matches single session actual sleep`() {
+        val summary =
+            viewModel.resolveDashboardSleepSessionSummary(
+                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 480),
+                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
+            )
+
+        assertEquals(0.9f, summary?.efficiency)
+        assertEquals(0L, summary?.startTime)
+        assertEquals(510 * 60_000L, summary?.endTime)
+    }
+
+    @Test
+    fun `dashboard session summary falls back to session when aggregate duration no longer matches single session`() {
+        val summary =
+            viewModel.resolveDashboardSleepSessionSummary(
+                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 540),
+                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
+            )
+
+        assertEquals(0.9f, summary?.efficiency)
+        assertNull(summary?.takeIf { it.endTime <= it.startTime })
+    }
+
+    private fun sleepSession(
+        durationMinutes: Int,
+        awakeMinutes: Int,
+    ) = SleepSessionData(
+        id = "sleep_1",
+        deviceName = "Test Ring",
+        startTime = 0L,
+        endTime = durationMinutes * 60_000L,
+        durationMinutes = durationMinutes,
+        efficiency = 0.9f,
+        deepSleepMinutes = 90,
+        lightSleepMinutes = 300,
+        remSleepMinutes = 90,
+        awakeMinutes = awakeMinutes,
+        sleepScore = 85f,
+    )
 }

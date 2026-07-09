@@ -7,10 +7,15 @@ import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.mean
 import app.readylytics.health.domain.util.median
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
+import app.readylytics.health.domain.scoring.sleep.SleepDayAggregator
+import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
+import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 
 /**
  * Computes physiological rolling-window baselines used by the scoring pipeline.
@@ -62,6 +67,7 @@ class BaselineComputer
             fromMs: Long,
             toMs: Long,
             percentile: Int,
+            sleepDayPolicy: SleepDayPolicy? = null,
         ): List<Int> {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val baselineFromMs =
@@ -74,18 +80,12 @@ class BaselineComputer
                     baselineFromMs.coerceAtLeast(0),
                     inclusiveToMs,
                 )
-            val sessionIds = sessions.map { it.id }
-            if (sessionIds.isEmpty()) return emptyList()
-
-            val allHrRecords = scoringHistoryRepository.getSleepHrProjectionForSessions(sessionIds)
-            val samplesBySession = allHrRecords.groupBy { it.sessionId }
-
-            return sessions.mapNotNull { session ->
-                val samples = samplesBySession[session.id] ?: return@mapNotNull null
-                if (samples.isEmpty()) return@mapNotNull null
-                val index = ((percentile / 100.0) * (samples.size - 1)).roundToInt().coerceIn(0, samples.size - 1)
-                samples[index].beatsPerMinute
-            }
+            return buildHistoricalSleepDays(
+                sessions = sessions,
+                percentile = percentile,
+                sleepDayPolicy = sleepDayPolicy,
+                assumeCoverageValid = true,
+            ).mapNotNull { it.rhrPercentileBpm }
         }
 
         /**
@@ -117,6 +117,7 @@ class BaselineComputer
             fromMs: Long,
             toMs: Long,
             percentile: Int,
+            sleepDayPolicy: SleepDayPolicy? = null,
         ): Float? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(fromMs)
@@ -135,30 +136,21 @@ class BaselineComputer
                     baselineFromMs.coerceAtLeast(0),
                     inclusiveToMs,
                 )
-            val validIds = filterValidBaselineSessions(sessions)
-            if (validIds.isEmpty()) {
+            val historicalSleepDays =
+                buildHistoricalSleepDays(
+                    sessions = sessions,
+                    percentile = percentile,
+                    sleepDayPolicy = sleepDayPolicy,
+                    assumeCoverageValid = true,
+                )
+            val nadirs =
+                historicalSleepDays
+                    .filter { it.canContributeToBaseline }
+                    .mapNotNull { it.nadirBpm }
+            if (nadirs.isEmpty()) {
                 return ScoringConstants.DEFAULT_RHR_BPM
             }
-            val allHrSamples = scoringHistoryRepository.getSleepHrProjectionForSessions(validIds)
-            val samplesBySession = allHrSamples.groupBy { it.sessionId }
-            val nadirs =
-                validIds.mapNotNull { sessionId ->
-                    val samples = samplesBySession[sessionId] ?: return@mapNotNull null
-                    if (samples.size < 10) return@mapNotNull null
-                    val idx =
-                        Math
-                            .round(
-                                (percentile / 100.0) * (samples.size - 1),
-                            ).toInt()
-                            .coerceIn(0, samples.size - 1)
-                    samples[idx].beatsPerMinute.toFloat()
-                }
-            return if (nadirs.isEmpty()) {
-                ScoringConstants.DEFAULT_RHR_BPM
-            } else {
-                // Median of the float nadirs directly; round only at the final boundary.
-                nadirs.median()
-            }
+            return nadirs.median()
         }
 
         /**
@@ -179,6 +171,7 @@ class BaselineComputer
             dayMidnight: Instant,
             rhrBaselineOverride: Float?,
             percentile: Int,
+            sleepDayPolicy: SleepDayPolicy? = null,
         ): Float? {
             if (rhrBaselineOverride != null) return rhrBaselineOverride
 
@@ -196,38 +189,22 @@ class BaselineComputer
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
             val sessions = scoringHistoryRepository.getSleepSessionsSince(baselineFromMs)
-            val validIds = filterValidBaselineSessions(sessions)
+            val historicalSleepDays =
+                buildHistoricalSleepDays(
+                    sessions = sessions,
+                    percentile = percentile,
+                    sleepDayPolicy = sleepDayPolicy,
+                    assumeCoverageValid = true,
+                )
+            val nadirs =
+                historicalSleepDays
+                    .filter { it.canContributeToBaseline }
+                    .mapNotNull { it.nadirBpm }
 
-            if (validIds.isEmpty()) {
+            if (nadirs.isEmpty()) {
                 return ScoringConstants.DEFAULT_RHR_BPM
             }
-
-            // OPTIMIZATION: Fetch all HR samples in single batch query using lightweight projection
-            val allHrSamples = scoringHistoryRepository.getSleepHrProjectionForSessions(validIds)
-
-            // Group samples by session in memory (fast)
-            val samplesBySession = allHrSamples.groupBy { it.sessionId }
-
-            // Compute nadirs from grouped samples (no more DB queries)
-            val nadirs =
-                validIds.mapNotNull { sessionId ->
-                    val samples = samplesBySession[sessionId] ?: return@mapNotNull null
-                    val count = samples.size
-
-                    if (count < 10) return@mapNotNull null
-
-                    val idx = ((percentile / 100.0) * (count - 1)).roundToInt().coerceIn(0, count - 1)
-
-                    // Index into in-memory list (no DB query)
-                    samples[idx].beatsPerMinute.toFloat()
-                }
-
-            return if (nadirs.isEmpty()) {
-                ScoringConstants.DEFAULT_RHR_BPM
-            } else {
-                // Median of the float nadirs directly; round only at the final boundary.
-                nadirs.median()
-            }
+            return nadirs.median()
         }
 
         /**
@@ -268,6 +245,7 @@ class BaselineComputer
             fromMs: Long,
             toMs: Long,
             hrvBaselineOverride: Float?,
+            sleepDayPolicy: SleepDayPolicy? = null,
         ): Int? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             if (hrvBaselineOverride != null) return hrvBaselineOverride.roundToInt()
@@ -287,15 +265,17 @@ class BaselineComputer
                         baselineFromMs.coerceAtLeast(0),
                         inclusiveToMs,
                     )
-            val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
-            if (validIds.isEmpty()) return null
-            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(validIds)
+            val historicalSleepDays =
+                buildHistoricalSleepDays(
+                    sessions = historicalSessions,
+                    percentile = 50,
+                    sleepDayPolicy = sleepDayPolicy,
+                    assumeCoverageValid = true,
+                )
             val nightlyAverages =
-                validIds.mapNotNull { sessionId ->
-                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
-                    if (samples.isEmpty()) return@mapNotNull null
-                    samples.mean()
-                }
+                historicalSleepDays
+                    .filter { it.canContributeToBaseline }
+                    .mapNotNull { it.hrvMean }
             return if (nightlyAverages.isEmpty()) {
                 null
             } else {
@@ -310,7 +290,8 @@ class BaselineComputer
         suspend fun computeHrvWindowsBetween(
             fromMs: Long,
             toMs: Long,
-            excludeSessionId: String?,
+            excludeSessionIds: Set<String> = emptySet(),
+            sleepDayPolicy: SleepDayPolicy? = null,
         ): HrvWindows? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(fromMs)
@@ -333,21 +314,39 @@ class BaselineComputer
                     .getSleepSessionsBetween(
                         sigmaWindowFromMs.coerceAtLeast(0),
                         inclusiveToMs,
-                    ).filter { it.id != excludeSessionId }
-            val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
-            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(validIds)
-            val sigmaHistory =
-                validIds.mapNotNull { sessionId ->
-                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
-                    if (samples.isEmpty()) return@mapNotNull null
-                    samples.mean()
+                    ).filterNot { it.id in excludeSessionIds }
+            val historicalSleepDays =
+                buildHistoricalSleepDays(
+                    sessions = historicalSessions,
+                    percentile = 50,
+                    sleepDayPolicy = sleepDayPolicy,
+                    assumeCoverageValid = true,
+                )
+            val targetScoreDay =
+                sleepDayPolicy?.let { policy ->
+                    Instant.ofEpochMilli(fromMs).atZone(policy.scoringZoneId).toLocalDate()
                 }
+            val priorHistoricalSleepDays =
+                if (targetScoreDay == null) {
+                    historicalSleepDays
+                } else {
+                    historicalSleepDays.filter { it.scoreDay < targetScoreDay }
+                }
+            val sigmaHistory =
+                priorHistoricalSleepDays
+                    .filter { it.canContributeToBaseline }
+                    .mapNotNull { it.hrvMean }
             val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
             return HrvWindows(
                 muHistory = muHistory,
                 sigmaHistory = sigmaHistory,
                 historicalSessions = historicalSessions,
-                validHistoricalSessionIds = validIds,
+                validHistoricalSessionIds =
+                    priorHistoricalSleepDays
+                        .filter { it.canContributeToBaseline }
+                        .flatMap { it.coreSessionIds },
+                validHistoricalDayCount =
+                    priorHistoricalSleepDays.count { it.canContributeToBaseline },
             )
         }
 
@@ -370,7 +369,7 @@ class BaselineComputer
             computeHrvWindowsBetween(
                 fromMs = dayMidnight.toEpochMilli(),
                 toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
-                excludeSessionId = excludeSessionId,
+                excludeSessionIds = excludeSessionId?.let(::setOf).orEmpty(),
             )
 
         /**
@@ -396,6 +395,7 @@ class BaselineComputer
         suspend fun computeBackfillBaselines(
             summaries: List<DailySummaryEntity>,
             percentile: Int,
+            sleepDayPolicy: SleepDayPolicy? = null,
         ): Map<Long, BackfillBaseline> {
             if (summaries.isEmpty()) return emptyMap()
 
@@ -423,116 +423,49 @@ class BaselineComputer
                 }
             }
 
-            val ids = sessionsAsc.map { it.id }
-            val rmssdBySession = scoringHistoryRepository.getSleepRmssdForSessionsMap(ids)
-            val avgHrBySession = scoringHistoryRepository.getAvgSleepHrForSessions(ids)
-            val hrProjectionBySession =
-                scoringHistoryRepository
-                    .getSleepHrProjectionForSessions(
-                        ids,
-                    ).groupBy { it.sessionId }
-
-            // Precompute per-night derived values once (validity, nightly RMSSD mean, percentile nadir).
-            val nights =
-                sessionsAsc.map { session ->
-                    val rmssd = rmssdBySession[session.id] ?: emptyList()
-                    val hrvMean = if (rmssd.isNotEmpty()) rmssd.mean() else null
-                    val canContribute =
-                        scoringCalculator
-                            .validateNight(
-                                rmssdMs = hrvMean,
-                                rhrBpm = avgHrBySession[session.id]?.toFloat(),
-                                durationMinutes = session.durationMinutes,
-                                deepMinutes = session.deepSleepMinutes,
-                                remMinutes = session.remSleepMinutes,
-                                hrCoverageValid = true,
-                            ).canContributeToBaseline
-                    val samples = hrProjectionBySession[session.id]
-                    val nadirBpm =
-                        if (samples != null && samples.size >= 10) {
-                            val idx =
-                                ((percentile / 100.0) * (samples.size - 1))
-                                    .roundToInt()
-                                    .coerceIn(0, samples.size - 1)
-                            samples[idx].beatsPerMinute.toFloat()
-                        } else {
-                            null
-                        }
-                    val rhrPercentileBpm =
-                        if (samples != null && samples.isNotEmpty()) {
-                            val idx =
-                                ((percentile / 100.0) * (samples.size - 1))
-                                    .roundToInt()
-                                    .coerceIn(0, samples.size - 1)
-                            samples[idx].beatsPerMinute
-                        } else {
-                            null
-                        }
-                    BackfillNight(
-                        session.id,
-                        session.startTime,
-                        session.endTime,
-                        hrvMean,
-                        canContribute,
-                        nadirBpm,
-                        rhrPercentileBpm,
-                    )
-                }
+            val historicalSleepDays =
+                buildHistoricalSleepDays(
+                    sessions = sessionsAsc,
+                    percentile = percentile,
+                    sleepDayPolicy = sleepDayPolicy,
+                    assumeCoverageValid = true,
+                )
 
             return summaries.associate { summary ->
                 val dayMidnightMs = summary.dateMidnightMs
                 val dayInstant = Instant.ofEpochMilli(dayMidnightMs)
                 val nextDayMidnightMs = dayInstant.plus(1, ChronoUnit.DAYS).toEpochMilli()
                 val dayEndMs = nextDayMidnightMs - 1
+                val scoreDay = dayInstant.atZone(sleepDayPolicy?.scoringZoneId ?: ZoneOffset.UTC).toLocalDate()
 
-                // The day's own session: first session whose endTime falls within the day
-                // (mirrors getSessionEndingInRange(dayMidnight, nextDayMidnight)).
-                val ownSessionId =
-                    nights
-                        .filter { it.endTime in dayMidnightMs until nextDayMidnightMs }
-                        .minWithOrNull(compareBy({ it.endTime }, { it.id }))
-                        ?.id
-
-                // HRV sigma window: [dayMidnight − 56d .. dayEnd], excluding the day's own session.
-                val hrvFromMs =
-                    dayInstant
-                        .minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
-                        .toEpochMilli()
-                        .coerceAtLeast(0)
+                val sigmaWindowStartDay = scoreDay.minusDays(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong())
+                val priorSleepDays =
+                    historicalSleepDays.filter { it.scoreDay < scoreDay }
                 val sigmaHistory =
-                    nights
+                    priorSleepDays
                         .asSequence()
                         .filter {
-                            it.startTime >= hrvFromMs &&
-                                it.endTime <= dayEndMs &&
-                                it.id != ownSessionId &&
+                            it.scoreDay >= sigmaWindowStartDay &&
                                 it.canContributeToBaseline
                         }.mapNotNull { it.hrvMean }
                         .toList()
                 val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
 
-                // RHR window: [dayMidnight − 30d .. dayEnd] (own session NOT excluded).
-                val rhrFromMs =
-                    dayInstant
-                        .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
-                        .toEpochMilli()
-                        .coerceAtLeast(0)
+                val rhrWindowStartDay = scoreDay.minusDays(ScoringConstants.BASELINE_DAYS.toLong())
                 val nadirs =
-                    nights
+                    priorSleepDays
                         .asSequence()
                         .filter {
-                            it.startTime >= rhrFromMs &&
-                                it.endTime <= dayEndMs &&
+                            it.scoreDay >= rhrWindowStartDay &&
                                 it.canContributeToBaseline
                         }.mapNotNull { it.nadirBpm }
                         .toList()
                 val rhrBpm = if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM else nadirs.median()
                 val rhrHistory =
-                    nights
+                    priorSleepDays
                         .asSequence()
                         .filter {
-                            it.startTime >= rhrFromMs &&
-                                it.endTime <= dayEndMs
+                            it.scoreDay >= rhrWindowStartDay
                         }.mapNotNull { it.rhrPercentileBpm }
                         .toList()
 
@@ -579,6 +512,141 @@ class BaselineComputer
                 }.map { it.id }
         }
 
+        private suspend fun buildHistoricalSleepDays(
+            sessions: List<SleepSessionEntity>,
+            percentile: Int,
+            sleepDayPolicy: SleepDayPolicy?,
+            assumeCoverageValid: Boolean = false,
+        ): List<HistoricalSleepDay> {
+            if (sessions.isEmpty()) return emptyList()
+
+            val sessionIds = sessions.map { it.id }
+            val rmssdBySession = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
+            val hrProjectionBySession =
+                scoringHistoryRepository
+                    .getSleepHrProjectionForSessions(sessionIds)
+                    .groupBy { it.sessionId }
+
+            return if (sleepDayPolicy == null) {
+                sessions.map { session ->
+                    val hrvMean = rmssdBySession[session.id].orEmpty().takeIf { it.isNotEmpty() }?.mean()
+                    val hrSamples =
+                        hrProjectionBySession[session.id]
+                            .orEmpty()
+                            .map { it.beatsPerMinute }
+                            .sorted()
+                    historicalSleepDay(
+                        scoreDay = Instant.ofEpochMilli(session.endTime).atZone(ZoneOffset.UTC).toLocalDate(),
+                        coreSessionIds = listOf(session.id),
+                        durationMinutes = session.durationMinutes,
+                        deepMinutes = session.deepSleepMinutes,
+                        remMinutes = session.remSleepMinutes,
+                        hrvMean = hrvMean,
+                        hrSamples = hrSamples,
+                        percentile = percentile,
+                        assumeCoverageValid = assumeCoverageValid,
+                    )
+                }
+            } else {
+                SleepDayAggregator
+                    .aggregate(
+                        segments = sessions.map(::toSleepDaySegment),
+                        policy = sleepDayPolicy,
+                    ).aggregates
+                    .map { aggregate ->
+                        val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }
+                        val hrvMean =
+                            coreSessionIds
+                                .flatMap { rmssdBySession[it].orEmpty() }
+                                .takeIf { it.isNotEmpty() }
+                                ?.mean()
+                        val hrSamples =
+                            coreSessionIds
+                                .flatMap { hrProjectionBySession[it].orEmpty() }
+                                .map { it.beatsPerMinute }
+                                .sorted()
+                        historicalSleepDay(
+                            scoreDay = aggregate.scoreDay,
+                            coreSessionIds = coreSessionIds,
+                            durationMinutes = aggregate.totalDurationMinutes,
+                            deepMinutes = aggregate.architectureTotals.deepMinutes,
+                            remMinutes = aggregate.architectureTotals.remMinutes,
+                            hrvMean = hrvMean,
+                            hrSamples = hrSamples,
+                            percentile = percentile,
+                            assumeCoverageValid = assumeCoverageValid,
+                        )
+                    }
+            }
+        }
+
+        private fun historicalSleepDay(
+            scoreDay: LocalDate,
+            coreSessionIds: List<String>,
+            durationMinutes: Int,
+            deepMinutes: Int,
+            remMinutes: Int,
+            hrvMean: Float?,
+            hrSamples: List<Int>,
+            percentile: Int,
+            assumeCoverageValid: Boolean,
+        ): HistoricalSleepDay {
+            val rhrPercentileBpm = resolvePercentileBpm(hrSamples, percentile)
+            val validation =
+                if (assumeCoverageValid) {
+                    scoringCalculator.validateNight(
+                        rmssdMs = hrvMean,
+                        rhrBpm = rhrPercentileBpm?.toFloat(),
+                        durationMinutes = durationMinutes,
+                        deepMinutes = deepMinutes,
+                        remMinutes = remMinutes,
+                        hrCoverageValid = true,
+                    )
+                } else {
+                    scoringCalculator.validateNight(
+                        rmssdMs = hrvMean,
+                        rhrBpm = rhrPercentileBpm?.toFloat(),
+                        durationMinutes = durationMinutes,
+                        deepMinutes = deepMinutes,
+                        remMinutes = remMinutes,
+                    )
+                }
+
+            return HistoricalSleepDay(
+                scoreDay = scoreDay,
+                coreSessionIds = coreSessionIds,
+                hrvMean = hrvMean,
+                nadirBpm = rhrPercentileBpm?.toFloat()?.takeIf { hrSamples.size >= 10 },
+                rhrPercentileBpm = rhrPercentileBpm,
+                canContributeToBaseline = validation.canContributeToBaseline,
+            )
+        }
+
+        private fun resolvePercentileBpm(
+            hrSamples: List<Int>,
+            percentile: Int,
+        ): Int? {
+            if (hrSamples.isEmpty()) return null
+            val index = ((percentile / 100.0) * (hrSamples.size - 1)).roundToInt().coerceIn(0, hrSamples.size - 1)
+            return hrSamples[index]
+        }
+
+        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment =
+            SleepDaySegment(
+                stableId = session.id,
+                startTimeMs = session.startTime,
+                endTimeMs = session.endTime,
+                durationMinutes = session.durationMinutes,
+                lightSleepMinutes = session.lightSleepMinutes,
+                deepSleepMinutes = session.deepSleepMinutes,
+                remSleepMinutes = session.remSleepMinutes,
+                awakeMinutes = session.awakeMinutes,
+                efficiency = session.efficiency,
+                startZoneOffsetSeconds = session.startZoneOffsetSeconds,
+                endZoneOffsetSeconds = session.endZoneOffsetSeconds,
+                sourcePackageName = session.deviceName,
+            )
+
         /**
          * HRV history windows + supporting session metadata returned from
          * [computeHrvWindows].
@@ -588,6 +656,7 @@ class BaselineComputer
             val sigmaHistory: List<Float>,
             val historicalSessions: List<SleepSessionEntity>,
             val validHistoricalSessionIds: List<String>,
+            val validHistoricalDayCount: Int = validHistoricalSessionIds.size,
         )
 
         /**
@@ -610,5 +679,14 @@ class BaselineComputer
             val canContributeToBaseline: Boolean,
             val nadirBpm: Float?,
             val rhrPercentileBpm: Int?,
+        )
+
+        private data class HistoricalSleepDay(
+            val scoreDay: LocalDate,
+            val coreSessionIds: List<String>,
+            val hrvMean: Float?,
+            val nadirBpm: Float?,
+            val rhrPercentileBpm: Int?,
+            val canContributeToBaseline: Boolean,
         )
     }

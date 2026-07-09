@@ -96,6 +96,7 @@ class ScoringRepositoryN1Test {
         val historicSessions = (1..9).map { makeSleepSession("historic_$it", it) }
         val todaySession = makeSleepSession("today", 0)
         coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
+        coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.getSince(any()) } returns historicSessions + todaySession
         coEvery { sleepSessionDao.getBetween(any(), any()) } returns historicSessions + todaySession
 
@@ -143,7 +144,7 @@ class ScoringRepositoryN1Test {
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
         val hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository)
         val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository)
-        val nadirAnalyzer = SleepNadirAnalyzer(scoringHistoryRepository, scoringCalculator)
+        val nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator)
         val coverageValidator = HrCoverageValidator()
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(

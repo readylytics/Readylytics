@@ -230,6 +230,10 @@ Must document:
 - configurable segmented-sleep policy settings
 - overlap resolution and determinism guarantees
 
+Status:
+- completed for `internal-docs/DATA_FLOW.md` in this pass
+- verification not run in this pass
+
 ### Step 11: Full Verification Pass
 Run at end:
 - targeted new unit tests

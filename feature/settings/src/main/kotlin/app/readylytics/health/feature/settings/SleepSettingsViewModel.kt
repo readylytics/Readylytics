@@ -36,6 +36,10 @@ class SleepSettingsViewModel
                         restingHrPercentile = prefs.restingHrPercentile,
                         strainLoadSourceMode = prefs.strainLoadSourceMode,
                         rasSourceMode = prefs.rasSourceMode,
+                        coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                        supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                        minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                        supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -68,6 +72,53 @@ class SleepSettingsViewModel
                         sleepSettings.updateHrvBaselineOverride(rmssdMs = null)
                         scoringRepository.computeAndPersistDailySummary()
                     }
+
+                is SettingsEvent.CoreMergeGapMinutesChanged -> {
+                    val isValid =
+                        SettingsValidators.CORE_MERGE_GAP_MINUTES_RULE.validate(event.minutes) is ValidationResult.Valid
+                    if (isValid) {
+                        appScope.launch {
+                            sleepSettings.updateCoreMergeGapMinutes(event.minutes)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
+                    }
+                }
+
+                is SettingsEvent.SupplementalCutoffMinutesOfDayChanged -> {
+                    val isValid =
+                        SettingsValidators.SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY_RULE.validate(event.minutes) is
+                            ValidationResult.Valid
+                    if (isValid) {
+                        appScope.launch {
+                            sleepSettings.updateSupplementalCutoffMinutesOfDay(event.minutes)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
+                    }
+                }
+
+                is SettingsEvent.MinimumCountedSleepSegmentMinutesChanged -> {
+                    val isValid =
+                        SettingsValidators.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES_RULE.validate(event.minutes) is
+                            ValidationResult.Valid
+                    if (isValid) {
+                        appScope.launch {
+                            sleepSettings.updateMinimumCountedSleepSegmentMinutes(event.minutes)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
+                    }
+                }
+
+                is SettingsEvent.SupplementalArchitectureCoveragePercentChanged -> {
+                    val isValid =
+                        SettingsValidators.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT_RULE.validate(event.percent) is
+                            ValidationResult.Valid
+                    if (isValid) {
+                        appScope.launch {
+                            sleepSettings.updateSupplementalArchitectureCoveragePercent(event.percent)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
+                    }
+                }
 
                 is SettingsEvent.RhrBaselineChanged -> {
                     val value = event.text.toIntOrNull()?.toFloat()

@@ -17,8 +17,21 @@ class CurrentNightHrvResolver
             val mean: Float,
         )
 
-        suspend fun resolve(session: SleepSessionEntity): HrvResult {
-            var samples = scoringHistoryRepository.getSleepRmssdForSession(session.id)
+        suspend fun resolve(
+            session: SleepSessionEntity,
+            currentSessionIds: Set<String> = setOf(session.id),
+        ): HrvResult {
+            var samples =
+                if (currentSessionIds.isNotEmpty()) {
+                    currentSessionIds
+                        .toList()
+                        .sorted()
+                        .flatMap { sessionId ->
+                            scoringHistoryRepository.getSleepRmssdForSession(sessionId)
+                        }
+                } else {
+                    scoringHistoryRepository.getSleepRmssdForSession(session.id)
+                }
             if (samples.isEmpty()) {
                 samples = scoringHistoryRepository.getRmssdInTimeRange(session.startTime, session.endTime)
             }

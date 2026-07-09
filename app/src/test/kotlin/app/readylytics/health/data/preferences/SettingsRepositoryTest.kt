@@ -110,6 +110,16 @@ class SettingsRepositoryTest {
         }
 
     @Test
+    fun `default biphasic sleep policy values are exposed`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(180, prefs.coreMergeGapMinutes)
+            assertEquals(1200, prefs.supplementalCutoffMinutesOfDay)
+            assertEquals(15, prefs.minimumCountedSleepSegmentMinutes)
+            assertEquals(75, prefs.supplementalArchitectureCoveragePercent)
+        }
+
+    @Test
     fun `persisted HRR tolerance values normalize to supported bounds`() =
         runTest {
             repository.batchUpdate {
@@ -152,6 +162,32 @@ class SettingsRepositoryTest {
 
             val prefs = repository.userPreferences.first()
             assertEquals(60, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `biphasic sleep policy updates normalize into supported stepped ranges`() =
+        runTest {
+            repository.updateCoreMergeGapMinutes(241)
+            repository.updateSupplementalCutoffMinutesOfDay(845)
+            repository.updateMinimumCountedSleepSegmentMinutes(3)
+            repository.updateSupplementalArchitectureCoveragePercent(77)
+
+            var prefs = repository.userPreferences.first()
+            assertEquals(240, prefs.coreMergeGapMinutes)
+            assertEquals(840, prefs.supplementalCutoffMinutesOfDay)
+            assertEquals(5, prefs.minimumCountedSleepSegmentMinutes)
+            assertEquals(75, prefs.supplementalArchitectureCoveragePercent)
+
+            repository.updateCoreMergeGapMinutes(44)
+            repository.updateSupplementalCutoffMinutesOfDay(1370)
+            repository.updateMinimumCountedSleepSegmentMinutes(58)
+            repository.updateSupplementalArchitectureCoveragePercent(99)
+
+            prefs = repository.userPreferences.first()
+            assertEquals(30, prefs.coreMergeGapMinutes)
+            assertEquals(1380, prefs.supplementalCutoffMinutesOfDay)
+            assertEquals(60, prefs.minimumCountedSleepSegmentMinutes)
+            assertEquals(100, prefs.supplementalArchitectureCoveragePercent)
         }
 
     /**

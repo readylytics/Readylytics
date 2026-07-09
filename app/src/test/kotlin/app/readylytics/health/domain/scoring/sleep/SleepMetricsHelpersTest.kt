@@ -239,7 +239,7 @@ class SleepNadirAnalyzerTest {
     private val scoringHistoryRepository =
         ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
     private val scoringCalculator = mockk<ScoringCalculator>()
-    private val analyzer = SleepNadirAnalyzer(scoringHistoryRepository, scoringCalculator)
+    private val analyzer = SleepNadirAnalyzer(scoringCalculator)
 
     @Test
     fun `analyze_nadirInLastThird_isLateTrue`() =
@@ -258,7 +258,7 @@ class SleepNadirAnalyzerTest {
                 scoringCalculator.isLateNadir(2000L, 1000L, 480)
             } returns true
 
-            val result = analyzer.analyze(session, historical)
+            val result = analyzer.analyze(session, historical, minHrTimestamp = 2000L)
 
             assertTrue(result.isLateNadir)
             assertFalse(result.isTimezoneJump)
@@ -281,7 +281,7 @@ class SleepNadirAnalyzerTest {
                 scoringCalculator.isLateNadir(2000L, 1000L, 480)
             } returns true
 
-            val result = analyzer.analyze(session, historical)
+            val result = analyzer.analyze(session, historical, minHrTimestamp = 2000L)
 
             assertFalse(result.isLateNadir)
             assertTrue(result.isTimezoneJump)
@@ -294,7 +294,7 @@ class SleepNadirAnalyzerTest {
 
             coEvery { heartRateDao.getMinHrTimestamp("1") } returns null
 
-            val result = analyzer.analyze(session, emptyList())
+            val result = analyzer.analyze(session, emptyList(), minHrTimestamp = null)
 
             assertFalse(result.isLateNadir)
             assertFalse(result.isTimezoneJump)
