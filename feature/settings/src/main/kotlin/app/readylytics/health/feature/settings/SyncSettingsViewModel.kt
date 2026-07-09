@@ -12,6 +12,7 @@ import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -68,6 +69,8 @@ class SyncSettingsViewModel
                 try {
                     val devices = deviceSettings.getAvailableDevices()
                     availableDevices.value = devices
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     logE("SyncSettingsViewModel", e) { "Failed to load available devices" }
                 }

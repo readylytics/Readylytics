@@ -66,7 +66,11 @@ fun AppNavHost(
             SyncUiState.NeedsPermissions -> {
                 if (currentDest?.hasRoute<AppDestination.Onboarding>() != true) {
                     navController.navigate(AppDestination.Onboarding) {
-                        popUpTo(AppDestination.MainShell) { inclusive = true }
+                        popUpTo(AppDestination.MainShell) {
+                            inclusive = true
+                            saveState = true
+                        }
+                        restoreState = true
                     }
                 }
             }
@@ -80,7 +84,11 @@ fun AppNavHost(
             SyncUiState.PermissionsGranted -> {
                 if (currentDest?.hasRoute<AppDestination.MainShell>() != true) {
                     navController.navigate(AppDestination.MainShell) {
-                        popUpTo(AppDestination.Onboarding) { inclusive = true }
+                        popUpTo(AppDestination.Onboarding) {
+                            inclusive = true
+                            saveState = true
+                        }
+                        restoreState = true
                     }
                 }
             }
