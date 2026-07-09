@@ -125,6 +125,11 @@ class HealthDashboardApplication :
     private fun installAndroidLogSink() {
         DomainLogger.installSink(
             object : DomainLogSink {
+                override fun isLoggable(
+                    level: LogLevel,
+                    tag: String,
+                ): Boolean = BuildConfig.DEBUG
+
                 override fun log(
                     level: LogLevel,
                     tag: String,
@@ -132,18 +137,16 @@ class HealthDashboardApplication :
                     throwable: Throwable?,
                     context: LogContext,
                 ) {
-                    if (BuildConfig.DEBUG) {
-                        val formattedMsg =
-                            if (context.sessionId != null) {
-                                "[Session:${context.sessionId}] $message"
-                            } else {
-                                message
-                            }
-                        when (level) {
-                            LogLevel.INFO -> Log.i(tag, formattedMsg)
-                            LogLevel.WARN -> Log.w(tag, formattedMsg, throwable)
-                            LogLevel.ERROR -> Log.e(tag, formattedMsg, throwable)
+                    val formattedMsg =
+                        if (context.sessionId != null) {
+                            "[Session:${context.sessionId}] $message"
+                        } else {
+                            message
                         }
+                    when (level) {
+                        LogLevel.INFO -> Log.i(tag, formattedMsg)
+                        LogLevel.WARN -> Log.w(tag, formattedMsg, throwable)
+                        LogLevel.ERROR -> Log.e(tag, formattedMsg, throwable)
                     }
                 }
             },
