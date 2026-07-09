@@ -327,4 +327,43 @@ class CrashReportShareIntentTest {
 
         assertTrue(filename.matches(Regex("readylytics_crash_report_\\d{4}-\\d{2}-\\d{2}_\\d{6}-\\d{3}\\.txt")))
     }
+
+    @Test
+    fun buildLogFileShareIntent_constructsActionSendChooserIntentWithTextPlainType() {
+        io.mockk.mockkStatic(androidx.core.content.FileProvider::class)
+        try {
+            val logFile = java.io.File(context.cacheDir, "test_log.txt")
+            val mockUri =
+                android.net.Uri.parse(
+                    "content://app.readylytics.health.fileprovider/logcat_capture/test_log.txt",
+                )
+            io.mockk.every {
+                androidx.core.content.FileProvider
+                    .getUriForFile(any(), any(), any())
+            } returns mockUri
+
+            val chooserIntent = buildLogFileShareIntent(context, logFile)
+
+            // Verify chooser intent configuration
+            assertEquals(android.content.Intent.ACTION_CHOOSER, chooserIntent.action)
+            assertEquals(
+                context.getString(R.string.log_share_chooser_title),
+                chooserIntent.getStringExtra(android.content.Intent.EXTRA_TITLE),
+            )
+
+            // Verify inner intent details
+            val sendIntent =
+                chooserIntent.getParcelableExtra<android.content.Intent>(
+                    android.content.Intent.EXTRA_INTENT,
+                )!!
+            assertEquals(android.content.Intent.ACTION_SEND, sendIntent.action)
+            assertEquals("text/plain", sendIntent.type)
+            assertTrue(sendIntent.flags and android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+
+            val uri = sendIntent.getParcelableExtra<android.net.Uri>(android.content.Intent.EXTRA_STREAM)!!
+            assertEquals(mockUri, uri)
+        } finally {
+            io.mockk.unmockkAll()
+        }
+    }
 }
