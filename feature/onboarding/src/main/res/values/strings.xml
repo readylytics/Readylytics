@@ -26,6 +26,7 @@
     <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV,
         and Exercise data from Health Connect to calculate your scores.</string>
     <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
+    <string name="onboarding_next">Next</string>
     <string name="onboarding_open_hc_settings">Open Health Connect Settings</string>
     <string name="onboarding_restore_backup_button">Restore from Backup</string>
     <string name="onboarding_restore_title">Restore from Backup</string>

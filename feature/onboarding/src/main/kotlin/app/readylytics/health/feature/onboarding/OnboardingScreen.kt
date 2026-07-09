@@ -91,10 +91,11 @@ fun OnboardingScreen(
                     onContinueClick = { retentionDays ->
                         onRetentionSetupComplete(retentionDays)
                     },
+                    onOpenSettingsClick = onOpenSettingsClick,
                 )
             else ->
                 ProfileSetupScreen(
-                    onGrantPermissionsClick = {
+                    onNextClick = {
                         birthDate,
                         gender,
                         physiologyProfile,
@@ -113,7 +114,6 @@ fun OnboardingScreen(
                             step = 3
                         }
                     },
-                    onOpenSettingsClick = onOpenSettingsClick,
                 )
         }
     }
@@ -280,7 +280,7 @@ private fun FeatureItem(
 
 @Composable
 private fun ProfileSetupScreen(
-    onGrantPermissionsClick: (
+    onNextClick: (
         birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
@@ -288,7 +288,6 @@ private fun ProfileSetupScreen(
         unitSystem: UnitSystem,
         heightCm: Float?,
     ) -> Unit,
-    onOpenSettingsClick: () -> Unit,
 ) {
     var birthDate by remember { mutableStateOf(LocalDate.now().minusYears(30)) }
     var showBirthdatePicker by remember { mutableStateOf(false) }
@@ -414,20 +413,6 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
-        Text(
-            text = stringResource(R.string.onboarding_hc_permissions_label),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-        Text(
-            text = stringResource(R.string.onboarding_hc_permissions_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
-
         val isInputValid =
             !birthDate.isAfter(LocalDate.now()) &&
                 birthDate.year in 1900..LocalDate.now().year &&
@@ -435,7 +420,7 @@ private fun ProfileSetupScreen(
 
         Button(
             onClick = {
-                onGrantPermissionsClick(
+                onNextClick(
                     birthDate,
                     gender,
                     physiologyProfile,
@@ -447,13 +432,7 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = isInputValid,
         ) {
-            Text(stringResource(R.string.onboarding_grant_access))
-        }
-
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
-
-        TextButton(onClick = onOpenSettingsClick) {
-            Text(stringResource(R.string.onboarding_open_hc_settings))
+            Text(stringResource(R.string.onboarding_next))
         }
     }
 }

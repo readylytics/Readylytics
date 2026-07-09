@@ -81,7 +81,13 @@ fun OnboardingRoute(
         }
     }
 
-    val skipToPermissions = userPrefs?.isBirthdayConfigured == true
+    // True once the user has saved their profile in THIS session — keeps skipToPermissions
+    // from firing before they've seen the RetentionSetupScreen.
+    var profileJustSaved by rememberSaveable { mutableStateOf(false) }
+
+    // Fast-path for restore flow: profile already existed before this session started
+    // (isBirthdayConfigured was true on first load AND user didn't just fill the profile form).
+    val skipToPermissions = userPrefs?.isBirthdayConfigured == true && !profileJustSaved
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
     if (skipToPermissions || isSyncing || isSyncError) {
@@ -133,6 +139,9 @@ fun OnboardingRoute(
             heightCm,
             onComplete,
             ->
+            // Set BEFORE saveProfile so the DataStore write cannot race and trigger
+            // skipToPermissions while profileJustSaved is still false.
+            profileJustSaved = true
             app.readylytics.health.domain.util.logD("OnboardingRoute") {
                 "Grant Access clicked. Saving profile first..."
             }

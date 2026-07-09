@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -71,118 +70,128 @@ fun FinishingSetupScreen(
                 .fillMaxSize()
                 .padding(MaterialTheme.spacing.pageSectionGapLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
     ) {
-        if (progress != null && progress.total > 0) {
-            val percentage = progress.current.toFloat() / progress.total.toFloat()
-            Text(
-                text = stringResource(R.string.onboarding_sync_progress, progress.current, progress.total),
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-            LinearProgressIndicator(
-                progress = { percentage },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } else {
-            CircularProgressIndicator()
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-            Text(
-                text = stringResource(R.string.onboarding_finishing_setup),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-        }
+        // Scrollable content area — grows to fill remaining space above buttons
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            if (progress != null && progress.total > 0) {
+                val percentage = progress.current.toFloat() / progress.total.toFloat()
+                Text(
+                    text = stringResource(R.string.onboarding_sync_progress, progress.current, progress.total),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+                LinearProgressIndicator(
+                    progress = { percentage },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+                Text(
+                    text = stringResource(R.string.onboarding_finishing_setup),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                )
+            }
 
-        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
-        TextButton(onClick = { showLogs = !showLogs }) {
-            Text(
-                text =
-                    if (showLogs) {
-                        stringResource(R.string.onboarding_hide_logs)
-                    } else {
-                        stringResource(R.string.onboarding_view_logs)
-                    },
-            )
-        }
+            TextButton(onClick = { showLogs = !showLogs }) {
+                Text(
+                    text =
+                        if (showLogs) {
+                            stringResource(R.string.onboarding_hide_logs)
+                        } else {
+                            stringResource(R.string.onboarding_view_logs)
+                        },
+                )
+            }
 
-        AnimatedVisibility(visible = showLogs) {
-            Card(
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    ),
-                shape = MaterialTheme.shapes.large,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .padding(vertical = MaterialTheme.spacing.small),
-            ) {
-                val listState = rememberLazyListState()
-                val logLines =
-                    remember(logText) {
-                        logText?.split("\n")?.filter { it.isNotBlank() }?.takeLast(40) ?: emptyList()
+            AnimatedVisibility(visible = showLogs) {
+                Card(
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ),
+                    shape = MaterialTheme.shapes.large,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .padding(vertical = MaterialTheme.spacing.small),
+                ) {
+                    val listState = rememberLazyListState()
+                    val logLines =
+                        remember(logText) {
+                            logText?.split("\n")?.filter { it.isNotBlank() }?.takeLast(40) ?: emptyList()
+                        }
+
+                    LaunchedEffect(logLines) {
+                        if (logLines.isNotEmpty()) {
+                            listState.animateScrollToItem(logLines.size - 1)
+                        }
                     }
 
-                LaunchedEffect(logLines) {
-                    if (logLines.isNotEmpty()) {
-                        listState.animateScrollToItem(logLines.size - 1)
-                    }
-                }
-
-                if (logLines.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.onboarding_logs_empty),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(MaterialTheme.spacing.small),
-                    ) {
-                        items(logLines) { line ->
+                    if (logLines.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
                             Text(
-                                text = line,
-                                style =
-                                    MaterialTheme.typography.bodySmall.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                    ),
-                                color = MaterialTheme.colorScheme.onSurface,
+                                text = stringResource(R.string.onboarding_logs_empty),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(MaterialTheme.spacing.small),
+                        ) {
+                            items(logLines) { line ->
+                                Text(
+                                    text = line,
+                                    style =
+                                        MaterialTheme.typography.bodySmall.copy(
+                                            fontFamily = FontFamily.Monospace,
+                                        ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
+        // Buttons pinned to the bottom
         Spacer(Modifier.height(MaterialTheme.spacing.small))
 
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         ) {
             OutlinedButton(
                 onClick = onDownloadLogs,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.onboarding_download_logs))
             }
 
             Button(
                 onClick = onContinueInBackground,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.onboarding_continue_in_background))
             }
