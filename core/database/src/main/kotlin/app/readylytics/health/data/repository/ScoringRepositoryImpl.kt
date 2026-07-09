@@ -230,9 +230,10 @@ class ScoringRepositoryImpl
                 val totalRasWorkoutOnly = round(dailyRas + last6DaysRasWorkoutOnly)
                 val totalRasEverydayHr = round(dailyRasEverydayHr + last6DaysRasEverydayHr)
 
+                @Suppress("SENSELESS_COMPARISON")
+                val dailyTrimpPresent = dailyTrimpRaw != null
                 logD("ScoringRepository") {
-                    "Result - DailyTrimp: $dailyTrimpRaw, DailyRas: $dailyRas, " +
-                        "Last6d: $last6DaysRasWorkoutOnly, Total7d: $totalRasWorkoutOnly"
+                    "RAS calculation completed: workoutsFound=${workouts.isNotEmpty()}, dailyTrimpPresent=$dailyTrimpPresent"
                 }
 
                 val latestWeight = weightRecordDao.getLatestUpTo(nextDayMidnightMs)
