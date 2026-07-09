@@ -3,6 +3,7 @@ package app.readylytics.health.feature.onboarding
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +37,8 @@ fun OnboardingRoute(
     onPermissionsGranted: () -> Unit,
     onPermissionsDenied: () -> Unit,
     onRestartApp: () -> Unit,
+    onDownloadLogs: () -> Unit = {},
+    onContinueInBackground: () -> Unit = {},
     onboardingViewModel: OnboardingViewModel = hiltViewModel(),
     restoreViewModel: OnboardingRestoreViewModel = hiltViewModel(),
 ) {
@@ -79,7 +82,13 @@ fun OnboardingRoute(
         }
     }
 
-    val skipToPermissions = userPrefs?.isBirthdayConfigured == true
+    // True once the user has saved their profile in THIS session — keeps skipToPermissions
+    // from firing before they've seen the RetentionSetupScreen.
+    var profileJustSaved by rememberSaveable { mutableStateOf(false) }
+
+    // Fast-path for restore flow: profile already existed before this session started
+    // (isBirthdayConfigured was true on first load AND user didn't just fill the profile form).
+    val skipToPermissions = userPrefs?.isBirthdayConfigured == true && !profileJustSaved
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
     if (skipToPermissions || isSyncing || isSyncError) {
@@ -92,7 +101,7 @@ fun OnboardingRoute(
                 permissionLauncher.launch(permissions)
             }
         }
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             if (permissionsDenied) {
                 PermissionsRequiredScreen(
                     onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
@@ -110,7 +119,11 @@ fun OnboardingRoute(
                         onSkip = onSkipSync,
                     )
                 } else {
-                    FinishingSetupScreen(progress = recalcProgress)
+                    FinishingSetupScreen(
+                        progress = recalcProgress,
+                        onDownloadLogs = onDownloadLogs,
+                        onContinueInBackground = onContinueInBackground,
+                    )
                 }
             }
         }
@@ -118,14 +131,18 @@ fun OnboardingRoute(
     }
 
     OnboardingScreen(
-        onGrantPermissionsClick = {
+        onProfileSetupComplete = {
             birthDate,
             gender,
             physiologyProfile,
             dynamicColorEnabled,
             unitSystem,
             heightCm,
+            onComplete,
             ->
+            // Set BEFORE saveProfile so the DataStore write cannot race and trigger
+            // skipToPermissions while profileJustSaved is still false.
+            profileJustSaved = true
             app.readylytics.health.domain.util.logD("OnboardingRoute") {
                 "Grant Access clicked. Saving profile first..."
             }
@@ -136,13 +153,16 @@ fun OnboardingRoute(
                 dynamicColorEnabled = dynamicColorEnabled,
                 unitSystem = unitSystem,
                 heightCm = heightCm,
-                onComplete = {
-                    app.readylytics.health.domain.util.logD("OnboardingRoute") {
-                        "Profile saved. Launching HC permissions: $permissions"
-                    }
-                    permissionLauncher.launch(permissions)
-                },
+                onComplete = onComplete,
             )
+        },
+        onRetentionSetupComplete = { retentionDays ->
+            onboardingViewModel.saveRetention(retentionDays) {
+                app.readylytics.health.domain.util.logD("OnboardingRoute") {
+                    "Retention saved. Launching HC permissions: $permissions"
+                }
+                permissionLauncher.launch(permissions)
+            }
         },
         onOpenSettingsClick = {
             val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)

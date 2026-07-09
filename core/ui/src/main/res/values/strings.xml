@@ -160,4 +160,14 @@
     <string name="tooltip_sleep_hrv_no_baseline">\n\nNot enough data to calculate baseline.</string>
     <string name="tooltip_sleep_hrv_diagnostics">\n\nDiagnostics:\n• Z-score: %1$s\n• σ (ln-scale): %2$s</string>
     <string name="tooltip_sleep_duration">Total time asleep last night.\n\nGoal: %1$s</string>
+
+    <!-- Data retention shared settings -->
+    <string name="settings_retention_description">Automatically delete data older than the retention
+        period.</string>
+    <string name="settings_retention_enabled_label">Retention Enabled</string>
+    <string name="settings_retention_period_label">Retention Period</string>
+    <plurals name="settings_retention_months">
+        <item quantity="one">%1$d month</item>
+        <item quantity="other">%1$d months</item>
+    </plurals>
 </resources>

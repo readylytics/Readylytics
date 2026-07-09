@@ -72,5 +72,6 @@
 
     <string name="restore_partial_success_title" ns0:ignore="UnusedResources">Restore partly completed</string>
     <string name="restore_stage_preferences" ns0:ignore="UnusedResources">settings</string>
+    <string name="log_share_chooser_title">Download/Share logs</string>
 </resources>
 

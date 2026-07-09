@@ -36,6 +36,25 @@ fun buildCrashReportShareIntent(
     return Intent.createChooser(sendIntent, context.getString(R.string.crash_report_chooser_title))
 }
 
+fun buildLogFileShareIntent(
+    context: Context,
+    logFile: File,
+): Intent {
+    val uri =
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            logFile,
+        )
+    val sendIntent =
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    return Intent.createChooser(sendIntent, context.getString(R.string.log_share_chooser_title))
+}
+
 private const val GITHUB_ISSUES_NEW_URL = "https://github.com/readylytics/Readylytics/issues/new"
 
 // GitHub/browsers reject request URLs above roughly 8000 characters. Below this, the GitHub-URL
