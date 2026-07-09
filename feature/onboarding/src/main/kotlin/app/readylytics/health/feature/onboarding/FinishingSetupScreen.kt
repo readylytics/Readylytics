@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,8 +51,18 @@ fun FinishingSetupScreen(
     val logText by logViewModel.logText.collectAsStateWithLifecycle()
     var showLogs by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        logViewModel.startPolling()
+    LaunchedEffect(showLogs) {
+        if (showLogs) {
+            logViewModel.startPolling()
+        } else {
+            logViewModel.stopPolling()
+        }
+    }
+
+    DisposableEffect(logViewModel) {
+        onDispose {
+            logViewModel.stopPolling()
+        }
     }
 
     Column(
@@ -116,7 +127,7 @@ fun FinishingSetupScreen(
                         logText?.split("\n")?.filter { it.isNotBlank() }?.takeLast(40) ?: emptyList()
                     }
 
-                LaunchedEffect(logLines.size) {
+                LaunchedEffect(logLines) {
                     if (logLines.isNotEmpty()) {
                         listState.animateScrollToItem(logLines.size - 1)
                     }
