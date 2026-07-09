@@ -22,6 +22,7 @@ import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
+import app.readylytics.health.util.SecureFileLogSink
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -123,33 +124,29 @@ class HealthDashboardApplication :
     }
 
     private fun installAndroidLogSink() {
-        DomainLogger.installSink(
-            object : DomainLogSink {
-                override fun isLoggable(
-                    level: LogLevel,
-                    tag: String,
-                ): Boolean = BuildConfig.DEBUG
-
-                override fun log(
-                    level: LogLevel,
-                    tag: String,
-                    message: String,
-                    throwable: Throwable?,
-                    context: LogContext,
-                ) {
-                    val formattedMsg =
-                        if (context.sessionId != null) {
-                            "[Session:${context.sessionId}] $message"
-                        } else {
-                            message
+        if (BuildConfig.DEBUG) {
+            // Standard debug logging directly to logcat
+            DomainLogger.installSink(
+                object : DomainLogSink {
+                    override fun log(
+                        level: LogLevel,
+                        tag: String,
+                        message: String,
+                        throwable: Throwable?,
+                        context: LogContext,
+                    ) {
+                        val formatted = "[Session:${context.sessionId ?: "none"}] $message"
+                        when (level) {
+                            LogLevel.INFO -> Log.d(tag, formatted)
+                            LogLevel.WARN -> Log.w(tag, formatted, throwable)
+                            LogLevel.ERROR -> Log.e(tag, formatted, throwable)
                         }
-                    when (level) {
-                        LogLevel.INFO -> Log.i(tag, formattedMsg)
-                        LogLevel.WARN -> Log.w(tag, formattedMsg, throwable)
-                        LogLevel.ERROR -> Log.e(tag, formattedMsg, throwable)
                     }
-                }
-            },
-        )
+                },
+            )
+        } else {
+            // Release build secure log file sink (includes sanitized logcat mirroring)
+            DomainLogger.installSink(SecureFileLogSink(this))
+        }
     }
 }
