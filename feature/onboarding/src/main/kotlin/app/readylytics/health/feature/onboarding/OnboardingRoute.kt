@@ -3,6 +3,7 @@ package app.readylytics.health.feature.onboarding
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -100,7 +101,7 @@ fun OnboardingRoute(
                 permissionLauncher.launch(permissions)
             }
         }
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             if (permissionsDenied) {
                 PermissionsRequiredScreen(
                     onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
