@@ -50,4 +50,12 @@
     <string name="onboarding_sync_error_report">Report Issue</string>
     <string name="onboarding_sync_error_skip">Proceed to App</string>
     <string name="onboarding_sync_progress">Fetching data: Day %1$d of %2$d</string>
+    <string name="onboarding_retention_title">How far back should we sync?</string>
+    <string name="onboarding_retention_subtitle">Readylytics will backfill historical data from Health Connect up to this period. Surfacing older data might take longer on the first sync.</string>
+    <string name="onboarding_retention_continue">Continue</string>
+    <string name="onboarding_view_logs">Show log output</string>
+    <string name="onboarding_hide_logs">Hide log output</string>
+    <string name="onboarding_download_logs">Download Logs</string>
+    <string name="onboarding_logs_empty">No logs available yet</string>
+    <string name="onboarding_continue_in_background">Continue in background</string>
 </resources>
