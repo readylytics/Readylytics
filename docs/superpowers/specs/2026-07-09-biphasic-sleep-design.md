@@ -64,7 +64,10 @@ Use `selection-first`.
 - existing per-data-type device selection remains primary
 - if overlapping sleep from multiple providers remains in raw DB, aggregation must choose one canonical raw set deterministically
 - if selected device exists, prefer that device
-- if no selected device exists, this design leaves deterministic tie-break policy as explicit blocker
+- if no selected device exists, resolve overlaps by:
+  1. longest total sleep duration
+  2. richest stage coverage percentage
+  3. lexicographically smallest package name
 
 ### 2.7 Circadian Consistency Rule
 Use `hybrid`.
@@ -82,6 +85,17 @@ Use `stored scoring timezone first`.
 - trend bucketing
 
 All above must use stored scoring timezone from `UserPreferences.scoringZoneId`, not current device timezone and not session-local offsets.
+
+### 2.9 Time Setting Storage Rule
+Store time settings as `minutes-from-midnight`.
+
+Example:
+- `20:00` is stored as `1200`
+
+Reason:
+- simple Datastore shape
+- trivial SQLite serialization
+- direct integer boundary math
 
 ## 3. Current-State Audit
 
@@ -340,21 +354,15 @@ For target score day `D`:
 ### 6.2 Core Cluster Selection
 Confirmed:
 - longest merged cluster wins
+- equal-length tie-break order is locked:
+  1. greater total sleep minutes
+  2. later final wake
+  3. earlier start
+  4. lexicographically smallest stable session id
 
-Open blocker:
-- deterministic tie-breakers for equal total sleep minutes are not yet user-approved
-
-Required tie-break policy for implementation:
-- must be explicit
-- must not depend on insertion order, sync order, or retention window
-
-Recommended candidate:
-1. greater total sleep minutes
-2. later final wake
-3. earlier start
-4. lexicographically smallest stable session-id tuple
-
-This recommendation is not yet user-approved and should be treated as blocker until confirmed.
+Requirement:
+- tie-break must be applied exactly in this order
+- tie-break must not depend on insertion order, sync order, or retention window
 
 ### 6.3 Supplemental Sleep Acceptance
 Confirmed:
@@ -363,12 +371,13 @@ Confirmed:
 - can update duration and eligible architecture
 - cannot update readiness/RHR/HRV/nadir
 
-Open blocker:
-- exact rule to prevent borderline evening segments from being counted both as supplemental for day `D` and seed of next core cluster for day `D+1`
-
 Required behavior:
 - each raw segment must belong to at most one `SleepDayAggregate`
 - ownership must be deterministic across adjacent days
+- ownership boundary is locked by strict local start-time comparison:
+  - `startTime < supplementalCutoffLocalTime`: candidate for current day supplemental sleep
+  - `startTime >= supplementalCutoffLocalTime`: sever from current day and evaluate only for next day core-cluster candidacy
+- use strict `>=` check to avoid look-ahead dependencies
 
 ### 6.4 Stage Aggregation
 Core cluster:
@@ -377,16 +386,15 @@ Core cluster:
 Supplemental block:
 - duration always eligible once accepted
 - architecture eligible only if:
-  - stage-covered minutes / segment sleep minutes `>= supplementalArchitectureCoveragePercent`
+  - `((light + deep + rem + awake) * 100) / totalSegmentDurationMinutes >= supplementalArchitectureCoveragePercent`
   - at least one non-awake sleep stage exists
-
-Open blocker:
-- exact coverage denominator and rounding rule are not yet user-approved
 
 Required implementation rule:
 - use exact stored sleep-stage durations
-- define whether denominator is total session span, total sleep minutes, or stage-covered minutes versus `durationMinutes`
-- define threshold comparison as exact `>=` after integer-minute math
+- denominator is segment total elapsed clock time in minutes
+- numerator is `light + deep + rem + awake` minutes only
+- use integer math only
+- use exact `>=` threshold comparison
 
 ### 6.5 Missing Stages
 Confirmed direction:
@@ -399,10 +407,10 @@ Confirmed direction:
 
 Required implementation behavior:
 - if user selected sleep device, only segments from that device can participate when overlapping alternatives exist
-- if no sleep device selected and overlaps remain, implementation needs deterministic canonicalization policy
-
-Open blocker:
-- no-device overlap tie-breaker is not yet user-approved
+- if no sleep device selected and overlaps remain, canonicalize by:
+  1. longest total sleep duration
+  2. richest stage coverage percentage
+  3. lexicographically smallest package name
 
 ### 6.7 Timezone, DST, and Travel
 Confirmed:
@@ -552,6 +560,9 @@ New user-facing settings:
 - `minimumCountedSleepSegmentMinutes`
 - `supplementalArchitectureCoveragePercent`
 
+Storage note:
+- `supplementalCutoffLocalTime` should persist as `minutes-from-midnight`
+
 All new labels, descriptions, tooltips must be strings resources.
 
 ### 10.2 Sleep Screen
@@ -654,17 +665,16 @@ Update in same change if implementation proceeds:
 Current docs already note biphasic caveat; those sections must be replaced with explicit supported behavior once feature ships.
 
 ## 13. Safe Rollout Order
-1. lock remaining blockers
-2. add new settings/defaults/validators/serialization/backup support
-3. add pure Kotlin aggregation model and tests
-4. adapt circadian repository to aggregate/core anchors
-5. adapt baseline / HRV / RHR / nadir helpers to core recovery window
-6. refactor `ScoringRepositoryImpl` and `ComputeSleepMetricsUseCase` to consume aggregate
-7. update sleep screen and trend consumers
-8. update dashboard/widget consumers if needed
-9. add DB migration only if derived persistence proves necessary
-10. update docs
-11. run full regression suite
+1. add new settings/defaults/validators/serialization/backup support
+2. add pure Kotlin aggregation model and tests
+3. adapt circadian repository to aggregate/core anchors
+4. adapt baseline / HRV / RHR / nadir helpers to core recovery window
+5. refactor `ScoringRepositoryImpl` and `ComputeSleepMetricsUseCase` to consume aggregate
+6. update sleep screen and trend consumers
+7. update dashboard/widget consumers if needed
+8. add DB migration only if derived persistence proves necessary
+9. update docs
+10. run full regression suite
 
 ## 14. Main Risks
 - hidden single-session assumptions outside audited files
@@ -675,16 +685,26 @@ Current docs already note biphasic caveat; those sections must be replaced with 
 - UI drift if some screens use aggregate projections and others still use raw sessions
 - backup/restore drift if new policy settings are missed in serializers
 
-## 15. Explicit Blockers Before Implementation
-These are not resolved by current code or approved product policy and should be answered before code work starts:
+## 15. Locked Determinism Rules
+These rules are now fixed for implementation and must not drift across code paths:
 
-1. equal-length core-cluster tie-break order
-2. no-device overlap canonicalization rule when multiple providers remain
-3. exact ownership rule for borderline evening segments near same-day cutoff versus next-day core cluster
-4. exact stage-coverage denominator and rounding rule for supplemental architecture eligibility
-5. storage representation for supplemental cutoff setting
-   - minutes-from-midnight versus separate hour/minute fields
-   - this is lower-risk than behavioral blockers but should still be locked before implementation
+1. equal-length core-cluster tie-break:
+   1. greater total sleep minutes
+   2. later final wake time
+   3. earlier start time
+   4. lexicographically smallest stable session id
+2. no-device overlap canonicalization:
+   1. longest total sleep duration
+   2. richest stage coverage percentage
+   3. lexicographically smallest package name
+3. evening ownership boundary:
+   - `startTime < cutoff` stays candidate for current day supplemental sleep
+   - `startTime >= cutoff` is severed from current day and evaluated only for next day
+4. supplemental stage coverage:
+   - formula `((light + deep + rem + awake) * 100) / totalSegmentDurationMinutes >= threshold`
+   - integer math only
+5. time setting persistence:
+   - store as `minutes-from-midnight`
 
 ## 16. Recommendation Summary
 - implement biphasic support as shared pure domain aggregation, not ingestion merge and not UI-only patch
