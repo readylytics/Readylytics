@@ -112,7 +112,11 @@ fun OnboardingRoute(
                         onSkip = onSkipSync,
                     )
                 } else {
-                    FinishingSetupScreen(progress = recalcProgress)
+                    FinishingSetupScreen(
+                        progress = recalcProgress,
+                        onDownloadLogs = onDownloadLogs,
+                        onContinueInBackground = onContinueInBackground,
+                    )
                 }
             }
         }
