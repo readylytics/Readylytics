@@ -9,8 +9,11 @@ import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -25,10 +28,16 @@ class SecureFileLogSink(
     private val encryptStreams: Boolean = true,
     coroutineContext: CoroutineContext = Dispatchers.IO.limitedParallelism(1),
 ) : DomainLogSink {
+    private val writeDispatcher: CoroutineContext = coroutineContext
     private val logDirectory = File(context.cacheDir, "logs")
     private val logFile = File(logDirectory, "prod_logs.txt")
-    private val scope = CoroutineScope(SupervisorJob() + coroutineContext)
+    private val scope = CoroutineScope(SupervisorJob() + writeDispatcher)
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+
+    // Memory buffer for logs
+    private val pendingLogs = mutableListOf<String>()
+    private var lastWriteTimestamp = System.currentTimeMillis()
+    private var flushJob: Job? = null
 
     init {
         if (!logDirectory.exists()) {
@@ -54,33 +63,62 @@ class SecureFileLogSink(
         // Offload file writing to serialization coroutine scope
         scope.launch {
             try {
-                writeLogToFile(level, tag, message, throwable, context)
+                bufferLog(level, tag, message, throwable, context)
             } catch (e: Exception) {
                 Log.e("SecureFileLogSink", "Failed to write log to file", e)
             }
         }
     }
 
-    private fun writeLogToFile(
+    private fun bufferLog(
         level: LogLevel,
         tag: String,
         message: String,
         throwable: Throwable?,
         logContext: LogContext,
     ) {
-        checkRotation()
-
         val timestamp = dateFormat.format(Date())
         val sessionId = logContext.sessionId ?: "none"
         val logLine =
             "$timestamp [$level] [$tag] [Session:$sessionId] $message" +
                 (throwable?.let { "\n${Log.getStackTraceString(it)}" } ?: "") + "\n"
 
-        if (encryptStreams) {
-            writeEncrypted(logLine)
+        pendingLogs.add(logLine)
+
+        val timeSinceLastWrite = System.currentTimeMillis() - lastWriteTimestamp
+        if (pendingLogs.size >= 5 || timeSinceLastWrite >= 2000) {
+            flush(fromSchedule = false)
         } else {
-            writePlain(logLine)
+            if (flushJob == null) {
+                val delayTime = (2000 - timeSinceLastWrite).coerceAtLeast(0)
+                flushJob =
+                    scope.launch {
+                        delay(delayTime)
+                        flush(fromSchedule = true)
+                    }
+            }
         }
+    }
+
+    private fun flush(fromSchedule: Boolean = false) {
+        if (!fromSchedule) {
+            flushJob?.cancel()
+        }
+        flushJob = null
+
+        if (pendingLogs.isEmpty()) return
+        val content = pendingLogs.joinToString("")
+        pendingLogs.clear()
+
+        checkRotation()
+
+        if (encryptStreams) {
+            writeEncrypted(content)
+        } else {
+            writePlain(content)
+        }
+
+        lastWriteTimestamp = System.currentTimeMillis()
     }
 
     private fun writeEncrypted(content: String) {
@@ -154,16 +192,32 @@ class SecureFileLogSink(
     }
 
     // Safe decryption exposure helper for internal diagnostics use
-    fun readLogsDecrypted(): String {
-        if (!logFile.exists()) return ""
-        return try {
-            if (encryptStreams) {
-                getEncryptedFile(logFile).openFileInput().use { it.bufferedReader().readText() }
-            } else {
-                logFile.readText()
+    suspend fun readLogsDecrypted(): String =
+        withContext(writeDispatcher) {
+            flush(fromSchedule = false)
+
+            val files = mutableListOf<File>()
+            for (i in maxBackups downTo 1) {
+                files.add(File(logDirectory, "prod_logs.txt.$i"))
             }
-        } catch (e: Exception) {
-            "Error reading encrypted log file: ${e.message}"
+            files.add(logFile)
+
+            val result = StringBuilder()
+            for (file in files) {
+                if (file.exists()) {
+                    try {
+                        val fileContent =
+                            if (encryptStreams) {
+                                getEncryptedFile(file).openFileInput().use { it.bufferedReader().readText() }
+                            } else {
+                                file.readText()
+                            }
+                        result.append(fileContent)
+                    } catch (e: Exception) {
+                        result.append("Error reading encrypted log file: ${e.message}\n")
+                    }
+                }
+            }
+            result.toString()
         }
-    }
 }
