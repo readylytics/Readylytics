@@ -21,20 +21,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.health.connect.client.PermissionController
@@ -46,6 +43,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
+import app.readylytics.health.core.ui.components.settings.RetentionSlider
 import app.readylytics.health.data.preferences.BackgroundSyncInterval
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.model.HealthDataCategory
@@ -158,70 +156,15 @@ fun DataManagementSection(
     onEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
-    var retentionMonths by remember(uiState.retentionDays) {
-        mutableFloatStateOf(kotlin.math.round(uiState.retentionDays / 30f))
-    }
-
     Column {
-        ListItem(
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    stringResource(R.string.settings_retention_enabled_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            trailingContent = {
-                Switch(
-                    checked = uiState.retentionDaysEnabled,
-                    onCheckedChange = { onEvent(SettingsEvent.RetentionDaysEnabledChanged(it)) },
-                )
-            },
+        RetentionSlider(
+            enabled = uiState.retentionDaysEnabled,
+            retentionDays = uiState.retentionDays,
+            onEnabledChanged = { onEvent(SettingsEvent.RetentionDaysEnabledChanged(it)) },
+            onRetentionDaysChanged = { onEvent(SettingsEvent.RetentionDaysChanged(it)) },
+            showEnableToggle = true,
+            modifier = Modifier.fillMaxWidth(),
         )
-
-        AnimatedVisibility(visible = uiState.retentionDaysEnabled) {
-            Column(
-                modifier =
-                    Modifier.padding(
-                        horizontal = MaterialTheme.spacing.medium,
-                        vertical = MaterialTheme.spacing.extraSmall,
-                    ),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(R.string.settings_retention_period_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text =
-                            pluralStringResource(
-                                R.plurals.settings_retention_months,
-                                retentionMonths.toInt(),
-                                retentionMonths.toInt(),
-                            ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Slider(
-                    value = retentionMonths,
-                    onValueChange = { retentionMonths = it },
-                    onValueChangeFinished = {
-                        onEvent(SettingsEvent.RetentionDaysChanged((retentionMonths.toInt() * 30)))
-                    },
-                    valueRange = 3f..60f,
-                    steps = 18,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = stringResource(R.string.settings_retention_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
-                )
-            }
-        }
 
         Column(
             modifier =
