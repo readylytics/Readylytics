@@ -2,6 +2,8 @@ package app.readylytics.health.feature.onboarding
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,11 +11,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
@@ -24,6 +28,7 @@ fun OnboardingRoute(
     requiredPermissions: Set<String>,
     isSyncing: Boolean = false,
     syncError: String? = null,
+    recalcProgress: RecalcProgress? = null,
     onRetrySync: () -> Unit = {},
     onSkipSync: () -> Unit = {},
     onReportIssue: () -> Unit = {},
@@ -86,24 +91,26 @@ fun OnboardingRoute(
                 permissionLauncher.launch(permissions)
             }
         }
-        if (permissionsDenied) {
-            PermissionsRequiredScreen(
-                onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
-                onOpenSettingsClick = {
-                    val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
-                    runCatching { context.startActivity(intent) }
-                },
-            )
-        } else {
-            if (syncError != null) {
-                SyncErrorScreen(
-                    errorMessage = syncError,
-                    onRetry = onRetrySync,
-                    onReportIssue = onReportIssue,
-                    onSkip = onSkipSync,
+        Surface(modifier = Modifier.fillMaxSize()) {
+            if (permissionsDenied) {
+                PermissionsRequiredScreen(
+                    onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
+                    onOpenSettingsClick = {
+                        val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+                        runCatching { context.startActivity(intent) }
+                    },
                 )
             } else {
-                FinishingSetupScreen()
+                if (syncError != null) {
+                    SyncErrorScreen(
+                        errorMessage = syncError,
+                        onRetry = onRetrySync,
+                        onReportIssue = onReportIssue,
+                        onSkip = onSkipSync,
+                    )
+                } else {
+                    FinishingSetupScreen(progress = recalcProgress)
+                }
             }
         }
         return

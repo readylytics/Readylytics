@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -47,6 +48,7 @@ import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.onboarding.R
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreR
@@ -192,18 +194,39 @@ private fun WelcomeScreen(
 }
 
 @Composable
-fun FinishingSetupScreen(modifier: Modifier = Modifier) {
+fun FinishingSetupScreen(
+    progress: RecalcProgress?,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(MaterialTheme.spacing.pageSectionGapLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-        Text(
-            text = stringResource(R.string.onboarding_finishing_setup),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        if (progress != null && progress.total > 0) {
+            val percentage = progress.current.toFloat() / progress.total.toFloat()
+            Text(
+                text = stringResource(R.string.onboarding_sync_progress, progress.current, progress.total),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+            LinearProgressIndicator(
+                progress = { percentage },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            CircularProgressIndicator()
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+            Text(
+                text = stringResource(R.string.onboarding_finishing_setup),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 

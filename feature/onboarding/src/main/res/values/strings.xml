@@ -49,4 +49,5 @@
     <string name="onboarding_sync_error_retry">Retry Sync</string>
     <string name="onboarding_sync_error_report">Report Issue</string>
     <string name="onboarding_sync_error_skip">Proceed to App</string>
+    <string name="onboarding_sync_progress">Fetching data: Day %1$d of %2$d</string>
 </resources>

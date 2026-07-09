@@ -51,6 +51,7 @@ fun AppNavHost(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val userPrefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
     val hasCrashReport by crashReportViewModel.hasReport.collectAsStateWithLifecycle()
+    val recalcProgress by viewModel.recalcProgress.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -184,6 +185,7 @@ fun AppNavHost(
                 requiredPermissions = viewModel.requiredPermissions,
                 isSyncing = isSyncing,
                 syncError = syncError,
+                recalcProgress = recalcProgress,
                 onRetrySync = { viewModel.onPermissionsGranted() },
                 onSkipSync = { viewModel.skipSync() },
                 onReportIssue = { pendingReportType = GitHubIssueType.BUG_REPORT },
