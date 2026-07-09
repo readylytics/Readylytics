@@ -178,12 +178,14 @@ fun AppNavHost(
         composable<AppDestination.Onboarding> {
             val context = LocalContext.current
             val isSyncing = uiState is SyncUiState.SyncingCatchUp
+            val isSyncError = uiState is SyncUiState.Error
             val syncError = (uiState as? SyncUiState.Error)?.message?.resolveOrNull()
             OnboardingRoute(
                 userPreferencesFlow = viewModel.userPreferences,
                 allPermissions = viewModel.allPermissions,
                 requiredPermissions = viewModel.requiredPermissions,
                 isSyncing = isSyncing,
+                isSyncError = isSyncError,
                 syncError = syncError,
                 recalcProgress = recalcProgress,
                 onRetrySync = { viewModel.onPermissionsGranted() },

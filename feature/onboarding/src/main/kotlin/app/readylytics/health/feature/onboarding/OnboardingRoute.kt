@@ -27,6 +27,7 @@ fun OnboardingRoute(
     allPermissions: Set<String>,
     requiredPermissions: Set<String>,
     isSyncing: Boolean = false,
+    isSyncError: Boolean = false,
     syncError: String? = null,
     recalcProgress: RecalcProgress? = null,
     onRetrySync: () -> Unit = {},
@@ -81,7 +82,7 @@ fun OnboardingRoute(
     val skipToPermissions = userPrefs?.isBirthdayConfigured == true
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
-    if (skipToPermissions || isSyncing || syncError != null) {
+    if (skipToPermissions || isSyncing || isSyncError) {
         LaunchedEffect(Unit) {
             if (skipToPermissions && !autoLaunchTriggered) {
                 autoLaunchTriggered = true
@@ -101,7 +102,7 @@ fun OnboardingRoute(
                     },
                 )
             } else {
-                if (syncError != null) {
+                if (isSyncError) {
                     SyncErrorScreen(
                         errorMessage = syncError,
                         onRetry = onRetrySync,
