@@ -13,13 +13,17 @@ import app.readylytics.health.BuildConfig
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
+import app.readylytics.health.domain.util.LogContext
+import app.readylytics.health.domain.util.LogLevel
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
+import app.readylytics.health.util.SecureFileLogSink
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +57,10 @@ class HealthDashboardApplication :
     @Inject
     @ApplicationScope
     lateinit var appScope: CoroutineScope
+
+    @Inject
+    @ReleaseLogSink
+    lateinit var secureLogSink: SecureFileLogSink
 
     override val workManagerConfiguration: Configuration
         get() =
@@ -121,37 +129,29 @@ class HealthDashboardApplication :
     }
 
     private fun installAndroidLogSink() {
-        DomainLogger.installSink(
-            object : DomainLogSink {
-                override fun debug(
-                    tag: String,
-                    message: String,
-                ) {
-                    if (BuildConfig.DEBUG) {
-                        Log.d(tag, message)
+        if (BuildConfig.DEBUG) {
+            // Standard debug logging directly to logcat
+            DomainLogger.installSink(
+                object : DomainLogSink {
+                    override fun log(
+                        level: LogLevel,
+                        tag: String,
+                        message: String,
+                        throwable: Throwable?,
+                        context: LogContext,
+                    ) {
+                        val formatted = "[Session:${context.sessionId ?: "none"}] $message"
+                        when (level) {
+                            LogLevel.INFO -> Log.d(tag, formatted)
+                            LogLevel.WARN -> Log.w(tag, formatted, throwable)
+                            LogLevel.ERROR -> Log.e(tag, formatted, throwable)
+                        }
                     }
-                }
-
-                override fun warn(
-                    tag: String,
-                    message: String,
-                    throwable: Throwable?,
-                ) {
-                    if (BuildConfig.DEBUG) {
-                        Log.w(tag, message, throwable)
-                    }
-                }
-
-                override fun error(
-                    tag: String,
-                    message: String,
-                    throwable: Throwable?,
-                ) {
-                    if (BuildConfig.DEBUG) {
-                        Log.e(tag, message, throwable)
-                    }
-                }
-            },
-        )
+                },
+            )
+        } else {
+            // Release build secure log file sink (includes sanitized logcat mirroring)
+            DomainLogger.installSink(secureLogSink)
+        }
     }
 }

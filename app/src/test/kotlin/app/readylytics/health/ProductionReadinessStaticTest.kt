@@ -27,6 +27,8 @@ class ProductionReadinessStaticTest {
             setOf(
                 "app/readylytics/health/domain/util/AppLog.kt",
                 "app/readylytics/health/HealthDashboardApplication.kt",
+                "app/readylytics/health/util/SecureFileLogSink.kt",
+                "app/readylytics/health/util/SecureLogger.kt",
             )
 
         val offenders =
@@ -347,4 +349,16 @@ class ProductionReadinessStaticTest {
         listOf(File(path), File("..", path))
             .firstOrNull { it.exists() }
             ?: error("Project file not found: $path")
+
+    @Test
+    fun `production application installs SecureFileLogSink in release`() {
+        val appFile = projectFile("app/src/main/kotlin/app/readylytics/health/HealthDashboardApplication.kt")
+        val content = appFile.readText()
+        assertTrue(
+            "Application should install SecureFileLogSink(this) in release builds",
+            content.contains("DomainLogger.installSink(secureLogSink)") ||
+                content.contains("DomainLogger.installSink(SecureFileLogSink(this))") ||
+                content.contains("lateinit var secureLogSink: SecureFileLogSink"),
+        )
+    }
 }

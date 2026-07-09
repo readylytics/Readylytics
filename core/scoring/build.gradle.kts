@@ -6,6 +6,9 @@ plugins {
 
 android {
     namespace = "app.readylytics.health.core.scoring"
+    buildFeatures {
+        buildConfig = true
+    }
     buildTypes {
         debug {
             enableUnitTestCoverage = true

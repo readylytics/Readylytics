@@ -1,80 +1,73 @@
 package app.readylytics.health.domain.util
 
+enum class LogLevel { INFO, WARN, ERROR }
+
+data class LogContext(val sessionId: String? = null)
+
 interface DomainLogSink {
-    fun debug(
-        tag: String,
-        message: String,
-    )
+    fun isLoggable(level: LogLevel, tag: String): Boolean = true
 
-    fun warn(
+    fun log(
+        level: LogLevel,
         tag: String,
         message: String,
         throwable: Throwable?,
-    )
-
-    fun error(
-        tag: String,
-        message: String,
-        throwable: Throwable?,
+        context: LogContext
     )
 }
 
 object DomainLogger {
     private object NoOpSink : DomainLogSink {
-        override fun debug(
-            tag: String,
-            message: String,
-        ) = Unit
-
-        override fun warn(
+        override fun log(
+            level: LogLevel,
             tag: String,
             message: String,
             throwable: Throwable?,
-        ) = Unit
-
-        override fun error(
-            tag: String,
-            message: String,
-            throwable: Throwable?,
+            context: LogContext
         ) = Unit
     }
 
     @Volatile
-    private var sink: DomainLogSink = NoOpSink
+    @PublishedApi
+    internal var sink: DomainLogSink = NoOpSink
 
     fun installSink(newSink: DomainLogSink) {
         sink = newSink
     }
 
-    fun debug(
+    inline fun log(
+        level: LogLevel,
         tag: String,
-        message: String,
+        throwable: Throwable? = null,
+        context: LogContext = LogContext(),
+        msg: () -> String
     ) {
-        sink.debug(tag, message)
+        if (sink.isLoggable(level, tag)) {
+            sink.log(level, tag, msg(), throwable, context)
+        }
     }
+}
 
-    fun warn(
-        tag: String,
-        message: String,
-        throwable: Throwable?,
-    ) {
-        sink.warn(tag, message, throwable)
-    }
+class ScopedLogger(val tag: String, val context: LogContext) {
+    inline fun info(msg: () -> String) = DomainLogger.log(LogLevel.INFO, tag, context = context, msg = msg)
+    inline fun warn(throwable: Throwable? = null, msg: () -> String) = DomainLogger.log(LogLevel.WARN, tag, throwable, context, msg)
+    inline fun error(throwable: Throwable? = null, msg: () -> String) = DomainLogger.log(LogLevel.ERROR, tag, throwable, context, msg)
+}
 
-    fun error(
-        tag: String,
-        message: String,
-        throwable: Throwable?,
-    ) {
-        sink.error(tag, message, throwable)
-    }
+inline fun DomainLogger.scoped(
+    tag: String,
+    correlationId: String?,
+    block: ScopedLogger.() -> Unit
+) {
+    val logger = ScopedLogger(tag, LogContext(correlationId))
+    logger.block()
 }
 
 inline fun logD(
     tag: String,
     msg: () -> String,
 ) {
-    DomainLogger.debug(tag, msg())
+    DomainLogger.log(LogLevel.INFO, tag, throwable = null, context = LogContext(), msg = msg)
 }
 
 inline fun logW(
@@ -82,7 +75,7 @@ inline fun logW(
     throwable: Throwable? = null,
     msg: () -> String,
 ) {
-    DomainLogger.warn(tag, msg(), throwable)
+    DomainLogger.log(LogLevel.WARN, tag, throwable, LogContext(), msg)
 }
 
 inline fun logE(
@@ -90,5 +83,5 @@ inline fun logE(
     throwable: Throwable? = null,
     msg: () -> String,
 ) {
-    DomainLogger.error(tag, msg(), throwable)
+    DomainLogger.log(LogLevel.ERROR, tag, throwable, LogContext(), msg)
 }
