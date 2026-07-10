@@ -8,6 +8,7 @@ import app.readylytics.health.domain.util.mean
 import app.readylytics.health.domain.util.median
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -436,7 +437,8 @@ class BaselineComputer
                 val dayInstant = Instant.ofEpochMilli(dayMidnightMs)
                 val nextDayMidnightMs = dayInstant.plus(1, ChronoUnit.DAYS).toEpochMilli()
                 val dayEndMs = nextDayMidnightMs - 1
-                val scoreDay = dayInstant.atZone(sleepDayPolicy?.scoringZoneId ?: ZoneOffset.UTC).toLocalDate()
+                val scoreZone = sleepDayPolicy?.scoringZoneId ?: ZoneId.systemDefault()
+                val scoreDay = dayInstant.atZone(scoreZone).toLocalDate()
 
                 val sigmaWindowStartDay = scoreDay.minusDays(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong())
                 val priorSleepDays =
@@ -453,7 +455,7 @@ class BaselineComputer
 
                 val rhrWindowStartDay = scoreDay.minusDays(ScoringConstants.BASELINE_DAYS.toLong())
                 val nadirs =
-                    priorSleepDays
+                    historicalSleepDays
                         .asSequence()
                         .filter {
                             it.scoreDay >= rhrWindowStartDay &&
@@ -462,7 +464,7 @@ class BaselineComputer
                         .toList()
                 val rhrBpm = if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM else nadirs.median()
                 val rhrHistory =
-                    priorSleepDays
+                    historicalSleepDays
                         .asSequence()
                         .filter {
                             it.scoreDay >= rhrWindowStartDay
@@ -536,7 +538,7 @@ class BaselineComputer
                             .map { it.beatsPerMinute }
                             .sorted()
                     historicalSleepDay(
-                        scoreDay = Instant.ofEpochMilli(session.endTime).atZone(ZoneOffset.UTC).toLocalDate(),
+                        scoreDay = Instant.ofEpochMilli(session.endTime).atZone(ZoneId.systemDefault()).toLocalDate(),
                         coreSessionIds = listOf(session.id),
                         durationMinutes = session.durationMinutes,
                         deepMinutes = session.deepSleepMinutes,

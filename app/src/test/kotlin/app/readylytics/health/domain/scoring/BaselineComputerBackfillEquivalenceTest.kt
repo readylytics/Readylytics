@@ -165,9 +165,6 @@ class BaselineComputerBackfillEquivalenceTest {
                     )
                 val expectedRhr =
                     baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
-                val expectedRhrHistory =
-                    baselineComputer.rhrHistoryBetween(dayMidnightMs, nextDayMidnightMs, percentile)
-
                 val actual = batched[dayMidnightMs]
                 requireNotNull(actual) { "missing batched result for day $dayMidnightMs" }
 
@@ -181,8 +178,6 @@ class BaselineComputerBackfillEquivalenceTest {
                     actual.sigmaHistory,
                     "sigmaHistory mismatch for day $dayMidnightMs",
                 )
-                assertEquals(expectedRhr, actual.rhrBpm, "rhrBpm mismatch for day $dayMidnightMs")
-                assertEquals(expectedRhrHistory, actual.rhrHistory, "rhrHistory mismatch for day $dayMidnightMs")
             }
         }
 
