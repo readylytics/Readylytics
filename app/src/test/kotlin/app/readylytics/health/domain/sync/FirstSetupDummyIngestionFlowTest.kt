@@ -214,10 +214,25 @@ class FirstSetupDummyIngestionFlowTest {
             clearedRanges += start to endExclusive
         }
 
-        override suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int = 0
-        override suspend fun countHrvInRange(startMs: Long, endMs: Long): Int = 0
-        override suspend fun countSleepSessionsInRange(startMs: Long, endMs: Long): Int = 0
-        override suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int = 0
+        override suspend fun countHeartRateInRange(
+            startMs: Long,
+            endMs: Long,
+        ): Int = 0
+
+        override suspend fun countHrvInRange(
+            startMs: Long,
+            endMs: Long,
+        ): Int = 0
+
+        override suspend fun countSleepSessionsInRange(
+            startMs: Long,
+            endMs: Long,
+        ): Int = 0
+
+        override suspend fun countWorkoutsInRange(
+            startMs: Long,
+            endMs: Long,
+        ): Int = 0
     }
 
     private class FakeFirstSetupHealthConnectRepository : HealthConnectRepository {
