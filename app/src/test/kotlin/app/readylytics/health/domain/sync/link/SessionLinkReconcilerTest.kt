@@ -75,8 +75,6 @@ class SessionLinkReconcilerTest {
     @Test
     fun `relinks heart rate samples split across chunk boundaries to the correct session`() =
         runTest {
-            // hr1 falls inside the sleep session but was mistagged as RESTING by a chunk
-            // that did not see the sleep session (e.g. a different chunk alignment).
             val hr1 =
                 HeartRateRecordEntity(
                     id = "hr1",
@@ -85,7 +83,6 @@ class SessionLinkReconcilerTest {
                     recordType = RecordType.RESTING.name,
                     sessionId = null,
                 )
-            // hr2 was already correctly tagged by the chunk that saw the sleep session.
             val hr2 =
                 HeartRateRecordEntity(
                     id = "hr2",
@@ -94,7 +91,6 @@ class SessionLinkReconcilerTest {
                     recordType = RecordType.SLEEP.name,
                     sessionId = "sleep_1",
                 )
-            // hr3 falls inside the workout session but was mistagged as RESTING.
             val hr3 =
                 HeartRateRecordEntity(
                     id = "hr3",
@@ -104,7 +100,8 @@ class SessionLinkReconcilerTest {
                     sessionId = null,
                 )
 
-            coEvery { heartRateDao.getByTimeRange(0L, 20_000L) } returns listOf(hr1, hr2, hr3)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr1, hr2, hr3)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, "hr3", any()) } returns emptyList()
             coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns listOf(hr3)
 
             val upsertSlot = slot<List<HeartRateRecordEntity>>()
@@ -117,7 +114,6 @@ class SessionLinkReconcilerTest {
             assertEquals("sleep_1", updated.getValue("hr1").sessionId)
             assertEquals(RecordType.EXERCISE.name, updated.getValue("hr3").recordType)
             assertEquals("workout_1", updated.getValue("hr3").sessionId)
-            // hr2 was already correctly tagged, so it should not be re-upserted.
             org.junit.Assert.assertNull(updated["hr2"])
         }
 
@@ -133,7 +129,8 @@ class SessionLinkReconcilerTest {
                     sessionId = null,
                 )
 
-            coEvery { hrvDao.getByTimeRange(0L, 20_000L) } returns listOf(hrv1)
+            coEvery { hrvDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hrv1)
+            coEvery { hrvDao.getKeysetPage(0L, 20_000L, 2_000L, "hrv1", any()) } returns emptyList()
             coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
 
             val upsertSlot = slot<List<HrvRecordEntity>>()
@@ -158,9 +155,10 @@ class SessionLinkReconcilerTest {
                     sessionId = "workout_1",
                 )
 
-            coEvery { heartRateDao.getByTimeRange(0L, 20_000L) } returns listOf(hr3)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr3)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, "hr3", any()) } returns emptyList()
             coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns listOf(hr3)
-            coEvery { hrvDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { hrvDao.getKeysetPage(any(), any(), any(), any(), any()) } returns emptyList()
 
             val workoutUpsertSlot = slot<List<WorkoutRecordEntity>>()
             coEvery { workoutDao.upsertAll(capture(workoutUpsertSlot)) } returns Unit
@@ -177,7 +175,6 @@ class SessionLinkReconcilerTest {
     @Test
     fun `produces identical tagging for two differently chunk-split inputs of the same data`() =
         runTest {
-            // Scenario A (e.g. 1y resync chunking): hr1 is split out as RESTING.
             val hr1A =
                 HeartRateRecordEntity(
                     id = "hr1",
@@ -195,16 +192,15 @@ class SessionLinkReconcilerTest {
                     sessionId = "sleep_1",
                 )
 
-            // Scenario B (e.g. 10y resync chunking): both samples land in the chunk that saw
-            // the sleep session, so both are already correctly tagged.
             val hr1B = hr1A.copy(recordType = RecordType.SLEEP.name, sessionId = "sleep_1")
             val hr2B = hr2A
 
             coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns emptyList()
-            coEvery { hrvDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { hrvDao.getKeysetPage(any(), any(), any(), any(), any()) } returns emptyList()
 
             // --- Scenario A ---
-            coEvery { heartRateDao.getByTimeRange(0L, 20_000L) } returns listOf(hr1A, hr2A)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr1A, hr2A)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, "hr2", any()) } returns emptyList()
             val upsertSlotA = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotA)) } returns Unit
             reconciler.reconcile(0L, 20_000L, WorkoutMapper.zoneThresholds())
@@ -214,7 +210,8 @@ class SessionLinkReconcilerTest {
                     .mapValues { it.value.recordType to it.value.sessionId }
 
             // --- Scenario B ---
-            coEvery { heartRateDao.getByTimeRange(0L, 20_000L) } returns listOf(hr1B, hr2B)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr1B, hr2B)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, "hr2", any()) } returns emptyList()
             val upsertSlotB = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotB)) } returns Unit
             reconciler.reconcile(0L, 20_000L, WorkoutMapper.zoneThresholds())
