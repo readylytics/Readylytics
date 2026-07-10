@@ -396,7 +396,7 @@ private fun MetricsGrid(
                 MetricCard(
                     title = stringResource(R.string.card_title_nap_duration),
                     value = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0) ?: "0h",
-                    status = MetricStatus.NO_DATA,
+                    status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_duration),
                     onClick = null,
                 )
@@ -405,7 +405,7 @@ private fun MetricsGrid(
                 MetricCard(
                     title = stringResource(R.string.card_title_nap_count),
                     value = metrics?.napCount?.toString() ?: "0",
-                    status = MetricStatus.NO_DATA,
+                    status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_count),
                     onClick = null,
                 )
