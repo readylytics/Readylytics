@@ -43,7 +43,7 @@ You'll see all three on your dashboard once enough data has been collected. Unti
 
 A 100-point summary of last night's sleep, made of three parts:
 
-- **Duration (50%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). Includes a small adjustment for how efficient your time in bed was.
+- **Duration (50%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). If you sleep in multiple segments (biphasic sleep or naps), all sleep periods count toward your total duration. Includes a small adjustment for how efficient your time in bed was.
 - **Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
 - **Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalizes the skewed distribution of raw HRV data.
 
@@ -66,6 +66,10 @@ As you age, the amount of deep sleep naturally declines. We adjust your targets 
 | 60+       | 12%               | 19%              |
 
 These ranges come from polysomnography studies in healthy populations. They represent the healthy mid-range; your personal healthy normal may sit anywhere within your age band. Note that the age-related decline in deep (slow-wave) sleep is much steeper than the decline in REM, which falls only modestly across adulthood (Ohayon 2004). We do not penalise you if your wearable reports unusual numbers — wearable stage detection is imperfect.
+
+**Biphasic sleep and naps**
+
+We fully support segmented or biphasic sleep. If you sleep in multiple blocks (like a main overnight sleep and an afternoon nap), your "core" sleep drives your recovery metrics (Restoration/HRV/RHR), while all supplemental sleep adds to your total Duration. This means naps will improve your Sleep Score by adding duration, but they won't rewrite your overnight Readiness signal or baseline HRV.
 
 **HRV sensitivity by profile**
 
