@@ -32,6 +32,20 @@ interface HeartRateDao {
     ): List<HeartRateRecordEntity>
 
     @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND id > :lastId)) " +
+            "ORDER BY timestampMs ASC, id ASC LIMIT :limit",
+    )
+    suspend fun getKeysetPage(
+        startMs: Long,
+        endMs: Long,
+        lastTimestampMs: Long,
+        lastId: String,
+        limit: Int,
+    ): List<HeartRateRecordEntity>
+
+    @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
     )
