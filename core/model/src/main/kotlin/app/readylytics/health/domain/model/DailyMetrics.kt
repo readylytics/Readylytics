@@ -58,6 +58,8 @@ data class DailyMetrics(
     // --- Load source selection flags ---
     val needsRecalc: Boolean = false,
     val readinessLowConfidence: Boolean = false,
+    val napDurationDisplay: String? = null,
+    val napCount: Int? = null,
 )
 
 /**
