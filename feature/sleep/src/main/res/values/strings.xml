@@ -27,4 +27,8 @@
     <string name="sleep_metrics_title">Metrics</string>
     <string name="sleep_score_gauge_title">Sleep Score</string>
     <string name="sleep_time_gauge_title">Sleep Time</string>
+    <string name="card_title_nap_duration">Nap Duration</string>
+    <string name="card_title_nap_count">Naps Today</string>
+    <string name="tooltip_nap_duration">Total supplemental sleep duration for this wake-day. Only sessions above the minimum counted duration threshold are included.</string>
+    <string name="tooltip_nap_count">Number of naps or supplemental sleep sessions counted for this wake-day. Sessions shorter than the minimum counted duration setting are excluded.</string>
 </resources>
