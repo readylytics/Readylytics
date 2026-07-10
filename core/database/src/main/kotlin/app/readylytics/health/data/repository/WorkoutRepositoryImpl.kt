@@ -39,5 +39,6 @@ class WorkoutRepositoryImpl
                 trimp = entity.trimp,
                 avgHr = entity.avgHr,
                 deviceName = entity.deviceName,
+                intensityLevel = entity.intensityLevel,
             )
     }

@@ -145,4 +145,25 @@ object ScoringConstants {
         // iTRIMP — REF: Manzi et al. 2009
         const val ITRIMP_B = 2.1f
     }
+
+    object TrimpIntensityThresholds {
+        // Zone-weighted TRIMP/min boundaries for workout intensity classification
+        // REF: Firstbeat Sports Science, TRIMP normalization for cross-session intensity comparison
+        const val VERY_LIGHT_MAX = 0.5f      // < 0.5
+        const val LIGHT_MAX = 1.0f           // 0.5 - 1.0
+        const val MODERATE_MAX = 1.5f        // 1.0 - 1.5
+        const val HARD_MAX = 2.2f            // 1.5 - 2.2
+        // Very Hard: > 2.2f
+    }
+}
+
+enum class WorkoutIntensity {
+    VERY_LIGHT,
+    LIGHT,
+    MODERATE,
+    HARD,
+    VERY_HARD,
+    UNCATEGORIZED;  // zero-duration or no-HR workouts
+
+    fun toCategoryString(): String = this.name
 }

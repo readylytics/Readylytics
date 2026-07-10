@@ -3,6 +3,8 @@ package app.readylytics.health.data.healthconnect
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.WorkoutIntensity
 
 object WorkoutMapper {
     private val ZONE_WEIGHTS = floatArrayOf(1f, 2f, 3f, 4f, 5f)
@@ -34,6 +36,28 @@ object WorkoutMapper {
             bpm < thresholds[4] -> 3
             else -> 4
         }
+
+    private fun classifyIntensity(trimp: Float, durationMinutes: Int, avgHr: Float): String {
+        // Handle edge cases: zero duration or no HR data
+        if (durationMinutes <= 0 || avgHr <= 0f) {
+            return WorkoutIntensity.UNCATEGORIZED.toCategoryString()
+        }
+
+        val trimpPerMinute = trimp / durationMinutes.toFloat()
+
+        return when {
+            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.VERY_LIGHT_MAX ->
+                WorkoutIntensity.VERY_LIGHT.toCategoryString()
+            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.LIGHT_MAX ->
+                WorkoutIntensity.LIGHT.toCategoryString()
+            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.MODERATE_MAX ->
+                WorkoutIntensity.MODERATE.toCategoryString()
+            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.HARD_MAX ->
+                WorkoutIntensity.HARD.toCategoryString()
+            else ->
+                WorkoutIntensity.VERY_HARD.toCategoryString()
+        }
+    }
 
     /**
      * Pure HR-derived metrics for a session window: zone minutes, TRIMP, average HR, duration.
@@ -104,6 +128,8 @@ object WorkoutMapper {
                 thresholds,
             )
 
+        val intensityLevel = classifyIntensity(metrics.trimp, metrics.durationMinutes, metrics.avgHr)
+
         return WorkoutRecordEntity(
             id = session.id,
             startTime = session.startTime.toEpochMilli(),
@@ -118,6 +144,7 @@ object WorkoutMapper {
             trimp = metrics.trimp,
             avgHr = metrics.avgHr,
             deviceName = session.deviceName,
+            intensityLevel = intensityLevel,
         )
     }
 }

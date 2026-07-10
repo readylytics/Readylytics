@@ -72,6 +72,6 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun auditEventDao(): AuditEventDao
 
     companion object {
-        const val DATABASE_VERSION = 5
+        const val DATABASE_VERSION = 6
     }
 }

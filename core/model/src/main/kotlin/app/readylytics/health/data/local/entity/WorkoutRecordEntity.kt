@@ -26,4 +26,5 @@ data class WorkoutRecordEntity(
     val trimp: Float,
     val avgHr: Float,
     val deviceName: String? = null,
+    val intensityLevel: String? = null,
 )

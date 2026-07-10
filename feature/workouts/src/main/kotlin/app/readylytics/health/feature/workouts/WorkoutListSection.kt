@@ -193,18 +193,21 @@ private fun IntensityBadge(
 }
 
 private fun WorkoutData.intensityLabelResId(): Int =
-    when {
-        trimp > 200 -> R.string.workout_intensity_very_hard
-        trimp > 150 -> R.string.workout_intensity_hard
-        trimp > 100 -> R.string.workout_intensity_moderate
-        trimp > 50 -> R.string.workout_intensity_light
-        else -> R.string.workout_intensity_very_light
+    when (intensityLevel) {
+        "VERY_LIGHT" -> R.string.workout_intensity_very_light
+        "LIGHT" -> R.string.workout_intensity_light
+        "MODERATE" -> R.string.workout_intensity_moderate
+        "HARD" -> R.string.workout_intensity_hard
+        "VERY_HARD" -> R.string.workout_intensity_very_hard
+        else -> R.string.workout_intensity_very_light  // default for UNCATEGORIZED or null
     }
 
 private fun WorkoutData.intensityStatus(): MetricStatus =
-    when {
-        trimp > 200 -> MetricStatus.POOR
-        trimp > 150 -> MetricStatus.WARNING
-        trimp > 50 -> MetricStatus.OPTIMAL
-        else -> MetricStatus.CALIBRATING
+    when (intensityLevel) {
+        "VERY_LIGHT" -> MetricStatus.CALIBRATING
+        "LIGHT" -> MetricStatus.OPTIMAL
+        "MODERATE" -> MetricStatus.OPTIMAL
+        "HARD" -> MetricStatus.WARNING
+        "VERY_HARD" -> MetricStatus.POOR
+        else -> MetricStatus.CALIBRATING  // default for UNCATEGORIZED or null
     }
