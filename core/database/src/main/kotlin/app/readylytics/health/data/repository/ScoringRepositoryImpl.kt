@@ -276,6 +276,8 @@ class ScoringRepositoryImpl
                         bodyFatPercent = latestBodyFat?.bodyFatPercent,
                         bloodPressureSystolic = latestBP?.systolicMmHg,
                         bloodPressureDiastolic = latestBP?.diastolicMmHg,
+                        supplementalSleepDurationMinutes = aggregatedSleep?.aggregate?.supplementalSleepDurationMinutes,
+                        napCount = aggregatedSleep?.aggregate?.supplementalBlocks?.size,
                     )
 
                 val isCalibrated =
