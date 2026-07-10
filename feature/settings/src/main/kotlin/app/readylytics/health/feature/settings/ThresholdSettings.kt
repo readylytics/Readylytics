@@ -170,6 +170,22 @@ fun SleepSettingsSection(
         mutableFloatStateOf(uiState.supplementalArchitectureCoveragePercent.toFloat())
     }
 
+    val minCoreMergeGap = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES.toFloat()
+    val maxCoreMergeGap = SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES.toFloat()
+    val coreMergeGapRange = minCoreMergeGap..maxCoreMergeGap
+
+    val minSupplementalCutoff = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()
+    val maxSupplementalCutoff = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()
+    val supplementalCutoffRange = minSupplementalCutoff..maxSupplementalCutoff
+
+    val minSegmentMinutes = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()
+    val maxSegmentMinutes = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()
+    val minimumSegmentRange = minSegmentMinutes..maxSegmentMinutes
+
+    val minCoveragePercent = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()
+    val maxCoveragePercent = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()
+    val architectureCoverageRange = minCoveragePercent..maxCoveragePercent
+
     Column {
         Column(
             modifier =
@@ -208,8 +224,7 @@ fun SleepSettingsSection(
             onValueChangeFinished = {
                 onEvent(SettingsEvent.CoreMergeGapMinutesChanged(coreMergeGapMinutes.roundToInt()))
             },
-            valueRange =
-                SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES.toFloat()..SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES.toFloat(),
+            valueRange = coreMergeGapRange,
             steps =
                 steppedSliderSteps(
                     min = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES,
@@ -231,8 +246,7 @@ fun SleepSettingsSection(
                     ),
                 )
             },
-            valueRange =
-                SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()..SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat(),
+            valueRange = supplementalCutoffRange,
             steps =
                 steppedSliderSteps(
                     min = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
@@ -261,8 +275,7 @@ fun SleepSettingsSection(
                     ),
                 )
             },
-            valueRange =
-                SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()..SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat(),
+            valueRange = minimumSegmentRange,
             steps =
                 steppedSliderSteps(
                     min = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
@@ -288,8 +301,7 @@ fun SleepSettingsSection(
                     ),
                 )
             },
-            valueRange =
-                SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()..SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat(),
+            valueRange = architectureCoverageRange,
             steps =
                 steppedSliderSteps(
                     min = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
