@@ -298,6 +298,8 @@ class SleepDayAggregatorTest {
         val supplemental = aggregate.supplementalBlocks.single()
 
         assertEquals(525, aggregate.totalDurationMinutes)
+        assertEquals(45, aggregate.supplementalSleepDurationMinutes)
+        assertEquals(1, aggregate.supplementalBlocks.size)
         assertFalse(supplemental.architectureEligible)
         assertEquals(core.stageTotals, aggregate.architectureTotals)
     }

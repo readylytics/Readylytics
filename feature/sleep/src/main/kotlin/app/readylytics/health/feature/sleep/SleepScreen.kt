@@ -21,7 +21,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -85,10 +84,7 @@ fun SleepScreen(
     earliestDate: java.time.LocalDate? = null,
 ) {
     val scrollState = rememberScrollState()
-    val singleSessionVisual =
-        remember(uiState.latestSession, uiState.latestSummary) {
-            resolveSingleSessionVisual(uiState.latestSession, uiState.latestSummary)
-        }
+    val singleSessionVisual = uiState.latestSession
     val (trendScrollState, trendZoomState) =
         ChartDefaults.rememberChartState(
             rangeDays = uiState.selectedTrendRange.days,
@@ -395,7 +391,7 @@ private fun MetricsGrid(
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
                     title = stringResource(R.string.card_title_nap_duration),
-                    value = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0) ?: "0h",
+                    value = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_duration),
                     onClick = null,
@@ -462,17 +458,3 @@ private data class MetricCardData(
     val status: MetricStatus,
     val tooltip: String,
 )
-
-internal fun resolveSingleSessionVisual(
-    session: SleepSessionData?,
-    summary: app.readylytics.health.domain.model.DailySummary?,
-): SleepSessionData? {
-    val actualMinutes = actualSleepMinutes(session) ?: return session
-    val summaryMinutes = summary?.sleepDurationMinutes ?: return session
-    if (actualMinutes != summaryMinutes) {
-        // Biphasic days can carry aggregate totals that exceed any single session. Keep the
-        // best available session visual instead of collapsing architecture/timeline to blanks.
-        return session
-    }
-    return session
-}

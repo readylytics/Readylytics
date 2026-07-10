@@ -199,20 +199,16 @@ message UserPreferencesProto {
     int32 hrr_tolerance_seconds = 75;
 
     // Gap threshold for merging same-day sleep segments into one core block.
-    // Zero means unset and resolves to SettingsDefaults.CORE_MERGE_GAP_MINUTES.
-    int32 core_merge_gap_minutes = 76;
+    optional int32 core_merge_gap_minutes = 76;
 
     // Minutes from midnight after which same-day sessions are treated as core sleep candidates.
-    // Zero means unset and resolves to SettingsDefaults.SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.
-    int32 supplemental_cutoff_minutes_of_day = 77;
+    optional int32 supplemental_cutoff_minutes_of_day = 77;
 
     // Minimum segment duration counted toward daily sleep aggregation.
-    // Zero means unset and resolves to SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.
-    int32 minimum_counted_sleep_segment_minutes = 78;
+    optional int32 minimum_counted_sleep_segment_minutes = 78;
 
     // Required stage coverage for supplemental blocks to contribute architecture totals.
-    // Zero means unset and resolves to SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.
-    int32 supplemental_architecture_coverage_percent = 79;
+    optional int32 supplemental_architecture_coverage_percent = 79;
 }
 
 enum TrimpMethodProto {

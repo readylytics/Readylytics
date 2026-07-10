@@ -16,13 +16,30 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
     val profile = physiologyProfile.toDomainProfile()
     return UserPreferences(
         goalSleepHours = goalSleepHours,
-        coreMergeGapMinutes = normalizeCoreMergeGapMinutes(coreMergeGapMinutes),
+        coreMergeGapMinutes =
+            if (hasCoreMergeGapMinutes()) {
+                normalizeCoreMergeGapMinutes(coreMergeGapMinutes)
+            } else {
+                SettingsDefaults.CORE_MERGE_GAP_MINUTES
+            },
         supplementalCutoffMinutesOfDay =
-            normalizeSupplementalCutoffMinutesOfDay(supplementalCutoffMinutesOfDay),
+            if (hasSupplementalCutoffMinutesOfDay()) {
+                normalizeSupplementalCutoffMinutesOfDay(supplementalCutoffMinutesOfDay)
+            } else {
+                SettingsDefaults.SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY
+            },
         minimumCountedSleepSegmentMinutes =
-            normalizeMinimumCountedSleepSegmentMinutes(minimumCountedSleepSegmentMinutes),
+            if (hasMinimumCountedSleepSegmentMinutes()) {
+                normalizeMinimumCountedSleepSegmentMinutes(minimumCountedSleepSegmentMinutes)
+            } else {
+                SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES
+            },
         supplementalArchitectureCoveragePercent =
-            normalizeSupplementalArchitectureCoveragePercent(supplementalArchitectureCoveragePercent),
+            if (hasSupplementalArchitectureCoveragePercent()) {
+                normalizeSupplementalArchitectureCoveragePercent(supplementalArchitectureCoveragePercent)
+            } else {
+                SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT
+            },
         hrvBaselineOverride = if (hasHrvBaselineOverride()) hrvBaselineOverride else null,
         rhrBaselineOverride = if (hasRhrBaselineOverride()) rhrBaselineOverride else null,
         syncPreference = SyncPreference.valueOf(syncPreference.name.removePrefix("SYNC_")),

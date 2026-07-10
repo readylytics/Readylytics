@@ -76,7 +76,7 @@ object DailyMetricsMapper {
             remSleepPercentDisplay = summary.remSleepPercent?.let { "${it.roundToInt()}%" },
             needsRecalc = LoadSourceSelector.needsRecalc(summary, prefs),
             readinessLowConfidence = LoadSourceSelector.readinessLowConfidence(summary, prefs),
-            napDurationDisplay = formatSleepDuration(summary.supplementalSleepDurationMinutes ?: 0),
+            napDurationDisplay = summary.supplementalSleepDurationMinutes?.let(::formatSleepDuration),
             napCount = summary.napCount,
         )
     }

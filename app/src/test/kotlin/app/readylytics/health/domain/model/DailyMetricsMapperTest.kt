@@ -232,7 +232,7 @@ class DailyMetricsMapperTest {
     fun `nap duration maps and formats correctly`() {
         val summaryNull = DailySummary(date = date, supplementalSleepDurationMinutes = null, napCount = null)
         val metricsNull = DailyMetricsMapper.toMetrics(summaryNull, prefs)
-        assertEquals("0h", metricsNull.napDurationDisplay) // Formatter output for 0
+        assertNull(metricsNull.napDurationDisplay)
         assertNull(metricsNull.napCount)
 
         val summaryVal = DailySummary(date = date, supplementalSleepDurationMinutes = 45, napCount = 2)

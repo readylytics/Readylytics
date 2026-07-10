@@ -120,6 +120,34 @@ class SettingsRepositoryTest {
         }
 
     @Test
+    fun `legacy proto without sleep policy fields resolves defaults`() {
+        val prefs = UserPreferencesProto.getDefaultInstance().toDomainModel()
+
+        assertEquals(180, prefs.coreMergeGapMinutes)
+        assertEquals(1200, prefs.supplementalCutoffMinutesOfDay)
+        assertEquals(15, prefs.minimumCountedSleepSegmentMinutes)
+        assertEquals(75, prefs.supplementalArchitectureCoveragePercent)
+    }
+
+    @Test
+    fun `explicit persisted sleep policy fields remain distinguishable from absent fields`() {
+        val prefs =
+            UserPreferencesProto
+                .newBuilder()
+                .setCoreMergeGapMinutes(240)
+                .setSupplementalCutoffMinutesOfDay(840)
+                .setMinimumCountedSleepSegmentMinutes(30)
+                .setSupplementalArchitectureCoveragePercent(80)
+                .build()
+                .toDomainModel()
+
+        assertEquals(240, prefs.coreMergeGapMinutes)
+        assertEquals(840, prefs.supplementalCutoffMinutesOfDay)
+        assertEquals(30, prefs.minimumCountedSleepSegmentMinutes)
+        assertEquals(80, prefs.supplementalArchitectureCoveragePercent)
+    }
+
+    @Test
     fun `persisted HRR tolerance values normalize to supported bounds`() =
         runTest {
             repository.batchUpdate {
