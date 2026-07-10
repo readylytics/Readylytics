@@ -162,6 +162,8 @@ the result a pure function of the data, independent of chunking.
 > and promotes them only after walk-forward recompute succeeds. Changes made during the scan therefore
 > remain visible from that baseline on the next sync; killed workers resume with the same baseline.
 
+To bound memory and keep long reconciles cooperative, HR and HRV rows use ordered keyset paging on (timestampMs, id) in 5000-row batches. Each batch commits independently, checks cancellation, and yields before the next page. Settings device selection reads distinct ingested device names from Room only; Health Connect device discovery is not part of Settings or onboarding.
+
 ### 1.3 Mappers — domain HC DTO → Room entity
 
 All mappers consume the domain DTOs returned by `HealthConnectRepository`; those DTOs already
