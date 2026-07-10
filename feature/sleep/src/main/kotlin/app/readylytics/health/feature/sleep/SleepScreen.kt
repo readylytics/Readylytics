@@ -388,6 +388,29 @@ private fun MetricsGrid(
                 )
             }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCard(
+                    title = stringResource(R.string.card_title_nap_duration),
+                    value = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0) ?: "0h",
+                    status = MetricStatus.NO_DATA,
+                    tooltip = stringResource(R.string.tooltip_nap_duration),
+                    onClick = null,
+                )
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCard(
+                    title = stringResource(R.string.card_title_nap_count),
+                    value = metrics?.napCount?.toString() ?: "0",
+                    status = MetricStatus.NO_DATA,
+                    tooltip = stringResource(R.string.tooltip_nap_count),
+                    onClick = null,
+                )
+            }
+        }
     }
 }
 
@@ -397,6 +420,17 @@ private fun MetricsGridSkeleton(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),

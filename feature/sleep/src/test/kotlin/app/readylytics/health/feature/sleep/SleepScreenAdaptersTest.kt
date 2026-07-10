@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.sleep
 
+import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.SleepSessionData
 import org.junit.Assert.assertEquals
@@ -8,6 +9,28 @@ import org.junit.Test
 import java.time.LocalDate
 
 class SleepScreenAdaptersTest {
+    @Test
+    fun `nap duration fallback resolves correctly`() {
+        val napDurationDisplay: String? = null
+        val resolved = napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0) ?: "0h"
+        assertEquals("0h", resolved)
+
+        val napDurationDisplayWithValue = "1h 15m"
+        val resolvedWithValue = napDurationDisplayWithValue ?: DateFormatUtils.formatSleepDuration(0) ?: "0h"
+        assertEquals("1h 15m", resolvedWithValue)
+    }
+
+    @Test
+    fun `nap count fallback resolves correctly`() {
+        val napCount: Int? = null
+        val resolved = napCount?.toString() ?: "0"
+        assertEquals("0", resolved)
+
+        val napCountWithValue = 2
+        val resolvedWithValue = napCountWithValue.toString()
+        assertEquals("2", resolvedWithValue)
+    }
+
     @Test
     fun `single session visual stays when aggregate matches session actual sleep`() {
         val session =
