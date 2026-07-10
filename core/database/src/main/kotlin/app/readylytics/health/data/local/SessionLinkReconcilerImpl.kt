@@ -53,7 +53,7 @@ class SessionLinkReconcilerImpl
             sleepSpans: List<SessionSpan>,
             workoutSpans: List<SessionSpan>,
         ) {
-            var lastTimestampMs = Long.MIN_VALUE
+            var lastTimestampMs = 0L
             var lastId = ""
             val limit = 5000
             while (true) {
@@ -91,7 +91,7 @@ class SessionLinkReconcilerImpl
             endMs: Long,
             sleepSpans: List<SessionSpan>,
         ) {
-            var lastTimestampMs = Long.MIN_VALUE
+            var lastTimestampMs = 0L
             var lastId = ""
             val limit = 5000
             while (true) {
