@@ -37,6 +37,20 @@ interface HrvDao {
     ): List<HrvRecordEntity>
 
     @Query(
+        "SELECT * FROM hrv_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND id > :lastId)) " +
+            "ORDER BY timestampMs ASC, id ASC LIMIT :limit",
+    )
+    suspend fun getKeysetPage(
+        startMs: Long,
+        endMs: Long,
+        lastTimestampMs: Long,
+        lastId: String,
+        limit: Int,
+    ): List<HrvRecordEntity>
+
+    @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
             "ORDER BY timestampMs ASC, id ASC",
     )
@@ -125,6 +139,9 @@ interface HrvDao {
 
     @Query("SELECT COUNT(*) FROM hrv_records")
     suspend fun count(): Int
+
+    @Query("SELECT COUNT(*) FROM hrv_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
+    suspend fun countInRange(startMs: Long, endMs: Long): Int
 
     @Query("DELETE FROM hrv_records")
     suspend fun deleteAll(): Int

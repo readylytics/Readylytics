@@ -81,6 +81,6 @@ class HealthSyncUseCaseTest {
         val result = useCase.sync()
 
         assertTrue(result is Result.Failure)
-        assertEquals("SYNC_ERROR", (result as Result.Failure).code)
+        assertEquals("SYNC_ERROR", result.code)
     }
 }

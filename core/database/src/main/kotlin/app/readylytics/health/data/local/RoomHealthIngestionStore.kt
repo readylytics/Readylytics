@@ -83,6 +83,22 @@ class RoomHealthIngestionStore
                 toExclusiveMs = endExclusive.atStartOfDay(zoneId).toInstant().toEpochMilli(),
             )
         }
+
+        override suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int {
+            return heartRateDao.countInRange(startMs, endMs)
+        }
+
+        override suspend fun countHrvInRange(startMs: Long, endMs: Long): Int {
+            return hrvDao.countInRange(startMs, endMs)
+        }
+
+        override suspend fun countSleepSessionsInRange(startMs: Long, endMs: Long): Int {
+            return sleepSessionDao.countInRange(startMs, endMs)
+        }
+
+        override suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int {
+            return workoutDao.countInRange(startMs, endMs)
+        }
     }
 
 private fun SleepSessionInput.toEntity() =

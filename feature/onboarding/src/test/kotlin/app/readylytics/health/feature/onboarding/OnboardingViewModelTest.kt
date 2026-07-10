@@ -3,7 +3,6 @@ package app.readylytics.health.feature.onboarding
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.service.BmiService
@@ -23,7 +22,6 @@ import java.time.LocalDate
 class OnboardingViewModelTest {
     private lateinit var physiologySettings: PhysiologySettings
     private lateinit var displaySettings: DisplaySettings
-    private lateinit var deviceSettings: DeviceSettings
     private lateinit var viewModel: OnboardingViewModel
 
     @Before
@@ -31,12 +29,10 @@ class OnboardingViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         physiologySettings = mockk(relaxed = true)
         displaySettings = mockk(relaxed = true)
-        deviceSettings = mockk(relaxed = true)
         viewModel =
             OnboardingViewModel(
                 physiologySettings = physiologySettings,
                 displaySettings = displaySettings,
-                deviceSettings = deviceSettings,
                 bmiService = BmiService(),
             )
     }

@@ -256,4 +256,19 @@ class ResyncRangeUseCaseTest {
                 scoringRepository.computeAndPersistDailySummary(startDate, any())
             }
         }
+
+    @Test
+    fun `resyncRange collects range telemetry before and after ingest and prune`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 1)
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            // Each range count is called 3 times: baseline, after ingest, and after prune.
+            coVerify(exactly = 3) { healthIngestionStore.countHeartRateInRange(any(), any()) }
+            coVerify(exactly = 3) { healthIngestionStore.countHrvInRange(any(), any()) }
+            coVerify(exactly = 3) { healthIngestionStore.countSleepSessionsInRange(any(), any()) }
+            coVerify(exactly = 3) { healthIngestionStore.countWorkoutsInRange(any(), any()) }
+        }
 }
