@@ -16,7 +16,6 @@ data class WorkoutData(
     val trimp: Float,
     val avgHr: Float,
     val deviceName: String? = null,
-    val intensityLevel: String? = null,
 )
 
 interface WorkoutRepository {

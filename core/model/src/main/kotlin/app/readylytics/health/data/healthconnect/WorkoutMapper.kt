@@ -37,28 +37,6 @@ object WorkoutMapper {
             else -> 4
         }
 
-    private fun classifyIntensity(trimp: Float, durationMinutes: Int, avgHr: Float): String {
-        // Handle edge cases: zero duration or no HR data
-        if (durationMinutes <= 0 || avgHr <= 0f) {
-            return WorkoutIntensity.UNCATEGORIZED.toCategoryString()
-        }
-
-        val trimpPerMinute = trimp / durationMinutes.toFloat()
-
-        return when {
-            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.VERY_LIGHT_MAX ->
-                WorkoutIntensity.VERY_LIGHT.toCategoryString()
-            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.LIGHT_MAX ->
-                WorkoutIntensity.LIGHT.toCategoryString()
-            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.MODERATE_MAX ->
-                WorkoutIntensity.MODERATE.toCategoryString()
-            trimpPerMinute < ScoringConstants.TrimpIntensityThresholds.HARD_MAX ->
-                WorkoutIntensity.HARD.toCategoryString()
-            else ->
-                WorkoutIntensity.VERY_HARD.toCategoryString()
-        }
-    }
-
     /**
      * Pure HR-derived metrics for a session window: zone minutes, TRIMP, average HR, duration.
      *
@@ -128,8 +106,6 @@ object WorkoutMapper {
                 thresholds,
             )
 
-        val intensityLevel = classifyIntensity(metrics.trimp, metrics.durationMinutes, metrics.avgHr)
-
         return WorkoutRecordEntity(
             id = session.id,
             startTime = session.startTime.toEpochMilli(),
@@ -144,7 +120,6 @@ object WorkoutMapper {
             trimp = metrics.trimp,
             avgHr = metrics.avgHr,
             deviceName = session.deviceName,
-            intensityLevel = intensityLevel,
         )
     }
 }

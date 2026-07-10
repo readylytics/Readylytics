@@ -192,22 +192,30 @@ private fun IntensityBadge(
     }
 }
 
-private fun WorkoutData.intensityLabelResId(): Int =
-    when (intensityLevel) {
-        "VERY_LIGHT" -> R.string.workout_intensity_very_light
-        "LIGHT" -> R.string.workout_intensity_light
-        "MODERATE" -> R.string.workout_intensity_moderate
-        "HARD" -> R.string.workout_intensity_hard
-        "VERY_HARD" -> R.string.workout_intensity_very_hard
-        else -> R.string.workout_intensity_very_light  // default for UNCATEGORIZED or null
+private fun WorkoutData.intensityLabelResId(): Int {
+    if (durationMinutes <= 0 || trimp <= 0f) {
+        return R.string.workout_intensity_very_light
     }
+    val trimpPerMinute = trimp / durationMinutes.toFloat()
+    return when {
+        trimpPerMinute < 0.5f -> R.string.workout_intensity_very_light
+        trimpPerMinute < 1.0f -> R.string.workout_intensity_light
+        trimpPerMinute < 1.5f -> R.string.workout_intensity_moderate
+        trimpPerMinute < 2.2f -> R.string.workout_intensity_hard
+        else -> R.string.workout_intensity_very_hard
+    }
+}
 
-private fun WorkoutData.intensityStatus(): MetricStatus =
-    when (intensityLevel) {
-        "VERY_LIGHT" -> MetricStatus.CALIBRATING
-        "LIGHT" -> MetricStatus.OPTIMAL
-        "MODERATE" -> MetricStatus.OPTIMAL
-        "HARD" -> MetricStatus.WARNING
-        "VERY_HARD" -> MetricStatus.POOR
-        else -> MetricStatus.CALIBRATING  // default for UNCATEGORIZED or null
+private fun WorkoutData.intensityStatus(): MetricStatus {
+    if (durationMinutes <= 0 || trimp <= 0f) {
+        return MetricStatus.CALIBRATING
     }
+    val trimpPerMinute = trimp / durationMinutes.toFloat()
+    return when {
+        trimpPerMinute < 0.5f -> MetricStatus.CALIBRATING
+        trimpPerMinute < 1.0f -> MetricStatus.OPTIMAL
+        trimpPerMinute < 1.5f -> MetricStatus.OPTIMAL
+        trimpPerMinute < 2.2f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }
+}
