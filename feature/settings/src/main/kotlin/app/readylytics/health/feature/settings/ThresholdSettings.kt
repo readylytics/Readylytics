@@ -148,6 +148,7 @@ fun ActivitySettingsSection(
     }
 }
 
+@Suppress("ktlint:standard:max-line-length")
 @Composable
 fun SleepSettingsSection(
     uiState: SleepSettingsState,
