@@ -140,6 +140,9 @@ interface HrvDao {
     @Query("SELECT COUNT(*) FROM hrv_records")
     suspend fun count(): Int
 
+    @Query("SELECT COUNT(*) FROM hrv_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
+    suspend fun countInRange(startMs: Long, endMs: Long): Int
+
     @Query("DELETE FROM hrv_records")
     suspend fun deleteAll(): Int
 

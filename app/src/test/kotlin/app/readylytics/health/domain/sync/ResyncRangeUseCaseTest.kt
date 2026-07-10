@@ -1,9 +1,5 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -40,10 +36,6 @@ class ResyncRangeUseCaseTest {
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = mockk<ResyncCheckpointStore>(relaxed = true)
-    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
-    private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
-    private val workoutDao = mockk<WorkoutDao>(relaxed = true)
 
     private lateinit var useCase: ResyncRangeUseCase
 
@@ -64,10 +56,6 @@ class ResyncRangeUseCaseTest {
                 ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                 stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                sleepSessionDao = sleepSessionDao,
-                workoutDao = workoutDao,
                 ioDispatcher = Dispatchers.Unconfined,
             )
     }
@@ -270,17 +258,17 @@ class ResyncRangeUseCaseTest {
         }
 
     @Test
-    fun `resyncRange collects telemetry by querying DAO counts before and after phases`() =
+    fun `resyncRange collects range telemetry before and after ingest and prune`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 1)
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
-            // count() is called 3 times: baseline, after ingest, and after prune
-            coVerify(exactly = 3) { heartRateDao.count() }
-            coVerify(exactly = 3) { hrvDao.count() }
-            coVerify(exactly = 3) { sleepSessionDao.count() }
-            coVerify(exactly = 3) { workoutDao.count() }
+            // Each range count is called 3 times: baseline, after ingest, and after prune.
+            coVerify(exactly = 3) { healthIngestionStore.countHeartRateInRange(any(), any()) }
+            coVerify(exactly = 3) { healthIngestionStore.countHrvInRange(any(), any()) }
+            coVerify(exactly = 3) { healthIngestionStore.countSleepSessionsInRange(any(), any()) }
+            coVerify(exactly = 3) { healthIngestionStore.countWorkoutsInRange(any(), any()) }
         }
 }

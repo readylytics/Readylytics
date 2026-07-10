@@ -7,10 +7,6 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.WorkoutDao
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
@@ -48,10 +44,6 @@ class ResyncRangeUseCase
         private val ingestionCoordinator: HealthIngestionCoordinator,
         private val stepCountFetcher: StepCountFetcher,
         private val recomputeSupport: DailyRecomputeSupport,
-        private val heartRateDao: HeartRateDao,
-        private val hrvDao: HrvDao,
-        private val sleepSessionDao: SleepSessionDao,
-        private val workoutDao: WorkoutDao,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         /**
@@ -124,17 +116,50 @@ class ResyncRangeUseCase
                             .coerceIn(0, totalDays)
                     onProgress?.invoke(completedDays, totalDays)
 
-                    // --- Telemetry Baseline ---
-                    val hrBeforeResync = heartRateDao.count()
-                    val hrvBeforeResync = hrvDao.count()
-                    val sleepBeforeResync = sleepSessionDao.count()
-                    val workoutBeforeResync = workoutDao.count()
+                    val reconcileStartMs =
+                        startDate
+                            .minusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    val reconcileEndMs =
+                        endDate
+                            .plusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli() - 1
 
-                    // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
+                    val runIngestion = checkpoint == null || checkpoint.phase == ResyncPhase.INGEST
+                    val runPruning =
+                        checkpoint == null ||
+                            checkpoint.phase == ResyncPhase.INGEST ||
+                            checkpoint.phase == ResyncPhase.PRUNE
+                    val runReconciliation =
+                        checkpoint == null ||
+                            checkpoint.phase == ResyncPhase.INGEST ||
+                            checkpoint.phase == ResyncPhase.PRUNE ||
+                            checkpoint.phase == ResyncPhase.RECONCILE
+
+                    var hrBeforePrune = 0
+                    var hrvBeforePrune = 0
+                    var sleepBeforePrune = 0
+                    var workoutBeforePrune = 0
+
                     val stepsDevice =
                         prefs.deviceByDataType[HealthDataType.STEPS.name]?.takeIf { it.isNotBlank() }
-                    val ingestStart = System.currentTimeMillis()
-                    if (checkpoint == null || checkpoint.phase == ResyncPhase.INGEST) {
+
+                    // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
+                    if (runIngestion) {
+                        val hrBeforeResync =
+                            healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
+                        val hrvBeforeResync =
+                            healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
+                        val sleepBeforeResync =
+                            healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
+                        val workoutBeforeResync =
+                            healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
+
+                        val ingestStart = System.currentTimeMillis()
                         var chunkStart = checkpoint?.nextDate?.coerceAtLeast(startDate) ?: startDate
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
@@ -176,30 +201,43 @@ class ResyncRangeUseCase
                             )
                             chunkStart = chunkEndExclusive
                         }
-                    }
-                    val ingestEnd = System.currentTimeMillis()
-                    val hrAfterIngest = heartRateDao.count()
-                    val hrvAfterIngest = hrvDao.count()
-                    val sleepAfterIngest = sleepSessionDao.count()
-                    val workoutAfterIngest = workoutDao.count()
-                    logD("ResyncTelemetry") {
-                        "[INGESTION] Completed in ${ingestEnd - ingestStart}ms. " +
-                        "HeartRate: $hrBeforeResync -> $hrAfterIngest (delta: ${hrAfterIngest - hrBeforeResync}), " +
-                        "HRV: $hrvBeforeResync -> $hrvAfterIngest (delta: ${hrvAfterIngest - hrvBeforeResync}), " +
-                        "Sleep: $sleepBeforeResync -> $sleepAfterIngest (delta: ${sleepAfterIngest - sleepBeforeResync}), " +
-                        "Workout: $workoutBeforeResync -> $workoutAfterIngest (delta: ${workoutAfterIngest - workoutBeforeResync})"
+                        val ingestEnd = System.currentTimeMillis()
+                        hrBeforePrune =
+                            healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
+                        hrvBeforePrune =
+                            healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
+                        sleepBeforePrune =
+                            healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
+                        workoutBeforePrune =
+                            healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
+
+                        logD(TELEMETRY_TAG) {
+                            "[INGESTION] Completed in ${ingestEnd - ingestStart}ms. " +
+                            "HeartRate: $hrBeforeResync -> $hrBeforePrune (delta: ${hrBeforePrune - hrBeforeResync}), " +
+                            "HRV: $hrvBeforeResync -> $hrvBeforePrune (delta: ${hrvBeforePrune - hrvBeforeResync}), " +
+                            "Sleep: $sleepBeforeResync -> $sleepBeforePrune (delta: ${sleepBeforePrune - sleepBeforeResync}), " +
+                            "Workout: $workoutBeforeResync -> $workoutBeforePrune (delta: ${workoutBeforePrune - workoutBeforeResync})"
+                        }
                     }
 
                     // --- Prune phase: remove stale data from non-selected devices ---
-                    val prunerSelections =
-                        HealthDataType.entries.associateWith { type ->
-                            prefs.deviceByDataType[type.name]
+                    if (runPruning) {
+                        if (!runIngestion) {
+                            hrBeforePrune =
+                                healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
+                            hrvBeforePrune =
+                                healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
+                            sleepBeforePrune =
+                                healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
+                            workoutBeforePrune =
+                                healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
                         }
-                    val pruneStart = System.currentTimeMillis()
-                    if (checkpoint == null ||
-                        checkpoint.phase == ResyncPhase.INGEST ||
-                        checkpoint.phase == ResyncPhase.PRUNE
-                    ) {
+
+                        val prunerSelections =
+                            HealthDataType.entries.associateWith { type ->
+                                prefs.deviceByDataType[type.name]
+                            }
+                        val pruneStart = System.currentTimeMillis()
                         selectedSourcePruner.prune(
                             start = startDate,
                             endInclusive = endDate,
@@ -216,58 +254,38 @@ class ResyncRangeUseCase
                                 baselineChangeTokens = baselineChangeTokens,
                             ),
                         )
-                    }
-                    val pruneEnd = System.currentTimeMillis()
-                    val hrAfterPrune = heartRateDao.count()
-                    val hrvAfterPrune = hrvDao.count()
-                    val sleepAfterPrune = sleepSessionDao.count()
-                    val workoutAfterPrune = workoutDao.count()
-                    logD("ResyncTelemetry") {
-                        "[PRUNING] Completed in ${pruneEnd - pruneStart}ms. " +
-                        "HeartRate: $hrAfterIngest -> $hrAfterPrune (pruned: ${hrAfterIngest - hrAfterPrune}), " +
-                        "HRV: $hrvAfterIngest -> $hrvAfterPrune (pruned: ${hrvAfterIngest - hrvAfterPrune}), " +
-                        "Sleep: $sleepAfterIngest -> $sleepAfterPrune (pruned: ${sleepAfterIngest - sleepAfterPrune}), " +
-                        "Workout: $workoutAfterIngest -> $workoutAfterPrune (pruned: ${workoutAfterIngest - workoutAfterPrune})"
+                        val pruneEnd = System.currentTimeMillis()
+                        val hrAfterPrune =
+                            healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
+                        val hrvAfterPrune =
+                            healthIngestionStore.countHrvInRange(reconcileStartMs, reconcileEndMs)
+                        val sleepAfterPrune =
+                            healthIngestionStore.countSleepSessionsInRange(reconcileStartMs, reconcileEndMs)
+                        val workoutAfterPrune =
+                            healthIngestionStore.countWorkoutsInRange(reconcileStartMs, reconcileEndMs)
+
+                        logD(TELEMETRY_TAG) {
+                            "[PRUNING] Completed in ${pruneEnd - pruneStart}ms. " +
+                            "HeartRate: $hrBeforePrune -> $hrAfterPrune (pruned: ${hrBeforePrune - hrAfterPrune}), " +
+                            "HRV: $hrvBeforePrune -> $hrvAfterPrune (pruned: ${hrvBeforePrune - hrvAfterPrune}), " +
+                            "Sleep: $sleepBeforePrune -> $sleepAfterPrune (pruned: ${sleepBeforePrune - sleepAfterPrune}), " +
+                            "Workout: $workoutBeforePrune -> $workoutAfterPrune (pruned: ${workoutBeforePrune - workoutAfterPrune})"
+                        }
                     }
 
                     // --- Reconcile phase: chunk-independent session linkage ---
-                    // Re-derives (recordType, sessionId) for every HR/HRV sample in range from the
-                    // *complete* set of sleep + workout sessions, and recomputes affected workout
-                    // metrics. Without this, a night straddling a chunk boundary could have its
-                    // samples split across two Health Connect fetch windows, each tagging only the
-                    // subset it saw - making linkage (and everything derived from it) depend on
-                    // chunk alignment, which itself depends on the retention setting.
-                    val reconcileStart = System.currentTimeMillis()
-                    if (
-                        checkpoint == null ||
-                        checkpoint.phase == ResyncPhase.INGEST ||
-                        checkpoint.phase == ResyncPhase.PRUNE ||
-                        checkpoint.phase == ResyncPhase.RECONCILE
-                    ) {
-                        run {
-                            val reconcileStartMs =
-                                startDate
-                                    .minusDays(
-                                        1,
-                                    ).atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli()
-                            val reconcileEndMs =
-                                endDate
-                                    .plusDays(1)
-                                    .atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli() - 1
-                            val zoneThresholds =
-                                app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
-                                    prefs.zone1MinBpm,
-                                    prefs.zone1MaxBpm,
-                                    prefs.zone2MaxBpm,
-                                    prefs.zone3MaxBpm,
-                                    prefs.zone4MaxBpm,
-                                )
-                            sessionLinkReconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
-                        }
+                    if (runReconciliation) {
+                        val reconcileStart = System.currentTimeMillis()
+                        val zoneThresholds =
+                            app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
+                                prefs.zone1MinBpm,
+                                prefs.zone1MaxBpm,
+                                prefs.zone2MaxBpm,
+                                prefs.zone3MaxBpm,
+                                prefs.zone4MaxBpm,
+                            )
+                        sessionLinkReconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
+
                         checkpointStore.save(
                             ResyncCheckpoint(
                                 startDate = startDate,
@@ -278,10 +296,10 @@ class ResyncRangeUseCase
                                 baselineChangeTokens = baselineChangeTokens,
                             ),
                         )
-                    }
-                    val reconcileEnd = System.currentTimeMillis()
-                    logD("ResyncTelemetry") {
-                        "[RECONCILIATION] Completed in ${reconcileEnd - reconcileStart}ms."
+                        val reconcileEnd = System.currentTimeMillis()
+                        logD(TELEMETRY_TAG) {
+                            "[RECONCILIATION] Completed in ${reconcileEnd - reconcileStart}ms."
+                        }
                     }
 
                     // --- Recompute phase: walk-forward over the full range ---
@@ -310,7 +328,7 @@ class ResyncRangeUseCase
                         val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
                         val dayResult = recomputeSupport.recomputeDay(day, stepsForDay)
                         if (dayResult is Result.Failure) {
-                            logD("ResyncTelemetry") { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
+                            logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
                             return@withContext dayResult
                         }
                         recomputedDays++
@@ -329,7 +347,7 @@ class ResyncRangeUseCase
                         yield()
                     }
                     val recomputeEnd = System.currentTimeMillis()
-                    logD("ResyncTelemetry") {
+                    logD(TELEMETRY_TAG) {
                         "[RECOMPUTE] Completed in ${recomputeEnd - recomputeStart}ms. Days recomputed: $recomputedDays"
                     }
 
@@ -339,11 +357,15 @@ class ResyncRangeUseCase
                     logD("ResyncRangeUseCase") { "Full resync complete ($totalDays days)" }
                     Result.success(Unit)
                 } catch (e: CancellationException) {
-                    logD("ResyncTelemetry") { "Resync cancelled." }
+                    logD(TELEMETRY_TAG) { "Resync cancelled." }
                     throw e
                 } catch (e: Exception) {
-                    logD("ResyncTelemetry") { "Resync failed with exception: ${e.message}" }
+                    logD(TELEMETRY_TAG) { "Resync failed with exception: ${e.message}" }
                     Result.failure("Full resync failed", "RESYNC_ERROR")
                 }
             }
+
+        companion object {
+            private const val TELEMETRY_TAG = "ResyncTelemetry"
+        }
     }

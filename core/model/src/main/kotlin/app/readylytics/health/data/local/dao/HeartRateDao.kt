@@ -164,6 +164,9 @@ interface HeartRateDao {
     @Query("SELECT COUNT(*) FROM heart_rate_records")
     suspend fun count(): Int
 
+    @Query("SELECT COUNT(*) FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs")
+    suspend fun countInRange(startMs: Long, endMs: Long): Int
+
     @Query("DELETE FROM heart_rate_records")
     suspend fun deleteAll(): Int
 

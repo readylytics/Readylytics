@@ -1,9 +1,5 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -38,10 +34,6 @@ class ResyncCheckpointResumeTest {
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = InMemoryResyncCheckpointStore()
     private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
-    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
-    private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
-    private val workoutDao = mockk<WorkoutDao>(relaxed = true)
 
     private lateinit var useCase: ResyncRangeUseCase
 
@@ -62,10 +54,6 @@ class ResyncCheckpointResumeTest {
                 ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                 stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                sleepSessionDao = sleepSessionDao,
-                workoutDao = workoutDao,
                 ioDispatcher = Dispatchers.Unconfined,
             )
     }
