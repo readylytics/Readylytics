@@ -9,6 +9,11 @@ interface HealthIngestionStore {
         start: LocalDate,
         endExclusive: LocalDate,
     )
+
+    suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int
+    suspend fun countHrvInRange(startMs: Long, endMs: Long): Int
+    suspend fun countSleepSessionsInRange(startMs: Long, endMs: Long): Int
+    suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int
 }
 
 data class HealthIngestionBatch(

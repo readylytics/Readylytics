@@ -353,14 +353,21 @@ class CrashReportShareIntentTest {
 
             // Verify inner intent details
             val sendIntent =
-                chooserIntent.getParcelableExtra<android.content.Intent>(
+                androidx.core.content.IntentCompat.getParcelableExtra(
+                    chooserIntent,
                     android.content.Intent.EXTRA_INTENT,
+                    android.content.Intent::class.java,
                 )!!
             assertEquals(android.content.Intent.ACTION_SEND, sendIntent.action)
             assertEquals("text/plain", sendIntent.type)
             assertTrue(sendIntent.flags and android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
 
-            val uri = sendIntent.getParcelableExtra<android.net.Uri>(android.content.Intent.EXTRA_STREAM)!!
+            val uri =
+                androidx.core.content.IntentCompat.getParcelableExtra(
+                    sendIntent,
+                    android.content.Intent.EXTRA_STREAM,
+                    android.net.Uri::class.java,
+                )!!
             assertEquals(mockUri, uri)
         } finally {
             io.mockk.unmockkAll()

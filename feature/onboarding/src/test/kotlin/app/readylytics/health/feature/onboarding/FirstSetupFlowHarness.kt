@@ -5,7 +5,6 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -25,7 +24,6 @@ class FirstSetupFlowHarness(
 
     val physiologySettings: PhysiologySettings = PhysiologyPort()
     val displaySettings: DisplaySettings = DisplayPort()
-    val deviceSettings: DeviceSettings = DevicePort()
     val reader: UserPreferencesReader = Reader()
     val userProfileActions = UserProfileActionsPort()
     val healthDataRefresh = HealthDataRefreshPort()
@@ -34,7 +32,6 @@ class FirstSetupFlowHarness(
         OnboardingViewModel(
             physiologySettings = physiologySettings,
             displaySettings = displaySettings,
-            deviceSettings = deviceSettings,
             bmiService = BmiService(),
         )
 
@@ -133,27 +130,6 @@ class FirstSetupFlowHarness(
         override suspend fun updateChengBeta(value: Float) = error("Unexpected call: updateChengBeta")
 
         override suspend fun updateItrimB(value: Float) = error("Unexpected call: updateItrimB")
-    }
-
-    private inner class DevicePort : DeviceSettings {
-        override suspend fun getAvailableDevices(): List<String> = error("Unexpected call: getAvailableDevices")
-
-        override suspend fun clearDeviceCache() = error("Unexpected call: clearDeviceCache")
-
-        override suspend fun migrateDeviceSelectionIfNeeded() = error("Unexpected call: migrateDeviceSelectionIfNeeded")
-
-        override suspend fun updatePrimaryDevice(deviceName: String?) = error("Unexpected call: updatePrimaryDevice")
-
-        override suspend fun updateDeviceForDataType(
-            dataTypeKey: String,
-            deviceLabel: String?,
-        ) = error("Unexpected call: updateDeviceForDataType")
-
-        override suspend fun applyDeviceOverrides(overrides: Map<String, String?>) =
-            error("Unexpected call: applyDeviceOverrides")
-
-        override suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) =
-            error("Unexpected call: updateDeviceChangeNoticeDismissed")
     }
 
     inner class UserProfileActionsPort : UserProfileActions {

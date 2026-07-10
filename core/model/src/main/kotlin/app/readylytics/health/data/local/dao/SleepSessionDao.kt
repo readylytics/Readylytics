@@ -85,6 +85,9 @@ interface SleepSessionDao {
     @Query("SELECT COUNT(*) FROM sleep_sessions")
     suspend fun count(): Int
 
+    @Query("SELECT COUNT(*) FROM sleep_sessions WHERE startTime >= :startMs AND startTime <= :endMs")
+    suspend fun countInRange(startMs: Long, endMs: Long): Int
+
     @Query("DELETE FROM sleep_sessions")
     suspend fun deleteAll(): Int
 

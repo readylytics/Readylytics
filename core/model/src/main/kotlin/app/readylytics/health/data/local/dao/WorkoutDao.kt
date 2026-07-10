@@ -99,6 +99,9 @@ interface WorkoutDao {
     @Query("SELECT COUNT(*) FROM workout_records")
     suspend fun count(): Int
 
+    @Query("SELECT COUNT(*) FROM workout_records WHERE startTime >= :startMs AND startTime <= :endMs")
+    suspend fun countInRange(startMs: Long, endMs: Long): Int
+
     @Query("DELETE FROM workout_records")
     suspend fun deleteAll(): Int
 

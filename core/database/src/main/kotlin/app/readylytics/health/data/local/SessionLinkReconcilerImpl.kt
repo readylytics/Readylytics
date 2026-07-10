@@ -12,6 +12,9 @@ import app.readylytics.health.domain.sync.link.SampleLink
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.sync.link.SessionLinker
 import app.readylytics.health.domain.sync.link.SessionSpan
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.yield
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,11 +42,9 @@ class SessionLinkReconcilerImpl
                     .getOverlapping(startMs, endMs)
                     .map { SessionSpan(it.id, it.startTime, it.endTime) }
 
-            transactionRunner.runInTransaction {
-                relinkHeartRate(startMs, endMs, sleepSpans, workoutSpans)
-                relinkHrv(startMs, endMs, sleepSpans)
-                recomputeWorkouts(workoutSpans, zoneThresholds)
-            }
+            relinkHeartRate(startMs, endMs, sleepSpans, workoutSpans)
+            relinkHrv(startMs, endMs, sleepSpans)
+            recomputeWorkouts(workoutSpans, zoneThresholds)
         }
 
         private suspend fun relinkHeartRate(
@@ -52,13 +53,37 @@ class SessionLinkReconcilerImpl
             sleepSpans: List<SessionSpan>,
             workoutSpans: List<SessionSpan>,
         ) {
-            val records = heartRateDao.getByTimeRange(startMs, endMs)
-            val updated =
-                records.mapNotNull { record ->
+            var lastTimestampMs = 0L
+            var lastId = ""
+            val limit = 5000
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val records = heartRateDao.getKeysetPage(
+                    startMs = startMs,
+                    endMs = endMs,
+                    lastTimestampMs = lastTimestampMs,
+                    lastId = lastId,
+                    limit = limit
+                )
+                if (records.isEmpty()) break
+
+                val updated = records.mapNotNull { record ->
                     val link = SessionLinker.resolve(record.timestampMs, sleepSpans, workoutSpans)
                     record.relinkedOrNull(link)
                 }
-            if (updated.isNotEmpty()) heartRateDao.upsertAll(updated)
+
+                if (updated.isNotEmpty()) {
+                    transactionRunner.runInTransaction {
+                        heartRateDao.upsertAll(updated)
+                    }
+                }
+
+                val lastRecord = records.last()
+                lastTimestampMs = lastRecord.timestampMs
+                lastId = lastRecord.id
+
+                yield()
+            }
         }
 
         private suspend fun relinkHrv(
@@ -66,13 +91,37 @@ class SessionLinkReconcilerImpl
             endMs: Long,
             sleepSpans: List<SessionSpan>,
         ) {
-            val records = hrvDao.getByTimeRange(startMs, endMs)
-            val updated =
-                records.mapNotNull { record ->
+            var lastTimestampMs = 0L
+            var lastId = ""
+            val limit = 5000
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val records = hrvDao.getKeysetPage(
+                    startMs = startMs,
+                    endMs = endMs,
+                    lastTimestampMs = lastTimestampMs,
+                    lastId = lastId,
+                    limit = limit
+                )
+                if (records.isEmpty()) break
+
+                val updated = records.mapNotNull { record ->
                     val link = SessionLinker.resolve(record.timestampMs, sleepSpans, emptyList())
                     record.relinkedOrNull(link)
                 }
-            if (updated.isNotEmpty()) hrvDao.upsertAll(updated)
+
+                if (updated.isNotEmpty()) {
+                    transactionRunner.runInTransaction {
+                        hrvDao.upsertAll(updated)
+                    }
+                }
+
+                val lastRecord = records.last()
+                lastTimestampMs = lastRecord.timestampMs
+                lastId = lastRecord.id
+
+                yield()
+            }
         }
 
         private suspend fun recomputeWorkouts(
@@ -80,6 +129,7 @@ class SessionLinkReconcilerImpl
             zoneThresholds: IntArray,
         ) {
             for (span in workoutSpans) {
+                currentCoroutineContext().ensureActive()
                 val existing = workoutDao.getById(span.id) ?: continue
                 val hrSamples = heartRateDao.getByTimeRange(existing.startTime, existing.endTime)
                 val metrics =
@@ -89,20 +139,23 @@ class SessionLinkReconcilerImpl
                         hrSamples,
                         zoneThresholds,
                     )
-                workoutDao.upsertAll(
-                    listOf(
-                        existing.copy(
-                            durationMinutes = metrics.durationMinutes,
-                            zone1Minutes = metrics.zoneMinutes[0],
-                            zone2Minutes = metrics.zoneMinutes[1],
-                            zone3Minutes = metrics.zoneMinutes[2],
-                            zone4Minutes = metrics.zoneMinutes[3],
-                            zone5Minutes = metrics.zoneMinutes[4],
-                            trimp = metrics.trimp,
-                            avgHr = metrics.avgHr,
+                transactionRunner.runInTransaction {
+                    workoutDao.upsertAll(
+                        listOf(
+                            existing.copy(
+                                durationMinutes = metrics.durationMinutes,
+                                zone1Minutes = metrics.zoneMinutes[0],
+                                zone2Minutes = metrics.zoneMinutes[1],
+                                zone3Minutes = metrics.zoneMinutes[2],
+                                zone4Minutes = metrics.zoneMinutes[3],
+                                zone5Minutes = metrics.zoneMinutes[4],
+                                trimp = metrics.trimp,
+                                avgHr = metrics.avgHr,
+                            ),
                         ),
-                    ),
-                )
+                    )
+                }
+                yield()
             }
         }
     }

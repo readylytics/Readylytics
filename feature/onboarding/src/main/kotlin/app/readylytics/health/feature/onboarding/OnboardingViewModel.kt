@@ -5,7 +5,6 @@ import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.service.BmiData
@@ -23,7 +22,6 @@ class OnboardingViewModel
     constructor(
         private val physiologySettings: PhysiologySettings,
         private val displaySettings: DisplaySettings,
-        private val deviceSettings: DeviceSettings,
         private val bmiService: BmiService,
     ) : BaseViewModel() {
         fun validateBirthdayDay(day: String): Result<Int> =
@@ -100,16 +98,6 @@ class OnboardingViewModel
                 displaySettings.updateDynamicColorEnabled(dynamicColorEnabled)
                 displaySettings.updateUnitSystem(unitSystem)
                 physiologySettings.updateHeight(heightCm)
-                onComplete()
-            }
-        }
-
-        fun selectDevice(
-            deviceName: String?,
-            onComplete: () -> Unit,
-        ) {
-            viewModelScope.launch {
-                deviceSettings.updatePrimaryDevice(deviceName)
                 onComplete()
             }
         }
