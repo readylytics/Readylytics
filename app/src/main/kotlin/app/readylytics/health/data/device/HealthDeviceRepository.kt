@@ -5,9 +5,6 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -31,7 +28,6 @@ class HealthDeviceRepository
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
-        private val healthConnectRepository: HealthConnectRepository,
     ) {
         // TTL in milliseconds (5 minutes)
         companion object {
@@ -86,32 +82,17 @@ class HealthDeviceRepository
         }
 
         /**
-         * Fetch devices from both DB and HC API, then cache with timestamp.
-         * DB devices: Extracted from all existing records (device names from all data types)
-         * HC devices: Discovered via Health Connect API
+         * Fetch devices from Room and cache with timestamp.
+         * Only ingested devices are selectable; Health Connect stays ingestion-only.
          */
         private suspend fun fetchAndCacheDevices(): List<String> {
-            // Parallel fetch from DB and HC API
             val allDevices =
-                coroutineScope {
-                    val dbDevicesAsync =
-                        async {
-                            sleepSessionDao.getDistinctDeviceNames() +
-                                heartRateDao.getDistinctDeviceNames() +
-                                hrvDao.getDistinctDeviceNames() +
-                                workoutDao.getDistinctDeviceNames()
-                        }
-
-                    val hcDevicesAsync =
-                        async {
-                            healthConnectRepository.discoverDevices(windowDays = 14)
-                        }
-
-                    (dbDevicesAsync.await() + hcDevicesAsync.await())
-                        .filterNot { it.isBlank() }
-                        .distinct()
-                        .sorted()
-                }
+                (
+                    sleepSessionDao.getDistinctDeviceNames() +
+                        heartRateDao.getDistinctDeviceNames() +
+                        hrvDao.getDistinctDeviceNames() +
+                        workoutDao.getDistinctDeviceNames()
+                ).filterNot { it.isBlank() }.distinct().sorted()
 
             // Cache with timestamp for TTL tracking (using elapsedRealtime for monotonic clock)
             deviceCache.value = CacheEntry(allDevices, SystemClock.elapsedRealtime())

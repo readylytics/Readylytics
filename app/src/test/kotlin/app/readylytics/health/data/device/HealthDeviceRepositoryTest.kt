@@ -4,7 +4,6 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.domain.repository.HealthConnectRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -19,7 +18,6 @@ class HealthDeviceRepositoryTest {
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
-    private lateinit var healthConnectRepository: HealthConnectRepository
     private lateinit var repository: HealthDeviceRepository
 
     @Before
@@ -28,15 +26,12 @@ class HealthDeviceRepositoryTest {
         heartRateDao = mockk()
         hrvDao = mockk()
         workoutDao = mockk()
-        healthConnectRepository = mockk()
-
         repository =
             HealthDeviceRepository(
                 sleepSessionDao,
                 heartRateDao,
                 hrvDao,
                 workoutDao,
-                healthConnectRepository,
             )
     }
 
@@ -44,14 +39,12 @@ class HealthDeviceRepositoryTest {
     fun `getAvailableDevices fetches and caches devices`() =
         runTest {
             val dbDevices = listOf("Device1", "Device2")
-            val hcDevices = listOf("Device3")
-            val expected = listOf("Device1", "Device2", "Device3").sorted()
+            val expected = listOf("Device1", "Device2").sorted()
 
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2")
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns hcDevices
 
             // First call fetches and caches
             val result1 = repository.getAvailableDevices()
@@ -62,7 +55,6 @@ class HealthDeviceRepositoryTest {
             coVerify(exactly = 1) { heartRateDao.getDistinctDeviceNames() }
             coVerify(exactly = 1) { hrvDao.getDistinctDeviceNames() }
             coVerify(exactly = 1) { workoutDao.getDistinctDeviceNames() }
-            coVerify(exactly = 1) { healthConnectRepository.discoverDevices(any()) }
         }
 
     @Test
@@ -72,11 +64,10 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2")
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device3")
 
             // First call
             val result1 = repository.getAvailableDevices()
-            assertEquals(3, result1.size)
+            assertEquals(2, result1.size)
 
             // Clear all mock call counts
             io.mockk.clearAllMocks(answers = false)
@@ -86,9 +77,6 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
             coEvery { hrvDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
             coEvery { workoutDao.getDistinctDeviceNames() } throws AssertionError("Should not be called")
-            coEvery {
-                healthConnectRepository.discoverDevices(any())
-            } throws AssertionError("Should not be called")
 
             // Second call should use cache
             val result2 = repository.getAvailableDevices()
@@ -102,11 +90,10 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device2")
 
             // Fetch and cache
             val result1 = repository.getAvailableDevices()
-            assertEquals(2, result1.size)
+            assertEquals(1, result1.size)
 
             // Invalidate cache
             repository.invalidateCache()
@@ -116,11 +103,10 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device4")
 
             // Next call should fetch fresh data
             val result2 = repository.getAvailableDevices()
-            assertEquals(listOf("Device3", "Device4").sorted(), result2)
+            assertEquals(listOf("Device3"), result2)
         }
 
     @Test
@@ -130,7 +116,6 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("  ", "Device2")
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns emptyList()
 
             val result = repository.getAvailableDevices()
 
@@ -145,7 +130,6 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Device2", "Device3")
             coEvery { hrvDao.getDistinctDeviceNames() } returns listOf("Device1")
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device3")
 
             val result = repository.getAvailableDevices()
 
@@ -160,7 +144,6 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns listOf("Apple")
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns listOf("Mango")
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns emptyList()
 
             val result = repository.getAvailableDevices()
 
@@ -175,7 +158,6 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device2")
 
             // First call: cache miss — triggers fetch
             val devices1 = repository.getAvailableDevices()
@@ -205,7 +187,6 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device2")
 
             // Fetch and cache
             repository.getAvailableDevices()
@@ -218,10 +199,9 @@ class HealthDeviceRepositoryTest {
             coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
             coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
-            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device4")
 
             // Next call should fetch fresh data
             val result = repository.getAvailableDevices()
-            assertEquals(listOf("Device3", "Device4").sorted(), result)
+            assertEquals(listOf("Device3"), result)
         }
 }
