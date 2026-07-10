@@ -115,7 +115,7 @@ class ScoringRepositoryImplTest {
                     remSleepMinutes = 90,
                     lightSleepMinutes = 240,
                     awakeMinutes = 60,
-            )
+                )
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
             coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
 
@@ -207,7 +207,7 @@ class ScoringRepositoryImplTest {
                     remSleepMinutes = 90,
                     lightSleepMinutes = 210,
                     awakeMinutes = 15,
-            )
+                )
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
             coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
             coEvery { sleepSessionDao.countSince(any()) } returns 7

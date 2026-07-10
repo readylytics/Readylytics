@@ -2,8 +2,8 @@ package app.readylytics.health.util
 
 import android.content.Context
 import android.util.Log
-import androidx.security.crypto.EncryptedFile
-import androidx.security.crypto.MasterKeys
+import app.readylytics.health.data.security.SecureFileStore
+import app.readylytics.health.data.security.TinkSecureFileStore
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration.Companion.milliseconds
 
 class SecureFileLogSink(
     private val context: Context,
@@ -27,6 +28,7 @@ class SecureFileLogSink(
     private val maxBackups: Int = DEFAULT_MAX_BACKUPS,
     private val encryptStreams: Boolean = true,
     coroutineContext: CoroutineContext = Dispatchers.IO.limitedParallelism(1),
+    private val secureFileStore: SecureFileStore = TinkSecureFileStore.create(context),
 ) : DomainLogSink {
     private val writeDispatcher: CoroutineContext = coroutineContext
     private val logDirectory = File(context.cacheDir, "logs")
@@ -93,7 +95,7 @@ class SecureFileLogSink(
                 val delayTime = (2000 - timeSinceLastWrite).coerceAtLeast(0)
                 flushJob =
                     scope.launch {
-                        delay(delayTime)
+                        delay(delayTime.milliseconds)
                         flush(fromSchedule = true)
                     }
             }
@@ -113,17 +115,6 @@ class SecureFileLogSink(
         persistLogs(content)
 
         lastWriteTimestamp = System.currentTimeMillis()
-    }
-
-    private fun getEncryptedFile(file: File): EncryptedFile {
-        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-        return EncryptedFile
-            .Builder(
-                file,
-                context,
-                masterKeyAlias,
-                EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB,
-            ).build()
     }
 
     private fun persistLogs(newContent: String) {
@@ -157,11 +148,11 @@ class SecureFileLogSink(
         if (!file.exists()) return ""
         return try {
             if (encryptStreams) {
-                getEncryptedFile(file).openFileInput().use { it.bufferedReader().readText() }
+                secureFileStore.readText(file)
             } else {
                 file.readText()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             ""
         }
     }
@@ -192,9 +183,7 @@ class SecureFileLogSink(
         if (content.isEmpty()) return
 
         if (encryptStreams) {
-            getEncryptedFile(file).openFileOutput().use { output ->
-                output.write(content.toByteArray(Charsets.UTF_8))
-            }
+            secureFileStore.writeText(file, content)
         } else {
             FileOutputStream(file, false).use { output ->
                 output.write(content.toByteArray(Charsets.UTF_8))

@@ -208,13 +208,13 @@ fun SleepSettingsSection(
                 onEvent(SettingsEvent.CoreMergeGapMinutesChanged(coreMergeGapMinutes.roundToInt()))
             },
             valueRange =
-                SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES.toFloat()..
-                    SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES.toFloat(),
-            steps = steppedSliderSteps(
-                min = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES,
-                max = SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES,
-                step = SettingsDefaults.CORE_MERGE_GAP_STEP_MINUTES,
-            ),
+                SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES.toFloat()..SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES.toFloat(),
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES,
+                    max = SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES,
+                    step = SettingsDefaults.CORE_MERGE_GAP_STEP_MINUTES,
+                ),
             displayValue = stringResource(R.string.settings_sleep_minutes_value, coreMergeGapMinutes.roundToInt()),
             description = stringResource(R.string.settings_sleep_core_merge_gap_tooltip),
         )
@@ -231,13 +231,13 @@ fun SleepSettingsSection(
                 )
             },
             valueRange =
-                SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()..
-                    SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat(),
-            steps = steppedSliderSteps(
-                min = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
-                max = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
-                step = SettingsDefaults.SUPPLEMENTAL_CUTOFF_STEP_MINUTES,
-            ),
+                SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()..SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat(),
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+                    max = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+                    step = SettingsDefaults.SUPPLEMENTAL_CUTOFF_STEP_MINUTES,
+                ),
             displayValue =
                 supplementalCutoffMinutesOfDay.roundToInt().let { minutes ->
                     stringResource(
@@ -261,13 +261,13 @@ fun SleepSettingsSection(
                 )
             },
             valueRange =
-                SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()..
-                    SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat(),
-            steps = steppedSliderSteps(
-                min = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
-                max = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
-                step = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_STEP_MINUTES,
-            ),
+                SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()..SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat(),
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+                    max = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+                    step = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_STEP_MINUTES,
+                ),
             displayValue =
                 stringResource(
                     R.string.settings_sleep_minutes_value,
@@ -288,13 +288,13 @@ fun SleepSettingsSection(
                 )
             },
             valueRange =
-                SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()..
-                    SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat(),
-            steps = steppedSliderSteps(
-                min = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
-                max = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
-                step = SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_STEP_PERCENT,
-            ),
+                SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()..SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat(),
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+                    max = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+                    step = SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_STEP_PERCENT,
+                ),
             displayValue =
                 stringResource(
                     R.string.settings_sleep_percent_value,

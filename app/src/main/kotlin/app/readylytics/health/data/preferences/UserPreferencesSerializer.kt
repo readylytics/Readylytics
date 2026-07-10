@@ -18,8 +18,7 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setMinimumCountedSleepSegmentMinutes(SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES)
             .setSupplementalArchitectureCoveragePercent(
                 SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
-            )
-            .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${SettingsDefaults.SYNC_PREFERENCE.name}"))
+            ).setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${SettingsDefaults.SYNC_PREFERENCE.name}"))
             .setSyncIntervalHours(SettingsDefaults.SYNC_INTERVAL_HOURS)
             .setLastSyncTimestamp(SettingsDefaults.LAST_SYNC_TIMESTAMP)
             .setMaxHeartRate(SettingsDefaults.MAX_HEART_RATE)

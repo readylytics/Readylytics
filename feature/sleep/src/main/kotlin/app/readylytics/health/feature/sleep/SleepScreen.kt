@@ -85,9 +85,10 @@ fun SleepScreen(
     earliestDate: java.time.LocalDate? = null,
 ) {
     val scrollState = rememberScrollState()
-    val singleSessionVisual = remember(uiState.latestSession, uiState.latestSummary) {
-        resolveSingleSessionVisual(uiState.latestSession, uiState.latestSummary)
-    }
+    val singleSessionVisual =
+        remember(uiState.latestSession, uiState.latestSummary) {
+            resolveSingleSessionVisual(uiState.latestSession, uiState.latestSummary)
+        }
     val (trendScrollState, trendZoomState) =
         ChartDefaults.rememberChartState(
             rangeDays = uiState.selectedTrendRange.days,

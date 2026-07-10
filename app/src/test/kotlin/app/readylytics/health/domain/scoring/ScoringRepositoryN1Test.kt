@@ -279,7 +279,11 @@ class ScoringRepositoryN1Test {
 
             // Batch path fetches both sessions once, then filters invalid nights in memory.
             coVerify { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) }
-            coVerify { heartRateDao.getSleepHrProjectionForSessions(match { it.containsAll(listOf("valid", "short")) }) }
+            coVerify {
+                heartRateDao.getSleepHrProjectionForSessions(
+                    match { it.containsAll(listOf("valid", "short")) },
+                )
+            }
         }
 
     @Test

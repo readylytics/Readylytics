@@ -10,20 +10,22 @@ import java.time.LocalDate
 class SleepScreenAdaptersTest {
     @Test
     fun `single session visual stays when aggregate matches session actual sleep`() {
-        val session = resolveSingleSessionVisual(
-            session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
-            summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 480),
-        )
+        val session =
+            resolveSingleSessionVisual(
+                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
+                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 480),
+            )
 
         assertEquals("sleep_1", session?.id)
     }
 
     @Test
     fun `single session visual falls back to session when aggregate differs from session actual sleep`() {
-        val session = resolveSingleSessionVisual(
-            session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
-            summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 540),
-        )
+        val session =
+            resolveSingleSessionVisual(
+                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
+                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 540),
+            )
 
         assertEquals("sleep_1", session?.id)
         assertNull(session?.takeIf { it.endTime <= it.startTime })

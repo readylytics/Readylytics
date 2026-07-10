@@ -453,7 +453,7 @@ class BaselineComputer
                         .toList()
                 val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
 
-                val rhrWindowStartDay = scoreDay.minusDays(ScoringConstants.BASELINE_DAYS.toLong())
+                val rhrWindowStartDay = scoreDay.minusDays(ScoringConstants.BASELINE_DAYS)
                 val nadirs =
                     historicalSleepDays
                         .asSequence()

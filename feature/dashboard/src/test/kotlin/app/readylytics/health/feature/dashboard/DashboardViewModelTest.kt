@@ -13,11 +13,11 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.mockk
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 
 class DashboardViewModelTest {
     private lateinit var dailySummaryRepository: DailySummaryRepository

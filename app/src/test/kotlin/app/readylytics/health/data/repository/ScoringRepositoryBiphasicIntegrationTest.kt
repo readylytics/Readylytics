@@ -93,8 +93,20 @@ class ScoringRepositoryBiphasicIntegrationTest {
                 listOf(
                     sleepSession(
                         id = "core-1",
-                        start = LocalDate.of(2026, 7, 8).atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                        end = LocalDate.of(2026, 7, 9).atTime(2, 30).atZone(zoneId).toInstant().toEpochMilli(),
+                        start =
+                            LocalDate
+                                .of(2026, 7, 8)
+                                .atTime(23, 0)
+                                .atZone(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
+                        end =
+                            LocalDate
+                                .of(2026, 7, 9)
+                                .atTime(2, 30)
+                                .atZone(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
                         durationMinutes = 210,
                         light = 90,
                         deep = 60,
@@ -102,8 +114,20 @@ class ScoringRepositoryBiphasicIntegrationTest {
                     ),
                     sleepSession(
                         id = "core-2",
-                        start = LocalDate.of(2026, 7, 9).atTime(3, 15).atZone(zoneId).toInstant().toEpochMilli(),
-                        end = LocalDate.of(2026, 7, 9).atTime(7, 15).atZone(zoneId).toInstant().toEpochMilli(),
+                        start =
+                            LocalDate
+                                .of(2026, 7, 9)
+                                .atTime(3, 15)
+                                .atZone(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
+                        end =
+                            LocalDate
+                                .of(2026, 7, 9)
+                                .atTime(7, 15)
+                                .atZone(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
                         durationMinutes = 240,
                         light = 150,
                         deep = 30,
@@ -112,8 +136,20 @@ class ScoringRepositoryBiphasicIntegrationTest {
                     ),
                     sleepSession(
                         id = "nap-pass",
-                        start = LocalDate.of(2026, 7, 9).atTime(13, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                        end = LocalDate.of(2026, 7, 9).atTime(14, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                        start =
+                            LocalDate
+                                .of(2026, 7, 9)
+                                .atTime(13, 0)
+                                .atZone(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
+                        end =
+                            LocalDate
+                                .of(2026, 7, 9)
+                                .atTime(14, 0)
+                                .atZone(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
                         durationMinutes = 60,
                         light = 30,
                         deep = 12,
@@ -163,11 +199,21 @@ class ScoringRepositoryBiphasicIntegrationTest {
             assertEquals(108, sessionSlot.captured.remSleepMinutes)
             assertEquals(15, sessionSlot.captured.awakeMinutes)
             assertEquals(
-                LocalDate.of(2026, 7, 8).atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                LocalDate
+                    .of(2026, 7, 8)
+                    .atTime(23, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli(),
                 sessionSlot.captured.startTime,
             )
             assertEquals(
-                LocalDate.of(2026, 7, 9).atTime(7, 15).atZone(zoneId).toInstant().toEpochMilli(),
+                LocalDate
+                    .of(2026, 7, 9)
+                    .atTime(7, 15)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli(),
                 sessionSlot.captured.endTime,
             )
             coVerify {

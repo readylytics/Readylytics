@@ -36,13 +36,18 @@ internal class SleepPreferences
 
         suspend fun updateSupplementalCutoffMinutesOfDay(minutes: Int) {
             dataStore.updateData {
-                it.toBuilder().setSupplementalCutoffMinutesOfDay(normalizeSupplementalCutoffMinutesOfDay(minutes)).build()
+                it
+                    .toBuilder()
+                    .setSupplementalCutoffMinutesOfDay(
+                        normalizeSupplementalCutoffMinutesOfDay(minutes),
+                    ).build()
             }
         }
 
         suspend fun updateMinimumCountedSleepSegmentMinutes(minutes: Int) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setMinimumCountedSleepSegmentMinutes(normalizeMinimumCountedSleepSegmentMinutes(minutes))
                     .build()
             }
@@ -50,7 +55,8 @@ internal class SleepPreferences
 
         suspend fun updateSupplementalArchitectureCoveragePercent(percent: Int) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setSupplementalArchitectureCoveragePercent(
                         normalizeSupplementalArchitectureCoveragePercent(percent),
                     ).build()
