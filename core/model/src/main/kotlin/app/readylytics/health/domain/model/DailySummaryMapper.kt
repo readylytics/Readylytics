@@ -79,6 +79,8 @@ object DailySummaryMapper {
             readinessEverydayHr = entity.readinessEverydayHr,
             everydayCoverageMinutes = entity.everydayCoverageMinutes,
             everydayLoadConfidence = entity.everydayLoadConfidence,
+            supplementalSleepDurationMinutes = entity.supplementalSleepDurationMinutes,
+            napCount = entity.napCount,
         )
     }
 
@@ -150,6 +152,8 @@ object DailySummaryMapper {
             readinessEverydayHr = domain.readinessEverydayHr,
             everydayCoverageMinutes = domain.everydayCoverageMinutes,
             everydayLoadConfidence = domain.everydayLoadConfidence,
+            supplementalSleepDurationMinutes = domain.supplementalSleepDurationMinutes,
+            napCount = domain.napCount,
         )
     }
 }

@@ -3,12 +3,12 @@ package app.readylytics.health.data.security
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import app.readylytics.health.domain.util.logW
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.RegistryConfiguration
 import com.google.crypto.tink.StreamingAead
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import com.google.crypto.tink.streamingaead.StreamingAeadConfig
-import app.readylytics.health.domain.util.logW
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
