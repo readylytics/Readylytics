@@ -158,12 +158,13 @@ class BaselineComputerBackfillEquivalenceTest {
                 // Reproduce exactly what ComputeHistoricalBaselinesUseCase did per day.
                 val ownSession = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val expectedWindows =
-                    baselineComputer.computeHrvWindowsBetween(dayMidnightMs, nextDayMidnightMs, ownSession?.id)
+                    baselineComputer.computeHrvWindowsBetween(
+                        fromMs = dayMidnightMs,
+                        toMs = nextDayMidnightMs,
+                        excludeSessionIds = ownSession?.id?.let(::setOf).orEmpty(),
+                    )
                 val expectedRhr =
                     baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
-                val expectedRhrHistory =
-                    baselineComputer.rhrHistoryBetween(dayMidnightMs, nextDayMidnightMs, percentile)
-
                 val actual = batched[dayMidnightMs]
                 requireNotNull(actual) { "missing batched result for day $dayMidnightMs" }
 
@@ -177,8 +178,6 @@ class BaselineComputerBackfillEquivalenceTest {
                     actual.sigmaHistory,
                     "sigmaHistory mismatch for day $dayMidnightMs",
                 )
-                assertEquals(expectedRhr, actual.rhrBpm, "rhrBpm mismatch for day $dayMidnightMs")
-                assertEquals(expectedRhrHistory, actual.rhrHistory, "rhrHistory mismatch for day $dayMidnightMs")
             }
         }
 

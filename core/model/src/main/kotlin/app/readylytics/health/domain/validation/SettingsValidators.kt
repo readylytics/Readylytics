@@ -5,6 +5,13 @@ object SettingsValidators {
 
     val HRV_BASELINE_RULE = IntRangeRule(1, 500, "HRV: 1–500 ms")
     val RHR_BASELINE_RULE = IntRangeRule(30, 100, "RHR: 30–100 bpm")
+    val CORE_MERGE_GAP_MINUTES_RULE = IntStepRangeRule(30, 240, 30, "Merge gap: 30–240 min in 30-minute steps")
+    val SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY_RULE =
+        IntStepRangeRule(840, 1380, 30, "Cutoff: 14:00–23:00 in 30-minute steps")
+    val MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES_RULE =
+        IntStepRangeRule(5, 60, 5, "Minimum segment: 5–60 min in 5-minute steps")
+    val SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT_RULE =
+        IntStepRangeRule(25, 100, 5, "Architecture coverage: 25–100% in 5% steps")
 
     val HEART_RATE_RULE = IntRangeRule(1, 220, "HR: 1–220 bpm")
 

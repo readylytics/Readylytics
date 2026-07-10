@@ -342,6 +342,36 @@ same backfill path also carries the RHR history used to freeze `rhrSigma` for la
 z-score restoration (guarded by equivalence tests). The
 per-day UPDATEs are collapsed into a single transaction by the backfill use-case.
 
+### 2.4.1 Biphasic sleep-day aggregation
+
+`core/database/src/main/kotlin/app/readylytics/health/data/repository/ScoringRepositoryImpl.kt`
+keeps raw sleep rows intact. `SleepSessionEntity` and `SleepStageEntity` remain the persisted
+source records; the scorer derives a day-specific domain aggregate on demand instead of rewriting
+those raw tables.
+
+`resolveSleepAggregation(targetDate, zoneId, prefs)` fetches overlapping sleep sessions from the
+core scoring window around the target day, builds `SleepDayPolicy` from the current settings, and
+projects the raw sessions into `SleepDayAggregate` via `SleepDayAggregator.aggregateForScoreDay(...)`.
+The aggregate is score-day aware: `supplementalCutoffMinutesOfDay` decides whether a segment belongs
+to the current score day or rolls forward to the next day, `coreMergeGapMinutes` defines the merged
+core cluster, and `minimumCountedSleepSegmentMinutes` filters out short fragments.
+
+The aggregate contract is:
+- raw sessions and stages stay stored unchanged
+- the longest merged cluster becomes the core sleep block
+- tie-breaks are deterministic: longer total duration, later final wake time, earlier start time,
+  then the smallest stable session id
+- non-core segments become `SupplementalSleepBlock`s
+- total duration is `core + supplemental`
+- stage totals are `core stage totals + architecture-eligible supplemental stage totals`
+- HRV / RHR / restoration inputs use the core window only through the derived `scoringSession`
+
+`canonicalizeOverlaps(...)` makes overlap resolution deterministic before aggregation. It prefers
+segments marked as coming from the selected source, then resolves by duration, tracked-stage
+coverage, and stored source identity. If package metadata is not available for a record, the stored
+source/device fallback captured on ingest is used so the overlap choice stays stable across daily
+sync, historical resync, retention-window changes, and restarts.
+
 ### 2.5 Sleep & Load scoring strategies
 
 | Component                    | Path                                                | Output                                                                                                                      |
@@ -349,7 +379,7 @@ per-day UPDATEs are collapsed into a single transaction by the backfill use-case
 | `SleepScoringStrategy`       | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/strategies/SleepScoringStrategy.kt` | Sleep score = **Duration 50% + Architecture 25% + Restoration 25%** (Restoration from HRV & RHR z-scores).                  |
 | `LoadScoringStrategy`        | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL): `sr ≤ 1.3 → 100`, `sr > 1.3 → 100·exp(−2.5·(sr−1.3)²)`. Feeds the readiness composite (0.4 restoration + 0.3 sleep + 0.3 load). Only `ILLNESS_ONSET` (cap 50) caps the readiness number and requires two consecutive nights; strong recovery, workout-impact, and rest-day flags are informational only and do not cap the score. |
 | `RasScoringStrategy`         | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/strategies/RasScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
-| `ComputeSleepMetricsUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ComputeSleepMetricsUseCase.kt`      | Assembles sleep/readiness metrics for the day from the strategies + baselines.                                              |
+| `ComputeSleepMetricsUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ComputeSleepMetricsUseCase.kt`      | Consumes the `SleepDayAggregate` / core-isolated `scoringSession` from `ScoringRepositoryImpl.resolveSleepAggregation(...)`, then assembles sleep/readiness metrics for the day from the strategies + baselines. |
 | `CircadianConsistencyRepository` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/CircadianConsistencyRepository.kt` | Live bed/wake-time consistency score. The allowed deviation **threshold** resolves through the single `CircadianThresholdDefaults.resolveThreshold(profile, override)` (Athlete 20 / Active 30 / Sedentary 45 min; override wins). The encrypted `circadianThresholdOverride` is the user knob; a legacy non-default flat `consistencyThresholdMinutes` is honored as an override for back-compat. The former per-profile strategy classes are deleted — there is now one resolver. |
 
 Supporting helpers live in `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/components/` and `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/sleep/`

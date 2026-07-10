@@ -28,6 +28,7 @@ import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
+import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
@@ -123,13 +124,10 @@ class DashboardViewModel
         ): DashboardUiState {
             val selectedDate = basicInputs.selectedDate
             val sessionSummary =
-                cardState.lastSleepSession?.let {
-                    SleepSessionSummary(
-                        efficiency = it.efficiency,
-                        startTime = it.startTime,
-                        endTime = it.endTime,
-                    )
-                }
+                resolveDashboardSleepSessionSummary(
+                    summary = basicInputs.summary,
+                    session = cardState.lastSleepSession,
+                )
 
             val cardsResult =
                 getDashboardDataUseCase.invoke(
@@ -199,6 +197,29 @@ class DashboardViewModel
 
         // Time-of-day gating for insights only makes sense for the current day;
         // for past days, treat as end-of-day so it never suppresses a finding.
+        internal fun resolveDashboardSleepSessionSummary(
+            summary: DailySummary?,
+            session: SleepSessionData?,
+        ): SleepSessionSummary? {
+            session ?: return null
+            val summaryMinutes = summary?.sleepDurationMinutes
+            val sessionMinutes = (session.durationMinutes - session.awakeMinutes).coerceAtLeast(0)
+            if (summaryMinutes != null && summaryMinutes != sessionMinutes) {
+                // Biphasic days can legitimately aggregate more sleep than any single session.
+                // Keep the available session-backed fallback instead of blanking dashboard cards.
+                return SleepSessionSummary(
+                    efficiency = session.efficiency,
+                    startTime = session.startTime,
+                    endTime = session.endTime,
+                )
+            }
+            return SleepSessionSummary(
+                efficiency = session.efficiency,
+                startTime = session.startTime,
+                endTime = session.endTime,
+            )
+        }
+
         private fun nowMinutesOfDayFor(selectedDate: LocalDate): Int =
             if (selectedDate == LocalDate.now()) {
                 LocalTime.now().let { it.hour * 60 + it.minute }

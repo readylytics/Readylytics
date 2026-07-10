@@ -35,6 +35,7 @@ class SleepPercentileRhrCalculator
             session: SleepSessionEntity,
             dayMidnight: Instant,
             percentile: Int = 5,
+            currentSessionIds: Set<String> = setOf(session.id),
         ): SleepPercentileRhrResult {
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val sessions =
@@ -42,7 +43,10 @@ class SleepPercentileRhrCalculator
                     baselineFrom,
                     dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1,
                 )
-            val sessionIds = (sessions.map { it.id } + session.id).distinct()
+            val effectiveCurrentSessionIds =
+                currentSessionIds
+                    .ifEmpty { setOf(session.id) }
+            val sessionIds = (sessions.map { it.id } + effectiveCurrentSessionIds).distinct()
 
             // Fetch all sleep HR samples for all these sessions batched using a lightweight projection
             val allHrRecords = scoringHistoryRepository.getSleepHrProjectionForSessions(sessionIds)
@@ -56,9 +60,14 @@ class SleepPercentileRhrCalculator
                 return this[index].beatsPerMinute
             }
 
-            val currentRestingHr = samplesBySession[session.id].getPercentileValue(percentile)
+            val currentRestingHr =
+                effectiveCurrentSessionIds
+                    .sorted()
+                    .flatMap { sessionId -> samplesBySession[sessionId].orEmpty() }
+                    .sortedWith(compareBy(SleepHrSample::beatsPerMinute))
+                    .getPercentileValue(percentile)
 
-            val historicSessions = sessions.filter { it.id != session.id }
+            val historicSessions = sessions.filterNot { it.id in effectiveCurrentSessionIds }
             val historicRestingHrs =
                 historicSessions.mapNotNull { s ->
                     samplesBySession[s.id].getPercentileValue(percentile)

@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.MetricTooltip
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.feature.settings.R
 import kotlin.math.roundToInt
 
@@ -147,6 +148,7 @@ fun ActivitySettingsSection(
     }
 }
 
+@Suppress("ktlint:standard:max-line-length")
 @Composable
 fun SleepSettingsSection(
     uiState: SleepSettingsState,
@@ -155,6 +157,34 @@ fun SleepSettingsSection(
     var sleepGoalValue by remember(uiState.goalSleepHours) {
         mutableFloatStateOf(uiState.goalSleepHours)
     }
+    var coreMergeGapMinutes by remember(uiState.coreMergeGapMinutes) {
+        mutableFloatStateOf(uiState.coreMergeGapMinutes.toFloat())
+    }
+    var supplementalCutoffMinutesOfDay by remember(uiState.supplementalCutoffMinutesOfDay) {
+        mutableFloatStateOf(uiState.supplementalCutoffMinutesOfDay.toFloat())
+    }
+    var minimumCountedSleepSegmentMinutes by remember(uiState.minimumCountedSleepSegmentMinutes) {
+        mutableFloatStateOf(uiState.minimumCountedSleepSegmentMinutes.toFloat())
+    }
+    var supplementalArchitectureCoveragePercent by remember(uiState.supplementalArchitectureCoveragePercent) {
+        mutableFloatStateOf(uiState.supplementalArchitectureCoveragePercent.toFloat())
+    }
+
+    val minCoreMergeGap = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES.toFloat()
+    val maxCoreMergeGap = SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES.toFloat()
+    val coreMergeGapRange = minCoreMergeGap..maxCoreMergeGap
+
+    val minSupplementalCutoff = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()
+    val maxSupplementalCutoff = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY.toFloat()
+    val supplementalCutoffRange = minSupplementalCutoff..maxSupplementalCutoff
+
+    val minSegmentMinutes = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()
+    val maxSegmentMinutes = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES.toFloat()
+    val minimumSegmentRange = minSegmentMinutes..maxSegmentMinutes
+
+    val minCoveragePercent = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()
+    val maxCoveragePercent = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()
+    val architectureCoverageRange = minCoveragePercent..maxCoveragePercent
 
     Column {
         Column(
@@ -184,6 +214,107 @@ fun SleepSettingsSection(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
+        ThresholdSliderItem(
+            label = stringResource(R.string.settings_sleep_core_merge_gap_label),
+            value = coreMergeGapMinutes,
+            onValueChange = { coreMergeGapMinutes = it },
+            onValueChangeFinished = {
+                onEvent(SettingsEvent.CoreMergeGapMinutesChanged(coreMergeGapMinutes.roundToInt()))
+            },
+            valueRange = coreMergeGapRange,
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES,
+                    max = SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES,
+                    step = SettingsDefaults.CORE_MERGE_GAP_STEP_MINUTES,
+                ),
+            displayValue = stringResource(R.string.settings_sleep_minutes_value, coreMergeGapMinutes.roundToInt()),
+            description = stringResource(R.string.settings_sleep_core_merge_gap_tooltip),
+        )
+
+        ThresholdSliderItem(
+            label = stringResource(R.string.settings_sleep_supplemental_cutoff_label),
+            value = supplementalCutoffMinutesOfDay,
+            onValueChange = { supplementalCutoffMinutesOfDay = it },
+            onValueChangeFinished = {
+                onEvent(
+                    SettingsEvent.SupplementalCutoffMinutesOfDayChanged(
+                        supplementalCutoffMinutesOfDay.roundToInt(),
+                    ),
+                )
+            },
+            valueRange = supplementalCutoffRange,
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+                    max = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+                    step = SettingsDefaults.SUPPLEMENTAL_CUTOFF_STEP_MINUTES,
+                ),
+            displayValue =
+                supplementalCutoffMinutesOfDay.roundToInt().let { minutes ->
+                    stringResource(
+                        R.string.settings_sleep_time_value,
+                        minutes / 60,
+                        minutes % 60,
+                    )
+                },
+            description = stringResource(R.string.settings_sleep_supplemental_cutoff_tooltip),
+        )
+
+        ThresholdSliderItem(
+            label = stringResource(R.string.settings_sleep_minimum_segment_label),
+            value = minimumCountedSleepSegmentMinutes,
+            onValueChange = { minimumCountedSleepSegmentMinutes = it },
+            onValueChangeFinished = {
+                onEvent(
+                    SettingsEvent.MinimumCountedSleepSegmentMinutesChanged(
+                        minimumCountedSleepSegmentMinutes.roundToInt(),
+                    ),
+                )
+            },
+            valueRange = minimumSegmentRange,
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+                    max = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+                    step = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_STEP_MINUTES,
+                ),
+            displayValue =
+                stringResource(
+                    R.string.settings_sleep_minutes_value,
+                    minimumCountedSleepSegmentMinutes.roundToInt(),
+                ),
+            description = stringResource(R.string.settings_sleep_minimum_segment_tooltip),
+        )
+
+        ThresholdSliderItem(
+            label = stringResource(R.string.settings_sleep_architecture_coverage_label),
+            value = supplementalArchitectureCoveragePercent,
+            onValueChange = { supplementalArchitectureCoveragePercent = it },
+            onValueChangeFinished = {
+                onEvent(
+                    SettingsEvent.SupplementalArchitectureCoveragePercentChanged(
+                        supplementalArchitectureCoveragePercent.roundToInt(),
+                    ),
+                )
+            },
+            valueRange = architectureCoverageRange,
+            steps =
+                steppedSliderSteps(
+                    min = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+                    max = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+                    step = SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_STEP_PERCENT,
+                ),
+            displayValue =
+                stringResource(
+                    R.string.settings_sleep_percent_value,
+                    supplementalArchitectureCoveragePercent.roundToInt(),
+                ),
+            description = stringResource(R.string.settings_sleep_architecture_coverage_tooltip),
+        )
     }
 }
 
@@ -245,3 +376,9 @@ fun Float.toSleepHoursText(): String {
     val minutes = totalMinutes % 60
     return if (minutes == 0) "${hours}h" else "${hours}h ${minutes}m"
 }
+
+private fun steppedSliderSteps(
+    min: Int,
+    max: Int,
+    step: Int,
+): Int = ((max - min) / step) - 1

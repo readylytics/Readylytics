@@ -96,6 +96,7 @@ class ScoringRepositoryN1Test {
         val historicSessions = (1..9).map { makeSleepSession("historic_$it", it) }
         val todaySession = makeSleepSession("today", 0)
         coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
+        coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.getSince(any()) } returns historicSessions + todaySession
         coEvery { sleepSessionDao.getBetween(any(), any()) } returns historicSessions + todaySession
 
@@ -143,7 +144,7 @@ class ScoringRepositoryN1Test {
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
         val hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository)
         val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository)
-        val nadirAnalyzer = SleepNadirAnalyzer(scoringHistoryRepository, scoringCalculator)
+        val nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator)
         val coverageValidator = HrCoverageValidator()
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
@@ -276,8 +277,13 @@ class ScoringRepositoryN1Test {
 
             repo.computeAndPersistDailySummary(LocalDate.now())
 
-            // Should only fetch HRV samples for the valid session for baseline median
-            coVerify { hrvDao.getSleepRmssdForSessionsMap(listOf("valid")) }
+            // Batch path fetches both sessions once, then filters invalid nights in memory.
+            coVerify { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) }
+            coVerify {
+                heartRateDao.getSleepHrProjectionForSessions(
+                    match { it.containsAll(listOf("valid", "short")) },
+                )
+            }
         }
 
     @Test
@@ -316,10 +322,9 @@ class ScoringRepositoryN1Test {
     fun `batch fetch replaces per-session getMinHrInRange calls`() =
         runTest {
             repo.computeAndPersistDailySummary(LocalDate.now())
-            // Two batch fetches: one for the everyday-HR load window (full day) and one for the
-            // sleep-metrics wake-HR window. The key invariant is that no per-session getMinHrInRange
-            // calls are used.
-            coVerify(exactly = 2) { heartRateDao.getByTimeRange(any(), any()) }
+            // One full-day HR batch for load, one or more projection batches for sleep-baseline math.
+            coVerify(atLeast = 1) { heartRateDao.getByTimeRange(any(), any()) }
+            coVerify(atLeast = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
             coVerify(exactly = 0) { heartRateDao.getMinHrInRange(any(), any()) }
         }
 
@@ -335,7 +340,7 @@ class ScoringRepositoryN1Test {
             repo.computeAndPersistDailySummary(LocalDate.now())
 
             coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
-            coVerify(atLeast = 1) { heartRateDao.getAvgSleepHrForSessions(any()) }
+            coVerify(atLeast = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
             coVerify(exactly = 1) { hrvDao.getSleepRmssdForSession(any()) }
             coVerify(exactly = 0) { heartRateDao.getAvgSleepHr(any()) }
         }

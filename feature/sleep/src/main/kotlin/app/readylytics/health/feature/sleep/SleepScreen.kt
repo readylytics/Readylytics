@@ -47,6 +47,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.deepSleepStatus
 import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
+import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString
@@ -83,6 +84,7 @@ fun SleepScreen(
     earliestDate: java.time.LocalDate? = null,
 ) {
     val scrollState = rememberScrollState()
+    val singleSessionVisual = uiState.latestSession
     val (trendScrollState, trendZoomState) =
         ChartDefaults.rememberChartState(
             rangeDays = uiState.selectedTrendRange.days,
@@ -182,7 +184,7 @@ fun SleepScreen(
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 SleepArchitectureBar(
-                    session = uiState.latestSession,
+                    session = singleSessionVisual,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -201,7 +203,7 @@ fun SleepScreen(
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             ) {
                 SleepStagesChart(
-                    session = uiState.latestSession,
+                    session = singleSessionVisual,
                     stageTimeline = uiState.stageTimeline,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -265,6 +267,7 @@ fun SleepScreen(
             MetricsGrid(
                 uiState = uiState,
                 circadianResult = circadianConsistency,
+                singleSessionVisual = singleSessionVisual,
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )
         }
@@ -279,9 +282,10 @@ fun SleepScreen(
 private fun MetricsGrid(
     uiState: SleepUiState,
     circadianResult: CircadianConsistencyResult,
+    singleSessionVisual: SleepSessionData?,
     modifier: Modifier = Modifier,
 ) {
-    val session = uiState.latestSession
+    val session = singleSessionVisual
     val summary = uiState.latestSummary
     val metrics = uiState.latestMetrics
 
@@ -380,6 +384,29 @@ private fun MetricsGrid(
                 )
             }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCard(
+                    title = stringResource(R.string.card_title_nap_duration),
+                    value = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0),
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = stringResource(R.string.tooltip_nap_duration),
+                    onClick = null,
+                )
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCard(
+                    title = stringResource(R.string.card_title_nap_count),
+                    value = metrics?.napCount?.toString() ?: "0",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = stringResource(R.string.tooltip_nap_count),
+                    onClick = null,
+                )
+            }
+        }
     }
 }
 
@@ -389,6 +416,17 @@ private fun MetricsGridSkeleton(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),

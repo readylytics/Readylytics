@@ -34,6 +34,11 @@ data class SleepSettingsState(
     val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
     val strainLoadSourceMode: LoadSourceMode = SettingsDefaults.STRAIN_LOAD_SOURCE_MODE,
     val rasSourceMode: LoadSourceMode = SettingsDefaults.RAS_SOURCE_MODE,
+    val coreMergeGapMinutes: Int = SettingsDefaults.CORE_MERGE_GAP_MINUTES,
+    val supplementalCutoffMinutesOfDay: Int = SettingsDefaults.SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+    val minimumCountedSleepSegmentMinutes: Int = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+    val supplementalArchitectureCoveragePercent: Int =
+        SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
 )
 
 data class PhysiologySettingsState(

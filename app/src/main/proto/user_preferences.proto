@@ -197,6 +197,18 @@ message UserPreferencesProto {
     // Maximum offset from each 1/2/3-minute HRR target used for nearest-sample matching.
     // Zero means unset and resolves to SettingsDefaults.HRR_TOLERANCE_SECONDS.
     int32 hrr_tolerance_seconds = 75;
+
+    // Gap threshold for merging same-day sleep segments into one core block.
+    optional int32 core_merge_gap_minutes = 76;
+
+    // Minutes from midnight after which same-day sessions are treated as core sleep candidates.
+    optional int32 supplemental_cutoff_minutes_of_day = 77;
+
+    // Minimum segment duration counted toward daily sleep aggregation.
+    optional int32 minimum_counted_sleep_segment_minutes = 78;
+
+    // Required stage coverage for supplemental blocks to contribute architecture totals.
+    optional int32 supplemental_architecture_coverage_percent = 79;
 }
 
 enum TrimpMethodProto {

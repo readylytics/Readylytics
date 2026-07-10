@@ -52,6 +52,40 @@ class IntRangeRuleTest {
     }
 }
 
+class IntStepRangeRuleTest {
+    private val rule = IntStepRangeRule(min = 30, max = 240, step = 30, errorMessage = "Must be 30-240 by 30")
+
+    @Test
+    fun `valid stepped value returns Valid`() {
+        assertTrue(rule.validate("180") is ValidationResult.Valid)
+    }
+
+    @Test
+    fun `minimum stepped value returns Valid`() {
+        assertTrue(rule.validate("30") is ValidationResult.Valid)
+    }
+
+    @Test
+    fun `maximum stepped value returns Valid`() {
+        assertTrue(rule.validate("240") is ValidationResult.Valid)
+    }
+
+    @Test
+    fun `off step value returns Invalid`() {
+        assertTrue(rule.validate("45") is ValidationResult.Invalid)
+    }
+
+    @Test
+    fun `out of range value returns Invalid`() {
+        assertTrue(rule.validate("270") is ValidationResult.Invalid)
+    }
+
+    @Test
+    fun `direct int validate within range returns Valid`() {
+        assertTrue(rule.validate(120) is ValidationResult.Valid)
+    }
+}
+
 // ─── FloatRangeRule ────────────────────────────────────────────────────────────
 
 class FloatRangeRuleTest {

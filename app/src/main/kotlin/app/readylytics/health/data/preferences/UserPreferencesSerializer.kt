@@ -13,7 +13,12 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
         UserPreferencesProto
             .newBuilder()
             .setGoalSleepHours(SettingsDefaults.GOAL_SLEEP_HOURS)
-            .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${SettingsDefaults.SYNC_PREFERENCE.name}"))
+            .setCoreMergeGapMinutes(SettingsDefaults.CORE_MERGE_GAP_MINUTES)
+            .setSupplementalCutoffMinutesOfDay(SettingsDefaults.SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY)
+            .setMinimumCountedSleepSegmentMinutes(SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES)
+            .setSupplementalArchitectureCoveragePercent(
+                SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+            ).setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${SettingsDefaults.SYNC_PREFERENCE.name}"))
             .setSyncIntervalHours(SettingsDefaults.SYNC_INTERVAL_HOURS)
             .setLastSyncTimestamp(SettingsDefaults.LAST_SYNC_TIMESTAMP)
             .setMaxHeartRate(SettingsDefaults.MAX_HEART_RATE)
@@ -95,6 +100,10 @@ fun UserPreferences.toProto(): UserPreferencesProto {
     val builder = UserPreferencesProto.newBuilder()
     builder
         .setGoalSleepHours(domain.goalSleepHours)
+        .setCoreMergeGapMinutes(domain.coreMergeGapMinutes)
+        .setSupplementalCutoffMinutesOfDay(domain.supplementalCutoffMinutesOfDay)
+        .setMinimumCountedSleepSegmentMinutes(domain.minimumCountedSleepSegmentMinutes)
+        .setSupplementalArchitectureCoveragePercent(domain.supplementalArchitectureCoveragePercent)
         .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${domain.syncPreference.name}"))
         .setSyncIntervalHours(domain.syncIntervalHours)
         .setLastSyncTimestamp(domain.lastSyncTimestamp)

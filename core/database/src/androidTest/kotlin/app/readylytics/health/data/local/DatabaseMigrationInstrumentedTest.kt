@@ -52,6 +52,32 @@ class DatabaseMigrationInstrumentedTest {
         }
     }
 
+    @Test
+    fun migrate4To5AddsNapColumnsAndPreservesExistingData() {
+        helper.createDatabase(TEST_DATABASE, 4).apply {
+            execSQL(
+                "INSERT INTO daily_summaries (dateMidnightMs, diag_isCalibrating, diag_stagesSuspicious, diag_lateNadir, diag_hrvMissing, diag_timezoneJump) VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf<Any>(1_234L, 0, 0, 0, 0, 0),
+            )
+            close()
+        }
+
+        val database =
+            helper.runMigrationsAndValidate(
+                TEST_DATABASE,
+                5,
+                true,
+                *DatabaseMigrations.all,
+            )
+
+        database.query("SELECT dateMidnightMs, supplementalSleepDurationMinutes, napCount FROM daily_summaries").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1_234L, cursor.getLong(0))
+            assertTrue(cursor.isNull(1))
+            assertTrue(cursor.isNull(2))
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "audit-migration-test"
     }

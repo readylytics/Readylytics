@@ -227,4 +227,17 @@ class DailyMetricsMapperTest {
         val summary = DailySummary(date = date, hrvMuMssd = null, hrvBaseline = null)
         assertNull(DailyMetricsMapper.hrvBaselineRounded(summary, prefs))
     }
+
+    @Test
+    fun `nap duration maps and formats correctly`() {
+        val summaryNull = DailySummary(date = date, supplementalSleepDurationMinutes = null, napCount = null)
+        val metricsNull = DailyMetricsMapper.toMetrics(summaryNull, prefs)
+        assertNull(metricsNull.napDurationDisplay)
+        assertNull(metricsNull.napCount)
+
+        val summaryVal = DailySummary(date = date, supplementalSleepDurationMinutes = 45, napCount = 2)
+        val metricsVal = DailyMetricsMapper.toMetrics(summaryVal, prefs)
+        assertEquals("0h 45m", metricsVal.napDurationDisplay)
+        assertEquals(2, metricsVal.napCount)
+    }
 }

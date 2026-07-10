@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.domain.model.DailySummaryEntity
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.stdev
@@ -28,6 +29,14 @@ class ComputeHistoricalBaselinesUseCase
         val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
         val rasScalingFactor = prefs.rasScalingFactor
         val sigmaPrior = profile.lnSigmaPrior
+        val sleepDayPolicy =
+            SleepDayPolicy(
+                coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                scoringZoneId = prefs.scoringZone(),
+            )
 
         // Batch all per-day baseline windows (HRV mu/sigma + RHR) in a fixed, small number of DB
         // reads for the entire history instead of ~11 queries per day (classic N+1). The batched
@@ -35,7 +44,11 @@ class ComputeHistoricalBaselinesUseCase
         // frozen baseline values are identical — see BaselineComputer.computeBackfillBaselines and
         // its equivalence test.
         val baselines =
-            baselineComputer.computeBackfillBaselines(allDailySummaries, prefs.restingHrPercentile)
+            baselineComputer.computeBackfillBaselines(
+                allDailySummaries,
+                prefs.restingHrPercentile,
+                sleepDayPolicy = sleepDayPolicy,
+            )
 
         return allDailySummaries.mapNotNull { summary ->
             val windows = baselines[summary.dateMidnightMs] ?: return@mapNotNull null

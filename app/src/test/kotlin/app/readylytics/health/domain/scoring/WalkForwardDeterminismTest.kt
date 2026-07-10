@@ -125,7 +125,7 @@ class WalkForwardDeterminismTest {
                 baselineComputer.computeHrvWindowsBetween(
                     fromMs = targetDayMs,
                     toMs = targetDayEndMs,
-                    excludeSessionId = allSessions[60].id,
+                    excludeSessionIds = setOf(allSessions[60].id),
                 )
 
             // Scenario B: Room has all 120 days (resync-equivalent).
@@ -141,7 +141,7 @@ class WalkForwardDeterminismTest {
                 baselineComputer.computeHrvWindowsBetween(
                     fromMs = targetDayMs,
                     toMs = targetDayEndMs,
-                    excludeSessionId = allSessions[60].id,
+                    excludeSessionIds = setOf(allSessions[60].id),
                 )
 
             assertNotNull(baselinesA)

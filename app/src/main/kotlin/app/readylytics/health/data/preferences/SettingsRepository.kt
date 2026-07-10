@@ -94,6 +94,17 @@ class SettingsRepository
 
         override suspend fun updateGoalSleepHours(hours: Float) = sleep.updateGoalSleepHours(hours)
 
+        override suspend fun updateCoreMergeGapMinutes(minutes: Int) = sleep.updateCoreMergeGapMinutes(minutes)
+
+        override suspend fun updateSupplementalCutoffMinutesOfDay(minutes: Int) =
+            sleep.updateSupplementalCutoffMinutesOfDay(minutes)
+
+        override suspend fun updateMinimumCountedSleepSegmentMinutes(minutes: Int) =
+            sleep.updateMinimumCountedSleepSegmentMinutes(minutes)
+
+        override suspend fun updateSupplementalArchitectureCoveragePercent(percent: Int) =
+            sleep.updateSupplementalArchitectureCoveragePercent(percent)
+
         override suspend fun updateHrvBaselineOverride(rmssdMs: Float?) = physiology.updateHrvBaselineOverride(rmssdMs)
 
         override suspend fun updateRhrBaselineOverride(bpm: Float?) = physiology.updateRhrBaselineOverride(bpm)

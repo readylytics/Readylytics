@@ -7,6 +7,22 @@ import app.readylytics.health.domain.scoring.TrimpModel
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
+    const val CORE_MERGE_GAP_MINUTES = 180
+    const val MIN_CORE_MERGE_GAP_MINUTES = 30
+    const val MAX_CORE_MERGE_GAP_MINUTES = 240
+    const val CORE_MERGE_GAP_STEP_MINUTES = 30
+    const val SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY = 1200
+    const val MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY = 840
+    const val MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY = 1380
+    const val SUPPLEMENTAL_CUTOFF_STEP_MINUTES = 30
+    const val MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES = 15
+    const val MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES = 5
+    const val MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES = 60
+    const val MINIMUM_COUNTED_SLEEP_SEGMENT_STEP_MINUTES = 5
+    const val SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT = 75
+    const val MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT = 25
+    const val MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT = 100
+    const val SUPPLEMENTAL_ARCHITECTURE_COVERAGE_STEP_PERCENT = 5
     val HRV_BASELINE_OVERRIDE: Float? = null
     val RHR_BASELINE_OVERRIDE: Float? = null
     val SYNC_PREFERENCE = SyncPreference.BY_TIME
@@ -101,4 +117,61 @@ object SettingsDefaults {
             CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = true, position = 15),
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
         )
+}
+
+fun normalizeCoreMergeGapMinutes(value: Int): Int =
+    normalizeSteppedPreference(
+        value = value,
+        defaultValue = SettingsDefaults.CORE_MERGE_GAP_MINUTES,
+        minValue = SettingsDefaults.MIN_CORE_MERGE_GAP_MINUTES,
+        maxValue = SettingsDefaults.MAX_CORE_MERGE_GAP_MINUTES,
+        step = SettingsDefaults.CORE_MERGE_GAP_STEP_MINUTES,
+    )
+
+fun normalizeSupplementalCutoffMinutesOfDay(value: Int): Int =
+    normalizeSteppedPreference(
+        value = value,
+        defaultValue = SettingsDefaults.SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+        minValue = SettingsDefaults.MIN_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+        maxValue = SettingsDefaults.MAX_SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY,
+        step = SettingsDefaults.SUPPLEMENTAL_CUTOFF_STEP_MINUTES,
+    )
+
+fun normalizeMinimumCountedSleepSegmentMinutes(value: Int): Int =
+    normalizeSteppedPreference(
+        value = value,
+        defaultValue = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+        minValue = SettingsDefaults.MIN_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+        maxValue = SettingsDefaults.MAX_MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
+        step = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_STEP_MINUTES,
+    )
+
+fun normalizeSupplementalArchitectureCoveragePercent(value: Int): Int =
+    normalizeSteppedPreference(
+        value = value,
+        defaultValue = SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+        minValue = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+        maxValue = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+        step = SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_STEP_PERCENT,
+    )
+
+private fun normalizeSteppedPreference(
+    value: Int,
+    defaultValue: Int,
+    minValue: Int,
+    maxValue: Int,
+    step: Int,
+): Int {
+    if (value == 0) return defaultValue
+    val clamped = value.coerceIn(minValue, maxValue)
+    val stepsFromMin = ((clamped - minValue) / step.toFloat()).toInt()
+    val lower = minValue + (stepsFromMin * step)
+    val upper = (lower + step).coerceAtMost(maxValue)
+    return if (upper == lower) {
+        lower
+    } else if (clamped - lower < upper - clamped) {
+        lower
+    } else {
+        upper
+    }
 }

@@ -81,7 +81,7 @@ class SleepTimeGaugeDataTest {
     }
 
     @Test
-    fun `missing sleep session keeps calibrating status even when summary has duration`() {
+    fun `missing sleep session still shows summary-based duration status when summary has duration`() {
         val data =
             buildSleepTimeGaugeData(
                 session = null,
@@ -89,9 +89,23 @@ class SleepTimeGaugeDataTest {
                 goalSleepHours = 8f,
             )
 
-        assertNull(data.progress)
-        assertEquals("—", data.displayText)
-        assertEquals(MetricStatus.CALIBRATING, data.status)
+        assertEquals(0.5f, data.progress!!, 0.001f)
+        assertEquals("8h", data.displayText)
+        assertEquals(MetricStatus.OPTIMAL, data.status)
+    }
+
+    @Test
+    fun `aggregate duration overrides single session duration when day total differs`() {
+        val data =
+            buildSleepTimeGaugeData(
+                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
+                summary = DailySummary(date = LocalDate.of(2026, 6, 11), sleepDurationMinutes = 540),
+                goalSleepHours = 8f,
+            )
+
+        assertEquals(0.5625f, data.progress!!, 0.001f)
+        assertEquals("9h", data.displayText)
+        assertEquals(MetricStatus.OPTIMAL, data.status)
     }
 
     private fun sleepSession(
