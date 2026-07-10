@@ -149,11 +149,11 @@ object ScoringConstants {
     object TrimpIntensityThresholds {
         // Zone-weighted TRIMP/min boundaries for workout intensity classification
         // REF: Firstbeat Sports Science, TRIMP normalization for cross-session intensity comparison
-        const val VERY_LIGHT_MAX = 0.5f      // < 0.5
-        const val LIGHT_MAX = 1.0f           // 0.5 - 1.0
-        const val MODERATE_MAX = 1.5f        // 1.0 - 1.5
-        const val HARD_MAX = 2.2f            // 1.5 - 2.2
-        // Very Hard: > 2.2f
+        const val VERY_LIGHT_MAX = 0.75f     // < 0.75
+        const val LIGHT_MAX = 1.25f          // 0.75 - 1.25
+        const val MODERATE_MAX = 1.75f       // 1.25 - 1.75
+        const val HARD_MAX = 2.25f           // 1.75 - 2.25
+        // Very Hard: > 2.25f
     }
 }
 
