@@ -31,9 +31,13 @@ import app.readylytics.health.domain.sync.SleepSessionInput
 import app.readylytics.health.domain.sync.SleepStageInput
 import app.readylytics.health.domain.sync.WeightInput
 import app.readylytics.health.domain.sync.WorkoutInput
+import app.readylytics.health.domain.util.logD
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.yield
 
 @Singleton
 class RoomHealthIngestionStore
@@ -52,6 +56,8 @@ class RoomHealthIngestionStore
         private val transactionRunner: TransactionRunner,
     ) : HealthIngestionStore {
         override suspend fun persist(batch: HealthIngestionBatch) {
+            // Persist parent and low-volume records first. Sample batches can then commit
+            // independently; stable IDs make a retry of this window idempotent.
             transactionRunner.runInTransaction {
                 sleepSessionDao.upsertAll(batch.sleepSessions.map(SleepSessionInput::toEntity))
                 val sessionIds = batch.sleepSessions.map(SleepSessionInput::id).toSet()
@@ -62,14 +68,37 @@ class RoomHealthIngestionStore
                         .map(SleepStageInput::toEntity),
                 )
                 workoutDao.upsertAll(batch.workouts.map(WorkoutInput::toEntity))
-                heartRateDao.upsertAll(batch.heartRateSamples.map(HeartRateInput::toEntity))
-                hrvDao.upsertAll(batch.hrvSamples.map(HrvInput::toEntity))
                 weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
                 bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
                 bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))
                 oxygenSaturationRecordDao.upsertAll(
                     batch.oxygenSaturationSamples.map(OxygenSaturationInput::toEntity),
                 )
+            }
+
+            var persistedHeartRateSamples = 0
+            batch.heartRateSamples.forEachPersistenceBatch { samples ->
+                val startedAt = System.currentTimeMillis()
+                transactionRunner.runInTransaction {
+                    heartRateDao.upsertAll(samples.map(HeartRateInput::toEntity))
+                }
+                persistedHeartRateSamples += samples.size
+                logD(TAG) {
+                    "Persisted HR batch: $persistedHeartRateSamples/${batch.heartRateSamples.size} " +
+                        "samples in ${System.currentTimeMillis() - startedAt}ms"
+                }
+            }
+            var persistedHrvSamples = 0
+            batch.hrvSamples.forEachPersistenceBatch { samples ->
+                val startedAt = System.currentTimeMillis()
+                transactionRunner.runInTransaction {
+                    hrvDao.upsertAll(samples.map(HrvInput::toEntity))
+                }
+                persistedHrvSamples += samples.size
+                logD(TAG) {
+                    "Persisted HRV batch: $persistedHrvSamples/${batch.hrvSamples.size} " +
+                        "samples in ${System.currentTimeMillis() - startedAt}ms"
+                }
             }
         }
 
@@ -100,6 +129,22 @@ class RoomHealthIngestionStore
             return workoutDao.countInRange(startMs, endMs)
         }
     }
+
+private const val TAG = "RoomHealthIngestionStore"
+
+internal suspend fun <T> List<T>.forEachPersistenceBatch(
+    batchSize: Int = 5_000,
+    action: suspend (List<T>) -> Unit,
+) {
+    require(batchSize > 0) { "batchSize must be positive" }
+    var start = 0
+    while (start < size) {
+        currentCoroutineContext().ensureActive()
+        action(subList(start, minOf(start + batchSize, size)))
+        start += batchSize
+        yield()
+    }
+}
 
 private fun SleepSessionInput.toEntity() =
     SleepSessionEntity(

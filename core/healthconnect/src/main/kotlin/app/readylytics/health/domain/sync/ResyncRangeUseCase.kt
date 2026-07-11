@@ -5,6 +5,7 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
 import kotlinx.coroutines.CancellationException
@@ -358,6 +359,9 @@ class ResyncRangeUseCase
                     Result.success(Unit)
                 } catch (e: CancellationException) {
                     logD(TELEMETRY_TAG) { "Resync cancelled." }
+                    throw e
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    logD(TELEMETRY_TAG) { "Resync stopped by Health Connect permission failure: ${e.message}" }
                     throw e
                 } catch (e: Exception) {
                     logD(TELEMETRY_TAG) { "Resync failed with exception: ${e.message}" }

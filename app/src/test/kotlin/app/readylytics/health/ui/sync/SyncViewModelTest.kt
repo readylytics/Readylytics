@@ -16,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -113,15 +114,55 @@ class SyncViewModelTest {
     }
 
     @Test
-    fun onPermissionsGranted_whenImmediateSyncThrowsPermissionRevoked_returnsNeedsPermissions() {
+    fun onPermissionsGranted_whenPermissionFailureRecheckIsMissing_returnsNeedsPermissions() {
         coEvery {
             foregroundSyncController.triggerImmediateSync()
         } throws HealthConnectPermissionRevokedException(SecurityException("revoked"))
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Missing(setOf("sleep"))
 
         viewModel.onPermissionsGranted()
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertIs<SyncUiState.NeedsPermissions>(viewModel.uiState.value)
+    }
+
+    @Test
+    fun onPermissionsGranted_whenPermissionFailureRecheckIsUnavailable_returnsUnavailable() {
+        coEvery {
+            foregroundSyncController.triggerImmediateSync()
+        } throws HealthConnectPermissionRevokedException(SecurityException("provider unavailable"))
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Unavailable
+
+        viewModel.onPermissionsGranted()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertIs<SyncUiState.Unavailable>(viewModel.uiState.value)
+    }
+
+    @Test
+    fun onPermissionsGranted_whenPermissionFailureRecheckIsGranted_returnsError() {
+        coEvery {
+            foregroundSyncController.triggerImmediateSync()
+        } throws HealthConnectPermissionRevokedException(SecurityException("record read rejected"))
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
+
+        viewModel.onPermissionsGranted()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertIs<SyncUiState.Error>(viewModel.uiState.value)
+    }
+
+    @Test
+    fun onPermissionsGranted_whenPermissionRecheckThrows_returnsError() {
+        coEvery {
+            foregroundSyncController.triggerImmediateSync()
+        } throws HealthConnectPermissionRevokedException(SecurityException("record read rejected"))
+        coEvery { hcRepo.checkPermissions() } throws IllegalStateException("provider unavailable")
+
+        viewModel.onPermissionsGranted()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertIs<SyncUiState.Error>(viewModel.uiState.value)
     }
 
     @Test
@@ -157,6 +198,31 @@ class SyncViewModelTest {
             selectedDateRepository.advanceTodayIfNeeded()
             foregroundSyncController.evaluateAndSync()
         }
+    }
+
+    @Test
+    fun onAppForeground_whileCheckIsActive_reusesExistingJob() {
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
+        coEvery { foregroundSyncController.evaluateAndSync() } coAnswers { awaitCancellation() }
+
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.runCurrent()
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.runCurrent()
+
+        coVerify(exactly = 1) { foregroundSyncController.evaluateAndSync() }
+    }
+
+    @Test
+    fun onAppForeground_afterCheckCompletes_allowsNextEvaluation() {
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
+
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 2) { foregroundSyncController.evaluateAndSync() }
     }
 
     @Test

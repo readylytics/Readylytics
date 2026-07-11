@@ -5,6 +5,7 @@ import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
 import io.mockk.*
@@ -101,6 +102,22 @@ class HealthResyncWorkerTest {
             assertEquals(
                 androidx.work.ListenableWorker.Result
                     .retry(),
+                result,
+            )
+        }
+
+    @Test
+    fun `doWork returns terminal failure when Health Connect permission is revoked`() =
+        runBlocking {
+            coEvery { useCase.execute(any()) } throws
+                HealthConnectPermissionRevokedException(SecurityException("permission revoked"))
+            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+
+            val result = worker.doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .failure(),
                 result,
             )
         }
