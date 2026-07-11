@@ -64,7 +64,8 @@ fun MainScaffold(
                 !dest.hasRoute(AppDestination.WeightDetail::class) &&
                 !dest.hasRoute(AppDestination.BodyFatDetail::class) &&
                 !dest.hasRoute(AppDestination.BloodPressureDetail::class) &&
-                !dest.hasRoute(AppDestination.About::class)
+                !dest.hasRoute(AppDestination.About::class) &&
+                !dest.hasRoute(AppDestination.SyncProgress::class)
         } ?: true
 
     val snackbarHostState = remember { SnackbarHostState() }
