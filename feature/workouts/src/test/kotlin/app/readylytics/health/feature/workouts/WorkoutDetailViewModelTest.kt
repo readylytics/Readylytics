@@ -83,7 +83,7 @@ class WorkoutDetailViewModelTest {
     }
 
     @Test
-    fun `detail state uses rounded load metrics from shared use case`() =
+    fun `loadWorkout publishes detail and cached route chart data`() =
         runTest {
             val date = LocalDate.of(2026, 6, 9)
             val startMs =
@@ -107,6 +107,24 @@ class WorkoutDetailViewModelTest {
                     zone5Minutes = 0f,
                     trimp = 115.6f,
                     avgHr = 134f,
+                    routeState = "PENDING_FOREGROUND_LOAD",
+                )
+            val routePoints =
+                listOf(
+                    RoutePoint(latitude = 60.1699, longitude = 24.9384, altitude = 10.0, timestampMs = startMs),
+                    RoutePoint(
+                        latitude = 60.1709,
+                        longitude = 24.9394,
+                        altitude = 11.0,
+                        timestampMs = startMs + 60_000L,
+                    ),
+                    RoutePoint(
+                        latitude = 60.1719,
+                        longitude = 24.9404,
+                        altitude = 12.0,
+                        timestampMs =
+                            startMs + 120_000L,
+                    ),
                 )
             val dbSamples =
                 listOf(
@@ -118,6 +136,8 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
             coEvery { workoutRepository.getById("run-1") } returns workout
+            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { workoutRepository.getRoutePoints("run-1") } returns routePoints
             coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
             coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns dbSamples
             coEvery { dailySummaryRepository.getByDate(any()) } returns
@@ -158,6 +178,8 @@ class WorkoutDetailViewModelTest {
                 viewModel.uiState.value.classification
                     ?.finalLoad,
             )
+            assertEquals(RouteDataState.Available, viewModel.uiState.value.routeUiState.state)
+            assertEquals(2, viewModel.uiState.value.paceSpeedChartData.size)
         }
 
     @Test

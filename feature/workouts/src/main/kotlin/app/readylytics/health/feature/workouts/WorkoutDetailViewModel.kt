@@ -79,7 +79,6 @@ data class WorkoutDetailUiState(
     val classification: WorkoutLoadClassification? = null,
     val isLoading: Boolean = true,
     val routeUiState: RouteUiState = RouteUiState(),
-    // Populated in Task 8 (Vico Performance Charts)
     val paceSpeedChartData: List<Pair<Float, Float>> = emptyList(),
     val elevationChartData: List<Pair<Float, Float>> = emptyList(),
     val isSpeedOriented: Boolean = false,
@@ -199,6 +198,7 @@ class WorkoutDetailViewModel
                         isLoading = false,
                     )
                 }
+                loadRouteDetail(workout)
             }
         }
 
