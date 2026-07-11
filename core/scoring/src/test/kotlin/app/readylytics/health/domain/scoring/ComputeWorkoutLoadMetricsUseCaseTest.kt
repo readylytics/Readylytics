@@ -13,7 +13,13 @@ import kotlin.test.assertEquals
 class ComputeWorkoutLoadMetricsUseCaseTest {
     private val computeWorkoutTrimpUseCase = mockk<ComputeWorkoutTrimpUseCase>()
     private val scoringCalculator = mockk<ScoringCalculator>()
-    private val useCase = ComputeWorkoutLoadMetricsUseCase(computeWorkoutTrimpUseCase, scoringCalculator)
+    private val workoutLoadClassifier = WorkoutLoadClassifier()
+    private val useCase =
+        ComputeWorkoutLoadMetricsUseCase(
+            computeWorkoutTrimpUseCase,
+            scoringCalculator,
+            workoutLoadClassifier,
+        )
 
     @Test
     fun `uses stored workout trimp and returns rounded display values`() {
@@ -65,6 +71,9 @@ class ComputeWorkoutLoadMetricsUseCaseTest {
         assertEquals(0.365f, result.preciseGainedStrain)
         assertEquals(0.37f, result.roundedGainedStrain)
         assertEquals("0.37", result.gainedStrainDisplay)
+        assertEquals(WorkoutLoadLevel.MODERATE, result.classification?.baseLoad)
+        assertEquals(WorkoutIntensityLevel.HARD, result.classification?.intensity)
+        assertEquals(WorkoutLoadLevel.HARD, result.classification?.finalLoad)
         verify {
             computeWorkoutTrimpUseCase.execute(
                 workoutStartTime = workout.startTime,
@@ -76,5 +85,53 @@ class ComputeWorkoutLoadMetricsUseCaseTest {
                 storedTrimp = workout.trimp,
             )
         }
+    }
+
+    @Test
+    fun `leaves intensity unavailable when avg hr is missing`() {
+        val workout =
+            WorkoutData(
+                id = "run-2",
+                startTime = 1_000L,
+                endTime = 3_601_000L,
+                exerciseType = "RUNNING",
+                durationMinutes = 60,
+                zone1Minutes = 0f,
+                zone2Minutes = 10f,
+                zone3Minutes = 20f,
+                zone4Minutes = 30f,
+                zone5Minutes = 0f,
+                trimp = 50f,
+                avgHr = 0f,
+            )
+        val workoutDate = LocalDate.of(2026, 6, 9)
+
+        every {
+            computeWorkoutTrimpUseCase.execute(
+                workoutStartTime = workout.startTime,
+                workoutEndTime = workout.endTime,
+                workoutAvgHr = workout.avgHr,
+                samples = emptyList(),
+                prefs = any(),
+                restingHrBaseline = 52f,
+                storedTrimp = workout.trimp,
+            )
+        } returns Result.success(50f)
+        every { scoringCalculator.computeAtlEmaWithDecay(any(), workoutDate, any()) } returnsMany listOf(2f, 1f)
+        every { scoringCalculator.computeCtlEmaWithDecay(any(), workoutDate, any()) } returnsMany listOf(1f, 1f)
+        every { scoringCalculator.computeStrainRatio(any(), any()) } returnsMany listOf(1.365f, 1.0f)
+
+        val result =
+            useCase.execute(
+                workout = workout,
+                workoutDate = workoutDate,
+                samples = emptyList(),
+                prefs = UserPreferences(),
+                restingHrBaseline = 52f,
+                trimpByDate = mapOf(workoutDate to 50f),
+            )
+
+        assertEquals(WorkoutLoadLevel.LIGHT, result.classification?.finalLoad)
+        assertEquals(null, result.classification?.intensity)
     }
 }

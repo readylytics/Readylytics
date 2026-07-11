@@ -4,6 +4,8 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.WorkoutData
+import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logW
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.max
@@ -13,6 +15,7 @@ class ComputeWorkoutLoadMetricsUseCase
     constructor(
         private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
         private val scoringCalculator: ScoringCalculator,
+        private val workoutLoadClassifier: WorkoutLoadClassifier,
     ) {
         fun execute(
             workout: WorkoutData,
@@ -53,6 +56,7 @@ class ComputeWorkoutLoadMetricsUseCase
 
             val gainedStrain = max(0f, srWith - srWithout)
             val roundedGainedStrain = MetricFormatter.roundStrain(gainedStrain)
+            val classification = classifyWorkoutLoad(workout, computedTrimp)
 
             return WorkoutLoadMetrics(
                 preciseTrimp = computedTrimp,
@@ -60,7 +64,38 @@ class ComputeWorkoutLoadMetricsUseCase
                 preciseGainedStrain = gainedStrain,
                 roundedGainedStrain = roundedGainedStrain,
                 gainedStrainDisplay = MetricFormatter.formatStrain(roundedGainedStrain),
+                classification = classification,
             )
+        }
+
+        private fun classifyWorkoutLoad(
+            workout: WorkoutData,
+            preciseTrimp: Float,
+        ): WorkoutLoadClassification? {
+            if (!preciseTrimp.isFinite() || preciseTrimp < 0f) {
+                logW("ComputeWorkoutLoadMetrics") {
+                    "Skipping workout load classification due to invalid TRIMP input"
+                }
+                return null
+            }
+
+            val trimpPerMinute =
+                preciseTrimp
+                    .takeIf { workout.durationMinutes > 0 && workout.avgHr > 0f && it > 0f }
+                    ?.let { it.toDouble() / workout.durationMinutes.toDouble() }
+
+            val classification = workoutLoadClassifier.classify(preciseTrimp.toDouble(), trimpPerMinute)
+            if (classification == null) {
+                logW("ComputeWorkoutLoadMetrics") {
+                    "Skipping workout load classification due to invalid workout load inputs"
+                }
+            } else if (classification.wasPromoted) {
+                logD("ComputeWorkoutLoadMetrics") {
+                    "Applied workout load promotion rule"
+                }
+            }
+
+            return classification
         }
 
         data class WorkoutLoadMetrics(
@@ -69,5 +104,6 @@ class ComputeWorkoutLoadMetricsUseCase
             val preciseGainedStrain: Float,
             val roundedGainedStrain: Float,
             val gainedStrainDisplay: String,
+            val classification: WorkoutLoadClassification?,
         )
     }

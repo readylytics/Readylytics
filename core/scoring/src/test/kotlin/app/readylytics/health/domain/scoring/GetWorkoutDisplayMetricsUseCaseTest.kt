@@ -94,6 +94,15 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                     preciseGainedStrain = 0.36f,
                     roundedGainedStrain = 0.36f,
                     gainedStrainDisplay = "0.36",
+                    classification =
+                        WorkoutLoadClassification(
+                            totalTrimp = 50.0,
+                            trimpPerMinute = 1.2,
+                            baseLoad = WorkoutLoadLevel.LIGHT,
+                            intensity = WorkoutIntensityLevel.LIGHT,
+                            finalLoad = WorkoutLoadLevel.LIGHT,
+                            wasPromoted = false,
+                        ),
                 )
             every {
                 computeWorkoutLoadMetricsUseCase.execute(
@@ -113,6 +122,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
             assertEquals("50", result.trimpDisplay)
             assertEquals(0.36f, result.gainedStrain)
             assertEquals("0.36", result.gainedStrainDisplay)
+            assertEquals(WorkoutLoadLevel.LIGHT, result.classification?.finalLoad)
 
             coVerify {
                 dailySummaryRepository.getByDate(midnight)

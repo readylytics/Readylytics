@@ -13,6 +13,9 @@ import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
+import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
+import app.readylytics.health.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.domain.scoring.WorkoutLoadLevel
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -128,6 +131,15 @@ class WorkoutDetailViewModelTest {
                     trimpDisplay = "116",
                     gainedStrain = 0.37f,
                     gainedStrainDisplay = "0.37",
+                    classification =
+                        WorkoutLoadClassification(
+                            totalTrimp = 115.6,
+                            trimpPerMinute = 1.93,
+                            baseLoad = WorkoutLoadLevel.MODERATE,
+                            intensity = WorkoutIntensityLevel.HARD,
+                            finalLoad = WorkoutLoadLevel.HARD,
+                            wasPromoted = true,
+                        ),
                 )
 
             viewModel.loadWorkout("run-1")
@@ -136,6 +148,11 @@ class WorkoutDetailViewModelTest {
             assertEquals(116, viewModel.uiState.value.computedTrimp)
             assertEquals(0.37f, viewModel.uiState.value.gainedStrain)
             assertEquals("0.37", viewModel.uiState.value.gainedStrainDisplay)
+            assertEquals(
+                WorkoutLoadLevel.HARD,
+                viewModel.uiState.value.classification
+                    ?.finalLoad,
+            )
         }
 
     @Test
@@ -194,6 +211,7 @@ class WorkoutDetailViewModelTest {
                     trimpDisplay = "116",
                     gainedStrain = 0.37f,
                     gainedStrainDisplay = "0.37",
+                    classification = null,
                 )
 
             // Recreate viewModel with pre-populated SavedStateHandle simulating process death recovery
@@ -261,6 +279,7 @@ class WorkoutDetailViewModelTest {
                     trimpDisplay = "116",
                     gainedStrain = 0.37f,
                     gainedStrainDisplay = "0.37",
+                    classification = null,
                 )
 
             viewModel.loadWorkout("run-1")
@@ -328,6 +347,7 @@ class WorkoutDetailViewModelTest {
                     trimpDisplay = "90",
                     gainedStrain = 0.25f,
                     gainedStrainDisplay = "0.25",
+                    classification = null,
                 )
 
             viewModel.loadWorkout("run-1")

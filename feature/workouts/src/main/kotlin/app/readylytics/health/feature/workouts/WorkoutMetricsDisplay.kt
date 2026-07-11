@@ -28,6 +28,7 @@ import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.WorkoutData
+import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.feature.workouts.R
 import java.time.Instant
 import java.time.ZoneId
@@ -40,6 +41,7 @@ fun WorkoutMetricsDisplay(
     gainedStrain: Float?,
     gainedStrainDisplay: String,
     ras: Float?,
+    classification: WorkoutLoadClassification?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         WorkoutHeader(workout)
@@ -88,6 +90,44 @@ fun WorkoutMetricsDisplay(
                     secondaryText = stringResource(R.string.workout_metric_points),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_ras),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                MetricCard(
+                    title = stringResource(R.string.workout_metric_overall_load),
+                    value =
+                        classification
+                            ?.finalLoad
+                            ?.let { stringResource(R.string.workout_metric_out_of_five, it.score()) }
+                            ?: "--",
+                    secondaryText =
+                        classification
+                            ?.finalLoad
+                            ?.let { stringResource(it.labelResId()) }
+                            ?: stringResource(R.string.workout_metric_unavailable),
+                    status = classification?.overallStatus() ?: MetricStatus.NEUTRAL,
+                    tooltip = stringResource(R.string.workout_tooltip_overall_load),
+                    modifier = Modifier.weight(1f),
+                )
+                MetricCard(
+                    title = stringResource(R.string.workout_metric_intensity),
+                    value =
+                        classification
+                            ?.intensity
+                            ?.let { stringResource(R.string.workout_metric_out_of_five, it.score()) }
+                            ?: "--",
+                    secondaryText =
+                        classification
+                            ?.intensity
+                            ?.let { stringResource(it.labelResId()) }
+                            ?: stringResource(R.string.workout_metric_unavailable),
+                    status = classification?.intensity?.metricStatus() ?: MetricStatus.NEUTRAL,
+                    tooltip = stringResource(R.string.workout_tooltip_intensity),
                     modifier = Modifier.weight(1f),
                 )
             }

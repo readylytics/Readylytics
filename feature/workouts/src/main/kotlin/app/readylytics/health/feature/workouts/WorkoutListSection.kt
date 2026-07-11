@@ -30,7 +30,6 @@ import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.feature.workouts.R
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -158,10 +157,12 @@ private fun WorkoutHistoryItem(
                 )
             },
             trailingContent = {
-                IntensityBadge(
-                    label = stringResource(workout.intensityLabelResId()),
-                    status = workout.intensityStatus(),
-                )
+                item.classification?.let { classification ->
+                    IntensityBadge(
+                        label = stringResource(classification.finalLoad.labelResId()),
+                        status = classification.overallBadgeStatus(),
+                    )
+                }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         )
@@ -191,20 +192,3 @@ private fun IntensityBadge(
         )
     }
 }
-
-private fun WorkoutData.intensityLabelResId(): Int =
-    when {
-        trimp > 200 -> R.string.workout_intensity_very_hard
-        trimp > 150 -> R.string.workout_intensity_hard
-        trimp > 100 -> R.string.workout_intensity_moderate
-        trimp > 50 -> R.string.workout_intensity_light
-        else -> R.string.workout_intensity_very_light
-    }
-
-private fun WorkoutData.intensityStatus(): MetricStatus =
-    when {
-        trimp > 200 -> MetricStatus.POOR
-        trimp > 150 -> MetricStatus.WARNING
-        trimp > 50 -> MetricStatus.OPTIMAL
-        else -> MetricStatus.CALIBRATING
-    }

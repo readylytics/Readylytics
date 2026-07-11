@@ -199,7 +199,12 @@
     <string name="about_glossary_rem">**REM** — the dreaming stage, important for memory and
         emotional processing.</string>
     <string name="about_glossary_trimp">**TRIMP (Training Impulse)** — a single number summarizing
-        the intensity-weighted duration of an exercise session.</string>
+        the intensity-weighted duration of an exercise session. On workout screens, **overall
+        load** is derived primarily from total TRIMP. **Intensity** is derived from TRIMP/min
+        (load density) and may promote a Moderate workout to Hard when `TRIMP &gt;= 90` and
+        `TRIMP/min &gt;= 1.75`, or a Hard workout to Very Hard when `TRIMP &gt;= 140` and
+        `TRIMP/min &gt;= 2.25`. These categorical labels do **not** replace numeric TRIMP in
+        ATL, CTL, Strain Ratio, Load Score, RAS, or Readiness calculations.</string>
     <string name="about_glossary_atl_ctl">**ATL / CTL** — short-term and long-term rolling averages
         of TRIMP. Borrowed from Banister\'s training-load model and used by most cycling and running
         apps.</string>
