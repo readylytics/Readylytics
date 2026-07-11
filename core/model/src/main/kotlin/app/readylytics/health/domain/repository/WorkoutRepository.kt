@@ -16,12 +16,33 @@ data class WorkoutData(
     val trimp: Float,
     val avgHr: Float,
     val deviceName: String? = null,
+    val routeState: String = "NOT_AVAILABLE",
+    val avgSpeedKmh: Float? = null,
+    val avgPaceMinKm: Float? = null,
+    val elevationGainMeters: Float? = null,
+    val totalDistanceMeters: Float? = null
+)
+
+data class RoutePoint(
+    val latitude: Double,
+    val longitude: Double,
+    val altitude: Double?,
+    val timestampMs: Long
 )
 
 interface WorkoutRepository {
     suspend fun getById(id: String): WorkoutData?
-
     suspend fun getEarliestWorkoutTimestamp(): Long?
-
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>
+
+    suspend fun getRoutePoints(workoutId: String): List<RoutePoint>
+    suspend fun updateRouteState(workoutId: String, routeState: String)
+    suspend fun saveRoutePoints(workoutId: String, points: List<RoutePoint>, stats: WorkoutStats)
 }
+
+data class WorkoutStats(
+    val avgSpeedKmh: Float?,
+    val avgPaceMinKm: Float?,
+    val elevationGainMeters: Float?,
+    val totalDistanceMeters: Float?
+)

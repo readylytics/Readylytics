@@ -19,6 +19,7 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import dagger.Module
 import dagger.Provides
@@ -81,6 +82,9 @@ object DatabaseModule {
 
     @Provides
     fun provideWorkoutDao(db: HealthDatabase): WorkoutDao = db.workoutDao()
+
+    @Provides
+    fun provideWorkoutRoutePointDao(db: HealthDatabase): WorkoutRoutePointDao = db.workoutRoutePointDao()
 
     @Provides
     fun provideDailySummaryDao(db: HealthDatabase): DailySummaryDao = db.dailySummaryDao()
