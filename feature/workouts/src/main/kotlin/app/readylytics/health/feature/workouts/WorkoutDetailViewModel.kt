@@ -25,6 +25,7 @@ import app.readylytics.health.feature.workouts.mappers.ChartDataMapper
 import app.readylytics.health.feature.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.feature.workouts.mappers.RecoveryMetricsMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -42,10 +43,15 @@ data class HeartRatePoint(
 
 sealed interface RouteDataState {
     object Loading : RouteDataState
+
     object NotAvailable : RouteDataState
+
     object PermissionRequired : RouteDataState
+
     object Available : RouteDataState
+
     object Empty : RouteDataState
+
     object Error : RouteDataState
 }
 
@@ -91,10 +97,10 @@ class WorkoutDetailViewModel
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
-
         companion object {
             private const val EXERCISE_TYPE_CYCLING = "8"
         }
+
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
 
@@ -208,7 +214,11 @@ class WorkoutDetailViewModel
                     if (permissionStatus is PermissionStatus.Missing &&
                         permissionStatus.missing.contains("android.permission.health.READ_EXERCISE_ROUTES")
                     ) {
-                        _uiState.update { it.copy(routeUiState = RouteUiState(state = RouteDataState.PermissionRequired)) }
+                        _uiState.update {
+                            it.copy(
+                                routeUiState = RouteUiState(state = RouteDataState.PermissionRequired),
+                            )
+                        }
                         return@launch
                     }
 
@@ -219,9 +229,10 @@ class WorkoutDetailViewModel
                     } else if (workout.routeState == "PENDING_FOREGROUND_LOAD") {
                         val hcRoute = hcRepo.readExerciseRoute(workout.id)
                         if (hcRoute != null && hcRoute.points.isNotEmpty()) {
-                            val routePoints = hcRoute.points.map {
-                                RoutePoint(it.latitude, it.longitude, it.altitude, it.timestampMs)
-                            }
+                            val routePoints =
+                                hcRoute.points.map {
+                                    RoutePoint(it.latitude, it.longitude, it.altitude, it.timestampMs)
+                                }
 
                             // Fallback calculations for stats
                             val latitudes = routePoints.map { it.latitude }.toDoubleArray()
@@ -230,59 +241,100 @@ class WorkoutDetailViewModel
                             val cumulativeDist = PaceSpeedCalculator.calculateCumulativeDistances(latitudes, longitudes)
                             val totalDistance = cumulativeDist.lastOrNull() ?: 0.0
 
-                            val elevationGain = if (altitudes.isNotEmpty()) ElevationGainCalculator.calculateAscent(altitudes) else 0.0
+                            val elevationGain =
+                                if (altitudes.isNotEmpty()) {
+                                    ElevationGainCalculator.calculateAscent(
+                                        altitudes,
+                                    )
+                                } else {
+                                    0.0
+                                }
 
                             val elapsedMinutes = (workout.endTime - workout.startTime) / 60000.0
-                            val avgSpeedKmh = if (elapsedMinutes > 0) (totalDistance / 1000.0) / (elapsedMinutes / 60.0) else 0.0
+                            val avgSpeedKmh =
+                                if (elapsedMinutes >
+                                    0
+                                ) {
+                                    (totalDistance / 1000.0) / (elapsedMinutes / 60.0)
+                                } else {
+                                    0.0
+                                }
 
-                            val stats = WorkoutStats(
-                                avgSpeedKmh = avgSpeedKmh.toFloat(),
-                                avgPaceMinKm = if (avgSpeedKmh > 0) (60.0 / avgSpeedKmh).toFloat() else 0f,
-                                elevationGainMeters = elevationGain.toFloat(),
-                                totalDistanceMeters = totalDistance.toFloat(),
-                            )
+                            val stats =
+                                WorkoutStats(
+                                    avgSpeedKmh = avgSpeedKmh.toFloat(),
+                                    avgPaceMinKm = if (avgSpeedKmh > 0) (60.0 / avgSpeedKmh).toFloat() else 0f,
+                                    elevationGainMeters = elevationGain.toFloat(),
+                                    totalDistanceMeters = totalDistance.toFloat(),
+                                )
 
                             workoutRepository.saveRoutePoints(workout.id, routePoints, stats)
                             processAndPublishRoute(workout, routePoints)
                         } else {
                             workoutRepository.updateRouteState(workout.id, "NOT_AVAILABLE")
-                            _uiState.update { it.copy(routeUiState = RouteUiState(state = RouteDataState.NotAvailable)) }
+                            _uiState.update {
+                                it.copy(
+                                    routeUiState = RouteUiState(state = RouteDataState.NotAvailable),
+                                )
+                            }
                         }
                     } else {
                         _uiState.update { it.copy(routeUiState = RouteUiState(state = RouteDataState.NotAvailable)) }
                     }
-                } catch (e: Exception) {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
                     _uiState.update { it.copy(routeUiState = RouteUiState(state = RouteDataState.Error)) }
                 }
             }
         }
 
-        private fun processAndPublishRoute(workout: WorkoutData, points: List<RoutePoint>) {
+        private fun processAndPublishRoute(
+            workout: WorkoutData,
+            points: List<RoutePoint>,
+        ) {
             val latitudes = points.map { it.latitude }.toDoubleArray()
             val longitudes = points.map { it.longitude }.toDoubleArray()
 
-            val projected = RouteProjector.project(
-                latitudes,
-                longitudes,
-                points.map { it.altitude ?: 0.0 }.toDoubleArray(),
-                points.map { it.timestampMs }.toLongArray(),
-            )
+            val projected =
+                RouteProjector.project(
+                    latitudes,
+                    longitudes,
+                    points.map { it.altitude ?: 0.0 }.toDoubleArray(),
+                    points.map { it.timestampMs }.toLongArray(),
+                )
             val simplified = RouteSimplifier.simplify(projected, maxPoints = 200)
 
             // Reuse extracted lat/lon arrays for cumulative distance computation
             val cumulativeDist = PaceSpeedCalculator.calculateCumulativeDistances(latitudes, longitudes)
 
-            val elevationChart = points.indices.mapNotNull { i ->
-                val alt = points[i].altitude ?: return@mapNotNull null
-                (cumulativeDist[i] / 1000.0).toFloat() to alt.toFloat()
-            }
+            val elevationChart =
+                points.indices.mapNotNull { i ->
+                    val alt = points[i].altitude ?: return@mapNotNull null
+                    (cumulativeDist[i] / 1000.0).toFloat() to alt.toFloat()
+                }
+            val paceSpeedChart =
+                points.indices.drop(1).mapNotNull { index ->
+                    val elapsedMillis = points[index].timestampMs - points[index - 1].timestampMs
+                    val distanceMeters = cumulativeDist[index] - cumulativeDist[index - 1]
+                    if (elapsedMillis <= 0L || distanceMeters <= 0.0) {
+                        return@mapNotNull null
+                    }
+
+                    val speedKmh = distanceMeters / elapsedMillis * 3_600.0
+                    val chartValue =
+                        if (workout.exerciseType == EXERCISE_TYPE_CYCLING) speedKmh else 60.0 / speedKmh
+                    (cumulativeDist[index] / 1000.0).toFloat() to chartValue.toFloat()
+                }
 
             _uiState.update {
                 it.copy(
-                    routeUiState = RouteUiState(
-                        state = RouteDataState.Available,
-                        points = simplified,
-                    ),
+                    routeUiState =
+                        RouteUiState(
+                            state = RouteDataState.Available,
+                            points = simplified,
+                        ),
+                    paceSpeedChartData = paceSpeedChart,
                     elevationChartData = elevationChart,
                     isSpeedOriented = workout.exerciseType == EXERCISE_TYPE_CYCLING,
                 )

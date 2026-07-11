@@ -4,11 +4,15 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.DomainExerciseRoute
+import app.readylytics.health.domain.model.DomainRoutePoint
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.HeartRateRepository
+import app.readylytics.health.domain.repository.PermissionStatus
+import app.readylytics.health.domain.repository.RoutePoint
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
@@ -16,10 +20,6 @@ import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.WorkoutLoadLevel
-import app.readylytics.health.domain.model.DomainExerciseRoute
-import app.readylytics.health.domain.model.DomainRoutePoint
-import app.readylytics.health.domain.repository.PermissionStatus
-import app.readylytics.health.domain.repository.RoutePoint
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -36,6 +36,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -449,8 +450,20 @@ class WorkoutDetailViewModelTest {
             advanceUntilIdle()
 
             assertEquals(RouteDataState.Available, viewModel.uiState.value.routeUiState.state)
-            assert(viewModel.uiState.value.routeUiState.points.isNotEmpty())
-            assert(viewModel.uiState.value.elevationChartData.isNotEmpty())
+            assert(
+                viewModel.uiState.value.routeUiState.points
+                    .isNotEmpty(),
+            )
+            assertEquals(2, viewModel.uiState.value.paceSpeedChartData.size)
+            assertTrue(
+                viewModel.uiState.value.paceSpeedChartData.all { (distanceKm, paceMinKm) ->
+                    distanceKm > 0f && paceMinKm > 0f
+                },
+            )
+            assert(
+                viewModel.uiState.value.elevationChartData
+                    .isNotEmpty(),
+            )
         }
 
     @Test
