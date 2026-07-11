@@ -15,6 +15,7 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.AuditEventEntity
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
@@ -27,6 +28,7 @@ import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 
 @Database(
     entities = [
@@ -35,6 +37,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
         HeartRateRecordEntity::class,
         HrvRecordEntity::class,
         WorkoutRecordEntity::class,
+        WorkoutRoutePointEntity::class,
         DailySummaryEntity::class,
         WeightRecordEntity::class,
         BodyFatRecordEntity::class,
@@ -57,6 +60,8 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun workoutDao(): WorkoutDao
 
+    abstract fun workoutRoutePointDao(): WorkoutRoutePointDao
+
     abstract fun dailySummaryDao(): DailySummaryDao
 
     abstract fun weightRecordDao(): WeightRecordDao
@@ -72,6 +77,6 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun auditEventDao(): AuditEventDao
 
     companion object {
-        const val DATABASE_VERSION = 5
+        const val DATABASE_VERSION = 6
     }
 }

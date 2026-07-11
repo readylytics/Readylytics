@@ -144,7 +144,14 @@ android {
             unitTests.isReturnDefaultValues = true
             unitTests.isIncludeAndroidResources = true
         }
+
+        sourceSets {
+            getByName("main") {
+                assets.srcDirs(files("${project(":core:database").projectDir}/schemas"))
+            }
+        }
     }
+
 
     buildTypes {
         release {
@@ -339,7 +346,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
+    testImplementation(libs.room.testing)
     testImplementation(libs.androidx.junit)
+
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.androidx.arch.core.testing)

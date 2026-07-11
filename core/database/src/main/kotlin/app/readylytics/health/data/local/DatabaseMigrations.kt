@@ -142,11 +142,42 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_5_6 =
+        object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `workout_route_points` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `workoutId` TEXT NOT NULL, 
+                        `latitude` REAL NOT NULL, 
+                        `longitude` REAL NOT NULL, 
+                        `altitude` REAL, 
+                        `timestampMs` INTEGER NOT NULL, 
+                        `horizontalAccuracy` REAL, 
+                        `verticalAccuracy` REAL,
+                        FOREIGN KEY(`workoutId`) REFERENCES `workout_records`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_workout_route_points_workoutId_timestampMs` ON `workout_route_points` (`workoutId`, `timestampMs`)",
+                )
+                db.execSQL("ALTER TABLE `workout_records` ADD COLUMN `routeState` TEXT NOT NULL DEFAULT 'NOT_AVAILABLE'")
+                db.execSQL("ALTER TABLE `workout_records` ADD COLUMN `avgSpeedKmh` REAL")
+                db.execSQL("ALTER TABLE `workout_records` ADD COLUMN `avgPaceMinKm` REAL")
+                db.execSQL("ALTER TABLE `workout_records` ADD COLUMN `elevationGainMeters` REAL")
+                db.execSQL("ALTER TABLE `workout_records` ADD COLUMN `totalDistanceMeters` REAL")
+            }
+        }
+
     val all: Array<Migration> =
         arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
+            MIGRATION_5_6,
         )
 }
+

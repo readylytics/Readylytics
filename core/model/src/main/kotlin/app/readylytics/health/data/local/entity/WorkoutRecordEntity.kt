@@ -26,4 +26,10 @@ data class WorkoutRecordEntity(
     val trimp: Float,
     val avgHr: Float,
     val deviceName: String? = null,
+    val routeState: String = "NOT_AVAILABLE",
+    val avgSpeedKmh: Float? = null,
+    val avgPaceMinKm: Float? = null,
+    val elevationGainMeters: Float? = null,
+    val totalDistanceMeters: Float? = null
 )
+
