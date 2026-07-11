@@ -144,7 +144,11 @@ class HealthConnectRepositoryImpl
                     pageToken = response.pageToken
                 } while (pageToken != null)
             } catch (e: SecurityException) {
-                throw HealthConnectPermissionRevokedException(e)
+                throw HealthConnectPermissionRevokedException(
+                    cause = e,
+                    operation = "read",
+                    recordType = T::class.simpleName,
+                )
             }
             return all
         }
@@ -318,7 +322,11 @@ class HealthConnectRepositoryImpl
                             dayRecords.sumOf { it.count }
                         }
                 } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(e)
+                    throw HealthConnectPermissionRevokedException(
+                        cause = e,
+                        operation = "readRange",
+                        recordType = StepsRecord::class.simpleName,
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -523,7 +531,10 @@ class HealthConnectRepositoryImpl
                     ) { "Device discovery found ${devices.size} unique devices" }
                     devices.sorted()
                 } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(e)
+                    throw HealthConnectPermissionRevokedException(
+                        cause = e,
+                        operation = "discoverDevices",
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
