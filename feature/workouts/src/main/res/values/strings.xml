@@ -58,6 +58,11 @@
     <string name="workout_history_button_prev">Previous page</string>
     <string name="workout_history_button_next">Next page</string>
 
+    <!-- Workout Route Permission -->
+    <string name="workout_route_permission_title">Route data requires permission</string>
+    <string name="workout_route_permission_desc">To display the route map and pace charts, Readylytics needs permission to read exercise routes from Health Connect.</string>
+    <string name="workout_route_permission_button">Grant Permission</string>
+
     <!-- Accessibility -->
     <string name="workout_route_scale_meters">%1$d m</string>
     <string name="chart_accessibility_trimp_summary">Heart rate intensity timeline chart showing workout heart rate over the duration of the exercise.</string>
