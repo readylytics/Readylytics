@@ -8,20 +8,26 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -30,13 +36,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.sync.SyncProgressScreen
 import app.readylytics.health.crashreport.CrashReportFileExport
 import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildIssueReportIntent
+import app.readylytics.health.crashreport.buildLogFileShareIntent
 import app.readylytics.health.crashreport.buildOversizedFallbackIntent
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.about.AboutScreen
 import app.readylytics.health.feature.dashboard.DashboardRoute
 import app.readylytics.health.feature.dashboard.InsightCard
@@ -45,7 +54,9 @@ import app.readylytics.health.feature.dashboard.getInsightIcon
 import app.readylytics.health.feature.dashboard.toDailyInsightContext
 import app.readylytics.health.feature.insights.InsightDetailRepository
 import app.readylytics.health.feature.insights.InsightDetailSheet
+import app.readylytics.health.feature.onboarding.SyncLogViewModel
 import app.readylytics.health.feature.settings.SettingsRoute
+import app.readylytics.health.feature.settings.SyncSettingsViewModel
 import app.readylytics.health.feature.sleep.SleepRoute
 import app.readylytics.health.feature.vitals.bloodpressure.BloodPressureDetailRoute
 import app.readylytics.health.feature.vitals.bodyfat.BodyFatDetailRoute
@@ -60,6 +71,7 @@ import app.readylytics.health.ui.crashreport.OversizedReportDialog
 import app.readylytics.health.ui.logcat.LogcatCaptureViewModel
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
+import app.readylytics.health.ui.sync.SyncViewModel
 import kotlinx.coroutines.launch
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -70,11 +82,33 @@ private data class PendingGithubSave(
     val consumeCrashReport: Boolean,
 )
 
+internal enum class SyncProgressDismissalState {
+    StayOpen,
+    MarkProgressSeen,
+    Dismiss,
+}
+
+internal fun shouldAutoDismissSyncProgress(
+    recalcProgress: RecalcProgress?,
+    isResyncing: Boolean?,
+    hasSeenProgress: Boolean,
+): SyncProgressDismissalState =
+    when {
+        recalcProgress != null -> SyncProgressDismissalState.MarkProgressSeen
+        hasSeenProgress || isResyncing == false -> SyncProgressDismissalState.Dismiss
+        else -> SyncProgressDismissalState.StayOpen
+    }
+
 @Composable
 fun MainNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
+    // Survives navigation to/from AppDestination.SyncProgress (both destinations get
+    // disposed/recomposed as they're pushed/popped) so returning from "Continue in background"
+    // doesn't immediately re-trigger the Settings auto-redirect below.
+    var resyncScreenDismissed by rememberSaveable { mutableStateOf(false) }
+
     NavHost(
         navController = navController,
         startDestination = TabDestination.Dashboard,
@@ -90,7 +124,8 @@ fun MainNavHost(
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.About::class)
+                    targetState.destination.hasRoute(AppDestination.About::class) ||
+                    targetState.destination.hasRoute(AppDestination.SyncProgress::class)
 
             val direction =
                 if (isEnteringDetail) {
@@ -113,7 +148,8 @@ fun MainNavHost(
                     initialState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
-                    initialState.destination.hasRoute(AppDestination.About::class)
+                    initialState.destination.hasRoute(AppDestination.About::class) ||
+                    initialState.destination.hasRoute(AppDestination.SyncProgress::class)
             val isEnteringDetail =
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
@@ -121,7 +157,8 @@ fun MainNavHost(
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.About::class)
+                    targetState.destination.hasRoute(AppDestination.About::class) ||
+                    targetState.destination.hasRoute(AppDestination.SyncProgress::class)
 
             val direction =
                 if (isLeavingDetail) {
@@ -358,11 +395,72 @@ fun MainNavHost(
                 onDismiss = { navController.popBackStack() },
             )
         }
+
+        composable<AppDestination.SyncProgress> {
+            val syncViewModel: SyncViewModel = hiltViewModel()
+            val recalcProgress by syncViewModel.recalcProgress.collectAsStateWithLifecycle()
+            val historicalResyncState by syncViewModel.historicalResyncState.collectAsStateWithLifecycle()
+            val logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel()
+            val syncLogViewModel: SyncLogViewModel = hiltViewModel()
+            val logText by syncLogViewModel.logText.collectAsStateWithLifecycle()
+            val coroutineScope = rememberCoroutineScope()
+            val context = LocalContext.current
+
+            // Auto-dismiss once the sync/resync this screen was opened for finishes.
+            var hasSeenProgress by rememberSaveable { mutableStateOf(recalcProgress != null) }
+            LaunchedEffect(recalcProgress, historicalResyncState, hasSeenProgress) {
+                when (
+                    shouldAutoDismissSyncProgress(
+                        recalcProgress = recalcProgress,
+                        isResyncing = historicalResyncState?.running,
+                        hasSeenProgress = hasSeenProgress,
+                    )
+                ) {
+                    SyncProgressDismissalState.MarkProgressSeen -> hasSeenProgress = true
+                    SyncProgressDismissalState.Dismiss -> navController.popBackStack()
+                    SyncProgressDismissalState.StayOpen -> Unit
+                }
+            }
+
+            Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+                SyncProgressScreen(
+                    progress = recalcProgress,
+                    onDownloadLogs = {
+                        coroutineScope.launch {
+                            val file = logcatCaptureViewModel.captureFile()
+                            context.startActivity(buildLogFileShareIntent(context, file))
+                        }
+                    },
+                    onContinueInBackground = {
+                        resyncScreenDismissed = true
+                        navController.popBackStack()
+                    },
+                    logText = logText,
+                    onLogsVisibilityChanged = { visible ->
+                        if (visible) syncLogViewModel.startPolling() else syncLogViewModel.stopPolling()
+                    },
+                )
+            }
+        }
+
         composable<TabDestination.Settings> {
             val context = LocalContext.current
             val crashReportViewModel: CrashReportViewModel = hiltViewModel()
             val logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel()
             val coroutineScope = rememberCoroutineScope()
+
+            // Same Hilt-scoped SyncSettingsViewModel instance SettingsRoute uses internally
+            // (same NavBackStackEntry) — redirects to the full-screen progress view in place of
+            // the resync dialog this screen used to show, unless the user already backgrounded it.
+            val syncSettingsViewModel: SyncSettingsViewModel = hiltViewModel()
+            val syncSettingsState by syncSettingsViewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(syncSettingsState.isResyncing) {
+                if (syncSettingsState.isResyncing && !resyncScreenDismissed) {
+                    navController.navigate(AppDestination.SyncProgress) { launchSingleTop = true }
+                } else if (!syncSettingsState.isResyncing) {
+                    resyncScreenDismissed = false
+                }
+            }
 
             var pendingOversized by remember { mutableStateOf<PendingGithubSave?>(null) }
             var showOversizedDialog by remember { mutableStateOf(false) }

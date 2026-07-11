@@ -64,7 +64,8 @@ fun MainScaffold(
                 !dest.hasRoute(AppDestination.WeightDetail::class) &&
                 !dest.hasRoute(AppDestination.BodyFatDetail::class) &&
                 !dest.hasRoute(AppDestination.BloodPressureDetail::class) &&
-                !dest.hasRoute(AppDestination.About::class)
+                !dest.hasRoute(AppDestination.About::class) &&
+                !dest.hasRoute(AppDestination.SyncProgress::class)
         } ?: true
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -80,9 +81,13 @@ fun MainScaffold(
         }
     }
 
+    val isSyncProgressScreen =
+        navBackStackEntry?.destination?.hasRoute(AppDestination.SyncProgress::class) == true
+
     PullToRefreshBox(
-        isRefreshing = isSyncing,
+        isRefreshing = isSyncing && !isSyncProgressScreen,
         onRefresh = { syncViewModel.triggerManualSync() },
+        enabled = !isSyncProgressScreen,
     ) {
         NavigationSuiteScaffold(
             layoutType =
@@ -145,10 +150,16 @@ fun MainScaffold(
 
                     // Determinate "day X of Y" banner shown while a historical recalculation walks
                     // forward, so the recompute surfaces visible progress instead of a silent spinner.
-                    recalcProgress?.takeIf { it.total > 0 }?.let { progress ->
+                    // Hide banner when on full-screen SyncProgress view (it shows the same progress inline).
+                    recalcProgress?.takeIf { it.total > 0 && !isSyncProgressScreen }?.let { progress ->
                         RecalcProgressBanner(
                             current = progress.current,
                             total = progress.total,
+                            onClick = {
+                                navController.navigate(AppDestination.SyncProgress) {
+                                    launchSingleTop = true
+                                }
+                            },
                             modifier =
                                 Modifier
                                     .align(Alignment.BottomCenter)
@@ -165,9 +176,11 @@ fun MainScaffold(
 private fun RecalcProgressBanner(
     current: Int,
     total: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
+        onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {

@@ -16,6 +16,9 @@ sealed interface AppDestination {
     data object MainShell : AppDestination
 
     @Serializable
+    data object SyncProgress : AppDestination
+
+    @Serializable
     data class WorkoutDetail(
         val workoutId: String,
     ) : AppDestination

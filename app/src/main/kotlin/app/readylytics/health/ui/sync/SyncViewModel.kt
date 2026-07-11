@@ -10,15 +10,19 @@ import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedEx
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.HistoricalResyncController
+import app.readylytics.health.domain.sync.HistoricalResyncState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -51,6 +55,7 @@ class SyncViewModel
     constructor(
         private val hcRepo: HealthConnectRepository,
         private val foregroundSyncController: ForegroundSyncController,
+        private val historicalResyncController: HistoricalResyncController,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
     ) : BaseViewModel() {
@@ -64,6 +69,14 @@ class SyncViewModel
         val allPermissions = hcRepo.allPermissions
         val isSyncing = foregroundSyncController.isSyncing
         val recalcProgress = foregroundSyncController.recalcProgress
+
+        // Null until WorkManager-backed state first arrives, so consumers never treat loading as idle.
+        val historicalResyncState: StateFlow<HistoricalResyncState?> =
+            historicalResyncController.state.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null,
+            )
 
         private val _syncEvents = Channel<SyncEvent>(capacity = Channel.BUFFERED)
         val syncEvents = _syncEvents.receiveAsFlow()

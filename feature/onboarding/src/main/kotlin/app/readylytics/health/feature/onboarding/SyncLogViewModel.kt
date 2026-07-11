@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class OnboardingLogViewModel
+class SyncLogViewModel
     @Inject
     constructor(
         private val logcatCaptureStore: LogcatCaptureStore,

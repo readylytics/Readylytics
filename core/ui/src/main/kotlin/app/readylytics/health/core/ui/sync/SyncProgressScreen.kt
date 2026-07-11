@@ -1,4 +1,4 @@
-package app.readylytics.health.feature.onboarding
+package app.readylytics.health.core.ui.sync
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
@@ -34,33 +34,28 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.R
 import app.readylytics.health.domain.sync.RecalcProgress
 
 @Composable
-fun FinishingSetupScreen(
+fun SyncProgressScreen(
     progress: RecalcProgress?,
     onDownloadLogs: () -> Unit,
     onContinueInBackground: () -> Unit,
+    logText: String?,
+    onLogsVisibilityChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    logViewModel: OnboardingLogViewModel = hiltViewModel(),
 ) {
-    val logText by logViewModel.logText.collectAsStateWithLifecycle()
     var showLogs by remember { mutableStateOf(false) }
 
     LaunchedEffect(showLogs) {
-        if (showLogs) {
-            logViewModel.startPolling()
-        } else {
-            logViewModel.stopPolling()
-        }
+        onLogsVisibilityChanged(showLogs)
     }
 
-    DisposableEffect(logViewModel) {
+    DisposableEffect(Unit) {
         onDispose {
-            logViewModel.stopPolling()
+            onLogsVisibilityChanged(false)
         }
     }
 
@@ -83,7 +78,7 @@ fun FinishingSetupScreen(
             if (progress != null && progress.total > 0) {
                 val percentage = progress.current.toFloat() / progress.total.toFloat()
                 Text(
-                    text = stringResource(R.string.onboarding_sync_progress, progress.current, progress.total),
+                    text = stringResource(R.string.sync_progress_fetching_data, progress.current, progress.total),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -96,7 +91,7 @@ fun FinishingSetupScreen(
                 CircularProgressIndicator()
                 Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
                 Text(
-                    text = stringResource(R.string.onboarding_finishing_setup),
+                    text = stringResource(R.string.sync_progress_finishing_setup),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -108,9 +103,9 @@ fun FinishingSetupScreen(
                 Text(
                     text =
                         if (showLogs) {
-                            stringResource(R.string.onboarding_hide_logs)
+                            stringResource(R.string.sync_progress_hide_logs)
                         } else {
-                            stringResource(R.string.onboarding_view_logs)
+                            stringResource(R.string.sync_progress_view_logs)
                         },
                 )
             }
@@ -146,7 +141,7 @@ fun FinishingSetupScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = stringResource(R.string.onboarding_logs_empty),
+                                text = stringResource(R.string.sync_progress_logs_empty),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -186,14 +181,14 @@ fun FinishingSetupScreen(
                 onClick = onDownloadLogs,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.onboarding_download_logs))
+                Text(stringResource(R.string.sync_progress_download_logs))
             }
 
             Button(
                 onClick = onContinueInBackground,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.onboarding_continue_in_background))
+                Text(stringResource(R.string.sync_progress_continue_in_background))
             }
         }
     }

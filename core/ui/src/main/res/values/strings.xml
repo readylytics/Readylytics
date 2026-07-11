@@ -163,4 +163,13 @@
         <item quantity="one">%1$d month</item>
         <item quantity="other">%1$d months</item>
     </plurals>
+
+    <!-- Sync progress screen (shared between onboarding catch-up sync and Settings resync) -->
+    <string name="sync_progress_fetching_data">Fetching data: Day %1$d of %2$d</string>
+    <string name="sync_progress_finishing_setup">Finishing setup…</string>
+    <string name="sync_progress_view_logs">Show log output</string>
+    <string name="sync_progress_hide_logs">Hide log output</string>
+    <string name="sync_progress_download_logs">Download Logs</string>
+    <string name="sync_progress_logs_empty">No logs available yet</string>
+    <string name="sync_progress_continue_in_background">Continue in background</string>
 </resources>
