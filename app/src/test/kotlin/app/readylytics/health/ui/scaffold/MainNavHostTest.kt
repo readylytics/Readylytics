@@ -91,4 +91,3 @@ class MainNavHostTest {
         assertEquals(SyncProgressDismissalState.Dismiss, result)
     }
 }
-

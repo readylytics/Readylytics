@@ -69,6 +69,7 @@ class SyncViewModel
         val allPermissions = hcRepo.allPermissions
         val isSyncing = foregroundSyncController.isSyncing
         val recalcProgress = foregroundSyncController.recalcProgress
+
         // Null until WorkManager-backed state first arrives, so consumers never treat loading as idle.
         val historicalResyncState: StateFlow<HistoricalResyncState?> =
             historicalResyncController.state.stateIn(
