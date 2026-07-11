@@ -9,6 +9,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.domain.util.logE
@@ -68,6 +69,9 @@ class HealthResyncWorker
                 Result.retry()
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: HealthConnectPermissionRevokedException) {
+                logE(TAG, e) { "Resync worker stopped: Health Connect permission failure" }
+                Result.failure()
             } catch (e: Exception) {
                 logE(TAG, e) { "Resync worker failed" }
                 Result.retry()

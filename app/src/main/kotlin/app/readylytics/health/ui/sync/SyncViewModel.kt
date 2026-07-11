@@ -107,7 +107,7 @@ class SyncViewModel
                     // is exposed via the Settings "Resync Health Connect data" button (WorkManager).
                     foregroundSyncController.triggerDailySync()
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    _uiState.update { SyncUiState.NeedsPermissions }
+                    handleHealthConnectPermissionFailure(e, "Manual sync")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -123,7 +123,7 @@ class SyncViewModel
         }
 
         fun onAppForeground() {
-            foregroundCheckJob?.cancel()
+            if (foregroundCheckJob?.isActive == true) return
             foregroundCheckJob =
                 viewModelScope.launch {
                     // Advances to the new "today" only if the user was passively on
@@ -141,7 +141,7 @@ class SyncViewModel
                         try {
                             foregroundSyncController.evaluateAndSync()
                         } catch (e: HealthConnectPermissionRevokedException) {
-                            _uiState.update { SyncUiState.NeedsPermissions }
+                            handleHealthConnectPermissionFailure(e, "Foreground sync eval")
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -166,13 +166,7 @@ class SyncViewModel
                                 try {
                                     foregroundSyncController.evaluateAndSync()
                                 } catch (e: HealthConnectPermissionRevokedException) {
-                                    // Re-verify before going to onboarding. Avoids misrouting
-                                    // errors from specific record types (e.g. missing
-                                    // READ_RESTING_HEART_RATE) as full permission revocation.
-                                    val recheck = hcRepo.checkPermissions()
-                                    if (recheck !is PermissionStatus.Granted) {
-                                        _uiState.update { SyncUiState.NeedsPermissions }
-                                    }
+                                    handleHealthConnectPermissionFailure(e, "Foreground sync")
                                 } catch (e: CancellationException) {
                                     throw e
                                 } catch (e: Exception) {
@@ -230,7 +224,7 @@ class SyncViewModel
                     app.readylytics.health.domain.util.logE("SyncViewModel", e) {
                         "Initial sync: permissions revoked"
                     }
-                    _uiState.update { SyncUiState.NeedsPermissions }
+                    handleHealthConnectPermissionFailure(e, "Initial sync")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -250,14 +244,8 @@ class SyncViewModel
                 try {
                     foregroundSyncController.triggerImmediateSync()
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    val recheck = hcRepo.checkPermissions()
-                    if (recheck !is PermissionStatus.Granted) {
-                        _uiState.update { SyncUiState.NeedsPermissions }
-                        return@launch
-                    }
-                    app.readylytics.health.domain.util.logE("SyncViewModel", e) {
-                        "Sync threw permission error but HC says granted — proceeding"
-                    }
+                    handleHealthConnectPermissionFailure(e, "Post-device-selection sync")
+                    return@launch
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -276,6 +264,46 @@ class SyncViewModel
 
         fun skipSync() {
             _uiState.update { SyncUiState.PermissionsGranted }
+        }
+
+        private suspend fun handleHealthConnectPermissionFailure(
+            error: HealthConnectPermissionRevokedException,
+            source: String,
+        ) {
+            app.readylytics.health.domain.util.logE("SyncViewModel", error) {
+                "$source reported a Health Connect permission failure; rechecking permissions"
+            }
+            val status =
+                try {
+                    hcRepo.checkPermissions()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("SyncViewModel", e) {
+                        "$source could not recheck Health Connect permissions"
+                    }
+                    _uiState.update {
+                        SyncUiState.Error(
+                            UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                        )
+                    }
+                    return
+                }
+            when (status) {
+                is PermissionStatus.Missing -> {
+                    _uiState.update { SyncUiState.NeedsPermissions }
+                }
+                is PermissionStatus.Unavailable -> {
+                    _uiState.update { SyncUiState.Unavailable }
+                }
+                is PermissionStatus.Granted -> {
+                    _uiState.update {
+                        SyncUiState.Error(
+                            UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                        )
+                    }
+                }
+            }
         }
     }
 

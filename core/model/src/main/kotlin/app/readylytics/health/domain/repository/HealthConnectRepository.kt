@@ -13,7 +13,17 @@ import java.time.Instant
 
 class HealthConnectPermissionRevokedException(
     cause: SecurityException,
-) : Exception("Health Connect permissions were revoked", cause)
+    val operation: String? = null,
+    val recordType: String? = null,
+) : Exception(
+        buildString {
+            append("Health Connect permission failure")
+            operation?.let { append("; operation=$it") }
+            recordType?.let { append("; recordType=$it") }
+            cause.message?.takeIf { it.isNotBlank() }?.let { append("; cause=$it") }
+        },
+        cause,
+    )
 
 sealed interface PermissionStatus {
     data object Granted : PermissionStatus

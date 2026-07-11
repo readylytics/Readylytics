@@ -3,6 +3,7 @@ package app.readylytics.health.domain.sync
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
@@ -16,11 +17,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 
 /**
  * Behavioral characterization of the full historical resync flow. As in [DailySyncUseCaseTest], the
@@ -270,5 +274,32 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 3) { healthIngestionStore.countHrvInRange(any(), any()) }
             coVerify(exactly = 3) { healthIngestionStore.countSleepSessionsInRange(any(), any()) }
             coVerify(exactly = 3) { healthIngestionStore.countWorkoutsInRange(any(), any()) }
+        }
+
+    @Test
+    fun `resyncRange preserves permission revoked exception and diagnostic context`() =
+        runTest {
+            val expected =
+                HealthConnectPermissionRevokedException(
+                    cause = SecurityException("READ_HEART_RATE denied"),
+                    operation = "read",
+                    recordType = "HeartRateRecord",
+                )
+            coEvery { hcRepo.readHeartRateSamples(any(), any()) } throws expected
+
+            val actual =
+                assertFailsWith<HealthConnectPermissionRevokedException> {
+                    useCase.run(
+                        startDate = LocalDate.of(2024, 6, 1),
+                        endDate = LocalDate.of(2024, 6, 1),
+                        chunkDays = 30,
+                        onProgress = null,
+                    )
+                }
+
+            assertSame(expected, actual)
+            assertTrue(actual.message.orEmpty().contains("operation=read"))
+            assertTrue(actual.message.orEmpty().contains("recordType=HeartRateRecord"))
+            assertTrue(actual.message.orEmpty().contains("READ_HEART_RATE denied"))
         }
 }
