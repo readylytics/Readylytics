@@ -30,4 +30,12 @@ class PaceSpeedCalculatorTest {
         val expectedDist = 6371000.0 * Math.toRadians(1.0)
         assertEquals(expectedDist, result[1], 1.0)
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun testCalculateCumulativeDistancesThrowsOnMismatchedSizes() {
+        PaceSpeedCalculator.calculateCumulativeDistances(
+            latitudes = doubleArrayOf(0.0, 1.0),
+            longitudes = doubleArrayOf(0.0)
+        )
+    }
 }

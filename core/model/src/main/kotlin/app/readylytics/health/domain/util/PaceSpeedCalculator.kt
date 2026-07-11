@@ -10,6 +10,7 @@ object PaceSpeedCalculator {
 
     // Returns cumulative distances in meters for a path of lat/lons
     fun calculateCumulativeDistances(latitudes: DoubleArray, longitudes: DoubleArray): DoubleArray {
+        require(latitudes.size == longitudes.size) { "Input arrays must have the same size" }
         if (latitudes.isEmpty()) return DoubleArray(0)
         if (latitudes.size == 1) return DoubleArray(1) { 0.0 }
         val distances = DoubleArray(latitudes.size)

@@ -21,7 +21,6 @@ class RouteProjectorTest {
         val result = RouteProjector.project(latitudes, longitudes, altitudes, timestamps)
         
         assertEquals(2, result.size)
-        // Let's assert on the first projected point
         val p1 = result[0]
         val latCenter = 45.5
         val radLatCenter = Math.toRadians(latCenter)
@@ -31,5 +30,15 @@ class RouteProjectorTest {
         assertEquals(45.0, p1.y, 0.00001)
         assertEquals(100.0, p1.altitude ?: 0.0, 0.00001)
         assertEquals(1000L, p1.timestampMs)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun testProjectThrowsOnMismatchedArraySizes() {
+        RouteProjector.project(
+            latitudes = doubleArrayOf(45.0, 46.0),
+            longitudes = doubleArrayOf(90.0), // mismatched
+            altitudes = null,
+            timestamps = longArrayOf(1000L, 2000L)
+        )
     }
 }

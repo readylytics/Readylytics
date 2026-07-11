@@ -11,6 +11,7 @@ data class ProjectedPoint(
 
 object RouteProjector {
     fun project(latitudes: DoubleArray, longitudes: DoubleArray, altitudes: DoubleArray?, timestamps: LongArray): List<ProjectedPoint> {
+        require(latitudes.size == longitudes.size && latitudes.size == timestamps.size) { "Input arrays must have the same size" }
         if (latitudes.isEmpty()) return emptyList()
         val latCenter = latitudes.average()
         val radLatCenter = Math.toRadians(latCenter)

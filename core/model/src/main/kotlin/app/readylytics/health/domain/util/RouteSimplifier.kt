@@ -5,6 +5,7 @@ import kotlin.math.sqrt
 
 object RouteSimplifier {
     fun simplify(points: List<ProjectedPoint>, maxPoints: Int, tolerance: Double = 0.00005): List<ProjectedPoint> {
+        require(maxPoints >= 2) { "maxPoints must be at least 2" }
         if (points.size <= maxPoints) return points
         val keep = BooleanArray(points.size) { false }
         keep[0] = true

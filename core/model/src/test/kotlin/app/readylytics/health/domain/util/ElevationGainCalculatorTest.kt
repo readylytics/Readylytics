@@ -17,4 +17,11 @@ class ElevationGainCalculatorTest {
         val ascent = ElevationGainCalculator.calculateAscent(alt, 3.0)
         assertEquals(15.0, ascent, 0.1)
     }
+
+    @Test
+    fun testAscentCalculationShortListNoSmoothing() {
+        val alt = listOf(100.0, 105.0, 105.0, 110.0) // size 4 < 5, bypasses smoothing
+        val ascent = ElevationGainCalculator.calculateAscent(alt, 3.0)
+        assertEquals(10.0, ascent, 0.1)
+    }
 }

@@ -39,4 +39,13 @@ class RouteSimplifierTest {
         val result = RouteSimplifier.simplify(points, 4, tolerance = 0.0)
         assertEquals(4, result.size)
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun testSimplifyThrowsOnInvalidMaxPoints() {
+        val points = listOf(
+            ProjectedPoint(0.0, 0.0, 100.0, 1000L),
+            ProjectedPoint(1.0, 1.0, 100.0, 2000L)
+        )
+        RouteSimplifier.simplify(points, 1)
+    }
 }
