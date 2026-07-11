@@ -3,6 +3,7 @@ package app.readylytics.health.feature.workouts
 import app.readylytics.health.domain.util.ProjectedPoint
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.Locale
 
 class WorkoutDetailScreenTest {
     @Test
@@ -14,6 +15,19 @@ class WorkoutDetailScreenTest {
             )
 
         assertEquals(listOf(1.0 to -6.5, 2.0 to -5.0), result)
+    }
+
+    @Test
+    fun formatChartAxisValue_usesProvidedLocaleAndRestoresInvertedPaceValue() {
+        val result =
+            formatChartAxisValue(
+                format = "%1$.1f",
+                value = -5.5,
+                isInverted = true,
+                locale = Locale.GERMANY,
+            )
+
+        assertEquals("5,5", result)
     }
 
     @Test

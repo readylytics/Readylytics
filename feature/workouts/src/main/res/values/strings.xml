@@ -78,4 +78,5 @@
     <string name="workout_chart_speed_unit">km/h</string>
     <string name="workout_chart_elevation_unit">m</string>
     <string name="workout_chart_distance_unit">Distance (km)</string>
+    <string name="workout_chart_axis_number_format">%1$.1f</string>
 </resources>

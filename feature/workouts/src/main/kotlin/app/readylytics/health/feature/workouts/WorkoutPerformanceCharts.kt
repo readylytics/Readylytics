@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.ChartDefaults
@@ -29,6 +30,7 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
+import java.util.Locale
 import kotlin.math.abs
 
 @Composable
@@ -80,6 +82,7 @@ fun WorkoutPerformanceChart(
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
+    val axisNumberFormat = stringResource(R.string.workout_chart_axis_number_format)
     val rangeProvider = remember(series) { performanceChartRange(series) }
     val line =
         LineCartesianLayer.rememberLine(
@@ -96,10 +99,9 @@ fun WorkoutPerformanceChart(
             interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
     val valueFormatter =
-        remember(isInverted) {
+        remember(axisNumberFormat, isInverted) {
             CartesianValueFormatter { _, value, _ ->
-                val displayValue = if (isInverted) -value else value
-                "%.1f".format(displayValue)
+                formatChartAxisValue(axisNumberFormat, value, isInverted)
             }
         }
 
@@ -132,7 +134,10 @@ fun WorkoutPerformanceChart(
                         title = { xAxisTitle },
                         titleComponent = axisLabelComponent,
                         guideline = guidelineComponent,
-                        valueFormatter = CartesianValueFormatter { _, value, _ -> "%.1f".format(value) },
+                        valueFormatter =
+                            CartesianValueFormatter { _, value, _ ->
+                                formatChartAxisValue(axisNumberFormat, value, isInverted = false)
+                            },
                     ),
             ),
         modelProducer = modelProducer,
@@ -147,6 +152,13 @@ internal fun performanceChartSeries(
     chartData.map { (distance, value) ->
         distance.toDouble() to if (isInverted) -value.toDouble() else value.toDouble()
     }
+
+internal fun formatChartAxisValue(
+    format: String,
+    value: Double,
+    isInverted: Boolean,
+    locale: Locale = Locale.getDefault(),
+): String = String.format(locale, format, if (isInverted) -value else value)
 
 private fun performanceChartRange(series: List<Pair<Double, Double>>): CartesianLayerRangeProvider {
     val xValues = series.map { it.first }
