@@ -59,6 +59,7 @@
     <string name="workout_history_button_next">Next page</string>
 
     <!-- Accessibility -->
+    <string name="workout_route_scale_meters">%1$d m</string>
     <string name="chart_accessibility_trimp_summary">Heart rate intensity timeline chart showing workout heart rate over the duration of the exercise.</string>
     <string name="chart_accessibility_ras_summary">RAS weekly breakdown bar showing daily Readylytics Activity Score contribution.</string>
     <string name="label_workout_details">Workout details</string>

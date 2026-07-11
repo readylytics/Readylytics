@@ -70,9 +70,53 @@ class WorkoutDetailScreenTest {
             )
 
         requireNotNull(result)
-        assert(result.scale.isFinite())
+        assertEquals(true, result.scale.isFinite())
         assertEquals(16f, result.scale)
         assertEquals(200f, result.offsetX)
+    }
+
+    @Test
+    fun routeContourTransform_horizontalRoute_usesFiniteCenteredScale() {
+        val result =
+            calculateRouteContourTransform(
+                points =
+                    listOf(
+                        ProjectedPoint(x = 10.0, y = 100.0, altitude = 0.0, timestampMs = 0L),
+                        ProjectedPoint(x = 20.0, y = 100.0, altitude = 0.0, timestampMs = 1L),
+                    ),
+                canvasWidth = 400f,
+                canvasHeight = 200f,
+                padding = 20f,
+            )
+
+        requireNotNull(result)
+        assertEquals(true, result.scale.isFinite())
+        assertEquals(36f, result.scale)
+        assertEquals(100f, result.offsetY)
+    }
+
+    @Test
+    fun routeContourTransform_singlePoint_centersPointWithUnitScale() {
+        val result =
+            calculateRouteContourTransform(
+                points = listOf(ProjectedPoint(x = 10.0, y = 100.0, altitude = 0.0, timestampMs = 0L)),
+                canvasWidth = 400f,
+                canvasHeight = 200f,
+                padding = 20f,
+            )
+
+        requireNotNull(result)
+        assertEquals(1f, result.scale)
+        assertEquals(200f, result.offsetX)
+        assertEquals(100f, result.offsetY)
+    }
+
+    @Test
+    fun routeContourScale_usesAVisibleNiceDistance() {
+        val scale = calculateRouteContourScale(metersPerPixel = 2f, maxWidthPx = 100f)
+
+        assertEquals(100, scale.distanceMeters)
+        assertEquals(50f, scale.widthPx)
     }
 
     private fun computeLabelMinutes(

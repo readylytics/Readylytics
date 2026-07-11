@@ -1,18 +1,27 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.domain.util.ProjectedPoint
+import app.readylytics.health.feature.workouts.R
+import kotlin.math.pow
 
 @Composable
 fun RouteContourCard(
@@ -27,37 +36,86 @@ fun RouteContourCard(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+            val density = LocalDensity.current
+            val canvasWidth = with(density) { maxWidth.toPx() }
+            val canvasHeight = with(density) { 200.dp.toPx() }
+            val padding = with(density) { 20.dp.toPx() }
             val transform =
-                calculateRouteContourTransform(
-                    points = routeUiState.points,
-                    canvasWidth = size.width,
-                    canvasHeight = size.height,
-                    padding = 20.dp.toPx(),
-                ) ?: return@Canvas
-            val path = Path()
-            routeUiState.points.forEachIndexed { index, point ->
-                val canvasPoint = point.toCanvasOffset(transform, size.height)
-                if (index == 0) path.moveTo(canvasPoint.x, canvasPoint.y) else path.lineTo(canvasPoint.x, canvasPoint.y)
-            }
+                remember(routeUiState.points, canvasWidth, canvasHeight, padding) {
+                    calculateRouteContourTransform(
+                        points = routeUiState.points,
+                        canvasWidth = canvasWidth,
+                        canvasHeight = canvasHeight,
+                        padding = padding,
+                    )
+                }
+            val contourScale =
+                remember(transform, canvasWidth) {
+                    transform?.let {
+                        calculateRouteContourScale(
+                            metersPerPixel = 1f / it.scale,
+                            maxWidthPx = canvasWidth / 4f,
+                        )
+                    }
+                }
 
-            drawPath(
-                path = path,
-                color = routeColor,
-                style = Stroke(width = 3.dp.toPx()),
-            )
-            if (routeUiState.scaleLineWidthDp > 0f) {
-                val scaleWidth = routeUiState.scaleLineWidthDp.dp.toPx()
-                val start = Offset(x = size.width - 20.dp.toPx() - scaleWidth, y = size.height - 20.dp.toPx())
-                drawLine(
+            Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+                val canvasTransform =
+                    transform ?: return@Canvas
+                val path = Path()
+                routeUiState.points.forEachIndexed { index, point ->
+                    val canvasPoint = point.toCanvasOffset(canvasTransform, size.height)
+                    if (index ==
+                        0
+                    ) {
+                        path.moveTo(canvasPoint.x, canvasPoint.y)
+                    } else {
+                        path.lineTo(canvasPoint.x, canvasPoint.y)
+                    }
+                }
+
+                drawPath(
+                    path = path,
+                    color = routeColor,
+                    style = Stroke(width = 3.dp.toPx()),
+                )
+                contourScale?.let { scale ->
+                    val start = Offset(x = size.width - 20.dp.toPx() - scale.widthPx, y = size.height - 20.dp.toPx())
+                    drawLine(
+                        color = scaleColor,
+                        start = start,
+                        end = start.copy(x = start.x + scale.widthPx),
+                        strokeWidth = 2.dp.toPx(),
+                    )
+                }
+            }
+            contourScale?.let { scale ->
+                Text(
+                    text = stringResource(R.string.workout_route_scale_meters, scale.distanceMeters),
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 24.dp),
                     color = scaleColor,
-                    start = start,
-                    end = start.copy(x = start.x + scaleWidth),
-                    strokeWidth = 2.dp.toPx(),
+                    style = MaterialTheme.typography.labelSmall,
                 )
             }
         }
     }
+}
+
+internal data class RouteContourScale(
+    val distanceMeters: Int,
+    val widthPx: Float,
+)
+
+internal fun calculateRouteContourScale(
+    metersPerPixel: Float,
+    maxWidthPx: Float,
+): RouteContourScale {
+    val targetDistance = (metersPerPixel * maxWidthPx / 2f).coerceAtLeast(1f)
+    val exponent = kotlin.math.floor(kotlin.math.log10(targetDistance.toDouble())).toInt()
+    val magnitude = 10.0.pow(exponent).toFloat()
+    val distanceMeters = listOf(1f, 2f, 5f).last { it * magnitude <= targetDistance }.times(magnitude).toInt()
+    return RouteContourScale(distanceMeters = distanceMeters, widthPx = distanceMeters / metersPerPixel)
 }
 
 internal data class RouteContourTransform(
