@@ -521,4 +521,31 @@ class WorkoutDetailViewModelTest {
             coVerify { workoutRepository.updateRouteState("run-1", "NOT_AVAILABLE") }
             assertEquals(RouteDataState.NotAvailable, viewModel.uiState.value.routeUiState.state)
         }
+
+    @Test
+    fun `loadRouteDetail emits Error state when an exception is thrown`() =
+        runTest {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = 1_000_000L,
+                    endTime = 2_000_000L,
+                    exerciseType = "running",
+                    durationMinutes = 16,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 16f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 140f,
+                    routeState = "PENDING_FOREGROUND_LOAD",
+                )
+            coEvery { healthConnectRepository.checkPermissions() } throws RuntimeException("network error")
+
+            viewModel.loadRouteDetail(workout)
+            advanceUntilIdle()
+
+            assertEquals(RouteDataState.Error, viewModel.uiState.value.routeUiState.state)
+        }
 }
