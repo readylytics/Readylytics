@@ -45,6 +45,7 @@ import app.readylytics.health.crashreport.buildOversizedFallbackIntent
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.about.AboutScreen
 import app.readylytics.health.feature.dashboard.DashboardRoute
 import app.readylytics.health.feature.dashboard.InsightCard
@@ -80,6 +81,23 @@ private data class PendingGithubSave(
     val oversized: GithubIssueIntentResult.Oversized,
     val consumeCrashReport: Boolean,
 )
+
+internal enum class SyncProgressDismissalState {
+    StayOpen,
+    MarkProgressSeen,
+    Dismiss,
+}
+
+internal fun shouldAutoDismissSyncProgress(
+    recalcProgress: RecalcProgress?,
+    isResyncing: Boolean,
+    hasSeenProgress: Boolean,
+): SyncProgressDismissalState =
+    when {
+        recalcProgress != null -> SyncProgressDismissalState.MarkProgressSeen
+        hasSeenProgress || !isResyncing -> SyncProgressDismissalState.Dismiss
+        else -> SyncProgressDismissalState.StayOpen
+    }
 
 @Composable
 fun MainNavHost(
@@ -381,6 +399,8 @@ fun MainNavHost(
         composable<AppDestination.SyncProgress> {
             val syncViewModel: SyncViewModel = hiltViewModel()
             val recalcProgress by syncViewModel.recalcProgress.collectAsStateWithLifecycle()
+            val syncSettingsViewModel: SyncSettingsViewModel = hiltViewModel()
+            val syncSettingsState by syncSettingsViewModel.uiState.collectAsStateWithLifecycle()
             val logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel()
             val syncLogViewModel: SyncLogViewModel = hiltViewModel()
             val logText by syncLogViewModel.logText.collectAsStateWithLifecycle()
@@ -389,11 +409,17 @@ fun MainNavHost(
 
             // Auto-dismiss once the sync/resync this screen was opened for finishes.
             var hasSeenProgress by rememberSaveable { mutableStateOf(recalcProgress != null) }
-            LaunchedEffect(recalcProgress) {
-                if (recalcProgress != null) {
-                    hasSeenProgress = true
-                } else if (hasSeenProgress) {
-                    navController.popBackStack()
+            LaunchedEffect(recalcProgress, syncSettingsState.isResyncing, hasSeenProgress) {
+                when (
+                    shouldAutoDismissSyncProgress(
+                        recalcProgress = recalcProgress,
+                        isResyncing = syncSettingsState.isResyncing,
+                        hasSeenProgress = hasSeenProgress,
+                    )
+                ) {
+                    SyncProgressDismissalState.MarkProgressSeen -> hasSeenProgress = true
+                    SyncProgressDismissalState.Dismiss -> navController.popBackStack()
+                    SyncProgressDismissalState.StayOpen -> Unit
                 }
             }
 
