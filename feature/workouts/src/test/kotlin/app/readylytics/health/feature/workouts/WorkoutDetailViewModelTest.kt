@@ -16,6 +16,10 @@ import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.domain.model.DomainExerciseRoute
+import app.readylytics.health.domain.model.DomainRoutePoint
+import app.readylytics.health.domain.repository.PermissionStatus
+import app.readylytics.health.domain.repository.RoutePoint
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -355,5 +359,166 @@ class WorkoutDetailViewModelTest {
 
             assertNotNull(viewModel.uiState.value.hrr1Min)
             assertEquals(21, viewModel.uiState.value.hrr1Min)
+        }
+
+    @Test
+    fun `loadRouteDetail sets NotAvailable when routeState is NOT_AVAILABLE`() =
+        runTest {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = 1_000_000L,
+                    endTime = 2_000_000L,
+                    exerciseType = "running",
+                    durationMinutes = 16,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 16f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 140f,
+                    routeState = "NOT_AVAILABLE",
+                )
+
+            viewModel.loadRouteDetail(workout)
+            advanceUntilIdle()
+
+            assertEquals(RouteDataState.NotAvailable, viewModel.uiState.value.routeUiState.state)
+        }
+
+    @Test
+    fun `loadRouteDetail sets PermissionRequired when route permission is missing`() =
+        runTest {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = 1_000_000L,
+                    endTime = 2_000_000L,
+                    exerciseType = "running",
+                    durationMinutes = 16,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 16f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 140f,
+                    routeState = "PENDING_FOREGROUND_LOAD",
+                )
+            coEvery { healthConnectRepository.checkPermissions() } returns
+                PermissionStatus.Missing(
+                    missing = setOf("android.permission.health.READ_EXERCISE_ROUTES"),
+                )
+
+            viewModel.loadRouteDetail(workout)
+            advanceUntilIdle()
+
+            assertEquals(RouteDataState.PermissionRequired, viewModel.uiState.value.routeUiState.state)
+        }
+
+    @Test
+    fun `loadRouteDetail sets Available and projects points when DB has route points`() =
+        runTest {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = 1_000_000L,
+                    endTime = 2_000_000L,
+                    exerciseType = "running",
+                    durationMinutes = 16,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 16f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 140f,
+                    routeState = "IMPORTED",
+                )
+            val dbRoutePoints =
+                listOf(
+                    RoutePoint(latitude = 60.1699, longitude = 24.9384, altitude = 10.0, timestampMs = 1_000_000L),
+                    RoutePoint(latitude = 60.1709, longitude = 24.9394, altitude = 12.0, timestampMs = 1_030_000L),
+                    RoutePoint(latitude = 60.1719, longitude = 24.9404, altitude = 11.0, timestampMs = 1_060_000L),
+                )
+            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { workoutRepository.getRoutePoints("run-1") } returns dbRoutePoints
+
+            viewModel.loadRouteDetail(workout)
+            advanceUntilIdle()
+
+            assertEquals(RouteDataState.Available, viewModel.uiState.value.routeUiState.state)
+            assert(viewModel.uiState.value.routeUiState.points.isNotEmpty())
+            assert(viewModel.uiState.value.elevationChartData.isNotEmpty())
+        }
+
+    @Test
+    fun `loadRouteDetail fetches from HealthConnect when PENDING_FOREGROUND_LOAD and saves route`() =
+        runTest {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = 1_000_000L,
+                    endTime = 4_600_000L,
+                    exerciseType = "running",
+                    durationMinutes = 60,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 60f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 150f,
+                    avgHr = 155f,
+                    routeState = "PENDING_FOREGROUND_LOAD",
+                )
+            val hcRoutePoints =
+                listOf(
+                    DomainRoutePoint(60.1699, 24.9384, 10.0, 1_000_000L, null, null),
+                    DomainRoutePoint(60.1709, 24.9394, 12.0, 1_030_000L, null, null),
+                    DomainRoutePoint(60.1719, 24.9404, 11.0, 1_060_000L, null, null),
+                )
+            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { workoutRepository.getRoutePoints("run-1") } returns emptyList()
+            coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns
+                DomainExerciseRoute(workoutId = "run-1", points = hcRoutePoints)
+            coEvery { workoutRepository.saveRoutePoints(any(), any(), any()) } returns Unit
+
+            viewModel.loadRouteDetail(workout)
+            advanceUntilIdle()
+
+            coVerify { workoutRepository.saveRoutePoints("run-1", any(), any()) }
+            assertEquals(RouteDataState.Available, viewModel.uiState.value.routeUiState.state)
+        }
+
+    @Test
+    fun `loadRouteDetail sets NotAvailable and updates state when HC returns no route`() =
+        runTest {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = 1_000_000L,
+                    endTime = 2_000_000L,
+                    exerciseType = "running",
+                    durationMinutes = 16,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 16f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 140f,
+                    routeState = "PENDING_FOREGROUND_LOAD",
+                )
+            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { workoutRepository.getRoutePoints("run-1") } returns emptyList()
+            coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns null
+            coEvery { workoutRepository.updateRouteState(any(), any()) } returns Unit
+
+            viewModel.loadRouteDetail(workout)
+            advanceUntilIdle()
+
+            coVerify { workoutRepository.updateRouteState("run-1", "NOT_AVAILABLE") }
+            assertEquals(RouteDataState.NotAvailable, viewModel.uiState.value.routeUiState.state)
         }
 }
