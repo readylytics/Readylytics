@@ -94,6 +94,10 @@ fun WorkoutDetailScreen(
             classification = uiState.classification,
         )
 
+        if (uiState.routeUiState.state == RouteDataState.Available) {
+            RouteContourCard(routeUiState = uiState.routeUiState)
+        }
+
         TrimpBreakdownChart(
             uiState.hrChartData,
             uiState.durationMinutes,

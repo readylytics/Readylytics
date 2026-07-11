@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.domain.util.ProjectedPoint
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -52,6 +53,26 @@ class WorkoutDetailScreenTest {
         val endHr: Int? = null
         val recoveryDrop = if (endHr != null) endHr - 50 else null
         assertEquals(null, recoveryDrop)
+    }
+
+    @Test
+    fun routeContourTransform_singleAxisRoute_usesFiniteCenteredScale() {
+        val result =
+            calculateRouteContourTransform(
+                points =
+                    listOf(
+                        ProjectedPoint(x = 100.0, y = 10.0, altitude = 0.0, timestampMs = 0L),
+                        ProjectedPoint(x = 100.0, y = 20.0, altitude = 0.0, timestampMs = 1L),
+                    ),
+                canvasWidth = 400f,
+                canvasHeight = 200f,
+                padding = 20f,
+            )
+
+        requireNotNull(result)
+        assert(result.scale.isFinite())
+        assertEquals(16f, result.scale)
+        assertEquals(200f, result.offsetX)
     }
 
     private fun computeLabelMinutes(
