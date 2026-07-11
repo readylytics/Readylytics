@@ -1,11 +1,10 @@
 package app.readylytics.health.data.healthconnect
 
 import android.content.Context
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseRouteResult
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.response.ReadRecordResponse
 import androidx.health.connect.client.units.Length
 import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainRoutePoint
@@ -36,6 +35,9 @@ class HealthConnectRepositoryImplTest {
     fun setUp() {
         mockkObject(HealthConnectClient.Companion)
         every { HealthConnectClient.getOrCreate(any()) } returns mockClient
+        mockkStatic("app.readylytics.health.data.healthconnect.HealthConnectRepositoryImplKt")
+        mockkStatic(Log::class)
+        every { Log.e(any(), any()) } returns 0
         
         repository = HealthConnectRepositoryImpl(
             context = context,
@@ -51,9 +53,6 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readExerciseRoute_whenRouteExists_returnsMappedRoute() = runTest(ioDispatcher) {
         val sessionId = "session-123"
-        val mockResponse = mockk<ReadRecordResponse<ExerciseSessionRecord>>()
-        val mockRecord = mockk<ExerciseSessionRecord>()
-        
         val timePoint = Instant.parse("2026-05-01T12:00:00Z")
         val mockLocation = mockk<ExerciseRoute.Location> {
             every { latitude } returns 37.7749
@@ -69,14 +68,11 @@ class HealthConnectRepositoryImplTest {
         }
         
         val mockRouteResult = ExerciseRouteResult.Data(mockRoute)
-        
-        every { mockRecord.exerciseRouteResult } returns mockRouteResult
-        every { mockResponse.record } returns mockRecord
-        coEvery { mockClient.readRecord(ExerciseSessionRecord::class, sessionId) } returns mockResponse
+        coEvery { mockClient.getExerciseRoute(sessionId) } returns mockRouteResult
 
         val result = repository.readExerciseRoute(sessionId)
 
-        coVerify(exactly = 1) { mockClient.readRecord(ExerciseSessionRecord::class, sessionId) }
+        coVerify(exactly = 1) { mockClient.getExerciseRoute(sessionId) }
         
         val expected = DomainExerciseRoute(
             workoutId = sessionId,
@@ -97,12 +93,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readExerciseRoute_whenNoRouteData_returnsNull() = runTest(ioDispatcher) {
         val sessionId = "session-123"
-        val mockResponse = mockk<ReadRecordResponse<ExerciseSessionRecord>>()
-        val mockRecord = mockk<ExerciseSessionRecord>()
-        
-        every { mockRecord.exerciseRouteResult } returns ExerciseRouteResult.NoData()
-        every { mockResponse.record } returns mockRecord
-        coEvery { mockClient.readRecord(ExerciseSessionRecord::class, sessionId) } returns mockResponse
+        coEvery { mockClient.getExerciseRoute(sessionId) } returns ExerciseRouteResult.NoData()
 
         val result = repository.readExerciseRoute(sessionId)
 
@@ -112,12 +103,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readExerciseRoute_whenConsentRequired_returnsNull() = runTest(ioDispatcher) {
         val sessionId = "session-123"
-        val mockResponse = mockk<ReadRecordResponse<ExerciseSessionRecord>>()
-        val mockRecord = mockk<ExerciseSessionRecord>()
-        
-        every { mockRecord.exerciseRouteResult } returns ExerciseRouteResult.ConsentRequired()
-        every { mockResponse.record } returns mockRecord
-        coEvery { mockClient.readRecord(ExerciseSessionRecord::class, sessionId) } returns mockResponse
+        coEvery { mockClient.getExerciseRoute(sessionId) } returns ExerciseRouteResult.ConsentRequired()
 
         val result = repository.readExerciseRoute(sessionId)
 
@@ -127,7 +113,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readExerciseRoute_whenSecurityExceptionThrown_returnsNull() = runTest(ioDispatcher) {
         val sessionId = "session-123"
-        coEvery { mockClient.readRecord(ExerciseSessionRecord::class, sessionId) } throws SecurityException("No permission")
+        coEvery { mockClient.getExerciseRoute(sessionId) } throws SecurityException("No permission")
 
         val result = repository.readExerciseRoute(sessionId)
 
@@ -137,7 +123,7 @@ class HealthConnectRepositoryImplTest {
     @Test
     fun readExerciseRoute_whenGeneralExceptionThrown_returnsNull() = runTest(ioDispatcher) {
         val sessionId = "session-123"
-        coEvery { mockClient.readRecord(ExerciseSessionRecord::class, sessionId) } throws RuntimeException("Boom")
+        coEvery { mockClient.getExerciseRoute(sessionId) } throws RuntimeException("Boom")
 
         val result = repository.readExerciseRoute(sessionId)
 

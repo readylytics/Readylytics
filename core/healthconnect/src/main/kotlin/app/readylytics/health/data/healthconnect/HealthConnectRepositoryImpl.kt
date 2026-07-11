@@ -1,6 +1,7 @@
 package app.readylytics.health.data.healthconnect
 
 import android.content.Context
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
@@ -45,6 +46,9 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+
+suspend fun HealthConnectClient.getExerciseRoute(sessionId: String): ExerciseRouteResult =
+    this.readRecord(ExerciseSessionRecord::class, sessionId).record.exerciseRouteResult
 
 @Singleton
 class HealthConnectRepositoryImpl
@@ -445,8 +449,7 @@ class HealthConnectRepositoryImpl
         override suspend fun readExerciseRoute(sessionId: String): DomainExerciseRoute? =
             withContext(ioDispatcher) {
                 try {
-                    val response = client.readRecord(ExerciseSessionRecord::class, sessionId)
-                    val routeResult = response.record.exerciseRouteResult
+                    val routeResult = client.getExerciseRoute(sessionId)
                     if (routeResult is ExerciseRouteResult.Data) {
                         val domainPoints = routeResult.exerciseRoute.route.map { point ->
                             DomainRoutePoint(
@@ -470,7 +473,7 @@ class HealthConnectRepositoryImpl
                     // Permission not granted or revoked
                     null
                 } catch (e: Exception) {
-                    // Fallback for general errors
+                    Log.e("HealthConnectRepo", "Failed to read route: ${e.message}")
                     null
                 }
             }
