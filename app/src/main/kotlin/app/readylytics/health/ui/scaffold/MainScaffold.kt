@@ -149,6 +149,11 @@ fun MainScaffold(
                         RecalcProgressBanner(
                             current = progress.current,
                             total = progress.total,
+                            onClick = {
+                                navController.navigate(AppDestination.SyncProgress) {
+                                    launchSingleTop = true
+                                }
+                            },
                             modifier =
                                 Modifier
                                     .align(Alignment.BottomCenter)
@@ -165,9 +170,11 @@ fun MainScaffold(
 private fun RecalcProgressBanner(
     current: Int,
     total: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
+        onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {

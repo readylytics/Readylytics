@@ -21,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -166,46 +165,6 @@ fun SettingsRoute(
             if (request.hasCrashReport) crashReportViewModel.markSent()
         },
     )
-
-    // Determinate, non-blocking progress dialog during resync. The work runs durably in WorkManager
-    // (with a foreground notification), so the user may dismiss this and leave — the resync continues.
-    var resyncDialogDismissed by rememberSaveable { mutableStateOf(false) }
-    if (!syncState.isResyncing) resyncDialogDismissed = false
-    if (syncState.isResyncing && !resyncDialogDismissed) {
-        AlertDialog(
-            onDismissRequest = { resyncDialogDismissed = true },
-            confirmButton = {
-                TextButton(onClick = { resyncDialogDismissed = true }) {
-                    Text(stringResource(R.string.resync_dialog_continue_in_background))
-                }
-            },
-            title = { Text(stringResource(R.string.resync_button_label)) },
-            text = {
-                Column {
-                    val total = syncState.resyncTotal
-                    val current = syncState.resyncCurrent
-                    if (total > 0) {
-                        Text(
-                            text = stringResource(R.string.recalculating_progress, current, total),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                        LinearProgressIndicator(
-                            progress = { current.toFloat() / total.toFloat() },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.resync_notification_preparing),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                }
-            },
-        )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

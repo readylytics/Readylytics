@@ -185,7 +185,6 @@
 <string name="resync_button_description">Re-fetch and recalculate your full history within your
         retention period. Runs in the background — you can keep using the app.</string>
 <string name="resync_button_label">Resync Health Connect data</string>
-<string name="resync_dialog_continue_in_background">Continue in background</string>
 <string name="resync_notification_preparing">Preparing…</string>
 <string name="settings_about_button">About Readylytics</string>
 <string name="settings_customize_palette_desc">Manually override color formulas with custom selections</string>

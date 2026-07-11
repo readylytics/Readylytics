@@ -18,6 +18,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.ui.sync.SyncProgressScreen
 import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
@@ -119,7 +120,7 @@ fun OnboardingRoute(
                         onSkip = onSkipSync,
                     )
                 } else {
-                    FinishingSetupScreen(
+                    SyncProgressScreen(
                         progress = recalcProgress,
                         onDownloadLogs = onDownloadLogs,
                         onContinueInBackground = onContinueInBackground,

@@ -1,4 +1,4 @@
-package app.readylytics.health.feature.onboarding
+package app.readylytics.health.core.ui.sync
 
 import app.readylytics.health.domain.logcat.LogcatCaptureStore
 import io.mockk.coEvery
@@ -15,15 +15,15 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class OnboardingLogViewModelTest {
+class SyncLogViewModelTest {
     private lateinit var logcatCaptureStore: LogcatCaptureStore
-    private lateinit var viewModel: OnboardingLogViewModel
+    private lateinit var viewModel: SyncLogViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         logcatCaptureStore = mockk(relaxed = true)
-        viewModel = OnboardingLogViewModel(logcatCaptureStore)
+        viewModel = SyncLogViewModel(logcatCaptureStore)
     }
 
     @After

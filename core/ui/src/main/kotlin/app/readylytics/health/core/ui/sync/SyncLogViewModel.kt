@@ -1,4 +1,4 @@
-package app.readylytics.health.feature.onboarding
+package app.readylytics.health.core.ui.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class OnboardingLogViewModel
+class SyncLogViewModel
     @Inject
     constructor(
         private val logcatCaptureStore: LogcatCaptureStore,
