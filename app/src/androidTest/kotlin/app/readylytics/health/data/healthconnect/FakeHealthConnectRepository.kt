@@ -12,7 +12,9 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainRoutePoint
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord
@@ -44,6 +46,7 @@ internal enum class FakeOp {
     BloodPressure,
     OxygenSaturation,
     Discovery,
+    ExerciseRoute,
 }
 
 /**
@@ -64,6 +67,8 @@ internal enum class FakeOp {
  * the desired scenario, then assert on the values returned through the interface.
  */
 internal class FakeHealthConnectRepository : HealthConnectRepository {
+    val exerciseRoutes = mutableMapOf<String, DomainExerciseRoute>()
+
     override val criticalPermissions: Set<String> =
         setOf(
             HealthPermission.getReadPermission(SleepSessionRecord::class),
@@ -242,6 +247,11 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         runOptional(FakeOp.OxygenSaturation) {
             stubList(totalInRange(spo2Count, from, to)) { index -> placeholderOxygen(index) }
         }
+
+    override suspend fun readExerciseRoute(sessionId: String): DomainExerciseRoute? {
+        errors[FakeOp.ExerciseRoute]?.let { throw it }
+        return exerciseRoutes[sessionId]
+    }
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays

@@ -5,6 +5,8 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.ExerciseRoute
+import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -18,7 +20,9 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainRoutePoint
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord
@@ -435,6 +439,39 @@ class HealthConnectRepositoryImpl
                         "Error reading oxygen saturation records"
                     }
                     emptyList()
+                }
+            }
+
+        override suspend fun readExerciseRoute(sessionId: String): DomainExerciseRoute? =
+            withContext(ioDispatcher) {
+                try {
+                    val response = client.readRecord(ExerciseSessionRecord::class, sessionId)
+                    val routeResult = response.record.exerciseRouteResult
+                    if (routeResult is ExerciseRouteResult.Data) {
+                        val domainPoints = routeResult.exerciseRoute.route.map { point ->
+                            DomainRoutePoint(
+                                latitude = point.latitude,
+                                longitude = point.longitude,
+                                altitude = point.altitude?.inMeters,
+                                timestampMs = point.time.toEpochMilli(),
+                                horizontalAccuracy = point.horizontalAccuracy?.inMeters?.toFloat(),
+                                verticalAccuracy = point.verticalAccuracy?.inMeters?.toFloat()
+                            )
+                        }
+                        if (domainPoints.isNotEmpty()) {
+                            DomainExerciseRoute(sessionId, domainPoints)
+                        } else {
+                            null
+                        }
+                    } else {
+                        null
+                    }
+                } catch (e: SecurityException) {
+                    // Permission not granted or revoked
+                    null
+                } catch (e: Exception) {
+                    // Fallback for general errors
+                    null
                 }
             }
 

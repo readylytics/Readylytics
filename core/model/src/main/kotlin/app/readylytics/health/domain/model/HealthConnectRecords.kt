@@ -86,3 +86,18 @@ data class DomainOxygenSaturationRecord(
     val percentage: Float,
     val deviceName: String,
 )
+
+data class DomainRoutePoint(
+    val latitude: Double,
+    val longitude: Double,
+    val altitude: Double?,
+    val timestampMs: Long,
+    val horizontalAccuracy: Float?,
+    val verticalAccuracy: Float?
+)
+
+data class DomainExerciseRoute(
+    val workoutId: String,
+    val points: List<DomainRoutePoint>
+)
+
