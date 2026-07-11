@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.units.Length
 import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainRoutePoint
+import app.readylytics.health.domain.repository.PermissionStatus
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -17,11 +18,13 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CancellationException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class HealthConnectRepositoryImplTest {
@@ -128,5 +131,25 @@ class HealthConnectRepositoryImplTest {
         val result = repository.readExerciseRoute(sessionId)
 
         assertNull(result)
+    }
+
+    @Test
+    fun readExerciseRoute_whenCancelled_rethrowsCancellation() = runTest(ioDispatcher) {
+        coEvery { mockClient.getExerciseRoute("session-123") } throws CancellationException("cancelled")
+
+        assertFailsWith<CancellationException> {
+            repository.readExerciseRoute("session-123")
+        }
+    }
+
+    @Test
+    fun checkExerciseRoutePermission_whenOptionalPermissionIsMissing_reportsIt() = runTest(ioDispatcher) {
+        every { HealthConnectClient.getSdkStatus(context) } returns HealthConnectClient.SDK_AVAILABLE
+        coEvery { mockClient.permissionController.getGrantedPermissions() } returns emptySet()
+
+        assertEquals(
+            PermissionStatus.Missing(setOf("android.permission.health.READ_EXERCISE_ROUTES")),
+            repository.checkExerciseRoutePermission(),
+        )
     }
 }

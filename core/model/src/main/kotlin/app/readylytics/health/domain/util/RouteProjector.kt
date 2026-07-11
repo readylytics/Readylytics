@@ -10,6 +10,8 @@ data class ProjectedPoint(
 )
 
 object RouteProjector {
+    private const val EARTH_RADIUS_METERS = 6_371_000.0
+
     fun project(latitudes: DoubleArray, longitudes: DoubleArray, altitudes: DoubleArray?, timestamps: LongArray): List<ProjectedPoint> {
         require(latitudes.size == longitudes.size && latitudes.size == timestamps.size) { "Input arrays must have the same size" }
         if (latitudes.isEmpty()) return emptyList()
@@ -19,8 +21,8 @@ object RouteProjector {
 
         return latitudes.indices.map { i ->
             ProjectedPoint(
-                x = longitudes[i] * cosLat,
-                y = latitudes[i],
+                x = EARTH_RADIUS_METERS * Math.toRadians(longitudes[i]) * cosLat,
+                y = EARTH_RADIUS_METERS * Math.toRadians(latitudes[i]),
                 altitude = altitudes?.getOrNull(i),
                 timestampMs = timestamps[i]
             )

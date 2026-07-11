@@ -152,7 +152,6 @@ android {
         }
     }
 
-
     buildTypes {
         release {
             isMinifyEnabled = true

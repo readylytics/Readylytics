@@ -57,6 +57,10 @@ class HealthConnectRepositoryImpl
         @param:ApplicationContext private val context: Context,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : HealthConnectRepository {
+        private companion object {
+            const val READ_EXERCISE_ROUTES = "android.permission.health.READ_EXERCISE_ROUTES"
+        }
+
         override val criticalPermissions: Set<String> =
             setOf(
                 HealthPermission.getReadPermission(SleepSessionRecord::class),
@@ -76,7 +80,7 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(BodyFatRecord::class),
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
                 HealthPermission.getReadPermission(OxygenSaturationRecord::class),
-                "android.permission.health.READ_EXERCISE_ROUTES"
+                READ_EXERCISE_ROUTES
             )
 
         override val allPermissions: Set<String> =
@@ -131,6 +135,14 @@ class HealthConnectRepositoryImpl
                     ) { "Missing permissions: $missing" }
                     PermissionStatus.Missing(missing)
                 }
+            }
+
+        override suspend fun checkExerciseRoutePermission(): PermissionStatus =
+            withContext(ioDispatcher) {
+                if (!isAvailable()) return@withContext PermissionStatus.Unavailable
+                val granted = client.permissionController.getGrantedPermissions()
+                if (READ_EXERCISE_ROUTES in granted) PermissionStatus.Granted
+                else PermissionStatus.Missing(setOf(READ_EXERCISE_ROUTES))
             }
 
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPages(
@@ -215,6 +227,7 @@ class HealthConnectRepositoryImpl
                 endTime = endTime,
                 exerciseType = exerciseType.toString(),
                 deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+                hasRoute = exerciseRouteResult !is ExerciseRouteResult.NoData,
             )
 
         private fun StepsRecord.toDomain(): DomainStepsRecord =
@@ -472,6 +485,8 @@ class HealthConnectRepositoryImpl
                 } catch (e: SecurityException) {
                     // Permission not granted or revoked
                     null
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.e("HealthConnectRepo", "Failed to read route: ${e.message}")
                     null

@@ -210,7 +210,7 @@ class WorkoutDetailViewModel
                         return@launch
                     }
 
-                    val permissionStatus = hcRepo.checkPermissions()
+                    val permissionStatus = hcRepo.checkExerciseRoutePermission()
                     if (permissionStatus is PermissionStatus.Missing &&
                         permissionStatus.missing.contains("android.permission.health.READ_EXERCISE_ROUTES")
                     ) {

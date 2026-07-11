@@ -14,7 +14,6 @@ import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
 import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainRoutePoint
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord

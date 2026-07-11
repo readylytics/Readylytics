@@ -119,6 +119,7 @@ object WorkoutMapper {
             trimp = metrics.trimp,
             avgHr = metrics.avgHr,
             deviceName = session.deviceName,
+            routeState = if (session.hasRoute) "PENDING_FOREGROUND_LOAD" else "NOT_AVAILABLE",
         )
     }
 }

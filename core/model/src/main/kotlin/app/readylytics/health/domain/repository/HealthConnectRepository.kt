@@ -39,6 +39,9 @@ interface HealthConnectRepository {
 
     suspend fun checkPermissions(): PermissionStatus
 
+    /** Checks the optional permission required to load an exercise route in the foreground. */
+    suspend fun checkExerciseRoutePermission(): PermissionStatus = checkPermissions()
+
     suspend fun readSleepSessions(
         from: Instant,
         to: Instant,

@@ -50,6 +50,7 @@ data class DomainExerciseSessionRecord(
     val endTime: Instant,
     val exerciseType: String,
     val deviceName: String,
+    val hasRoute: Boolean = false,
 )
 
 data class DomainStepsRecord(

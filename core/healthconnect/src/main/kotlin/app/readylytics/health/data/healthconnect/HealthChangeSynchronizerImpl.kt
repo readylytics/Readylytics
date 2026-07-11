@@ -437,6 +437,7 @@ class HealthChangeSynchronizerImpl
                 endTime = endTime,
                 exerciseType = exerciseType.toString(),
                 deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+                hasRoute = exerciseRouteResult !is ExerciseRouteResult.NoData,
             )
 
         private fun WeightRecord.toDomain(): DomainWeightRecord =

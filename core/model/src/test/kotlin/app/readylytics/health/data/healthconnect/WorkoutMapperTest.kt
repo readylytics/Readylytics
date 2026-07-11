@@ -1,9 +1,31 @@
 package app.readylytics.health.data.healthconnect
 
+import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import org.junit.Test
+import java.time.Instant
 import kotlin.test.assertEquals
 
 class WorkoutMapperIntensityTest {
+    @Test
+    fun mapExerciseSession_withRoute_marksItForForegroundLoading() {
+        val workout =
+            WorkoutMapper.mapExerciseSession(
+                session =
+                    DomainExerciseSessionRecord(
+                        id = "route-workout",
+                        startTime = Instant.EPOCH,
+                        endTime = Instant.EPOCH.plusSeconds(60),
+                        exerciseType = "running",
+                        deviceName = "watch",
+                        hasRoute = true,
+                    ),
+                hrSamples = emptyList(),
+                thresholds = WorkoutMapper.zoneThresholds(),
+            )
+
+        assertEquals("PENDING_FOREGROUND_LOAD", workout.routeState)
+    }
+
     @Test
     fun computeMetrics_returns_valid_metrics() {
         val thresholds = WorkoutMapper.zoneThresholds()

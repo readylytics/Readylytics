@@ -136,7 +136,7 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
             coEvery { workoutRepository.getById("run-1") } returns workout
-            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns PermissionStatus.Granted
             coEvery { workoutRepository.getRoutePoints("run-1") } returns routePoints
             coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
             coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns dbSamples
@@ -429,7 +429,7 @@ class WorkoutDetailViewModelTest {
                     avgHr = 140f,
                     routeState = "PENDING_FOREGROUND_LOAD",
                 )
-            coEvery { healthConnectRepository.checkPermissions() } returns
+            coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns
                 PermissionStatus.Missing(
                     missing = setOf("android.permission.health.READ_EXERCISE_ROUTES"),
                 )
@@ -465,7 +465,7 @@ class WorkoutDetailViewModelTest {
                     RoutePoint(latitude = 60.1709, longitude = 24.9394, altitude = 12.0, timestampMs = 1_030_000L),
                     RoutePoint(latitude = 60.1719, longitude = 24.9404, altitude = 11.0, timestampMs = 1_060_000L),
                 )
-            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns PermissionStatus.Granted
             coEvery { workoutRepository.getRoutePoints("run-1") } returns dbRoutePoints
 
             viewModel.loadRouteDetail(workout)
@@ -513,7 +513,7 @@ class WorkoutDetailViewModelTest {
                     DomainRoutePoint(60.1709, 24.9394, 12.0, 1_030_000L, null, null),
                     DomainRoutePoint(60.1719, 24.9404, 11.0, 1_060_000L, null, null),
                 )
-            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns PermissionStatus.Granted
             coEvery { workoutRepository.getRoutePoints("run-1") } returns emptyList()
             coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns
                 DomainExerciseRoute(workoutId = "run-1", points = hcRoutePoints)
@@ -545,7 +545,7 @@ class WorkoutDetailViewModelTest {
                     avgHr = 140f,
                     routeState = "PENDING_FOREGROUND_LOAD",
                 )
-            coEvery { healthConnectRepository.checkPermissions() } returns PermissionStatus.Granted
+            coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns PermissionStatus.Granted
             coEvery { workoutRepository.getRoutePoints("run-1") } returns emptyList()
             coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns null
             coEvery { workoutRepository.updateRouteState(any(), any()) } returns Unit
@@ -576,7 +576,7 @@ class WorkoutDetailViewModelTest {
                     avgHr = 140f,
                     routeState = "PENDING_FOREGROUND_LOAD",
                 )
-            coEvery { healthConnectRepository.checkPermissions() } throws RuntimeException("network error")
+            coEvery { healthConnectRepository.checkExerciseRoutePermission() } throws RuntimeException("network error")
 
             viewModel.loadRouteDetail(workout)
             advanceUntilIdle()

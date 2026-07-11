@@ -6,6 +6,19 @@ import org.junit.Test
 
 class RouteProjectorTest {
     @Test
+    fun project_convertsGeographicDegreesToMetres() {
+        val projected =
+            RouteProjector.project(
+                latitudes = doubleArrayOf(0.0, 1.0),
+                longitudes = doubleArrayOf(0.0, 0.0),
+                altitudes = null,
+                timestamps = longArrayOf(0L, 1L),
+            )
+
+        assertEquals(111_195.0, projected[1].y, 1.0)
+    }
+
+    @Test
     fun testEmptyInputReturnsEmptyList() {
         val result = RouteProjector.project(DoubleArray(0), DoubleArray(0), null, LongArray(0))
         assertTrue(result.isEmpty())
@@ -26,8 +39,8 @@ class RouteProjectorTest {
         val radLatCenter = Math.toRadians(latCenter)
         val cosLat = Math.cos(radLatCenter)
         
-        assertEquals(90.0 * cosLat, p1.x, 0.00001)
-        assertEquals(45.0, p1.y, 0.00001)
+        assertEquals(6_371_000.0 * Math.toRadians(90.0) * cosLat, p1.x, 0.00001)
+        assertEquals(6_371_000.0 * Math.toRadians(45.0), p1.y, 0.00001)
         assertEquals(100.0, p1.altitude ?: 0.0, 0.00001)
         assertEquals(1000L, p1.timestampMs)
     }
