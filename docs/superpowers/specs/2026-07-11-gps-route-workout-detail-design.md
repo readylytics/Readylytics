@@ -46,8 +46,8 @@ We will implement **Approach A (Eager Ingestion + Normalized Route Table)**. Exe
 | Feature | Health Connect Source | Already Imported? | Already Persisted? | Permission Requirements | Fallback | UI Visibility Rule |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Workout Route** | `ExerciseSessionRecord` route | No | No | `READ_EXERCISE_ROUTES` | None | Show canvas card if route is imported or permission/prompt states apply. Hide if no route was recorded. |
-| **Average Pace / Speed** | `SpeedRecord` samples or computed | No | No | `READ_EXERCISE` | Computed as GPS route distance divided by elapsed duration. | Visible if distance exists (either via route or fallback `DistanceRecord`). |
-| **Elevation Gain** | `ElevationGainedRecord` or route | No | No | `READ_EXERCISE` | Cumulative ascent calculated from GPS route altitude samples. | Visible if elevation gain was imported or calculated fallback is available. |
+| **Average Pace / Speed** | Direct Health Connect speed/pace metrics | No | No | `READ_EXERCISE` | **ONLY** calculated (using GPS route distance / elapsed duration) if Health Connect does not directly supply speed/pace data. | Visible if distance exists (either via route or fallback `DistanceRecord`). |
+| **Elevation Gain** | Direct `ElevationGainedRecord` from Health Connect | No | No | `READ_EXERCISE` | **ONLY** calculated (using 3m-threshold cumulative ascent from route altitude) if Health Connect does not directly provide elevation gain. | Visible if elevation gain was imported or calculated fallback is available. |
 | **Pace / Speed Chart** | `SpeedRecord` or coordinates | No | No | `READ_EXERCISE` | Interpolated speed points over route distance axis. | Visible if distance and speed data is available and point count $\ge 10$. |
 | **Elevation Chart** | `ExerciseSessionRecord` route altitude | No | No | `READ_EXERCISE_ROUTES` | None | Visible if route contains altitude samples and point count $\ge 10$. |
 
@@ -274,6 +274,11 @@ Extend `UnitConverter.kt` and `MetricFormatter.kt` to handle new units based on 
 *   **Distance**: Conversion of meters to kilometers (Metric) or miles (Imperial, division by `1609.344`).
 *   **Speed**: Conversion of meters per second to `km/h` (multiply by `3.6`) or `mph` (multiply by `2.236936`).
 *   **Pace**: Speed conversion to minutes/km or minutes/mile. (Inverting speed: $\text{Pace} = 60 / \text{Speed}$). Cap pace at 20 min/km (30 min/mi) to handle standstill periods.
+
+### 5. Fallback Calculation Priority Rules
+To prevent redundant math and preserve original source metrics:
+*   **Elevation Gain**: If `ElevationGainedRecord` is present in the imported Health Connect data, it is stored in `elevationGainMeters` and displayed directly. Fallback calculation via GPS altitude points (with the 3m vertical threshold filter) is executed **only** if the direct Health Connect elevation gain record is null or missing.
+*   **Average Pace / Speed**: If the workout session from Health Connect includes pre-calculated average speed or speed samples, we use it to calculate average pace/speed directly. Fallback calculation (using the cumulative GPS route distance divided by elapsed session duration) is executed **only** if no speed data was directly supplied.
 
 ---
 
