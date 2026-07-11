@@ -4,7 +4,6 @@ import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.WorkoutIntensity
 
 object WorkoutMapper {
     private val ZONE_WEIGHTS = floatArrayOf(1f, 2f, 3f, 4f, 5f)

@@ -157,13 +157,22 @@ object ScoringConstants {
     }
 }
 
-enum class WorkoutIntensity {
+enum class WorkoutLoadLevel {
     VERY_LIGHT,
     LIGHT,
     MODERATE,
     HARD,
-    VERY_HARD,
-    UNCATEGORIZED;  // zero-duration or no-HR workouts
+    VERY_HARD;
+
+    fun toCategoryString(): String = this.name
+}
+
+enum class WorkoutIntensityLevel {
+    VERY_LIGHT,
+    LIGHT,
+    MODERATE,
+    HARD,
+    VERY_HARD;
 
     fun toCategoryString(): String = this.name
 }

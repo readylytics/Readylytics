@@ -22,12 +22,20 @@
     <string name="workout_metric_bpm">bpm</string>
     <string name="workout_metric_strain">Strain</string>
     <string name="workout_metric_points">points</string>
-    <string name="workout_tooltip_training_load">Total training impulse - measures training
-        intensity and duration.</string>
+    <string name="workout_metric_overall_load">Overall load</string>
+    <string name="workout_metric_intensity">Intensity</string>
+    <string name="workout_metric_unavailable">Unavailable</string>
+    <string name="workout_metric_out_of_five">%1$d/5</string>
+    <string name="workout_tooltip_training_load">Total training impulse. Numeric TRIMP remains
+        source value for load calculations.</string>
     <string name="workout_tooltip_avg_pulse">Average heart rate during the workout.</string>
     <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
     <string name="workout_tooltip_ras">Readylytics Activity Score (RAS) points gained from this
         workout. RAS summarizes meaningful cardiovascular activity.</string>
+    <string name="workout_tooltip_overall_load">Overall workout load. Based on total TRIMP, with
+        at most one promotion for sufficiently high sustained intensity.</string>
+    <string name="workout_tooltip_intensity">Workout intensity. Based on TRIMP per minute when
+        duration and heart-rate coverage are sufficient.</string>
 
     <!-- Workout Stats -->
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>

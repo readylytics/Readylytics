@@ -12,6 +12,7 @@ import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.RasCalculator
+import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.feature.workouts.mappers.ChartDataMapper
 import app.readylytics.health.feature.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.feature.workouts.mappers.RecoveryMetricsMapper
@@ -45,6 +46,7 @@ data class WorkoutDetailUiState(
     val gainedStrain: Float? = null,
     val gainedStrainDisplay: String = "—",
     val ras: Float? = null,
+    val classification: WorkoutLoadClassification? = null,
     val isLoading: Boolean = true,
 )
 
@@ -154,6 +156,7 @@ class WorkoutDetailViewModel
                         gainedStrain = displayMetrics.gainedStrain,
                         gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
                         ras = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
+                        classification = displayMetrics.classification,
                         isLoading = false,
                     )
                 }

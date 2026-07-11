@@ -69,6 +69,7 @@ class GetWorkoutDisplayMetricsUseCase
                 trimpDisplay = MetricFormatter.formatTrimp(loadMetrics.preciseTrimp),
                 gainedStrain = loadMetrics.roundedGainedStrain,
                 gainedStrainDisplay = loadMetrics.gainedStrainDisplay,
+                classification = loadMetrics.classification,
             )
         }
     }
@@ -79,4 +80,5 @@ data class WorkoutDisplayMetrics(
     val trimpDisplay: String,
     val gainedStrain: Float,
     val gainedStrainDisplay: String,
+    val classification: WorkoutLoadClassification?,
 )

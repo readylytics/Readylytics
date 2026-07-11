@@ -30,7 +30,6 @@ import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.feature.workouts.R
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -158,10 +157,12 @@ private fun WorkoutHistoryItem(
                 )
             },
             trailingContent = {
-                IntensityBadge(
-                    label = stringResource(workout.intensityLabelResId()),
-                    status = workout.intensityStatus(),
-                )
+                item.classification?.let { classification ->
+                    IntensityBadge(
+                        label = stringResource(classification.finalLoad.labelResId()),
+                        status = classification.overallBadgeStatus(),
+                    )
+                }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         )
@@ -189,33 +190,5 @@ private fun IntensityBadge(
             style = MaterialTheme.typography.labelSmall,
             color = status.onContainerColor(),
         )
-    }
-}
-
-private fun WorkoutData.intensityLabelResId(): Int {
-    if (durationMinutes <= 0 || trimp <= 0f) {
-        return R.string.workout_intensity_very_light
-    }
-    val trimpPerMinute = trimp / durationMinutes.toFloat()
-    return when {
-        trimpPerMinute < 0.5f -> R.string.workout_intensity_very_light
-        trimpPerMinute < 1.0f -> R.string.workout_intensity_light
-        trimpPerMinute < 1.5f -> R.string.workout_intensity_moderate
-        trimpPerMinute < 2.2f -> R.string.workout_intensity_hard
-        else -> R.string.workout_intensity_very_hard
-    }
-}
-
-private fun WorkoutData.intensityStatus(): MetricStatus {
-    if (durationMinutes <= 0 || trimp <= 0f) {
-        return MetricStatus.CALIBRATING
-    }
-    val trimpPerMinute = trimp / durationMinutes.toFloat()
-    return when {
-        trimpPerMinute < 0.5f -> MetricStatus.CALIBRATING
-        trimpPerMinute < 1.0f -> MetricStatus.OPTIMAL
-        trimpPerMinute < 1.5f -> MetricStatus.OPTIMAL
-        trimpPerMinute < 2.2f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
     }
 }

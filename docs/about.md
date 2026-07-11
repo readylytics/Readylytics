@@ -247,7 +247,7 @@ _Implemented in: `Phase.kt`, `PhaseCalculator.kt`_
 
   _Implemented in: `SleepPercentileRhrCalculator.kt`, `BaselineComputer.kt`, `RhrBaselineProvider.kt`_
 
-- **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session. Advanced models (such as LT-TRIMP) rely on the specific Heart Rate Zones configured in your app settings. These zones are always active; it is your responsibility to ensure they accurately reflect your current fitness level.
+- **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session. Advanced models (such as LT-TRIMP) rely on the specific Heart Rate Zones configured in your app settings. These zones are always active; it is your responsibility to ensure they accurately reflect your current fitness level. On workout screens, **overall load** is derived primarily from total TRIMP. **Intensity** is derived from TRIMP/min (load density) and may promote a Moderate workout to Hard when `TRIMP >= 90` and `TRIMP/min >= 1.75`, or a Hard workout to Very Hard when `TRIMP >= 140` and `TRIMP/min >= 2.25`. These categorical labels do **not** replace numeric TRIMP in ATL, CTL, Strain Ratio, Load Score, RAS, or Readiness calculations.
 
   _Implemented in: `RasCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `RasScoringStrategy.kt`, `HrMaxProvider.kt`_
 

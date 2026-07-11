@@ -15,6 +15,9 @@ import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
+import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
+import app.readylytics.health.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
 import io.mockk.every
@@ -113,6 +116,15 @@ class WorkoutsViewModelTest {
                         trimpDisplay = "50",
                         gainedStrain = 0.36f,
                         gainedStrainDisplay = "0.36",
+                        classification =
+                            WorkoutLoadClassification(
+                                totalTrimp = 50.0,
+                                trimpPerMinute = 1.2,
+                                baseLoad = WorkoutLoadLevel.LIGHT,
+                                intensity = WorkoutIntensityLevel.LIGHT,
+                                finalLoad = WorkoutLoadLevel.LIGHT,
+                                wasPromoted = false,
+                            ),
                     )
             }
         foregroundSyncController =
@@ -334,6 +346,15 @@ class WorkoutsViewModelTest {
                     trimpDisplay = "116",
                     gainedStrain = 0.37f,
                     gainedStrainDisplay = "0.37",
+                    classification =
+                        WorkoutLoadClassification(
+                            totalTrimp = 115.6,
+                            trimpPerMinute = 1.93,
+                            baseLoad = WorkoutLoadLevel.MODERATE,
+                            intensity = WorkoutIntensityLevel.HARD,
+                            finalLoad = WorkoutLoadLevel.HARD,
+                            wasPromoted = true,
+                        ),
                 )
 
             viewModel = createViewModel()
@@ -343,6 +364,13 @@ class WorkoutsViewModelTest {
             assertEquals(0.37f, state.recentWorkouts.single().gainedStrain)
             assertEquals("0.37", state.recentWorkouts.single().gainedStrainDisplay)
             assertEquals(116, state.recentWorkouts.single().computedTrimp)
+            assertEquals(
+                WorkoutLoadLevel.HARD,
+                state.recentWorkouts
+                    .single()
+                    .classification
+                    ?.finalLoad,
+            )
 
             collectJob.cancelAndJoin()
         }
@@ -448,6 +476,15 @@ class WorkoutsViewModelTest {
                     trimpDisplay = "20",
                     gainedStrain = 0.09f,
                     gainedStrainDisplay = "0.09",
+                    classification =
+                        WorkoutLoadClassification(
+                            totalTrimp = 20.0,
+                            trimpPerMinute = 2.5,
+                            baseLoad = WorkoutLoadLevel.VERY_LIGHT,
+                            intensity = WorkoutIntensityLevel.VERY_HARD,
+                            finalLoad = WorkoutLoadLevel.VERY_LIGHT,
+                            wasPromoted = false,
+                        ),
                 )
             coEvery {
                 getWorkoutDisplayMetricsUseCase.execute(workout = workout2, samples = emptyList())
@@ -458,6 +495,15 @@ class WorkoutsViewModelTest {
                     trimpDisplay = "25",
                     gainedStrain = 0.09f,
                     gainedStrainDisplay = "0.09",
+                    classification =
+                        WorkoutLoadClassification(
+                            totalTrimp = 25.0,
+                            trimpPerMinute = 2.5,
+                            baseLoad = WorkoutLoadLevel.VERY_LIGHT,
+                            intensity = WorkoutIntensityLevel.VERY_HARD,
+                            finalLoad = WorkoutLoadLevel.VERY_LIGHT,
+                            wasPromoted = false,
+                        ),
                 )
 
             viewModel = createViewModel()
