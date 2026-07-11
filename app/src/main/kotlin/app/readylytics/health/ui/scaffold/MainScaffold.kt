@@ -81,9 +81,13 @@ fun MainScaffold(
         }
     }
 
+    val isSyncProgressScreen =
+        navBackStackEntry?.destination?.hasRoute(AppDestination.SyncProgress::class) == true
+
     PullToRefreshBox(
-        isRefreshing = isSyncing,
+        isRefreshing = isSyncing && !isSyncProgressScreen,
         onRefresh = { syncViewModel.triggerManualSync() },
+        enabled = !isSyncProgressScreen,
     ) {
         NavigationSuiteScaffold(
             layoutType =
@@ -147,8 +151,6 @@ fun MainScaffold(
                     // Determinate "day X of Y" banner shown while a historical recalculation walks
                     // forward, so the recompute surfaces visible progress instead of a silent spinner.
                     // Hide banner when on full-screen SyncProgress view (it shows the same progress inline).
-                    val isSyncProgressScreen =
-                        currentDestination?.hasRoute(AppDestination.SyncProgress::class) == true
                     recalcProgress?.takeIf { it.total > 0 && !isSyncProgressScreen }?.let { progress ->
                         RecalcProgressBanner(
                             current = progress.current,
