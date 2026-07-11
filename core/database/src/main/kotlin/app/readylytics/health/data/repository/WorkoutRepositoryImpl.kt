@@ -1,5 +1,7 @@
 package app.readylytics.health.data.repository
 
+import androidx.room.withTransaction
+import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
@@ -19,6 +21,7 @@ class WorkoutRepositoryImpl
     constructor(
         private val dao: WorkoutDao,
         private val workoutRoutePointDao: WorkoutRoutePointDao,
+        private val db: HealthDatabase,
     ) : WorkoutRepository {
         override suspend fun getById(id: String): WorkoutData? = dao.getById(id)?.let { mapToDomain(it) }
 
@@ -40,30 +43,33 @@ class WorkoutRepositoryImpl
         }
 
         override suspend fun saveRoutePoints(workoutId: String, points: List<RoutePoint>, stats: WorkoutStats) {
-            val dbPoints = points.map {
-                WorkoutRoutePointEntity(
-                    workoutId = workoutId,
-                    latitude = it.latitude,
-                    longitude = it.longitude,
-                    altitude = it.altitude,
-                    timestampMs = it.timestampMs,
-                    horizontalAccuracy = null,
-                    verticalAccuracy = null
-                )
-            }
-            workoutRoutePointDao.deleteByWorkoutId(workoutId)
-            workoutRoutePointDao.insertAll(dbPoints)
-
             val workout = dao.getById(workoutId) ?: return
-            dao.upsertAll(listOf(
-                workout.copy(
-                    routeState = "IMPORTED",
-                    avgSpeedKmh = stats.avgSpeedKmh,
-                    avgPaceMinKm = stats.avgPaceMinKm,
-                    elevationGainMeters = stats.elevationGainMeters,
-                    totalDistanceMeters = stats.totalDistanceMeters
-                )
-            ))
+
+            db.withTransaction {
+                val dbPoints = points.map {
+                    WorkoutRoutePointEntity(
+                        workoutId = workoutId,
+                        latitude = it.latitude,
+                        longitude = it.longitude,
+                        altitude = it.altitude,
+                        timestampMs = it.timestampMs,
+                        horizontalAccuracy = null,
+                        verticalAccuracy = null
+                    )
+                }
+                workoutRoutePointDao.deleteByWorkoutId(workoutId)
+                workoutRoutePointDao.insertAll(dbPoints)
+
+                dao.upsertAll(listOf(
+                    workout.copy(
+                        routeState = "IMPORTED",
+                        avgSpeedKmh = stats.avgSpeedKmh,
+                        avgPaceMinKm = stats.avgPaceMinKm,
+                        elevationGainMeters = stats.elevationGainMeters,
+                        totalDistanceMeters = stats.totalDistanceMeters
+                    )
+                ))
+            }
         }
 
         private fun mapToDomain(entity: WorkoutRecordEntity): WorkoutData =

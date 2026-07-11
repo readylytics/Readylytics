@@ -1,5 +1,7 @@
 package app.readylytics.health.data.repository
 
+import androidx.room.withTransaction
+import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
@@ -7,8 +9,12 @@ import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.model.TimestampedTrimp
 import app.readylytics.health.domain.repository.RoutePoint
 import app.readylytics.health.domain.repository.WorkoutStats
+import io.mockk.coEvery
+import io.mockk.mockk
+import io.mockk.mockkStatic
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -17,7 +23,19 @@ import kotlin.test.assertNull
 class WorkoutRepositoryImplTest {
     private val workoutDao = FakeWorkoutDao()
     private val routePointDao = FakeWorkoutRoutePointDao()
-    private val repository = WorkoutRepositoryImpl(workoutDao, routePointDao)
+    private val database = mockk<HealthDatabase>(relaxed = true)
+    private val repository = WorkoutRepositoryImpl(workoutDao, routePointDao, database)
+
+    @Before
+    fun setUp() {
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        coEvery {
+            database.withTransaction(any<suspend () -> Any>())
+        } answers {
+            val block = secondArg<suspend () -> Any>()
+            kotlinx.coroutines.runBlocking { block() }
+        }
+    }
 
     @Test
     fun getRoutePointsMapsEntitiesToDomainModel() = runTest {
@@ -128,6 +146,26 @@ class WorkoutRepositoryImplTest {
         assertEquals(4.8f, updatedWorkout.avgPaceMinKm)
         assertEquals(150f, updatedWorkout.elevationGainMeters)
         assertEquals(5000f, updatedWorkout.totalDistanceMeters)
+    }
+
+    @Test
+    fun saveRoutePointsDoesNothingIfWorkoutNotFound() = runTest {
+        val workoutId = "nonexistent-workout"
+        val newPoints = listOf(
+            RoutePoint(10.0, 20.0, 30.0, 1500L)
+        )
+        val stats = WorkoutStats(
+            avgSpeedKmh = 12.5f,
+            avgPaceMinKm = 4.8f,
+            elevationGainMeters = 150f,
+            totalDistanceMeters = 5000f
+        )
+
+        repository.saveRoutePoints(workoutId, newPoints, stats)
+
+        // Verify route points are not saved because workout is not found
+        val savedPoints = routePointDao.getRoutePoints(workoutId)
+        assertEquals(0, savedPoints.size)
     }
 
     private fun createWorkoutRecord(id: String) = WorkoutRecordEntity(
