@@ -21,6 +21,7 @@ import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,6 +56,7 @@ data class WorkoutDisplayItem(
     val gainedStrain: Float,
     val computedTrimp: Int,
     val gainedStrainDisplay: String,
+    val classification: WorkoutLoadClassification?,
 )
 
 data class WorkoutsUiState(
@@ -316,6 +318,7 @@ class WorkoutsViewModel
                                             gainedStrain = displayMetrics.gainedStrain,
                                             computedTrimp = displayMetrics.computedTrimp,
                                             gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
+                                            classification = displayMetrics.classification,
                                         )
                                     }
 
