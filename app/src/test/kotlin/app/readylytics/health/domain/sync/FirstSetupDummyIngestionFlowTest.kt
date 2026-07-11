@@ -3,6 +3,7 @@ package app.readylytics.health.domain.sync
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -302,6 +303,8 @@ class FirstSetupDummyIngestionFlowTest {
             from: Instant,
             to: Instant,
         ): List<DomainOxygenSaturationRecord> = emptyList()
+
+        override suspend fun readExerciseRoute(sessionId: String): DomainExerciseRoute? = null
 
         private companion object {
             val sleepStart: Instant = Instant.parse("2026-06-28T22:00:00Z")
