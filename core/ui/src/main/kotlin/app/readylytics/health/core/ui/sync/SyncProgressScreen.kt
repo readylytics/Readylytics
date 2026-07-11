@@ -34,8 +34,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.domain.sync.RecalcProgress
@@ -45,23 +43,19 @@ fun SyncProgressScreen(
     progress: RecalcProgress?,
     onDownloadLogs: () -> Unit,
     onContinueInBackground: () -> Unit,
+    logText: String?,
+    onLogsVisibilityChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    logViewModel: SyncLogViewModel = hiltViewModel(),
 ) {
-    val logText by logViewModel.logText.collectAsStateWithLifecycle()
     var showLogs by remember { mutableStateOf(false) }
 
     LaunchedEffect(showLogs) {
-        if (showLogs) {
-            logViewModel.startPolling()
-        } else {
-            logViewModel.stopPolling()
-        }
+        onLogsVisibilityChanged(showLogs)
     }
 
-    DisposableEffect(logViewModel) {
+    DisposableEffect(Unit) {
         onDispose {
-            logViewModel.stopPolling()
+            onLogsVisibilityChanged(false)
         }
     }
 

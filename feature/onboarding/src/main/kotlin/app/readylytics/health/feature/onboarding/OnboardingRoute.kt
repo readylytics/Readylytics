@@ -42,10 +42,12 @@ fun OnboardingRoute(
     onContinueInBackground: () -> Unit = {},
     onboardingViewModel: OnboardingViewModel = hiltViewModel(),
     restoreViewModel: OnboardingRestoreViewModel = hiltViewModel(),
+    syncLogViewModel: SyncLogViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val userPrefs by userPreferencesFlow.collectAsStateWithLifecycle(initialValue = null)
     val restoreState by restoreViewModel.state.collectAsStateWithLifecycle()
+    val logText by syncLogViewModel.logText.collectAsStateWithLifecycle()
     val permissions = remember { allPermissions }
 
     var permissionsDenied by rememberSaveable { mutableStateOf(false) }
@@ -124,6 +126,10 @@ fun OnboardingRoute(
                         progress = recalcProgress,
                         onDownloadLogs = onDownloadLogs,
                         onContinueInBackground = onContinueInBackground,
+                        logText = logText,
+                        onLogsVisibilityChanged = { visible ->
+                            if (visible) syncLogViewModel.startPolling() else syncLogViewModel.stopPolling()
+                        },
                     )
                 }
             }

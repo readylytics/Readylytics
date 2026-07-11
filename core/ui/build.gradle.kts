@@ -1,7 +1,5 @@
 plugins {
     id("readylytics.compose-library-conventions")
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt)
 }
 
 android {
@@ -11,13 +9,9 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:designsystem"))
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
     testImplementation(libs.androidx.junit)
@@ -25,8 +19,6 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.junit)
     testImplementation(kotlin("test"))
-    testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test)
     testImplementation(libs.androidx.compose.ui.test.junit4)

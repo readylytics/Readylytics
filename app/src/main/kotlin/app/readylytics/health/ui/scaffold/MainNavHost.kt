@@ -53,6 +53,7 @@ import app.readylytics.health.feature.dashboard.getInsightIcon
 import app.readylytics.health.feature.dashboard.toDailyInsightContext
 import app.readylytics.health.feature.insights.InsightDetailRepository
 import app.readylytics.health.feature.insights.InsightDetailSheet
+import app.readylytics.health.feature.onboarding.SyncLogViewModel
 import app.readylytics.health.feature.settings.SettingsRoute
 import app.readylytics.health.feature.settings.SyncSettingsViewModel
 import app.readylytics.health.feature.sleep.SleepRoute
@@ -381,6 +382,8 @@ fun MainNavHost(
             val syncViewModel: SyncViewModel = hiltViewModel()
             val recalcProgress by syncViewModel.recalcProgress.collectAsStateWithLifecycle()
             val logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel()
+            val syncLogViewModel: SyncLogViewModel = hiltViewModel()
+            val logText by syncLogViewModel.logText.collectAsStateWithLifecycle()
             val coroutineScope = rememberCoroutineScope()
             val context = LocalContext.current
 
@@ -406,6 +409,10 @@ fun MainNavHost(
                     onContinueInBackground = {
                         resyncScreenDismissed = true
                         navController.popBackStack()
+                    },
+                    logText = logText,
+                    onLogsVisibilityChanged = { visible ->
+                        if (visible) syncLogViewModel.startPolling() else syncLogViewModel.stopPolling()
                     },
                 )
             }

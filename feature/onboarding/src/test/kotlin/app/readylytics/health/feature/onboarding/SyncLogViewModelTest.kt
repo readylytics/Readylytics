@@ -1,4 +1,4 @@
-package app.readylytics.health.core.ui.sync
+package app.readylytics.health.feature.onboarding
 
 import app.readylytics.health.domain.logcat.LogcatCaptureStore
 import io.mockk.coEvery
