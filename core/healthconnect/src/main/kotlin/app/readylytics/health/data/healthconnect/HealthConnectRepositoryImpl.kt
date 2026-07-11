@@ -68,6 +68,7 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(BodyFatRecord::class),
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
                 HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+                "android.permission.health.READ_EXERCISE_ROUTES"
             )
 
         override val allPermissions: Set<String> =
