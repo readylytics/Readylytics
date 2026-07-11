@@ -71,4 +71,11 @@
     <string name="message_no_hr_data">No HR data available</string>
     <string name="label_minutes">Minutes</string>
     <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>
+    <string name="workout_chart_pace">Pace</string>
+    <string name="workout_chart_speed">Speed</string>
+    <string name="workout_chart_elevation">Elevation</string>
+    <string name="workout_chart_pace_unit">min/km</string>
+    <string name="workout_chart_speed_unit">km/h</string>
+    <string name="workout_chart_elevation_unit">m</string>
+    <string name="workout_chart_distance_unit">Distance (km)</string>
 </resources>

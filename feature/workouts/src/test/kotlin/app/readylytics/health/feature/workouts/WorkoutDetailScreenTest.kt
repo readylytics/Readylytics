@@ -6,6 +6,17 @@ import org.junit.Test
 
 class WorkoutDetailScreenTest {
     @Test
+    fun performanceChartSeries_invertedPace_negatesValuesSoFasterPaceRendersHigher() {
+        val result =
+            performanceChartSeries(
+                chartData = listOf(1f to 6.5f, 2f to 5.0f),
+                isInverted = true,
+            )
+
+        assertEquals(listOf(1.0 to -6.5, 2.0 to -5.0), result)
+    }
+
+    @Test
     fun computeLabelMinutes_durationZero_returnsZero() {
         val result = computeLabelMinutes(0, 6)
         assertEquals(listOf(0.0), result)

@@ -98,6 +98,32 @@ fun WorkoutDetailScreen(
             RouteContourCard(routeUiState = uiState.routeUiState)
         }
 
+        WorkoutPerformanceChartCard(
+            title =
+                stringResource(
+                    if (uiState.isSpeedOriented) R.string.workout_chart_speed else R.string.workout_chart_pace,
+                ),
+            chartData = uiState.paceSpeedChartData,
+            isInverted = !uiState.isSpeedOriented,
+            yAxisTitle =
+                stringResource(
+                    if (uiState.isSpeedOriented) {
+                        R.string.workout_chart_speed_unit
+                    } else {
+                        R.string.workout_chart_pace_unit
+                    },
+                ),
+            xAxisTitle = stringResource(R.string.workout_chart_distance_unit),
+        )
+
+        WorkoutPerformanceChartCard(
+            title = stringResource(R.string.workout_chart_elevation),
+            chartData = uiState.elevationChartData,
+            isInverted = false,
+            yAxisTitle = stringResource(R.string.workout_chart_elevation_unit),
+            xAxisTitle = stringResource(R.string.workout_chart_distance_unit),
+        )
+
         TrimpBreakdownChart(
             uiState.hrChartData,
             uiState.durationMinutes,
