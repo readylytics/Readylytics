@@ -6,6 +6,7 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainRoutePoint
+import app.readylytics.health.domain.model.RouteReadResult
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -516,7 +517,7 @@ class WorkoutDetailViewModelTest {
             coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns PermissionStatus.Granted
             coEvery { workoutRepository.getRoutePoints("run-1") } returns emptyList()
             coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns
-                DomainExerciseRoute(workoutId = "run-1", points = hcRoutePoints)
+                RouteReadResult.Data(DomainExerciseRoute(workoutId = "run-1", points = hcRoutePoints))
             coEvery { workoutRepository.saveRoutePoints(any(), any(), any()) } returns Unit
 
             viewModel.loadRouteDetail(workout)
@@ -547,7 +548,7 @@ class WorkoutDetailViewModelTest {
                 )
             coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns PermissionStatus.Granted
             coEvery { workoutRepository.getRoutePoints("run-1") } returns emptyList()
-            coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns null
+            coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns RouteReadResult.NoRoute
             coEvery { workoutRepository.updateRouteState(any(), any()) } returns Unit
 
             viewModel.loadRouteDetail(workout)
@@ -555,6 +556,36 @@ class WorkoutDetailViewModelTest {
 
             coVerify { workoutRepository.updateRouteState("run-1", "NOT_AVAILABLE") }
             assertEquals(RouteDataState.NotAvailable, viewModel.uiState.value.routeUiState.state)
+        }
+
+    @Test
+    fun `loadRouteDetail sets ConsentRequired and does not persist NOT_AVAILABLE when route consent is required`() =
+        runTest {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = 1_000_000L,
+                    endTime = 2_000_000L,
+                    exerciseType = "RUNNING",
+                    durationMinutes = 16,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 16f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 140f,
+                    routeState = "PENDING_FOREGROUND_LOAD",
+                )
+            coEvery { healthConnectRepository.checkExerciseRoutePermission() } returns PermissionStatus.Granted
+            coEvery { workoutRepository.getRoutePoints("run-1") } returns emptyList()
+            coEvery { healthConnectRepository.readExerciseRoute("run-1") } returns RouteReadResult.ConsentRequired
+
+            viewModel.loadRouteDetail(workout)
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { workoutRepository.updateRouteState(any(), any()) }
+            assertEquals(RouteDataState.ConsentRequired, viewModel.uiState.value.routeUiState.state)
         }
 
     @Test

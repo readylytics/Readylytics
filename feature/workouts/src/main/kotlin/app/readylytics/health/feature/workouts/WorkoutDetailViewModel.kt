@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.domain.model.RouteReadResult
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -47,6 +48,8 @@ sealed interface RouteDataState {
     object NotAvailable : RouteDataState
 
     object PermissionRequired : RouteDataState
+
+    object ConsentRequired : RouteDataState
 
     object Available : RouteDataState
 
@@ -227,7 +230,17 @@ class WorkoutDetailViewModel
                     if (dbPoints.isNotEmpty()) {
                         processAndPublishRoute(workout, dbPoints)
                     } else if (workout.routeState == "PENDING_FOREGROUND_LOAD") {
-                        val hcRoute = hcRepo.readExerciseRoute(workout.id)
+                        val routeReadResult = hcRepo.readExerciseRoute(workout.id)
+                        if (routeReadResult is RouteReadResult.ConsentRequired) {
+                            // Health Connect gates route data behind a per-session consent
+                            // dialog on top of READ_EXERCISE_ROUTES. Leave routeState as
+                            // PENDING_FOREGROUND_LOAD so this retries once consent is granted.
+                            _uiState.update {
+                                it.copy(routeUiState = RouteUiState(state = RouteDataState.ConsentRequired))
+                            }
+                            return@launch
+                        }
+                        val hcRoute = (routeReadResult as? RouteReadResult.Data)?.route
                         if (hcRoute != null && hcRoute.points.isNotEmpty()) {
                             val routePoints =
                                 hcRoute.points.map {

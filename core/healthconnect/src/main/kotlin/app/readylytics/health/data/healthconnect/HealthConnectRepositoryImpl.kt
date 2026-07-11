@@ -23,6 +23,7 @@ import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
 import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.RouteReadResult
 import app.readylytics.health.domain.model.DomainRoutePoint
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -467,37 +468,38 @@ class HealthConnectRepositoryImpl
                 }
             }
 
-        override suspend fun readExerciseRoute(sessionId: String): DomainExerciseRoute? =
+        override suspend fun readExerciseRoute(sessionId: String): RouteReadResult =
             withContext(ioDispatcher) {
                 try {
-                    val routeResult = client.getExerciseRoute(sessionId)
-                    if (routeResult is ExerciseRouteResult.Data) {
-                        val domainPoints = routeResult.exerciseRoute.route.map { point ->
-                            DomainRoutePoint(
-                                latitude = point.latitude,
-                                longitude = point.longitude,
-                                altitude = point.altitude?.inMeters,
-                                timestampMs = point.time.toEpochMilli(),
-                                horizontalAccuracy = point.horizontalAccuracy?.inMeters?.toFloat(),
-                                verticalAccuracy = point.verticalAccuracy?.inMeters?.toFloat()
-                            )
+                    when (val routeResult = client.getExerciseRoute(sessionId)) {
+                        is ExerciseRouteResult.Data -> {
+                            val domainPoints = routeResult.exerciseRoute.route.map { point ->
+                                DomainRoutePoint(
+                                    latitude = point.latitude,
+                                    longitude = point.longitude,
+                                    altitude = point.altitude?.inMeters,
+                                    timestampMs = point.time.toEpochMilli(),
+                                    horizontalAccuracy = point.horizontalAccuracy?.inMeters?.toFloat(),
+                                    verticalAccuracy = point.verticalAccuracy?.inMeters?.toFloat()
+                                )
+                            }
+                            if (domainPoints.isNotEmpty()) {
+                                RouteReadResult.Data(DomainExerciseRoute(sessionId, domainPoints))
+                            } else {
+                                RouteReadResult.NoRoute
+                            }
                         }
-                        if (domainPoints.isNotEmpty()) {
-                            DomainExerciseRoute(sessionId, domainPoints)
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
+                        is ExerciseRouteResult.ConsentRequired -> RouteReadResult.ConsentRequired
+                        else -> RouteReadResult.NoRoute
                     }
                 } catch (e: SecurityException) {
                     // Permission not granted or revoked
-                    null
+                    RouteReadResult.NoRoute
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Log.e("HealthConnectRepo", "Failed to read route: ${e.message}")
-                    null
+                    RouteReadResult.NoRoute
                 }
             }
 

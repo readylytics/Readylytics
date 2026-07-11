@@ -102,3 +102,19 @@ data class DomainExerciseRoute(
     val points: List<DomainRoutePoint>
 )
 
+/**
+ * Result of attempting to read a workout's GPS route from Health Connect.
+ *
+ * [ConsentRequired] is distinct from [NoRoute]: Health Connect gates route data behind a
+ * separate, per-session, one-time consent dialog on top of the blanket READ_EXERCISE_ROUTES
+ * permission. Callers must not treat [ConsentRequired] as "this workout has no route" — doing
+ * so persists a false negative and the route can never be shown even after the user consents.
+ */
+sealed interface RouteReadResult {
+    data class Data(val route: DomainExerciseRoute) : RouteReadResult
+
+    data object NoRoute : RouteReadResult
+
+    data object ConsentRequired : RouteReadResult
+}
+

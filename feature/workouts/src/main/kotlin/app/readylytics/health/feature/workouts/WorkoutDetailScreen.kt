@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.contracts.ExerciseRouteRequestContract
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
@@ -54,6 +55,14 @@ fun WorkoutDetailRoute(
                 if (granted.contains("android.permission.health.READ_EXERCISE_ROUTES")) {
                     uiState.workout?.let { viewModel.loadRouteDetail(it) }
                 }
+            },
+        )
+
+    val routeConsentLauncher =
+        rememberLauncherForActivityResult(
+            contract = ExerciseRouteRequestContract(),
+            onResult = {
+                uiState.workout?.let { viewModel.loadRouteDetail(it) }
             },
         )
 
@@ -85,6 +94,9 @@ fun WorkoutDetailRoute(
                 onRequestRoutePermission = {
                     permissionLauncher.launch(setOf("android.permission.health.READ_EXERCISE_ROUTES"))
                 },
+                onRequestRouteConsent = {
+                    routeConsentLauncher.launch(workoutId)
+                },
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -95,6 +107,7 @@ fun WorkoutDetailRoute(
 fun WorkoutDetailScreen(
     uiState: WorkoutDetailUiState,
     onRequestRoutePermission: () -> Unit = {},
+    onRequestRouteConsent: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val workout = uiState.workout ?: return
@@ -121,6 +134,8 @@ fun WorkoutDetailScreen(
             RouteContourCard(routeUiState = uiState.routeUiState)
         } else if (uiState.routeUiState.state == RouteDataState.PermissionRequired) {
             RoutePermissionCard(onRequestPermission = onRequestRoutePermission)
+        } else if (uiState.routeUiState.state == RouteDataState.ConsentRequired) {
+            RouteConsentCard(onRequestConsent = onRequestRouteConsent)
         }
 
         WorkoutPerformanceChartCard(
@@ -188,6 +203,40 @@ fun RoutePermissionCard(
             Spacer(Modifier.height(MaterialTheme.spacing.medium))
             Button(onClick = onRequestPermission) {
                 Text(stringResource(R.string.workout_route_permission_button))
+            }
+        }
+    }
+}
+
+@Composable
+fun RouteConsentCard(
+    onRequestConsent: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(
+            modifier = Modifier.padding(MaterialTheme.spacing.medium),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.workout_route_consent_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            Text(
+                text = stringResource(R.string.workout_route_consent_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
+            Button(onClick = onRequestConsent) {
+                Text(stringResource(R.string.workout_route_consent_button))
             }
         }
     }

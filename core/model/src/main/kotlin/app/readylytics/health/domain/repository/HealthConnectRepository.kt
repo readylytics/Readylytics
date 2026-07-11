@@ -3,13 +3,13 @@ package app.readylytics.health.domain.repository
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainExerciseRoute
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
+import app.readylytics.health.domain.model.RouteReadResult
 import java.time.Instant
 
 class HealthConnectPermissionRevokedException(
@@ -109,5 +109,5 @@ interface HealthConnectRepository {
         to: Instant,
     ): List<DomainOxygenSaturationRecord>
 
-    suspend fun readExerciseRoute(sessionId: String): DomainExerciseRoute?
+    suspend fun readExerciseRoute(sessionId: String): RouteReadResult
 }

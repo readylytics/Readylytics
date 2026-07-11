@@ -23,6 +23,7 @@ import app.readylytics.health.domain.model.DomainSleepStage
 import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
+import app.readylytics.health.domain.model.RouteReadResult
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
@@ -247,9 +248,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             stubList(totalInRange(spo2Count, from, to)) { index -> placeholderOxygen(index) }
         }
 
-    override suspend fun readExerciseRoute(sessionId: String): DomainExerciseRoute? {
+    override suspend fun readExerciseRoute(sessionId: String): RouteReadResult {
         errors[FakeOp.ExerciseRoute]?.let { throw it }
-        return exerciseRoutes[sessionId]
+        return exerciseRoutes[sessionId]?.let { RouteReadResult.Data(it) } ?: RouteReadResult.NoRoute
     }
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
