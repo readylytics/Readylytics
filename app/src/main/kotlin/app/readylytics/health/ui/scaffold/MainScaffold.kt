@@ -146,7 +146,10 @@ fun MainScaffold(
 
                     // Determinate "day X of Y" banner shown while a historical recalculation walks
                     // forward, so the recompute surfaces visible progress instead of a silent spinner.
-                    recalcProgress?.takeIf { it.total > 0 }?.let { progress ->
+                    // Hide banner when on full-screen SyncProgress view (it shows the same progress inline).
+                    val isSyncProgressScreen =
+                        currentDestination?.hasRoute(AppDestination.SyncProgress::class) == true
+                    recalcProgress?.takeIf { it.total > 0 && !isSyncProgressScreen }?.let { progress ->
                         RecalcProgressBanner(
                             current = progress.current,
                             total = progress.total,
