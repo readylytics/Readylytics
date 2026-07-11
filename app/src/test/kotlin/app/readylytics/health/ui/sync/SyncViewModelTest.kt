@@ -7,6 +7,8 @@ import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedEx
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.HistoricalResyncController
+import app.readylytics.health.domain.sync.HistoricalResyncState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -30,6 +32,7 @@ class SyncViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var hcRepo: HealthConnectRepository
     private lateinit var foregroundSyncController: ForegroundSyncController
+    private lateinit var historicalResyncController: HistoricalResyncController
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var selectedDateRepository: SelectedDateRepository
     private lateinit var viewModel: SyncViewModel
@@ -46,6 +49,9 @@ class SyncViewModelTest {
         every { foregroundSyncController.syncCompletedEvent } returns MutableSharedFlow()
         every { foregroundSyncController.isSyncing } returns MutableStateFlow(false)
 
+        historicalResyncController = mockk(relaxed = true)
+        every { historicalResyncController.state } returns MutableStateFlow(HistoricalResyncState(false, 0, 0))
+
         settingsRepo = mockk(relaxed = true)
         every { settingsRepo.userPreferences } returns MutableStateFlow(UserPreferences())
 
@@ -54,6 +60,7 @@ class SyncViewModelTest {
             SyncViewModel(
                 hcRepo = hcRepo,
                 foregroundSyncController = foregroundSyncController,
+                historicalResyncController = historicalResyncController,
                 settingsRepo = settingsRepo,
                 selectedDateRepository = selectedDateRepository,
             )

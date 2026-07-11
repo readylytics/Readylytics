@@ -6,6 +6,18 @@ import org.junit.Test
 
 class MainNavHostTest {
     @Test
+    fun `sync progress stays open while authoritative resync state is loading`() {
+        val result =
+            shouldAutoDismissSyncProgress(
+                recalcProgress = null,
+                isResyncing = null,
+                hasSeenProgress = false,
+            )
+
+        assertEquals(SyncProgressDismissalState.StayOpen, result)
+    }
+
+    @Test
     fun `sync progress stays open while resync is running before progress is emitted`() {
         val result =
             shouldAutoDismissSyncProgress(
@@ -27,6 +39,32 @@ class MainNavHostTest {
             )
 
         assertEquals(SyncProgressDismissalState.Dismiss, result)
+    }
+
+    @Test
+    fun `sync progress waits for loaded active resync before dismissing on completion`() {
+        val loading =
+            shouldAutoDismissSyncProgress(
+                recalcProgress = null,
+                isResyncing = null,
+                hasSeenProgress = false,
+            )
+        val active =
+            shouldAutoDismissSyncProgress(
+                recalcProgress = null,
+                isResyncing = true,
+                hasSeenProgress = false,
+            )
+        val completed =
+            shouldAutoDismissSyncProgress(
+                recalcProgress = null,
+                isResyncing = false,
+                hasSeenProgress = false,
+            )
+
+        assertEquals(SyncProgressDismissalState.StayOpen, loading)
+        assertEquals(SyncProgressDismissalState.StayOpen, active)
+        assertEquals(SyncProgressDismissalState.Dismiss, completed)
     }
 
     @Test

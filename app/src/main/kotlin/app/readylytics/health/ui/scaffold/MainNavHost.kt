@@ -90,12 +90,12 @@ internal enum class SyncProgressDismissalState {
 
 internal fun shouldAutoDismissSyncProgress(
     recalcProgress: RecalcProgress?,
-    isResyncing: Boolean,
+    isResyncing: Boolean?,
     hasSeenProgress: Boolean,
 ): SyncProgressDismissalState =
     when {
         recalcProgress != null -> SyncProgressDismissalState.MarkProgressSeen
-        hasSeenProgress || !isResyncing -> SyncProgressDismissalState.Dismiss
+        hasSeenProgress || isResyncing == false -> SyncProgressDismissalState.Dismiss
         else -> SyncProgressDismissalState.StayOpen
     }
 
@@ -399,8 +399,7 @@ fun MainNavHost(
         composable<AppDestination.SyncProgress> {
             val syncViewModel: SyncViewModel = hiltViewModel()
             val recalcProgress by syncViewModel.recalcProgress.collectAsStateWithLifecycle()
-            val syncSettingsViewModel: SyncSettingsViewModel = hiltViewModel()
-            val syncSettingsState by syncSettingsViewModel.uiState.collectAsStateWithLifecycle()
+            val historicalResyncState by syncViewModel.historicalResyncState.collectAsStateWithLifecycle()
             val logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel()
             val syncLogViewModel: SyncLogViewModel = hiltViewModel()
             val logText by syncLogViewModel.logText.collectAsStateWithLifecycle()
@@ -409,11 +408,11 @@ fun MainNavHost(
 
             // Auto-dismiss once the sync/resync this screen was opened for finishes.
             var hasSeenProgress by rememberSaveable { mutableStateOf(recalcProgress != null) }
-            LaunchedEffect(recalcProgress, syncSettingsState.isResyncing, hasSeenProgress) {
+            LaunchedEffect(recalcProgress, historicalResyncState, hasSeenProgress) {
                 when (
                     shouldAutoDismissSyncProgress(
                         recalcProgress = recalcProgress,
-                        isResyncing = syncSettingsState.isResyncing,
+                        isResyncing = historicalResyncState?.running,
                         hasSeenProgress = hasSeenProgress,
                     )
                 ) {
