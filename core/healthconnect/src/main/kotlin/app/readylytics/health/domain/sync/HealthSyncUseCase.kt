@@ -36,18 +36,20 @@ class HealthSyncUseCase
          * Runs the foreground sync / recalculation over a recent [windowDays] window.
          *
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
-         *   reporting (completedDays, totalDays) so the UI can surface determinate progress instead
-         *   of a silent spinner. Invoked off the main thread.
+         *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress
+         *   instead of a silent spinner. Invoked off the main thread.
          */
         suspend fun sync(
             windowDays: Int = 8,
-            onProgress: ((current: Int, total: Int) -> Unit)? = null,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {
                 dailySyncUseCase.run(windowDays, onProgress)
             }
 
-        suspend fun catchUpSync(onProgress: ((current: Int, total: Int) -> Unit)? = null): Result<Unit> =
+        suspend fun catchUpSync(
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+        ): Result<Unit> =
             syncMutex.withLock {
                 val prefs = settingsRepo.userPreferences.first()
                 if (prefs.lastSyncTimestamp > 0L) {
@@ -72,13 +74,13 @@ class HealthSyncUseCase
          * the user's data-retention setting. See [ResyncRangeUseCase] for the chunking, checkpoint/
          * resume, and chunk-independent reconcile→walk-forward contract.
          *
-         * @param onProgress reports (completed, total) across both the ingestion and recompute phases.
+         * @param onProgress reports (phase, completed, total) across all four resync phases.
          */
         suspend fun resyncRange(
             startDate: LocalDate,
             endDate: LocalDate,
             chunkDays: Int = 30,
-            onProgress: ((current: Int, total: Int) -> Unit)? = null,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {
                 resyncRangeUseCase.run(startDate, endDate, chunkDays, onProgress)

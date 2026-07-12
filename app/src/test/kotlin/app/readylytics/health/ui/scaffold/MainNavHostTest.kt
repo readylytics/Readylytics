@@ -1,6 +1,7 @@
 package app.readylytics.health.ui.scaffold
 
 import app.readylytics.health.domain.sync.RecalcProgress
+import app.readylytics.health.domain.sync.ResyncPhase
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -71,7 +72,7 @@ class MainNavHostTest {
     fun `sync progress marks progress as seen when determinate progress appears`() {
         val result =
             shouldAutoDismissSyncProgress(
-                recalcProgress = RecalcProgress(current = 1, total = 10),
+                recalcProgress = RecalcProgress(phase = ResyncPhase.RECOMPUTE, current = 1, total = 10),
                 isResyncing = true,
                 hasSeenProgress = false,
             )

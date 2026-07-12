@@ -40,7 +40,7 @@ class ForegroundSyncController
         private val _isSyncing = MutableStateFlow(false)
         override val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
-        // Determinate recalculation progress ("day X of Y"); null when no walk-forward is running.
+        // Phase-tagged resync progress (INGEST/PRUNE/RECONCILE/RECOMPUTE); null when no resync is running.
         private val _recalcProgress = MutableStateFlow<RecalcProgress?>(null)
         override val recalcProgress: StateFlow<RecalcProgress?> = _recalcProgress.asStateFlow()
 
@@ -127,10 +127,11 @@ class ForegroundSyncController
         }
 
         fun onBackgroundRecalcProgress(
+            phase: ResyncPhase,
             current: Int,
             total: Int,
         ) {
-            _recalcProgress.value = RecalcProgress(current = current, total = total)
+            _recalcProgress.value = RecalcProgress(phase = phase, current = current, total = total)
         }
 
         fun onBackgroundRecalcFinished(success: Boolean) {
@@ -160,8 +161,8 @@ class ForegroundSyncController
                 }
                 return
             }
-            val onProgress: (Int, Int) -> Unit = { current, total ->
-                _recalcProgress.value = RecalcProgress(current = current, total = total)
+            val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
+                _recalcProgress.value = RecalcProgress(phase = phase, current = current, total = total)
             }
             try {
                 _isSyncing.value = true

@@ -186,6 +186,9 @@
         retention period. Runs in the background — you can keep using the app.</string>
 <string name="resync_button_label">Resync Health Connect data</string>
 <string name="resync_notification_preparing">Preparing…</string>
+<string name="resync_phase_ingest">Fetching Health Connect data (batch %1$d of %2$d)…</string>
+<string name="resync_phase_prune">Cleaning up local data…</string>
+<string name="resync_phase_reconcile">Linking sleep and workout sessions…</string>
 <string name="settings_about_button">About Readylytics</string>
 <string name="settings_customize_palette_desc">Manually override color formulas with custom selections</string>
 <string name="settings_customize_palette_label">Customize secondary and tertiary colors</string>

@@ -12,6 +12,7 @@ import androidx.work.workDataOf
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
+import app.readylytics.health.domain.sync.ResyncPhase
 import app.readylytics.health.domain.util.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -39,21 +40,21 @@ class HealthResyncWorker
         @SuppressLint("MissingPermission")
         override suspend fun doWork(): Result {
             SyncNotifications.ensureChannel(appContext)
-            runCatching { setForeground(buildForegroundInfo(0, 0)) }
+            runCatching { setForeground(buildForegroundInfo(null, 0, 0)) }
 
             foregroundSyncController.onBackgroundRecalcStarted()
             var success = false
             return try {
                 val result =
-                    fullHistoricalResyncUseCase.execute { current, total ->
+                    fullHistoricalResyncUseCase.execute { phase, current, total ->
                         setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
-                        foregroundSyncController.onBackgroundRecalcProgress(current, total)
+                        foregroundSyncController.onBackgroundRecalcProgress(phase, current, total)
                         runCatching {
                             NotificationManagerCompat
                                 .from(appContext)
                                 .notify(
                                     SyncNotifications.NOTIFICATION_ID,
-                                    SyncNotifications.buildProgressNotification(appContext, current, total),
+                                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
                                 )
                         }
                     }
@@ -82,23 +83,24 @@ class HealthResyncWorker
 
         override suspend fun getForegroundInfo(): ForegroundInfo {
             SyncNotifications.ensureChannel(appContext)
-            return buildForegroundInfo(0, 0)
+            return buildForegroundInfo(null, 0, 0)
         }
 
         private fun buildForegroundInfo(
+            phase: ResyncPhase?,
             current: Int,
             total: Int,
         ): ForegroundInfo =
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 ForegroundInfo(
                     SyncNotifications.NOTIFICATION_ID,
-                    SyncNotifications.buildProgressNotification(appContext, current, total),
+                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
                 )
             } else {
                 ForegroundInfo(
                     SyncNotifications.NOTIFICATION_ID,
-                    SyncNotifications.buildProgressNotification(appContext, current, total),
+                    SyncNotifications.buildProgressNotification(appContext, phase, current, total),
                 )
             }
 
