@@ -293,12 +293,24 @@ reproduction or measurement.
   and is injected in the sync engine, but scoring and dashboard hardcode `Dispatchers.Default`.
 - **Why problematic:** tests cannot substitute a deterministic dispatcher for the scoring hot path;
   inconsistent ownership makes it unclear which layer decides threading.
-- **Desired ownership/scope:** add a `@DefaultDispatcher` qualifier next to `@IoDispatcher`; inject
-  it in `ScoringRepositoryImpl` and `DashboardViewModel`.
-- **Safest migration:** add qualifier + binding, replace call sites one at a time; no behavior
-  change.
-- **Acceptance criteria:** no `Dispatchers.Default`/`Dispatchers.IO` literals outside DI modules
-  (enforceable with a Konsist check scoped to `domain..`/`data..`).
+- **Desired ownership/scope:** all dispatcher choices flow from the DI graph; `@IoDispatcher` and a
+  new `@DefaultDispatcher` are the only sources below the UI layer.
+- **Remediation:**
+  1. Add a `@DefaultDispatcher` qualifier next to `@IoDispatcher` in
+     `core/model .../di/CoroutineDispatchers.kt` and bind it to `Dispatchers.Default` in
+     `app/.../di/CoroutineDispatchersModule.kt`.
+  2. Inject it into `ScoringRepositoryImpl` (constructor param, replace the
+     `withContext(Dispatchers.Default)` literal at line 104) and `DashboardViewModel` (replace the
+     `flowOn(Dispatchers.Default)` literal at line 110).
+  3. Leave `DatabaseModule.setQueryCoroutineContext(Dispatchers.IO)` as-is (DI module = allowed
+     owner), but add a comment marking it as the deliberate exception.
+  4. Add a Konsist check (in `CleanArchTest`) asserting no `Dispatchers.Default`/`Dispatchers.IO`
+     literals appear in `domain..`/`data..`/feature ViewModel sources outside `di` packages.
+  5. Migrate one call site per commit; behavior is unchanged, so the golden fixture (WP-01) is the
+     only gate needed.
+- **Dependencies:** none. · **Complexity:** Low. · **Migration risk:** Low.
+- **Acceptance criteria:** no `Dispatchers.Default`/`Dispatchers.IO` literals outside DI modules,
+  enforced by the new Konsist check; scoring unit tests can inject a test dispatcher.
 
 ---
 
@@ -1094,10 +1106,25 @@ reproduction or measurement.
   603, `GetDashboardDataUseCase.kt` 601 — all above the repo's 400-line target (none above the
   800-line hard limit).
 - **Remediation:** opportunistic decomposition **only where other findings already touch the
-  file** (ScoringRepositoryImpl will shrink naturally when PERF-002/SCORE-001 extract the
-  TRIMP-series and everyday-HR blocks into use-cases). Do not refactor charts for line count alone.
-- **Complexity:** absorbed into other work packages. · **Acceptance criteria:** touched files do
-  not grow; ScoringRepositoryImpl ≤ ~450 lines after Phase 4.
+  file** — do not refactor for line count alone. Concrete seams, keyed to the packages that
+  already modify each file:
+  1. `ScoringRepositoryImpl` (673): extract the TRIMP-series/ATL-CTL assembly (lines ~418–462)
+     into a `BuildLoadSeriesUseCase` and the everyday-HR block (lines ~198–236) into an
+     `AssembleEverydayLoadInputUseCase` — both fall out of WP-20/WP-21 naturally; the
+     calibration branch (lines ~311–416) becomes a private `buildCalibratingSummary(...)` helper.
+  2. `BaselineComputer` (694): when WP-22 adds rolling-window state, split the
+     `*Between` bounded-window variants (backfill/resync path) from the `dayMidnight`-anchored
+     live variants into two files sharing the pure window math.
+  3. `GetDashboardDataUseCase` (601): the per-card builder functions (`weightCard`,
+     `bodyFatCard`, `bloodPressureCard`, `oxygenSaturationCard`, …) are independent — move them to
+     a `DashboardCardBuilders` file if WP-19's package rename touches the file anyway.
+  4. `SleepStagesChart` (756), `SettingsScreen` (664), `ComputeSleepMetricsUseCase` (603): leave
+     unless a Phase-1–4 package touches them; if touched, split by existing internal section
+     comments (chart: geometry vs. drawing; settings: per-section composables).
+- **Complexity:** absorbed into WP-19/20/21/22. · **Migration risk:** Low (mechanical extraction;
+  golden fixture gates the scoring files).
+- **Acceptance criteria:** touched files do not grow; ScoringRepositoryImpl ≤ ~450 lines after
+  Phase 4; no file crosses the 800-line hard limit.
 
 ---
 
@@ -1110,18 +1137,30 @@ reproduction or measurement.
   `DatabaseModule` (SQLCipher via `SqlCipherKeyManager`, WAL, FK pragma, destructive migration
   gated to `BuildConfig.DEBUG`); logging (`logD` payloads are counts/dates, not sample values;
   release sink is `SecureFileLogSink` with documented sanitization).
-- **Hardening opportunities (not vulnerabilities):**
-  1. `SecureFileLogSink` (304 lines) is the single choke point for release logs — add a unit test
-     asserting that strings matching HR/HRV/BP numeric patterns with identifying context are
-     redacted, so future log calls can't silently leak health values into the shareable bug-report
-     log.
-  2. `HealthConnectRepositoryImpl.checkPermissions` logs the full granted-permission set on every
-     check; harmless but chatty — gate to debug.
-  3. Confirm `data_extraction_rules`/`full_backup_content` exclude the DataStore protos
-     (change tokens, checkpoints) — a restored stale token set on a new device is handled
-     (missing/expired token → full resync) but excluding them avoids the odd state entirely.
-- **Complexity:** Low. · **Acceptance criteria:** redaction test exists; extraction rules reviewed
-  and documented in `docs/privacy.md` if changed.
+- **Remediation (hardening, not vulnerability fixes):**
+  1. **Log-redaction regression test.** `SecureFileLogSink` (304 lines,
+     `app/.../util/SecureFileLogSink.kt`) is the single choke point for release logs and feeds the
+     shareable bug-report flow. Add a unit test suite that pushes representative log lines through
+     the sink's sanitization — HR/HRV/BP-like numeric payloads with identifying context, file
+     paths, and account-ish strings — and asserts the persisted line is redacted. Purpose: any
+     future `logD`/`logE` call site that starts interpolating health values fails a test instead
+     of silently leaking into a user-shareable file.
+  2. **Debug-gate permission-set logging.** `HealthConnectRepositoryImpl.checkPermissions`
+     (lines 97–124) logs the full granted/missing permission sets on every check. Wrap these four
+     `logD` calls so release builds log only the boolean outcome
+     (`Granted` / `Missing(n)`), keeping the detailed set in debug builds.
+  3. **Backup-exclusion review.** Inspect `app/src/main/res/xml/data_extraction_rules.xml` and
+     `full_backup_content.xml` and explicitly exclude the proto DataStore files backing
+     `HealthChangeTokenStoreImpl` and `ResyncCheckpointStoreImpl` (device-bound sync state). A
+     restored stale token set is already *handled* (missing/expired token → full resync), but
+     excluding the files removes the odd state entirely; document the resulting behavior in
+     `docs/privacy.md` if the rules change.
+- **Dependencies:** none. · **Complexity:** Low. · **Migration risk:** None (logging and backup
+  metadata only).
+- **Acceptance criteria:** redaction test exists and fails on an unsanitized health-value log
+  line; release builds do not log permission-set contents; extraction rules exclude sync-state
+  protos (or a written decision records why not), with `docs/privacy.md` updated if behavior
+  changed.
 
 ---
 
