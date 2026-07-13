@@ -370,6 +370,7 @@ dependencies {
 tasks.withType<Test>().configureEach {
     jvmArgs("-Xshare:off")
     systemProperty("robolectric.coverage.enabled", "true")
+    systemProperty("update.golden", System.getProperty("update.golden") ?: "false")
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
         excludes = listOf("jdk.internal.*")
