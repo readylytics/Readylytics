@@ -37,6 +37,11 @@ duplicated in the UI, unkeyed ingestion) have already been engineered out.
    `BackfillHistoricalBaselinesUseCase` wipes *all* derived baselines and recomputes them outside
    `HealthSyncUseCase.syncMutex` and `ScoringRepositoryImpl.calculationMutex`, racing any
    concurrent sync/resync walk-forward.
+4. **Switching the user-selectable Training Load Model recomputes only 8 days** (SCORE-007).
+   The model (Banister / Cheng LT-TRIMP / iTRIMP) and its parameters are first-class settings,
+   but a change only triggers `sync(windowDays = 8)`, so the persisted TRIMP history — and every
+   ATL/CTL EMA built from it for the following ~76 days — silently mixes two models until a full
+   resync happens to run.
 
 **Most important scalability risks** (all become acute in the required 1,000,000-heart-rate-records
 / multi-year scenario):
@@ -555,17 +560,31 @@ reproduction or measurement.
 
 ---
 
-### HC-009 — Dead/misleading `windowDays = 8` default on the public sync facade
+### HC-009 — Implicit `windowDays = 8` default is the undocumented settings-change refresh window
 
-- **Category:** Clean code · **Severity:** Low · **Confidence:** High · **Status:** Confirmed
-- **Affected:** `HealthSyncUseCase.sync(windowDays: Int = 8, ...)`; the only caller path that could
-  hit the default (`ForegroundSyncController.executeSync` with `windowDays == null` and
-  `isFirstSync == false`) is unreachable from current call sites.
-- **Impact:** a future caller invoking `sync()` gets an undocumented 8-day foreground window,
-  contradicting the 1-day/2-day documented flows.
-- **Remediation:** remove the default; make `windowDays` required; delete the unreachable
-  `else` branch in `executeSync`.
-- **Acceptance criteria:** compiles with explicit windows only.
+- **Category:** Clean code / hidden contract · **Severity:** Low (as a code smell; its correctness
+  consequence is SCORE-007) · **Confidence:** High · **Status:** Confirmed
+- **Affected:** `HealthSyncUseCase.sync(windowDays: Int = 8, ...)`;
+  `app/.../domain/sync/HealthDataRefreshAdapter.refreshAffectedWindow()` (calls `sync()` with no
+  argument); callers of `HealthDataRefresh.refreshAffectedWindow()` in
+  `UISettingsViewModel` (TRIMP model + Banister/Cheng/iTRIMP parameter changes),
+  `PhysiologySettingsViewModel`, `HeartRateZonesViewModel`, `SyncSettingsViewModel`.
+- **Current behavior:** every scoring-relevant settings change triggers a foreground
+  `sync(windowDays = 8)` — the "8" lives silently as a parameter default on the facade rather
+  than as a named settings-refresh policy, and is invisible at every call site. The
+  `ForegroundSyncController.executeSync` `else` branch that could also hit the default is
+  unreachable from current call sites.
+- **Impact:** the settings-refresh horizon (8 days) is an undocumented magic constant; nobody
+  reading `UISettingsViewModel` can tell how much history a model switch recomputes. Whether 8
+  days is *sufficient* is a separate correctness question — see SCORE-007.
+- **Remediation:** remove the parameter default; introduce a named constant/config
+  (`SETTINGS_REFRESH_WINDOW_DAYS`) passed explicitly by `HealthDataRefreshAdapter`; delete the
+  unreachable `else` branch in `executeSync`; document the settings-refresh flow in
+  `DATA_FLOW.md` §1.2 (it is currently absent — the doc describes only pull-to-refresh, periodic,
+  and historical resync).
+- **Dependencies:** SCORE-007 decides what the window *should* be per setting.
+- **Acceptance criteria:** no implicit window defaults on the facade; settings-refresh flow
+  documented; every `sync(...)` call site names its window.
 
 ---
 
@@ -824,17 +843,23 @@ reproduction or measurement.
   (same units in ATL and CTL) but inconsistent with displayed TRIMP, with the everyday-HR variant,
   with the with/without-workout strain attribution, and with `ABOUT.md`.
 - **Recommended remediation** (subject to Open Decision OD-1):
-  1. **Unify on the user-selected TRIMP model (Banister default).** Compute per-workout model TRIMP
-     during the daily/resync recompute (the code already does this per day) and persist it to a
-     *new* column `workout_records.modelTrimp` (nullable REAL; migration v5→v6, backfilled lazily
-     by the next recompute — the walk-forward already touches every workout in range).
+  1. **Unify on the user-selected TRIMP model** (Settings → Advanced exposes Banister /
+     Cheng LT-TRIMP / iTRIMP with tunable parameters; Banister is only the default selection).
+     Compute per-workout model TRIMP during the daily/resync recompute (the code already does this
+     per day) and persist it to a *new* column `workout_records.modelTrimp` (nullable REAL;
+     migration v5→v6, backfilled lazily by the next recompute — the walk-forward already touches
+     every workout in range). Because the persisted value then depends on `prefs.trimpModel` and
+     its parameters, a model/parameter switch must invalidate and rebuild it across the full
+     retention-bounded history — that trigger is SCORE-007's recompute-only path, which is
+     therefore a hard prerequisite for flipping the ATL/CTL read to `modelTrimp`.
   2. Point `getTrimpPoints` (and `ComputeWorkoutLoadMetricsUseCase`'s history fetch) at
      `COALESCE(modelTrimp, trimp)` during the transition, then at `modelTrimp` once backfilled.
   3. Keep the zone-weighted value (rename the concept internally to `zoneTrimp`) for the zone
      minutes UI only; stop calling it TRIMP in code.
   4. Update `ABOUT.md`/`docs/about.md`/in-app About strings + `DATA_FLOW.md` §2.3 in the same PR
      (repo Documentation Synchronization Rule).
-- **Dependencies:** must precede PERF-002 step 3 (defines which series the EMA consumes); OD-1.
+- **Dependencies:** must precede PERF-002 step 3 (defines which series the EMA consumes); OD-1;
+  SCORE-007 (model-switch invalidation of the new column).
 - **Complexity:** Medium–High. · **Migration risk:** Medium-High — **user-visible score changes**:
   workout-only ATL/CTL/Strain Ratio/Load Score/Readiness shift after the fix. Requires the score-
   change communication strategy in §12 and a before/after fixture report.
@@ -966,6 +991,69 @@ reproduction or measurement.
 
 ---
 
+### SCORE-007 — Switching the TRIMP model recomputes only 8 days; older TRIMP history stays on the previous model
+
+- **Category:** Scoring — likely implementation bug (mixed-model load series) · **Severity:** High ·
+  **Confidence:** High · **Status:** Confirmed
+- **Affected:** `UISettingsViewModel` (`SettingsEvent.TrimpModelChanged` /
+  `BanisterMultiplierChanged` / `ChengBetaChanged` / `ItrimBChanged` /
+  `ResetTrimpToProfileDefaults` → `healthDataRefresh.refreshAffectedWindow()`);
+  `HealthDataRefreshAdapter.refreshAffectedWindow()` → `HealthSyncUseCase.sync()` →
+  `windowDays = 8` default (HC-009); persisted model-dependent columns on `daily_summaries`
+  (`trimpWorkoutOnly`, `trimpEverydayHr`, `rasWorkoutOnly`, `rasEverydayHr`, `totalRas*`);
+  `ScoringRepositoryImpl.computeDailySummary` (everyday ATL/CTL reads
+  `dailySummaryDao.getEverydayTrimpPoints` over an 84-day window).
+- **Current behavior:** the app exposes the Training Load Model as a first-class user setting
+  (Settings → Advanced: Banister / Cheng LT-TRIMP / iTRIMP, each with tunable parameters). On any
+  change, only the last 8 days are recomputed. All older `daily_summaries` rows keep TRIMP/RAS
+  values computed under the *previous* model and parameters. Because the everyday-HR ATL/CTL EMAs
+  are built from the persisted `trimpEverydayHr` series over an 84-day fetch window, every
+  ATL/CTL/Strain-Ratio/Load-Score/Readiness computation for the next ~76 days mixes old-model and
+  new-model TRIMP values in a single EMA. The 7-day `totalRas*` sums mix models for 6 days.
+  (The workout-only ATL/CTL series is currently insulated only because it reads the zone-weighted
+  `workout_records.trimp` — i.e. SCORE-001 masks SCORE-007 for that variant; fixing SCORE-001
+  without fixing SCORE-007 would extend the mixed-model window problem to the workout-only series
+  as well.)
+- **Failure scenario (concrete):** user on Banister for months switches to iTRIMP. Days −8..0 are
+  recomputed with iTRIMP; days −84..−9 retain Banister `trimpEverydayHr`. Tomorrow's CTL
+  (42-day EMA) blends the two models' different scales; the Strain Ratio shifts for reasons that
+  are neither training nor the model's steady-state difference, then drifts for weeks as old-model
+  days age out. A subsequent full historical resync recomputes everything under the new model —
+  so the same data yields different scores before vs. after a resync, violating the determinism
+  contract ("identical SQLite + preferences reproduce identical scores").
+- **Root cause:** the settings-refresh path reuses the recent-window sync as a generic "refresh"
+  without modeling *which dates a preference change invalidates*. TRIMP model/parameters (and
+  hrMax, RHR override, HR zones — same class) invalidate the entire retention-bounded history,
+  not a recent window.
+- **Remediation:**
+  1. Classify settings by invalidation scope: display-only (no recompute), recent-window
+     (e.g. RHR percentile forward-only policy decisions), and **historical** (TRIMP model +
+     parameters, HR zones, hrMax source, RHR/HRV overrides, physiology profile).
+  2. For historical-scope changes, escalate to the durable recompute path instead of
+     `sync(8)`: enqueue `WorkerScheduler.scheduleResyncWorker()` — ideally a *recompute-only*
+     variant that skips the INGEST/PRUNE phases (raw HC data is unaffected by a model switch) and
+     runs RECONCILE(zone thresholds changed)/RECOMPUTE over `RetentionBounds.resolveResyncStartDate`.
+     The 4-phase checkpoint machinery already supports starting at a later phase; expose that as
+     a `recomputeRange(start, end)` entry on `HealthSyncUseCase`.
+  3. Under WP-10 (SCORE-001), the same trigger must invalidate/rebuild the persisted
+     `workout_records.modelTrimp` column (the walk-forward recompute already rewrites it per day,
+     so step 2's recompute-only pass covers it).
+  4. Surface the recompute to the user with the existing determinate progress banner (the model
+     switch is an explicit user action; a "Recalculating history day X of Y" is expected, and the
+     infrastructure exists).
+- **Dependencies:** HC-009 (same entry point), SCORE-001/WP-10 (modelTrimp invalidation),
+  PERF-002 (makes the full-history recompute cheap enough to run on a settings change).
+- **Complexity:** Medium. · **Migration risk:** Low–Medium — behavior change is strictly toward
+  the documented determinism contract; the recompute is the same one a manual "Resync Health
+  Connect data" already performs, minus re-ingestion.
+- **Acceptance criteria:** switching TRIMP model (or editing its parameters / HR zones) schedules
+  a full-range recompute; after it completes, `daily_summaries` TRIMP/RAS/ATL/CTL columns are
+  byte-identical to a fresh full resync under the new model (fixture test); no EMA window ever
+  mixes values computed under different model settings; the recompute-only path never re-reads
+  Health Connect.
+
+---
+
 ### CACHE-001 — Insight dismissals keyed by device-zone midnight; summaries keyed by scoring-zone midnight
 
 - **Category:** Cache/state correctness · **Severity:** Low–Medium · **Confidence:** High · **Status:** Confirmed
@@ -1047,7 +1135,7 @@ reproduction or measurement.
 | **Stored workout TRIMP** | `WorkoutMapper.computeMetrics` | zone minutes × 1..5 | not documented as a separate model | **zone-weighted (Edwards), feeds workout-only ATL/CTL** | ❌ inconsistent with docs + rest of pipeline | **SCORE-001, SCORE-005** | unify on model TRIMP (OD-1) |
 | Daily TRIMP (workout-only) | `ScoringRepositoryImpl` lines 151–196 | fresh per-workout Banister sum | "TRIMP → ATL → CTL" | persisted value ≠ series value for same day | ❌ | SCORE-001/005 | fix with SCORE-001 |
 | Everyday-HR load | `EverydayHeartRateLoadCalculator` | 1-min buckets, non-sleep/non-workout | ABOUT.md §everyday load (zone 0 excluded from TRIMP, counted in coverage) | matches doc incl. confidence tiers (0/≤179/≤479/480+) | ✅ correct | PERF-006 (perf only) | SQL bucketing |
-| ATL / CTL EMA | `RasScoringStrategy.computeEmaWithDecay` | date-bucketed TRIMP map | EMA, α=2/(N+1), zero-fill missing days, single-point seed rule | matches; single-point rule is documented in ABOUT.md ("used directly as the starting average") — product decision, not a bug | ✅ per docs | — | none |
+| ATL / CTL EMA | `RasScoringStrategy.computeEmaWithDecay` | date-bucketed TRIMP map | EMA, α=2/(N+1), zero-fill missing days, single-point seed rule | formula matches; single-point rule is documented in ABOUT.md ("used directly as the starting average") — product decision, not a bug. **However**, the input series mixes TRIMP models for up to 84 days after the user switches the Training Load Model (only 8 days recomputed) | ⚠️ input series | **SCORE-007** | full-range recompute on model switch |
 | Strain Ratio | `RasScoringStrategy.computeStrainRatio` | ATL/CTL | ATL/CTL, 0 when CTL=0 | matches | ✅ | — | none |
 | Load Score | `LoadScoringStrategy.computeLoadScore` | SR | sr≤1.3→100; else 100·exp(−2.5·(sr−1.3)²) | matches constants `SR_SWEET_SPOT_MAX=1.3`, `K=2.5` | ✅ | — | none |
 | RAS | `RasCalculator.calculateDailyRas` + `sumRasLastSixDays` | TRIMP × scaling, cap 75; 7-day rolling | ABOUT.md PAI-style | matches; total = round(today + Σ round(prev 6)) consistent with UI sum | ✅ | — | none |
@@ -1189,8 +1277,8 @@ Deltas only — the module layout and two-flow sync contract stay.
 ### Phase 1 — Correctness & Data Integrity
 
 - **Objective:** fix confirmed correctness defects; decide and land the TRIMP unification.
-- **Findings:** SCORE-002, SCORE-003, SCORE-004, SCORE-006, CACHE-001, HC-005, HC-008, HC-004,
-  HC-006 (after OD-2), SCORE-001 + SCORE-005 (after OD-1).
+- **Findings:** SCORE-002, SCORE-003, SCORE-004, SCORE-006, SCORE-007, CACHE-001, HC-005, HC-008,
+  HC-004, HC-006 (after OD-2), SCORE-001 + SCORE-005 (after OD-1).
 - **Steps (order):**
   1. SCORE-002 zone fix (+ `ScoringDayKey` helper + zone-misuse guard test) → CACHE-001 → HC-007's
      zone half → SCORE-006.
@@ -1198,9 +1286,11 @@ Deltas only — the module layout and two-flow sync contract stay.
   3. SCORE-003 backfill serialization + incrementality (behind OD-4 decision).
   4. HC-008 error-modeling fixes; HC-005 steps-deletion affected dates (option b).
   5. HC-004 changes-path link/metrics correctness.
-  6. SCORE-001/005 TRIMP unification (schema v5→v6: add `workout_records.modelTrimp`), including
+  6. SCORE-007 settings-invalidation scopes + recompute-only resync entry point (with HC-009's
+     explicit-window cleanup) — lands *before* the ATL/CTL read flips to `modelTrimp`.
+  7. SCORE-001/005 TRIMP unification (schema v5→v6: add `workout_records.modelTrimp`), including
      ABOUT.md/docs/about.md/strings/DATA_FLOW.md sync per repo rule.
-  7. HC-006 stage-less sleep fallback (behind OD-2).
+  8. HC-006 stage-less sleep fallback (behind OD-2).
 - **Schema/API changes:** v5→v6 additive column (nullable REAL) + drop DB-002's redundant index in
   the same migration.
 - **Migration strategy:** additive column, lazily backfilled by the next recompute; `COALESCE`
@@ -1279,7 +1369,7 @@ ends (repo pre-commit rule), plus the package-specific checks below.
 | WP-07 | Error-modeling: permission propagation, logged catches, typed token-expiry, optional-read semantics | HC-008 | `DailySyncUseCase`, `HealthConnectRepositoryImpl`, `HealthChangeSynchronizerImpl`, `GetDashboardDataUseCase` | — |
 | WP-08 | Changes-path correctness: local-span linking, workout metrics at write, steps-deletion affected dates | HC-004, HC-005 | `HealthChangeSynchronizerImpl`, extracted workout-metrics helper | WP-07 |
 | WP-09 | Foreground window cap + resync escalation | HC-007, HC-009 | `ForegroundSyncController`, `HealthSyncUseCase` | — |
-| WP-10 | **TRIMP unification** (v5→v6 `modelTrimp`, COALESCE reads, today-injection symmetry, docs sync, score-delta report) | SCORE-001, SCORE-005, DB-002 | `WorkoutRecordEntity`, `DatabaseMigrations`, `WorkoutDao`, `ScoringRepositoryImpl`, `ComputeWorkoutLoadMetricsUseCase`, `ABOUT.md`, `docs/about.md`, strings, `DATA_FLOW.md` | WP-01, OD-1 |
+| WP-10 | **TRIMP unification** (v5→v6 `modelTrimp`, COALESCE reads, today-injection symmetry, docs sync, score-delta report) | SCORE-001, SCORE-005, DB-002 | `WorkoutRecordEntity`, `DatabaseMigrations`, `WorkoutDao`, `ScoringRepositoryImpl`, `ComputeWorkoutLoadMetricsUseCase`, `ABOUT.md`, `docs/about.md`, strings, `DATA_FLOW.md` | WP-01, WP-26, OD-1 |
 | WP-11 | Stage-less sleep fallback | HC-006 | `SleepDataMapper`, `ComputeSleepMetricsUseCase`, docs | WP-01, OD-2 |
 | WP-12 | Ordered session-link sweep + property tests | PERF-001 | `core/model .../link/`, `SessionLinkReconcilerImpl` | WP-02 |
 | WP-13 | Streamed page-wise ingestion | HC-001, part PERF-004 | `HealthConnectRepository(+Impl)`, `HealthIngestionCoordinator`, `RoomHealthIngestionStore` | WP-12 |
@@ -1295,6 +1385,7 @@ ends (repo pre-commit rule), plus the package-specific checks below.
 | WP-23 | Aggregate HR observation + debounced detail flow | PERF-005 | `HeartRateDao`, `HeartRateRepository`, `DashboardFlowIntermediate`, `HeartRateDetailViewModel` | — |
 | WP-24 | Security hardening: log-redaction test, debug-gated permission logging, extraction-rules review | SEC-001 | `SecureFileLogSink` tests, `HealthConnectRepositoryImpl`, `res/xml/*` | — |
 | WP-25 | (Conditional) `heart_rate_records` key migration | DB-001 | entity, v6→v7 chunked migration, backup compat | WP-02 benchmark gate |
+| WP-26 | Settings-invalidation scopes + recompute-only resync entry (`recomputeRange`), explicit refresh windows, progress surfacing | SCORE-007, HC-009 | `UISettingsViewModel`, `HealthDataRefreshAdapter`, `HealthSyncUseCase`, `ResyncRangeUseCase`, `WorkerScheduler`, `HealthResyncWorker`, `DATA_FLOW.md` | WP-01, WP-05 |
 
 Acceptance criteria per package = the corresponding findings' acceptance criteria plus golden-
 fixture equality (WP-04…WP-23) or the documented intentional delta (WP-10, WP-11).
@@ -1363,9 +1454,11 @@ test (scoring zone ≠ device zone) across sync/resync/backfill; DST-boundary wa
 Required in the same PR as the code they describe (repo Documentation Synchronization Rule):
 
 - `internal-docs/DATA_FLOW.md` — §1.1 (paged reads, grouped steps), §1.2 (adaptive chunking,
-  timeout semantics, capped foreground window), §1.2.1 (sweep linker), §1.4 (v6 schema, index
-  drop), §2.1/§2.3 (TRIMP unification, prefs snapshot), §2.4 (backfill locking/incrementality,
-  freeze-vs-retention outcome), plus the DB-version tripwire (WP-03).
+  timeout semantics, capped foreground window, the settings-change refresh flow and the new
+  recompute-only `recomputeRange` entry — currently undocumented), §1.2.1 (sweep linker), §1.4
+  (v6 schema, index drop), §2.1/§2.3 (TRIMP unification, prefs snapshot, model-switch
+  invalidation), §2.4 (backfill locking/incrementality, freeze-vs-retention outcome), plus the
+  DB-version tripwire (WP-03).
 - `ABOUT.md` + `docs/about.md` + in-app `about_*`/`tooltip_*` strings — TRIMP model unification
   (SCORE-001), stage-less-sleep handling (HC-006), any OD-4 semantic change; run
   `DocumentationDriftTest`.
@@ -1380,11 +1473,17 @@ Required in the same PR as the code they describe (repo Documentation Synchroniz
 
 **OD-1 — Which TRIMP feeds workout-only ATL/CTL?** (blocks WP-10 / SCORE-001)
 *Why it matters:* defines the user's Load Score/Readiness semantics and the size of the score jump.
-*Options:* (a) unify on the user-selected model TRIMP (Banister default) — consistent with
-ABOUT.md and the everyday variant; (b) declare zone-TRIMP the intended "stored" load metric and
-document it — no score jump, but perpetuates two models and contradicts current docs; (c) unify on
-zone-TRIMP everywhere — contradicts the multi-model settings UI.
-*Recommended default:* (a). *Affected roadmap:* WP-10, WP-20.
+The Training Load Model is a first-class user setting (Settings → Advanced: Banister /
+Cheng LT-TRIMP / iTRIMP with tunable parameters), so "unify" must mean "the selected model",
+never a hardcoded one.
+*Options:* (a) unify on the user-selected model TRIMP — consistent with ABOUT.md, the everyday
+variant, the per-workout display, and the settings UI; requires SCORE-007's full-history
+recompute on model switch; (b) declare zone-TRIMP the intended "stored" load metric and document
+it — no score jump and no model-switch invalidation needed for the workout-only series, but it
+perpetuates two models, contradicts current docs, and makes the model setting affect only *part*
+of the load pipeline; (c) unify on zone-TRIMP everywhere — effectively deletes the multi-model
+feature; contradicts the settings UI.
+*Recommended default:* (a). *Affected roadmap:* WP-10, WP-20, WP-26.
 
 **OD-2 — Stage-less sleep sessions.** (blocks WP-11 / HC-006)
 *Why:* changes historical sleep scores for users with stage-less writers; may be deliberate
@@ -1431,9 +1530,11 @@ Decide from WP-02 benchmark data per the ≥30%-ingest / ≥25%-size thresholds 
   indexes (`EXPLAIN QUERY PLAN` asserted); redundant index removed; DB-001 explicitly resolved
   (done or wont-fix with data).
 - **Scoring correctness:** one TRIMP definition across daily, per-workout, ATL/CTL, and strain
-  attribution (per OD-1); frozen-baseline clearing and insight dismissals use the scoring zone;
-  walk-forward uses a single preferences snapshot; backfill is serialized with sync and incremental
-  (per OD-4); score deltas from each intentional change quantified in fixture reports.
+  attribution (per OD-1); switching the Training Load Model or its parameters triggers a
+  full-range recompute so no EMA window mixes models; frozen-baseline clearing and insight
+  dismissals use the scoring zone; walk-forward uses a single preferences snapshot; backfill is
+  serialized with sync and incremental (per OD-4); score deltas from each intentional change
+  quantified in fixture reports.
 - **Deterministic recomputation:** golden-fixture summaries byte-identical across repeated resyncs,
   chunk sizes {7,30,60}, device-zone ≠ scoring-zone splits, and kill/resume at every phase
   boundary; DST-boundary regression dates stay green.
