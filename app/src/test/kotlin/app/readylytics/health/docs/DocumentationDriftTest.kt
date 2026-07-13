@@ -1,5 +1,6 @@
 package app.readylytics.health.docs
 
+import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
@@ -269,6 +270,20 @@ class DocumentationDriftTest {
                 "expected $path to declare minSdk=$minSdk, targetSdk=$targetSdk",
             )
         }
+    }
+
+    @Test
+    fun `HealthDatabase version is reflected in DATA_FLOW md`() {
+        val version = HealthDatabase.DATABASE_VERSION
+
+        assertTrue(
+            dataFlowMd.contains("version = $version"),
+            "expected internal-docs/DATA_FLOW.md to mention Room schema version $version",
+        )
+        assertTrue(
+            dataFlowMd.contains("v1→v$version"),
+            "expected internal-docs/DATA_FLOW.md's migration chain to end at v1→v$version",
+        )
     }
 
     @Test
