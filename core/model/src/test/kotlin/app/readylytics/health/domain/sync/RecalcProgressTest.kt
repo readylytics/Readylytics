@@ -25,9 +25,12 @@ class RecalcProgressTest {
     }
 
     @Test
-    fun `PRUNE and RECONCILE hold at their slice start regardless of current or total`() {
-        assertEquals(0.25f, RecalcProgress(ResyncPhase.PRUNE, 7, 9).fraction(), 0.001f)
-        assertEquals(0.50f, RecalcProgress(ResyncPhase.RECONCILE, 3, 3).fraction(), 0.001f)
+    fun `fraction math is phase-agnostic, it only holds at slice start when total is zero`() {
+        // PRUNE/RECONCILE hold steady in production because ResyncRangeUseCase always reports
+        // (0, 0) for them (no natural sub-progress to report) -- fraction() itself doesn't special
+        // case those phases, so a nonzero total advances them within their slice like any other.
+        assertEquals(0.25f + 0.25f * (7f / 9f), RecalcProgress(ResyncPhase.PRUNE, 7, 9).fraction(), 0.001f)
+        assertEquals(0.50f, RecalcProgress(ResyncPhase.RECONCILE, 0, 0).fraction(), 0.001f)
     }
 
     @Test
