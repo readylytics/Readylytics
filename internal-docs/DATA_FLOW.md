@@ -454,19 +454,32 @@ progress).
 
 ### 3.4 Recalc-progress trace (background job → UI)
 
+`ResyncRangeUseCase.run()` reports `(phase, current, total)` at the start of each of its four
+phases and, for `INGEST`/`RECOMPUTE`, again after each unit of work (a chunk / a day) completes.
+Both `HealthResyncWorker` (background WorkManager resync) and `ForegroundSyncController.executeSync`
+(foreground first-launch `catchUpSync`) funnel this through the same `RecalcProgress(phase, current,
+total)` type:
+
 ```
-HealthResyncWorker
-  → ForegroundSyncController.onBackgroundRecalcProgress(current, total)
-     → ForegroundSyncController.recalcProgress: StateFlow<RecalcProgress?>
-        → SyncViewModel.recalcProgress
-           → MainScaffold (collectAsStateWithLifecycle)
-              → RecalcProgressBanner("Recalculating day X of Y")
+ResyncRangeUseCase.run()
+  → onProgress(phase, current, total)                              // phase-start + per-unit signals
+     → HealthResyncWorker / ForegroundSyncController.executeSync
+        → ForegroundSyncController.recalcProgress: StateFlow<RecalcProgress?>
+           → SyncViewModel.recalcProgress
+              → MainScaffold's RecalcProgressBanner / SyncProgressScreen (collectAsStateWithLifecycle)
 ```
 
-The same `RecalcProgress` also drives the foreground-service notification and the Settings
-resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`). When a
-historical recompute resumes from checkpoint, this progress starts at the already-completed
-day offset instead of resetting to zero.
+`RecalcProgress.fraction()` (`core/model/.../FeatureSyncPorts.kt`) is the single shared computation
+all three UI surfaces (bottom banner, full-screen `SyncProgressScreen`, foreground-service
+notification) use to render one continuous, always-determinate `LinearProgressIndicator` — never an
+indeterminate spinner. Each `ResyncPhase` value owns an equal-width slice of the bar, derived
+generically from `phase.ordinal / ResyncPhase.entries.size` (25% each for the current 4 phases:
+`INGEST` 0-25%, `PRUNE` 25-50%, `RECONCILE` 50-75%, `RECOMPUTE` 75-100%). `INGEST` (chunked HC
+re-fetch) and `RECOMPUTE` (walk-forward days) report real `current`/`total` and fill smoothly within
+their slice; `PRUNE` and `RECONCILE` are single non-chunked passes with no natural sub-progress, so
+they simply hold the bar at their slice's start until the next phase begins. When a historical
+resync resumes from checkpoint, progress starts directly at the resumed phase/offset instead of
+resetting to zero.
 
 ---
 

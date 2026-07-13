@@ -48,13 +48,14 @@ class ResyncRangeUseCase
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         /**
-         * @param onProgress reports (completed, total) across both the ingestion and recompute phases.
+         * @param onProgress reports (phase, completed, total) as the resync advances through its
+         *   four phases (INGEST batches, PRUNE, RECONCILE, RECOMPUTE days).
          */
         suspend fun run(
             startDate: LocalDate,
             endDate: LocalDate,
             chunkDays: Int,
-            onProgress: ((current: Int, total: Int) -> Unit)?,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
@@ -103,6 +104,7 @@ class ResyncRangeUseCase
                             }
 
                     val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
+                    val totalChunks = if (totalDays <= 0) 0 else (totalDays + chunkDays - 1) / chunkDays
                     val recomputeStartDate =
                         if (checkpoint?.phase == ResyncPhase.RECOMPUTE) {
                             minOf(checkpoint.nextDate, endDate.plusDays(1))
@@ -115,7 +117,6 @@ class ResyncRangeUseCase
                             .between(startDate, recomputeStartDate)
                             .toInt()
                             .coerceIn(0, totalDays)
-                    onProgress?.invoke(completedDays, totalDays)
 
                     val reconcileStartMs =
                         startDate
@@ -162,6 +163,10 @@ class ResyncRangeUseCase
 
                         val ingestStart = System.currentTimeMillis()
                         var chunkStart = checkpoint?.nextDate?.coerceAtLeast(startDate) ?: startDate
+                        var chunksCompleted =
+                            (ChronoUnit.DAYS.between(startDate, chunkStart) / chunkDays)
+                                .toInt()
+                                .coerceIn(0, totalChunks)
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
                             val chunkEndExclusive =
@@ -200,6 +205,8 @@ class ResyncRangeUseCase
                                     baselineChangeTokens = baselineChangeTokens,
                                 ),
                             )
+                            chunksCompleted++
+                            onProgress?.invoke(ResyncPhase.INGEST, chunksCompleted, totalChunks)
                             chunkStart = chunkEndExclusive
                         }
                         val ingestEnd = System.currentTimeMillis()
@@ -223,6 +230,7 @@ class ResyncRangeUseCase
 
                     // --- Prune phase: remove stale data from non-selected devices ---
                     if (runPruning) {
+                        onProgress?.invoke(ResyncPhase.PRUNE, 0, 0)
                         if (!runIngestion) {
                             hrBeforePrune =
                                 healthIngestionStore.countHeartRateInRange(reconcileStartMs, reconcileEndMs)
@@ -276,6 +284,7 @@ class ResyncRangeUseCase
 
                     // --- Reconcile phase: chunk-independent session linkage ---
                     if (runReconciliation) {
+                        onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
                         val reconcileStart = System.currentTimeMillis()
                         val zoneThresholds =
                             app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
@@ -322,6 +331,7 @@ class ResyncRangeUseCase
                     if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
                         healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1))
                     }
+                    onProgress?.invoke(ResyncPhase.RECOMPUTE, completedDays, totalDays)
                     var day = recomputeStartDate
                     var recomputedDays = completedDays
                     while (!day.isAfter(endDate)) {
@@ -343,7 +353,7 @@ class ResyncRangeUseCase
                                 baselineChangeTokens = baselineChangeTokens,
                             ),
                         )
-                        onProgress?.invoke(recomputedDays, totalDays)
+                        onProgress?.invoke(ResyncPhase.RECOMPUTE, recomputedDays, totalDays)
                         day = day.plusDays(1)
                         yield()
                     }
