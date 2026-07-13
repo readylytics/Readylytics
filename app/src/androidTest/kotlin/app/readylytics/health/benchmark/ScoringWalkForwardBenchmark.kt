@@ -21,13 +21,13 @@ import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
-import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
+import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.domain.security.EncryptionManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
