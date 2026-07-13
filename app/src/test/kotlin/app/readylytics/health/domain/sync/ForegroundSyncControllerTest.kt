@@ -167,8 +167,8 @@ class ForegroundSyncControllerTest {
     fun `triggerImmediateSync executes catchUpSync and propagates progress`() =
         runTest {
             coEvery { syncUseCase.catchUpSync(any()) } coAnswers {
-                val progress = firstArg<(Int, Int) -> Unit>()
-                progress(1, 5)
+                val progress = firstArg<(ResyncPhase, Int, Int) -> Unit>()
+                progress(ResyncPhase.RECOMPUTE, 1, 5)
                 kotlinx.coroutines.yield()
                 app.readylytics.health.domain.model.Result
                     .Success(Unit)
@@ -186,7 +186,7 @@ class ForegroundSyncControllerTest {
 
             val progressList = observedProgresses.filterNotNull()
             kotlin.test.assertTrue(progressList.isNotEmpty())
-            kotlin.test.assertEquals(RecalcProgress(1, 5), progressList.first())
+            kotlin.test.assertEquals(RecalcProgress(ResyncPhase.RECOMPUTE, 1, 5), progressList.first())
 
             job.cancel()
         }
@@ -222,7 +222,7 @@ class ForegroundSyncControllerTest {
             kotlin.test.assertTrue(isSyncing)
             kotlin.test.assertNull(progress)
 
-            controller.onBackgroundRecalcProgress(3, 10)
+            controller.onBackgroundRecalcProgress(ResyncPhase.RECOMPUTE, 3, 10)
             runCurrent()
             kotlin.test.assertNotNull(progress)
             kotlin.test.assertEquals(3, progress?.current)

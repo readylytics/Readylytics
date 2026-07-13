@@ -6,6 +6,10 @@ import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import app.readylytics.health.R
+import app.readylytics.health.domain.sync.RecalcProgress
+import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.domain.sync.fraction
+import kotlin.math.roundToInt
 
 /**
  * Notification channel + builder for the foreground historical-resync worker
@@ -62,6 +66,7 @@ object SyncNotifications {
 
     fun buildProgressNotification(
         context: Context,
+        phase: ResyncPhase?,
         current: Int,
         total: Int,
     ): Notification {
@@ -74,15 +79,18 @@ object SyncNotifications {
                 .setOnlyAlertOnce(true)
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
 
-        if (total > 0) {
-            builder
-                .setContentText(context.getString(R.string.recalculating_progress, current, total))
-                .setProgress(total, current, false)
-        } else {
-            builder
-                .setContentText(context.getString(R.string.resync_notification_preparing))
-                .setProgress(0, 0, true)
-        }
+        val text =
+            when (phase) {
+                null -> context.getString(R.string.resync_notification_preparing)
+                ResyncPhase.INGEST -> context.getString(R.string.resync_phase_ingest, current, total)
+                ResyncPhase.PRUNE -> context.getString(R.string.resync_phase_prune)
+                ResyncPhase.RECONCILE -> context.getString(R.string.resync_phase_reconcile)
+                ResyncPhase.RECOMPUTE -> context.getString(R.string.recalculating_progress, current, total)
+            }
+        val fraction = phase?.let { RecalcProgress(it, current, total).fraction() } ?: 0f
+        builder
+            .setContentText(text)
+            .setProgress(100, (fraction * 100).roundToInt(), false)
         return builder.build()
     }
 }

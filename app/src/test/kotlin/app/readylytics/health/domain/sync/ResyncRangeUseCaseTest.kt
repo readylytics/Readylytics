@@ -213,21 +213,65 @@ class ResyncRangeUseCaseTest {
         }
 
     @Test
-    fun `resyncRange progress reports calendar days not internal two phase steps`() =
+    fun `resyncRange RECOMPUTE progress reports calendar days not internal chunk counts`() =
         runTest {
-            val progress = mutableListOf<Pair<Int, Int>>()
+            val progress = mutableListOf<Triple<ResyncPhase, Int, Int>>()
 
             useCase.run(
                 startDate = LocalDate.of(2024, 6, 1),
                 endDate = LocalDate.of(2024, 6, 3),
                 chunkDays = 30,
-            ) { current, total ->
-                progress += current to total
+            ) { phase, current, total ->
+                progress += Triple(phase, current, total)
             }
 
-            assertEquals(3, progress.last().first)
-            assertEquals(3, progress.last().second)
-            assert(progress.all { (_, total) -> total == 3 })
+            val recompute = progress.filter { it.first == ResyncPhase.RECOMPUTE }
+            assertEquals(3, recompute.last().second)
+            assertEquals(3, recompute.last().third)
+            assertTrue(recompute.all { (_, _, total) -> total == 3 })
+        }
+
+    @Test
+    fun `resyncRange emits phases in order for a fresh run`() =
+        runTest {
+            val phases = mutableListOf<ResyncPhase>()
+
+            useCase.run(
+                startDate = LocalDate.of(2024, 6, 1),
+                endDate = LocalDate.of(2024, 6, 3),
+                chunkDays = 30,
+            ) { phase, _, _ -> phases += phase }
+
+            assertEquals(
+                listOf(ResyncPhase.INGEST, ResyncPhase.PRUNE, ResyncPhase.RECONCILE, ResyncPhase.RECOMPUTE),
+                phases.distinct(),
+            )
+        }
+
+    @Test
+    fun `resyncRange resuming from a PRUNE checkpoint skips the INGEST phase signal`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+            every { checkpointStore.checkpoint } returns
+                flowOf(
+                    ResyncCheckpoint(
+                        startDate = startDate,
+                        endDate = endDate,
+                        phase = ResyncPhase.PRUNE,
+                        nextDate = startDate,
+                        selectionHash = "",
+                        baselineChangeTokens = mapOf(HealthDataType.STEPS to "token"),
+                    ),
+                )
+            val phases = mutableListOf<ResyncPhase>()
+
+            useCase.run(startDate, endDate, chunkDays = 30) { phase, _, _ -> phases += phase }
+
+            assertEquals(
+                listOf(ResyncPhase.PRUNE, ResyncPhase.RECONCILE, ResyncPhase.RECOMPUTE),
+                phases.distinct(),
+            )
         }
 
     @Test

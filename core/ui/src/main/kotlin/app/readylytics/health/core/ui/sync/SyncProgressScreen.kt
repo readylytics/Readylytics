@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.domain.sync.RecalcProgress
+import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.domain.sync.fraction
 
 @Composable
 fun SyncProgressScreen(
@@ -75,27 +76,29 @@ fun SyncProgressScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            if (progress != null && progress.total > 0) {
-                val percentage = progress.current.toFloat() / progress.total.toFloat()
-                Text(
-                    text = stringResource(R.string.sync_progress_fetching_data, progress.current, progress.total),
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-                LinearProgressIndicator(
-                    progress = { percentage },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                CircularProgressIndicator()
-                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-                Text(
-                    text = stringResource(R.string.sync_progress_finishing_setup),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            val text =
+                if (progress == null) {
+                    stringResource(R.string.sync_progress_finishing_setup)
+                } else {
+                    when (progress.phase) {
+                        ResyncPhase.INGEST ->
+                            stringResource(R.string.sync_progress_phase_ingest, progress.current, progress.total)
+                        ResyncPhase.PRUNE -> stringResource(R.string.sync_progress_phase_prune)
+                        ResyncPhase.RECONCILE -> stringResource(R.string.sync_progress_phase_reconcile)
+                        ResyncPhase.RECOMPUTE ->
+                            stringResource(R.string.sync_progress_fetching_data, progress.current, progress.total)
+                    }
+                }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+            LinearProgressIndicator(
+                progress = { progress?.fraction() ?: 0f },
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
