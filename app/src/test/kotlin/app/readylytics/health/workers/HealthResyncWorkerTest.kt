@@ -8,6 +8,7 @@ import androidx.work.WorkerParameters
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
+import app.readylytics.health.domain.sync.ResyncPhase
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -64,8 +65,8 @@ class HealthResyncWorkerTest {
     fun `doWork reports progress and returns success when resync usecase succeeds`() =
         runBlocking {
             coEvery { useCase.execute(any()) } answers {
-                val progressCallback = firstArg<(Int, Int) -> Unit>()
-                progressCallback(1, 10)
+                val progressCallback = firstArg<(ResyncPhase, Int, Int) -> Unit>()
+                progressCallback(ResyncPhase.RECOMPUTE, 1, 10)
                 app.readylytics.health.domain.model.Result
                     .Success(Unit)
             }

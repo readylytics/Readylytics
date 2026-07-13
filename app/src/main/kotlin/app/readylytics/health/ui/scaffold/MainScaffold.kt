@@ -39,6 +39,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.readylytics.health.R
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.domain.sync.RecalcProgress
+import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.domain.sync.fraction
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.ui.sync.SyncEvent
@@ -148,13 +151,12 @@ fun MainScaffold(
                             ),
                     )
 
-                    // Determinate "day X of Y" banner shown while a historical recalculation walks
-                    // forward, so the recompute surfaces visible progress instead of a silent spinner.
-                    // Hide banner when on full-screen SyncProgress view (it shows the same progress inline).
-                    recalcProgress?.takeIf { it.total > 0 && !isSyncProgressScreen }?.let { progress ->
+                    // Phase-aware progress banner shown while a historical resync runs, so it
+                    // surfaces visible progress instead of a silent stall. Hide banner when on the
+                    // full-screen SyncProgress view (it shows the same progress inline).
+                    recalcProgress?.takeIf { !isSyncProgressScreen }?.let { progress ->
                         RecalcProgressBanner(
-                            current = progress.current,
-                            total = progress.total,
+                            progress = progress,
                             onClick = {
                                 navController.navigate(AppDestination.SyncProgress) {
                                     launchSingleTop = true
@@ -174,8 +176,7 @@ fun MainScaffold(
 
 @Composable
 private fun RecalcProgressBanner(
-    current: Int,
-    total: Int,
+    progress: RecalcProgress,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -194,9 +195,17 @@ private fun RecalcProgressBanner(
                     ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
         ) {
-            Text(text = stringResource(R.string.recalculating_progress, current, total))
+            val text =
+                when (progress.phase) {
+                    ResyncPhase.INGEST -> stringResource(R.string.resync_phase_ingest, progress.current, progress.total)
+                    ResyncPhase.PRUNE -> stringResource(R.string.resync_phase_prune)
+                    ResyncPhase.RECONCILE -> stringResource(R.string.resync_phase_reconcile)
+                    ResyncPhase.RECOMPUTE ->
+                        stringResource(R.string.recalculating_progress, progress.current, progress.total)
+                }
+            Text(text = text)
             LinearProgressIndicator(
-                progress = { current.toFloat() / total.toFloat() },
+                progress = { progress.fraction() },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
