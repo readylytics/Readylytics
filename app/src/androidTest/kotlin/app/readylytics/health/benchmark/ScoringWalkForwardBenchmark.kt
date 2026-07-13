@@ -17,9 +17,9 @@ import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.scoring.BaselineComputer
+import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
@@ -75,8 +75,11 @@ class ScoringWalkForwardBenchmark {
         dbFile.delete()
         db =
             Room
-                .databaseBuilder(ApplicationProvider.getApplicationContext(), HealthDatabase::class.java, dbFile.absolutePath)
-                .build()
+                .databaseBuilder(
+                    ApplicationProvider.getApplicationContext(),
+                    HealthDatabase::class.java,
+                    dbFile.absolutePath,
+                ).build()
     }
 
     @After
@@ -89,7 +92,12 @@ class ScoringWalkForwardBenchmark {
     @Test
     fun ingestBatchPersist() {
         val heartRateDao = db.heartRateDao()
-        val baseMs = LocalDate.of(2026, 1, 1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val baseMs =
+            LocalDate
+                .of(2026, 1, 1)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
         var seq = 0L
         benchmarkRule.measureRepeated {
             val batch =
@@ -122,7 +130,12 @@ class ScoringWalkForwardBenchmark {
                 transactionRunner = RoomTransactionRunner(db),
             )
         val startMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val endMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val endMs =
+            endDate
+                .plusDays(1)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
         val zoneThresholds = WorkoutMapper.zoneThresholds(120, 140, 155, 168, 180)
 
         benchmarkRule.measureRepeated {
@@ -199,8 +212,19 @@ class ScoringWalkForwardBenchmark {
         var day = startDate.plusDays(1)
         var index = 0
         while (!day.isAfter(endDate) && index < sleepSessionCount) {
-            val bedTime = day.minusDays(1).atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val wakeTime = day.atTime(7, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val bedTime =
+                day
+                    .minusDays(1)
+                    .atTime(23, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val wakeTime =
+                day
+                    .atTime(7, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val id = "bench_sleep_$index"
             sleepSessions +=
                 SleepSessionEntity(
@@ -247,7 +271,9 @@ class ScoringWalkForwardBenchmark {
     }
 }
 
-private class BenchmarkFakeSettingsRepository(initial: UserPreferences) : SettingsRepository {
+private class BenchmarkFakeSettingsRepository(
+    initial: UserPreferences,
+) : SettingsRepository {
     private val state = MutableStateFlow(initial)
     override val userPreferences: Flow<UserPreferences> = state
 

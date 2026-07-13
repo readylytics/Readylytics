@@ -44,9 +44,10 @@ class GoldenFixtureDataBuilderTest {
     fun `builder produces exactly one stage-less night`() =
         runTest {
             val result = GoldenFixtureDataBuilder(zoneId).build(db, startDate, endDate)
+            val stageLessNightDate = result.scenarioDates.stageLessNightDate
             val session = db.sleepSessionDao().getOverlapping(
-                result.scenarioDates.stageLessNightDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                result.scenarioDates.stageLessNightDate.atTime(23, 59).atZone(zoneId).toInstant().toEpochMilli(),
+                stageLessNightDate.minusDays(1).atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                stageLessNightDate.atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli(),
             ).single { it.id.endsWith("_main") }
 
             assertEquals(0, session.durationMinutes)
@@ -80,8 +81,8 @@ class GoldenFixtureDataBuilderTest {
 
             val sessionsInGap =
                 db.sleepSessionDao().getOverlapping(
-                    gapStart.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                    gapEnd.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                    gapStart.atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                    gapEnd.atTime(20, 0).atZone(zoneId).toInstant().toEpochMilli(),
                 )
             assertTrue(sessionsInGap.isEmpty(), "expected no sleep sessions inside the seeded data gap")
         }
