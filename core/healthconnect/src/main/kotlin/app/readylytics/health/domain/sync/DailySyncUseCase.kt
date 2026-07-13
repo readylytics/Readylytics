@@ -49,12 +49,14 @@ class DailySyncUseCase
 
         /**
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
-         *   reporting (completedDays, totalDays) so the UI can surface determinate progress instead
-         *   of a silent spinner. Invoked off the main thread.
+         *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress
+         *   instead of a silent spinner. Invoked off the main thread. Daily sync has no chunked
+         *   ingest/prune phase of its own (single non-chunked window, always fast), so it always
+         *   reports [ResyncPhase.RECOMPUTE].
          */
         suspend fun run(
             windowDays: Int,
-            onProgress: ((current: Int, total: Int) -> Unit)?,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
@@ -130,7 +132,7 @@ class DailySyncUseCase
                     val stepsMap = stepCountFetcher.fetchWindow(today, totalDays, zoneId, stepsDevice)
 
                     var processedDays = 0
-                    onProgress?.invoke(processedDays, totalDays)
+                    onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
 
                     var successCount = 0
                     var failureCount = 0
@@ -154,7 +156,7 @@ class DailySyncUseCase
                             }
                         }
                         processedDays++
-                        onProgress?.invoke(processedDays, totalDays)
+                        onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
                         dayToScore = dayToScore.plusDays(1)
                         yield()
                     }
