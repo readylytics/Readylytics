@@ -118,6 +118,17 @@ kotlin {
     }
 }
 
+composeCompiler {
+    stabilityConfigurationFiles.add(
+        rootProject.layout.projectDirectory.file("compose_compiler_config.conf"),
+    )
+    // Metrics/reports are opt-in via -PenableComposeReports so normal builds pay zero extra I/O cost.
+    if (project.hasProperty("enableComposeReports")) {
+        metricsDestination.set(layout.buildDirectory.dir("compose-metrics"))
+        reportsDestination.set(layout.buildDirectory.dir("compose-metrics"))
+    }
+}
+
 android {
     namespace = "app.readylytics.health"
     compileSdk = 37
