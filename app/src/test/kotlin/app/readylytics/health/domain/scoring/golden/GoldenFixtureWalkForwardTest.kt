@@ -12,17 +12,17 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.scoring.BaselineComputer
+import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
-import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
+import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.domain.sync.DailyRecomputeSupport
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.ListSerializer
@@ -82,7 +82,12 @@ class GoldenFixtureWalkForwardTest {
             val prefs =
                 UserPreferences(
                     scoringZoneId = zoneId.id,
-                    installDate = startDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                    installDate =
+                        startDate
+                            .minusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
                     age = 35,
                 )
 
@@ -104,8 +109,18 @@ class GoldenFixtureWalkForwardTest {
                     hrvDao = db.hrvDao(),
                     transactionRunner = RoomTransactionRunner(db),
                 )
-            val reconcileStartMs = startDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val reconcileEndMs = endDate.plusDays(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val reconcileStartMs =
+                startDate
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val reconcileEndMs =
+                endDate
+                    .plusDays(2)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             reconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
 
             val scoringHistoryRepository =

@@ -33,8 +33,11 @@ class SyntheticDatasetGeneratorTest {
         dbFile.delete()
         db =
             Room
-                .databaseBuilder(ApplicationProvider.getApplicationContext(), HealthDatabase::class.java, dbFile.absolutePath)
-                .build()
+                .databaseBuilder(
+                    ApplicationProvider.getApplicationContext(),
+                    HealthDatabase::class.java,
+                    dbFile.absolutePath,
+                ).build()
     }
 
     @After
@@ -60,7 +63,10 @@ class SyntheticDatasetGeneratorTest {
 
             assertEquals(20, summary.sleepSessionCount)
             assertEquals(10, summary.workoutCount)
-            assertTrue(summary.heartRateRowCount in 1_900..2_100, "expected ~2000 HR rows, got ${summary.heartRateRowCount}")
+            assertTrue(
+                summary.heartRateRowCount in 1_900..2_100,
+                "expected ~2000 HR rows, got ${summary.heartRateRowCount}",
+            )
             assertEquals(20, summary.hrvRowCount.toInt())
             assertEquals(endDate.minusDays(59), summary.historyStartDate)
             assertEquals(endDate.minusDays(6), summary.denseWindowStartDate)

@@ -45,10 +45,22 @@ class GoldenFixtureDataBuilderTest {
         runTest {
             val result = GoldenFixtureDataBuilder(zoneId).build(db, startDate, endDate)
             val stageLessNightDate = result.scenarioDates.stageLessNightDate
-            val session = db.sleepSessionDao().getOverlapping(
-                stageLessNightDate.minusDays(1).atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                stageLessNightDate.atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli(),
-            ).single { it.id.endsWith("_main") }
+            val session =
+                db
+                    .sleepSessionDao()
+                    .getOverlapping(
+                        stageLessNightDate
+                            .minusDays(1)
+                            .atTime(12, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                        stageLessNightDate
+                            .atTime(12, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    ).single { it.id.endsWith("_main") }
 
             assertEquals(0, session.durationMinutes)
             assertEquals(0f, session.efficiency)
@@ -60,10 +72,20 @@ class GoldenFixtureDataBuilderTest {
             val result = GoldenFixtureDataBuilder(zoneId).build(db, startDate, endDate)
             val biphasicDate = result.scenarioDates.biphasicDate
             val sessions =
-                db.sleepSessionDao().getOverlapping(
-                    biphasicDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                    biphasicDate.atTime(23, 59).atZone(zoneId).toInstant().toEpochMilli(),
-                )
+                db
+                    .sleepSessionDao()
+                    .getOverlapping(
+                        biphasicDate
+                            .minusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                        biphasicDate
+                            .atTime(23, 59)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    )
 
             assertTrue(sessions.any { it.id.endsWith("_main") })
             assertTrue(sessions.any { it.id.endsWith("_nap") })
@@ -80,10 +102,20 @@ class GoldenFixtureDataBuilderTest {
             assertEquals(0L, result.stepsByDate[gapEnd])
 
             val sessionsInGap =
-                db.sleepSessionDao().getOverlapping(
-                    gapStart.atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                    gapEnd.atTime(20, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                )
+                db
+                    .sleepSessionDao()
+                    .getOverlapping(
+                        gapStart
+                            .atTime(12, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                        gapEnd
+                            .atTime(20, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    )
             assertTrue(sessionsInGap.isEmpty(), "expected no sleep sessions inside the seeded data gap")
         }
 
@@ -96,10 +128,20 @@ class GoldenFixtureDataBuilderTest {
 
             for (dstDate in result.scenarioDates.dstDates) {
                 val sessions =
-                    db.sleepSessionDao().getOverlapping(
-                        dstDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                        dstDate.atTime(23, 59).atZone(zoneId).toInstant().toEpochMilli(),
-                    )
+                    db
+                        .sleepSessionDao()
+                        .getOverlapping(
+                            dstDate
+                                .minusDays(1)
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
+                            dstDate
+                                .atTime(23, 59)
+                                .atZone(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
+                        )
                 assertTrue(sessions.isNotEmpty(), "expected a sleep session covering DST date $dstDate")
             }
         }

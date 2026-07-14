@@ -66,6 +66,7 @@ class SyntheticDatasetGenerator(
         var hrvRowCount = 0L
 
         val hrBuffer = mutableListOf<HeartRateRecordEntity>()
+
         suspend fun flushHr(force: Boolean = false) {
             if (hrBuffer.isEmpty()) return
             if (force || hrBuffer.size >= config.flushEveryRows) {
@@ -89,8 +90,19 @@ class SyntheticDatasetGenerator(
             val wakeDay = historyStartDate.plusDays(accumulatedSleepDays.toLong())
             if (wakeDay.isAfter(endDate)) break
             val id = "synthetic_sleep_$sleepIndex"
-            val bedTime = wakeDay.minusDays(1).atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
-            val wakeTime = wakeDay.atTime(7, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val bedTime =
+                wakeDay
+                    .minusDays(1)
+                    .atTime(23, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val wakeTime =
+                wakeDay
+                    .atTime(7, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val device = deviceName()
 
             sleepSessions +=
@@ -139,7 +151,12 @@ class SyntheticDatasetGenerator(
         while (workoutIndex < config.workoutCount) {
             val day = historyStartDate.plusDays(accumulatedWorkoutDays.toLong())
             if (day.isAfter(endDate)) break
-            val start = day.atTime(18, 0).atZone(zoneId).toInstant().toEpochMilli()
+            val start =
+                day
+                    .atTime(18, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val durationMinutes = 30 + random.nextInt(30)
             workoutRows +=
                 WorkoutRecordEntity(
@@ -164,7 +181,12 @@ class SyntheticDatasetGenerator(
 
         // --- Dense window: ~1M HR samples across the most recent `denseWindowDays` days. ---
         val denseWindowStartMs = denseWindowStartDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val denseWindowEndMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val denseWindowEndMs =
+            endDate
+                .plusDays(1)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
         val denseWindowMs = denseWindowEndMs - denseWindowStartMs
         val sampleIntervalMs = (denseWindowMs / config.heartRateSamplesInDenseWindow).coerceAtLeast(1L)
 

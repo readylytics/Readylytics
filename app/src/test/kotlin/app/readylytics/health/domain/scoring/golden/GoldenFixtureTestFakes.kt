@@ -13,7 +13,9 @@ import java.time.LocalDate
  * against a fixed [UserPreferences] snapshot. The walk-forward test never mutates preferences
  * mid-run, so every method beyond the [userPreferences] flow is a no-op.
  */
-class FakeSettingsRepository(initial: UserPreferences) : SettingsRepository {
+class FakeSettingsRepository(
+    initial: UserPreferences,
+) : SettingsRepository {
     private val state = MutableStateFlow(initial)
     override val userPreferences: Flow<UserPreferences> = state
 

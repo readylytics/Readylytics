@@ -131,8 +131,19 @@ class GoldenFixtureDataBuilder(
         deviceName: String,
         stageLess: Boolean,
     ) {
-        val bedTime = wakeDay.minusDays(1).atTime(23, 0).atZone(zoneId).toInstant().toEpochMilli()
-        val wakeTime = wakeDay.atTime(7, 0).atZone(zoneId).toInstant().toEpochMilli()
+        val bedTime =
+            wakeDay
+                .minusDays(1)
+                .atTime(23, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        val wakeTime =
+            wakeDay
+                .atTime(7, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
         val id = "sleep_${wakeDay}_main"
 
         if (stageLess) {
@@ -175,7 +186,13 @@ class GoldenFixtureDataBuilder(
             )
 
         var stageStart = bedTime
-        val order = listOf("LIGHT" to lightMinutes / 2, "DEEP" to deepMinutes, "REM" to remMinutes, "LIGHT" to lightMinutes / 2)
+        val order =
+            listOf(
+                "LIGHT" to lightMinutes / 2,
+                "DEEP" to deepMinutes,
+                "REM" to remMinutes,
+                "LIGHT" to lightMinutes / 2,
+            )
         for ((stageType, minutes) in order) {
             if (minutes <= 0) continue
             val stageEnd = stageStart + minutes * 60_000L
@@ -217,8 +234,18 @@ class GoldenFixtureDataBuilder(
         day: LocalDate,
         deviceName: String,
     ) {
-        val napStart = day.atTime(14, 0).atZone(zoneId).toInstant().toEpochMilli()
-        val napEnd = day.atTime(14, 45).atZone(zoneId).toInstant().toEpochMilli()
+        val napStart =
+            day
+                .atTime(14, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        val napEnd =
+            day
+                .atTime(14, 45)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
         val id = "sleep_${day}_nap"
         sleepSessions +=
             SleepSessionEntity(
@@ -263,10 +290,16 @@ class GoldenFixtureDataBuilder(
         wakeDay: LocalDate,
         deviceName: String,
     ) {
-        val sampleTime = wakeDay.minusDays(1).atTime(2, 30).atZone(zoneId).toInstant().toEpochMilli()
+        val sampleTime =
+            wakeDay
+                .minusDays(1)
+                .atTime(2, 30)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
         hrvRows +=
             HrvRecordEntity(
-                id = "hrv_${wakeDay}",
+                id = "hrv_$wakeDay",
                 timestampMs = sampleTime,
                 rmssdMs = 30f + random.nextInt(20),
                 recordType = RecordType.RESTING.name,
@@ -281,8 +314,18 @@ class GoldenFixtureDataBuilder(
         deviceName: String,
     ) {
         // Sparse daytime coverage (every 15 minutes, 08:00-22:00) for the everyday-HR load path.
-        var sampleTime = day.atTime(8, 0).atZone(zoneId).toInstant().toEpochMilli()
-        val dayEnd = day.atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli()
+        var sampleTime =
+            day
+                .atTime(8, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        val dayEnd =
+            day
+                .atTime(22, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
         var sampleIndex = 0
         while (sampleTime < dayEnd) {
             heartRateRows +=
@@ -306,7 +349,12 @@ class GoldenFixtureDataBuilder(
         deviceName: String,
         workoutSeq: Int,
     ) {
-        val start = day.atTime(18, 0).atZone(zoneId).toInstant().toEpochMilli()
+        val start =
+            day
+                .atTime(18, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
         val durationMinutes = 30 + random.nextInt(30)
         val end = start + durationMinutes * 60_000L
         val id = "workout_$workoutSeq"
