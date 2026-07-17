@@ -137,7 +137,7 @@ class DailySyncUseCase
                     var successCount = 0
                     var failureCount = 0
 
-                    healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1))
+                    healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
 
                     var dayToScore = oldestTargetDay
                     while (!dayToScore.isAfter(today)) {

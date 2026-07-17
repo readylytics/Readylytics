@@ -1,10 +1,12 @@
 package app.readylytics.health.feature.dashboard
 
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -12,14 +14,29 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
+    private val testDispatcher = StandardTestDispatcher()
     private lateinit var dailySummaryRepository: DailySummaryRepository
     private lateinit var getDashboardDataUseCase: GetDashboardDataUseCase
     private lateinit var foregroundSyncController: ForegroundSyncGateway
@@ -34,6 +51,8 @@ class DashboardViewModelTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+
         dailySummaryRepository = mockk(relaxed = true)
         getDashboardDataUseCase = mockk(relaxed = true)
         foregroundSyncController = mockk(relaxed = true)
@@ -60,6 +79,31 @@ class DashboardViewModelTest {
                 clock = java.time.Clock.systemDefaultZone(),
             )
     }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `DismissInsight resolves dateMs from the scoring zone, not the device zone`() =
+        runTest {
+            val selectedDate = LocalDate.of(2024, 6, 1)
+            every { selectedDateRepository.selectedDate } returns MutableStateFlow(selectedDate)
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = "Pacific/Kiritimati"))
+            coEvery { insightDismissalRepository.dismiss(any(), any()) } returns Unit
+
+            viewModel.onEvent(DashboardEvent.DismissInsight(InsightType.LATE_NADIR))
+            advanceUntilIdle()
+
+            val expectedDateMs =
+                selectedDate
+                    .atStartOfDay(ZoneId.of("Pacific/Kiritimati"))
+                    .toInstant()
+                    .toEpochMilli()
+            coVerify { insightDismissalRepository.dismiss(expectedDateMs, InsightType.LATE_NADIR) }
+        }
 
     @Test
     fun validateSelectedDate_today_succeeds() {

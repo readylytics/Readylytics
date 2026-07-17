@@ -277,13 +277,14 @@ class ResyncRangeUseCaseTest {
     @Test
     fun `resyncRange clears frozen baselines only for requested range before walk-forward recompute`() =
         runTest {
+            val zoneId = ZoneId.systemDefault()
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 3)
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             coVerifyOrder {
-                healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1))
+                healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
                 scoringRepository.computeAndPersistDailySummary(startDate, any())
                 scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any())
                 scoringRepository.computeAndPersistDailySummary(endDate, any())

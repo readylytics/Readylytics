@@ -25,6 +25,7 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
@@ -41,13 +42,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -294,26 +295,24 @@ class DashboardViewModel
                 DashboardEvent.Refresh -> onRefresh()
                 DashboardEvent.ToggleCardManagement -> toggleCardManagement()
                 is DashboardEvent.DismissInsight -> {
-                    val zoneId = ZoneId.systemDefault()
-                    val dateMs =
-                        selectedDateRepository.selectedDate.value
-                            .atStartOfDay(
-                                zoneId,
-                            ).toInstant()
-                            .toEpochMilli()
                     viewModelScope.launch {
+                        val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                        val dateMs =
+                            selectedDateRepository.selectedDate.value
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli()
                         insightDismissalRepository.dismiss(dateMs, event.type)
                     }
                 }
                 DashboardEvent.RestoreInsights -> {
-                    val zoneId = ZoneId.systemDefault()
-                    val dateMs =
-                        selectedDateRepository.selectedDate.value
-                            .atStartOfDay(
-                                zoneId,
-                            ).toInstant()
-                            .toEpochMilli()
                     viewModelScope.launch {
+                        val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                        val dateMs =
+                            selectedDateRepository.selectedDate.value
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli()
                         insightDismissalRepository.restoreAllForDate(dateMs)
                     }
                 }

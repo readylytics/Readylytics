@@ -111,7 +111,7 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = windowDays, onProgress = null)
 
             coVerifyOrder {
-                healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1))
+                healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1), zoneId)
                 scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L)
                 scoringRepository.computeAndPersistDailySummary(today, 0L)
             }
@@ -146,7 +146,7 @@ class DailySyncUseCaseTest {
                     endMs = windowEndExclusiveMs - 1,
                     zoneThresholds = any(),
                 )
-                healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1))
+                healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1), zoneId)
                 scoringRepository.computeAndPersistDailySummary(today, 0L)
             }
         }

@@ -105,8 +105,8 @@ class RoomHealthIngestionStore
         override suspend fun clearFrozenBaselines(
             start: java.time.LocalDate,
             endExclusive: java.time.LocalDate,
+            zoneId: ZoneId,
         ) {
-            val zoneId = ZoneId.systemDefault()
             dailySummaryDao.clearFrozenBaselinesBetween(
                 fromMs = start.atStartOfDay(zoneId).toInstant().toEpochMilli(),
                 toExclusiveMs = endExclusive.atStartOfDay(zoneId).toInstant().toEpochMilli(),

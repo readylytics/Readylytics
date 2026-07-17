@@ -329,7 +329,7 @@ class ResyncRangeUseCase
                             emptyMap()
                         }
                     if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
-                        healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1))
+                        healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
                     }
                     onProgress?.invoke(ResyncPhase.RECOMPUTE, completedDays, totalDays)
                     var day = recomputeStartDate

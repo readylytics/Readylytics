@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.sync
 
 import java.time.LocalDate
+import java.time.ZoneId
 
 interface HealthIngestionStore {
     suspend fun persist(batch: HealthIngestionBatch)
@@ -8,6 +9,7 @@ interface HealthIngestionStore {
     suspend fun clearFrozenBaselines(
         start: LocalDate,
         endExclusive: LocalDate,
+        zoneId: ZoneId,
     )
 
     suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int

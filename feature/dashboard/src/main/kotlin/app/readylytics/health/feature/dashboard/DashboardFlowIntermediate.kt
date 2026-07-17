@@ -8,6 +8,7 @@ import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
@@ -87,51 +88,54 @@ fun createDashboardBasicInputsFlow(
     circadianRepository: CircadianConsistencyRepository,
     insightDismissalRepository: InsightDismissalRepository,
 ): Flow<DashboardBasicInputs> =
-    selectedDate.flatMapLatest { date ->
-        val zoneId = ZoneId.systemDefault()
-        val today = LocalDate.now(zoneId)
+    combine(selectedDate, settingsRepository.userPreferences) { date, prefs -> date to prefs }
+        .flatMapLatest { (date, prefs) ->
+            // Every date-range query below must key off the same scoring-zone midnight that
+            // DailySummaryEntity.dateMidnightMs is written with, not the device zone, or the
+            // summary/RAS/dismissal lookups can silently miss or hit the wrong day.
+            val zoneId = prefs.scoringZone()
+            val today = LocalDate.now(zoneId)
 
-        // Select appropriate summary flow based on whether date is today or historical
-        val summaryFlow =
-            if (date == today) {
-                val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
-            } else {
-                val midnightMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                dailySummaryRepository.observeByDate(midnightMs)
+            // Select appropriate summary flow based on whether date is today or historical
+            val summaryFlow =
+                if (date == today) {
+                    val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
+                } else {
+                    val midnightMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    dailySummaryRepository.observeByDate(midnightMs)
+                }
+
+            // RAS breakdown is always 7-day window
+            val rasFromMs =
+                date
+                    .minusDays(6)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
+
+            val dismissalFlow =
+                insightDismissalRepository
+                    .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
+
+            // Combine all basic inputs
+            combine(
+                summaryFlow,
+                circadianRepository.resultFor(date),
+                rasBreakdownFlow,
+                dismissalFlow,
+            ) { summary, circadian, rasSummaries, dismissed ->
+                DashboardBasicInputs(
+                    selectedDate = date,
+                    summary = summary,
+                    userPreferences = prefs,
+                    circadianResult = circadian,
+                    rasSummaries = rasSummaries,
+                    dismissedInsightTypes = dismissed,
+                )
             }
-
-        // RAS breakdown is always 7-day window
-        val rasFromMs =
-            date
-                .minusDays(6)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
-        val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
-
-        val dismissalFlow =
-            insightDismissalRepository
-                .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
-
-        // Combine all basic inputs
-        combine(
-            summaryFlow,
-            settingsRepository.userPreferences,
-            circadianRepository.resultFor(date),
-            rasBreakdownFlow,
-            dismissalFlow,
-        ) { summary, prefs, circadian, rasSummaries, dismissed ->
-            DashboardBasicInputs(
-                selectedDate = date,
-                summary = summary,
-                userPreferences = prefs,
-                circadianResult = circadian,
-                rasSummaries = rasSummaries,
-                dismissedInsightTypes = dismissed,
-            )
         }
-    }
 
 /**
  * Creates the card state flow.
