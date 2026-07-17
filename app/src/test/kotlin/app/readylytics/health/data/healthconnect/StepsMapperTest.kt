@@ -15,7 +15,9 @@ class StepsMapperTest {
         deviceName: String = "Watch",
     ): DomainStepsRecord =
         DomainStepsRecord(
+            id = start,
             startTime = Instant.parse(start),
+            endTime = Instant.parse(start).plusSeconds(60),
             count = count,
             deviceName = deviceName,
         )

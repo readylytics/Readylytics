@@ -142,11 +142,39 @@ object DatabaseMigrations {
             }
         }
 
+    private val MIGRATION_5_6 =
+        object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // SCORE-001: unified-TRIMP column, additive/nullable; lazily backfilled by the next
+                // walk-forward recompute. Read paths COALESCE(modelTrimp, trimp) until then.
+                db.execSQL("ALTER TABLE workout_records ADD COLUMN modelTrimp REAL")
+
+                // HC-005/OD-3: raw per-record steps table, purely so a later steps DeletionChange
+                // can resolve the deleted record's own (startTime, endTime). Never read for scoring.
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `step_records` (
+                        `id` TEXT NOT NULL,
+                        `startTime` INTEGER NOT NULL,
+                        `endTime` INTEGER NOT NULL,
+                        `count` INTEGER NOT NULL,
+                        `deviceName` TEXT,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent(),
+                )
+
+                // DB-002: redundant secondary index on daily_summaries' own primary key column.
+                db.execSQL("DROP INDEX IF EXISTS `index_daily_summaries_dateMidnightMs`")
+            }
+        }
+
     val all: Array<Migration> =
         arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
+            MIGRATION_5_6,
         )
 }

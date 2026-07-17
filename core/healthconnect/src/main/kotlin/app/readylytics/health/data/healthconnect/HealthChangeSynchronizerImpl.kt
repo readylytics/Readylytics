@@ -8,6 +8,7 @@ import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.mapper.BloodPressureDataMapper
 import app.readylytics.health.data.mapper.BodyFatDataMapper
 import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
@@ -46,6 +47,7 @@ class HealthChangeSynchronizerImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val stepRecordDao: StepRecordDao,
     ) : HealthChangeSynchronizer {
         private val client by lazy { HealthConnectClient.getOrCreate(context) }
 
@@ -198,14 +200,23 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.HEART_RATE -> {
                     if (record is HeartRateRecord) {
                         val domainHr = record.toDomain()
-                        val entities = HeartRateMapper.mapToEntities(listOf(domainHr), emptyList(), emptyList())
+                        // Resolve real session spans overlapping this record's own time range so the
+                        // sample is tagged SLEEP/EXERCISE immediately instead of RESTING/sessionId=null
+                        // until the next reconcile pass corrects it (HC-004).
+                        val startMs = record.startTime.toEpochMilli()
+                        val endMs = record.endTime.toEpochMilli()
+                        val sleepSpans = sleepSessionDao.getOverlapping(startMs, endMs)
+                        val workoutSpans = workoutDao.getOverlapping(startMs, endMs)
+                        val entities = HeartRateMapper.mapToEntities(listOf(domainHr), sleepSpans, workoutSpans)
                         heartRateDao.upsertAll(entities)
                     }
                 }
                 HealthDataType.HRV -> {
                     if (record is HeartRateVariabilityRmssdRecord) {
                         val domainHrv = record.toDomain()
-                        val entities = HrvMapper.mapToEntities(listOf(domainHrv), emptyList())
+                        val sampleMs = record.time.toEpochMilli()
+                        val sleepSpans = sleepSessionDao.getOverlapping(sampleMs, sampleMs)
+                        val entities = HrvMapper.mapToEntities(listOf(domainHrv), sleepSpans)
                         hrvDao.upsertAll(entities)
                     }
                 }
@@ -220,7 +231,16 @@ class HealthChangeSynchronizerImpl
                                 prefs.zone3MaxBpm,
                                 prefs.zone4MaxBpm,
                             )
-                        val entity = WorkoutMapper.mapExerciseSession(domainExercise, emptyList(), thresholds)
+                        // Compute metrics from already-stored HR rows overlapping this session so a
+                        // workout upsert has non-zero TRIMP/zones/avgHr immediately (HC-004); a sample
+                        // arriving in the very same changes batch is still corrected by the next
+                        // reconcile pass, matching SessionLinkReconcilerImpl.recomputeWorkouts.
+                        val hrSamples =
+                            heartRateDao.getByTimeRange(
+                                record.startTime.toEpochMilli(),
+                                record.endTime.toEpochMilli(),
+                            )
+                        val entity = WorkoutMapper.mapExerciseSession(domainExercise, hrSamples, thresholds)
                         workoutDao.upsertAll(listOf(entity))
                     }
                 }
@@ -253,7 +273,22 @@ class HealthChangeSynchronizerImpl
                     }
                 }
                 HealthDataType.STEPS -> {
-                    // Steps do not have a dedicated DB table, so we do nothing.
+                    if (record is StepsRecord) {
+                        // Steps have no dedicated table for scoring (daily totals come from
+                        // StepCountFetcher's aggregate reads) -- this row exists purely so a later
+                        // DeletionChange for this record can resolve its own date range (HC-005).
+                        stepRecordDao.upsertAll(
+                            listOf(
+                                StepRecordEntity(
+                                    id = record.metadata.id,
+                                    startTime = record.startTime.toEpochMilli(),
+                                    endTime = record.endTime.toEpochMilli(),
+                                    count = record.count,
+                                    deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+                                ),
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -360,7 +395,13 @@ class HealthChangeSynchronizerImpl
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
-                HealthDataType.STEPS -> emptySet()
+                HealthDataType.STEPS -> {
+                    // Resolve from the raw row upsertRecord's STEPS branch persisted, before
+                    // deleteRecordLocal removes it (HC-005) -- must be called before the delete.
+                    stepRecordDao.getById(id)?.let {
+                        getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
+                    } ?: emptySet()
+                }
             }
 
         private suspend fun deleteRecordLocal(
@@ -376,7 +417,7 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.BODY_FAT -> bodyFatRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.BLOOD_PRESSURE -> bloodPressureRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.OXYGEN_SATURATION -> oxygenSaturationRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.STEPS -> Unit
+                HealthDataType.STEPS -> stepRecordDao.deleteById(id)
             }
         }
 

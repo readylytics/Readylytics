@@ -214,7 +214,9 @@ class HealthConnectRepositoryImpl
 
         private fun StepsRecord.toDomain(): DomainStepsRecord =
             DomainStepsRecord(
+                id = metadata.id,
                 startTime = startTime,
+                endTime = endTime,
                 count = count,
                 deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
             )

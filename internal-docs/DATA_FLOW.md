@@ -53,7 +53,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v5)  │   12 entities — single source of truth
+│  HealthDatabase (SQLite v6)  │   13 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -120,10 +120,10 @@ explicit and idempotent.
 | `WorkerScheduler`             | `core/model/src/main/kotlin/app/readylytics/health/workers/WorkerScheduler.kt`                 | Enqueues unique work. `scheduleResyncWorker()` (`RESYNC_WORK_NAME`, `ExistingWorkPolicy.KEEP`, expedited, exponential backoff) + `cancelResyncWorker()`; `schedulePeriodicSync(intervalMinutes)` (`PERIODIC_SYNC_WORK_NAME`, `ExistingPeriodicWorkPolicy.UPDATE`, exponential backoff) + `cancelPeriodicSync()`; also backup / birthday / data-cleanup workers. |
 | `PeriodicHealthSyncWorker`    | `app/src/main/kotlin/app/readylytics/health/workers/PeriodicHealthSyncWorker.kt`        | "Background Sync" toggle in Settings. `@HiltWorker` periodic **standard (non-foreground) worker** calling `HealthSyncUseCase.sync(windowDays = 2)` (shares `syncMutex` with the other two flows), bridges progress to `ForegroundSyncController`, shows/dismisses a silent transient notification (`SyncNotifications.BACKGROUND_SYNC_CHANNEL_ID`) via `NotificationManagerCompat` directly — no `setForeground()`, since `READ_HEALTH_DATA_IN_BACKGROUND` already permits background HC reads and starting a foreground service from a periodic background worker risks `ForegroundServiceStartNotAllowedException` on API 34+. Ordinary failures return `Result.retry()`; `REQUIRES_HISTORICAL_RESYNC` enqueues `WorkerScheduler.scheduleResyncWorker()` and finishes successfully so durable catch-up runs once without periodic retry churn. |
 | `DataCleanupWorker`           | `app/src/main/kotlin/app/readylytics/health/workers/DataCleanupWorker.kt`               | Daily retention enforcement; cutoff resolved via `RetentionBounds.resolveRetentionCutoffMs()` (shared with resync). Delegates to `RetentionCleanup`. No-op when retention disabled. |
-| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`             | Executes transactional deletions of data strictly older than the cutoff across all 9 sensitive tables. |
+| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`             | Executes transactional deletions of data strictly older than the cutoff across all 10 sensitive tables (incl. `step_records`). |
 | `RetentionBounds`             | `core/model/src/main/kotlin/app/readylytics/health/domain/util/RetentionBounds.kt`             | Single source of truth for retention→date math: enabled → `today − retentionDays`; disabled → `today − ABSOLUTE_MAX_DAYS` (3650 / 10y). |
 | `RoomTransactionRunner`       | `core/database/src/main/kotlin/app/readylytics/health/data/local/RoomTransactionRunner.kt`        | Wraps `HealthDatabase.withTransaction { … }`. Ingestion commits parent/low-volume records together, then HR and HRV in bounded 5,000-row transactions with cancellation checks between batches. A failed window may contain partial new upserts, but never deletes prior valid rows; its unchanged checkpoint causes an idempotent replay. |
-| `HealthChangeSynchronizer`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthChangeSynchronizer.kt`    | Reconciles differential Health Connect Changes API responses (upsertions and deletions) incrementally during daily/foreground sync. Resolves dates of deleted records via local DB lookup. Composite-key metric changes delete every Room row owned by the HC source record before re-upsert. The synchronizer returns candidate next tokens but never persists them; the daily-sync flow (`DailySyncUseCase`) commits them only after requested-window ingest, reconciliation, step fetch, and scoring all succeed. Changes older than the requested scoring window leave tokens uncommitted and return `REQUIRES_HISTORICAL_RESYNC`, routing correction through the durable worker without widening foreground scoring. |
+| `HealthChangeSynchronizer`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthChangeSynchronizer.kt`    | Reconciles differential Health Connect Changes API responses (upsertions and deletions) incrementally during daily/foreground sync. Resolves dates of deleted records via local DB lookup — steps resolve via the new `step_records` raw table (HC-005), every other type via its own scoring table. Composite-key metric changes delete every Room row owned by the HC source record before re-upsert. HR/HRV/exercise upserts resolve real overlapping sleep/workout session spans from local DB (`getOverlapping`) and, for exercise, real stored HR samples, so a changes-path row is link/metric-correct at write time rather than only after the next `DailySyncUseCase` reconcile pass (HC-004). The synchronizer returns candidate next tokens but never persists them; the daily-sync flow (`DailySyncUseCase`) commits them only after requested-window ingest, reconciliation, step fetch, and scoring all succeed. Changes older than the requested scoring window leave tokens uncommitted and return `REQUIRES_HISTORICAL_RESYNC`, routing correction through the durable worker without widening foreground scoring. |
 | `HealthChangeTokenStore`      | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/HealthChangeTokenStore.kt`      | Atomically stores differential Changes Tokens per Health Connect data type after derived summaries are durable. Replayed pages are safe because Room ingestion is idempotent by HC record ID. |
 | `ResyncCheckpointStore`       | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/ResyncCheckpointStore.kt`       | Stores the resumable historical-resync checkpoint: fixed range, current phase (`INGEST` / `PRUNE` / `RECONCILE` / `RECOMPUTE`), next date, selection hash, and pre-ingest baseline Changes Tokens. Cleared only after recompute succeeds and baseline tokens are promoted atomically. |
 | `ResyncCheckpointStoreImpl`   | `app/src/main/kotlin/app/readylytics/health/data/preferences/ResyncCheckpointStoreImpl.kt` | Proto DataStore implementation of historical-resync checkpoint persistence. |
@@ -184,18 +184,25 @@ are intentionally confined to `core/healthconnect/src/main/kotlin/app/readylytic
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 5)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 6)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
 `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/`. **The database is the single source of truth; the UI never reads Health
 Connect directly.**
 
-`DatabaseMigrations` registers v1→v2, v2→v3, v3→v4, and v4→v5 migrations for existing installs.
-Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
+`DatabaseMigrations` registers v1→v2, v2→v3, v3→v4, v4→v5, and v5→v6 migrations for existing
+installs. Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
 `supplementalSleepDurationMinutes` and `napCount`, for nap/supplemental-sleep tracking; it does
-not change any other table or scoring formula.
+not change any other table or scoring formula. Version 6 (SCORE-001, HC-005, DB-002): adds a
+nullable `workout_records.modelTrimp` column (the user-selected TRIMP model's value, lazily
+backfilled by the next walk-forward recompute — see §2.3); adds the `step_records` table (13th
+entity) holding raw per-record steps rows purely so a later Health Connect `DeletionChange` for
+steps can resolve the deleted record's own date range (§1.2) — it is never read for scoring, daily
+step totals still come from `StepCountFetcher`'s aggregate/device-filtered reads; and drops the
+`daily_summaries` index on `dateMidnightMs`, redundant with that column already being the primary
+key.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -528,7 +535,7 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/data/healthconnect/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | zone minutes + workout TRIMP                                                             |
 | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v5)                              | 12 entities; v1→v5 migrations wired through `DatabaseMigrations`                         |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v6)                              | 13 entities; v1→v6 migrations wired through `DatabaseMigrations`                         |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |

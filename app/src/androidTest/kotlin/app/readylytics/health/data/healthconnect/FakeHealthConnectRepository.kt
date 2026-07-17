@@ -345,7 +345,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     private fun placeholderSteps(index: Int): DomainStepsRecord =
         DomainStepsRecord(
+            id = "steps-$index",
             startTime = PLACEHOLDER_TIME.plusSeconds(index.toLong()),
+            endTime = PLACEHOLDER_TIME.plusSeconds(index.toLong() + 1),
             count = 1L,
             deviceName = PLACEHOLDER_DEVICE,
         )

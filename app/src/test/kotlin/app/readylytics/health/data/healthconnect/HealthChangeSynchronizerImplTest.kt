@@ -42,6 +42,7 @@ class HealthChangeSynchronizerImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val stepRecordDao = mockk<StepRecordDao>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -74,6 +75,7 @@ class HealthChangeSynchronizerImplTest {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                stepRecordDao = stepRecordDao,
             )
     }
 
@@ -478,6 +480,84 @@ class HealthChangeSynchronizerImplTest {
                 val outcome = synchronizer.applyPendingChanges()
 
                 assertEquals(setOf(LocalDate.of(2026, 1, 2)), outcome.affectedDates)
+            } finally {
+                TimeZone.setDefault(originalZone)
+            }
+        }
+
+    @Test
+    fun `applyPendingChanges persists an upserted steps record for later deletion resolution`() =
+        runTest {
+            seedTokens()
+            val recordId = "steps-record"
+            val startTime = Instant.parse("2026-06-21T08:00:00Z")
+            val endTime = Instant.parse("2026-06-21T08:10:00Z")
+            val record =
+                mockk<StepsRecord>(relaxed = true) {
+                    every { metadata.id } returns recordId
+                    every { metadata.device } returns null
+                    every { metadata.dataOrigin.packageName } returns "pkg"
+                    every { this@mockk.startTime } returns startTime
+                    every { this@mockk.endTime } returns endTime
+                    every { count } returns 500L
+                }
+            val change =
+                mockk<UpsertionChange>(relaxed = true) {
+                    every { this@mockk.record } returns record
+                }
+            routeOneChange(dataType = HealthDataType.STEPS, change = change)
+            coEvery { stepRecordDao.getById(recordId) } returns null
+
+            synchronizer.applyPendingChanges()
+
+            coVerify {
+                stepRecordDao.upsertAll(
+                    match { records ->
+                        records.size == 1 &&
+                            records[0].id == recordId &&
+                            records[0].startTime == startTime.toEpochMilli() &&
+                            records[0].endTime == endTime.toEpochMilli() &&
+                            records[0].count == 500L
+                    },
+                )
+            }
+        }
+
+    @Test
+    fun `applyPendingChanges resolves a deleted steps record's dates from the stored raw row`() =
+        runTest {
+            // HC-005: a steps DeletionChange must resolve affected dates from the row
+            // upsertRecord's STEPS branch previously persisted, not emptySet().
+            val originalZone = TimeZone.getDefault()
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+            try {
+                seedTokens()
+                val recordId = "deleted-steps"
+                val storedRow =
+                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                        id = recordId,
+                        startTime = Instant.parse("2026-03-10T22:00:00Z").toEpochMilli(),
+                        endTime = Instant.parse("2026-03-11T00:00:00Z").toEpochMilli(),
+                        count = 200L,
+                        deviceName = "Watch",
+                    )
+                coEvery { stepRecordDao.getById(recordId) } returns storedRow
+                val deletionChange =
+                    mockk<DeletionChange>(relaxed = true) {
+                        every { this@mockk.recordId } returns recordId
+                    }
+                routeOneChange(dataType = HealthDataType.STEPS, change = deletionChange)
+
+                val outcome = synchronizer.applyPendingChanges()
+
+                assertEquals(
+                    setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)),
+                    outcome.affectedDates,
+                )
+                coVerifyOrder {
+                    stepRecordDao.getById(recordId)
+                    stepRecordDao.deleteById(recordId)
+                }
             } finally {
                 TimeZone.setDefault(originalZone)
             }
