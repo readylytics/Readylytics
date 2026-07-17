@@ -82,7 +82,7 @@ class HealthSyncUseCaseTest {
     fun sync_returnsResultProducedByDailySyncUseCase() = runTest {
         coEvery { dailySyncUseCase.run(any(), any()) } returns Result.failure("nope", "SYNC_ERROR")
 
-        val result = useCase.sync()
+        val result = useCase.sync(windowDays = 3)
 
         assertTrue(result is Result.Failure)
         assertEquals("SYNC_ERROR", result.code)
@@ -109,7 +109,7 @@ class HealthSyncUseCaseTest {
         val order = mutableListOf<String>()
 
         val syncJob = launch {
-            useCase.sync()
+            useCase.sync(windowDays = 3)
             order += "sync-done"
         }
         syncStarted.await()

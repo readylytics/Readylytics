@@ -104,6 +104,72 @@ class ForegroundSyncControllerTest {
         }
 
     @Test
+    fun `evaluateAndSync caps the inline window and schedules the resync worker beyond it`() =
+        runTest {
+            // HC-007: a foreground, UI-blocking sync must never silently widen to an unbounded
+            // window just because the app was closed for a long time.
+            val zone = ZoneId.systemDefault()
+            val ninetyDaysAgoMs =
+                LocalDate
+                    .now(zone)
+                    .minusDays(90)
+                    .atStartOfDay(zone)
+                    .toInstant()
+                    .toEpochMilli()
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.ALWAYS,
+                    lastSyncTimestamp = ninetyDaysAgoMs,
+                )
+
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+            coEvery { syncUseCase.sync(any(), any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 1) { syncUseCase.sync(windowDays = MAX_INLINE_RECOMPUTE_DAYS, onProgress = any()) }
+            verify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+        }
+
+    @Test
+    fun `evaluateAndSync resolves the catch-up window from the scoring zone, not the device zone`() =
+        runTest {
+            val originalZone = java.util.TimeZone.getDefault()
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"))
+            try {
+                // Kiritimati is UTC+14: three days ago in Kiritimati can already be a fourth
+                // calendar day back in UTC, so an incorrect device-zone resolution would compute a
+                // different windowDays than the correct scoring-zone resolution.
+                val kiritimati = ZoneId.of("Pacific/Kiritimati")
+                val lastSyncMs =
+                    LocalDate
+                        .now(kiritimati)
+                        .minusDays(3)
+                        .atStartOfDay(kiritimati)
+                        .toInstant()
+                        .toEpochMilli()
+                val prefs =
+                    UserPreferences(
+                        syncPreference = SyncPreference.ALWAYS,
+                        lastSyncTimestamp = lastSyncMs,
+                        scoringZoneId = "Pacific/Kiritimati",
+                    )
+                coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+                coEvery { syncUseCase.sync(any(), any()) } returns
+                    app.readylytics.health.domain.model.Result
+                        .Success(Unit)
+
+                controller.evaluateAndSync()
+
+                coVerify(exactly = 1) { syncUseCase.sync(windowDays = 4, onProgress = any()) }
+            } finally {
+                java.util.TimeZone.setDefault(originalZone)
+            }
+        }
+
+    @Test
     fun `triggerDailySync propagates coroutine cancellation`() =
         runTest {
             coEvery { syncUseCase.sync(windowDays = 1, onProgress = any()) } throws

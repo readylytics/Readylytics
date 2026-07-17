@@ -40,15 +40,6 @@ class DailySyncUseCase
         private val recomputeSupport: DailyRecomputeSupport,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
-        private companion object {
-            // How far back a foreground sync will widen its walk-forward recompute to absorb
-            // recent out-of-window Health Connect changes (e.g. last night's sleep dated
-            // yesterday, HR/HRV backfilled for the prior day) inline instead of escalating to a
-            // full historical resync. This is a foreground-cost guard, not a correctness bound:
-            // changes older than this still recompute correctly via the durable resync worker.
-            const val MAX_INLINE_RECOMPUTE_DAYS = 7
-        }
-
         /**
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
          *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress

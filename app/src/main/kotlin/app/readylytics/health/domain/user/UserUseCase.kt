@@ -4,6 +4,7 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.sync.HealthSyncUseCase
+import app.readylytics.health.domain.sync.SETTINGS_REFRESH_WINDOW_DAYS
 import app.readylytics.health.domain.util.HeartRateFormulas
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -30,7 +31,7 @@ class UserUseCase
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(age)
                     settingsRepo.updateMaxHeartRate(maxHr)
-                    healthSyncUseCase.sync()
+                    healthSyncUseCase.sync(windowDays = SETTINGS_REFRESH_WINDOW_DAYS)
                 }
                 Result.success(Unit)
             } catch (e: Exception) {
@@ -43,7 +44,7 @@ class UserUseCase
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(prefs.age)
                     settingsRepo.updateMaxHeartRate(maxHr)
-                    healthSyncUseCase.sync()
+                    healthSyncUseCase.sync(windowDays = SETTINGS_REFRESH_WINDOW_DAYS)
                 }
                 Result.success(Unit)
             } catch (e: Exception) {

@@ -43,12 +43,17 @@ class HealthSyncUseCase
         /**
          * Runs the foreground sync / recalculation over a recent [windowDays] window.
          *
+         * No default: HC-009 -- every call site must name the window it actually wants rather than
+         * silently inheriting a magic constant. See [app.readylytics.health.domain.sync.MAX_INLINE_RECOMPUTE_DAYS]
+         * for the inline-vs-durable-resync cutoff both [DailySyncUseCase] and
+         * [ForegroundSyncController] use.
+         *
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
          *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress
          *   instead of a silent spinner. Invoked off the main thread.
          */
         suspend fun sync(
-            windowDays: Int = 8,
+            windowDays: Int,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {

@@ -10,6 +10,6 @@ class HealthDataRefreshAdapter
         private val healthSyncUseCase: HealthSyncUseCase,
     ) : HealthDataRefresh {
         override suspend fun refreshAffectedWindow() {
-            healthSyncUseCase.sync()
+            healthSyncUseCase.sync(windowDays = SETTINGS_REFRESH_WINDOW_DAYS)
         }
     }
