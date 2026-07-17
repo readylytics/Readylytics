@@ -640,12 +640,23 @@ class ScoringRepositoryImpl
             )
         }
 
-        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment =
-            SleepDaySegment(
+        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment {
+            // HC-006: defensive guard for sessions already persisted with durationMinutes = 0 by the
+            // pre-fix stage-less-session mapping (SleepDataMapper's raw-span fallback only applies to
+            // freshly ingested sessions). Without this, a recompute-only pass -- which never re-reads
+            // Health Connect -- would still see the old stored 0 and SleepDaySegment's
+            // `durationMinutes > 0` invariant would throw.
+            val durationMinutes =
+                if (session.durationMinutes > 0) {
+                    session.durationMinutes
+                } else {
+                    ((session.endTime - session.startTime) / 60_000L).toInt()
+                }
+            return SleepDaySegment(
                 stableId = session.id,
                 startTimeMs = session.startTime,
                 endTimeMs = session.endTime,
-                durationMinutes = session.durationMinutes,
+                durationMinutes = durationMinutes,
                 lightSleepMinutes = session.lightSleepMinutes,
                 deepSleepMinutes = session.deepSleepMinutes,
                 remSleepMinutes = session.remSleepMinutes,
@@ -655,6 +666,7 @@ class ScoringRepositoryImpl
                 endZoneOffsetSeconds = session.endZoneOffsetSeconds,
                 sourcePackageName = session.deviceName,
             )
+        }
 
         private fun aggregateEfficiency(coreSessions: List<SleepSessionEntity>): Float {
             val weightedSessions = coreSessions.filter { it.durationMinutes > 0 }

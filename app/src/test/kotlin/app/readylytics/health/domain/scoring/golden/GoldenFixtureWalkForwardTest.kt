@@ -59,11 +59,20 @@ import kotlin.test.assertTrue
  * `COALESCE(modelTrimp, trimp)`, so the workout-only ATL/CTL series in the checked-in golden JSON
  * (computed under the old zone-weighted-only read) is expected to diverge from a fresh run wherever
  * this fixture's default `BANISTER` model produces a different per-workout value than the
- * zone-weighted formula. This environment has no working Gradle (see
- * `internal-docs/plans/PHASE_1_IMPLEMENTATION_PLAN.md`), so the fixture could not be regenerated
- * here -- the next CI/Gradle-capable pass must run the `-Dupdate.golden=true` regeneration above,
- * review the score deltas it produces, and commit the refreshed JSON separately per the remediation
- * plan's migration-risk requirement (same treatment as the HC-006/WP-11 stage-less-night gap below).
+ * zone-weighted formula.
+ *
+ * **Known-stale as of WP-11 (HC-006 stage-less-night fallback):** the stage-less-night scenario
+ * (`stageLessNightDate`) no longer throws `IllegalArgumentException("durationMinutes must be >
+ * 0")` -- see `toSleepDaySegment`'s defensive raw-span fallback in `ScoringRepositoryImpl` and
+ * `BaselineComputer`. The ~57 days previously left unscored by that exception (its own night plus
+ * every day whose baseline/aggregation lookback still included it) now produce normally-scored
+ * rows, so the checked-in golden JSON is missing entries for that whole window.
+ *
+ * This environment has no working Gradle (see `internal-docs/plans/PHASE_1_IMPLEMENTATION_PLAN.md`),
+ * so the fixture could not be regenerated here for either change above -- the next CI/Gradle-capable
+ * pass must run the `-Dupdate.golden=true` regeneration above, review the combined score deltas it
+ * produces, and commit the refreshed JSON separately per the remediation plan's migration-risk
+ * requirement.
  */
 @RunWith(AndroidJUnit4::class)
 class GoldenFixtureWalkForwardTest {
@@ -178,28 +187,19 @@ class GoldenFixtureWalkForwardTest {
                     sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
                     scoringHistoryRepository = scoringHistoryRepository,
                 )
-            // A stage-less HC sleep session (this fixture's HC-006 scenario, `stageLessNightDate`)
-            // maps to durationMinutes = 0 today (SleepDataMapper.mapSleepSession), which
-            // SleepDaySegment's domain invariant (durationMinutes > 0) rejects once
-            // ScoringRepositoryImpl.resolveSleepAggregation builds segments for any day whose
-            // aggregation window still includes that session -- empirically ~8 weeks after it,
-            // not just its own day. In production this is swallowed by DailyRecomputeSupport into
-            // a silent Result.Failure, so today's real symptom is a missing DailySummaryEntity for
-            // that whole window -- a materially worse manifestation of HC-006 than currently
-            // documented (see internal-docs/plans/ARCHITECTURE_HEALTH_DATA_SCORING_REMEDIATION_PLAN.md).
-            // This fixture tolerates exactly that known, characterized failure (and only that one)
-            // so the golden file reflects today's real gap; a future HC-006 fix should turn these
-            // days into normally-scored rows, which will show up as a golden-file diff.
+            // WP-11/HC-006 fix: this fixture's stage-less-night scenario (`stageLessNightDate`)
+            // seeds a SleepSessionEntity with durationMinutes = 0 directly (mirroring a session
+            // ingested before ScoringRepositoryImpl.toSleepDaySegment's defensive raw-span
+            // fallback landed). Previously SleepDaySegment's `durationMinutes > 0` invariant threw
+            // for every day whose aggregation window still included that session -- empirically
+            // ~8 weeks after it, not just its own day -- which production silently swallowed into
+            // a missing DailySummaryEntity for that whole window. The fallback (here and in
+            // SleepDataMapper for freshly-ingested sessions) means every day now scores normally;
+            // ComputeSleepMetricsUseCase's `stagesSuspicious` reweight (Architecture -> 0%, Duration
+            // -> 75%) applies for the stage-less night itself.
             var day = startDate
             while (!day.isAfter(endDate)) {
-                try {
-                    scoringRepository.computeAndPersistDailySummary(day, buildResult.stepsByDate[day])
-                } catch (e: IllegalArgumentException) {
-                    assertTrue(
-                        e.message == "durationMinutes must be > 0",
-                        "day $day failed with an unexpected IllegalArgumentException: ${e.message}",
-                    )
-                }
+                scoringRepository.computeAndPersistDailySummary(day, buildResult.stepsByDate[day])
                 day = day.plusDays(1)
             }
 

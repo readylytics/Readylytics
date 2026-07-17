@@ -210,7 +210,7 @@ are intentionally confined to `core/healthconnect/src/main/kotlin/app/readylytic
 
 | Mapper                       | Path                                        | DTO → Entity                                                                                                                                       |
 | :--------------------------- | :------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SleepDataMapper`            | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/SleepDataMapper.kt`     | `DomainSleepSessionRecord` → `SleepSessionEntity` + `List<SleepStageEntity>` (sums deep/REM/light/awake, computes efficiency).                     |
+| `SleepDataMapper`            | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/SleepDataMapper.kt`     | `DomainSleepSessionRecord` → `SleepSessionEntity` + `List<SleepStageEntity>` (sums deep/REM/light/awake, computes efficiency). **HC-006/WP-11:** when `stages` is empty (a stage-less HC session), `durationMinutes` falls back to the raw session span (`endTime - startTime`) instead of the stage-minute sum (which would be 0) — see 2.5's note on the Architecture reweight. |
 | `HeartRateMapper`            | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/HeartRateMapper.kt`     | `List<DomainHeartRateRecord>` → `List<HeartRateRecordEntity>`; assigns `recordType` (SLEEP / EXERCISE / RESTING) and `sessionId` by time matching. |
 | `HrvMapper`                  | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/HrvMapper.kt`           | RMSSD records → `HrvRecordEntity`; links to sleep session or marks RESTING.                                                                        |
 | `WorkoutMapper`              | `core/model/src/main/kotlin/app/readylytics/health/data/healthconnect/WorkoutMapper.kt`               | `DomainExerciseSessionRecord` (+ HR samples) → `WorkoutRecordEntity`; derives elapsed `durationMinutes`, zone minutes, avg HR, TRIMP. Workout load/intensity categories are **not** persisted here. |
@@ -464,6 +464,19 @@ Supporting helpers live in `core/scoring/src/main/kotlin/app/readylytics/health/
 (architecture targets, restoration weights, nadir analysis, HR coverage validation).
 `CircadianThresholdDefaults` (`core/model/src/main/kotlin/app/readylytics/health/domain/circadian/`) is the single threshold source, consumed
 by both the live repository above and the diagnostic config built in `ScoringConfigFactory`.
+
+**HC-006/WP-11 — stage-less sessions reweight Architecture instead of scoring 0%.** A stage-less HC
+sleep session has zero deep/rem/light minutes despite a positive (raw-span fallback) duration.
+`LoadScoringStrategy.validateNight`'s deep/rem *fraction* checks read 0/duration as trivially valid
+(not the intended signal), so `ComputeSleepMetricsUseCase` additionally flags `stagesSuspicious =
+true` whenever `deepSleepMinutes == remSleepMinutes == lightSleepMinutes == 0` with
+`durationMinutes > 0`. `stagesSuspicious` is the same flag `SleepScoringStrategy.computeSleepScore`
+already used for its Architecture-unavailable reweight: `durationWeight` 0.50 → 0.75, `archWeight`
+0.25 → 0.00, restoration unchanged at 0.25. `ScoringRepositoryImpl.toSleepDaySegment` and
+`BaselineComputer.toSleepDaySegment` both also fall back `durationMinutes` to the raw session span
+when a **already-persisted** session still carries the pre-fix stored `durationMinutes = 0` (e.g.
+during a settings-driven recompute-only pass, which never re-reads Health Connect) — this is what
+actually prevents `SleepDaySegment`'s `durationMinutes > 0` invariant from throwing for those rows.
 
 ### 2.6 Everyday Heart-Rate Load
 

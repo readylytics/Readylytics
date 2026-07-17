@@ -633,12 +633,22 @@ class BaselineComputer
             return hrSamples[index]
         }
 
-        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment =
-            SleepDaySegment(
+        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment {
+            // HC-006: same defensive guard as ScoringRepositoryImpl.toSleepDaySegment -- a
+            // stage-less session persisted before the SleepDataMapper raw-span fallback landed can
+            // still carry a stored durationMinutes = 0, which SleepDaySegment's `durationMinutes > 0`
+            // invariant would otherwise throw on.
+            val durationMinutes =
+                if (session.durationMinutes > 0) {
+                    session.durationMinutes
+                } else {
+                    ((session.endTime - session.startTime) / 60_000L).toInt()
+                }
+            return SleepDaySegment(
                 stableId = session.id,
                 startTimeMs = session.startTime,
                 endTimeMs = session.endTime,
-                durationMinutes = session.durationMinutes,
+                durationMinutes = durationMinutes,
                 lightSleepMinutes = session.lightSleepMinutes,
                 deepSleepMinutes = session.deepSleepMinutes,
                 remSleepMinutes = session.remSleepMinutes,
@@ -648,6 +658,7 @@ class BaselineComputer
                 endZoneOffsetSeconds = session.endZoneOffsetSeconds,
                 sourcePackageName = session.deviceName,
             )
+        }
 
         /**
          * HRV history windows + supporting session metadata returned from

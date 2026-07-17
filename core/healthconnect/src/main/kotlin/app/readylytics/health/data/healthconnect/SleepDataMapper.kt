@@ -27,13 +27,22 @@ object SleepDataMapper {
 
         val totalSleepMinutes = deepMinutes + remMinutes + lightMinutes
         val timeInBedMinutes = ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
-        val efficiency = totalSleepMinutes.toFloat() / max(timeInBedMinutes, 1) * 100f
+
+        // HC-006/OD-2: a stage-less HC sleep session (no per-stage breakdown at all) reports zero
+        // deep/rem/light minutes, which previously left durationMinutes = 0 -- SleepDaySegment's
+        // `durationMinutes > 0` invariant then throws for every day whose lookback window includes
+        // it. Fall back to the raw session span so Duration scoring still works; the all-zero
+        // deep/rem/light combination (with a positive fallback duration) is the signal
+        // ComputeSleepMetricsUseCase uses to reweight Architecture out of the Sleep Score instead of
+        // scoring it as 0% (see `stagesSuspicious` there).
+        val durationMinutes = if (session.stages.isEmpty()) timeInBedMinutes else totalSleepMinutes
+        val efficiency = durationMinutes.toFloat() / max(timeInBedMinutes, 1) * 100f
 
         return SleepSessionEntity(
             id = session.id,
             startTime = session.startTime.toEpochMilli(),
             endTime = session.endTime.toEpochMilli(),
-            durationMinutes = totalSleepMinutes,
+            durationMinutes = durationMinutes,
             efficiency = efficiency,
             deepSleepMinutes = deepMinutes,
             remSleepMinutes = remMinutes,
