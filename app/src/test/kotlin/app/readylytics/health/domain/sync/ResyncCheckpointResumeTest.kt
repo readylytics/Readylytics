@@ -102,9 +102,14 @@ class ResyncCheckpointResumeTest {
                 )
             val progress = mutableListOf<Triple<ResyncPhase, Int, Int>>()
 
-            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30) { phase, current, total ->
-                progress += Triple(phase, current, total)
-            }
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = { phase, current, total ->
+                    progress += Triple(phase, current, total)
+                },
+            )
 
             assertEquals(Triple(ResyncPhase.RECOMPUTE, 2, 4), progress.first())
             coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate, any(), any()) }

@@ -221,9 +221,10 @@ class ResyncRangeUseCaseTest {
                 startDate = LocalDate.of(2024, 6, 1),
                 endDate = LocalDate.of(2024, 6, 3),
                 chunkDays = 30,
-            ) { phase, current, total ->
-                progress += Triple(phase, current, total)
-            }
+                onProgress = { phase, current, total ->
+                    progress += Triple(phase, current, total)
+                },
+            )
 
             val recompute = progress.filter { it.first == ResyncPhase.RECOMPUTE }
             assertEquals(3, recompute.last().second)
@@ -240,7 +241,8 @@ class ResyncRangeUseCaseTest {
                 startDate = LocalDate.of(2024, 6, 1),
                 endDate = LocalDate.of(2024, 6, 3),
                 chunkDays = 30,
-            ) { phase, _, _ -> phases += phase }
+                onProgress = { phase, _, _ -> phases += phase },
+            )
 
             assertEquals(
                 listOf(ResyncPhase.INGEST, ResyncPhase.PRUNE, ResyncPhase.RECONCILE, ResyncPhase.RECOMPUTE),
@@ -266,7 +268,7 @@ class ResyncRangeUseCaseTest {
                 )
             val phases = mutableListOf<ResyncPhase>()
 
-            useCase.run(startDate, endDate, chunkDays = 30) { phase, _, _ -> phases += phase }
+            useCase.run(startDate, endDate, chunkDays = 30, onProgress = { phase, _, _ -> phases += phase })
 
             assertEquals(
                 listOf(ResyncPhase.PRUNE, ResyncPhase.RECONCILE, ResyncPhase.RECOMPUTE),
