@@ -164,7 +164,11 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any()) }
+            // HC-005/WP-08: readStepsRecords is now called twice per chunk regardless of the
+            // selected device -- once by HealthIngestionCoordinator.ingestWindow (populates the raw
+            // step_records table for every device, unfiltered) and once by StepCountFetcher.fetchRange
+            // (the device-filtered daily-total aggregate actually used for scoring).
+            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
         }
 
@@ -187,7 +191,12 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any()) }
+            // First call (ingestWindow's retryWithBackoff) throws, then succeeds on retry (2 calls);
+            // the recompute-phase StepCountFetcher.fetchRange call succeeds immediately after (the
+            // mock's last-defined `andThen` behavior persists) for a 3rd call. See HC-005/WP-08: the
+            // ingestion coordinator now also reads raw step records, independent of the per-device
+            // aggregate fetch this test originally exercised alone.
+            coVerify(exactly = 3) { hcRepo.readStepsRecords(any(), any()) }
         }
 
     @Test

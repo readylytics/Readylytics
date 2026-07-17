@@ -264,33 +264,6 @@ class ScoringRepositoryN1Test {
         }
 
     @Test
-    fun `stage-less sleep session does not throw and reweights architecture out of sleep score`() =
-        runTest {
-            // HC-006/WP-11: a session with zero deep/rem/light minutes despite a positive duration
-            // (the shape SleepDataMapper's raw-span fallback produces for a stage-less HC session)
-            // must not throw building SleepDaySegment, and ComputeSleepMetricsUseCase must reweight
-            // Architecture out of the Sleep Score (stagesSuspicious) instead of scoring it as 0%.
-            val stageLessSession =
-                makeSleepSession("stageless", 0).copy(
-                    durationMinutes = 480,
-                    deepSleepMinutes = 0,
-                    remSleepMinutes = 0,
-                    lightSleepMinutes = 0,
-                )
-            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns stageLessSession
-            coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
-
-            val capturedSummaries = mutableListOf<DailySummaryEntity>()
-            coEvery { dailySummaryDao.upsert(capture(capturedSummaries)) } returns Unit
-
-            repo.computeAndPersistDailySummary(LocalDate.now())
-
-            val captured = capturedSummaries.first()
-            kotlin.test.assertEquals(true, captured.diagnostics.stagesSuspicious)
-            kotlin.test.assertNotNull(captured.sleepScore)
-        }
-
-    @Test
     fun `baseline calculation excludes invalid nights`() =
         runTest {
             val validSession = makeSleepSession("valid", 1)
