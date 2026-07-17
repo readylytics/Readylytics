@@ -11,7 +11,14 @@ interface WorkerScheduler {
         const val PERIODIC_SYNC_WORK_NAME = "health_periodic_sync"
     }
 
-    fun scheduleResyncWorker()
+    /**
+     * @param recomputeOnly SCORE-007: true routes the durable worker through a recompute-only pass
+     *   (skips Health Connect re-ingestion) for a historical-scope settings change; false (default)
+     *   is the full historical resync from the Settings button. Both share this one unique
+     *   `RESYNC_WORK_NAME` work slot (kept, not replaced, if one is already queued/running), so only
+     *   one can be in flight at a time.
+     */
+    fun scheduleResyncWorker(recomputeOnly: Boolean = false)
     fun cancelResyncWorker()
     fun scheduleBackupWorker(schedule: BackupSchedule)
     fun scheduleBirthdayWorker()

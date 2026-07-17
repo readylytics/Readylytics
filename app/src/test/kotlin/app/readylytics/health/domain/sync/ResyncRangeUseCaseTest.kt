@@ -292,6 +292,30 @@ class ResyncRangeUseCaseTest {
         }
 
     @Test
+    fun `skipIngestAndPrune runs reconcile and recompute without touching Health Connect or pruning`() =
+        runTest {
+            // SCORE-007: a settings-driven recompute-only pass must never re-read Health Connect
+            // or prune, only rebuild session-linking and scores from already-stored raw data.
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 2)
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHeartRateSamples(any(), any()) }
+            coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
+            coVerify(exactly = 2) { scoringRepository.computeAndPersistDailySummary(any(), any(), any()) }
+        }
+
+    @Test
     fun `resyncRange shares one preferences snapshot across every recomputed day`() =
         runTest {
             // Each independent read of settingsRepo.userPreferences returns a distinct value here,

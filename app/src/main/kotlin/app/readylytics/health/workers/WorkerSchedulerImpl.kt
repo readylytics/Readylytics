@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import app.readylytics.health.data.preferences.BackupSchedule
 import dagger.Lazy
 import java.util.concurrent.TimeUnit
@@ -30,15 +31,20 @@ class WorkerSchedulerImpl
         }
 
         /**
-         * Enqueues the full historical Health Connect resync as a unique one-time foreground worker.
-         * [ExistingWorkPolicy.KEEP] means a tap while a resync is already running is a no-op rather
-         * than restarting it. Expedited so it starts promptly when the user explicitly requests it.
+         * Enqueues the historical Health Connect resync (or, if [recomputeOnly], the SCORE-007
+         * recompute-only pass) as a unique one-time foreground worker. [ExistingWorkPolicy.KEEP]
+         * means a request while one is already running is a no-op rather than restarting it.
+         * Expedited so it starts promptly when the user (or a historical-scope settings change)
+         * explicitly requests it.
          */
-        override fun scheduleResyncWorker() {
+        override fun scheduleResyncWorker(recomputeOnly: Boolean) {
             val request =
                 OneTimeWorkRequestBuilder<HealthResyncWorker>()
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .setInputData(
+                        workDataOf(HealthResyncWorker.KEY_RECOMPUTE_ONLY to recomputeOnly),
+                    )
                     .build()
 
             workManager.get().enqueueUniqueWork(

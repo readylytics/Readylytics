@@ -180,6 +180,44 @@ class SettingsViewModelTest {
         }
 
     @Test
+    fun `TrimpModelChanged triggers a historical recompute, not a recent-window refresh`() =
+        runTest {
+            // SCORE-007: the TRIMP model changes how every persisted historical day's TRIMP was
+            // computed, so it must escalate to the full recompute path, not the 8-day window.
+            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.TrimpModelChanged(app.readylytics.health.domain.scoring.TrimpModel.I_TRIMP))
+            advanceUntilIdle()
+
+            coVerify { displaySettings.updateTrimpModel(app.readylytics.health.domain.scoring.TrimpModel.I_TRIMP) }
+            coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `StepGoalChanged still uses the recent-window refresh, not a historical recompute`() =
+        runTest {
+            // Confirms the split didn't over-broaden: a display-only goal isn't a scoring input.
+            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            viewModel.sharingStarted = SharingStarted.Eagerly
+            viewModel.uiState
+
+            viewModel.onEvent(SettingsEvent.StepGoalChanged(8_000))
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { healthDataRefresh.refreshAffectedWindow() }
+            coVerify(exactly = 0) { healthDataRefresh.refreshHistorical() }
+
+            viewModel.viewModelScope.cancel()
+            advanceUntilIdle()
+        }
+
+    @Test
     fun `HrrToleranceSecondsChanged rejects invalid values`() =
         runTest {
             val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)

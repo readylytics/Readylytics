@@ -79,6 +79,22 @@ class HealthSyncUseCaseTest {
     }
 
     @Test
+    fun recomputeRange_delegatesToResyncRangeUseCaseWithSkipIngestAndPrune() = runTest {
+        // SCORE-007: recomputeRange must skip Health Connect re-ingestion entirely.
+        val startDate = LocalDate.of(2024, 6, 1)
+        val endDate = LocalDate.of(2024, 6, 2)
+        coEvery {
+            resyncRangeUseCase.run(any(), any(), any(), any(), skipIngestAndPrune = true)
+        } returns Result.success(Unit)
+
+        useCase.recomputeRange(startDate, endDate)
+
+        coVerify {
+            resyncRangeUseCase.run(startDate, endDate, 30, null, skipIngestAndPrune = true)
+        }
+    }
+
+    @Test
     fun sync_returnsResultProducedByDailySyncUseCase() = runTest {
         coEvery { dailySyncUseCase.run(any(), any()) } returns Result.failure("nope", "SYNC_ERROR")
 

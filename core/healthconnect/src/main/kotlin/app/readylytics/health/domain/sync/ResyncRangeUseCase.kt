@@ -48,6 +48,18 @@ class ResyncRangeUseCase
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         /**
+         * @param skipIngestAndPrune SCORE-007/WP-26: when true, skips the INGEST and PRUNE phases
+         *   entirely and starts at RECONCILE -- used for a settings-driven recompute (e.g. a TRIMP
+         *   model/parameter or HR-zone change) where raw Health Connect data is untouched and only
+         *   the derived session-linking/scoring needs to be rebuilt across the range. Never commits
+         *   change tokens or updates `lastSyncTimestamp` (no HC read happened to justify either).
+         *   The checkpoint's [selectionHash] is namespaced separately from full-resync runs so a
+         *   recompute-only pass can never resume from (or be resumed by) an unrelated, possibly
+         *   ingestion-incomplete full-resync checkpoint for the same date range. Both kinds of run
+         *   still share one `RESYNC_WORK_NAME` unique WorkManager slot (`ExistingWorkPolicy.KEEP`),
+         *   which is what actually prevents them from ever executing back-to-back against a
+         *   not-yet-resumed full-resync checkpoint in practice -- the namespacing only guards the
+         *   narrower case of WorkManager having already abandoned a broken full resync.
          * @param onProgress reports (phase, completed, total) as the resync advances through its
          *   four phases (INGEST batches, PRUNE, RECONCILE, RECOMPUTE days).
          */
@@ -56,10 +68,17 @@ class ResyncRangeUseCase
             endDate: LocalDate,
             chunkDays: Int,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+            skipIngestAndPrune: Boolean = false,
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    logD("ResyncRangeUseCase") { "Full resync $startDate..$endDate (chunk=$chunkDays days)" }
+                    logD("ResyncRangeUseCase") {
+                        if (skipIngestAndPrune) {
+                            "Recompute-only $startDate..$endDate"
+                        } else {
+                            "Full resync $startDate..$endDate (chunk=$chunkDays days)"
+                        }
+                    }
 
                     val initialPrefs = settingsRepo.userPreferences.first()
                     recomputeSupport.refreshAutoMaxHr(initialPrefs)
@@ -68,10 +87,12 @@ class ResyncRangeUseCase
                     // device zone when un-seeded) so chunked ingest, reconcile, and prune all use
                     // the same boundaries as the scoring engine.
                     val zoneId = prefs.scoringZone()
-                    val selectionHash =
+                    val baseSelectionHash =
                         prefs.deviceByDataType.toSortedMap().entries.joinToString(
                             "|",
                         ) { (type, device) -> "$type=${device.orEmpty()}" }
+                    val selectionHash =
+                        if (skipIngestAndPrune) "RECOMPUTE_ONLY|$baseSelectionHash" else baseSelectionHash
                     val savedCheckpoint = checkpointStore.checkpoint.first()
                     val checkpoint =
                         savedCheckpoint
@@ -95,7 +116,7 @@ class ResyncRangeUseCase
                                     ResyncCheckpoint(
                                         startDate = startDate,
                                         endDate = endDate,
-                                        phase = ResyncPhase.INGEST,
+                                        phase = if (skipIngestAndPrune) ResyncPhase.RECONCILE else ResyncPhase.INGEST,
                                         nextDate = startDate,
                                         selectionHash = selectionHash,
                                         baselineChangeTokens = tokens,
@@ -131,11 +152,15 @@ class ResyncRangeUseCase
                             .toInstant()
                             .toEpochMilli() - 1
 
-                    val runIngestion = checkpoint == null || checkpoint.phase == ResyncPhase.INGEST
+                    val runIngestion =
+                        !skipIngestAndPrune && (checkpoint == null || checkpoint.phase == ResyncPhase.INGEST)
                     val runPruning =
-                        checkpoint == null ||
-                            checkpoint.phase == ResyncPhase.INGEST ||
-                            checkpoint.phase == ResyncPhase.PRUNE
+                        !skipIngestAndPrune &&
+                            (
+                                checkpoint == null ||
+                                    checkpoint.phase == ResyncPhase.INGEST ||
+                                    checkpoint.phase == ResyncPhase.PRUNE
+                            )
                     val runReconciliation =
                         checkpoint == null ||
                             checkpoint.phase == ResyncPhase.INGEST ||
@@ -362,10 +387,22 @@ class ResyncRangeUseCase
                         "[RECOMPUTE] Completed in ${recomputeEnd - recomputeStart}ms. Days recomputed: $recomputedDays"
                     }
 
-                    changeSynchronizer.commitTokens(baselineChangeTokens)
-                    settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                    if (!skipIngestAndPrune) {
+                        // A recompute-only pass never read Health Connect, so it must not commit
+                        // change tokens (that would mark interim HC changes as already processed)
+                        // or update lastSyncTimestamp (the foreground sync's catch-up window math
+                        // assumes that timestamp means "data was actually re-ingested up to here").
+                        changeSynchronizer.commitTokens(baselineChangeTokens)
+                        settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                    }
                     checkpointStore.clear()
-                    logD("ResyncRangeUseCase") { "Full resync complete ($totalDays days)" }
+                    logD("ResyncRangeUseCase") {
+                        if (skipIngestAndPrune) {
+                            "Recompute-only complete ($totalDays days)"
+                        } else {
+                            "Full resync complete ($totalDays days)"
+                        }
+                    }
                     Result.success(Unit)
                 } catch (e: CancellationException) {
                     logD(TELEMETRY_TAG) { "Resync cancelled." }

@@ -98,4 +98,27 @@ class HealthSyncUseCase
             syncMutex.withLock {
                 resyncRangeUseCase.run(startDate, endDate, chunkDays, onProgress)
             }
+
+        /**
+         * Recompute-only pass over [startDate]..[endDate] (SCORE-007): skips Health Connect
+         * re-ingestion entirely and rebuilds session-linking + scores from already-stored raw data.
+         * For settings changes that invalidate the *derived* history without touching raw HC data
+         * (TRIMP model/parameters, HR zones, hrMax source, RHR/HRV overrides, physiology profile) --
+         * see [ResyncRangeUseCase.run]'s `skipIngestAndPrune` parameter for the phase/checkpoint
+         * details.
+         */
+        suspend fun recomputeRange(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+        ): Result<Unit> =
+            syncMutex.withLock {
+                resyncRangeUseCase.run(
+                    startDate = startDate,
+                    endDate = endDate,
+                    chunkDays = 30,
+                    onProgress = onProgress,
+                    skipIngestAndPrune = true,
+                )
+            }
     }

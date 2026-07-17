@@ -149,9 +149,15 @@ class FirstSetupFlowHarness(
     inner class HealthDataRefreshPort : HealthDataRefresh {
         var refreshCalls = 0
             private set
+        var historicalRefreshCalls = 0
+            private set
 
         override suspend fun refreshAffectedWindow() {
             refreshCalls += 1
+        }
+
+        override suspend fun refreshHistorical() {
+            historicalRefreshCalls += 1
         }
     }
 }
