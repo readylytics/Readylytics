@@ -3,7 +3,6 @@ package app.readylytics.health.domain.sync
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
-import io.mockk.coAnswers
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

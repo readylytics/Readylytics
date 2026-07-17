@@ -17,6 +17,7 @@ import app.readylytics.health.data.local.dao.InsightDismissalDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.security.SqlCipherKeyManager
@@ -102,4 +103,7 @@ object DatabaseModule {
 
     @Provides
     fun provideAuditEventDao(db: HealthDatabase): AuditEventDao = db.auditEventDao()
+
+    @Provides
+    fun provideStepRecordDao(db: HealthDatabase): StepRecordDao = db.stepRecordDao()
 }
