@@ -33,6 +33,14 @@ class HealthSyncUseCase
         private val syncMutex = Mutex()
 
         /**
+         * Serializes [block] against the daily sync / resync flows above. Used by callers outside
+         * this facade that must not run concurrently with a sync or resync — e.g. the app-start
+         * baseline backfill (SCORE-003), which reads/writes `daily_summaries` rows a concurrent
+         * walk-forward recompute could be mid-write on.
+         */
+        suspend fun <T> withSyncLock(block: suspend () -> T): T = syncMutex.withLock { block() }
+
+        /**
          * Runs the foreground sync / recalculation over a recent [windowDays] window.
          *
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,

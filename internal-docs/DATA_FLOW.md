@@ -335,16 +335,22 @@ the diagnostic, days-since-install `phaseName` inlined in `AuditTrailFactory` (d
 trail only, not part of `computeConfigHash`).
 
 The historical backfill (`core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/BackfillHistoricalBaselinesUseCase` →
-`ComputeHistoricalBaselinesUseCase`) wipes derived baselines and recomputes the entire
-history at app start. It resolves all per-day HRV/RHR windows via the **batched**
-`BaselineComputer.computeBackfillBaselines()` — a fixed, small number of DB reads for the
-whole range instead of ~11 queries per day — which reproduces the per-day
-`compute*Between` window/validity/nadir math exactly. Daily baseline upper bounds are
-treated as exclusive next-day midnights before hitting Room's inclusive `getBetween`
-predicate, so a session ending exactly at the next midnight belongs to the next day. The
-same backfill path also carries the RHR history used to freeze `rhrSigma` for later RHR
-z-score restoration (guarded by equivalence tests). The
-per-day UPDATEs are collapsed into a single transaction by the backfill use-case.
+`ComputeHistoricalBaselinesUseCase`) runs at app start under `HealthSyncUseCase.withSyncLock`
+(serialized against daily sync / resync, so it never reads or rewrites a day mid-walk-forward) and
+is **incremental, true-freeze**: it only computes baselines for rows whose
+`baselineCalculatedAtDate` is still `null` (never-frozen — newly ingested history, or a day the
+batched computation couldn't produce a value for yet). A day that already has a frozen baseline is
+never wiped or rewritten by this pass, so a second consecutive launch with no new unfrozen days is
+a 0-write no-op, and `DataCleanupWorker`/`RetentionCleanup` deleting old raw rows past retention can
+no longer silently change an already-frozen day's stored baseline on the next launch. It resolves
+all per-day HRV/RHR windows for the unfrozen subset via the **batched**
+`BaselineComputer.computeBackfillBaselines()` — a fixed, small number of DB reads for the whole
+subset instead of ~11 queries per day — which reproduces the per-day `compute*Between`
+window/validity/nadir math exactly. Daily baseline upper bounds are treated as exclusive next-day
+midnights before hitting Room's inclusive `getBetween` predicate, so a session ending exactly at
+the next midnight belongs to the next day. The same backfill path also carries the RHR history used
+to freeze `rhrSigma` for later RHR z-score restoration (guarded by equivalence tests). The per-day
+UPDATEs are collapsed into a single transaction by the backfill use-case.
 
 ### 2.4.1 Biphasic sleep-day aggregation
 

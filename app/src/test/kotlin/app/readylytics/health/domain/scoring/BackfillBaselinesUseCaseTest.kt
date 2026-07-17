@@ -586,7 +586,7 @@ class BackfillBaselinesUseCaseTest {
         }
 
     @Test
-    fun `execute recomputes and writes all rows even if they were already frozen`() =
+    fun `execute never recomputes or rewrites rows that are already frozen — true freeze (OD-4)`() =
         runTest {
             val frozen =
                 listOf(
@@ -597,20 +597,18 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns frozen
 
             val (bc, ls, compute) = buildComputeUseCase()
-            stubBackfill(bc, listOf(50f), listOf(50f), 60f)
-            coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
             val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
-            assertEquals(2, count)
-            coVerify(exactly = 1) { dao.wipeDerivedBaselines() }
-            coVerify(exactly = 2) {
+            assertEquals(0, count, "Already-frozen rows must not be recomputed")
+            coVerify(exactly = 0) { bc.computeBackfillBaselines(any(), any(), any()) }
+            coVerify(exactly = 0) {
                 dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 
     @Test
-    fun `execute always recomputes and writes rows on subsequent runs`() =
+    fun `execute is a no-op on a second consecutive run once every row is frozen`() =
         runTest {
             val summary = makeSummary(daysAgo = 7)
             val dao = mockk<DailySummaryDao>(relaxed = true)
@@ -620,17 +618,47 @@ class BackfillBaselinesUseCaseTest {
             stubBackfill(bc, listOf(48f), listOf(48f), 60f)
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
-            // First run: processed.
+            // First run: the row is unfrozen, so it gets computed and written.
             val firstCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
             assertEquals(1, firstCount)
 
-            // Simulate DAO returning the now-frozen row.
+            // Simulate the DAO now returning the frozen row the first run produced.
             val frozenRow = summary.copy(baselineCalculatedAtDate = LocalDate.now().minusDays(7))
             coEvery { dao.getAllSummaries() } returns listOf(frozenRow)
 
-            // Second run: still processed (full rebuild behavior).
+            // Second run: nothing is unfrozen, so this is a 0-write no-op.
             val secondCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
-            assertEquals(1, secondCount)
+            assertEquals(0, secondCount)
+            coVerify(exactly = 1) {
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            }
+        }
+
+    @Test
+    fun `execute only recomputes the unfrozen subset when some rows are already frozen`() =
+        runTest {
+            val frozen = makeSummary(daysAgo = 20, baselineCalculatedAtDate = LocalDate.now().minusDays(20))
+            val unfrozen = makeSummary(daysAgo = 3)
+            val dao = mockk<DailySummaryDao>(relaxed = true)
+            coEvery { dao.getAllSummaries() } returns listOf(frozen, unfrozen)
+
+            val (bc, ls, compute) = buildComputeUseCase()
+            val passedSummaries = slot<List<DailySummaryEntity>>()
+            coEvery { bc.computeBackfillBaselines(capture(passedSummaries), any(), any()) } answers {
+                passedSummaries.captured.associate {
+                    it.dateMidnightMs to BaselineComputer.BackfillBaseline(listOf(50f), listOf(50f), 60f, emptyList())
+                }
+            }
+            coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
+
+            val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
+
+            assertEquals(1, count)
+            assertEquals(
+                listOf(unfrozen.dateMidnightMs),
+                passedSummaries.captured.map { it.dateMidnightMs },
+                "Only the never-frozen row should be handed to the batched computation",
+            )
         }
 
     @Test

@@ -17,6 +17,7 @@ import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
@@ -55,6 +56,9 @@ class HealthDashboardApplication :
     lateinit var backfillHistoricalBaselines: BackfillHistoricalBaselinesUseCase
 
     @Inject
+    lateinit var healthSyncUseCase: HealthSyncUseCase
+
+    @Inject
     @ApplicationScope
     lateinit var appScope: CoroutineScope
 
@@ -86,9 +90,11 @@ class HealthDashboardApplication :
             .ensureChannel(this)
 
         appScope.launch {
-            // Run historical baseline backfill once per app start
+            // Run historical baseline backfill once per app start, serialized against any
+            // concurrent daily sync / resync so it never reads or rewrites a day's frozen
+            // baseline mid-walk-forward (SCORE-003).
             runCatching {
-                val backfilled = backfillHistoricalBaselines.execute()
+                val backfilled = healthSyncUseCase.withSyncLock { backfillHistoricalBaselines.execute() }
                 if (backfilled > 0) {
                     logD("HealthDashboardApplication") { "Backfilled $backfilled historical baselines" }
                 }

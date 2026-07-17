@@ -109,22 +109,6 @@ interface DailySummaryDao {
         toExclusiveMs: Long,
     )
 
-    @Query(
-        "UPDATE daily_summaries SET " +
-            "hrv_mu_mssd = NULL, " +
-            "hrv_sigma_mssd = NULL, " +
-            "rhr_bpm = NULL, " +
-            "rhr_sigma = NULL, " +
-            "baseline_calculated_at_date = NULL, " +
-            "hr_max = NULL, " +
-            "snapshot_profile = NULL, " +
-            "snapshot_calibration_phase = NULL, " +
-            "hrv_sigma_prior = NULL, " +
-            "ras_scaling_factor = NULL, " +
-            "baseline_observation_count = NULL",
-    )
-    suspend fun wipeDerivedBaselines()
-
     @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
     suspend fun getEarliestDateMs(): Long?
 

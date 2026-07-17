@@ -86,11 +86,12 @@ the environment constraint above.
 - `HealthDashboardApplication.onCreate`: wrap `backfillHistoricalBaselines.execute()` in
   `healthSyncUseCase.withSyncLock { ... }`.
 - `BackfillHistoricalBaselinesUseCase.execute`: stop unconditionally calling
-  `dailySummaryDao.wipeDerivedBaselines()`. New contract (true freeze): only recompute a day's
-  baseline if `baselineCalculatedAtDate == null` (never frozen) or the day is newly present since
-  the last backfill; never wipe/rewrite a day that already has a frozen baseline. Track a
-  lightweight watermark (e.g. last-backfilled raw-data high-water-mark timestamp, or an inputs
-  hash) in prefs/DataStore so a second consecutive launch with unchanged inputs is a 0-write no-op.
+  `dailySummaryDao.wipeDerivedBaselines()` (the DAO method itself is deleted — no other caller).
+  New contract (true freeze): filter to only rows where `baselineCalculatedAtDate == null` before
+  handing them to `ComputeHistoricalBaselinesUseCase`; never wipe/rewrite a day that already has a
+  frozen baseline. No separate watermark/hash tracking needed — `baselineCalculatedAtDate` already
+  is the per-day frozen marker, so filtering on it directly gives incrementality (a second
+  consecutive launch with no new unfrozen days is a 0-write no-op) for free.
 - Test: stress test — launch-time backfill racing a concurrent `sync(windowDays=7)` on a seeded DB
   produces the same summaries as running them serially; second-launch no-op test; a day whose
   30-day baseline window crosses a retention cutoff keeps its already-frozen values.
