@@ -53,7 +53,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v2)  │   11 entities — single source of truth
+│  HealthDatabase (SQLite v5)  │   12 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -184,16 +184,18 @@ are intentionally confined to `core/healthconnect/src/main/kotlin/app/readylytic
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 4)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 5)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
 `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/`. **The database is the single source of truth; the UI never reads Health
 Connect directly.**
 
-`DatabaseMigrations` registers v1→v2, v2→v3, and v3→v4 migrations for existing installs.
+`DatabaseMigrations` registers v1→v2, v2→v3, v3→v4, and v4→v5 migrations for existing installs.
 Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
-ingestion tables or scoring formulas.
+ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
+`supplementalSleepDurationMinutes` and `napCount`, for nap/supplemental-sleep tracking; it does
+not change any other table or scoring formula.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -520,7 +522,7 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/data/healthconnect/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | zone minutes + workout TRIMP                                                             |
 | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v4)                              | 12 entities; v1→v4 migrations wired through `DatabaseMigrations`                         |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v5)                              | 12 entities; v1→v5 migrations wired through `DatabaseMigrations`                         |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |
