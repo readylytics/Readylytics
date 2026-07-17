@@ -8,6 +8,7 @@ import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,9 +35,21 @@ class DailyRecomputeSupport
         suspend fun recomputeDay(
             day: LocalDate,
             steps: Long?,
+        ): Result<Unit> = recomputeDay(day, steps, settingsRepo.userPreferences.first())
+
+        /**
+         * Same as the two-arg overload, but with a preferences snapshot supplied by the caller.
+         * A multi-day walk-forward (daily sync / resync) must call this with one snapshot shared
+         * across every recomputed day, or a preference change mid-walk-forward silently mixes
+         * old- and new-preference days (SCORE-004).
+         */
+        suspend fun recomputeDay(
+            day: LocalDate,
+            steps: Long?,
+            prefs: UserPreferences,
         ): Result<Unit> =
             try {
-                scoringRepository.computeAndPersistDailySummary(day, steps)
+                scoringRepository.computeAndPersistDailySummary(day, steps, prefs)
                 logD("DailyRecomputeSupport") {
                     "Day $day: scored atomically (steps=${steps?.toString() ?: "preserved"})"
                 }

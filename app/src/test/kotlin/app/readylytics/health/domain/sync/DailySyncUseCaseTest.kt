@@ -76,10 +76,33 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = windowDays, onProgress = null)
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(day0, 0L)
-                scoringRepository.computeAndPersistDailySummary(day1, 0L)
-                scoringRepository.computeAndPersistDailySummary(day2, 0L)
+                scoringRepository.computeAndPersistDailySummary(day0, 0L, any())
+                scoringRepository.computeAndPersistDailySummary(day1, 0L, any())
+                scoringRepository.computeAndPersistDailySummary(day2, 0L, any())
             }
+        }
+
+    @Test
+    fun `sync shares one preferences snapshot across every recomputed day`() =
+        runTest {
+            // Each independent read of settingsRepo.userPreferences returns a distinct value here,
+            // simulating a preference change mid-sync. SCORE-004 requires the walk-forward to
+            // recompute every day from the single snapshot taken at the start of run(), never a
+            // fresh per-day read, so every day's captured prefs argument must be identical.
+            var accessCount = 0
+            every { settingsRepo.userPreferences } answers {
+                accessCount++
+                flowOf(UserPreferences(scoringZoneId = "snapshot-$accessCount"))
+            }
+            val capturedPrefs = mutableListOf<UserPreferences>()
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), capture(capturedPrefs))
+            } returns Unit
+
+            useCase.run(windowDays = 3, onProgress = null)
+
+            assertEquals(3, capturedPrefs.size)
+            assertEquals(1, capturedPrefs.distinct().size)
         }
 
     @Test
@@ -96,7 +119,7 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = 1, onProgress = null)
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any())
                 changeSynchronizer.commitTokens(nextTokens)
             }
         }
@@ -112,8 +135,8 @@ class DailySyncUseCaseTest {
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L)
-                scoringRepository.computeAndPersistDailySummary(today, 0L)
+                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L, any())
+                scoringRepository.computeAndPersistDailySummary(today, 0L, any())
             }
         }
 
@@ -147,7 +170,7 @@ class DailySyncUseCaseTest {
                     zoneThresholds = any(),
                 )
                 healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(today, 0L)
+                scoringRepository.computeAndPersistDailySummary(today, 0L, any())
             }
         }
 
@@ -211,7 +234,7 @@ class DailySyncUseCaseTest {
                     nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
                 )
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
-            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
@@ -242,7 +265,7 @@ class DailySyncUseCaseTest {
                     nextTokens = nextTokens,
                 )
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
-            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
@@ -270,7 +293,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 

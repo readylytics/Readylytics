@@ -10,6 +10,7 @@ import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.DailySummaryEntity
 import app.readylytics.health.domain.model.DailySummaryMapper
@@ -79,8 +80,15 @@ class ScoringRepositoryImpl
             targetDate: LocalDate,
             steps: Long?,
         ) {
+            computeAndPersistDailySummary(targetDate, steps, settingsRepo.userPreferences.first())
+        }
+
+        override suspend fun computeAndPersistDailySummary(
+            targetDate: LocalDate,
+            steps: Long?,
+            prefs: UserPreferences,
+        ) {
             calculationMutex.withLock {
-                val prefs = settingsRepo.userPreferences.first()
                 val zoneId = prefs.scoringZone()
                 val summary =
                     computeDailySummary(targetDate, prefs).let { computed ->

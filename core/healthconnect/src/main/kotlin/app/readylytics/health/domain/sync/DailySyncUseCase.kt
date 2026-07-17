@@ -143,7 +143,7 @@ class DailySyncUseCase
                     while (!dayToScore.isAfter(today)) {
                         ensureActive()
                         val steps = stepsMap[dayToScore]
-                        val result = recomputeSupport.recomputeDay(dayToScore, steps)
+                        val result = recomputeSupport.recomputeDay(dayToScore, steps, prefs)
 
                         when (result) {
                             is Result.Success -> {

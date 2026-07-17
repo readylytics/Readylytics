@@ -209,7 +209,7 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L) }
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any()) }
         }
 
     @Test
@@ -285,10 +285,38 @@ class ResyncRangeUseCaseTest {
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(startDate, any())
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any())
             }
+        }
+
+    @Test
+    fun `resyncRange shares one preferences snapshot across every recomputed day`() =
+        runTest {
+            // Each independent read of settingsRepo.userPreferences returns a distinct value here,
+            // simulating a preference change mid-resync. SCORE-004 requires the walk-forward to
+            // recompute every day from the single snapshot taken at the start of run(), never a
+            // fresh per-day read, so every day's captured prefs argument must be identical.
+            var accessCount = 0
+            every { settingsRepo.userPreferences } answers {
+                accessCount++
+                flowOf(UserPreferences(scoringZoneId = "snapshot-$accessCount"))
+            }
+            val capturedPrefs = mutableListOf<UserPreferences>()
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), capture(capturedPrefs))
+            } returns Unit
+
+            useCase.run(
+                startDate = LocalDate.of(2024, 6, 1),
+                endDate = LocalDate.of(2024, 6, 3),
+                chunkDays = 30,
+                onProgress = null,
+            )
+
+            assertEquals(3, capturedPrefs.size)
+            assertEquals(1, capturedPrefs.distinct().size)
         }
 
     @Test
@@ -302,7 +330,7 @@ class ResyncRangeUseCaseTest {
             coVerifyOrder {
                 selectedSourcePruner.prune(startDate, endDate, any(), any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
             }
         }
 

@@ -337,7 +337,7 @@ class ResyncRangeUseCase
                     while (!day.isAfter(endDate)) {
                         ensureActive()
                         val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
-                        val dayResult = recomputeSupport.recomputeDay(day, stepsForDay)
+                        val dayResult = recomputeSupport.recomputeDay(day, stepsForDay, prefs)
                         if (dayResult is Result.Failure) {
                             logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
                             return@withContext dayResult

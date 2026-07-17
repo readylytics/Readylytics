@@ -107,11 +107,11 @@ class ResyncCheckpointResumeTest {
             }
 
             assertEquals(Triple(ResyncPhase.RECOMPUTE, 2, 4), progress.first())
-            coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate, any()) }
-            coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any()) }
+            coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate, any(), any()) }
+            coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any()) }
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(2), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any())
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(2), any(), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any())
             }
         }
 
@@ -152,7 +152,7 @@ class ResyncCheckpointResumeTest {
             coVerifyOrder {
                 changeSynchronizer.captureChangesTokens()
                 hcRepo.readSleepSessions(any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
                 changeSynchronizer.commitTokens(baselineTokens)
             }
             assertEquals(null, checkpointStore.value)
@@ -162,7 +162,7 @@ class ResyncCheckpointResumeTest {
     fun `resyncRange keeps checkpoint and tokens when recompute fails`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
-            coEvery { scoringRepository.computeAndPersistDailySummary(startDate, any()) } throws
+            coEvery { scoringRepository.computeAndPersistDailySummary(startDate, any(), any()) } throws
                 IllegalStateException("scoring failed")
 
             val result = useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
