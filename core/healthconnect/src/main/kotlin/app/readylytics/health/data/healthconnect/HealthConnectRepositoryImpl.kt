@@ -357,10 +357,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading weight records"
                     }
-                    emptyList()
+                    throw e
                 }
             }
 
@@ -384,10 +386,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading body fat records"
                     }
-                    emptyList()
+                    throw e
                 }
             }
 
@@ -411,10 +415,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading blood pressure records"
                     }
-                    emptyList()
+                    throw e
                 }
             }
 
@@ -438,10 +444,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading oxygen saturation records"
                     }
-                    emptyList()
+                    throw e
                 }
             }
 

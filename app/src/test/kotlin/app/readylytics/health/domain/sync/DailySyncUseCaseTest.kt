@@ -312,4 +312,20 @@ class DailySyncUseCaseTest {
                 useCase.run(windowDays = 1, onProgress = null)
             }
         }
+
+    @Test
+    fun `sync rethrows permission-revoked instead of flattening to SYNC_ERROR`() =
+        runTest {
+            // HC-008: a revoked Health Connect permission must surface distinctly so
+            // ForegroundSyncController/the periodic worker can route to the permission-recovery
+            // flow, not be swallowed into a generic Result.Failure("SYNC_ERROR").
+            coEvery { hcRepo.readSleepSessions(any(), any()) } throws
+                app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException(
+                    SecurityException("revoked"),
+                )
+
+            assertFailsWith<app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException> {
+                useCase.run(windowDays = 1, onProgress = null)
+            }
+        }
 }

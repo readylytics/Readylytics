@@ -21,6 +21,7 @@ import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.ResourceProvider
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.util.roundToPercentInt
 import app.readylytics.health.feature.dashboard.CardData
 import app.readylytics.health.feature.dashboard.DashboardAction
@@ -63,6 +64,7 @@ class GetDashboardDataUseCase
                     ),
                 )
             } catch (e: Exception) {
+                logE("GetDashboardDataUseCase", e) { "Failed to build dashboard data" }
                 Result.failure("Failed to build dashboard data", "CARD_GENERATION_ERROR")
             }
 
