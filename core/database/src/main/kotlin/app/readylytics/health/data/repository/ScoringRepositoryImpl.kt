@@ -8,6 +8,7 @@ import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -169,6 +170,7 @@ class ScoringRepositoryImpl
                         emptyList()
                     }
                 var dailyTrimpRaw = 0f
+                val workoutModelTrimpUpdates = mutableListOf<WorkoutRecordEntity>()
 
                 workouts.forEach { workout ->
                     val workoutHrSamples =
@@ -201,6 +203,15 @@ class ScoringRepositoryImpl
                         )
                     val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f
                     dailyTrimpRaw += workoutTrimp
+                    // SCORE-001: persist the user-selected-model TRIMP (Banister/Cheng/iTRIMP)
+                    // alongside the existing zone-weighted `trimp` column, so WorkoutDao.getTrimpPoints'
+                    // COALESCE(modelTrimp, trimp) can prefer it once this row has been touched.
+                    if (workout.modelTrimp != workoutTrimp) {
+                        workoutModelTrimpUpdates += workout.copy(modelTrimp = workoutTrimp)
+                    }
+                }
+                if (workoutModelTrimpUpdates.isNotEmpty()) {
+                    workoutDao.upsertAll(workoutModelTrimpUpdates)
                 }
 
                 // Sleep intervals are resolved before the everyday-HR block because the load calculator
@@ -429,11 +440,17 @@ class ScoringRepositoryImpl
                         .atStartOfDay(zoneId)
                         .toInstant()
                         .toEpochMilli()
+                // SCORE-005: build the series from the persisted (now-COALESCEd) model-TRIMP column,
+                // then inject today's freshly computed dailyTrimpRaw directly -- mirrors the
+                // everyday-HR series below and keeps this read independent of the upsertAll above
+                // being visible through this exact bucketed query.
                 val dailyTrimpByDate =
-                    TrimpDateBucketer.bucket(
-                        workoutDao.getTrimpPoints(ctlFetchFrom, nextDayMidnightMs),
-                        zoneId,
-                    )
+                    TrimpDateBucketer
+                        .bucket(
+                            workoutDao.getTrimpPoints(ctlFetchFrom, nextDayMidnightMs),
+                            zoneId,
+                        ).toMutableMap()
+                        .apply { put(targetDate, dailyTrimpRaw) }
 
                 val ctl = scoringCalculator.computeCtlEmaWithDecay(dailyTrimpByDate, targetDate)
                 val atl = scoringCalculator.computeAtlEmaWithDecay(dailyTrimpByDate, targetDate)

@@ -3,6 +3,7 @@ package app.readylytics.health.data.repository
 import app.readylytics.health.data.local.dao.*
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
@@ -347,5 +348,87 @@ class ScoringRepositoryImplTest {
                     .toEpochMilli(),
                 entitySlot.captured.dateMidnightMs,
             )
+        }
+
+    @Test
+    fun `computeDailySummary persists modelTrimp per workout using computeWorkoutTrimpUseCase result`() =
+        runTest {
+            // SCORE-001/WP-10: the user-selected-model TRIMP computed per workout must be written
+            // back onto WorkoutRecordEntity.modelTrimp, not just summed into dailyTrimpRaw in memory.
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+            val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            val workout =
+                WorkoutRecordEntity(
+                    id = "w1",
+                    startTime = dayStart + 3_600_000L,
+                    endTime = dayStart + 5_400_000L,
+                    exerciseType = "RUNNING",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 20f,
+                    zone3Minutes = 5f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 40f,
+                    avgHr = 140f,
+                    modelTrimp = null,
+                )
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            every {
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(55f)
+            coEvery {
+                computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(DailySummaryEntity(0L))
+
+            val workoutSlot = slot<List<WorkoutRecordEntity>>()
+            coEvery { workoutDao.upsertAll(capture(workoutSlot)) } returns Unit
+
+            repo.computeDailySummary(today)
+
+            coVerify(exactly = 1) { workoutDao.upsertAll(any()) }
+            assertEquals(1, workoutSlot.captured.size)
+            assertEquals("w1", workoutSlot.captured.first().id)
+            assertEquals(55f, workoutSlot.captured.first().modelTrimp)
+        }
+
+    @Test
+    fun `computeDailySummary skips workoutDao upsertAll when no workout's modelTrimp changed`() =
+        runTest {
+            // A workout already carrying the freshly computed modelTrimp value shouldn't trigger a
+            // redundant write on every single walk-forward day.
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+            val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            val workout =
+                WorkoutRecordEntity(
+                    id = "w1",
+                    startTime = dayStart + 3_600_000L,
+                    endTime = dayStart + 5_400_000L,
+                    exerciseType = "RUNNING",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 20f,
+                    zone3Minutes = 5f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 40f,
+                    avgHr = 140f,
+                    modelTrimp = 55f,
+                )
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            every {
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(55f)
+            coEvery {
+                computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(DailySummaryEntity(0L))
+
+            repo.computeDailySummary(today)
+
+            coVerify(exactly = 0) { workoutDao.upsertAll(any()) }
         }
 }

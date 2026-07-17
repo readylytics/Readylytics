@@ -53,6 +53,17 @@ import kotlin.test.assertTrue
  *   ./gradlew :app:testDebugUnitTest --tests "*.GoldenFixtureWalkForwardTest" -Dupdate.golden=true
  * then inspect the diff of `app/src/test/resources/golden/scoring_walk_forward_golden.json` before
  * committing.
+ *
+ * **Known-stale as of WP-10 (SCORE-001/SCORE-005 TRIMP unification):** `ScoringRepositoryImpl`
+ * now persists `WorkoutRecordEntity.modelTrimp` per workout and `WorkoutDao.getTrimpPoints` reads
+ * `COALESCE(modelTrimp, trimp)`, so the workout-only ATL/CTL series in the checked-in golden JSON
+ * (computed under the old zone-weighted-only read) is expected to diverge from a fresh run wherever
+ * this fixture's default `BANISTER` model produces a different per-workout value than the
+ * zone-weighted formula. This environment has no working Gradle (see
+ * `internal-docs/plans/PHASE_1_IMPLEMENTATION_PLAN.md`), so the fixture could not be regenerated
+ * here -- the next CI/Gradle-capable pass must run the `-Dupdate.golden=true` regeneration above,
+ * review the score deltas it produces, and commit the refreshed JSON separately per the remediation
+ * plan's migration-risk requirement (same treatment as the HC-006/WP-11 stage-less-night gap below).
  */
 @RunWith(AndroidJUnit4::class)
 class GoldenFixtureWalkForwardTest {

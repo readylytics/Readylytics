@@ -290,11 +290,26 @@ class ScoringPointInTimeRegressionTest {
 
             repo.computeDailySummary(today)
 
-            // First ATL call = workout-only series (no today key). Second = everyday series (today injected).
+            // SCORE-005: both variants now inject today's freshly computed value directly (workout-only
+            // gets dailyTrimpRaw, everyday gets trimpEverydayHr) -- each from its own toMutableMap(),
+            // so neither series' historical entries or today's injected value can leak into the other.
             assertEquals(2, atlMaps.size, "ATL computed once per variant")
             val workoutOnlyMap = atlMaps[0]
             val everydayMap = atlMaps[1]
-            assertNull(workoutOnlyMap[today], "Workout-only series must NOT contain injected everyday value")
+            assertEquals(
+                30f,
+                workoutOnlyMap[today.minusDays(1)],
+                "Workout-only historical entry preserved",
+            )
+            assertNull(
+                everydayMap[today.minusDays(1)],
+                "Workout-only historical entry must not leak into the everyday series",
+            )
+            assertEquals(
+                0f,
+                workoutOnlyMap[today],
+                "Workout-only series now injects today's dailyTrimpRaw too (SCORE-005)",
+            )
             assertEquals(0f, everydayMap[today], "Everyday series injects today's everyday TRIMP (0 with no HR)")
         }
 

@@ -336,6 +336,31 @@ result.
 - **CHENG** — LT-TRIMP, piecewise around the lactate-threshold zone (requires a zone-3 / LT bound).
 - **I_TRIMP** — individualized exponential TRIMP (Manzi et al.).
 
+**SCORE-001 — one persisted TRIMP series feeds workout-only ATL/CTL, not two.**
+`WorkoutRecordEntity` (`core/model/.../data/local/entity/WorkoutRecordEntity.kt`) carries two
+independent per-workout values that must not be confused:
+
+- `trimp` — zone-minutes ("zone TRIMP"), computed at ingestion/reconcile time by `WorkoutMapper.computeMetrics`
+  from `zone1Minutes..zone5Minutes` (Edwards-style, no HR-reserve/sex/model inputs). This is UI-only
+  zone-minutes data (per-workout detail screens) and is never fed into ATL/CTL.
+- `modelTrimp` — the user-selected-model TRIMP (Banister/Cheng/iTRIMP per `prefs.trimpModel`),
+  written onto the entity by `ScoringRepositoryImpl.computeDailySummary`'s per-workout loop (the
+  same value `ComputeWorkoutTrimpUseCase.execute` already produced for `dailyTrimpRaw`). Nullable
+  additive column (v5→v6); a row keeps `modelTrimp = null` until the next walk-forward recompute
+  touches it. `SessionLinkReconcilerImpl.recomputeWorkouts` cannot populate it (no RHR
+  baseline/hrMax/gender available at that call site) and intentionally leaves it null.
+- `WorkoutDao.getTrimpPoints` (which feeds the workout-only ATL/CTL series in
+  `ScoringRepositoryImpl.computeDailySummary`) reads `COALESCE(modelTrimp, trimp)` — rows already
+  touched by a walk-forward recompute contribute their model TRIMP; untouched historical rows fall
+  back to zone TRIMP until backfilled. `computeDailySummary` also injects the current day's
+  freshly computed `dailyTrimpRaw` directly into that series (mirroring how `trimpEverydayHr` is
+  injected into the everyday-HR series), so today's value never depends on the just-issued
+  `workoutDao.upsertAll` being visible through the same bucketed read.
+- A TRIMP-model or -parameter settings change (see 1.2.2) must invalidate every persisted
+  historical day, not just a recent window, or the COALESCE transition mixes model-A and model-B
+  values inside the same ATL/CTL EMA — this is exactly what `HealthDataRefresh.refreshHistorical()`
+  exists to prevent.
+
 ### 2.4 Baselines & calibration
 
 **Physiology profiles** are now exactly **Athlete / Active / Sedentary**

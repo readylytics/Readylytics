@@ -88,6 +88,8 @@ class ScoringRepositoryN1Test {
         coEvery { weightRecordDao.getLatestUpTo(any()) } returns null
         coEvery { bodyFatRecordDao.getLatestUpTo(any()) } returns null
         coEvery { bloodPressureRecordDao.getLatestUpTo(any()) } returns null
+        // SCORE-001: computeDailySummary now writes modelTrimp back onto touched workout rows.
+        coEvery { workoutDao.upsertAll(any()) } returns Unit
 
         every { settingsRepo.userPreferences } returns
             MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE))
