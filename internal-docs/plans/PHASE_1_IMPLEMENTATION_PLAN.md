@@ -11,6 +11,15 @@ documentation-truth pass) is merged (`e7dabfd`, PR #153). All ten findings below
 directly against current code on `claude/architecture-health-scoring-phase-1-fzcq61` before this
 plan was written; none had drifted out from under the remediation plan's description.
 
+**Status as of this pass:** all of WP-04 through WP-11, plus the settings-invalidation slice of
+WP-26, are implemented and committed on this branch (not yet merged). Per the environment
+constraint below, none of it has been compiled or test-run locally — CI is the first real
+verification pass. The two golden-fixture-affecting changes (WP-10's TRIMP unification, WP-11's
+stage-less-night fix) are flagged inline in `GoldenFixtureWalkForwardTest`'s docstring rather than
+regenerated here; that regeneration, its reviewed score-delta summary, and the still-unexported
+Room schema JSON (`core/database/schemas/.../6.json`) are the first things a CI-capable pass must
+do before this phase can be considered fully verified.
+
 **Environment constraint (carried over from Phase 0):** this session has no working Gradle —
 `./gradlew --version` fails fetching the wrapper distribution (403 from `services.gradle.org`,
 egress-policy blocked), and the system's Gradle 8.14.3 cannot resolve this project's AGP 9.2.1.
