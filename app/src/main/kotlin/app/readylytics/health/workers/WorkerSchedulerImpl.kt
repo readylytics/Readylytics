@@ -44,8 +44,7 @@ class WorkerSchedulerImpl
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                     .setInputData(
                         workDataOf(HealthResyncWorker.KEY_RECOMPUTE_ONLY to recomputeOnly),
-                    )
-                    .build()
+                    ).build()
 
             workManager.get().enqueueUniqueWork(
                 RESYNC_WORK_NAME,

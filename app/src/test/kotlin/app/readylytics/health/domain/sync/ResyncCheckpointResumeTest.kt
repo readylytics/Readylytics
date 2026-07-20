@@ -113,7 +113,9 @@ class ResyncCheckpointResumeTest {
 
             assertEquals(Triple(ResyncPhase.RECOMPUTE, 2, 4), progress.first())
             coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate, any(), any()) }
-            coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any()) }
+            coVerify(
+                exactly = 0,
+            ) { scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any()) }
             coVerifyOrder {
                 scoringRepository.computeAndPersistDailySummary(startDate.plusDays(2), any(), any())
                 scoringRepository.computeAndPersistDailySummary(endDate, any(), any())
