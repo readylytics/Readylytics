@@ -152,6 +152,40 @@ class ResyncCheckpointResumeTest {
         }
 
     @Test
+    fun `full resync rejects matching checkpoint without baseline tokens and restarts ingest`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 7, 3)
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.INGEST,
+                    nextDate = LocalDate.of(2024, 7, 1),
+                    selectionHash = "",
+                    baselineChangeTokens = emptyMap(),
+                )
+
+            val sleepFromSlot = slot<Instant>()
+            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } throws
+                IllegalStateException("stop after checkpoint initialization")
+
+            val result =
+                useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertEquals(false, result.isSuccess)
+            assertEquals(
+                startDate.minusDays(1).atStartOfDay(zoneId).toInstant(),
+                sleepFromSlot.captured,
+            )
+            coVerify(exactly = 1) { changeSynchronizer.captureChangesTokens() }
+            assertEquals(ResyncPhase.INGEST, checkpointStore.value?.phase)
+            assertEquals(startDate, checkpointStore.value?.nextDate)
+            assertEquals(baselineTokens, checkpointStore.value?.baselineChangeTokens)
+        }
+
+    @Test
     fun `resyncRange captures baseline tokens before ingest and promotes them after recompute`() =
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)

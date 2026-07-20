@@ -57,10 +57,10 @@ class ResyncRangeUseCase
          *   The checkpoint's [selectionHash] is namespaced separately from full-resync runs so a
          *   recompute-only pass can never resume from (or be resumed by) an unrelated, possibly
          *   ingestion-incomplete full-resync checkpoint for the same date range. Both kinds of run
-         *   still share one `RESYNC_WORK_NAME` unique WorkManager slot (`ExistingWorkPolicy.KEEP`),
-         *   which is what actually prevents them from ever executing back-to-back against a
-         *   not-yet-resumed full-resync checkpoint in practice -- the namespacing only guards the
-         *   narrower case of WorkManager having already abandoned a broken full resync. Health
+         *   still share one `RESYNC_WORK_NAME` WorkManager chain. Full resync uses
+         *   `ExistingWorkPolicy.KEEP`; local recompute uses `ExistingWorkPolicy.APPEND_OR_REPLACE`
+         *   so it runs as a durable successor after existing work. The namespacing prevents either
+         *   run type from resuming the other type's checkpoint. Health
          *   Connect change tokens are mandatory for full resync checkpoints, but deliberately
          *   empty for local recompute checkpoints because no Health Connect access occurs.
          * @param onProgress reports (phase, completed, total) as the resync advances through its
