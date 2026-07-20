@@ -14,7 +14,7 @@ import javax.inject.Singleton
 internal fun resolveScoringToday(
     prefs: UserPreferences,
     now: Instant = Instant.now(),
-): LocalDate = LocalDate.ofInstant(now, prefs.scoringZone())
+): LocalDate = now.atZone(prefs.scoringZone()).toLocalDate()
 
 /**
  * Historical resync triggered from [app.readylytics.health.workers.HealthResyncWorker], covering
