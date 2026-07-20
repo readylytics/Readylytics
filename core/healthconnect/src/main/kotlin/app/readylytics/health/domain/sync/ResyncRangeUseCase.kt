@@ -4,6 +4,7 @@ import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
@@ -59,7 +60,9 @@ class ResyncRangeUseCase
          *   still share one `RESYNC_WORK_NAME` unique WorkManager slot (`ExistingWorkPolicy.KEEP`),
          *   which is what actually prevents them from ever executing back-to-back against a
          *   not-yet-resumed full-resync checkpoint in practice -- the namespacing only guards the
-         *   narrower case of WorkManager having already abandoned a broken full resync.
+         *   narrower case of WorkManager having already abandoned a broken full resync. Health
+         *   Connect change tokens are mandatory for full resync checkpoints, but deliberately
+         *   empty for local recompute checkpoints because no Health Connect access occurs.
          * @param onProgress reports (phase, completed, total) as the resync advances through its
          *   four phases (INGEST batches, PRUNE, RECONCILE, RECOMPUTE days).
          */
@@ -92,15 +95,19 @@ class ResyncRangeUseCase
                             "|",
                         ) { (type, device) -> "$type=${device.orEmpty()}" }
                     val selectionHash =
-                        if (skipIngestAndPrune) "RECOMPUTE_ONLY|$baseSelectionHash" else baseSelectionHash
+                        if (skipIngestAndPrune) {
+                            "RECOMPUTE_ONLY_V2|$baseSelectionHash|${prefs.scoringCheckpointIdentity()}"
+                        } else {
+                            baseSelectionHash
+                        }
                     val savedCheckpoint = checkpointStore.checkpoint.first()
                     val checkpoint =
                         savedCheckpoint
-                            ?.takeIf {
-                                it.startDate == startDate &&
-                                    it.endDate == endDate &&
-                                    it.selectionHash == selectionHash &&
-                                    it.baselineChangeTokens.isNotEmpty()
+                            ?.takeIf { saved ->
+                                saved.startDate == startDate &&
+                                    saved.endDate == endDate &&
+                                    saved.selectionHash == selectionHash &&
+                                    (skipIngestAndPrune || saved.baselineChangeTokens.isNotEmpty())
                             }?.also {
                                 logD("ResyncRangeUseCase") {
                                     "Resuming resync from ${it.phase} at ${it.nextDate}"
@@ -111,18 +118,23 @@ class ResyncRangeUseCase
                     }
                     val baselineChangeTokens =
                         checkpoint?.baselineChangeTokens
-                            ?: changeSynchronizer.captureChangesTokens().also { tokens ->
-                                checkpointStore.save(
-                                    ResyncCheckpoint(
-                                        startDate = startDate,
-                                        endDate = endDate,
-                                        phase = if (skipIngestAndPrune) ResyncPhase.RECONCILE else ResyncPhase.INGEST,
-                                        nextDate = startDate,
-                                        selectionHash = selectionHash,
-                                        baselineChangeTokens = tokens,
-                                    ),
-                                )
+                            ?: if (skipIngestAndPrune) {
+                                emptyMap()
+                            } else {
+                                changeSynchronizer.captureChangesTokens()
                             }
+                    if (checkpoint == null) {
+                        checkpointStore.save(
+                            ResyncCheckpoint(
+                                startDate = startDate,
+                                endDate = endDate,
+                                phase = if (skipIngestAndPrune) ResyncPhase.RECONCILE else ResyncPhase.INGEST,
+                                nextDate = startDate,
+                                selectionHash = selectionHash,
+                                baselineChangeTokens = baselineChangeTokens,
+                            ),
+                        )
+                    }
 
                     val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
                     val totalChunks = if (totalDays <= 0) 0 else (totalDays + chunkDays - 1) / chunkDays
@@ -420,3 +432,40 @@ class ResyncRangeUseCase
             private const val TELEMETRY_TAG = "ResyncTelemetry"
         }
     }
+
+private fun UserPreferences.scoringCheckpointIdentity(): String =
+    listOf(
+        "goalSleepHours=$goalSleepHours",
+        "hrvBaselineOverride=$hrvBaselineOverride",
+        "rhrBaselineOverride=$rhrBaselineOverride",
+        "maxHeartRate=$maxHeartRate",
+        "autoCalculateMaxHr=$autoCalculateMaxHr",
+        "zone1MinBpm=$zone1MinBpm",
+        "zone1MaxBpm=$zone1MaxBpm",
+        "zone2MaxBpm=$zone2MaxBpm",
+        "zone3MaxBpm=$zone3MaxBpm",
+        "zone4MaxBpm=$zone4MaxBpm",
+        "age=$age",
+        "gender=${gender?.name}",
+        "hrvOptimalThreshold=$hrvOptimalThreshold",
+        "rhrOptimalThreshold=$rhrOptimalThreshold",
+        "restingHrPercentile=$restingHrPercentile",
+        "consistencyThresholdMinutes=$consistencyThresholdMinutes",
+        "consistencyEvaluationDays=$consistencyEvaluationDays",
+        "consistencyBaselineDays=$consistencyBaselineDays",
+        "rasScalingFactor=$rasScalingFactor",
+        "physiologyProfile=${physiologyProfile.name}",
+        "installDate=$installDate",
+        "circadianThresholdOverride=$circadianThresholdOverride",
+        "trimpModel=${trimpModel.name}",
+        "banisterMultiplier=$banisterMultiplier",
+        "chengBeta=$chengBeta",
+        "itrimB=$itrimB",
+        "scoringZone=${scoringZone().id}",
+        "strainLoadSourceMode=${strainLoadSourceMode.name}",
+        "rasSourceMode=${rasSourceMode.name}",
+        "coreMergeGapMinutes=$coreMergeGapMinutes",
+        "supplementalCutoffMinutesOfDay=$supplementalCutoffMinutesOfDay",
+        "minimumCountedSleepSegmentMinutes=$minimumCountedSleepSegmentMinutes",
+        "supplementalArchitectureCoveragePercent=$supplementalArchitectureCoveragePercent",
+    ).joinToString("|")

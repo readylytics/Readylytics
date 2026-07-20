@@ -5,7 +5,9 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -178,6 +180,97 @@ class ResyncCheckpointResumeTest {
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
             assertEquals(ResyncPhase.RECOMPUTE, checkpointStore.value?.phase)
             assertEquals(startDate, checkpointStore.value?.nextDate)
+        }
+
+    @Test
+    fun `recompute resumes with the same scoring preferences without Health Connect tokens`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+            val preferences = MutableStateFlow(UserPreferences(trimpModel = TrimpModel.BANISTER))
+            every { settingsRepo.userPreferences } returns preferences
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any())
+            } throws IllegalStateException("scoring failed")
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            val failedCheckpoint = requireNotNull(checkpointStore.value)
+            assertEquals(ResyncPhase.RECOMPUTE, failedCheckpoint.phase)
+            assertEquals(startDate.plusDays(1), failedCheckpoint.nextDate)
+            assertEquals(emptyMap<HealthDataType, String>(), failedCheckpoint.baselineChangeTokens)
+
+            clearMocks(scoringRepository, answers = false, recordedCalls = true)
+            coEvery { scoringRepository.computeAndPersistDailySummary(any(), any(), any()) } returns Unit
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            coVerify(exactly = 0) {
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
+            }
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any())
+            }
+            coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
+            coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+        }
+
+    @Test
+    fun `recompute restarts from start when a scoring preference changes`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+            val preferences = MutableStateFlow(UserPreferences(trimpModel = TrimpModel.BANISTER))
+            every { settingsRepo.userPreferences } returns preferences
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any())
+            } throws IllegalStateException("scoring failed")
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            val failedCheckpoint = requireNotNull(checkpointStore.value)
+            assertEquals(ResyncPhase.RECOMPUTE, failedCheckpoint.phase)
+            assertEquals(startDate.plusDays(1), failedCheckpoint.nextDate)
+            assertEquals(emptyMap<HealthDataType, String>(), failedCheckpoint.baselineChangeTokens)
+
+            clearMocks(scoringRepository, answers = false, recordedCalls = true)
+            preferences.value = UserPreferences(trimpModel = TrimpModel.CHENG)
+            coEvery { scoringRepository.computeAndPersistDailySummary(any(), any(), any()) } returns Unit
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any())
+            }
+            assertEquals(null, checkpointStore.value)
         }
 
     private class InMemoryResyncCheckpointStore : ResyncCheckpointStore {

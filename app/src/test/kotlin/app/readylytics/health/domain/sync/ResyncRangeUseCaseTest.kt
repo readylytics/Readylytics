@@ -321,6 +321,8 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readHeartRateSamples(any(), any()) }
             coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
+            coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
             coVerify(exactly = 2) { scoringRepository.computeAndPersistDailySummary(any(), any(), any()) }
