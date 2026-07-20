@@ -32,10 +32,11 @@ class WorkerSchedulerImpl
 
         /**
          * Enqueues the historical Health Connect resync (or, if [recomputeOnly], the SCORE-007
-         * recompute-only pass) as a unique one-time foreground worker. [ExistingWorkPolicy.KEEP]
-         * means a request while one is already running is a no-op rather than restarting it.
-         * Expedited so it starts promptly when the user (or a historical-scope settings change)
-         * explicitly requests it.
+         * recompute-only pass) as a unique one-time foreground worker. Full resyncs use
+         * [ExistingWorkPolicy.KEEP], while settings changes append a durable successor with
+         * [ExistingWorkPolicy.APPEND_OR_REPLACE]. Rapid settings changes may queue redundant local
+         * passes, but the final queued pass captures the newest preferences without silently losing
+         * a request. Expedited so it starts promptly when explicitly requested.
          */
         override fun scheduleResyncWorker(recomputeOnly: Boolean) {
             val request =
@@ -46,9 +47,16 @@ class WorkerSchedulerImpl
                         workDataOf(HealthResyncWorker.KEY_RECOMPUTE_ONLY to recomputeOnly),
                     ).build()
 
+            val existingWorkPolicy =
+                if (recomputeOnly) {
+                    ExistingWorkPolicy.APPEND_OR_REPLACE
+                } else {
+                    ExistingWorkPolicy.KEEP
+                }
+
             workManager.get().enqueueUniqueWork(
                 RESYNC_WORK_NAME,
-                ExistingWorkPolicy.KEEP,
+                existingWorkPolicy,
                 request,
             )
         }
