@@ -7,6 +7,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
 import kotlinx.coroutines.CancellationException
@@ -204,21 +205,57 @@ class ResyncRangeUseCase
                             (ChronoUnit.DAYS.between(startDate, chunkStart) / chunkDays)
                                 .toInt()
                                 .coerceIn(0, totalChunks)
+                        // HC-002: the effective chunk size shrinks (persisted via
+                        // chunkDaysOverride, so it survives a killed worker) when a window can't be
+                        // read within its timeout budget, and grows back to the caller-supplied
+                        // chunkDays once a window succeeds -- a shrink is a recovery measure for
+                        // unusually dense data, not a permanent downgrade.
+                        var effectiveChunkDays = checkpoint?.chunkDaysOverride ?: chunkDays
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
                             val chunkEndExclusive =
-                                minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                                minOf(chunkStart.plusDays(effectiveChunkDays.toLong()), endDate.plusDays(1))
                             val ingestFromDate = chunkStart.minusDays(1)
                             val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
                             val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
 
-                            retryWithBackoff {
-                                ingestionCoordinator.ingestWindow(
-                                    windowStart = windowStart,
-                                    windowEnd = windowEnd,
-                                    prefs = prefs,
+                            try {
+                                retryWithBackoff {
+                                    ingestionCoordinator.ingestWindow(
+                                        windowStart = windowStart,
+                                        windowEnd = windowEnd,
+                                        prefs = prefs,
+                                    )
+                                }
+                            } catch (e: HealthConnectWindowTimeoutException) {
+                                if (effectiveChunkDays <= MIN_CHUNK_DAYS) {
+                                    logD(TELEMETRY_TAG) {
+                                        "[INGESTION] Window $windowStart..$windowEnd timed out even at the " +
+                                            "$MIN_CHUNK_DAYS-day floor; giving up."
+                                    }
+                                    throw e
+                                }
+                                val shrunkChunkDays = (effectiveChunkDays / 2).coerceAtLeast(MIN_CHUNK_DAYS)
+                                logD(TELEMETRY_TAG) {
+                                    "[INGESTION] Window $windowStart..$windowEnd timed out; shrinking chunk " +
+                                        "$effectiveChunkDays -> $shrunkChunkDays days and retrying $chunkStart."
+                                }
+                                effectiveChunkDays = shrunkChunkDays
+                                checkpointStore.save(
+                                    ResyncCheckpoint(
+                                        startDate = startDate,
+                                        endDate = endDate,
+                                        phase = ResyncPhase.INGEST,
+                                        nextDate = chunkStart,
+                                        selectionHash = selectionHash,
+                                        baselineChangeTokens = baselineChangeTokens,
+                                        chunkDaysOverride = effectiveChunkDays,
+                                    ),
                                 )
+                                continue
                             }
+
+                            effectiveChunkDays = chunkDays
                             val nextPhase =
                                 if (chunkEndExclusive.isAfter(endDate)) {
                                     ResyncPhase.PRUNE
@@ -240,6 +277,7 @@ class ResyncRangeUseCase
                                         },
                                     selectionHash = selectionHash,
                                     baselineChangeTokens = baselineChangeTokens,
+                                    chunkDaysOverride = null,
                                 ),
                             )
                             chunksCompleted++
@@ -422,6 +460,13 @@ class ResyncRangeUseCase
                 } catch (e: HealthConnectPermissionRevokedException) {
                     logD(TELEMETRY_TAG) { "Resync stopped by Health Connect permission failure: ${e.message}" }
                     throw e
+                } catch (e: HealthConnectWindowTimeoutException) {
+                    // HC-002: distinct from RESYNC_ERROR so telemetry can tell "genuinely stuck even
+                    // at the smallest chunk size" apart from other failures; WorkManager's normal
+                    // backoff (Result.retry() in HealthResyncWorker) is still the right fallback --
+                    // a later retry may find a less dense window or a recovered provider.
+                    logD(TELEMETRY_TAG) { "Resync failed: window read timed out even at the minimum chunk size" }
+                    Result.failure("Full resync failed: window read timeout", "RESYNC_WINDOW_TIMEOUT")
                 } catch (e: Exception) {
                     logD(TELEMETRY_TAG) { "Resync failed with exception: ${e.message}" }
                     Result.failure("Full resync failed", "RESYNC_ERROR")
@@ -430,6 +475,7 @@ class ResyncRangeUseCase
 
         companion object {
             private const val TELEMETRY_TAG = "ResyncTelemetry"
+            private const val MIN_CHUNK_DAYS = 1
         }
     }
 

@@ -72,10 +72,11 @@ interface WeightRecordDao {
     @Query("SELECT * FROM weight_records WHERE id = :id")
     suspend fun getById(id: String): WeightRecordEntity?
 
+    // PERF-003: sargable range predicate instead of substr() -- see HeartRateDao for the rationale.
     @Query(
         "SELECT * FROM weight_records " +
             "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`') " +
             "ORDER BY timestampMs ASC",
     )
     suspend fun getBySourceRecordId(sourceRecordId: String): List<WeightRecordEntity>
@@ -83,7 +84,7 @@ interface WeightRecordDao {
     @Query(
         "DELETE FROM weight_records " +
             "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+            "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`')",
     )
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
 

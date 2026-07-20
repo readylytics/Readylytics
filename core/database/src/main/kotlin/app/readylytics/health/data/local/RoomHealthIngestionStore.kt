@@ -84,9 +84,7 @@ class RoomHealthIngestionStore
             var persistedHeartRateSamples = 0
             batch.heartRateSamples.forEachPersistenceBatch { samples ->
                 val startedAt = System.currentTimeMillis()
-                transactionRunner.runInTransaction {
-                    heartRateDao.upsertAll(samples.map(HeartRateInput::toEntity))
-                }
+                persistHeartRateSamples(samples)
                 persistedHeartRateSamples += samples.size
                 logD(TAG) {
                     "Persisted HR batch: $persistedHeartRateSamples/${batch.heartRateSamples.size} " +
@@ -96,14 +94,26 @@ class RoomHealthIngestionStore
             var persistedHrvSamples = 0
             batch.hrvSamples.forEachPersistenceBatch { samples ->
                 val startedAt = System.currentTimeMillis()
-                transactionRunner.runInTransaction {
-                    hrvDao.upsertAll(samples.map(HrvInput::toEntity))
-                }
+                persistHrvSamples(samples)
                 persistedHrvSamples += samples.size
                 logD(TAG) {
                     "Persisted HRV batch: $persistedHrvSamples/${batch.hrvSamples.size} " +
                         "samples in ${System.currentTimeMillis() - startedAt}ms"
                 }
+            }
+        }
+
+        override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
+            if (samples.isEmpty()) return
+            transactionRunner.runInTransaction {
+                heartRateDao.upsertAll(samples.map(HeartRateInput::toEntity))
+            }
+        }
+
+        override suspend fun persistHrvSamples(samples: List<HrvInput>) {
+            if (samples.isEmpty()) return
+            transactionRunner.runInTransaction {
+                hrvDao.upsertAll(samples.map(HrvInput::toEntity))
             }
         }
 

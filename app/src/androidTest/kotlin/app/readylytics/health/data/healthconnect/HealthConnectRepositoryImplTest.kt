@@ -30,7 +30,7 @@ import java.time.ZoneId
  *   - permission state transitions (Granted / Missing / Unavailable / propagation)
  *   - per-record-type reads (sleep, HR, HRV, exercise, steps, weight, body fat, BP, SpO2)
  *   - pagination over large result sets (paging-loop termination)
- *   - aggregation (readSteps) and grouping (readStepsRange)
+ *   - aggregation (readSteps) and grouping (readDailyStepTotals)
  *   - error translation (SecurityException -> HealthConnectPermissionRevokedException
  *     for critical reads; SecurityException -> emptyList() for optional reads)
  *   - device discovery aggregation and de-duplication
@@ -222,6 +222,33 @@ class HealthConnectRepositoryImplTest {
             assertTrue(repo.readHeartRateSamples(t7, t0).isEmpty())
         }
 
+    // ---------- heart rate, paged (HC-001) ----------
+
+    @Test
+    fun readHeartRateSamplesPaged_yieldsSameTotalAsListVariant() =
+        runBlocking {
+            repeat(1_000) { i ->
+                fake.hrCount[t0.plusSeconds(i.toLong())] = 1
+            }
+            var total = 0
+            var pagesSeen = 0
+            repo.readHeartRateSamplesPaged(t0, t7) { page ->
+                total += page.size
+                pagesSeen++
+            }
+            assertEquals(1_000, total)
+            assertEquals(fake.hrPagesServed, pagesSeen)
+        }
+
+    @Test
+    fun readHeartRateSamplesPaged_translatesSecurityException() {
+        fake.hrCount[t1] = 1
+        fake.errors[FakeOp.HeartRate] = SecurityException("revoked")
+        assertThrows(HealthConnectPermissionRevokedException::class.java) {
+            runBlocking { repo.readHeartRateSamplesPaged(t0, t7) { } }
+        }
+    }
+
     // ---------- HRV ----------
 
     @Test
@@ -255,6 +282,28 @@ class HealthConnectRepositoryImplTest {
             fake.hrvCount[t1] = 1
             assertEquals(1, repo.readHrvSamples(t0, t7).size)
         }
+
+    // ---------- HRV, paged (HC-001) ----------
+
+    @Test
+    fun readHrvSamplesPaged_yieldsSameTotalAsListVariant() =
+        runBlocking {
+            fake.hrvCount[t1] = 1
+            fake.hrvCount[t2] = 1
+            fake.hrvCount[t3] = 1
+            var total = 0
+            repo.readHrvSamplesPaged(t0, t7) { page -> total += page.size }
+            assertEquals(3, total)
+        }
+
+    @Test
+    fun readHrvSamplesPaged_translatesSecurityException() {
+        fake.hrvCount[t1] = 1
+        fake.errors[FakeOp.Hrv] = SecurityException("revoked")
+        assertThrows(HealthConnectPermissionRevokedException::class.java) {
+            runBlocking { repo.readHrvSamplesPaged(t0, t7) { } }
+        }
+    }
 
     // ---------- exercise / workouts ----------
 
@@ -332,10 +381,10 @@ class HealthConnectRepositoryImplTest {
             assertEquals(100L, repo.readSteps(t0, t7))
         }
 
-    // ---------- readStepsRange (grouped) ----------
+    // ---------- readDailyStepTotals (grouped, HC-003) ----------
 
     @Test
-    fun readStepsRange_groupsByLocalDate() =
+    fun readDailyStepTotals_groupsByLocalDateInPassedZone() =
         runBlocking {
             val zone = ZoneId.systemDefault()
             val day1 = LocalDate.of(2026, 5, 1).atStartOfDay(zone).toInstant()
@@ -344,27 +393,27 @@ class HealthConnectRepositoryImplTest {
             fake.stepsByInstant[day1.plusSeconds(3_600)] = 500L
             fake.stepsByInstant[day2] = 2_000L
 
-            val map = repo.readStepsRange(day1, day2.plusSeconds(86_400))
+            val map = repo.readDailyStepTotals(day1, day2.plusSeconds(86_400), zone)
             assertEquals(2, map.size)
             assertEquals(1_500L, map[LocalDate.of(2026, 5, 1)])
             assertEquals(2_000L, map[LocalDate.of(2026, 5, 2)])
         }
 
     @Test
-    fun readStepsRange_translatesSecurityException() {
+    fun readDailyStepTotals_translatesSecurityException() {
         fake.stepsByInstant[t1] = 100L
         fake.errors[FakeOp.Steps] = SecurityException("revoked")
         assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readStepsRange(t0, t7) }
+            runBlocking { repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()) }
         }
     }
 
     @Test
-    fun readStepsRange_swallowsGenericException() =
+    fun readDailyStepTotals_swallowsGenericException() =
         runBlocking {
             fake.stepsByInstant[t1] = 100L
             fake.errors[FakeOp.Steps] = IllegalStateException("bad")
-            assertEquals(emptyMap<LocalDate, Long>(), repo.readStepsRange(t0, t7))
+            assertEquals(emptyMap<LocalDate, Long>(), repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()))
         }
 
     // ---------- weight (optional) ----------

@@ -97,13 +97,19 @@ class StepCountFetcher
             if (startDate.isAfter(endDate)) return stepsMap
 
             if (stepsDevice == null) {
-                var day = startDate
-                while (!day.isAfter(endDate)) {
+                // HC-003: one grouped-by-day aggregate call per chunk instead of one aggregate
+                // call per calendar day -- a 10-year resync issues ~(range/chunkDays) HC calls
+                // instead of ~3,650.
+                var chunkStart = startDate
+                while (!chunkStart.isAfter(endDate)) {
                     currentCoroutineContext().ensureActive()
-                    val dayStart = day.atStartOfDay(zoneId).toInstant()
-                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                    stepsMap[day] = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
-                    day = day.plusDays(1)
+                    val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                    val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+                    val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+                    stepsMap.putAll(
+                        retryWithBackoff { hcRepo.readDailyStepTotals(windowStart, windowEnd, zoneId) },
+                    )
+                    chunkStart = chunkEndExclusive
                     yield()
                 }
                 return stepsMap

@@ -57,7 +57,7 @@ internal enum class FakeOp {
  *   - optional reads (weight, body fat, blood pressure) swallow exceptions and return empty
  *   - reads accept an [Instant] range and filter inclusively at the low bound, exclusively
  *     at the high bound (matching [androidx.health.connect.client.time.TimeRangeFilter.between])
- *   - readSteps aggregates totals; readStepsRange groups by [LocalDate]
+ *   - readSteps aggregates totals; readDailyStepTotals groups by [LocalDate]
  *   - paginated reads loop until exhausted; the fake records the page count served
  *
  * Tests populate the public counters (e.g. [sleepCount]) and the [errors] map to drive
@@ -161,6 +161,30 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         return stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
     }
 
+    override suspend fun readHeartRateSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+    ) {
+        translateCritical(FakeOp.HeartRate)
+        val total = totalInRange(hrCount, from, to)
+        hrPagesServed = pagesFor(total)
+        stubList(total) { index -> placeholderHeartRate(index) }
+            .chunked(pageSize)
+            .forEach { onPage(it) }
+    }
+
+    override suspend fun readHrvSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHrvRecord>) -> Unit,
+    ) {
+        translateCritical(FakeOp.Hrv)
+        stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
+            .chunked(pageSize)
+            .forEach { onPage(it) }
+    }
+
     override suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
@@ -191,17 +215,17 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             .sum()
     }
 
-    override suspend fun readStepsRange(
+    override suspend fun readDailyStepTotals(
         from: Instant,
         to: Instant,
+        zoneId: ZoneId,
     ): Map<LocalDate, Long> =
         try {
             errors[FakeOp.Steps]?.let { throw it }
-            val zone = ZoneId.systemDefault()
             stepsByInstant
                 .filterKeys { inRange(it, from, to) }
                 .entries
-                .groupBy { it.key.atZone(zone).toLocalDate() }
+                .groupBy { it.key.atZone(zoneId).toLocalDate() }
                 .mapValues { (_, list) -> list.sumOf { it.value } }
         } catch (e: SecurityException) {
             throw HealthConnectPermissionRevokedException(e)

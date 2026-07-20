@@ -25,6 +25,21 @@ class HealthConnectPermissionRevokedException(
         cause,
     )
 
+/**
+ * Thrown when a Health Connect ingest window can't be read within its time budget (HC-002).
+ * Deliberately *not* a [kotlinx.coroutines.CancellationException] subtype -- unlike the
+ * [kotlinx.coroutines.TimeoutCancellationException] it's translated from at the `withTimeout` call
+ * site, this must never be confused with cooperative cancellation by any layer above the read.
+ */
+class HealthConnectWindowTimeoutException(
+    val windowStart: java.time.Instant,
+    val windowEnd: java.time.Instant,
+    cause: Throwable,
+) : Exception(
+        "Health Connect window read timed out: $windowStart..$windowEnd",
+        cause,
+    )
+
 sealed interface PermissionStatus {
     data object Granted : PermissionStatus
 
@@ -63,6 +78,25 @@ interface HealthConnectRepository {
         to: Instant,
     ): List<DomainHrvRecord>
 
+    /**
+     * Streams heart-rate samples page-by-page instead of materializing the whole [from]..[to]
+     * range in memory (HC-001). [onPage] is invoked once per Health Connect page, in the order
+     * pages are returned; pages are not guaranteed to be globally sorted across page boundaries,
+     * only within Health Connect's own per-page ordering.
+     */
+    suspend fun readHeartRateSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+    )
+
+    /** HRV equivalent of [readHeartRateSamplesPaged]. */
+    suspend fun readHrvSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHrvRecord>) -> Unit,
+    )
+
     suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
@@ -78,9 +112,16 @@ interface HealthConnectRepository {
         to: Instant,
     ): Long
 
-    suspend fun readStepsRange(
+    /**
+     * Daily step totals for [from]..[to], grouped by local calendar day in [zoneId] via Health
+     * Connect's `aggregateGroupByPeriod` (HC-003) -- one grouped call per range instead of one
+     * `readSteps` aggregate call per day. Falls back to the per-day aggregate only if the provider
+     * doesn't support grouped-by-period aggregation.
+     */
+    suspend fun readDailyStepTotals(
         from: Instant,
         to: Instant,
+        zoneId: java.time.ZoneId,
     ): Map<java.time.LocalDate, Long>
 
     suspend fun discoverDevices(windowDays: Int = 2): List<String>

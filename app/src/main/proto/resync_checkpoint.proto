@@ -21,4 +21,9 @@ message ResyncCheckpointProto {
   int64 next_epoch_day = 4;
   string selection_hash = 5;
   map<string, string> baseline_change_tokens = 6;
+  // HC-002: ingest chunk size (in days) to use for the next INGEST-phase chunk after a Health
+  // Connect window read timed out at the default chunk size. 0 (proto3 default) means "no
+  // override -- use the caller-supplied chunkDays". Additive field; checkpoints saved before this
+  // field existed decode it as 0/no-override.
+  int32 chunk_days_override = 7;
 }

@@ -87,46 +87,18 @@ class FirstSetupDummyIngestionFlowTest {
                                 durationMinutes = 180,
                             ),
                         ),
-                    heartRateSamples =
-                        listOf(
-                            HeartRateInput(
-                                id = "hr-1_1782687600000",
-                                timestampMs = 1782687600000,
-                                beatsPerMinute = 52,
-                                recordType = "SLEEP",
-                                sessionId = "sleep-1",
-                                deviceName = "Pixel Watch",
-                            ),
-                            HeartRateInput(
-                                id = "hr-2_1782724500000",
-                                timestampMs = 1782724500000,
-                                beatsPerMinute = 148,
-                                recordType = "EXERCISE",
-                                sessionId = "workout-1",
-                                deviceName = "Pixel Watch",
-                            ),
-                            HeartRateInput(
-                                id = "hr-3_1782741600000",
-                                timestampMs = 1782741600000,
-                                beatsPerMinute = 64,
-                                recordType = "RESTING",
-                                sessionId = null,
-                                deviceName = "Pixel Watch",
-                            ),
-                        ),
-                    hrvSamples =
-                        listOf(
-                            HrvInput(
-                                id = "hrv-1_1782691200000",
-                                timestampMs = 1782691200000,
-                                rmssdMs = 38.5f,
-                                recordType = "SLEEP",
-                                sessionId = "sleep-1",
-                                deviceName = "Pixel Watch",
-                            ),
-                        ),
+                    // HR/HRV samples are streamed and persisted separately (persistHeartRateSamples/
+                    // persistHrvSamples, HC-001) rather than through this batch -- see the
+                    // assertions on ingestionStore.persistedHeartRateSamples/persistedHrvSamples
+                    // below.
+                    heartRateSamples = emptyList(),
+                    hrvSamples = emptyList(),
                     workouts =
                         listOf(
+                            // Persisted with zero HR-derived metrics at ingest time; the reconcile
+                            // pass (mocked out here via sessionLinkReconciler) is what fills in the
+                            // real trimp/zone-minutes/avgHr once every HR sample in range has been
+                            // streamed and tagged (HC-004 pattern, see HealthIngestionCoordinator).
                             WorkoutInput(
                                 id = "workout-1",
                                 startTime = 1782723600000,
@@ -135,11 +107,11 @@ class FirstSetupDummyIngestionFlowTest {
                                 durationMinutes = 60,
                                 zone1Minutes = 0f,
                                 zone2Minutes = 0f,
-                                zone3Minutes = 45f,
+                                zone3Minutes = 0f,
                                 zone4Minutes = 0f,
                                 zone5Minutes = 0f,
-                                trimp = 135f,
-                                avgHr = 148f,
+                                trimp = 0f,
+                                avgHr = 0f,
                                 deviceName = "Pixel Watch",
                             ),
                         ),
@@ -150,6 +122,48 @@ class FirstSetupDummyIngestionFlowTest {
                     stepRecords = emptyList(),
                 )
             assertEquals(expectedBatch, batch)
+
+            val expectedHeartRateSamples =
+                listOf(
+                    HeartRateInput(
+                        id = "hr-1_1782687600000",
+                        timestampMs = 1782687600000,
+                        beatsPerMinute = 52,
+                        recordType = "SLEEP",
+                        sessionId = "sleep-1",
+                        deviceName = "Pixel Watch",
+                    ),
+                    HeartRateInput(
+                        id = "hr-2_1782724500000",
+                        timestampMs = 1782724500000,
+                        beatsPerMinute = 148,
+                        recordType = "EXERCISE",
+                        sessionId = "workout-1",
+                        deviceName = "Pixel Watch",
+                    ),
+                    HeartRateInput(
+                        id = "hr-3_1782741600000",
+                        timestampMs = 1782741600000,
+                        beatsPerMinute = 64,
+                        recordType = "RESTING",
+                        sessionId = null,
+                        deviceName = "Pixel Watch",
+                    ),
+                )
+            assertEquals(expectedHeartRateSamples, ingestionStore.persistedHeartRateSamples.single())
+
+            val expectedHrvSamples =
+                listOf(
+                    HrvInput(
+                        id = "hrv-1_1782691200000",
+                        timestampMs = 1782691200000,
+                        rmssdMs = 38.5f,
+                        recordType = "SLEEP",
+                        sessionId = "sleep-1",
+                        deviceName = "Pixel Watch",
+                    ),
+                )
+            assertEquals(expectedHrvSamples, ingestionStore.persistedHrvSamples.single())
         }
 
     @Test
@@ -165,8 +179,19 @@ class FirstSetupDummyIngestionFlowTest {
             assertEquals(2, ingestionStore.persisted.size)
             val first = ingestionStore.persisted.first()
             val second = ingestionStore.persisted.last()
-
             assertEquals(first, second)
+
+            assertEquals(2, ingestionStore.persistedHeartRateSamples.size)
+            assertEquals(
+                ingestionStore.persistedHeartRateSamples.first(),
+                ingestionStore.persistedHeartRateSamples.last(),
+            )
+
+            assertEquals(2, ingestionStore.persistedHrvSamples.size)
+            assertEquals(
+                ingestionStore.persistedHrvSamples.first(),
+                ingestionStore.persistedHrvSamples.last(),
+            )
         }
 
     private fun buildUseCase(
@@ -203,10 +228,20 @@ class FirstSetupDummyIngestionFlowTest {
 
     private class RecordingHealthIngestionStore : HealthIngestionStore {
         val persisted = mutableListOf<HealthIngestionBatch>()
+        val persistedHeartRateSamples = mutableListOf<List<HeartRateInput>>()
+        val persistedHrvSamples = mutableListOf<List<HrvInput>>()
         val clearedRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
 
         override suspend fun persist(batch: HealthIngestionBatch) {
             persisted += batch
+        }
+
+        override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
+            persistedHeartRateSamples += samples
+        }
+
+        override suspend fun persistHrvSamples(samples: List<HrvInput>) {
+            persistedHrvSamples += samples
         }
 
         override suspend fun clearFrozenBaselines(
@@ -264,6 +299,22 @@ class FirstSetupDummyIngestionFlowTest {
             to: Instant,
         ): List<DomainHrvRecord> = listOf(hrvRecord)
 
+        override suspend fun readHeartRateSamplesPaged(
+            from: Instant,
+            to: Instant,
+            onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+        ) {
+            onPage(heartRateRecords)
+        }
+
+        override suspend fun readHrvSamplesPaged(
+            from: Instant,
+            to: Instant,
+            onPage: suspend (List<DomainHrvRecord>) -> Unit,
+        ) {
+            onPage(listOf(hrvRecord))
+        }
+
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
@@ -279,9 +330,10 @@ class FirstSetupDummyIngestionFlowTest {
             to: Instant,
         ): Long = 4200L
 
-        override suspend fun readStepsRange(
+        override suspend fun readDailyStepTotals(
             from: Instant,
             to: Instant,
+            zoneId: ZoneId,
         ): Map<LocalDate, Long> = emptyMap()
 
         override suspend fun discoverDevices(windowDays: Int): List<String> = listOf("Pixel Watch")
