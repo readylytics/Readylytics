@@ -2,12 +2,19 @@ package app.readylytics.health.domain.sync
 
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
+import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+
+internal fun resolveScoringToday(
+    prefs: UserPreferences,
+    now: Instant = Instant.now(),
+): LocalDate = LocalDate.ofInstant(now, prefs.scoringZone())
 
 /**
  * Historical resync triggered from [app.readylytics.health.workers.HealthResyncWorker], covering
@@ -33,7 +40,7 @@ class FullHistoricalResyncUseCase
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> {
             val prefs = settingsRepo.userPreferences.first()
-            val today = LocalDate.now(ZoneId.systemDefault())
+            val today = resolveScoringToday(prefs)
             val startDate = RetentionBounds.resolveResyncStartDate(prefs, today)
             return if (recomputeOnly) {
                 healthSyncUseCase.recomputeRange(startDate = startDate, endDate = today, onProgress = onProgress)
