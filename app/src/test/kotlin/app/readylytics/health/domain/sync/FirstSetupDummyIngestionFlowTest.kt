@@ -31,6 +31,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 class FirstSetupDummyIngestionFlowTest {
     @Test
@@ -146,6 +147,7 @@ class FirstSetupDummyIngestionFlowTest {
                     bodyFatSamples = emptyList(),
                     bloodPressureSamples = emptyList(),
                     oxygenSaturationSamples = listOf(),
+                    stepRecords = emptyList(),
                 )
             assertEquals(expectedBatch, batch)
         }
@@ -210,6 +212,7 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun clearFrozenBaselines(
             start: LocalDate,
             endExclusive: LocalDate,
+            zoneId: ZoneId,
         ) {
             clearedRanges += start to endExclusive
         }

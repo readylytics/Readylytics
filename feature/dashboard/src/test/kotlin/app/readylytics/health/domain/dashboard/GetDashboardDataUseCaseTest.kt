@@ -3,10 +3,17 @@ package app.readylytics.health.domain.dashboard
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.util.DomainLogSink
+import app.readylytics.health.domain.util.DomainLogger
+import app.readylytics.health.domain.util.LogContext
+import app.readylytics.health.domain.util.LogLevel
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -27,6 +34,21 @@ class GetDashboardDataUseCaseTest {
             )
     }
 
+    @After
+    fun tearDown() {
+        DomainLogger.installSink(
+            object : DomainLogSink {
+                override fun log(
+                    level: LogLevel,
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                    context: LogContext,
+                ) = Unit
+            },
+        )
+    }
+
     @Test
     fun invoke_validInputs_succeeds() {
         val summary = mockk<DailySummary>(relaxed = true)
@@ -40,6 +62,41 @@ class GetDashboardDataUseCaseTest {
                 rasSummaries = emptyList(),
             )
         assert(result.isSuccess) { "Should succeed with valid inputs" }
+    }
+
+    @Test
+    fun `invoke logs the throwable before returning CARD_GENERATION_ERROR`() {
+        // HC-008: the failure path must not silently drop the exception that caused it.
+        val loggedThrowables = mutableListOf<Throwable?>()
+        DomainLogger.installSink(
+            object : DomainLogSink {
+                override fun log(
+                    level: LogLevel,
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                    context: LogContext,
+                ) {
+                    if (level == LogLevel.ERROR) loggedThrowables += throwable
+                }
+            },
+        )
+        val summary = mockk<DailySummary>(relaxed = true)
+        val prefs = mockk<UserPreferences>(relaxed = true)
+        every { resourceProvider.getString(any()) } throws RuntimeException("boom")
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = prefs,
+                date = LocalDate.now(),
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+            )
+
+        assert(result is Result.Failure) { "Should fail when card building throws" }
+        assertEquals("CARD_GENERATION_ERROR", (result as Result.Failure).code)
+        assertNotNull("The triggering exception must be logged", loggedThrowables.firstOrNull())
     }
 
     @Test

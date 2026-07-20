@@ -8,6 +8,7 @@ import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
@@ -17,6 +18,7 @@ import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.SleepStageEntity
+import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.domain.repository.TransactionRunner
@@ -29,6 +31,7 @@ import app.readylytics.health.domain.sync.HrvInput
 import app.readylytics.health.domain.sync.OxygenSaturationInput
 import app.readylytics.health.domain.sync.SleepSessionInput
 import app.readylytics.health.domain.sync.SleepStageInput
+import app.readylytics.health.domain.sync.StepRecordInput
 import app.readylytics.health.domain.sync.WeightInput
 import app.readylytics.health.domain.sync.WorkoutInput
 import app.readylytics.health.domain.util.logD
@@ -52,6 +55,7 @@ class RoomHealthIngestionStore
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val stepRecordDao: StepRecordDao,
         private val dailySummaryDao: DailySummaryDao,
         private val transactionRunner: TransactionRunner,
     ) : HealthIngestionStore {
@@ -74,6 +78,7 @@ class RoomHealthIngestionStore
                 oxygenSaturationRecordDao.upsertAll(
                     batch.oxygenSaturationSamples.map(OxygenSaturationInput::toEntity),
                 )
+                stepRecordDao.upsertAll(batch.stepRecords.map(StepRecordInput::toEntity))
             }
 
             var persistedHeartRateSamples = 0
@@ -105,8 +110,8 @@ class RoomHealthIngestionStore
         override suspend fun clearFrozenBaselines(
             start: java.time.LocalDate,
             endExclusive: java.time.LocalDate,
+            zoneId: ZoneId,
         ) {
-            val zoneId = ZoneId.systemDefault()
             dailySummaryDao.clearFrozenBaselinesBetween(
                 fromMs = start.atStartOfDay(zoneId).toInstant().toEpochMilli(),
                 toExclusiveMs = endExclusive.atStartOfDay(zoneId).toInstant().toEpochMilli(),
@@ -239,5 +244,14 @@ private fun OxygenSaturationInput.toEntity() =
         id = id,
         timestampMs = timestampMs,
         percentage = percentage,
+        deviceName = deviceName,
+    )
+
+private fun StepRecordInput.toEntity() =
+    StepRecordEntity(
+        id = id,
+        startTime = startTime,
+        endTime = endTime,
+        count = count,
         deviceName = deviceName,
     )

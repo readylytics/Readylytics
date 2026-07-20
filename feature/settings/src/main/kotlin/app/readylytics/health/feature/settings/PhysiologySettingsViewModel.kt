@@ -88,14 +88,16 @@ class PhysiologySettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             userUseCase.updateBirthday(event.date).getOrNull()
-                            healthDataRefresh.refreshAffectedWindow()
+                            // Birthday feeds auto-calculated hrMax (historical-scope, SCORE-007).
+                            healthDataRefresh.refreshHistorical()
                         }
                     }
                 }
                 is SettingsEvent.GenderChanged -> {
                     viewModelScope.launch {
                         physiologySettings.updateGender(gender = event.gender?.displayName)
-                        healthDataRefresh.refreshAffectedWindow()
+                        // Gender feeds Banister's sex-specific TRIMP weighting (historical-scope).
+                        healthDataRefresh.refreshHistorical()
                     }
                 }
                 is SettingsEvent.HeightChanged -> {
@@ -106,14 +108,15 @@ class PhysiologySettingsViewModel
                 is SettingsEvent.PhysiologyProfileChanged ->
                     viewModelScope.launch {
                         physiologySettings.updatePhysiologyProfile(profile = event.profile)
-                        healthDataRefresh.refreshAffectedWindow()
+                        healthDataRefresh.refreshHistorical()
                     }
                 SettingsEvent.ResetRasScalingFactor ->
                     viewModelScope.launch {
                         val currentProfile = settingsRepo.userPreferences.first().physiologyProfile
                         val defaultFactor = RasCalculator.getDefaultRasScalingFactor(currentProfile)
                         displaySettings.updateRasScalingFactor(defaultFactor)
-                        healthDataRefresh.refreshAffectedWindow()
+                        // RAS scaling factor feeds every persisted day's RAS (historical-scope).
+                        healthDataRefresh.refreshHistorical()
                     }
                 else -> {}
             }

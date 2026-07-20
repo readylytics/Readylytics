@@ -164,7 +164,11 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any()) }
+            // HC-005/WP-08: readStepsRecords is now called twice per chunk regardless of the
+            // selected device -- once by HealthIngestionCoordinator.ingestWindow (populates the raw
+            // step_records table for every device, unfiltered) and once by StepCountFetcher.fetchRange
+            // (the device-filtered daily-total aggregate actually used for scoring).
+            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
         }
 
@@ -187,7 +191,12 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any()) }
+            // First call (ingestWindow's retryWithBackoff) throws, then succeeds on retry (2 calls);
+            // the recompute-phase StepCountFetcher.fetchRange call succeeds immediately after (the
+            // mock's last-defined `andThen` behavior persists) for a 3rd call. See HC-005/WP-08: the
+            // ingestion coordinator now also reads raw step records, independent of the per-device
+            // aggregate fetch this test originally exercised alone.
+            coVerify(exactly = 3) { hcRepo.readStepsRecords(any(), any()) }
         }
 
     @Test
@@ -209,7 +218,7 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L) }
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any()) }
         }
 
     @Test
@@ -221,9 +230,10 @@ class ResyncRangeUseCaseTest {
                 startDate = LocalDate.of(2024, 6, 1),
                 endDate = LocalDate.of(2024, 6, 3),
                 chunkDays = 30,
-            ) { phase, current, total ->
-                progress += Triple(phase, current, total)
-            }
+                onProgress = { phase, current, total ->
+                    progress += Triple(phase, current, total)
+                },
+            )
 
             val recompute = progress.filter { it.first == ResyncPhase.RECOMPUTE }
             assertEquals(3, recompute.last().second)
@@ -240,7 +250,8 @@ class ResyncRangeUseCaseTest {
                 startDate = LocalDate.of(2024, 6, 1),
                 endDate = LocalDate.of(2024, 6, 3),
                 chunkDays = 30,
-            ) { phase, _, _ -> phases += phase }
+                onProgress = { phase, _, _ -> phases += phase },
+            )
 
             assertEquals(
                 listOf(ResyncPhase.INGEST, ResyncPhase.PRUNE, ResyncPhase.RECONCILE, ResyncPhase.RECOMPUTE),
@@ -266,7 +277,7 @@ class ResyncRangeUseCaseTest {
                 )
             val phases = mutableListOf<ResyncPhase>()
 
-            useCase.run(startDate, endDate, chunkDays = 30) { phase, _, _ -> phases += phase }
+            useCase.run(startDate, endDate, chunkDays = 30, onProgress = { phase, _, _ -> phases += phase })
 
             assertEquals(
                 listOf(ResyncPhase.PRUNE, ResyncPhase.RECONCILE, ResyncPhase.RECOMPUTE),
@@ -277,17 +288,72 @@ class ResyncRangeUseCaseTest {
     @Test
     fun `resyncRange clears frozen baselines only for requested range before walk-forward recompute`() =
         runTest {
+            val zoneId = ZoneId.systemDefault()
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 3)
 
             useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             coVerifyOrder {
-                healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1))
-                scoringRepository.computeAndPersistDailySummary(startDate, any())
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any())
+                healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any())
             }
+        }
+
+    @Test
+    fun `skipIngestAndPrune runs reconcile and recompute without touching Health Connect or pruning`() =
+        runTest {
+            // SCORE-007: a settings-driven recompute-only pass must never re-read Health Connect
+            // or prune, only rebuild session-linking and scores from already-stored raw data.
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 2)
+
+            useCase.run(
+                startDate = startDate,
+                endDate = endDate,
+                chunkDays = 30,
+                onProgress = null,
+                skipIngestAndPrune = true,
+            )
+
+            coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHeartRateSamples(any(), any()) }
+            coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
+            coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
+            coVerify(exactly = 2) { scoringRepository.computeAndPersistDailySummary(any(), any(), any()) }
+        }
+
+    @Test
+    fun `resyncRange shares one preferences snapshot across every recomputed day`() =
+        runTest {
+            // Each independent read of settingsRepo.userPreferences returns a distinct value here,
+            // simulating a preference change mid-resync. SCORE-004 requires the walk-forward to
+            // recompute every day from the single snapshot taken at the start of run(), never a
+            // fresh per-day read, so every day's captured prefs argument must be identical.
+            var accessCount = 0
+            every { settingsRepo.userPreferences } answers {
+                accessCount++
+                flowOf(UserPreferences(scoringZoneId = "snapshot-$accessCount"))
+            }
+            val capturedPrefs = mutableListOf<UserPreferences>()
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), capture(capturedPrefs))
+            } returns Unit
+
+            useCase.run(
+                startDate = LocalDate.of(2024, 6, 1),
+                endDate = LocalDate.of(2024, 6, 3),
+                chunkDays = 30,
+                onProgress = null,
+            )
+
+            assertEquals(3, capturedPrefs.size)
+            assertEquals(1, capturedPrefs.distinct().size)
         }
 
     @Test
@@ -301,7 +367,7 @@ class ResyncRangeUseCaseTest {
             coVerifyOrder {
                 selectedSourcePruner.prune(startDate, endDate, any(), any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
             }
         }
 

@@ -30,6 +30,7 @@ class HealthResyncWorkerTest {
         context = ApplicationProvider.getApplicationContext()
         workerParams = mockk(relaxed = true)
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
+        every { workerParams.inputData } returns androidx.work.Data.EMPTY
 
         val progressUpdater = mockk<androidx.work.ProgressUpdater>()
         every { workerParams.progressUpdater } returns progressUpdater
@@ -64,8 +65,8 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork reports progress and returns success when resync usecase succeeds`() =
         runBlocking {
-            coEvery { useCase.execute(any()) } answers {
-                val progressCallback = firstArg<(ResyncPhase, Int, Int) -> Unit>()
+            coEvery { useCase.execute(any(), any()) } answers {
+                val progressCallback = secondArg<(ResyncPhase, Int, Int) -> Unit>()
                 progressCallback(ResyncPhase.RECOMPUTE, 1, 10)
                 app.readylytics.health.domain.model.Result
                     .Success(Unit)
@@ -80,9 +81,42 @@ class HealthResyncWorkerTest {
         }
 
     @Test
+    fun `doWork passes recomputeOnly from input data through to the use case`() =
+        runBlocking {
+            every { workerParams.inputData } returns
+                androidx.work.Data
+                    .Builder()
+                    .putBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true)
+                    .build()
+            val recomputeOnlySlot = slot<Boolean>()
+            coEvery { useCase.execute(capture(recomputeOnlySlot), any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+
+            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            worker.doWork()
+
+            assertTrue(recomputeOnlySlot.captured)
+        }
+
+    @Test
+    fun `doWork defaults recomputeOnly to false when input data is absent`() =
+        runBlocking {
+            val recomputeOnlySlot = slot<Boolean>()
+            coEvery { useCase.execute(capture(recomputeOnlySlot), any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+
+            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            worker.doWork()
+
+            assertTrue(!recomputeOnlySlot.captured)
+        }
+
+    @Test
     fun `doWork returns retry when resync usecase fails`() =
         runBlocking {
-            coEvery { useCase.execute(any()) } returns
+            coEvery { useCase.execute(any(), any()) } returns
                 app.readylytics.health.domain.model.Result
                     .Failure("error", "network error")
             val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
@@ -97,7 +131,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns retry when resync usecase throws exception`() =
         runBlocking {
-            coEvery { useCase.execute(any()) } throws RuntimeException("critical error")
+            coEvery { useCase.execute(any(), any()) } throws RuntimeException("critical error")
             val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
             val result = worker.doWork()
             assertEquals(
@@ -110,7 +144,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `doWork returns terminal failure when Health Connect permission is revoked`() =
         runBlocking {
-            coEvery { useCase.execute(any()) } throws
+            coEvery { useCase.execute(any(), any()) } throws
                 HealthConnectPermissionRevokedException(SecurityException("permission revoked"))
             val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
 

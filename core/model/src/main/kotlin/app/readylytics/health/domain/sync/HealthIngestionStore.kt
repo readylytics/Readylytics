@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.sync
 
 import java.time.LocalDate
+import java.time.ZoneId
 
 interface HealthIngestionStore {
     suspend fun persist(batch: HealthIngestionBatch)
@@ -8,6 +9,7 @@ interface HealthIngestionStore {
     suspend fun clearFrozenBaselines(
         start: LocalDate,
         endExclusive: LocalDate,
+        zoneId: ZoneId,
     )
 
     suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int
@@ -26,6 +28,7 @@ data class HealthIngestionBatch(
     val bodyFatSamples: List<BodyFatInput>,
     val bloodPressureSamples: List<BloodPressureInput>,
     val oxygenSaturationSamples: List<OxygenSaturationInput>,
+    val stepRecords: List<StepRecordInput>,
 )
 
 data class SleepSessionInput(
@@ -112,5 +115,18 @@ data class OxygenSaturationInput(
     val id: String,
     val timestampMs: Long,
     val percentage: Float,
+    val deviceName: String?,
+)
+
+/**
+ * Raw per-record steps row, persisted purely to resolve a deleted steps record's own
+ * `(startTime, endTime)` on a later `DeletionChange` (HC-005). Never read for scoring — daily step
+ * totals are sourced from `StepCountFetcher`'s aggregate/device-filtered reads.
+ */
+data class StepRecordInput(
+    val id: String,
+    val startTime: Long,
+    val endTime: Long,
+    val count: Long,
     val deviceName: String?,
 )

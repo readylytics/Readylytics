@@ -264,7 +264,16 @@ class ComputeSleepMetricsUseCase
                     } else {
                         null
                     }
-                val stagesSuspicious = !validation.stagesValid || validation.stagesSuspicious
+                // HC-006/OD-2: a stage-less session (SleepDataMapper's raw-span duration fallback)
+                // has zero deep/rem/light minutes despite a positive duration -- validateNight's
+                // deep/rem *fraction* checks read that as 0%, i.e. trivially "valid", when it's
+                // actually total architecture blindness. Force the existing reweight pathway.
+                val hasNoStageBreakdown =
+                    session.durationMinutes > 0 &&
+                        session.deepSleepMinutes == 0 &&
+                        session.remSleepMinutes == 0 &&
+                        session.lightSleepMinutes == 0
+                val stagesSuspicious = hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
 
                 // Compute calibration status early for freeze gate (HIGH-1)
                 val totalValidHrvNights =

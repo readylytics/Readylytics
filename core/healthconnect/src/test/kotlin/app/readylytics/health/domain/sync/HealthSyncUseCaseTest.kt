@@ -6,7 +6,10 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -75,12 +78,68 @@ class HealthSyncUseCaseTest {
     }
 
     @Test
+    fun recomputeRange_delegatesToResyncRangeUseCaseWithSkipIngestAndPrune() = runTest {
+        // SCORE-007: recomputeRange must skip Health Connect re-ingestion entirely.
+        val startDate = LocalDate.of(2024, 6, 1)
+        val endDate = LocalDate.of(2024, 6, 2)
+        coEvery {
+            resyncRangeUseCase.run(any(), any(), any(), any(), skipIngestAndPrune = true)
+        } returns Result.success(Unit)
+
+        useCase.recomputeRange(startDate, endDate)
+
+        coVerify {
+            resyncRangeUseCase.run(startDate, endDate, 30, null, skipIngestAndPrune = true)
+        }
+    }
+
+    @Test
     fun sync_returnsResultProducedByDailySyncUseCase() = runTest {
         coEvery { dailySyncUseCase.run(any(), any()) } returns Result.failure("nope", "SYNC_ERROR")
 
-        val result = useCase.sync()
+        val result = useCase.sync(windowDays = 3)
 
         assertTrue(result is Result.Failure)
         assertEquals("SYNC_ERROR", result.code)
+    }
+
+    @Test
+    fun withSyncLock_returnsTheBlocksResult() = runTest {
+        val result = useCase.withSyncLock { "value" }
+
+        assertEquals("value", result)
+    }
+
+    @Test
+    fun withSyncLock_serializesAgainstAConcurrentSync() = runTest {
+        // SCORE-003: withSyncLock must share the same mutex sync()/resyncRange() use, so a caller
+        // like the app-start baseline backfill can never run concurrently with a sync/resync.
+        val syncStarted = CompletableDeferred<Unit>()
+        val releaseSync = CompletableDeferred<Unit>()
+        coEvery { dailySyncUseCase.run(any(), any()) } coAnswers {
+            syncStarted.complete(Unit)
+            releaseSync.await()
+            Result.success(Unit)
+        }
+        val order = mutableListOf<String>()
+
+        val syncJob = launch {
+            useCase.sync(windowDays = 3)
+            order += "sync-done"
+        }
+        syncStarted.await()
+
+        val lockJob =
+            launch {
+                useCase.withSyncLock { order += "lock-acquired" }
+            }
+        advanceUntilIdle()
+        assertTrue(order.isEmpty(), "withSyncLock must not proceed while sync() holds the mutex")
+
+        releaseSync.complete(Unit)
+        syncJob.join()
+        lockJob.join()
+
+        assertEquals(listOf("sync-done", "lock-acquired"), order)
     }
 }

@@ -7,6 +7,7 @@ import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -36,7 +37,7 @@ class HealthIngestionCoordinator
             windowBudgetMs: Long = 3 * 60_000L,
         ) {
             val (sleepSessions, exerciseRecords, hrRecords, hrvRecords,
-                weightRecords, bodyFatRecords, bloodPressureRecords, spo2Records) =
+                weightRecords, bodyFatRecords, bloodPressureRecords, spo2Records, stepsRecords) =
                 withTimeout(windowBudgetMs) {
                     HcFetch(
                         sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) },
@@ -47,6 +48,10 @@ class HealthIngestionCoordinator
                         bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) },
                         bloodPressureRecords = retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) },
                         spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) },
+                        // Raw steps records aren't used for the daily total (StepCountFetcher's
+                        // aggregate/device-filtered reads are) -- persisted purely so a later
+                        // changes-path deletion can resolve its own date range (HC-005).
+                        stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) },
                     )
                 }
             val sleepEntities =
@@ -187,6 +192,21 @@ class HealthIngestionCoordinator
                             .mapSleepSessionStages(it)
                     }.filter { it.sessionId in filteredSleepIds }
 
+            // Unlike the other record types, step_records isn't device-filtered: it's never read
+            // for scoring (StepCountFetcher's aggregate/device-filtered reads own the visible daily
+            // total), only for resolving a future deletion's date range, so storing every device's
+            // raw rows is strictly more correct (HC-005).
+            val stepRecordInputs =
+                stepsRecords.map { record ->
+                    StepRecordInput(
+                        id = record.id,
+                        startTime = record.startTime.toEpochMilli(),
+                        endTime = record.endTime.toEpochMilli(),
+                        count = record.count,
+                        deviceName = record.deviceName,
+                    )
+                }
+
             healthIngestionStore.persist(
                 HealthIngestionBatch(
                     sleepSessions = filteredSleep.map { it.toInput() },
@@ -198,6 +218,7 @@ class HealthIngestionCoordinator
                     bodyFatSamples = filteredBodyFat.map { it.toInput() },
                     bloodPressureSamples = filteredBloodPressure.map { it.toInput() },
                     oxygenSaturationSamples = filteredSpo2.map { it.toInput() },
+                    stepRecords = stepRecordInputs,
                 ),
             )
         }
@@ -211,6 +232,7 @@ class HealthIngestionCoordinator
             val bodyFatRecords: List<DomainBodyFatRecord>,
             val bloodPressureRecords: List<DomainBloodPressureRecord>,
             val spo2Records: List<DomainOxygenSaturationRecord>,
+            val stepsRecords: List<DomainStepsRecord>,
         )
 
         private fun app.readylytics.health.data.local.entity.SleepSessionEntity.toInput() =

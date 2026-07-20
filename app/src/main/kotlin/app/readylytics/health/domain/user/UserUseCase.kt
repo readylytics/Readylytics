@@ -3,8 +3,8 @@ package app.readylytics.health.domain.user
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.HeartRateFormulas
+import app.readylytics.health.workers.WorkerScheduler
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.Period
@@ -16,7 +16,7 @@ class UserUseCase
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
-        private val healthSyncUseCase: HealthSyncUseCase,
+        private val workerScheduler: WorkerScheduler,
         private val scoringRepository: ScoringRepository,
     ) : UserProfileActions {
         override suspend fun updateBirthday(date: LocalDate): Result<Unit> =
@@ -30,7 +30,10 @@ class UserUseCase
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(age)
                     settingsRepo.updateMaxHeartRate(maxHr)
-                    healthSyncUseCase.sync()
+                    // hrMax feeds every persisted historical day's TRIMP (historical-scope,
+                    // SCORE-007) -- a recent-window refresh would leave old days mixing hrMax
+                    // values in the same ATL/CTL EMA window as newly-recomputed days.
+                    workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
                 Result.success(Unit)
             } catch (e: Exception) {
@@ -43,7 +46,7 @@ class UserUseCase
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(prefs.age)
                     settingsRepo.updateMaxHeartRate(maxHr)
-                    healthSyncUseCase.sync()
+                    workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
                 Result.success(Unit)
             } catch (e: Exception) {

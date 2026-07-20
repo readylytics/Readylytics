@@ -37,7 +37,7 @@ object WorkoutMapper {
         }
 
     /**
-     * Pure HR-derived metrics for a session window: zone minutes, TRIMP, average HR, duration.
+     * Pure HR-derived metrics for a session window: zone minutes, zone TRIMP, average HR, duration.
      *
      * Shared by ingestion ([mapExerciseSession]) and the post-ingestion
      * [app.readylytics.health.domain.sync.link.SessionLinkReconciler], so a workout's
@@ -47,6 +47,8 @@ object WorkoutMapper {
     data class WorkoutMetrics(
         val durationMinutes: Int,
         val zoneMinutes: FloatArray,
+        // SCORE-001: zone-weighted ("zone TRIMP") only -- not the user-selected-model TRIMP that
+        // feeds ATL/CTL. See WorkoutRecordEntity.modelTrimp / WorkoutDao.getTrimpPoints.
         val trimp: Float,
         val avgHr: Float,
     )

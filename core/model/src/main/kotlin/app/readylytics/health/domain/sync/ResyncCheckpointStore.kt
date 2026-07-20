@@ -16,6 +16,7 @@ data class ResyncCheckpoint(
     val phase: ResyncPhase,
     val nextDate: LocalDate,
     val selectionHash: String,
+    /** Mandatory baseline tokens for ingesting full resyncs; deliberately empty for local recomputes. */
     val baselineChangeTokens: Map<app.readylytics.health.domain.model.HealthDataType, String> = emptyMap(),
 )
 

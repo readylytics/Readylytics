@@ -392,12 +392,15 @@ class HealthConnectRepositoryImplTest {
         }
 
     @Test
-    fun readWeightRecords_returnsEmptyOnGenericException() =
-        runBlocking {
-            fake.weightCount[t1] = 1
-            fake.errors[FakeOp.Weight] = IllegalStateException("io")
-            assertTrue(repo.readWeightRecords(t0, t7).isEmpty())
+    fun readWeightRecords_propagatesGenericException() {
+        fake.weightCount[t1] = 1
+        fake.errors[FakeOp.Weight] = IllegalStateException("io")
+        // HC-008: transient IO errors must propagate (for retryWithBackoff), not be
+        // indistinguishable from "user has no data".
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repo.readWeightRecords(t0, t7) }
         }
+    }
 
     // ---------- body fat (optional) ----------
 
@@ -423,12 +426,15 @@ class HealthConnectRepositoryImplTest {
         }
 
     @Test
-    fun readBodyFatRecords_returnsEmptyOnGenericException() =
-        runBlocking {
-            fake.bodyFatCount[t1] = 1
-            fake.errors[FakeOp.BodyFat] = IllegalStateException("io")
-            assertTrue(repo.readBodyFatRecords(t0, t7).isEmpty())
+    fun readBodyFatRecords_propagatesGenericException() {
+        fake.bodyFatCount[t1] = 1
+        fake.errors[FakeOp.BodyFat] = IllegalStateException("io")
+        // HC-008: transient IO errors must propagate (for retryWithBackoff), not be
+        // indistinguishable from "user has no data".
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repo.readBodyFatRecords(t0, t7) }
         }
+    }
 
     // ---------- blood pressure (optional) ----------
 
@@ -455,12 +461,15 @@ class HealthConnectRepositoryImplTest {
         }
 
     @Test
-    fun readBloodPressureRecords_returnsEmptyOnGenericException() =
-        runBlocking {
-            fake.bpCount[t1] = 1
-            fake.errors[FakeOp.BloodPressure] = IllegalStateException("io")
-            assertTrue(repo.readBloodPressureRecords(t0, t7).isEmpty())
+    fun readBloodPressureRecords_propagatesGenericException() {
+        fake.bpCount[t1] = 1
+        fake.errors[FakeOp.BloodPressure] = IllegalStateException("io")
+        // HC-008: transient IO errors must propagate (for retryWithBackoff), not be
+        // indistinguishable from "user has no data".
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repo.readBloodPressureRecords(t0, t7) }
         }
+    }
 
     // ---------- device discovery ----------
 

@@ -3,6 +3,8 @@ package app.readylytics.health.domain.sync
 import app.readylytics.health.domain.model.getOrThrow
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.SyncPreference
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -59,17 +61,7 @@ class ForegroundSyncController
                     app.readylytics.health.domain.util.logD(
                         "ForegroundSyncController",
                     ) { "Sync type: ALWAYS" }
-                    val startTimestamp =
-                        if (prefs.lastSyncTimestamp ==
-                            0L
-                        ) {
-                            prefs.installDate
-                        } else {
-                            prefs.lastSyncTimestamp
-                        }
-                    val isFirst = prefs.lastSyncTimestamp == 0L
-                    val windowDays = if (isFirst) null else computeWindowDays(startTimestamp)
-                    executeSync(isFirstSync = isFirst, windowDays = windowDays)
+                    runCappedCatchUpSync(prefs)
                 }
                 SyncPreference.BY_TIME -> {
                     val intervalMs = prefs.syncIntervalHours * 3_600_000L
@@ -78,23 +70,41 @@ class ForegroundSyncController
                         "Sync type: BY_TIME. Time since last: ${timeSinceLast / 1000}s, Interval: ${intervalMs / 1000}s"
                     }
                     if (timeSinceLast > intervalMs) {
-                        val startTimestamp =
-                            if (prefs.lastSyncTimestamp ==
-                                0L
-                            ) {
-                                prefs.installDate
-                            } else {
-                                prefs.lastSyncTimestamp
-                            }
-                        val isFirst = prefs.lastSyncTimestamp == 0L
-                        val windowDays = if (isFirst) null else computeWindowDays(startTimestamp)
-                        executeSync(isFirstSync = isFirst, windowDays = windowDays)
+                        runCappedCatchUpSync(prefs)
                     } else {
                         app.readylytics.health.domain.util.logD(
                             "ForegroundSyncController",
                         ) { "Sync skipped: interval not met" }
                     }
                 }
+            }
+        }
+
+        /**
+         * Runs the app-open catch-up sync, capped at [MAX_INLINE_RECOMPUTE_DAYS] (HC-007): a
+         * foreground, UI-blocking sync must never silently widen to an unbounded window just
+         * because the app was closed for a long time -- that recreates the "Pull-to-refresh = FULL
+         * catch-up" problem the two-flow contract forbids through the front door. When the real
+         * gap exceeds the cap, the capped inline sync still runs (so the user sees *something*
+         * immediately) and the durable resync worker is enqueued for the remainder.
+         */
+        private suspend fun runCappedCatchUpSync(prefs: UserPreferences) {
+            val isFirst = prefs.lastSyncTimestamp == 0L
+            if (isFirst) {
+                executeSync(isFirstSync = true, windowDays = null)
+                return
+            }
+            val startTimestamp = prefs.lastSyncTimestamp
+            val zoneId = prefs.scoringZone()
+            val uncappedWindowDays = computeWindowDays(startTimestamp, zoneId)
+            val windowDays = uncappedWindowDays.coerceAtMost(MAX_INLINE_RECOMPUTE_DAYS)
+            executeSync(isFirstSync = false, windowDays = windowDays)
+            if (uncappedWindowDays > MAX_INLINE_RECOMPUTE_DAYS) {
+                app.readylytics.health.domain.util.logD("ForegroundSyncController") {
+                    "Catch-up window ($uncappedWindowDays days) exceeds the inline cap " +
+                        "($MAX_INLINE_RECOMPUTE_DAYS); ran the capped window and enqueued the resync worker"
+                }
+                workerScheduler.get().scheduleResyncWorker()
             }
         }
 
@@ -140,15 +150,14 @@ class ForegroundSyncController
             if (success) _syncCompletedEvent.tryEmit(Unit)
         }
 
-        private fun computeWindowDays(lastSyncTimestamp: Long): Int {
-            val lastSyncDate =
-                Instant
-                    .ofEpochMilli(lastSyncTimestamp)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-            val today = LocalDate.now(ZoneId.systemDefault())
+        private fun computeWindowDays(
+            lastSyncTimestamp: Long,
+            zoneId: ZoneId,
+        ): Int {
+            val lastSyncDate = Instant.ofEpochMilli(lastSyncTimestamp).atZone(zoneId).toLocalDate()
+            val today = LocalDate.now(zoneId)
             val daysSince = ChronoUnit.DAYS.between(lastSyncDate, today).toInt()
-            return if (daysSince == 0) 1 else daysSince + 1
+            return (daysSince + 1).coerceAtLeast(1)
         }
 
         private suspend fun executeSync(
@@ -172,10 +181,12 @@ class ForegroundSyncController
                             "ForegroundSyncController",
                         ) { "Running catch-up sync..." }
                         syncUseCase.catchUpSync(onProgress)
-                    } else if (windowDays != null) {
-                        syncUseCase.sync(windowDays = windowDays, onProgress = onProgress)
                     } else {
-                        syncUseCase.sync(onProgress = onProgress)
+                        // Every non-first-sync call site (runCappedCatchUpSync, triggerDailySync)
+                        // always supplies windowDays -- HC-009's dead fallback branch removed.
+                        val requiredWindowDays =
+                            requireNotNull(windowDays) { "windowDays is required when isFirstSync is false" }
+                        syncUseCase.sync(windowDays = requiredWindowDays, onProgress = onProgress)
                     }
 
                 if (result is app.readylytics.health.domain.model.Result.Failure &&
