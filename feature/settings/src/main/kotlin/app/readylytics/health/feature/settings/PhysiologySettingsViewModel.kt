@@ -88,8 +88,6 @@ class PhysiologySettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             userUseCase.updateBirthday(event.date).getOrNull()
-                            // Birthday feeds auto-calculated hrMax (historical-scope, SCORE-007).
-                            healthDataRefresh.refreshHistorical()
                         }
                     }
                 }
