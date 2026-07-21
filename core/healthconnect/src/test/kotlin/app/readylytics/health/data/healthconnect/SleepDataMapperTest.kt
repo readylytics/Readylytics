@@ -3,6 +3,7 @@ package app.readylytics.health.data.healthconnect
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStage
 import app.readylytics.health.domain.model.DomainSleepStageType
+import app.readylytics.health.domain.sync.mappers.SleepDataMapper
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals

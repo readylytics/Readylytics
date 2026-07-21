@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.sync.link
 
-import app.readylytics.health.data.healthconnect.WorkoutMapper
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -10,6 +9,7 @@ import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.repository.TransactionRunner
 import io.mockk.coEvery
@@ -107,7 +107,7 @@ class SessionLinkReconcilerTest {
             val upsertSlot = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlot)) } returns Unit
 
-            reconciler.reconcile(0L, 20_000L, WorkoutMapper.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
 
             val updated = upsertSlot.captured.associateBy { it.id }
             assertEquals(RecordType.SLEEP.name, updated.getValue("hr1").recordType)
@@ -136,7 +136,7 @@ class SessionLinkReconcilerTest {
             val upsertSlot = slot<List<HrvRecordEntity>>()
             coEvery { hrvDao.upsertAll(capture(upsertSlot)) } returns Unit
 
-            reconciler.reconcile(0L, 20_000L, WorkoutMapper.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
 
             val updated = upsertSlot.captured.associateBy { it.id }
             assertEquals(RecordType.SLEEP.name, updated.getValue("hrv1").recordType)
@@ -163,9 +163,20 @@ class SessionLinkReconcilerTest {
             val workoutUpsertSlot = slot<List<WorkoutRecordEntity>>()
             coEvery { workoutDao.upsertAll(capture(workoutUpsertSlot)) } returns Unit
 
-            reconciler.reconcile(0L, 20_000L, WorkoutMapper.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
 
-            val expected = WorkoutMapper.computeMetrics(10_000L, 14_000L, listOf(hr3), WorkoutMapper.zoneThresholds())
+            val expected =
+                ZoneThresholds.computeMetrics(
+                    10_000L,
+                    14_000L,
+                    listOf(
+                        app.readylytics.health.domain.model.DomainHeartRateSample(
+                            java.time.Instant.ofEpochMilli(hr3.timestampMs),
+                            hr3.beatsPerMinute,
+                        ),
+                    ),
+                    ZoneThresholds.zoneThresholds(),
+                )
             val updated = workoutUpsertSlot.captured.single { it.id == "workout_1" }
             assertEquals(expected.trimp, updated.trimp)
             assertEquals(expected.durationMinutes, updated.durationMinutes)
@@ -203,7 +214,7 @@ class SessionLinkReconcilerTest {
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, "hr2", any()) } returns emptyList()
             val upsertSlotA = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotA)) } returns Unit
-            reconciler.reconcile(0L, 20_000L, WorkoutMapper.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
             val upsertedA = if (upsertSlotA.isCaptured) upsertSlotA.captured else emptyList()
             val resultA =
                 (listOf(hr1A, hr2A).associateBy { it.id } + upsertedA.associateBy { it.id })
@@ -214,7 +225,7 @@ class SessionLinkReconcilerTest {
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, "hr2", any()) } returns emptyList()
             val upsertSlotB = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotB)) } returns Unit
-            reconciler.reconcile(0L, 20_000L, WorkoutMapper.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
             val upsertedB = if (upsertSlotB.isCaptured) upsertSlotB.captured else emptyList()
             val resultB =
                 (listOf(hr1B, hr2B).associateBy { it.id } + upsertedB.associateBy { it.id })

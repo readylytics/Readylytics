@@ -6,13 +6,17 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -20,11 +24,13 @@ class HealthSyncUseCaseTest {
     private val dailySyncUseCase = mockk<DailySyncUseCase>(relaxed = true)
     private val resyncRangeUseCase = mockk<ResyncRangeUseCase>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
+    private val fixedClock = Clock.fixed(Instant.parse("2024-06-15T12:00:00Z"), ZoneId.of("UTC"))
 
     private val useCase = HealthSyncUseCase(
         dailySyncUseCase = dailySyncUseCase,
         resyncRangeUseCase = resyncRangeUseCase,
         settingsRepo = settingsRepo,
+        clock = fixedClock,
     )
 
     @Test
@@ -55,6 +61,33 @@ class HealthSyncUseCaseTest {
                 onProgress = any(),
             )
         }
+    }
+
+    @Test
+    fun catchUpSync_resolvesTodayFromTheInjectedClock_notTheRealSystemClock() = runTest {
+        val historicalClock = Clock.fixed(Instant.parse("2019-01-10T08:00:00Z"), ZoneId.of("UTC"))
+        val useCaseWithHistoricalClock = HealthSyncUseCase(
+            dailySyncUseCase = dailySyncUseCase,
+            resyncRangeUseCase = resyncRangeUseCase,
+            settingsRepo = settingsRepo,
+            clock = historicalClock,
+        )
+        val prefs = UserPreferences(lastSyncTimestamp = 0L, scoringZoneId = "UTC")
+        coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+        coEvery { resyncRangeUseCase.run(any(), any(), any(), any()) } returns Result.success(Unit)
+        val endDateSlot = slot<LocalDate>()
+
+        useCaseWithHistoricalClock.catchUpSync()
+
+        coVerify {
+            resyncRangeUseCase.run(
+                startDate = any(),
+                endDate = capture(endDateSlot),
+                chunkDays = 30,
+                onProgress = any(),
+            )
+        }
+        assertEquals(LocalDate.of(2019, 1, 10), endDateSlot.captured)
     }
 
     @Test

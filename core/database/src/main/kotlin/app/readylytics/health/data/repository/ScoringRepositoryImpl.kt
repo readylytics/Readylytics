@@ -41,7 +41,8 @@ import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
-import kotlinx.coroutines.Dispatchers
+import app.readylytics.health.di.DefaultDispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -74,6 +75,7 @@ class ScoringRepositoryImpl
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
         private val scoringHistoryRepository: ScoringHistoryRepository,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
@@ -110,7 +112,7 @@ class ScoringRepositoryImpl
             targetDate: LocalDate,
             prefs: app.readylytics.health.data.preferences.UserPreferences,
         ): DailySummary =
-            withContext(Dispatchers.Default) {
+            withContext(defaultDispatcher) {
                 val zoneId = prefs.scoringZone()
                 val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
                 val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()

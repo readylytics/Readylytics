@@ -4,6 +4,10 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.domain.sync.mappers.SleepDataMapper
+import app.readylytics.health.domain.sync.mappers.WorkoutMapper
+import app.readylytics.health.domain.sync.mappers.HeartRateMapper
+import app.readylytics.health.domain.sync.mappers.HrvMapper
 import app.readylytics.health.domain.util.logD
 import java.time.Instant
 import javax.inject.Inject
@@ -68,35 +72,15 @@ class HealthIngestionCoordinator
                 // changes-path deletion can resolve its own date range (HC-005).
                 val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
 
-                val sleepEntities =
-                    sleepSessions.map {
-                        app.readylytics.health.data.healthconnect.SleepDataMapper
-                            .mapSleepSession(it)
-                    }
+                val sleepInputs = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
 
                 logD("HealthIngestionCoordinator") {
-                    "Bulk HC fetch complete: sleep=${sleepEntities.size} exercise=${exerciseRecords.size} " +
+                    "Bulk HC fetch complete: sleep=${sleepInputs.size} exercise=${exerciseRecords.size} " +
                         "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} " +
                         "bp=${bloodPressureRecords.size} spo2=${spo2Records.size}"
                 }
 
-                val thresholds =
-                    app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
-                        prefs.zone1MinBpm,
-                        prefs.zone1MaxBpm,
-                        prefs.zone2MaxBpm,
-                        prefs.zone3MaxBpm,
-                        prefs.zone4MaxBpm,
-                    )
-
-                val workoutEntities =
-                    exerciseRecords.map {
-                        app.readylytics.health.data.healthconnect.WorkoutMapper.mapExerciseSession(
-                            it,
-                            emptyList(),
-                            thresholds,
-                        )
-                    }
+                val workoutInputs = exerciseRecords.map { WorkoutMapper.mapExerciseSession(it) }
 
                 val deviceByType = prefs.deviceByDataType
 
@@ -104,48 +88,73 @@ class HealthIngestionCoordinator
 
                 val filteredSleep =
                     DeviceSourceFilter.filterToDevice(
-                        sleepEntities,
+                        sleepInputs,
                         deviceFor(HealthDataType.SLEEP),
                     ) { it.deviceName }
                 val filteredWorkouts =
                     DeviceSourceFilter.filterToDevice(
-                        workoutEntities,
+                        workoutInputs,
                         deviceFor(HealthDataType.EXERCISE),
                     ) { it.deviceName }
 
-                val weightEntities =
-                    app.readylytics.health.data.mapper.WeightDataMapper
-                        .toEntities(weightRecords)
+                val weightInputs =
+                    weightRecords.map { record ->
+                        WeightInput(
+                            id = "${record.id}_${record.time.toEpochMilli()}",
+                            timestampMs = record.time.toEpochMilli(),
+                            weightKg = record.weightKg,
+                            deviceName = record.deviceName,
+                        )
+                    }
                 val filteredWeight =
                     DeviceSourceFilter.filterToDevice(
-                        weightEntities,
+                        weightInputs,
                         deviceFor(HealthDataType.WEIGHT),
                     ) { it.deviceName }
 
-                val bodyFatEntities =
-                    app.readylytics.health.data.mapper.BodyFatDataMapper
-                        .toEntities(bodyFatRecords)
+                val bodyFatInputs =
+                    bodyFatRecords.map { record ->
+                        BodyFatInput(
+                            id = "${record.id}_${record.time.toEpochMilli()}",
+                            timestampMs = record.time.toEpochMilli(),
+                            bodyFatPercent = record.percentage,
+                            deviceName = record.deviceName,
+                        )
+                    }
                 val filteredBodyFat =
                     DeviceSourceFilter.filterToDevice(
-                        bodyFatEntities,
+                        bodyFatInputs,
                         deviceFor(HealthDataType.BODY_FAT),
                     ) { it.deviceName }
 
-                val bloodPressureEntities =
-                    app.readylytics.health.data.mapper.BloodPressureDataMapper
-                        .toEntities(bloodPressureRecords)
+                val bloodPressureInputs =
+                    bloodPressureRecords.map { record ->
+                        BloodPressureInput(
+                            id = "${record.id}_${record.time.toEpochMilli()}",
+                            timestampMs = record.time.toEpochMilli(),
+                            systolicMmHg = record.systolicMmHg,
+                            diastolicMmHg = record.diastolicMmHg,
+                            deviceName = record.deviceName,
+                        )
+                    }
                 val filteredBloodPressure =
                     DeviceSourceFilter.filterToDevice(
-                        bloodPressureEntities,
+                        bloodPressureInputs,
                         deviceFor(HealthDataType.BLOOD_PRESSURE),
                     ) { it.deviceName }
 
-                val spo2Entities =
-                    app.readylytics.health.data.mapper.OxygenSaturationDataMapper
-                        .toEntities(spo2Records)
+                val spo2Inputs =
+                    spo2Records.map { record ->
+                        OxygenSaturationInput(
+                            id = "${record.id}_${record.time.toEpochMilli()}",
+                            timestampMs = record.time.toEpochMilli(),
+                            percentage = record.percentage,
+                            deviceName = record.deviceName,
+                        )
+                    }
                 val filteredSpo2 =
                     DeviceSourceFilter.filterToDevice(
-                        spo2Entities,
+                        spo2Inputs,
                         deviceFor(HealthDataType.OXYGEN_SATURATION),
                     ) { it.deviceName }
 
@@ -163,8 +172,7 @@ class HealthIngestionCoordinator
                 val allStages =
                     sleepSessions
                         .flatMap {
-                            app.readylytics.health.data.healthconnect.SleepDataMapper
-                                .mapSleepSessionStages(it)
+                            SleepDataMapper.mapSleepSessionStages(it)
                         }.filter { it.sessionId in filteredSleepIds }
 
                 // Unlike the other record types, step_records isn't device-filtered: it's never read
@@ -187,15 +195,15 @@ class HealthIngestionCoordinator
                 // heart-rate/HRV batch transactions.
                 healthIngestionStore.persist(
                     HealthIngestionBatch(
-                        sleepSessions = filteredSleep.map { it.toInput() },
-                        sleepStages = allStages.map { it.toInput() },
+                        sleepSessions = filteredSleep,
+                        sleepStages = allStages,
                         heartRateSamples = emptyList(),
                         hrvSamples = emptyList(),
-                        workouts = filteredWorkouts.map { it.toInput() },
-                        weights = filteredWeight.map { it.toInput() },
-                        bodyFatSamples = filteredBodyFat.map { it.toInput() },
-                        bloodPressureSamples = filteredBloodPressure.map { it.toInput() },
-                        oxygenSaturationSamples = filteredSpo2.map { it.toInput() },
+                        workouts = filteredWorkouts,
+                        weights = filteredWeight,
+                        bodyFatSamples = filteredBodyFat,
+                        bloodPressureSamples = filteredBloodPressure,
+                        oxygenSaturationSamples = filteredSpo2,
                         stepRecords = stepRecordInputs,
                     ),
                 )
@@ -205,14 +213,14 @@ class HealthIngestionCoordinator
                 retryWithBackoff {
                     hrSampleCount = 0
                     hcRepo.readHeartRateSamplesPaged(windowStart, windowEnd) { page ->
-                        val hrEntities =
-                            app.readylytics.health.data.healthconnect.HeartRateMapper.mapToEntities(
+                        val hrInputs =
+                            HeartRateMapper.mapToInputs(
                                 page,
-                                sleepEntities,
-                                workoutEntities,
+                                sleepInputs,
+                                workoutInputs,
                             )
-                        val filteredHr = DeviceSourceFilter.filterToDevice(hrEntities, hrDevice) { it.deviceName }
-                        healthIngestionStore.persistHeartRateSamples(filteredHr.map { it.toInput() })
+                        val filteredHr = DeviceSourceFilter.filterToDevice(hrInputs, hrDevice) { it.deviceName }
+                        healthIngestionStore.persistHeartRateSamples(filteredHr)
                         hrSampleCount += filteredHr.size
                     }
                 }
@@ -222,13 +230,13 @@ class HealthIngestionCoordinator
                 retryWithBackoff {
                     hrvSampleCount = 0
                     hcRepo.readHrvSamplesPaged(windowStart, windowEnd) { page ->
-                        val hrvEntities =
-                            app.readylytics.health.data.healthconnect.HrvMapper.mapToEntities(
+                        val hrvInputs =
+                            HrvMapper.mapToInputs(
                                 page,
-                                sleepEntities,
+                                sleepInputs,
                             )
-                        val filteredHrv = DeviceSourceFilter.filterToDevice(hrvEntities, hrvDevice) { it.deviceName }
-                        healthIngestionStore.persistHrvSamples(filteredHrv.map { it.toInput() })
+                        val filteredHrv = DeviceSourceFilter.filterToDevice(hrvInputs, hrvDevice) { it.deviceName }
+                        healthIngestionStore.persistHrvSamples(filteredHrv)
                         hrvSampleCount += filteredHrv.size
                     }
                 }
@@ -238,100 +246,4 @@ class HealthIngestionCoordinator
                 }
             }
         }
-
-        private fun app.readylytics.health.data.local.entity.SleepSessionEntity.toInput() =
-            SleepSessionInput(
-                id = id,
-                startTime = startTime,
-                endTime = endTime,
-                durationMinutes = durationMinutes,
-                efficiency = efficiency,
-                deepSleepMinutes = deepSleepMinutes,
-                remSleepMinutes = remSleepMinutes,
-                lightSleepMinutes = lightSleepMinutes,
-                awakeMinutes = awakeMinutes,
-                sleepScore = sleepScore,
-                startZoneOffsetSeconds = startZoneOffsetSeconds,
-                endZoneOffsetSeconds = endZoneOffsetSeconds,
-                deviceName = deviceName,
-            )
-
-        private fun app.readylytics.health.data.local.entity.SleepStageEntity.toInput() =
-            SleepStageInput(
-                sessionId = sessionId,
-                stageType = stageType,
-                startTime = startTime,
-                endTime = endTime,
-                durationMinutes = durationMinutes,
-            )
-
-        private fun app.readylytics.health.data.local.entity.HeartRateRecordEntity.toInput() =
-            HeartRateInput(
-                id = id,
-                timestampMs = timestampMs,
-                beatsPerMinute = beatsPerMinute,
-                recordType = recordType,
-                sessionId = sessionId,
-                deviceName = deviceName,
-            )
-
-        private fun app.readylytics.health.data.local.entity.HrvRecordEntity.toInput() =
-            HrvInput(
-                id = id,
-                timestampMs = timestampMs,
-                rmssdMs = rmssdMs,
-                recordType = recordType,
-                sessionId = sessionId,
-                deviceName = deviceName,
-            )
-
-        private fun app.readylytics.health.data.local.entity.WorkoutRecordEntity.toInput() =
-            WorkoutInput(
-                id = id,
-                startTime = startTime,
-                endTime = endTime,
-                exerciseType = exerciseType,
-                durationMinutes = durationMinutes,
-                zone1Minutes = zone1Minutes,
-                zone2Minutes = zone2Minutes,
-                zone3Minutes = zone3Minutes,
-                zone4Minutes = zone4Minutes,
-                zone5Minutes = zone5Minutes,
-                trimp = trimp,
-                avgHr = avgHr,
-                deviceName = deviceName,
-            )
-
-        private fun app.readylytics.health.data.local.entity.WeightRecordEntity.toInput() =
-            WeightInput(
-                id = id,
-                timestampMs = timestampMs,
-                weightKg = weightKg,
-                deviceName = deviceName,
-            )
-
-        private fun app.readylytics.health.data.local.entity.BodyFatRecordEntity.toInput() =
-            BodyFatInput(
-                id = id,
-                timestampMs = timestampMs,
-                bodyFatPercent = bodyFatPercent,
-                deviceName = deviceName,
-            )
-
-        private fun app.readylytics.health.data.local.entity.BloodPressureRecordEntity.toInput() =
-            BloodPressureInput(
-                id = id,
-                timestampMs = timestampMs,
-                systolicMmHg = systolicMmHg,
-                diastolicMmHg = diastolicMmHg,
-                deviceName = deviceName,
-            )
-
-        private fun app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity.toInput() =
-            OxygenSaturationInput(
-                id = id,
-                timestampMs = timestampMs,
-                percentage = percentage,
-                deviceName = deviceName,
-            )
     }

@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -223,6 +224,10 @@ class FirstSetupDummyIngestionFlowTest {
             stepCountFetcher = StepCountFetcher(hcRepo),
             recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
             ioDispatcher = Dispatchers.Unconfined,
+            // The fixture data below is keyed to fixed epoch millis (2026-06-28/29), independent
+            // of the sync window boundaries, so a fixed clock in that era is used for determinism
+            // without needing to assert on it directly (DI-002).
+            clock = Clock.fixed(Instant.parse("2026-06-29T12:00:00Z"), ZoneId.of("UTC")),
         )
     }
 

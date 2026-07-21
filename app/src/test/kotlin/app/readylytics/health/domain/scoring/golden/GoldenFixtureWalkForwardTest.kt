@@ -3,7 +3,6 @@ package app.readylytics.health.domain.scoring.golden
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.data.healthconnect.WorkoutMapper
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
@@ -11,6 +10,7 @@ import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
@@ -23,6 +23,7 @@ import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -113,7 +114,7 @@ class GoldenFixtureWalkForwardTest {
             val buildResult = GoldenFixtureDataBuilder(zoneId).build(db, startDate, endDate)
 
             val zoneThresholds =
-                WorkoutMapper.zoneThresholds(
+                ZoneThresholds.zoneThresholds(
                     prefs.zone1MinBpm,
                     prefs.zone1MaxBpm,
                     prefs.zone2MaxBpm,
@@ -186,6 +187,7 @@ class GoldenFixtureWalkForwardTest {
                     oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
                     sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
                     scoringHistoryRepository = scoringHistoryRepository,
+                    defaultDispatcher = UnconfinedTestDispatcher(),
                 )
             // WP-11/HC-006 fix: this fixture's stage-less-night scenario (`stageLessNightDate`)
             // seeds a SleepSessionEntity with durationMinutes = 0 directly (mirroring a session

@@ -2,11 +2,12 @@ package app.readylytics.health.data.logcat
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.logcat.LogcatCaptureStore
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -19,11 +20,12 @@ class LogcatCaptureStoreImpl
     constructor(
         @ApplicationContext private val context: Context,
         @ReleaseLogSink private val logSink: SecureFileLogSink,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : LogcatCaptureStore {
         internal var debugLogReader: suspend (Int) -> String? = ::readFromLogcat
 
         override suspend fun capture(durationMinutes: Int): String? =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     val logs =
                         if (isDebugBuild()) {
