@@ -30,7 +30,7 @@ class WorkoutMapperTest {
         assertEquals(endTime.toEpochMilli(), result.endTime)
         assertEquals("RUNNING", result.exerciseType)
         assertEquals("Watch", result.deviceName)
-        // All metrics initialized to 0 during ingestion
+        // durationMinutes is derived at ingestion time; zone/TRIMP/avgHr wait for the reconcile pass
         assertEquals(60, result.durationMinutes)
         assertEquals(0f, result.trimp)
         assertEquals(0f, result.avgHr)
