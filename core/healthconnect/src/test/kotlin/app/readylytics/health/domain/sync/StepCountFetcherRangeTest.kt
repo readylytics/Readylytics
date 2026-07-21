@@ -2,9 +2,7 @@ package app.readylytics.health.domain.sync
 
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import io.mockk.coEvery
-import io.mockk.firstArg
 import io.mockk.mockk
-import io.mockk.secondArg
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.Instant
