@@ -77,6 +77,7 @@ class DashboardViewModelTest {
                 heartRateRepository = heartRateRepository,
                 insightDismissalRepository = insightDismissalRepository,
                 clock = java.time.Clock.systemDefaultZone(),
+                defaultDispatcher = testDispatcher,
             )
     }
 

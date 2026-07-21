@@ -193,6 +193,7 @@ class ScoringWalkForwardBenchmark {
                 oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
                 sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
                 scoringHistoryRepository = scoringHistoryRepository,
+                defaultDispatcher = kotlinx.coroutines.Dispatchers.Default,
             )
 
         benchmarkRule.measureRepeated {

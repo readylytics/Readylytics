@@ -13,6 +13,7 @@ import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -61,6 +62,7 @@ class ScoringRepositoryImplTest {
                 oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
+                UnconfinedTestDispatcher(),
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null

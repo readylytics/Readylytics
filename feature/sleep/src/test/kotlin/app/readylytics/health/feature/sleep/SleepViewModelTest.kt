@@ -106,6 +106,7 @@ class SleepViewModelTest {
             foregroundSyncController = foregroundSyncController,
             savedStateHandle = savedStateHandle,
             ioDispatcher = testDispatcher,
+            defaultDispatcher = testDispatcher,
         )
 
     @Test

@@ -20,6 +20,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -79,6 +80,7 @@ class ScoringDeterminismRegressionTest {
                 oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
+                UnconfinedTestDispatcher(),
             )
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
     }

@@ -32,6 +32,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -182,6 +183,7 @@ class ScoringRepositoryN1Test {
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 scoringHistoryRepository = scoringHistoryRepository,
+                defaultDispatcher = UnconfinedTestDispatcher(),
             )
     }
 
