@@ -325,6 +325,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 settingsRepo = settingsRepo,
                 scoringCalculator = scoringCalculator,
                 baselineComputer = baselineComputer,
+                buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
+                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),

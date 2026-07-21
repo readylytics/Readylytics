@@ -12,9 +12,12 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -229,6 +232,46 @@ class HeartRateDetailViewModelTest {
             val zone = state.zoneTotals.values.first()
             assertEquals(60_000L, zone.durationMs)
             assertEquals("100%", zone.formattedPercent)
+        }
+
+    @Test
+    fun `rapid successive invalidations collapse into a single re-render via debounce`() =
+        runTest {
+            // PERF-005/WP-23: simulates a resync's 5,000-row ingest batches invalidating
+            // observeByTimeRange in quick succession -- the debounce(500) added to the view model
+            // must collapse them into one downstream re-render instead of one per batch.
+            val burst = MutableSharedFlow<List<HeartRateRecordData>>(replay = 1)
+            burst.tryEmit(emptyList())
+            every { heartRateRepository.observeByTimeRange(any(), any()) } returns burst
+
+            viewModel = createViewModel()
+
+            val collected = mutableListOf<HeartRateDetailUiState>()
+            val job = launch { viewModel.uiState.collect { collected += it } }
+            advanceTimeBy(600)
+            val countAfterInitialSettle = collected.size
+
+            repeat(5) { i ->
+                burst.emit(
+                    listOf(
+                        HeartRateRecordData(
+                            id = "batch$i",
+                            timestampMs = i * 1_000L,
+                            beatsPerMinute = 100,
+                            recordType = "instant",
+                        ),
+                    ),
+                )
+                advanceTimeBy(100) // well within the 500ms debounce window
+            }
+            advanceTimeBy(600) // let the debounce window elapse with no further emissions
+            advanceUntilIdle()
+            job.cancel()
+
+            assertEquals(countAfterInitialSettle + 1, collected.size)
+            assertEquals(1, collected.last().samples.size)
+            // The collapsed emission reflects the last (5th) batch, not an intermediate one.
+            assertEquals(4_000L, collected.last().samples.single().timeMs)
         }
 
     @Test

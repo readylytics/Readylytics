@@ -55,6 +55,8 @@ class ScoringPointInTimeRegressionTest {
                 settingsRepo,
                 scoringCalculator,
                 baselineComputer,
+                BuildLoadSeriesUseCase(scoringCalculator),
+                AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,

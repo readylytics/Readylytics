@@ -403,6 +403,22 @@ class ResyncRangeUseCase
                         } else {
                             emptyMap()
                         }
+                    // PERF-002/WP-20/WP-22: fetch the workout-only/everyday-HR TRIMP series and the
+                    // RHR/HRV baseline sleep-session window once for the whole walk-forward instead
+                    // of every recomputed day independently re-querying its own lookback -- same
+                    // batched-once shape as stepsMap above.
+                    val trimpContext =
+                        if (!recomputeStartDate.isAfter(endDate)) {
+                            recomputeSupport.buildWalkForwardTrimpContext(recomputeStartDate, endDate, zoneId)
+                        } else {
+                            null
+                        }
+                    val baselineContext =
+                        if (!recomputeStartDate.isAfter(endDate)) {
+                            recomputeSupport.buildWalkForwardBaselineContext(recomputeStartDate, endDate, zoneId)
+                        } else {
+                            null
+                        }
                     if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
                         healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
                     }
@@ -412,22 +428,34 @@ class ResyncRangeUseCase
                     while (!day.isAfter(endDate)) {
                         ensureActive()
                         val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
-                        val dayResult = recomputeSupport.recomputeDay(day, stepsForDay, prefs)
+                        val dayResult =
+                            if (trimpContext != null && baselineContext != null) {
+                                recomputeSupport.recomputeDay(day, stepsForDay, prefs, trimpContext, baselineContext)
+                            } else {
+                                recomputeSupport.recomputeDay(day, stepsForDay, prefs)
+                            }
                         if (dayResult is Result.Failure) {
                             logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
                             return@withContext dayResult
                         }
                         recomputedDays++
-                        checkpointStore.save(
-                            ResyncCheckpoint(
-                                startDate = startDate,
-                                endDate = endDate,
-                                phase = ResyncPhase.RECOMPUTE,
-                                nextDate = day.plusDays(1),
-                                selectionHash = selectionHash,
-                                baselineChangeTokens = baselineChangeTokens,
-                            ),
-                        )
+                        // PERF-002/WP-20: checkpoint every RECOMPUTE_CHECKPOINT_INTERVAL_DAYS days
+                        // (or on the final day, so completion is always durably recorded) instead of
+                        // every single day -- a kill-and-resume redoes at most one interval's worth
+                        // of already-idempotent recompute work instead of losing zero.
+                        val isLastDay = day == endDate
+                        if (recomputedDays % RECOMPUTE_CHECKPOINT_INTERVAL_DAYS == 0 || isLastDay) {
+                            checkpointStore.save(
+                                ResyncCheckpoint(
+                                    startDate = startDate,
+                                    endDate = endDate,
+                                    phase = ResyncPhase.RECOMPUTE,
+                                    nextDate = day.plusDays(1),
+                                    selectionHash = selectionHash,
+                                    baselineChangeTokens = baselineChangeTokens,
+                                ),
+                            )
+                        }
                         onProgress?.invoke(ResyncPhase.RECOMPUTE, recomputedDays, totalDays)
                         day = day.plusDays(1)
                         yield()
@@ -476,6 +504,10 @@ class ResyncRangeUseCase
         companion object {
             private const val TELEMETRY_TAG = "ResyncTelemetry"
             private const val MIN_CHUNK_DAYS = 1
+
+            // PERF-002/WP-20: RECOMPUTE-phase checkpoint granularity. Recompute is idempotent, so
+            // resuming from up to this many days back after a kill only redoes already-correct work.
+            private const val RECOMPUTE_CHECKPOINT_INTERVAL_DAYS = 30
         }
     }
 

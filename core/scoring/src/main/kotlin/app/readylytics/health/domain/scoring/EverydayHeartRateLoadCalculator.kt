@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
+import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
 import kotlin.math.roundToInt
 
 
@@ -15,7 +15,7 @@ data class LongInterval(
 data class EverydayHrLoadInput(
     val dayStartMs: Long,
     val dayEndMs: Long,
-    val hrSamples: List<HeartRateSample>,
+    val hrBuckets: List<HrMinuteBucketRow>,
     val sleepIntervalsMs: List<LongInterval>,
     val workoutIntervalsMs: List<LongInterval>,
     val workoutOnlyTrimp: Float,
@@ -34,15 +34,15 @@ data class EverydayHrLoadResult(
 )
 
 /**
- * Derives an "everyday heart-rate load" TRIMP value from a day's raw HR samples, excluding
- * sleep/workout windows and bucketing the remaining waking samples into 1-minute windows.
+ * Derives an "everyday heart-rate load" TRIMP value from a day's already-bucketed, already
+ * plausibility-filtered 1-minute HR averages (PERF-006/WP-21: `HeartRateDao.getMinuteBuckets`
+ * performs both the 30-230 bpm plausibility filter and the per-minute averaging in SQL), excluding
+ * any bucket overlapping a sleep or workout window.
  *
  * Pure Kotlin, zero Android dependencies, deterministic (no wall-clock/random usage).
  */
 object EverydayHeartRateLoadCalculator {
     private const val BUCKET_MS = 60_000L
-    private const val MIN_PLAUSIBLE_BPM = 30
-    private const val MAX_PLAUSIBLE_BPM = 230
     private const val LOW_CONFIDENCE_MAX_MINUTES = 179
     private const val MEDIUM_CONFIDENCE_MAX_MINUTES = 479
     private const val VALID_MIN_COVERAGE_MINUTES = 180
@@ -50,25 +50,15 @@ object EverydayHeartRateLoadCalculator {
     fun calculate(input: EverydayHrLoadInput): EverydayHrLoadResult {
         val totalBuckets = ((input.dayEndMs - input.dayStartMs) / BUCKET_MS).toInt()
 
-        // 1. Filter implausible samples, then bucket into 1-minute windows.
-        val bucketSums = mutableMapOf<Int, Float>()
-        val bucketCounts = mutableMapOf<Int, Int>()
-        for (sample in input.hrSamples) {
-            if (sample.bpm < MIN_PLAUSIBLE_BPM || sample.bpm > MAX_PLAUSIBLE_BPM) continue
-            val diff = sample.timestamp.toEpochMilli() - input.dayStartMs
-            if (diff < 0) continue
-            val bucketIndex = (diff / BUCKET_MS).toInt()
-            if (bucketIndex >= totalBuckets) continue
-            bucketSums[bucketIndex] = (bucketSums[bucketIndex] ?: 0f) + sample.bpm
-            bucketCounts[bucketIndex] = (bucketCounts[bucketIndex] ?: 0) + 1
-        }
-
         var nonWorkoutTrimp = 0f
         var validBucketCount = 0
         var coverageMinutes = 0
 
-        for (bucketIndex in bucketSums.keys.sorted()) {
-            val bucketStartMs = input.dayStartMs + bucketIndex * BUCKET_MS
+        for (bucket in input.hrBuckets) {
+            if (bucket.sampleCount <= 0) continue
+            if (bucket.bucketIndex < 0 || bucket.bucketIndex >= totalBuckets) continue
+
+            val bucketStartMs = input.dayStartMs + bucket.bucketIndex * BUCKET_MS
             val bucketEndMs = bucketStartMs + BUCKET_MS
 
             val isExcluded =
@@ -76,12 +66,9 @@ object EverydayHeartRateLoadCalculator {
                     input.workoutIntervalsMs.any { overlaps(bucketStartMs, bucketEndMs, it) }
             if (isExcluded) continue
 
-            val count = bucketCounts[bucketIndex] ?: continue
-            if (count <= 0) continue
-
             coverageMinutes++
 
-            val avgBpm = bucketSums.getValue(bucketIndex) / count
+            val avgBpm = bucket.avgBpm.toFloat()
             val zone = HrZoneClassifier.classify(avgBpm.roundToInt(), input.prefs)
             if (zone == 0) continue
 

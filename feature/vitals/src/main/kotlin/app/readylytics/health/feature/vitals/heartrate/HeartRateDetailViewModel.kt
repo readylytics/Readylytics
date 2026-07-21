@@ -15,6 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -51,7 +52,10 @@ class HeartRateDetailViewModel
                             .toInstant()
                             .toEpochMilli()
 
-                    heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
+                    // PERF-005/WP-23: a resync's 5,000-row ingest batches invalidate this Flow
+                    // repeatedly; debounce collapses a burst of invalidations into one re-render
+                    // instead of re-mapping/re-classifying the full day's samples per batch.
+                    heartRateRepository.observeByTimeRange(startMs, endMs).debounce(500).map { entities ->
                         if (entities.isEmpty()) {
                             return@map HeartRateDetailUiState(
                                 selectedDate = date,

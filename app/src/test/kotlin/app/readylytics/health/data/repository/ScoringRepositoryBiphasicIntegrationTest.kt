@@ -14,7 +14,9 @@ import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
+import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.ScoringCalculator
@@ -59,6 +61,8 @@ class ScoringRepositoryBiphasicIntegrationTest {
             settingsRepo,
             scoringCalculator,
             baselineComputer,
+            BuildLoadSeriesUseCase(scoringCalculator),
+            AssembleEverydayLoadInputUseCase(),
             computeSleepMetricsUseCase,
             scoringConfigFactory,
             computeWorkoutTrimpUseCase,

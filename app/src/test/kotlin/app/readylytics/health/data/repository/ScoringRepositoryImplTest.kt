@@ -52,6 +52,8 @@ class ScoringRepositoryImplTest {
                 settingsRepo,
                 scoringCalculator,
                 baselineComputer,
+                BuildLoadSeriesUseCase(scoringCalculator),
+                AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,

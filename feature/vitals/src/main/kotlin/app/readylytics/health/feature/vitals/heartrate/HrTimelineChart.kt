@@ -535,29 +535,3 @@ private fun DrawScope.drawZoneBand(
 }
 
 // HrChartHelper handles splitIntoSegments now
-
-@Composable
-fun HrSparkline(
-    hourlySamples: List<Pair<Int, Int>>,
-    modifier: Modifier = Modifier,
-) {
-    if (hourlySamples.isEmpty()) return
-    val lineColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-    val minBpm = hourlySamples.minOf { it.second }
-    val maxBpm = hourlySamples.maxOf { it.second }
-    val range = (maxBpm - minBpm).coerceAtLeast(10)
-
-    Canvas(modifier = modifier.padding(vertical = MaterialTheme.spacing.hairline)) {
-        val path = Path()
-        hourlySamples.forEachIndexed { i, (hour, bpm) ->
-            val x = hour / 23f * size.width
-            val y = (1f - (bpm - minBpm).toFloat() / range.toFloat()) * size.height
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-    }
-}

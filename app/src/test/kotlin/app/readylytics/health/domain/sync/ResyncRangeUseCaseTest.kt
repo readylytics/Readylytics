@@ -6,6 +6,8 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -24,6 +26,7 @@ import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.TreeMap
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 
@@ -49,6 +52,13 @@ class ResyncRangeUseCaseTest {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         every { checkpointStore.checkpoint } returns flowOf(null)
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
+        // PERF-002/WP-20/WP-22: every non-empty RECOMPUTE range now fetches batched TRIMP-series and
+        // baseline contexts once up front via these methods before calling the 5-arg
+        // computeAndPersistDailySummary overload.
+        coEvery { scoringRepository.fetchWalkForwardTrimpContext(any(), any(), any()) } returns
+            WalkForwardTrimpContext(TreeMap(), TreeMap())
+        coEvery { scoringRepository.fetchWalkForwardBaselineContext(any(), any(), any()) } returns
+            WalkForwardBaselineContext(emptyList())
 
         useCase =
             ResyncRangeUseCase(
@@ -265,7 +275,7 @@ class ResyncRangeUseCaseTest {
                 onProgress = null,
             )
 
-            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any()) }
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L, any(), any(), any()) }
         }
 
     @Test
@@ -343,9 +353,9 @@ class ResyncRangeUseCaseTest {
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any())
-                scoringRepository.computeAndPersistDailySummary(endDate, any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any(), any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any(), any(), any(), any())
             }
         }
 
@@ -372,7 +382,7 @@ class ResyncRangeUseCaseTest {
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
-            coVerify(exactly = 2) { scoringRepository.computeAndPersistDailySummary(any(), any(), any()) }
+            coVerify(exactly = 2) { scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any()) }
         }
 
     @Test
@@ -389,7 +399,7 @@ class ResyncRangeUseCaseTest {
             }
             val capturedPrefs = mutableListOf<UserPreferences>()
             coEvery {
-                scoringRepository.computeAndPersistDailySummary(any(), any(), capture(capturedPrefs))
+                scoringRepository.computeAndPersistDailySummary(any(), any(), capture(capturedPrefs), any(), any())
             } returns Unit
 
             useCase.run(
@@ -414,7 +424,7 @@ class ResyncRangeUseCaseTest {
             coVerifyOrder {
                 selectedSourcePruner.prune(startDate, endDate, any(), any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
-                scoringRepository.computeAndPersistDailySummary(startDate, any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any(), any(), any(), any())
             }
         }
 

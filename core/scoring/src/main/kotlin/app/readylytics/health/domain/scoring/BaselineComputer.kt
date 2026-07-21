@@ -3,20 +3,17 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.domain.model.DailySummaryEntity
 import app.readylytics.health.domain.model.SleepSessionEntity
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.mean
 import app.readylytics.health.domain.util.median
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
-import app.readylytics.health.domain.scoring.sleep.SleepDayAggregator
-import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
-import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 
 /**
  * Computes physiological rolling-window baselines used by the scoring pipeline.
@@ -40,6 +37,10 @@ class BaselineComputer
         companion object {
             private const val TAG = "BaselineComputer"
         }
+
+        // UI-002/WP-22: the sleep-session -> HistoricalSleepDay aggregation machinery shared by
+        // every windowed and live baseline method below lives in this extracted assembler.
+        private val sleepDayAssembler = HistoricalSleepDayAssembler(scoringHistoryRepository, scoringCalculator)
 
         suspend fun rhrHistory(
             dayMidnight: Instant,
@@ -81,7 +82,7 @@ class BaselineComputer
                     baselineFromMs.coerceAtLeast(0),
                     inclusiveToMs,
                 )
-            return buildHistoricalSleepDays(
+            return sleepDayAssembler.buildHistoricalSleepDays(
                 sessions = sessions,
                 percentile = percentile,
                 sleepDayPolicy = sleepDayPolicy,
@@ -113,12 +114,17 @@ class BaselineComputer
 
         /**
          * Computes RHR baseline bounded to [fromMs, toMs] (for backfill: no look-ahead).
+         *
+         * PERF-002/WP-22: pass [prefetchedSessions] (ascending by `startTime`, covering at least
+         * `[fromMs - BASELINE_DAYS, toMs)`) to slice in memory instead of re-querying the DB --
+         * see [WalkForwardBaselineContext]. Omit it (the default) for the single-day/live path.
          */
         suspend fun computeAdaptiveBaselineRhrBpmBetween(
             fromMs: Long,
             toMs: Long,
             percentile: Int,
             sleepDayPolicy: SleepDayPolicy? = null,
+            prefetchedSessions: List<SleepSessionEntity>? = null,
         ): Float? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(fromMs)
@@ -133,12 +139,9 @@ class BaselineComputer
                     ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
             val sessions =
-                scoringHistoryRepository.getSleepSessionsBetween(
-                    baselineFromMs.coerceAtLeast(0),
-                    inclusiveToMs,
-                )
+                sessionsBetween(prefetchedSessions, baselineFromMs.coerceAtLeast(0), inclusiveToMs)
             val historicalSleepDays =
-                buildHistoricalSleepDays(
+                sleepDayAssembler.buildHistoricalSleepDays(
                     sessions = sessions,
                     percentile = percentile,
                     sleepDayPolicy = sleepDayPolicy,
@@ -191,7 +194,7 @@ class BaselineComputer
                     .toEpochMilli()
             val sessions = scoringHistoryRepository.getSleepSessionsSince(baselineFromMs)
             val historicalSleepDays =
-                buildHistoricalSleepDays(
+                sleepDayAssembler.buildHistoricalSleepDays(
                     sessions = sessions,
                     percentile = percentile,
                     sleepDayPolicy = sleepDayPolicy,
@@ -223,7 +226,7 @@ class BaselineComputer
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
             val historicalSessions = scoringHistoryRepository.getSleepSessionsSince(baselineFromMs)
-            val validIds = filterValidBaselineSessions(historicalSessions)
+            val validIds = sleepDayAssembler.filterValidBaselineSessions(historicalSessions)
             if (validIds.isEmpty()) return null
             val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(validIds)
             val nightlyAverages =
@@ -241,12 +244,17 @@ class BaselineComputer
 
         /**
          * Computes the 30-day HRV baseline (median of nightly RMSSD averages) point-in-time correctly.
+         *
+         * PERF-002/WP-22: pass [prefetchedSessions] (ascending by `startTime`, covering at least
+         * `[fromMs - BASELINE_DAYS, toMs)`) to slice in memory instead of re-querying the DB --
+         * see [WalkForwardBaselineContext]. Omit it (the default) for the single-day/live path.
          */
         suspend fun computeHrvBaselineBetween(
             fromMs: Long,
             toMs: Long,
             hrvBaselineOverride: Float?,
             sleepDayPolicy: SleepDayPolicy? = null,
+            prefetchedSessions: List<SleepSessionEntity>? = null,
         ): Int? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             if (hrvBaselineOverride != null) return hrvBaselineOverride.roundToInt()
@@ -261,13 +269,9 @@ class BaselineComputer
                     ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
             val historicalSessions =
-                scoringHistoryRepository
-                    .getSleepSessionsBetween(
-                        baselineFromMs.coerceAtLeast(0),
-                        inclusiveToMs,
-                    )
+                sessionsBetween(prefetchedSessions, baselineFromMs.coerceAtLeast(0), inclusiveToMs)
             val historicalSleepDays =
-                buildHistoricalSleepDays(
+                sleepDayAssembler.buildHistoricalSleepDays(
                     sessions = historicalSessions,
                     percentile = 50,
                     sleepDayPolicy = sleepDayPolicy,
@@ -287,12 +291,17 @@ class BaselineComputer
         /**
          * Computes HRV windows bounded to [fromMs, toMs] (for backfill: no look-ahead).
          * Used by historical baseline backfill to enforce point-in-time correctness.
+         *
+         * PERF-002/WP-22: pass [prefetchedSessions] (ascending by `startTime`, covering at least
+         * `[fromMs - HRV_SIGMA_WINDOW_DAYS, toMs)`) to slice in memory instead of re-querying the
+         * DB -- see [WalkForwardBaselineContext]. Omit it (the default) for the single-day/live path.
          */
         suspend fun computeHrvWindowsBetween(
             fromMs: Long,
             toMs: Long,
             excludeSessionIds: Set<String> = emptySet(),
             sleepDayPolicy: SleepDayPolicy? = null,
+            prefetchedSessions: List<SleepSessionEntity>? = null,
         ): HrvWindows? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(fromMs)
@@ -311,13 +320,10 @@ class BaselineComputer
                     ).minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
                     .toEpochMilli()
             val historicalSessions =
-                scoringHistoryRepository
-                    .getSleepSessionsBetween(
-                        sigmaWindowFromMs.coerceAtLeast(0),
-                        inclusiveToMs,
-                    ).filterNot { it.id in excludeSessionIds }
+                sessionsBetween(prefetchedSessions, sigmaWindowFromMs.coerceAtLeast(0), inclusiveToMs)
+                    .filterNot { it.id in excludeSessionIds }
             val historicalSleepDays =
-                buildHistoricalSleepDays(
+                sleepDayAssembler.buildHistoricalSleepDays(
                     sessions = historicalSessions,
                     percentile = 50,
                     sleepDayPolicy = sleepDayPolicy,
@@ -425,7 +431,7 @@ class BaselineComputer
             }
 
             val historicalSleepDays =
-                buildHistoricalSleepDays(
+                sleepDayAssembler.buildHistoricalSleepDays(
                     sessions = sessionsAsc,
                     percentile = percentile,
                     sleepDayPolicy = sleepDayPolicy,
@@ -475,190 +481,45 @@ class BaselineComputer
             }
         }
 
-        private suspend fun filterValidBaselineSessions(
-            sessions: List<SleepSessionEntity>,
-            assumeCoverageValid: Boolean = false,
-        ): List<String> {
-            if (sessions.isEmpty()) return emptyList()
-
-            val sessionIds = sessions.map { it.id }
-            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
-            val hrMap = scoringHistoryRepository.getAvgSleepHrForSessions(sessionIds)
-
-            return sessions
-                .filter { s ->
-                    val samples = hrvMap[s.id] ?: emptyList()
-                    val avgHr = hrMap[s.id]
-
-                    val validation =
-                        if (assumeCoverageValid) {
-                            scoringCalculator.validateNight(
-                                rmssdMs = if (samples.isNotEmpty()) samples.mean() else null,
-                                rhrBpm = avgHr?.toFloat(),
-                                durationMinutes = s.durationMinutes,
-                                deepMinutes = s.deepSleepMinutes,
-                                remMinutes = s.remSleepMinutes,
-                                hrCoverageValid = true,
-                            )
-                        } else {
-                            scoringCalculator.validateNight(
-                                rmssdMs = if (samples.isNotEmpty()) samples.mean() else null,
-                                rhrBpm = avgHr?.toFloat(),
-                                durationMinutes = s.durationMinutes,
-                                deepMinutes = s.deepSleepMinutes,
-                                remMinutes = s.remSleepMinutes,
-                            )
-                        }
-
-                    validation.canContributeToBaseline
-                }.map { it.id }
+        /**
+         * PERF-002/WP-22: fetches sleep sessions once, covering the widest baseline lookback
+         * ([ScoringConstants.HRV_SIGMA_WINDOW_DAYS], 56 days) every day in `[startDate, endDate]`
+         * will need. Callers slice the result per day via the `prefetchedSessions` parameter on
+         * [computeAdaptiveBaselineRhrBpmBetween]/[computeHrvBaselineBetween]/[computeHrvWindowsBetween]
+         * instead of each of those independently re-querying its own 30- or 56-day window.
+         */
+        suspend fun prefetchWalkForwardSessions(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            zoneId: ZoneId,
+        ): List<SleepSessionEntity> {
+            val fromMs =
+                startDate
+                    .minusDays(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong())
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val inclusiveToMs =
+                endDate
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli() - 1
+            return scoringHistoryRepository.getSleepSessionsBetween(fromMs.coerceAtLeast(0), inclusiveToMs)
         }
 
-        private suspend fun buildHistoricalSleepDays(
-            sessions: List<SleepSessionEntity>,
-            percentile: Int,
-            sleepDayPolicy: SleepDayPolicy?,
-            assumeCoverageValid: Boolean = false,
-        ): List<HistoricalSleepDay> {
-            if (sessions.isEmpty()) return emptyList()
-
-            val sessionIds = sessions.map { it.id }
-            val rmssdBySession = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
-            val hrProjectionBySession =
-                scoringHistoryRepository
-                    .getSleepHrProjectionForSessions(sessionIds)
-                    .groupBy { it.sessionId }
-
-            return if (sleepDayPolicy == null) {
-                sessions.map { session ->
-                    val hrvMean = rmssdBySession[session.id].orEmpty().takeIf { it.isNotEmpty() }?.mean()
-                    val hrSamples =
-                        hrProjectionBySession[session.id]
-                            .orEmpty()
-                            .map { it.beatsPerMinute }
-                            .sorted()
-                    historicalSleepDay(
-                        scoreDay = Instant.ofEpochMilli(session.endTime).atZone(ZoneId.systemDefault()).toLocalDate(),
-                        coreSessionIds = listOf(session.id),
-                        durationMinutes = session.durationMinutes,
-                        deepMinutes = session.deepSleepMinutes,
-                        remMinutes = session.remSleepMinutes,
-                        hrvMean = hrvMean,
-                        hrSamples = hrSamples,
-                        percentile = percentile,
-                        assumeCoverageValid = assumeCoverageValid,
-                    )
-                }
-            } else {
-                SleepDayAggregator
-                    .aggregate(
-                        segments = sessions.map(::toSleepDaySegment),
-                        policy = sleepDayPolicy,
-                    ).aggregates
-                    .map { aggregate ->
-                        val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }
-                        val hrvMean =
-                            coreSessionIds
-                                .flatMap { rmssdBySession[it].orEmpty() }
-                                .takeIf { it.isNotEmpty() }
-                                ?.mean()
-                        val hrSamples =
-                            coreSessionIds
-                                .flatMap { hrProjectionBySession[it].orEmpty() }
-                                .map { it.beatsPerMinute }
-                                .sorted()
-                        historicalSleepDay(
-                            scoreDay = aggregate.scoreDay,
-                            coreSessionIds = coreSessionIds,
-                            durationMinutes = aggregate.totalDurationMinutes,
-                            deepMinutes = aggregate.architectureTotals.deepMinutes,
-                            remMinutes = aggregate.architectureTotals.remMinutes,
-                            hrvMean = hrvMean,
-                            hrSamples = hrSamples,
-                            percentile = percentile,
-                            assumeCoverageValid = assumeCoverageValid,
-                        )
-                    }
-            }
-        }
-
-        private fun historicalSleepDay(
-            scoreDay: LocalDate,
-            coreSessionIds: List<String>,
-            durationMinutes: Int,
-            deepMinutes: Int,
-            remMinutes: Int,
-            hrvMean: Float?,
-            hrSamples: List<Int>,
-            percentile: Int,
-            assumeCoverageValid: Boolean,
-        ): HistoricalSleepDay {
-            val rhrPercentileBpm = resolvePercentileBpm(hrSamples, percentile)
-            val validation =
-                if (assumeCoverageValid) {
-                    scoringCalculator.validateNight(
-                        rmssdMs = hrvMean,
-                        rhrBpm = rhrPercentileBpm?.toFloat(),
-                        durationMinutes = durationMinutes,
-                        deepMinutes = deepMinutes,
-                        remMinutes = remMinutes,
-                        hrCoverageValid = true,
-                    )
-                } else {
-                    scoringCalculator.validateNight(
-                        rmssdMs = hrvMean,
-                        rhrBpm = rhrPercentileBpm?.toFloat(),
-                        durationMinutes = durationMinutes,
-                        deepMinutes = deepMinutes,
-                        remMinutes = remMinutes,
-                    )
-                }
-
-            return HistoricalSleepDay(
-                scoreDay = scoreDay,
-                coreSessionIds = coreSessionIds,
-                hrvMean = hrvMean,
-                nadirBpm = rhrPercentileBpm?.toFloat()?.takeIf { hrSamples.size >= 10 },
-                rhrPercentileBpm = rhrPercentileBpm,
-                canContributeToBaseline = validation.canContributeToBaseline,
-            )
-        }
-
-        private fun resolvePercentileBpm(
-            hrSamples: List<Int>,
-            percentile: Int,
-        ): Int? {
-            if (hrSamples.isEmpty()) return null
-            val index = ((percentile / 100.0) * (hrSamples.size - 1)).roundToInt().coerceIn(0, hrSamples.size - 1)
-            return hrSamples[index]
-        }
-
-        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment {
-            // HC-006: same defensive guard as ScoringRepositoryImpl.toSleepDaySegment -- a
-            // stage-less session persisted before the SleepDataMapper raw-span fallback landed can
-            // still carry a stored durationMinutes = 0, which SleepDaySegment's `durationMinutes > 0`
-            // invariant would otherwise throw on.
-            val durationMinutes =
-                if (session.durationMinutes > 0) {
-                    session.durationMinutes
-                } else {
-                    ((session.endTime - session.startTime) / 60_000L).toInt()
-                }
-            return SleepDaySegment(
-                stableId = session.id,
-                startTimeMs = session.startTime,
-                endTimeMs = session.endTime,
-                durationMinutes = durationMinutes,
-                lightSleepMinutes = session.lightSleepMinutes,
-                deepSleepMinutes = session.deepSleepMinutes,
-                remSleepMinutes = session.remSleepMinutes,
-                awakeMinutes = session.awakeMinutes,
-                efficiency = session.efficiency,
-                startZoneOffsetSeconds = session.startZoneOffsetSeconds,
-                endZoneOffsetSeconds = session.endZoneOffsetSeconds,
-                sourcePackageName = session.deviceName,
-            )
-        }
+        /**
+         * Slices [prefetchedSessions] to the exact `startTime >= fromMs AND endTime <= inclusiveToMs`
+         * bound [SleepSessionDao.getBetween] uses, or falls back to querying the DB directly when no
+         * prefetched superset was supplied (the single-day/live call sites).
+         */
+        private suspend fun sessionsBetween(
+            prefetchedSessions: List<SleepSessionEntity>?,
+            fromMs: Long,
+            inclusiveToMs: Long,
+        ): List<SleepSessionEntity> =
+            prefetchedSessions?.filter { it.startTime >= fromMs && it.endTime <= inclusiveToMs }
+                ?: scoringHistoryRepository.getSleepSessionsBetween(fromMs, inclusiveToMs)
 
         /**
          * HRV history windows + supporting session metadata returned from
@@ -681,25 +542,5 @@ class BaselineComputer
             val sigmaHistory: List<Float>,
             val rhrBpm: Float,
             val rhrHistory: List<Int> = emptyList(),
-        )
-
-        /** Pre-derived per-night values used to build each day's windows in memory. */
-        private data class BackfillNight(
-            val id: String,
-            val startTime: Long,
-            val endTime: Long,
-            val hrvMean: Float?,
-            val canContributeToBaseline: Boolean,
-            val nadirBpm: Float?,
-            val rhrPercentileBpm: Int?,
-        )
-
-        private data class HistoricalSleepDay(
-            val scoreDay: LocalDate,
-            val coreSessionIds: List<String>,
-            val hrvMean: Float?,
-            val nadirBpm: Float?,
-            val rhrPercentileBpm: Int?,
-            val canContributeToBaseline: Boolean,
         )
     }

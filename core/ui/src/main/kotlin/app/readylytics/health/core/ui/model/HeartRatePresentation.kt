@@ -10,5 +10,4 @@ data class HeartRateDaySummary(
     val minBpm: Int,
     val maxBpm: Int,
     val avgBpm: Int,
-    val hourlySamples: List<Pair<Int, Int>>,
 )

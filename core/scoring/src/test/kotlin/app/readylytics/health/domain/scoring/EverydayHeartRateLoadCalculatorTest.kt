@@ -2,14 +2,21 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
+import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.domain.scoring.LongInterval
 import org.junit.Test
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+/**
+ * PERF-006/WP-21: fixtures here express already SQL-bucketed rows (`HeartRateDao.getMinuteBuckets`'
+ * output shape), not raw per-sample rows -- the plausibility filter (30-230 bpm) and the per-minute
+ * average are applied by SQL before the calculator ever sees a row, so a fixture representing
+ * "implausible samples" is simply the absence of a bucket row for that minute, and a fixture
+ * representing "multiple samples in one minute" is a single row with `sampleCount > 1` and the
+ * pre-averaged `avgBpm`.
+ */
 class EverydayHeartRateLoadCalculatorTest {
     private val defaultPrefs =
         UserPreferences(
@@ -28,24 +35,25 @@ class EverydayHeartRateLoadCalculatorTest {
     private val dayStartMs = 0L
     private val dayEndMs = 24L * 60L * 60_000L // full day in ms
 
-    private fun sample(
-        epochMs: Long,
-        bpm: Int,
-    ) = HeartRateSample(Instant.ofEpochMilli(epochMs), bpm)
+    private fun bucket(
+        bucketIndex: Int,
+        avgBpm: Double,
+        sampleCount: Int = 1,
+    ) = HrMinuteBucketRow(bucketIndex, avgBpm, sampleCount)
 
-    /** Builds consecutive 1-minute Zone-0 (e.g. bpm=70) samples for [count] minutes starting at minute 0. */
-    private fun zone0Samples(count: Int): List<HeartRateSample> =
-        (0 until count).map { minute -> sample(minute * 60_000L, 70) }
+    /** Builds consecutive Zone-0 (e.g. bpm=70) single-sample buckets for [count] minutes starting at minute 0. */
+    private fun zone0Buckets(count: Int): List<HrMinuteBucketRow> =
+        (0 until count).map { minute -> bucket(minute, 70.0) }
 
     private fun baseInput(
-        hrSamples: List<HeartRateSample>,
+        hrBuckets: List<HrMinuteBucketRow>,
         sleepIntervalsMs: List<LongInterval> = emptyList(),
         workoutIntervalsMs: List<LongInterval> = emptyList(),
         workoutOnlyTrimp: Float = 0f,
     ) = EverydayHrLoadInput(
         dayStartMs = dayStartMs,
         dayEndMs = dayEndMs,
-        hrSamples = hrSamples,
+        hrBuckets = hrBuckets,
         sleepIntervalsMs = sleepIntervalsMs,
         workoutIntervalsMs = workoutIntervalsMs,
         workoutOnlyTrimp = workoutOnlyTrimp,
@@ -55,11 +63,11 @@ class EverydayHeartRateLoadCalculatorTest {
     )
 
     @Test
-    fun `sleep interval HR samples excluded entirely`() {
-        // Minute 0 sample falls within a sleep interval covering [0, 60_000)
+    fun `sleep interval HR bucket excluded entirely`() {
+        // Minute-0 bucket falls within a sleep interval covering [0, 60_000)
         val input =
             baseInput(
-                hrSamples = listOf(sample(0L, 130)),
+                hrBuckets = listOf(bucket(0, 130.0)),
                 sleepIntervalsMs = listOf(LongInterval(0L, 60_000L)),
             )
 
@@ -73,12 +81,12 @@ class EverydayHeartRateLoadCalculatorTest {
     }
 
     @Test
-    fun `workout interval HR samples excluded but workoutOnlyTrimp counted exactly once`() {
-        // Minute 0 sample falls within a workout interval covering [0, 60_000)
+    fun `workout interval HR bucket excluded but workoutOnlyTrimp counted exactly once`() {
+        // Minute-0 bucket falls within a workout interval covering [0, 60_000)
         val workoutOnlyTrimp = 12.5f
         val input =
             baseInput(
-                hrSamples = listOf(sample(0L, 160)),
+                hrBuckets = listOf(bucket(0, 160.0)),
                 workoutIntervalsMs = listOf(LongInterval(0L, 60_000L)),
                 workoutOnlyTrimp = workoutOnlyTrimp,
             )
@@ -93,7 +101,7 @@ class EverydayHeartRateLoadCalculatorTest {
     @Test
     fun `zone 0 minute counts toward coverage but contributes zero TRIMP`() {
         // bpm=70 is below zone1MinBpm=95 -> zone 0
-        val input = baseInput(hrSamples = listOf(sample(0L, 70)))
+        val input = baseInput(hrBuckets = listOf(bucket(0, 70.0)))
 
         val result = EverydayHeartRateLoadCalculator.calculate(input)
 
@@ -105,7 +113,7 @@ class EverydayHeartRateLoadCalculatorTest {
     @Test
     fun `zone 1 or higher minute increments coverage and validBucketCount with positive TRIMP`() {
         // bpm=130 -> zone 2 (95 < bpm <= 133)
-        val input = baseInput(hrSamples = listOf(sample(0L, 130)))
+        val input = baseInput(hrBuckets = listOf(bucket(0, 130.0)))
 
         val result = EverydayHeartRateLoadCalculator.calculate(input)
 
@@ -116,30 +124,24 @@ class EverydayHeartRateLoadCalculatorTest {
     }
 
     @Test
-    fun `multiple samples in same minute bucket are averaged before zone and TRIMP calc`() {
-        // Two samples in minute 0: 120 and 140 -> average 130 -> zone 2
-        val averagedInput =
-            baseInput(
-                hrSamples =
-                    listOf(
-                        sample(0L, 120),
-                        sample(30_000L, 140),
-                    ),
-            )
-        val singleInput = baseInput(hrSamples = listOf(sample(0L, 130)))
+    fun `bucket sampleCount does not affect zone or TRIMP calc, only avgBpm does`() {
+        // SQL already averages same-minute samples (two raw samples at 120 and 140 -> avgBpm 130,
+        // sampleCount 2); the calculator must treat that identically to a single 130 bpm sample.
+        val multiSampleInput = baseInput(hrBuckets = listOf(bucket(0, 130.0, sampleCount = 2)))
+        val singleSampleInput = baseInput(hrBuckets = listOf(bucket(0, 130.0, sampleCount = 1)))
 
-        val averagedResult = EverydayHeartRateLoadCalculator.calculate(averagedInput)
-        val singleResult = EverydayHeartRateLoadCalculator.calculate(singleInput)
+        val multiSampleResult = EverydayHeartRateLoadCalculator.calculate(multiSampleInput)
+        val singleSampleResult = EverydayHeartRateLoadCalculator.calculate(singleSampleInput)
 
-        assertEquals(1, averagedResult.coverageMinutes)
-        assertEquals(1, averagedResult.validBucketCount)
-        assertEquals(singleResult.nonWorkoutTrimp, averagedResult.nonWorkoutTrimp, 0.001f)
+        assertEquals(1, multiSampleResult.coverageMinutes)
+        assertEquals(1, multiSampleResult.validBucketCount)
+        assertEquals(singleSampleResult.nonWorkoutTrimp, multiSampleResult.nonWorkoutTrimp, 0.001f)
     }
 
     @Test
-    fun `no HR samples at all`() {
+    fun `no HR buckets at all`() {
         val workoutOnlyTrimp = 7.5f
-        val input = baseInput(hrSamples = emptyList(), workoutOnlyTrimp = workoutOnlyTrimp)
+        val input = baseInput(hrBuckets = emptyList(), workoutOnlyTrimp = workoutOnlyTrimp)
 
         val result = EverydayHeartRateLoadCalculator.calculate(input)
 
@@ -151,16 +153,10 @@ class EverydayHeartRateLoadCalculatorTest {
     }
 
     @Test
-    fun `implausible samples are discarded and do not affect bucket averages or coverage`() {
-        // bpm=20 and bpm=250 are outside 30..230 and should be dropped entirely.
-        val input =
-            baseInput(
-                hrSamples =
-                    listOf(
-                        sample(0L, 20),
-                        sample(30_000L, 250),
-                    ),
-            )
+    fun `implausible samples never produce a bucket row and so do not affect coverage`() {
+        // bpm=20 and bpm=250 are outside 30..230 -- SQL's WHERE clause excludes both before
+        // GROUP BY, so minute 0 has no row at all (not a zero-count or zero-avg row).
+        val input = baseInput(hrBuckets = emptyList())
 
         val result = EverydayHeartRateLoadCalculator.calculate(input)
 
@@ -171,7 +167,7 @@ class EverydayHeartRateLoadCalculatorTest {
 
     @Test
     fun `confidence boundary 0 minutes maps to NONE`() {
-        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrSamples = emptyList()))
+        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrBuckets = emptyList()))
 
         assertEquals(0, result.coverageMinutes)
         assertEquals(LoadCoverageConfidence.NONE, result.confidence)
@@ -180,7 +176,7 @@ class EverydayHeartRateLoadCalculatorTest {
 
     @Test
     fun `confidence boundary 179 minutes maps to LOW`() {
-        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrSamples = zone0Samples(179)))
+        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrBuckets = zone0Buckets(179)))
 
         assertEquals(179, result.coverageMinutes)
         assertEquals(LoadCoverageConfidence.LOW, result.confidence)
@@ -189,7 +185,7 @@ class EverydayHeartRateLoadCalculatorTest {
 
     @Test
     fun `confidence boundary 180 minutes maps to MEDIUM and marks valid`() {
-        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrSamples = zone0Samples(180)))
+        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrBuckets = zone0Buckets(180)))
 
         assertEquals(180, result.coverageMinutes)
         assertEquals(LoadCoverageConfidence.MEDIUM, result.confidence)
@@ -198,7 +194,7 @@ class EverydayHeartRateLoadCalculatorTest {
 
     @Test
     fun `confidence boundary 479 minutes maps to MEDIUM`() {
-        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrSamples = zone0Samples(479)))
+        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrBuckets = zone0Buckets(479)))
 
         assertEquals(479, result.coverageMinutes)
         assertEquals(LoadCoverageConfidence.MEDIUM, result.confidence)
@@ -207,7 +203,7 @@ class EverydayHeartRateLoadCalculatorTest {
 
     @Test
     fun `confidence boundary 480 minutes maps to HIGH`() {
-        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrSamples = zone0Samples(480)))
+        val result = EverydayHeartRateLoadCalculator.calculate(baseInput(hrBuckets = zone0Buckets(480)))
 
         assertEquals(480, result.coverageMinutes)
         assertEquals(LoadCoverageConfidence.HIGH, result.confidence)
@@ -215,24 +211,12 @@ class EverydayHeartRateLoadCalculatorTest {
     }
 
     @Test
-    fun `sample exactly at bucket boundary falls into the later bucket`() {
-        // Sample at exactly 60_000ms (start of minute 1, not end of minute 0).
-        val input = baseInput(hrSamples = listOf(sample(60_000L, 130)))
-
-        val result = EverydayHeartRateLoadCalculator.calculate(input)
-
-        // The sample contributes to exactly one bucket (minute 1), not minute 0.
-        assertEquals(1, result.coverageMinutes)
-        assertEquals(1, result.validBucketCount)
-    }
-
-    @Test
     fun `bucket adjacent to sleep interval is not excluded`() {
-        // Sleep interval [0, 60_000) covers minute 0 only. Sample in minute 1 [60_000, 120_000)
+        // Sleep interval [0, 60_000) covers minute 0 only. A bucket at minute 1 [60_000, 120_000)
         // is adjacent but not overlapping, so it should be counted.
         val input =
             baseInput(
-                hrSamples = listOf(sample(60_000L, 130)),
+                hrBuckets = listOf(bucket(1, 130.0)),
                 sleepIntervalsMs = listOf(LongInterval(0L, 60_000L)),
             )
 
@@ -249,7 +233,7 @@ class EverydayHeartRateLoadCalculatorTest {
         // Both buckets should be excluded.
         val input =
             baseInput(
-                hrSamples = listOf(sample(0L, 130), sample(60_000L, 130)),
+                hrBuckets = listOf(bucket(0, 130.0), bucket(1, 130.0)),
                 sleepIntervalsMs = listOf(LongInterval(30_000L, 90_000L)),
             )
 
