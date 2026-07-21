@@ -41,7 +41,6 @@ abstract class DatabaseModule {
     companion object {
         @Provides
         @Singleton
-        @JvmStatic
         fun provideDatabase(
             @ApplicationContext context: Context,
             sqlCipherKeyManager: SqlCipherKeyManager,
@@ -71,56 +70,43 @@ abstract class DatabaseModule {
         }
 
         @Provides
-        @JvmStatic
         fun provideSleepSessionDao(db: HealthDatabase): SleepSessionDao = db.sleepSessionDao()
 
         @Provides
-        @JvmStatic
         fun provideSleepStageDao(db: HealthDatabase): SleepStageDao = db.sleepStageDao()
 
         @Provides
-        @JvmStatic
         fun provideHeartRateDao(db: HealthDatabase): HeartRateDao = db.heartRateDao()
 
         @Provides
-        @JvmStatic
         fun provideHrvDao(db: HealthDatabase): HrvDao = db.hrvDao()
 
         @Provides
-        @JvmStatic
         fun provideWorkoutDao(db: HealthDatabase): WorkoutDao = db.workoutDao()
 
         @Provides
-        @JvmStatic
         fun provideDailySummaryDao(db: HealthDatabase): DailySummaryDao = db.dailySummaryDao()
 
         @Provides
-        @JvmStatic
         fun provideWeightRecordDao(db: HealthDatabase): WeightRecordDao = db.weightRecordDao()
 
         @Provides
-        @JvmStatic
         fun provideBodyFatRecordDao(db: HealthDatabase): BodyFatRecordDao = db.bodyFatRecordDao()
 
         @Provides
-        @JvmStatic
         fun provideBloodPressureRecordDao(db: HealthDatabase): BloodPressureRecordDao = db.bloodPressureRecordDao()
 
         @Provides
-        @JvmStatic
         fun provideOxygenSaturationRecordDao(db: HealthDatabase): OxygenSaturationRecordDao =
             db.oxygenSaturationRecordDao()
 
         @Provides
-        @JvmStatic
         fun provideInsightDismissalDao(db: HealthDatabase): InsightDismissalDao = db.insightDismissalDao()
 
         @Provides
-        @JvmStatic
         fun provideAuditEventDao(db: HealthDatabase): AuditEventDao = db.auditEventDao()
 
         @Provides
-        @JvmStatic
         fun provideStepRecordDao(db: HealthDatabase): StepRecordDao = db.stepRecordDao()
     }
 }
