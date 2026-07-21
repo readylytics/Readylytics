@@ -12,7 +12,6 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.insights.InsightContext
@@ -35,6 +34,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
+import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

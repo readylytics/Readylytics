@@ -218,4 +218,21 @@ class CleanArchTest {
                 " Violations:\n${violations.joinToString("\n")}"
         org.junit.Assert.assertTrue(message, violations.isEmpty())
     }
+
+    @Test
+    fun `no doubled package segments exist`() {
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    val pkg = file.packagee?.name ?: ""
+                    pkg.contains("dashboard.dashboard") || pkg.contains("circadian.circadian")
+                }.map { "${it.name}: doubled package segment" }
+
+        org.junit.Assert.assertTrue(
+            "Doubled package segments are forbidden. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }

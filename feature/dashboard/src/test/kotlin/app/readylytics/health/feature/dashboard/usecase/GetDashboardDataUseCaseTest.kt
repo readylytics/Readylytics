@@ -1,6 +1,8 @@
-package app.readylytics.health.domain.dashboard
+package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
