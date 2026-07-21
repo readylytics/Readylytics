@@ -76,6 +76,7 @@ private fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
         nextDate = LocalDate.ofEpochDay(nextEpochDay),
         selectionHash = selectionHash,
         baselineChangeTokens = baselineChangeTokensMap.mapKeys { (dataType, _) -> HealthDataType.valueOf(dataType) },
+        chunkDaysOverride = chunkDaysOverride.takeIf { it > 0 },
     )
 
 private fun ResyncCheckpoint.toProto(): ResyncCheckpointProto =
@@ -93,4 +94,5 @@ private fun ResyncCheckpoint.toProto(): ResyncCheckpointProto =
         ).setNextEpochDay(nextDate.toEpochDay())
         .setSelectionHash(selectionHash)
         .putAllBaselineChangeTokens(baselineChangeTokens.mapKeys { (dataType, _) -> dataType.name })
+        .setChunkDaysOverride(chunkDaysOverride ?: 0)
         .build()

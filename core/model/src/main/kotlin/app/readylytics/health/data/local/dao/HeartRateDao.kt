@@ -146,10 +146,14 @@ interface HeartRateDao {
     @Query("SELECT * FROM heart_rate_records WHERE id = :id")
     suspend fun getById(id: String): HeartRateRecordEntity?
 
+    // PERF-003: id = X or a range bound on the id's `_`-prefixed suffix -- both sargable against
+    // the id index, unlike the previous substr(id, 1, length(:x)+1) predicate which forced a full
+    // table scan. Composite ids are "${hcId}_${timestampMs}"; '`' (0x60) is the next ASCII byte
+    // after '_' (0x5F), so [id, id||'_') .. [id||'_', id||'`') exactly covers "id" and "id_*".
     @Query(
         "SELECT * FROM heart_rate_records " +
             "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`') " +
             "ORDER BY timestampMs ASC, id ASC",
     )
     suspend fun getBySourceRecordId(sourceRecordId: String): List<HeartRateRecordEntity>
@@ -157,7 +161,7 @@ interface HeartRateDao {
     @Query(
         "DELETE FROM heart_rate_records " +
             "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+            "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`')",
     )
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
 

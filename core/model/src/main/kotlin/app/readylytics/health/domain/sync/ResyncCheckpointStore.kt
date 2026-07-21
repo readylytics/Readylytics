@@ -18,6 +18,12 @@ data class ResyncCheckpoint(
     val selectionHash: String,
     /** Mandatory baseline tokens for ingesting full resyncs; deliberately empty for local recomputes. */
     val baselineChangeTokens: Map<app.readylytics.health.domain.model.HealthDataType, String> = emptyMap(),
+    /**
+     * HC-002: ingest chunk size (days) to resume the INGEST phase with after a Health Connect
+     * window read timed out at the default chunk size and was shrunk. Null means no override --
+     * use the caller-supplied `chunkDays`.
+     */
+    val chunkDaysOverride: Int? = null,
 )
 
 interface ResyncCheckpointStore {

@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.domain.model.DomainHeartRateRecord
+import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -177,18 +179,25 @@ class DailySyncUseCaseTest {
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            // Mock non-empty returns to ensure mapping logic is triggered
-            coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns listOf(mockk(relaxed = true))
-            coEvery { hcRepo.readHrvSamples(any(), any()) } returns listOf(mockk(relaxed = true))
+            // HR/HRV are streamed page-by-page (HC-001); drive one non-empty page through each
+            // callback to ensure the per-page mapping/persist logic is triggered.
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
+                thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            }
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any()) } coAnswers {
+                thirdArg<suspend (List<DomainHrvRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            }
             coEvery { hcRepo.readSteps(any(), any()) } returns 0L
 
             useCase.run(windowDays = 8, onProgress = null)
 
             coVerify {
-                hcRepo.readHeartRateSamples(any(), any())
-                hcRepo.readHrvSamples(any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any())
+                hcRepo.readHrvSamplesPaged(any(), any(), any())
                 hcRepo.readSteps(any(), any())
                 healthIngestionStore.persist(any())
+                healthIngestionStore.persistHeartRateSamples(any())
+                healthIngestionStore.persistHrvSamples(any())
             }
         }
 
@@ -197,8 +206,8 @@ class DailySyncUseCaseTest {
         runTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
-            coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
 
             useCase.run(windowDays = 1, onProgress = null)
 
@@ -233,7 +242,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
                 )
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
             coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
@@ -264,7 +273,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
             coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)

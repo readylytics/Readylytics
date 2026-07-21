@@ -30,11 +30,10 @@ class UserUseCase
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(age)
                     settingsRepo.updateMaxHeartRate(maxHr)
-                    // hrMax feeds every persisted historical day's TRIMP (historical-scope,
-                    // SCORE-007) -- a recent-window refresh would leave old days mixing hrMax
-                    // values in the same ATL/CTL EMA window as newly-recomputed days.
-                    workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
+                // Birthday changes age-dependent scoring inputs, and automatic hrMax when enabled.
+                // Queue one durable historical pass after every affected preference has been persisted.
+                workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 Result.success(Unit)
             } catch (e: Exception) {
                 Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")

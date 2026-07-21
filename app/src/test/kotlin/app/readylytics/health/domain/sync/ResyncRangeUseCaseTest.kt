@@ -8,6 +8,7 @@ import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
+import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
@@ -75,8 +76,8 @@ class ResyncRangeUseCaseTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
             coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
-            coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
             useCase.run(startDate, endDate, chunkDays = 30, onProgress = null)
 
             // The first chunk of resyncRange must reach back one extra day to capture
@@ -101,8 +102,8 @@ class ResyncRangeUseCaseTest {
 
             val hrvFromInstants = mutableListOf<Instant>()
             val hrFromInstants = mutableListOf<Instant>()
-            coEvery { hcRepo.readHrvSamples(capture(hrvFromInstants), any()) } returns emptyList()
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromInstants), any()) } returns emptyList()
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromInstants), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromInstants), any(), any()) }
             useCase.run(startDate, endDate, chunkDays = chunkDays, onProgress = null)
 
             val secondChunkStart = startDate.plusDays(chunkDays.toLong())
@@ -133,8 +134,8 @@ class ResyncRangeUseCaseTest {
             val hrToInstants = mutableListOf<Instant>()
             coEvery { hcRepo.readSleepSessions(any(), capture(sleepToInstants)) } returns emptyList()
             coEvery { hcRepo.readExerciseSessions(any(), capture(workoutToInstants)) } returns emptyList()
-            coEvery { hcRepo.readHrvSamples(any(), capture(hrvToInstants)) } returns emptyList()
-            coEvery { hcRepo.readHeartRateSamples(any(), capture(hrToInstants)) } returns emptyList()
+            coJustRun { hcRepo.readHrvSamplesPaged(any(), capture(hrvToInstants), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(any(), capture(hrToInstants), any()) }
             useCase.run(
                 startDate = startDate,
                 endDate = LocalDate.of(2024, 7, 2),
@@ -146,6 +147,52 @@ class ResyncRangeUseCaseTest {
             assertEquals(firstChunkEnd, workoutToInstants[0])
             assertEquals(firstChunkEnd, hrvToInstants[0])
             assertEquals(firstChunkEnd, hrToInstants[0])
+        }
+
+    @Test
+    fun `resyncRange shrinks the ingest chunk after a Health Connect window timeout, then grows back`() =
+        runTest {
+            // HC-002: a window that can't be read within its budget must shrink and retry rather
+            // than wedge the whole resync in a same-size retry loop. The timeout itself is
+            // simulated by throwing HealthConnectWindowTimeoutException directly from the mocked HC
+            // read (the real trigger -- HealthIngestionCoordinator's withTimeout expiring -- is
+            // covered in isolation by HealthIngestionCoordinatorTimeoutTest); this test's concern is
+            // ResyncRangeUseCase's shrink/retry/grow-back policy once that exception occurs.
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 25)
+            val chunkDays = 10
+
+            var callCount = 0
+            val requestedWindowEnds = mutableListOf<Instant>()
+            coEvery { hcRepo.readSleepSessions(any(), capture(requestedWindowEnds)) } coAnswers {
+                callCount++
+                if (callCount == 1) {
+                    throw app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException(
+                        windowStart = Instant.EPOCH,
+                        windowEnd = Instant.EPOCH,
+                        cause = RuntimeException("synthetic timeout for test"),
+                    )
+                }
+                emptyList()
+            }
+
+            val result = useCase.run(startDate, endDate, chunkDays = chunkDays, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            val zoneId = ZoneId.systemDefault()
+            val requestedChunkEnds = requestedWindowEnds.map { it.atZone(zoneId).toLocalDate() }
+            assertEquals(
+                listOf(
+                    // Attempt 1 at the full chunk size times out.
+                    startDate.plusDays(chunkDays.toLong()),
+                    // Retry of the same chunk at half the size succeeds.
+                    startDate.plusDays((chunkDays / 2).toLong()),
+                    // Next chunk uses the full caller-supplied size again (grown back).
+                    startDate.plusDays((chunkDays / 2).toLong()).plusDays(chunkDays.toLong()),
+                    endDate.plusDays(1),
+                ),
+                requestedChunkEnds,
+            )
         }
 
     @Test
@@ -319,7 +366,7 @@ class ResyncRangeUseCaseTest {
             )
 
             coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
-            coVerify(exactly = 0) { hcRepo.readHeartRateSamples(any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) }
             coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
@@ -395,7 +442,7 @@ class ResyncRangeUseCaseTest {
                     operation = "read",
                     recordType = "HeartRateRecord",
                 )
-            coEvery { hcRepo.readHeartRateSamples(any(), any()) } throws expected
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } throws expected
 
             val actual =
                 assertFailsWith<HealthConnectPermissionRevokedException> {

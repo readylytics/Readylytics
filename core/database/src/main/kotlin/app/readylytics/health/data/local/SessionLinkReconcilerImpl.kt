@@ -10,7 +10,7 @@ import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.link.SampleLink
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
-import app.readylytics.health.domain.sync.link.SessionLinker
+import app.readylytics.health.domain.sync.link.SessionLinkSweep
 import app.readylytics.health.domain.sync.link.SessionSpan
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -56,6 +56,7 @@ class SessionLinkReconcilerImpl
             var lastTimestampMs = 0L
             var lastId = ""
             val limit = 5000
+            val sweep = SessionLinkSweep(sleepSpans, workoutSpans)
             while (true) {
                 currentCoroutineContext().ensureActive()
                 val records = heartRateDao.getKeysetPage(
@@ -68,7 +69,7 @@ class SessionLinkReconcilerImpl
                 if (records.isEmpty()) break
 
                 val updated = records.mapNotNull { record ->
-                    val link = SessionLinker.resolve(record.timestampMs, sleepSpans, workoutSpans)
+                    val link = sweep.resolve(record.timestampMs)
                     record.relinkedOrNull(link)
                 }
 
@@ -94,6 +95,7 @@ class SessionLinkReconcilerImpl
             var lastTimestampMs = 0L
             var lastId = ""
             val limit = 5000
+            val sweep = SessionLinkSweep(sleepSpans, emptyList())
             while (true) {
                 currentCoroutineContext().ensureActive()
                 val records = hrvDao.getKeysetPage(
@@ -106,7 +108,7 @@ class SessionLinkReconcilerImpl
                 if (records.isEmpty()) break
 
                 val updated = records.mapNotNull { record ->
-                    val link = SessionLinker.resolve(record.timestampMs, sleepSpans, emptyList())
+                    val link = sweep.resolve(record.timestampMs)
                     record.relinkedOrNull(link)
                 }
 

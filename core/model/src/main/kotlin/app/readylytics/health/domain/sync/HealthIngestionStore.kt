@@ -6,6 +6,16 @@ import java.time.ZoneId
 interface HealthIngestionStore {
     suspend fun persist(batch: HealthIngestionBatch)
 
+    /**
+     * Persists one streamed page of heart-rate samples in its own transaction (HC-001). Used by
+     * [app.readylytics.health.domain.sync.HealthIngestionCoordinator]'s streamed HR ingestion so a
+     * Health Connect page never waits for the rest of the window before it's written.
+     */
+    suspend fun persistHeartRateSamples(samples: List<HeartRateInput>)
+
+    /** HRV equivalent of [persistHeartRateSamples]. */
+    suspend fun persistHrvSamples(samples: List<HrvInput>)
+
     suspend fun clearFrozenBaselines(
         start: LocalDate,
         endExclusive: LocalDate,
