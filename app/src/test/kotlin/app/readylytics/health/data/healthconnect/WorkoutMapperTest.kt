@@ -1,14 +1,16 @@
 package app.readylytics.health.data.healthconnect
 
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.domain.sync.mappers.WorkoutMapper
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
 
 class WorkoutMapperTest {
     @Test
-    fun `mapExerciseSession correctly calculates TRIMP and avg HR from samples`() {
+    fun `mapExerciseSession correctly maps basic session fields`() {
         val startTime = Instant.parse("2026-05-09T10:00:00Z")
         val endTime = Instant.parse("2026-05-09T11:00:00Z")
 
@@ -21,8 +23,26 @@ class WorkoutMapperTest {
                 deviceName = "Watch",
             )
 
+        val result = WorkoutMapper.mapExerciseSession(session)
+
+        assertEquals("test_session", result.id)
+        assertEquals(startTime.toEpochMilli(), result.startTime)
+        assertEquals(endTime.toEpochMilli(), result.endTime)
+        assertEquals("RUNNING", result.exerciseType)
+        assertEquals("Watch", result.deviceName)
+        // All metrics initialized to 0 during ingestion
+        assertEquals(60, result.durationMinutes)
+        assertEquals(0f, result.trimp)
+        assertEquals(0f, result.avgHr)
+    }
+
+    @Test
+    fun `computeMetrics correctly calculates TRIMP and avg HR from samples`() {
+        val startTime = Instant.parse("2026-05-09T10:00:00Z")
+        val endTime = Instant.parse("2026-05-09T11:00:00Z")
+
         val thresholds =
-            WorkoutMapper.zoneThresholds(
+            ZoneThresholds.zoneThresholds(
                 z1Min = 100,
                 z1Max = 120,
                 z2Max = 140,
@@ -33,26 +53,24 @@ class WorkoutMapperTest {
         val hrSamples =
             listOf(
                 // 30 minutes in Zone 2 (130 bpm)
-                HeartRateRecordEntity(
-                    id = "s1",
-                    timestampMs = startTime.toEpochMilli(),
-                    beatsPerMinute = 130,
-                    recordType = "EXERCISE",
-                    sessionId = "test_session",
+                DomainHeartRateSample(
+                    time = startTime,
+                    beatsPerMinute = 130
                 ),
                 // 30 minutes in Zone 4 (170 bpm)
-                HeartRateRecordEntity(
-                    id = "s2",
-                    timestampMs = startTime.plusSeconds(1800).toEpochMilli(),
-                    beatsPerMinute = 170,
-                    recordType = "EXERCISE",
-                    sessionId = "test_session",
+                DomainHeartRateSample(
+                    time = startTime.plusSeconds(1800),
+                    beatsPerMinute = 170
                 ),
             )
 
-        val result = WorkoutMapper.mapExerciseSession(session, hrSamples, thresholds)
+        val result = ZoneThresholds.computeMetrics(
+            startTime.toEpochMilli(),
+            endTime.toEpochMilli(),
+            hrSamples,
+            thresholds
+        )
 
-        assertEquals("test_session", result.id)
         assertEquals(60, result.durationMinutes)
         assertEquals(150f, result.avgHr, 0.001f)
 
@@ -60,55 +78,42 @@ class WorkoutMapperTest {
         // Zone 4 weight = 4.0. Duration = 30 min. TRIMP = 120
         // Total TRIMP = 180
         assertEquals(180f, result.trimp, 0.001f)
-        assertEquals(30f, result.zone2Minutes, 0.001f)
-        assertEquals(30f, result.zone4Minutes, 0.001f)
+        assertEquals(30f, result.zoneMinutes[1], 0.001f)
+        assertEquals(30f, result.zoneMinutes[3], 0.001f)
     }
 
     @Test
-    fun `mapExerciseSession handles overlapping or duplicate samples gracefully`() {
+    fun `computeMetrics handles overlapping or duplicate samples gracefully`() {
         val startTime = Instant.parse("2026-05-09T10:00:00Z")
         val endTime = Instant.parse("2026-05-09T10:10:00Z")
 
-        val session =
-            DomainExerciseSessionRecord(
-                id = "test_session",
-                startTime = startTime,
-                endTime = endTime,
-                exerciseType = "RUNNING",
-                deviceName = "Watch",
-            )
-
-        val thresholds = WorkoutMapper.zoneThresholds()
+        val thresholds = ZoneThresholds.zoneThresholds()
 
         val hrSamples =
             listOf(
                 // Sample from source A
-                HeartRateRecordEntity(
-                    id = "sourceA_1",
-                    timestampMs = startTime.toEpochMilli(),
-                    beatsPerMinute = 140,
-                    recordType = "EXERCISE",
-                    sessionId = "test_session",
+                DomainHeartRateSample(
+                    time = startTime,
+                    beatsPerMinute = 140
                 ),
                 // Duplicate sample from source B for the same timestamp
-                HeartRateRecordEntity(
-                    id = "sourceB_1",
-                    timestampMs = startTime.toEpochMilli(),
-                    beatsPerMinute = 142,
-                    recordType = "EXERCISE",
-                    sessionId = "test_session",
+                DomainHeartRateSample(
+                    time = startTime,
+                    beatsPerMinute = 142
                 ),
                 // Another sample later
-                HeartRateRecordEntity(
-                    id = "sourceA_2",
-                    timestampMs = startTime.plusSeconds(300).toEpochMilli(),
-                    beatsPerMinute = 150,
-                    recordType = "EXERCISE",
-                    sessionId = "test_session",
+                DomainHeartRateSample(
+                    time = startTime.plusSeconds(300),
+                    beatsPerMinute = 150
                 ),
             )
 
-        val result = WorkoutMapper.mapExerciseSession(session, hrSamples, thresholds)
+        val result = ZoneThresholds.computeMetrics(
+            startTime.toEpochMilli(),
+            endTime.toEpochMilli(),
+            hrSamples,
+            thresholds
+        )
 
         // Average HR: (140 + 142 + 150) / 3 = 144
         assertEquals(144f, result.avgHr, 0.001f)

@@ -1,13 +1,15 @@
 package app.readylytics.health.data.local
 
-import app.readylytics.health.data.healthconnect.WorkoutMapper
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.domain.heartrate.ZoneThresholds
+import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.repository.TransactionRunner
+import java.time.Instant
 import app.readylytics.health.domain.sync.link.SampleLink
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.sync.link.SessionLinkSweep
@@ -134,13 +136,18 @@ class SessionLinkReconcilerImpl
                 currentCoroutineContext().ensureActive()
                 val existing = workoutDao.getById(span.id) ?: continue
                 val hrSamples = heartRateDao.getByTimeRange(existing.startTime, existing.endTime)
-                val metrics =
-                    WorkoutMapper.computeMetrics(
-                        existing.startTime,
-                        existing.endTime,
-                        hrSamples,
-                        zoneThresholds,
+                val hrSamplesMapped = hrSamples.map { sample ->
+                    DomainHeartRateSample(
+                        time = Instant.ofEpochMilli(sample.timestampMs),
+                        beatsPerMinute = sample.beatsPerMinute
                     )
+                }
+                val metrics = ZoneThresholds.computeMetrics(
+                    existing.startTime,
+                    existing.endTime,
+                    hrSamplesMapped,
+                    zoneThresholds
+                )
                 transactionRunner.runInTransaction {
                     workoutDao.upsertAll(
                         listOf(

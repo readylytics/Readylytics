@@ -1,8 +1,10 @@
 package app.readylytics.health.data.healthconnect
 
-import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.domain.sync.HeartRateInput
+import app.readylytics.health.domain.sync.SleepSessionInput
+import app.readylytics.health.domain.sync.mappers.HeartRateMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -12,22 +14,26 @@ class HeartRateMapperTest {
     private val sleepStartMs = Instant.parse("2026-05-09T22:00:00Z").toEpochMilli()
     private val sleepEndMs = Instant.parse("2026-05-10T06:00:00Z").toEpochMilli()
     private val sleepSession =
-        SleepSessionEntity(
+        SleepSessionInput(
             id = "sleep_1",
             startTime = sleepStartMs,
             endTime = sleepEndMs,
             durationMinutes = 480,
-            efficiency = 0.9f,
+            efficiency = 90.0f,
             deepSleepMinutes = 90,
             remSleepMinutes = 120,
             lightSleepMinutes = 240,
             awakeMinutes = 30,
+            sleepScore = null,
+            startZoneOffsetSeconds = null,
+            endZoneOffsetSeconds = null,
+            deviceName = "Watch",
         )
 
-    // --- mapToEntities ---
+    // --- mapToInputs ---
 
     @Test
-    fun `mapToEntities handles empty samples list gracefully`() {
+    fun `mapToInputs handles empty samples list gracefully`() {
         val record =
             DomainHeartRateRecord(
                 id = "rec_empty",
@@ -35,13 +41,13 @@ class HeartRateMapperTest {
                 samples = emptyList(),
             )
 
-        val result = HeartRateMapper.mapToEntities(listOf(record), emptyList(), emptyList())
+        val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), emptyList())
 
         assertEquals(0, result.size)
     }
 
     @Test
-    fun `mapToEntities handles out-of-order records so both samples classified as SLEEP`() {
+    fun `mapToInputs handles out-of-order records so both samples classified as SLEEP`() {
         // Samsung delivers records out of chronological order.
         // sample2Time is earlier than sample1Time, but record with sample1 arrives first.
         val sample1Time = Instant.parse("2026-05-10T03:00:00Z")
@@ -62,7 +68,7 @@ class HeartRateMapperTest {
                 samples = listOf(sample2),
             )
 
-        val result = HeartRateMapper.mapToEntities(listOf(recordA, recordB), listOf(sleepSession), emptyList())
+        val result = HeartRateMapper.mapToInputs(listOf(recordA, recordB), listOf(sleepSession), emptyList())
 
         assertEquals(2, result.size)
         val byTs = result.associateBy { it.timestampMs }
@@ -71,7 +77,7 @@ class HeartRateMapperTest {
     }
 
     @Test
-    fun `mapToEntities generates unique IDs per sample using record id and timestamp`() {
+    fun `mapToInputs generates unique IDs per sample using record id and timestamp`() {
         val t1 = Instant.parse("2026-05-10T02:00:00Z")
         val t2 = Instant.parse("2026-05-10T02:01:00Z")
         val s1 = DomainHeartRateSample(time = t1, beatsPerMinute = 60)
@@ -83,7 +89,7 @@ class HeartRateMapperTest {
                 samples = listOf(s1, s2),
             )
 
-        val result = HeartRateMapper.mapToEntities(listOf(record), emptyList(), emptyList())
+        val result = HeartRateMapper.mapToInputs(listOf(record), emptyList(), emptyList())
 
         assertEquals(2, result.size)
         val ids = result.map { it.id }.toSet()
@@ -91,7 +97,7 @@ class HeartRateMapperTest {
     }
 
     @Test
-    fun `mapToEntities classifies sample outside any session as RESTING`() {
+    fun `mapToInputs classifies sample outside any session as RESTING`() {
         val ts = Instant.parse("2026-05-09T14:00:00Z")
         val sample = DomainHeartRateSample(time = ts, beatsPerMinute = 72)
         val record =
@@ -101,7 +107,7 @@ class HeartRateMapperTest {
                 samples = listOf(sample),
             )
 
-        val result = HeartRateMapper.mapToEntities(listOf(record), listOf(sleepSession), emptyList())
+        val result = HeartRateMapper.mapToInputs(listOf(record), listOf(sleepSession), emptyList())
 
         assertEquals(1, result.size)
         assertEquals("RESTING", result[0].recordType)

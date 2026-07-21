@@ -3,7 +3,7 @@ package app.readylytics.health.domain.scoring.golden
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.data.healthconnect.WorkoutMapper
+import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
@@ -113,7 +113,7 @@ class GoldenFixtureWalkForwardTest {
             val buildResult = GoldenFixtureDataBuilder(zoneId).build(db, startDate, endDate)
 
             val zoneThresholds =
-                WorkoutMapper.zoneThresholds(
+                ZoneThresholds.zoneThresholds(
                     prefs.zone1MinBpm,
                     prefs.zone1MaxBpm,
                     prefs.zone2MaxBpm,
