@@ -1,4 +1,4 @@
-package app.readylytics.health.data.healthconnect
+package app.readylytics.health.domain.sync.mappers
 
 import app.readylytics.health.domain.model.DomainStepsRecord
 import java.time.Instant

@@ -55,21 +55,22 @@ class WorkoutMapperTest {
                 // 30 minutes in Zone 2 (130 bpm)
                 DomainHeartRateSample(
                     time = startTime,
-                    beatsPerMinute = 130
+                    beatsPerMinute = 130,
                 ),
                 // 30 minutes in Zone 4 (170 bpm)
                 DomainHeartRateSample(
                     time = startTime.plusSeconds(1800),
-                    beatsPerMinute = 170
+                    beatsPerMinute = 170,
                 ),
             )
 
-        val result = ZoneThresholds.computeMetrics(
-            startTime.toEpochMilli(),
-            endTime.toEpochMilli(),
-            hrSamples,
-            thresholds
-        )
+        val result =
+            ZoneThresholds.computeMetrics(
+                startTime.toEpochMilli(),
+                endTime.toEpochMilli(),
+                hrSamples,
+                thresholds,
+            )
 
         assertEquals(60, result.durationMinutes)
         assertEquals(150f, result.avgHr, 0.001f)
@@ -94,26 +95,27 @@ class WorkoutMapperTest {
                 // Sample from source A
                 DomainHeartRateSample(
                     time = startTime,
-                    beatsPerMinute = 140
+                    beatsPerMinute = 140,
                 ),
                 // Duplicate sample from source B for the same timestamp
                 DomainHeartRateSample(
                     time = startTime,
-                    beatsPerMinute = 142
+                    beatsPerMinute = 142,
                 ),
                 // Another sample later
                 DomainHeartRateSample(
                     time = startTime.plusSeconds(300),
-                    beatsPerMinute = 150
+                    beatsPerMinute = 150,
                 ),
             )
 
-        val result = ZoneThresholds.computeMetrics(
-            startTime.toEpochMilli(),
-            endTime.toEpochMilli(),
-            hrSamples,
-            thresholds
-        )
+        val result =
+            ZoneThresholds.computeMetrics(
+                startTime.toEpochMilli(),
+                endTime.toEpochMilli(),
+                hrSamples,
+                thresholds,
+            )
 
         // Average HR: (140 + 142 + 150) / 3 = 144
         assertEquals(144f, result.avgHr, 0.001f)

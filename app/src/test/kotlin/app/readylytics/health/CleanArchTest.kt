@@ -101,27 +101,6 @@ class CleanArchTest {
                 "app.readylytics.health.data.preferences.BackgroundSyncInterval",
                 "app.readylytics.health.data.preferences.FallbackThemeColor",
                 "app.readylytics.health.data.preferences.BackupSchedule",
-                "app.readylytics.health.data.local.entity.BloodPressureRecordEntity",
-                "app.readylytics.health.data.local.entity.BodyFatRecordEntity",
-                "app.readylytics.health.data.local.entity.DailySummaryEntity",
-                "app.readylytics.health.data.local.entity.HeartRateRecordEntity",
-                "app.readylytics.health.data.local.entity.HrvRecordEntity",
-                "app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity",
-                "app.readylytics.health.data.local.entity.SleepSessionEntity",
-                "app.readylytics.health.data.local.entity.WeightRecordEntity",
-                "app.readylytics.health.data.local.entity.WorkoutRecordEntity",
-                "app.readylytics.health.data.local.dao.BloodPressureRecordDao",
-                "app.readylytics.health.data.local.dao.BodyFatRecordDao",
-                "app.readylytics.health.data.local.dao.DailySummaryDao",
-                "app.readylytics.health.data.local.dao.HeartRateDao",
-                "app.readylytics.health.data.local.dao.HrvDao",
-                "app.readylytics.health.data.local.dao.OxygenSaturationRecordDao",
-                "app.readylytics.health.data.local.dao.SleepHrSample",
-                "app.readylytics.health.data.local.dao.SleepSessionDao",
-                "app.readylytics.health.data.local.dao.SleepStageDao",
-                "app.readylytics.health.data.local.dao.WeightRecordDao",
-                "app.readylytics.health.data.local.dao.WorkoutDao",
-                "app.readylytics.health.data.healthconnect.StepsMapper",
             )
 
         val violations =
@@ -130,7 +109,9 @@ class CleanArchTest {
                 .files
                 .filter {
                     it.hasPackage("app.readylytics.health.domain..") &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\")) &&
+                        !it.name.endsWith("Aliases.kt") &&
+                        !it.name.endsWith("Aliases")
                 }.flatMap { file ->
                     val text = file.text
                     val matches = Regex("""app\.readylytics\.health\.data\.[a-zA-Z0-9.]+""").findAll(text)

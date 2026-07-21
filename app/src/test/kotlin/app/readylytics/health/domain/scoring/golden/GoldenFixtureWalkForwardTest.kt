@@ -3,7 +3,6 @@ package app.readylytics.health.domain.scoring.golden
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
@@ -11,6 +10,7 @@ import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase

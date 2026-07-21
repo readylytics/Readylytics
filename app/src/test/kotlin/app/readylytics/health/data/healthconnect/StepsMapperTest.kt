@@ -1,6 +1,7 @@
 package app.readylytics.health.data.healthconnect
 
 import app.readylytics.health.domain.model.DomainStepsRecord
+import app.readylytics.health.domain.sync.mappers.StepsMapper
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant

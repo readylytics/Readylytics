@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.sync.link
 
-import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -10,6 +9,7 @@ import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.repository.TransactionRunner
 import io.mockk.coEvery
@@ -165,15 +165,18 @@ class SessionLinkReconcilerTest {
 
             reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
 
-            val expected = ZoneThresholds.computeMetrics(
-                10_000L,
-                14_000L,
-                listOf(app.readylytics.health.domain.model.DomainHeartRateSample(
-                    java.time.Instant.ofEpochMilli(hr3.timestampMs),
-                    hr3.beatsPerMinute
-                )),
-                ZoneThresholds.zoneThresholds()
-            )
+            val expected =
+                ZoneThresholds.computeMetrics(
+                    10_000L,
+                    14_000L,
+                    listOf(
+                        app.readylytics.health.domain.model.DomainHeartRateSample(
+                            java.time.Instant.ofEpochMilli(hr3.timestampMs),
+                            hr3.beatsPerMinute,
+                        ),
+                    ),
+                    ZoneThresholds.zoneThresholds(),
+                )
             val updated = workoutUpsertSlot.captured.single { it.id == "workout_1" }
             assertEquals(expected.trimp, updated.trimp)
             assertEquals(expected.durationMinutes, updated.durationMinutes)
