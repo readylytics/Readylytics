@@ -13,6 +13,8 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertFailsWith
@@ -22,7 +24,13 @@ class ForegroundSyncControllerTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val syncUseCase = mockk<HealthSyncUseCase>()
     private val workerScheduler = mockk<app.readylytics.health.workers.WorkerScheduler>(relaxed = true)
-    private val controller = ForegroundSyncController(settingsRepo, syncUseCase, dagger.Lazy { workerScheduler })
+
+    // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
+    // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
+    // clock instance the tests build their expected dates from.
+    private val fixedClock = Clock.fixed(Instant.parse("2024-06-15T12:00:00Z"), ZoneId.of("UTC"))
+    private val controller =
+        ForegroundSyncController(settingsRepo, syncUseCase, dagger.Lazy { workerScheduler }, fixedClock)
 
     @Test
     fun `evaluateAndSync should not run multiple syncs concurrently`() =
@@ -56,7 +64,7 @@ class ForegroundSyncControllerTest {
             val zone = ZoneId.systemDefault()
             val todayMs =
                 LocalDate
-                    .now(zone)
+                    .now(fixedClock.withZone(zone))
                     .atStartOfDay(zone)
                     .toInstant()
                     .toEpochMilli()
@@ -82,7 +90,7 @@ class ForegroundSyncControllerTest {
             val zone = ZoneId.systemDefault()
             val threeDaysAgoMs =
                 LocalDate
-                    .now(zone)
+                    .now(fixedClock.withZone(zone))
                     .minusDays(3)
                     .atStartOfDay(zone)
                     .toInstant()
@@ -111,7 +119,7 @@ class ForegroundSyncControllerTest {
             val zone = ZoneId.systemDefault()
             val ninetyDaysAgoMs =
                 LocalDate
-                    .now(zone)
+                    .now(fixedClock.withZone(zone))
                     .minusDays(90)
                     .atStartOfDay(zone)
                     .toInstant()
@@ -145,7 +153,7 @@ class ForegroundSyncControllerTest {
                 val kiritimati = ZoneId.of("Pacific/Kiritimati")
                 val lastSyncMs =
                     LocalDate
-                        .now(kiritimati)
+                        .now(fixedClock.withZone(kiritimati))
                         .minusDays(3)
                         .atStartOfDay(kiritimati)
                         .toInstant()
@@ -343,5 +351,40 @@ class ForegroundSyncControllerTest {
 
             coVerify(exactly = 1) { syncUseCase.catchUpSync(any()) }
             coVerify(exactly = 0) { syncUseCase.sync(any(), any()) }
+        }
+
+    @Test
+    fun `evaluateAndSync computes the catch-up window from the injected clock, not real wall-clock time`() =
+        runTest {
+            // DI-002: a controller wired to a clock fixed on a historical date must resolve
+            // "today" from that clock, not the machine's real date. If computeWindowDays ever
+            // reverted to LocalDate.now(zoneId) (the real system clock), the real gap between
+            // 2019-01-10 and today would be thousands of days, capping windowDays at
+            // MAX_INLINE_RECOMPUTE_DAYS instead of the small, exact value asserted below.
+            val historicalClock = Clock.fixed(Instant.parse("2019-01-10T00:00:00Z"), ZoneId.of("UTC"))
+            val historicalController =
+                ForegroundSyncController(settingsRepo, syncUseCase, dagger.Lazy { workerScheduler }, historicalClock)
+            val zone = ZoneId.of("UTC")
+            val lastSyncMs =
+                LocalDate
+                    .of(2019, 1, 10)
+                    .minusDays(3)
+                    .atStartOfDay(zone)
+                    .toInstant()
+                    .toEpochMilli()
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.ALWAYS,
+                    lastSyncTimestamp = lastSyncMs,
+                    scoringZoneId = "UTC",
+                )
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+            coEvery { syncUseCase.sync(any(), any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+
+            historicalController.evaluateAndSync()
+
+            coVerify(exactly = 1) { syncUseCase.sync(windowDays = 4, onProgress = any()) }
         }
 }

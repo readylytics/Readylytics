@@ -24,6 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -44,6 +45,11 @@ class DailySyncUseCaseTest {
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
 
+    // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
+    // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
+    // clock instance the tests build their expected dates from.
+    private val fixedClock = Clock.fixed(Instant.parse("2024-06-15T12:00:00Z"), ZoneId.of("UTC"))
+
     private lateinit var useCase: DailySyncUseCase
 
     @Before
@@ -63,6 +69,7 @@ class DailySyncUseCaseTest {
                 stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
                 ioDispatcher = Dispatchers.Unconfined,
+                clock = fixedClock,
             )
     }
 
@@ -70,7 +77,7 @@ class DailySyncUseCaseTest {
     fun `sync processes days in chronological order`() =
         runTest {
             val windowDays = 3
-            val today = LocalDate.now(ZoneId.systemDefault())
+            val today = LocalDate.now(fixedClock.withZone(ZoneId.systemDefault()))
             val day0 = today.minusDays(2)
             val day1 = today.minusDays(1)
             val day2 = today
@@ -131,7 +138,7 @@ class DailySyncUseCaseTest {
         runTest {
             val windowDays = 2
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
 
             useCase.run(windowDays = windowDays, onProgress = null)
 
@@ -147,7 +154,7 @@ class DailySyncUseCaseTest {
         runTest {
             val windowDays = 1
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             val ingestStartMs =
                 today
                     .minusDays(1)
@@ -217,7 +224,7 @@ class DailySyncUseCaseTest {
             val zoneId = ZoneId.systemDefault()
             val yesterdayMidnight =
                 LocalDate
-                    .now(zoneId)
+                    .now(fixedClock.withZone(zoneId))
                     .minusDays(1)
                     .atStartOfDay(zoneId)
                     .toInstant()
@@ -229,7 +236,7 @@ class DailySyncUseCaseTest {
     fun `daily sync keeps current-day range and requests historical resync for older changes`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             // Beyond the inline-recompute floor: must escalate to the durable historical resync
             // rather than being absorbed by the foreground walk-forward.
             val oldestAffectedDay = today.minusDays(8)
@@ -261,7 +268,7 @@ class DailySyncUseCaseTest {
     fun `daily sync absorbs recent out-of-window change inline without historical resync`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             val yesterday = today.minusDays(1)
             val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
             val hrFromSlot = slot<Instant>()
@@ -290,7 +297,7 @@ class DailySyncUseCaseTest {
     fun `daily sync absorbs change exactly at the inline floor inline`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             // Exactly MAX_INLINE_RECOMPUTE_DAYS (7) back: the floor is inclusive, so still inline.
             val floorDay = today.minusDays(7)
             val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
@@ -335,6 +342,42 @@ class DailySyncUseCaseTest {
 
             assertFailsWith<app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException> {
                 useCase.run(windowDays = 1, onProgress = null)
+            }
+        }
+
+    @Test
+    fun `sync resolves today from the injected clock, not the real system clock`() =
+        runTest {
+            // DI-002: a use case wired to a clock fixed on a historical date must resolve "today"
+            // from that clock, never from the machine's real wall-clock date. A historical instant
+            // (2019, long past) makes the assertion exact and immune to coincidental matches with
+            // whatever day this test actually runs on.
+            val historicalClock = Clock.fixed(Instant.parse("2019-01-10T08:00:00Z"), ZoneId.of("UTC"))
+            val clockedUseCase =
+                DailySyncUseCase(
+                    settingsRepo = settingsRepo,
+                    sessionLinkReconciler = sessionLinkReconciler,
+                    rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
+                    changeSynchronizer = changeSynchronizer,
+                    healthIngestionStore = healthIngestionStore,
+                    ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                    stepCountFetcher = StepCountFetcher(hcRepo),
+                    recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
+                    ioDispatcher = Dispatchers.Unconfined,
+                    clock = historicalClock,
+                )
+            every { settingsRepo.userPreferences } returns flowOf(UserPreferences(scoringZoneId = "UTC"))
+            val expectedDay = LocalDate.of(2019, 1, 10)
+
+            clockedUseCase.run(windowDays = 1, onProgress = null)
+
+            coVerify { scoringRepository.computeAndPersistDailySummary(expectedDay, any(), any()) }
+            coVerify(exactly = 0) {
+                scoringRepository.computeAndPersistDailySummary(
+                    LocalDate.now(ZoneId.of("UTC")),
+                    any(),
+                    any(),
+                )
             }
         }
 }
