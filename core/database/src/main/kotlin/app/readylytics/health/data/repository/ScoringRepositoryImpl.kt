@@ -9,12 +9,12 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.DailySummaryEntity
-import app.readylytics.health.domain.model.DailySummaryMapper
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType

@@ -1,5 +1,9 @@
-package app.readylytics.health.domain.model
+package app.readylytics.health.data.mapper
 
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.DailySummaryEntity
+import app.readylytics.health.domain.model.ReadinessResult
+import app.readylytics.health.domain.model.RecoveryFlag
 import java.time.Instant
 import java.time.ZoneId
 
