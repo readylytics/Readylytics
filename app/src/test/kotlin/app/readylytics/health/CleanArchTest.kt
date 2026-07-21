@@ -88,6 +88,69 @@ class CleanArchTest {
     }
 
     @Test
+    fun `domain package does not reference data package via fully-qualified names`() {
+        val allowedDataReferences =
+            setOf(
+                "app.readylytics.health.data.preferences.UserPreferences",
+                "app.readylytics.health.data.preferences.Gender",
+                "app.readylytics.health.data.preferences.AppTheme",
+                "app.readylytics.health.data.preferences.SettingsDefaults",
+                "app.readylytics.health.data.preferences.PhysiologyProfile",
+                "app.readylytics.health.data.preferences.UnitSystem",
+                "app.readylytics.health.data.preferences.SyncPreference",
+                "app.readylytics.health.data.preferences.BackgroundSyncInterval",
+                "app.readylytics.health.data.preferences.FallbackThemeColor",
+                "app.readylytics.health.data.preferences.BackupSchedule",
+                "app.readylytics.health.data.local.entity.BloodPressureRecordEntity",
+                "app.readylytics.health.data.local.entity.BodyFatRecordEntity",
+                "app.readylytics.health.data.local.entity.DailySummaryEntity",
+                "app.readylytics.health.data.local.entity.HeartRateRecordEntity",
+                "app.readylytics.health.data.local.entity.HrvRecordEntity",
+                "app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity",
+                "app.readylytics.health.data.local.entity.SleepSessionEntity",
+                "app.readylytics.health.data.local.entity.WeightRecordEntity",
+                "app.readylytics.health.data.local.entity.WorkoutRecordEntity",
+                "app.readylytics.health.data.local.dao.BloodPressureRecordDao",
+                "app.readylytics.health.data.local.dao.BodyFatRecordDao",
+                "app.readylytics.health.data.local.dao.DailySummaryDao",
+                "app.readylytics.health.data.local.dao.HeartRateDao",
+                "app.readylytics.health.data.local.dao.HrvDao",
+                "app.readylytics.health.data.local.dao.OxygenSaturationRecordDao",
+                "app.readylytics.health.data.local.dao.SleepHrSample",
+                "app.readylytics.health.data.local.dao.SleepSessionDao",
+                "app.readylytics.health.data.local.dao.SleepStageDao",
+                "app.readylytics.health.data.local.dao.WeightRecordDao",
+                "app.readylytics.health.data.local.dao.WorkoutDao",
+                "app.readylytics.health.data.healthconnect.StepsMapper",
+            )
+
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter {
+                    it.hasPackage("app.readylytics.health.domain..") &&
+                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                }.flatMap { file ->
+                    val text = file.text
+                    val matches = Regex("""app\.readylytics\.health\.data\.[a-zA-Z0-9.]+""").findAll(text)
+                    matches
+                        .map { it.value }
+                        .filter { ref ->
+                            allowedDataReferences.none { allowed ->
+                                ref == allowed || ref.startsWith("$allowed.")
+                            }
+                        }.map { violation -> "${file.name}: referenced FQN $violation" }
+                        .toList()
+                }
+
+        org.junit.Assert.assertTrue(
+            "Domain layer must not use data layer FQNs. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
     fun `domain and data packages do not import feature package`() {
         val violations =
             Konsist

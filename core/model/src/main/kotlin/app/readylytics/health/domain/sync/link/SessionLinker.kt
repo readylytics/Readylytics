@@ -23,8 +23,8 @@ data class SampleLink(
  *
  * Pure function of (sampleMs, sleepSessions, workoutSessions): the result does not depend on
  * processing order, prior tagging, or which Health Connect fetch window the sample came from.
- * This is the shared source of truth for [app.readylytics.health.data.healthconnect.HeartRateMapper]
- * and [app.readylytics.health.data.healthconnect.HrvMapper] during ingestion, and for
+ * This is the shared source of truth for [app.readylytics.health.domain.sync.mappers.HeartRateMapper]
+ * and [app.readylytics.health.domain.sync.mappers.HrvMapper] during ingestion, and for
  * [SessionLinkReconciler] during the post-ingestion reconcile pass.
  *
  * Precedence: sleep > workout > resting. For overlapping sessions of the same type, the one with
