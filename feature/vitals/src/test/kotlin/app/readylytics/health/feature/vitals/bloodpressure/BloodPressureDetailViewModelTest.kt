@@ -2,8 +2,8 @@ package app.readylytics.health.feature.vitals.bloodpressure
 
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.BloodPressureRecord
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
@@ -24,7 +24,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
+
+private fun BloodPressureRecordEntity(
+    id: String,
+    timestampMs: Long,
+    systolicMmHg: Int,
+    diastolicMmHg: Int,
+    deviceName: String? = null,
+): BloodPressureRecord =
+    BloodPressureRecord(id, Instant.ofEpochMilli(timestampMs), systolicMmHg, diastolicMmHg, deviceName)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BloodPressureDetailViewModelTest {
@@ -313,7 +323,7 @@ class BloodPressureDetailViewModelTest {
         systolic: Int,
         diastolic: Int,
         timestampMs: Long = System.currentTimeMillis(),
-    ): BloodPressureRecordEntity =
+    ): BloodPressureRecord =
         BloodPressureRecordEntity(
             id = "test-id-$timestampMs",
             timestampMs = timestampMs,

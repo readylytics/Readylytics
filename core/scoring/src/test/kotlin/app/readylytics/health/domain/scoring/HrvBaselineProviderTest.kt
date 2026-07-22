@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -16,15 +16,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class HrvBaselineProviderTest {
-    private val dao = mockk<DailySummaryDao>(relaxed = true)
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
     private val settingsRepository = mockk<SettingsRepository>()
     private val baselineComputer = mockk<BaselineComputer>()
-    private val provider = HrvBaselineProvider(dao, settingsRepository, baselineComputer)
+    private val provider = HrvBaselineProvider(scoringHistoryRepository, settingsRepository, baselineComputer)
     private val date = LocalDate.of(2026, 6, 2)
 
     @Before
     fun setUp() {
-        coEvery { dao.getPreciseHrvMu(any()) } returns null
+        coEvery { scoringHistoryRepository.getPreciseHrvMu(any()) } returns null
         coEvery { settingsRepository.userPreferences } returns flowOf(UserPreferences())
     }
 
@@ -32,7 +32,7 @@ class HrvBaselineProviderTest {
     fun `getRoundedHrvBaseline equals rounded exp(mu) when geometric mu is stored`() =
         runTest {
             val mu = ln(40.0)
-            coEvery { dao.getPreciseHrvMu(any()) } returns mu
+            coEvery { scoringHistoryRepository.getPreciseHrvMu(any()) } returns mu
 
             val precise = provider.getPreciseHrvBaseline(date)
             val rounded = provider.getRoundedHrvBaseline(date)

@@ -1,5 +1,9 @@
-package app.readylytics.health.domain.model
+package app.readylytics.health.data.mapper
 
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.domain.model.ReadinessResult
+import app.readylytics.health.domain.model.RecoveryFlag
 import java.time.Instant
 import java.time.ZoneId
 
@@ -108,8 +112,8 @@ object DailySummaryMapper {
             zLnHrv = domain.zLnHrv,
             zRhr = domain.zRhr,
             recoveryFlags =
-                if (domain.recoveryFlags.isNotEmpty()) {
-                    domain.recoveryFlags.joinToString(",") { it.name }
+                if (domain.readinessResult.recoveryFlags.isNotEmpty()) {
+                    domain.readinessResult.recoveryFlags.joinToString(",") { it.name }
                 } else {
                     null
                 },

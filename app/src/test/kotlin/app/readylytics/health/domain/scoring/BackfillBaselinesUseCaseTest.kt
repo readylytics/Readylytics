@@ -5,10 +5,13 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.util.stdev
@@ -85,8 +88,8 @@ class BackfillBaselinesUseCaseTest {
         rhrHistory: List<Int> = emptyList(),
     ) {
         coEvery { computer.computeBackfillBaselines(any(), any(), any()) } answers {
-            firstArg<List<DailySummaryEntity>>().associate {
-                it.dateMidnightMs to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
+            firstArg<List<DailySummary>>().associate {
+                it.date to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
             }
         }
     }
@@ -554,7 +557,30 @@ class BackfillBaselinesUseCaseTest {
         dao: DailySummaryDao,
         settingsRepo: SettingsRepository,
         compute: ComputeHistoricalBaselinesUseCase,
-    ) = BackfillHistoricalBaselinesUseCase(dao, settingsRepo, compute, passthroughTransactionRunner)
+    ): BackfillHistoricalBaselinesUseCase {
+        val history = mockk<ScoringHistoryRepository>(relaxed = true)
+        coEvery { history.getAllDailySummaries(any()) } coAnswers {
+            dao.getAllSummaries().map { DailySummaryMapper.toDomain(it, testZone) }
+        }
+        coEvery {
+            history.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } coAnswers {
+            dao.updateBaselines(
+                firstArg(),
+                secondArg(),
+                thirdArg(),
+                arg(3),
+                arg(4),
+                arg(5),
+                arg(6),
+                arg(7),
+                arg(8),
+                arg(9),
+                arg(10),
+            )
+        }
+        return BackfillHistoricalBaselinesUseCase(history, settingsRepo, compute, passthroughTransactionRunner)
+    }
 
     private fun buildComputeUseCase(): Triple<
         BaselineComputer,
@@ -643,10 +669,10 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns listOf(frozen, unfrozen)
 
             val (bc, ls, compute) = buildComputeUseCase()
-            val passedSummaries = slot<List<DailySummaryEntity>>()
+            val passedSummaries = slot<List<DailySummary>>()
             coEvery { bc.computeBackfillBaselines(capture(passedSummaries), any(), any()) } answers {
                 passedSummaries.captured.associate {
-                    it.dateMidnightMs to BaselineComputer.BackfillBaseline(listOf(50f), listOf(50f), 60f, emptyList())
+                    it.date to BaselineComputer.BackfillBaseline(listOf(50f), listOf(50f), 60f, emptyList())
                 }
             }
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
@@ -656,7 +682,12 @@ class BackfillBaselinesUseCaseTest {
             assertEquals(1, count)
             assertEquals(
                 listOf(unfrozen.dateMidnightMs),
-                passedSummaries.captured.map { it.dateMidnightMs },
+                passedSummaries.captured.map {
+                    it.date
+                        .atStartOfDay(testZone)
+                        .toInstant()
+                        .toEpochMilli()
+                },
                 "Only the never-frozen row should be handed to the batched computation",
             )
         }
@@ -804,3 +835,10 @@ class BackfillBaselinesUseCaseTest {
             assertEquals(expectedDate, computed[0].baselineCalculatedAtDate)
         }
 }
+
+private val testZone = ZoneId.systemDefault()
+
+private suspend fun ComputeHistoricalBaselinesUseCase.computeHistoricalBaselines(
+    summaries: List<DailySummaryEntity>,
+    prefs: UserPreferences,
+): List<DailySummary> = computeHistoricalBaselines(summaries.map { DailySummaryMapper.toDomain(it, testZone) }, prefs)

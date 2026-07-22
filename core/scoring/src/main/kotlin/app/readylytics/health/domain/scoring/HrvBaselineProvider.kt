@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -14,7 +14,7 @@ import kotlin.math.exp
 class HrvBaselineProvider
     @Inject
     constructor(
-        private val dao: DailySummaryDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
         private val settingsRepository: SettingsRepository,
         private val baselineComputer: BaselineComputer,
     ) {
@@ -22,7 +22,7 @@ class HrvBaselineProvider
             val prefs = settingsRepository.userPreferences.first()
             val zone = prefs.scoringZone()
             val dateMs = date.toMidnightEpochMilli(zone)
-            val mu = dao.getPreciseHrvMu(dateMs)
+            val mu = scoringHistoryRepository.getPreciseHrvMu(dateMs)
             if (mu != null) return exp(mu)
 
             val override = prefs.hrvBaselineOverride

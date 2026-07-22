@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.local.dao.*
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
@@ -87,7 +88,8 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
 
             // 2. Setup mock workouts/samples
             val workout =
@@ -172,7 +174,8 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
 
@@ -249,7 +252,8 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
@@ -337,8 +341,8 @@ class ScoringPointInTimeRegressionTest {
                         baselineObservationCount = 10,
                     )
                 coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns targetFrozenSnapshot
-                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs) } returns
-                    targetFrozenSnapshot
+                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs, zoneId) } returns
+                    DailySummaryMapper.toDomain(targetFrozenSnapshot, zoneId)
                 coEvery { sleepSessionDao.countSince(any()) } returns 10
                 coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
                 coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
@@ -425,7 +429,8 @@ class ScoringPointInTimeRegressionTest {
                         baselineObservationCount = 10,
                     )
                 coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns frozenSnapshot
-                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs) } returns frozenSnapshot
+                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs, zoneId) } returns
+                    DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
                 coEvery { workoutDao.getTrimpPoints(capture(fromMs), any()) } returns emptyList()
 
                 repo.computeDailySummary(targetDate)

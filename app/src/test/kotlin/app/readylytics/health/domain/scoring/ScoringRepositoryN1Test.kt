@@ -152,8 +152,7 @@ class ScoringRepositoryN1Test {
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer,
-                dailySummaryDao,
-                heartRateDao,
+                scoringHistoryRepository,
                 scoringCalculator,
                 scoringConfigFactory,
                 encryptionManager,
