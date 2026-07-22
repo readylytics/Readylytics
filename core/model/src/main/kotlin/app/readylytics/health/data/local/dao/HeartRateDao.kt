@@ -5,20 +5,13 @@ import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.domain.model.HrMinuteBucketRow
+import app.readylytics.health.domain.model.HrRangeAggregate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface HeartRateDao {
-    @Query(
-        "SELECT * FROM heart_rate_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
-            "ORDER BY timestampMs ASC, id ASC",
-    )
-    fun _observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>>
-
-    fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>> =
-        _observeSleepHrSince(fromMs).distinctUntilChanged()
-
     @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC")
     suspend fun getSince(fromMs: Long): List<HeartRateRecordEntity>
 
@@ -211,4 +204,44 @@ interface HeartRateDao {
 
     @Query("SELECT MIN(timestampMs) FROM heart_rate_records")
     fun observeEarliestHrTime(): Flow<Long?>
+
+    // PERF-005/WP-23: dashboard day-summary observable -- min/max/avg/count computed in SQL, so a
+    // 5,000-row ingest batch invalidating this Flow re-runs a single-row aggregate instead of
+    // re-materializing and re-mapping every row in the day (up to 86k at 1 Hz). `WHERE sampleCount > 0`
+    // in subquery makes SQLite return zero rows (not one row of NULLs) when the range is empty, so Room maps
+    // that to `null` naturally for the nullable single-row return type.
+    @Query(
+        "SELECT minBpm, maxBpm, avgBpm, sampleCount FROM (" +
+            "SELECT MIN(beatsPerMinute) AS minBpm, MAX(beatsPerMinute) AS maxBpm, " +
+            "AVG(beatsPerMinute) AS avgBpm, COUNT(*) AS sampleCount " +
+            "FROM heart_rate_records " +
+            "WHERE timestampMs >= :startMs AND timestampMs < :endMs" +
+            ") WHERE sampleCount > 0",
+    )
+    fun observeAggregateByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): Flow<HrRangeAggregate?>
+
+    // PERF-006/WP-21: SQL-side 1-minute bucketing for the everyday-HR load calculator, replacing a
+    // full-day `SELECT *` (up to 86k rows/day at 1 Hz) re-bucketed in Kotlin. The plausibility
+    // filter (30-230 bpm) mirrors EverydayHeartRateLoadCalculator's former Kotlin-side filter --
+    // moved here so implausible samples never enter a bucket's sum/count, identical to filtering
+    // before bucketing. `dayEndMs` is exclusive, matching getByTimeRange's callers' day-window
+    // convention (dayMidnightMs .. nextDayMidnightMs). Ascending `ORDER BY` matters: the calculator
+    // accumulates TRIMP via floating-point `+=`, which is not strictly order-independent, and the
+    // Kotlin bucketing this replaces always processed buckets in ascending index order.
+    @Query(
+        "SELECT (timestampMs - :dayStartMs) / 60000 AS bucketIndex, " +
+            "AVG(beatsPerMinute) AS avgBpm, COUNT(*) AS sampleCount " +
+            "FROM heart_rate_records " +
+            "WHERE timestampMs >= :dayStartMs AND timestampMs < :dayEndMs " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
+            "GROUP BY bucketIndex " +
+            "ORDER BY bucketIndex ASC",
+    )
+    suspend fun getMinuteBuckets(
+        dayStartMs: Long,
+        dayEndMs: Long,
+    ): List<HrMinuteBucketRow>
 }

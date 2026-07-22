@@ -71,6 +71,8 @@ class ScoringDeterminismRegressionTest {
                 settingsRepo,
                 scoringCalculator,
                 baselineComputer,
+                BuildLoadSeriesUseCase(scoringCalculator),
+                AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,

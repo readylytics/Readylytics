@@ -114,7 +114,7 @@ explicit and idempotent.
 | `ResyncRangeUseCase`          | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/ResyncRangeUseCase.kt`          | Full-historical-resync orchestrator (the `resyncRange(...)` body). Runs under the facade's `syncMutex`. Owns the four resumable phases (chunked ingest → selected-source prune → full-range session-link reconcile → walk-forward recompute), checkpoint capture/resume, and baseline-token promotion. `run(..., skipIngestAndPrune = false)`: when `true` (see 1.2.2), ingest and prune are forced off, the checkpoint starts at `RECONCILE`, and the checkpoint identity is namespaced with `RECOMPUTE_ONLY_V2` plus the device-selection hash and a canonical projection of every scoring/reconciliation preference. Matching scoring snapshots resume; changed scoring inputs restart from the requested start date, while operational/UI settings do not invalidate the checkpoint. Recompute-only checkpoints deliberately store no Changes API tokens and never capture/apply/commit tokens or update `lastSyncTimestamp`; full-resync checkpoints retain the mandatory non-empty-token resume guard. **Adaptive chunk shrink (HC-002):** if a chunk's `ingestWindow` throws `HealthConnectWindowTimeoutException`, the ingest loop halves the effective chunk size (floor 1 day), persists it as the checkpoint's `chunkDaysOverride` so a killed worker resumes at the shrunk size, and retries the same chunk start — never the identical oversized window. Once a chunk succeeds it grows back to the caller-supplied `chunkDays` for the next chunk. If the 1-day floor itself times out, the exception propagates out as a distinct `Result.failure("...", "RESYNC_WINDOW_TIMEOUT")` (not the generic `RESYNC_ERROR`), which `HealthResyncWorker` still resolves via its normal `Result.retry()` backoff. |
 | `HealthIngestionCoordinator`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthIngestionCoordinator.kt`  | Single read→map→device-filter→upsert funnel for one HC window (`ingestWindow`), shared by both flows. Sessions and low-volume record types are fetched and persisted first, in one `HealthIngestionStore.persist(batch)` transaction; HR and HRV samples then stream page-by-page via `readHeartRateSamplesPaged`/`readHrvSamplesPaged` (HC-001), each page tagged against this window's already-known sessions and persisted immediately through `HealthIngestionStore.persistHeartRateSamples`/`persistHrvSamples` — at most one HC page of samples is held in memory at once. Workouts are persisted with zero HR-derived metrics at this point (mirroring the changes-path pattern); `SessionLinkReconciler.recomputeWorkouts`, which both sync flows always run immediately after ingestion, fills in the real values once every HR sample in range is stored. The entire window read (sessions, low-volume types, and both streamed passes) runs inside one `withTimeout(windowBudgetMs)`; a `TimeoutCancellationException` from that timeout is caught here and rethrown as `HealthConnectWindowTimeoutException` (HC-002) — deliberately not a `CancellationException` subtype, so callers can never mistake "this window is too dense for its budget" for cooperative cancellation. If interrupted, the checkpoint stays on the current HC window and stable-ID upserts make the retry safe without deleting prior valid data. |
 | `StepCountFetcher`            | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/StepCountFetcher.kt`            | Per-device daily step reads. `fetchWindow(...)` for the recent window (semaphore-capped concurrent reads when no device filter); `fetchRange(...)` for the resync recompute range — the "all devices" path issues one grouped `readDailyStepTotals` call per chunk (HC-003) instead of one `readSteps` aggregate call per calendar day; the device-selected path stays raw-record-based, chunked, retry-wrapped. |
-| `DailyRecomputeSupport`       | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/DailyRecomputeSupport.kt`       | Shared per-day helpers: `recomputeDay(day, steps)` → `ScoringRepository.computeAndPersistDailySummary` (single point of daily score persistence; no math here), and `refreshAutoMaxHr(prefs)`. |
+| `DailyRecomputeSupport`       | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/DailyRecomputeSupport.kt`       | Shared per-day helpers: `recomputeDay(day, steps)` → `ScoringRepository.computeAndPersistDailySummary` (single point of daily score persistence; no math here), and `refreshAutoMaxHr(prefs)`. **PERF-002/WP-20/WP-22:** a multi-day walk-forward (`ResyncRangeUseCase`'s RECOMPUTE phase) instead calls `buildWalkForwardTrimpContext`/`buildWalkForwardBaselineContext` once up front, then the 5-arg `recomputeDay(day, steps, prefs, trimpContext, baselineContext)` per day — `ScoringRepositoryImpl` slices the shared in-memory `WalkForwardTrimpContext`/`WalkForwardBaselineContext` per day instead of each day independently re-querying its own 84-day TRIMP window or 30-/56-day baseline window; math is unchanged, only the I/O is batched. |
 | `ForegroundSyncController`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/ForegroundSyncController.kt`    | Foreground state + progress bridge. `triggerDailySync()` = pull-to-refresh (current day only, `windowDays = 1`); `triggerImmediateSync()` = first-launch catch-up; `onBackgroundRecalc{Started,Progress,Finished}()` publish WorkManager job progress into `isSyncing` / `recalcProgress` StateFlows + `syncCompletedEvent`. |
 | `FullHistoricalResyncUseCase` | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/FullHistoricalResyncUseCase.kt` | Snapshots preferences once, resolves `today` in that snapshot's stored scoring timezone, then resolves the retention-bounded start date via `RetentionBounds.resolveResyncStartDate(prefs, today)` and delegates to `HealthSyncUseCase.resyncRange(start, today)`. Checkpoint/resume behavior stays in the sync engine; no math. `execute(recomputeOnly = false, onProgress)`: when `true` (see 1.2.2) delegates to `HealthSyncUseCase.recomputeRange(start, today, onProgress)` instead. |
 | `HealthResyncWorker`          | `app/src/main/kotlin/app/readylytics/health/workers/HealthResyncWorker.kt`              | `@HiltWorker` durable foreground service (`FOREGROUND_SERVICE_TYPE_DATA_SYNC`). Runs the resync use case, emits `WorkInfo` progress (`setProgressAsync`), posts a determinate "day X of Y" notification, bridges progress to `ForegroundSyncController`; `Result.retry()` on transient failure, but confirmed permission failures stop with `Result.failure()` so WorkManager does not loop. Checkpoints remain available for a new sync after access is restored. Reads the boolean `KEY_RECOMPUTE_ONLY` input-data flag (default `false`, see 1.2.2) and forwards it as `FullHistoricalResyncUseCase.execute(recomputeOnly = ...)`. |
@@ -389,6 +389,33 @@ independent per-workout values that must not be confused:
   values inside the same ATL/CTL EMA — this is exactly what `HealthDataRefresh.refreshHistorical()`
   exists to prevent.
 
+**PERF-002/WP-20 — batched TRIMP series in the walk-forward.** The ATL/CTL/strain-ratio/load-score
+assembly for both the workout-only and everyday-HR series is extracted from
+`ScoringRepositoryImpl.computeDailySummary` into `BuildLoadSeriesUseCase` (pure; takes the resolved
+`dailyTrimpByDate`/`everydayTrimpByDate` maps, runs the unchanged `ScoringCalculator.compute*EmaWithDecay`
+math). A multi-day walk-forward (`ResyncRangeUseCase`'s RECOMPUTE phase) fetches
+`WorkoutDao.getTrimpPoints`/`DailySummaryDao.getEverydayTrimpPoints` **once** for the whole range
+(`HealthSyncUseCase`/`ScoringRepositoryImpl.fetchWalkForwardTrimpContext`, extended 84 days back)
+into a `WalkForwardTrimpContext` (two `TreeMap<LocalDate, Float>`), instead of every recomputed day
+re-querying its own 84-day lookback; each day slices that shared map (`subMap(fromDate, targetDate)`,
+reproducing the exact per-day DB-query bound) and publishes its own freshly computed TRIMP value
+back into the shared map for subsequent days to see — byte-identical to the per-day DB path by
+construction. `ScoringRepositoryImpl.computeAndPersistDailySummary`'s single-day overload (daily
+sync, ad-hoc calls) is unaffected — it still queries per day, since there's no walk-forward range to
+amortize the fetch across.
+
+**PERF-006/WP-21 — SQL-bucketed everyday-HR load.** `HeartRateDao.getMinuteBuckets(dayStart, dayEnd)`
+performs the 1-minute bucketing and the 30-230 bpm plausibility filter in SQL (`GROUP BY` +
+`WHERE...BETWEEN`, `ORDER BY bucketIndex ASC` so `EverydayHeartRateLoadCalculator`'s
+floating-point `+=` TRIMP accumulation stays order-identical to the old Kotlin-side bucketing),
+returning ≤1,440 `HrMinuteBucketRow` rows/day instead of a full-day `SELECT *` (up to 86k rows at
+1 Hz). `EverydayHrLoadInput.hrBuckets` replaces the old raw-sample list; the calculator no longer
+buckets or filters — it only excludes sleep/workout-overlapping buckets and runs the zone/TRIMP
+formula per pre-averaged bucket. `ComputeWorkoutTrimpUseCase.HeartRateSample` (the workout-TRIMP
+path's per-sample type) is untouched — workout TRIMP still needs raw per-sample timestamps for its
+variable-duration integration and cannot consume pre-bucketed rows. The fetch+assemble step is
+extracted into `AssembleEverydayLoadInputUseCase`.
+
 ### 2.4 Baselines & calibration
 
 **Physiology profiles** are now exactly **Athlete / Active / Sedentary**
@@ -447,6 +474,19 @@ midnights before hitting Room's inclusive `getBetween` predicate, so a session e
 the next midnight belongs to the next day. The same backfill path also carries the RHR history used
 to freeze `rhrSigma` for later RHR z-score restoration (guarded by equivalence tests). The per-day
 UPDATEs are collapsed into a single transaction by the backfill use-case.
+
+**PERF-002/WP-22 (resync/daily-sync walk-forward baselines):** the sleep-session-to-per-day
+aggregation machinery (`filterValidBaselineSessions`, `buildHistoricalSleepDays`, and the
+`HistoricalSleepDay` per-night data class) is extracted out of `BaselineComputer` into
+`HistoricalSleepDayAssembler` (same package), shared by every windowed (`*Between`) and live
+(`dayMidnight`-anchored) baseline method. `computeAdaptiveBaselineRhrBpmBetween`/
+`computeHrvBaselineBetween`/`computeHrvWindowsBetween` each gained an optional `prefetchedSessions`
+parameter (default `null`, behavior unchanged): the RECOMPUTE walk-forward calls
+`BaselineComputer.prefetchWalkForwardSessions(startDate, endDate, zoneId)` once (covering the
+widest lookback, the 56-day HRV sigma window) and passes the same in-memory list to every
+recomputed day, which slices it to that day's exact `startTime >= from AND endTime <= to` bound
+instead of re-querying the DB — same batched-I/O-only pattern as WP-20's TRIMP series, same
+equivalence guarantee (identical math, only the data source changes).
 
 ### 2.4.1 Biphasic sleep-day aggregation
 
@@ -510,8 +550,11 @@ actually prevents `SleepDaySegment`'s `durationMinutes > 0` invariant from throw
 
 | Component | Path | Output |
 | :--- | :--- | :--- |
-| `EverydayHeartRateLoadCalculator` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/EverydayHeartRateLoadCalculator.kt` | Pure Kotlin. Buckets a day's non-sleep, non-workout HR samples into 1-minute windows, classifies each via `HrZoneClassifier`, and accumulates per-minute TRIMP via `RasCalculator.calculateDailyTrimp` (Zone 0 excluded from TRIMP, included in `coverageMinutes`). Returns `EverydayHrLoadResult` (`nonWorkoutTrimp`, `totalEverydayTrimp = workoutOnlyTrimp + nonWorkoutTrimp`, `coverageMinutes`, `validBucketCount`, `confidence: LoadCoverageConfidence`). |
-| `ScoringRepositoryImpl.computeDailySummary` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ScoringRepositoryImpl.kt` | Fetches the day's non-sleep, non-workout HR samples plus sleep/workout intervals, feeds `EverydayHeartRateLoadCalculator`, and persists both `*WorkoutOnly` and `*EverydayHr` variants (TRIMP, RAS, total RAS, ATL, CTL, Strain Ratio, Load Score, Readiness) plus `everydayCoverageMinutes`/`everydayLoadConfidence` on `DailySummaryEntity`. |
+| `EverydayHeartRateLoadCalculator` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/EverydayHeartRateLoadCalculator.kt` | Pure Kotlin. **PERF-006/WP-21:** consumes already SQL-bucketed, already plausibility-filtered `HrMinuteBucketRow` rows (`HeartRateDao.getMinuteBuckets`) — no longer buckets or filters raw samples itself. Classifies each bucket's `avgBpm` via `HrZoneClassifier` and accumulates per-minute TRIMP via `RasCalculator.calculateDailyTrimp` (Zone 0 excluded from TRIMP, included in `coverageMinutes`). Returns `EverydayHrLoadResult` (`nonWorkoutTrimp`, `totalEverydayTrimp = workoutOnlyTrimp + nonWorkoutTrimp`, `coverageMinutes`, `validBucketCount`, `confidence: LoadCoverageConfidence`). |
+| `AssembleEverydayLoadInputUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/AssembleEverydayLoadInputUseCase.kt` | PERF-006/WP-21/UI-002 extraction from `ScoringRepositoryImpl`. Pure; builds `EverydayHrLoadInput` from the caller-resolved bucket rows + intervals and runs `EverydayHeartRateLoadCalculator`. |
+| `BuildLoadSeriesUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/BuildLoadSeriesUseCase.kt` | PERF-002/WP-20/UI-002 extraction from `ScoringRepositoryImpl`. Pure; runs `ScoringCalculator.compute*EmaWithDecay`/`computeStrainRatio`/`computeLoadScore` for both the workout-only and everyday-HR series given the caller-resolved `dailyTrimpByDate`/`everydayTrimpByDate` maps. |
+| `WalkForwardTrimpContext` / `WalkForwardBaselineContext` | `core/model/src/main/kotlin/app/readylytics/health/domain/repository/` | PERF-002/WP-20/WP-22. Held by a multi-day walk-forward (`ResyncRangeUseCase`'s RECOMPUTE phase) across every recomputed day: the TRIMP series (two `TreeMap<LocalDate, Float>`, fetched once via `ScoringRepository.fetchWalkForwardTrimpContext`) and the RHR/HRV baseline sleep-session superset (fetched once via `fetchWalkForwardBaselineContext`, delegating to `BaselineComputer.prefetchWalkForwardSessions`). |
+| `ScoringRepositoryImpl.computeDailySummary` | `core/database/src/main/kotlin/app/readylytics/health/data/repository/ScoringRepositoryImpl.kt` | Fetches the day's SQL-bucketed HR rows (`HeartRateDao.getMinuteBuckets`) plus sleep/workout intervals, feeds them to `AssembleEverydayLoadInputUseCase`, then `BuildLoadSeriesUseCase` for the ATL/CTL/strain/load assembly, and persists both `*WorkoutOnly` and `*EverydayHr` variants (TRIMP, RAS, total RAS, ATL, CTL, Strain Ratio, Load Score, Readiness) plus `everydayCoverageMinutes`/`everydayLoadConfidence` on `DailySummaryEntity`. Accepts an optional `WalkForwardTrimpContext`/`WalkForwardBaselineContext` pair (5-arg `computeAndPersistDailySummary` overload) to slice shared in-memory data instead of re-querying per day. |
 | `LoadSourceSelector` | `core/model/src/main/kotlin/app/readylytics/health/domain/model/LoadSourceSelector.kt` | Pure projection. Picks `*WorkoutOnly` or `*EverydayHr` per field from `UserPreferences.strainLoadSourceMode` (TRIMP/ATL/CTL/Strain Ratio/Load Score/Readiness) and `rasSourceMode` (daily/total RAS); also derives `needsRecalc` and `readinessLowConfidence`. |
 | `DailyMetricsMapper` | `core/model/src/main/kotlin/app/readylytics/health/domain/model/DailyMetricsMapper.kt` | Builds `DailyMetrics` exclusively through `LoadSourceSelector` for all user-visible strain/load/RAS/readiness fields, so switching either source preference re-projects already-stored data instantly with no recompute. |
 
@@ -549,6 +592,17 @@ ViewModels collect repository flows, fuse them with `combine()`, and expose immu
 and `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/SettingsState.kt` (incl. `SyncSettingsState` with resync current/total
 progress).
 
+**PERF-005/WP-23 — HR observation.** `DashboardFlowIntermediate.createDashboardHrFlow` (dashboard
+day-summary card) observes `HeartRateRepository.observeAggregateByTimeRange` — SQL
+`MIN`/`MAX`/`AVG`/`COUNT` (`HeartRateDao.observeAggregateByTimeRange`, `HAVING COUNT(*) > 0` so an
+empty range maps to `null` rather than a row of NULLs) — instead of the full raw-row
+`observeByTimeRange`, so a resync's 5,000-row ingest batches invalidating the Flow re-run a
+single-row aggregate instead of re-materializing/re-mapping the whole day. `HeartRateDaySummary` no
+longer carries `hourlySamples` (the hourly bucket it fed was computed but never rendered by any live
+UI). `HeartRateDetailViewModel` (which genuinely needs the full per-sample series for its
+chart/zone-totals) keeps observing raw rows via `observeByTimeRange`, but `.debounce(500)`s the Flow
+so a burst of ingest-batch invalidations collapses into one re-render.
+
 ### 3.3 Compose render & visualization components
 
 | Component                                                                                     | Path                                              | Role                                                                                                                                       |
@@ -571,6 +625,11 @@ progress).
 
 `ResyncRangeUseCase.run()` reports `(phase, current, total)` at the start of each of its four
 phases and, for `INGEST`/`RECOMPUTE`, again after each unit of work (a chunk / a day) completes.
+**PERF-002/WP-20:** this per-day `onProgress` signal is unchanged, but the RECOMPUTE phase's
+*durable checkpoint save* is no longer written after every day — it now saves every
+`RECOMPUTE_CHECKPOINT_INTERVAL_DAYS` (30) days, or on the final day, since recompute is idempotent
+and a kill-and-resume redoing up to one interval's worth of already-correct work is cheaper than a
+proto-DataStore write per day across a multi-year resync.
 Both `HealthResyncWorker` (background WorkManager resync) and `ForegroundSyncController.executeSync`
 (foreground first-launch `catchUpSync`) funnel this through the same `RecalcProgress(phase, current,
 total)` type:

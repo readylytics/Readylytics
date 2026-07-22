@@ -121,6 +121,8 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
         coEvery { heartRateDao.getMinHrInRange(any(), any()) } returns 50
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        // PERF-006/WP-21: everyday-HR load now reads SQL-bucketed rows instead of raw getByTimeRange rows.
+        coEvery { heartRateDao.getMinuteBuckets(any(), any()) } returns emptyList()
         coEvery { heartRateDao.getMinHrTimestamp(any()) } returns null
         coEvery { heartRateDao.getSleepHrSampleCount(any()) } returns 300
         coEvery { heartRateDao.getSleepHrSampleAtOffset(any(), any()) } returns 50
@@ -172,6 +174,8 @@ class ScoringRepositoryN1Test {
                 settingsRepo = settingsRepo,
                 scoringCalculator = scoringCalculator,
                 baselineComputer = baselineComputer,
+                buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
+                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
@@ -325,8 +329,9 @@ class ScoringRepositoryN1Test {
     fun `batch fetch replaces per-session getMinHrInRange calls`() =
         runTest {
             repo.computeAndPersistDailySummary(LocalDate.now())
-            // One full-day HR batch for load, one or more projection batches for sleep-baseline math.
-            coVerify(atLeast = 1) { heartRateDao.getByTimeRange(any(), any()) }
+            // One SQL-bucketed HR fetch for everyday-HR load (PERF-006/WP-21), one or more
+            // projection batches for sleep-baseline math.
+            coVerify(atLeast = 1) { heartRateDao.getMinuteBuckets(any(), any()) }
             coVerify(atLeast = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
             coVerify(exactly = 0) { heartRateDao.getMinHrInRange(any(), any()) }
         }

@@ -11,7 +11,9 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
+import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
+import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -176,6 +178,8 @@ class GoldenFixtureWalkForwardTest {
                     settingsRepo = settingsRepo,
                     scoringCalculator = scoringCalculator,
                     baselineComputer = baselineComputer,
+                    buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
+                    assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                     computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                     scoringConfigFactory = scoringConfigFactory,
                     computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),

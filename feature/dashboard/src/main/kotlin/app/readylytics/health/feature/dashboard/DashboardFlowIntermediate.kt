@@ -211,33 +211,18 @@ fun createDashboardHrFlow(
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
-            if (entities.isEmpty()) return@map null
-            // entities already sorted ASC by the DAO query; single pass for stats
-            var minBpm = Int.MAX_VALUE
-            var maxBpm = Int.MIN_VALUE
-            var sumBpm = 0
-            for (entity in entities) {
-                val bpm = entity.beatsPerMinute
-                if (bpm < minBpm) minBpm = bpm
-                if (bpm > maxBpm) maxBpm = bpm
-                sumBpm += bpm
+        // PERF-005/WP-23: SQL-aggregated min/max/avg instead of observing every raw row -- a
+        // 5,000-row ingest batch invalidating this Flow re-runs a cheap single-row aggregate
+        // instead of re-materializing and re-mapping the whole day.
+        heartRateRepository.observeAggregateByTimeRange(startMs, endMs).map { aggregate ->
+            aggregate?.let {
+                HeartRateDaySummary(
+                    minBpm = it.minBpm,
+                    maxBpm = it.maxBpm,
+                    // toInt() truncates toward zero, matching the previous sumBpm/entities.size
+                    // integer division exactly (both truncate the same sum/count quotient).
+                    avgBpm = it.avgBpm.toInt(),
+                )
             }
-            val hourlyMap =
-                entities.groupBy { entity ->
-                    ((entity.timestampMs - startMs) / 60_000L).toInt() / 60
-                }
-            val hourly =
-                (0..23).mapNotNull { hour ->
-                    hourlyMap[hour]?.let { group ->
-                        hour to group.sumOf { it.beatsPerMinute } / group.size
-                    }
-                }
-            HeartRateDaySummary(
-                minBpm = minBpm,
-                maxBpm = maxBpm,
-                avgBpm = sumBpm / entities.size,
-                hourlySamples = hourly,
-            )
         }
     }

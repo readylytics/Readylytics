@@ -12,12 +12,14 @@ import app.readylytics.health.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -35,7 +37,7 @@ class HeartRateDetailViewModel
         private val clock: Clock,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
-        @OptIn(ExperimentalCoroutinesApi::class)
+        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         val uiState: StateFlow<HeartRateDetailUiState> =
             combine(
                 selectedDateRepository.selectedDate,
@@ -51,7 +53,10 @@ class HeartRateDetailViewModel
                             .toInstant()
                             .toEpochMilli()
 
-                    heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
+                    // PERF-005/WP-23: a resync's 5,000-row ingest batches invalidate this Flow
+                    // repeatedly; sampling renders the latest value every 500 ms during sustained
+                    // invalidations instead of re-mapping/re-classifying every ingest batch.
+                    heartRateRepository.observeByTimeRange(startMs, endMs).sample(500).map { entities ->
                         if (entities.isEmpty()) {
                             return@map HeartRateDetailUiState(
                                 selectedDate = date,
