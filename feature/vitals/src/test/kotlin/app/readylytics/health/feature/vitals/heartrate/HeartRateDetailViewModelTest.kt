@@ -20,10 +20,13 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -235,11 +238,43 @@ class HeartRateDetailViewModelTest {
         }
 
     @Test
-    fun `rapid successive invalidations collapse into a single re-render via debounce`() =
+    fun `sustained invalidations continue updating state before the source becomes quiet`() =
+        runTest {
+            val updates = MutableSharedFlow<List<HeartRateRecordData>>(replay = 1)
+            updates.tryEmit(emptyList())
+            every { heartRateRepository.observeByTimeRange(any(), any()) } returns updates
+            viewModel = createViewModel()
+
+            val collected = mutableListOf<HeartRateDetailUiState>()
+            val job = launch { viewModel.uiState.collect { collected += it } }
+            runCurrent()
+
+            repeat(15) { index ->
+                updates.emit(
+                    listOf(
+                        HeartRateRecordData(
+                            id = "update$index",
+                            timestampMs = index * 1_000L,
+                            beatsPerMinute = 100,
+                            recordType = "instant",
+                        ),
+                    ),
+                )
+                advanceTimeBy(100)
+                runCurrent()
+            }
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertTrue(collected.count { it.samples.isNotEmpty() } >= 2)
+            job.cancel()
+        }
+
+    @Test
+    fun `rapid successive invalidations render only the latest sampled value`() =
         runTest {
             // PERF-005/WP-23: simulates a resync's 5,000-row ingest batches invalidating
-            // observeByTimeRange in quick succession -- the debounce(500) added to the view model
-            // must collapse them into one downstream re-render instead of one per batch.
+            // observeByTimeRange in quick succession -- the 500 ms sampling cadence must render
+            // only the latest value in the period instead of one downstream state per batch.
             val burst = MutableSharedFlow<List<HeartRateRecordData>>(replay = 1)
             burst.tryEmit(emptyList())
             every { heartRateRepository.observeByTimeRange(any(), any()) } returns burst
@@ -251,7 +286,7 @@ class HeartRateDetailViewModelTest {
             advanceTimeBy(600)
             val countAfterInitialSettle = collected.size
 
-            repeat(5) { i ->
+            repeat(4) { i ->
                 burst.emit(
                     listOf(
                         HeartRateRecordData(
@@ -262,17 +297,17 @@ class HeartRateDetailViewModelTest {
                         ),
                     ),
                 )
-                advanceTimeBy(100) // well within the 500ms debounce window
+                advanceTimeBy(100) // all four updates stay within one 500 ms sampling period
             }
-            advanceTimeBy(600) // let the debounce window elapse with no further emissions
-            advanceUntilIdle()
+            advanceTimeBy(200) // let the sampling period emit its latest value
             job.cancel()
+            advanceUntilIdle()
 
             assertEquals(countAfterInitialSettle + 1, collected.size)
             assertEquals(1, collected.last().samples.size)
-            // The collapsed emission reflects the last (5th) batch, not an intermediate one.
+            // The sampled emission reflects the fourth batch, not an intermediate one.
             assertEquals(
-                4_000L,
+                3_000L,
                 collected
                     .last()
                     .samples
