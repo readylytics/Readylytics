@@ -8,6 +8,7 @@ import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.BloodPressureRecord as HealthConnectBloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord as HealthConnectBodyFatRecord
+import androidx.health.connect.client.records.HeartRateRecord as HealthConnectHeartRateRecord
 import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
 import app.readylytics.health.data.local.dao.*
@@ -204,7 +205,7 @@ class HealthChangeSynchronizerImpl
                     }
                 }
                 HealthDataType.HEART_RATE -> {
-                    if (record is HeartRateRecord) {
+                    if (record is HealthConnectHeartRateRecord) {
                         val domainHr = record.toDomain()
                         // Resolve real session spans overlapping this record's own time range so the
                         // sample is tagged SLEEP/EXERCISE immediately instead of RESTING/sessionId=null
@@ -331,7 +332,7 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.WEIGHT -> setOf(HealthConnectWeightRecord::class)
                 HealthDataType.SLEEP -> setOf(SleepSessionRecord::class)
                 HealthDataType.BLOOD_PRESSURE -> setOf(HealthConnectBloodPressureRecord::class)
-                HealthDataType.HEART_RATE -> setOf(HeartRateRecord::class)
+                HealthDataType.HEART_RATE -> setOf(HealthConnectHeartRateRecord::class)
                 HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
                 HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
             }
@@ -370,7 +371,7 @@ class HealthChangeSynchronizerImpl
                 is SleepSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is ExerciseSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is StepsRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
-                is HeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
+                is HealthConnectHeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is HeartRateVariabilityRmssdRecord -> getDateFor(record.time, zoneId)
                 is HealthConnectWeightRecord -> getDateFor(record.time, zoneId)
                 is HealthConnectBodyFatRecord -> getDateFor(record.time, zoneId)
