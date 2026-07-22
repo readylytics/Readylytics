@@ -49,7 +49,12 @@ class HeartRateMinuteBucketQueryTest {
         runTest {
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 60_000L, beatsPerMinute = 130, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr1",
+                        timestampMs = 60_000L,
+                        beatsPerMinute = 130,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 
@@ -66,7 +71,12 @@ class HeartRateMinuteBucketQueryTest {
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(id = "hr1", timestampMs = 0L, beatsPerMinute = 20, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr2", timestampMs = 30_000L, beatsPerMinute = 250, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr2",
+                        timestampMs = 30_000L,
+                        beatsPerMinute = 250,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 
@@ -81,7 +91,12 @@ class HeartRateMinuteBucketQueryTest {
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(id = "hr1", timestampMs = 0L, beatsPerMinute = 120, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr2", timestampMs = 30_000L, beatsPerMinute = 140, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr2",
+                        timestampMs = 30_000L,
+                        beatsPerMinute = 140,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 
@@ -101,7 +116,12 @@ class HeartRateMinuteBucketQueryTest {
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(id = "hr1", timestampMs = 0L, beatsPerMinute = 130, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr2", timestampMs = 30_000L, beatsPerMinute = 250, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr2",
+                        timestampMs = 30_000L,
+                        beatsPerMinute = 250,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 
@@ -117,9 +137,19 @@ class HeartRateMinuteBucketQueryTest {
         runTest {
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 180_000L, beatsPerMinute = 100, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr1",
+                        timestampMs = 180_000L,
+                        beatsPerMinute = 100,
+                        recordType = "RESTING",
+                    ),
                     HeartRateRecordEntity(id = "hr2", timestampMs = 0L, beatsPerMinute = 100, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr3", timestampMs = 60_000L, beatsPerMinute = 100, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr3",
+                        timestampMs = 60_000L,
+                        beatsPerMinute = 100,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 
@@ -133,7 +163,12 @@ class HeartRateMinuteBucketQueryTest {
         runTest {
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = dayEndMs, beatsPerMinute = 100, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr1",
+                        timestampMs = dayEndMs,
+                        beatsPerMinute = 100,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 

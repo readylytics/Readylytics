@@ -271,7 +271,14 @@ class HeartRateDetailViewModelTest {
             assertEquals(countAfterInitialSettle + 1, collected.size)
             assertEquals(1, collected.last().samples.size)
             // The collapsed emission reflects the last (5th) batch, not an intermediate one.
-            assertEquals(4_000L, collected.last().samples.single().timeMs)
+            assertEquals(
+                4_000L,
+                collected
+                    .last()
+                    .samples
+                    .single()
+                    .timeMs,
+            )
         }
 
     @Test

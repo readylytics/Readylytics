@@ -74,7 +74,12 @@ class HeartRateRangeAggregateQueryTest {
         runTest {
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 1_000L, beatsPerMinute = 60, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        id = "hr1",
+                        timestampMs = 1_000L,
+                        beatsPerMinute = 60,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 
