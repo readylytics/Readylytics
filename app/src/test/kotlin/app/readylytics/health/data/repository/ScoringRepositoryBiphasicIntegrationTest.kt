@@ -8,11 +8,12 @@ import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
@@ -84,7 +85,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             val dayMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
 
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
             coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any()) } returns 60f
             coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any(), any()) } returns
                 BaselineComputer.HrvWindows(
@@ -167,7 +168,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
 
-            val sessionSlot = slot<SleepSessionEntity>()
+            val sessionSlot = slot<SleepSession>()
             coEvery {
                 computeSleepMetricsUseCase(
                     capture(sessionSlot),
@@ -185,8 +186,8 @@ class ScoringRepositoryBiphasicIntegrationTest {
             } answers {
                 val scoringSession = sessionSlot.captured
                 Result.success(
-                    DailySummaryEntity(
-                        dateMidnightMs = dayMidnightMs,
+                    DailySummary(
+                        date = targetDate,
                         sleepDurationMinutes = scoringSession.durationMinutes,
                         deepSleepPercent =
                             scoringSession.deepSleepMinutes / scoringSession.durationMinutes.toFloat() * 100f,

@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring.sleep
 
-import app.readylytics.health.domain.model.HeartRateRecordEntity
+import app.readylytics.health.domain.model.HeartRateRecord
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,7 +12,7 @@ class HrCoverageValidator
             sessionStartMs: Long,
             sessionEndMs: Long,
             durationMinutes: Int,
-            hrRecords: List<HeartRateRecordEntity>,
+            hrRecords: List<HeartRateRecord>,
         ): Boolean {
             val filtered = hrRecords.filter { it.timestampMs in sessionStartMs..sessionEndMs }
             if (filtered.isEmpty()) return false

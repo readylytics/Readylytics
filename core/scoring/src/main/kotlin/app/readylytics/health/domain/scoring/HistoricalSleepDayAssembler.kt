@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
@@ -32,7 +32,7 @@ internal class HistoricalSleepDayAssembler(
     private val scoringCalculator: ScoringCalculator,
 ) {
     suspend fun filterValidBaselineSessions(
-        sessions: List<SleepSessionEntity>,
+        sessions: List<SleepSession>,
         assumeCoverageValid: Boolean = false,
     ): List<String> {
         if (sessions.isEmpty()) return emptyList()
@@ -71,7 +71,7 @@ internal class HistoricalSleepDayAssembler(
     }
 
     suspend fun buildHistoricalSleepDays(
-        sessions: List<SleepSessionEntity>,
+        sessions: List<SleepSession>,
         percentile: Int,
         sleepDayPolicy: SleepDayPolicy?,
         assumeCoverageValid: Boolean = false,
@@ -189,7 +189,7 @@ internal class HistoricalSleepDayAssembler(
         return hrSamples[index]
     }
 
-    private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment {
+    private fun toSleepDaySegment(session: SleepSession): SleepDaySegment {
         // HC-006: same defensive guard as ScoringRepositoryImpl.toSleepDaySegment -- a
         // stage-less session persisted before the SleepDataMapper raw-span fallback landed can
         // still carry a stored durationMinutes = 0, which SleepDaySegment's `durationMinutes > 0`

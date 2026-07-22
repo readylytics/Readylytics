@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -77,7 +76,7 @@ class BodyFatDetailViewModel
 
                     val records = bodyFatRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = bodyFatRepository.getLatest()
-                    val previous = if (latest != null) bodyFatRepository.getPrevious(latest.timestampMs) else null
+                    val previous = latest?.let { bodyFatRepository.getPrevious(it.time.toEpochMilli()) }
                     val deltaBodyFatDisplay =
                         if (latest != null && previous != null) {
                             val diff = latest.bodyFatPercent - previous.bodyFatPercent
@@ -110,7 +109,7 @@ class BodyFatDetailViewModel
                             ChronoUnit.DAYS
                                 .between(
                                     rangeStart.atZone(zoneId).toLocalDate(),
-                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                    record.time.atZone(zoneId).toLocalDate(),
                                 ).toInt()
                         }
 
@@ -132,14 +131,14 @@ class BodyFatDetailViewModel
                     val weightByDay =
                         weightRepository
                             .getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
-                            .groupBy { Instant.ofEpochMilli(it.timestampMs).atZone(zoneId).toLocalDate() }
-                            .mapValues { (_, dayRecords) -> dayRecords.maxBy { it.timestampMs } }
+                            .groupBy { it.time.atZone(zoneId).toLocalDate() }
+                            .mapValues { (_, dayRecords) -> dayRecords.maxBy { it.time } }
 
                     val historyItems =
                         records
-                            .sortedByDescending { it.timestampMs }
+                            .sortedByDescending { it.time }
                             .map { record ->
-                                val recordDate = Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate()
+                                val recordDate = record.time.atZone(zoneId).toLocalDate()
                                 val weightKg = weightByDay[recordDate]?.weightKg
                                 val leanMassKg = weightKg?.let { it * (1f - record.bodyFatPercent / 100f) }
                                 val leanMassDisplay =
@@ -151,7 +150,7 @@ class BodyFatDetailViewModel
                                         }
                                     }
                                 BodyFatHistoryItem(
-                                    timestampMs = record.timestampMs,
+                                    timestampMs = record.time.toEpochMilli(),
                                     bodyFatPercent = record.bodyFatPercent,
                                     leanMassDisplay = leanMassDisplay,
                                     unitSystem = userPrefs.unitSystem,
@@ -170,7 +169,7 @@ class BodyFatDetailViewModel
                         }
                     BodyFatDetailUiState(
                         latestBodyFat = latest?.bodyFatPercent,
-                        latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
+                        latestDate = latest?.time?.atZone(zoneId)?.toLocalDate(),
                         age = userPrefs.age,
                         gender = userPrefs.gender?.name ?: "Unknown",
                         optimalRangeMin = optimalMin,

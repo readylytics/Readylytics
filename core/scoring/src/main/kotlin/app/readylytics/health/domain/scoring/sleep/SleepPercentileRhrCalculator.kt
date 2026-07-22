@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring.sleep
 
-import app.readylytics.health.domain.model.SleepSessionEntity
-import app.readylytics.health.domain.persistence.SleepHrSample
+import app.readylytics.health.domain.model.SleepHrSample
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.util.median
@@ -32,7 +32,7 @@ class SleepPercentileRhrCalculator
         }
 
         suspend fun collect(
-            session: SleepSessionEntity,
+            session: SleepSession,
             dayMidnight: Instant,
             percentile: Int = 5,
             currentSessionIds: Set<String> = setOf(session.id),

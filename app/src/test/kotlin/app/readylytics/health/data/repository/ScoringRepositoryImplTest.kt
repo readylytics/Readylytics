@@ -4,6 +4,7 @@ import app.readylytics.health.data.local.dao.*
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
@@ -68,7 +69,7 @@ class ScoringRepositoryImplTest {
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null
-        coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
+        coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.countSince(any()) } returns 10
         coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any()) } returns 60f
@@ -141,9 +142,15 @@ class ScoringRepositoryImplTest {
                 )
             } answers {
                 when (thirdArg<LocalDate>()) {
-                    today -> Result.success(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f))
-                    yesterday -> Result.success(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f))
-                    else -> Result.success(DailySummaryEntity(0L))
+                    today ->
+                        Result.success(
+                            DailySummaryMapper.toDomain(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f), zoneId),
+                        )
+                    yesterday ->
+                        Result.success(
+                            DailySummaryMapper.toDomain(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f), zoneId),
+                        )
+                    else -> Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
                 }
             }
 
@@ -169,7 +176,8 @@ class ScoringRepositoryImplTest {
                     baselineCalculatedAtDate = today,
                 )
             coEvery { dailySummaryDao.getByDate(todayMs) } returns existingSummary
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs) } returns existingSummary
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs, zoneId) } returns
+                DailySummaryMapper.toDomain(existingSummary, zoneId)
 
             // Ensure use case returns success
             coEvery {
@@ -188,7 +196,7 @@ class ScoringRepositoryImplTest {
                 )
             } returns
                 Result
-                    .success(existingSummary)
+                    .success(DailySummaryMapper.toDomain(existingSummary, zoneId))
 
             val result = repo.computeDailySummary(today)
 
@@ -233,7 +241,12 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                Result.success(DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f))
+                Result.success(
+                    DailySummaryMapper.toDomain(
+                        DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f),
+                        ZoneId.systemDefault(),
+                    ),
+                )
 
             val result = repo.computeDailySummary(today)
 
@@ -265,7 +278,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                Result.success(DailySummaryEntity(0L))
+                Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), ZoneId.systemDefault()))
 
             val result = repo.computeDailySummary(today)
 
@@ -318,7 +331,7 @@ class ScoringRepositoryImplTest {
                 )
             } returns
                 Result
-                    .success(DailySummaryEntity(0L))
+                    .success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
 
             // Should not throw
             val result = repo.computeDailySummary(today)
@@ -336,7 +349,7 @@ class ScoringRepositoryImplTest {
 
             every { settingsRepo.userPreferences } returns prefsFlow
             coEvery { dailySummaryDao.getByDate(any()) } returns null
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
             coEvery { sleepSessionDao.countSince(any()) } coAnswers {
                 prefsFlow.value = UserPreferences(scoringZoneId = zoneB.id)
                 10
@@ -385,7 +398,7 @@ class ScoringRepositoryImplTest {
             } returns Result.success(55f)
             coEvery {
                 computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
-            } returns Result.success(DailySummaryEntity(0L))
+            } returns Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
 
             val workoutSlot = slot<List<WorkoutRecordEntity>>()
             coEvery { workoutDao.upsertAll(capture(workoutSlot)) } returns Unit
@@ -429,7 +442,7 @@ class ScoringRepositoryImplTest {
             } returns Result.success(55f)
             coEvery {
                 computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
-            } returns Result.success(DailySummaryEntity(0L))
+            } returns Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
 
             repo.computeDailySummary(today)
 

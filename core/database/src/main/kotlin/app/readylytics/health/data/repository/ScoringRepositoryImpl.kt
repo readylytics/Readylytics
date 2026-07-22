@@ -9,16 +9,17 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
+import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.DailySummaryEntity
-import app.readylytics.health.domain.model.DailySummaryMapper
+import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
@@ -181,7 +182,7 @@ class ScoringRepositoryImpl
                     )
 
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
-                val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs)
+                val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId)
 
                 val frozenSnapshot = dailySummary?.takeIf { it.baselineCalculatedAtDate != null }
                 val frozenHrMax = frozenSnapshot?.hrMax
@@ -345,7 +346,9 @@ class ScoringRepositoryImpl
 
                 var summary =
                     (
-                        scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs)
+                        scoringHistoryRepository
+                            .getDailySummaryByDate(dayMidnightMs, zoneId)
+                            ?.let { DailySummaryMapper.toEntity(it, zoneId) }
                             ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
                     ).copy(
                         trimpWorkoutOnly = dailyTrimpRaw,
@@ -474,7 +477,7 @@ class ScoringRepositoryImpl
                     val rhrWakeResult =
                         if (session != null) {
                             sleepPercentileRhrCalculator.collect(
-                                session = session,
+                                session = SleepSessionMapper.toDomain(session),
                                 dayMidnight = dayMidnight,
                                 percentile = prefs.restingHrPercentile,
                                 currentSessionIds = currentSessionIds,
@@ -564,11 +567,11 @@ class ScoringRepositoryImpl
                 if (session != null) {
                     val sleepMetricsResult =
                         computeSleepMetricsUseCase(
-                            session = session,
+                            session = SleepSessionMapper.toDomain(session),
                             dayMidnight = dayMidnight,
                             targetDate = targetDate,
                             prefs = prefs,
-                            summary = summary,
+                            summary = DailySummaryMapper.toDomain(summary, zoneId),
                             loadScore = loadSeries.loadScore,
                             loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
                             zoneId = zoneId,
@@ -576,7 +579,7 @@ class ScoringRepositoryImpl
                             dayEndMs = nextDayMidnightMs,
                             currentSessionIds = currentSessionIds,
                         )
-                    summary = sleepMetricsResult.getOrNull() ?: summary
+                    summary = sleepMetricsResult.getOrNull()?.let { DailySummaryMapper.toEntity(it, zoneId) } ?: summary
                 }
 
                 val hrvMuMssd =

@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.repository
 
-import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepSession
 
 /**
  * PERF-002/WP-22: sleep sessions covering the widest RHR/HRV baseline lookback (56 days), fetched
@@ -14,5 +14,5 @@ import app.readylytics.health.domain.model.SleepSessionEntity
  * semantics those per-day queries used.
  */
 data class WalkForwardBaselineContext(
-    val sessions: List<SleepSessionEntity>,
+    val sessions: List<SleepSession>,
 )

@@ -1,7 +1,8 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -9,7 +10,7 @@ import javax.inject.Inject
 class BackfillHistoricalBaselinesUseCase
     @Inject
     constructor(
-        private val dailySummaryDao: DailySummaryDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
         private val settingsRepository: SettingsRepository,
         private val computeHistoricalBaselines: ComputeHistoricalBaselinesUseCase,
         private val transactionRunner: TransactionRunner,
@@ -23,11 +24,12 @@ class BackfillHistoricalBaselinesUseCase
      * longer silently change an already-frozen day's stored baseline.
      */
     suspend fun execute(): Int {
-        val allDailySummaries = dailySummaryDao.getAllSummaries()
+        val prefs = settingsRepository.userPreferences.first()
+        val zoneId = prefs.scoringZone()
+        val allDailySummaries = scoringHistoryRepository.getAllDailySummaries(zoneId)
         val unfrozenSummaries = allDailySummaries.filter { it.baselineCalculatedAtDate == null }
         if (unfrozenSummaries.isEmpty()) return 0
 
-        val prefs = settingsRepository.userPreferences.first()
         val backfilledSummaries =
             computeHistoricalBaselines.computeHistoricalBaselines(unfrozenSummaries, prefs)
 
@@ -36,8 +38,8 @@ class BackfillHistoricalBaselinesUseCase
         // a precomputed list — no interdependent reads — so transaction batching is safe here.
         transactionRunner.runInTransaction {
             for (summary in backfilledSummaries) {
-                dailySummaryDao.updateBaselines(
-                    dateMidnightMs = summary.dateMidnightMs,
+                scoringHistoryRepository.updateBaselines(
+                    dateMidnightMs = summary.date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
                     hrvMuMssd = summary.hrvMuMssd,
                     hrvSigmaMssd = summary.hrvSigmaMssd,
                     rhrBpm = summary.rhrBpm,
