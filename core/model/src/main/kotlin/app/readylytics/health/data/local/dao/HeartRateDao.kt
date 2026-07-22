@@ -207,15 +207,16 @@ interface HeartRateDao {
 
     // PERF-005/WP-23: dashboard day-summary observable -- min/max/avg/count computed in SQL, so a
     // 5,000-row ingest batch invalidating this Flow re-runs a single-row aggregate instead of
-    // re-materializing and re-mapping every row in the day (up to 86k at 1 Hz). `HAVING COUNT(*) > 0`
-    // makes SQLite return zero rows (not one row of NULLs) when the range is empty, so Room maps
+    // re-materializing and re-mapping every row in the day (up to 86k at 1 Hz). `WHERE sampleCount > 0`
+    // in subquery makes SQLite return zero rows (not one row of NULLs) when the range is empty, so Room maps
     // that to `null` naturally for the nullable single-row return type.
     @Query(
-        "SELECT MIN(beatsPerMinute) AS minBpm, MAX(beatsPerMinute) AS maxBpm, " +
+        "SELECT minBpm, maxBpm, avgBpm, sampleCount FROM (" +
+            "SELECT MIN(beatsPerMinute) AS minBpm, MAX(beatsPerMinute) AS maxBpm, " +
             "AVG(beatsPerMinute) AS avgBpm, COUNT(*) AS sampleCount " +
             "FROM heart_rate_records " +
-            "WHERE timestampMs >= :startMs AND timestampMs < :endMs " +
-            "HAVING COUNT(*) > 0",
+            "WHERE timestampMs >= :startMs AND timestampMs < :endMs" +
+            ") WHERE sampleCount > 0",
     )
     fun observeAggregateByTimeRange(
         startMs: Long,

@@ -12,6 +12,7 @@ import app.readylytics.health.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,7 +37,7 @@ class HeartRateDetailViewModel
         private val clock: Clock,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
-        @OptIn(ExperimentalCoroutinesApi::class)
+        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         val uiState: StateFlow<HeartRateDetailUiState> =
             combine(
                 selectedDateRepository.selectedDate,
