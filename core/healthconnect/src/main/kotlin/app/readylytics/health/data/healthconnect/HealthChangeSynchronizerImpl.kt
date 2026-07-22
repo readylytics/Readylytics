@@ -6,6 +6,9 @@ import androidx.health.connect.client.changes.Change
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.BloodPressureRecord as HealthConnectBloodPressureRecord
+import androidx.health.connect.client.records.BodyFatRecord as HealthConnectBodyFatRecord
+import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
 import app.readylytics.health.data.local.dao.*
 import app.readylytics.health.data.local.entity.StepRecordEntity
@@ -272,21 +275,21 @@ class HealthChangeSynchronizerImpl
                     }
                 }
                 HealthDataType.WEIGHT -> {
-                    if (record is WeightRecord) {
+                    if (record is HealthConnectWeightRecord) {
                         val domainWeight = record.toDomain()
                         val entity = WeightDataMapper.toEntities(listOf(domainWeight))
                         weightRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.BODY_FAT -> {
-                    if (record is BodyFatRecord) {
+                    if (record is HealthConnectBodyFatRecord) {
                         val domainBodyFat = record.toDomain()
                         val entity = BodyFatDataMapper.toEntities(listOf(domainBodyFat))
                         bodyFatRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.BLOOD_PRESSURE -> {
-                    if (record is BloodPressureRecord) {
+                    if (record is HealthConnectBloodPressureRecord) {
                         val domainBloodPressure = record.toDomain()
                         val entity = BloodPressureDataMapper.toEntities(listOf(domainBloodPressure))
                         bloodPressureRecordDao.upsertAll(entity)
@@ -324,10 +327,10 @@ class HealthChangeSynchronizerImpl
             when (dataType) {
                 HealthDataType.EXERCISE -> setOf(ExerciseSessionRecord::class)
                 HealthDataType.STEPS -> setOf(StepsRecord::class)
-                HealthDataType.BODY_FAT -> setOf(BodyFatRecord::class)
-                HealthDataType.WEIGHT -> setOf(WeightRecord::class)
+                HealthDataType.BODY_FAT -> setOf(HealthConnectBodyFatRecord::class)
+                HealthDataType.WEIGHT -> setOf(HealthConnectWeightRecord::class)
                 HealthDataType.SLEEP -> setOf(SleepSessionRecord::class)
-                HealthDataType.BLOOD_PRESSURE -> setOf(BloodPressureRecord::class)
+                HealthDataType.BLOOD_PRESSURE -> setOf(HealthConnectBloodPressureRecord::class)
                 HealthDataType.HEART_RATE -> setOf(HeartRateRecord::class)
                 HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
                 HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
@@ -369,9 +372,9 @@ class HealthChangeSynchronizerImpl
                 is StepsRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is HeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is HeartRateVariabilityRmssdRecord -> getDateFor(record.time, zoneId)
-                is WeightRecord -> getDateFor(record.time, zoneId)
-                is BodyFatRecord -> getDateFor(record.time, zoneId)
-                is BloodPressureRecord -> getDateFor(record.time, zoneId)
+                is HealthConnectWeightRecord -> getDateFor(record.time, zoneId)
+                is HealthConnectBodyFatRecord -> getDateFor(record.time, zoneId)
+                is HealthConnectBloodPressureRecord -> getDateFor(record.time, zoneId)
                 is OxygenSaturationRecord -> getDateFor(record.time, zoneId)
                 else -> emptySet()
             }
