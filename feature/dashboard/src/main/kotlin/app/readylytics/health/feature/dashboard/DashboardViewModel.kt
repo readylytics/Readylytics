@@ -6,12 +6,12 @@ import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.insights.InsightContext
@@ -34,8 +34,9 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
+import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -66,6 +67,7 @@ class DashboardViewModel
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
         private val clock: Clock,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now()) {
@@ -108,7 +110,7 @@ class DashboardViewModel
                         recalcProgress = realtimeState.recalcProgress,
                         isComputingMetrics = realtimeState.isSyncing && coreState.summary == null,
                     )
-                }.flowOn(Dispatchers.Default)
+                }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

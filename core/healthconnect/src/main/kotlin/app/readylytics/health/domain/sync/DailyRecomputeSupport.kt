@@ -27,7 +27,8 @@ class DailyRecomputeSupport
     ) {
         /**
          * Recomputes and persists the daily summary for [day]. Already invoked from an IO context;
-         * the repository switches to Dispatchers.Default internally for the CPU-heavy computation.
+         * the repository switches to the injected default dispatcher internally for the
+         * CPU-heavy computation.
          *
          * [steps] is null when no fresh step count is available for [day] (older historical days
          * outside the sync window). In that case the repository preserves the stored step count.

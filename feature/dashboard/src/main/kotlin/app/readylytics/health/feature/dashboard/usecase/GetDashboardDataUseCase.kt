@@ -1,6 +1,8 @@
-package app.readylytics.health.domain.dashboard
+package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
+import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus

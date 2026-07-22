@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,6 +30,7 @@ class ForegroundSyncController
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
         private val workerScheduler: dagger.Lazy<app.readylytics.health.workers.WorkerScheduler>,
+        private val clock: Clock,
     ) : ForegroundSyncGateway {
         private val syncMutex = Mutex()
 
@@ -155,7 +157,7 @@ class ForegroundSyncController
             zoneId: ZoneId,
         ): Int {
             val lastSyncDate = Instant.ofEpochMilli(lastSyncTimestamp).atZone(zoneId).toLocalDate()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(clock.withZone(zoneId))
             val daysSince = ChronoUnit.DAYS.between(lastSyncDate, today).toInt()
             return (daysSince + 1).coerceAtLeast(1)
         }

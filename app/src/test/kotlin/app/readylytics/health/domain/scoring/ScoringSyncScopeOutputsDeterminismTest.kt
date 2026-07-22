@@ -33,6 +33,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -333,6 +334,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 scoringHistoryRepository = scoringHistoryRepository,
+                defaultDispatcher = UnconfinedTestDispatcher(),
             )
 
         return ScopeResult(label = label, summary = repo.computeDailySummary(targetDate))

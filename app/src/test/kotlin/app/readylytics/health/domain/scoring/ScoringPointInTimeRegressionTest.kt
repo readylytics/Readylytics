@@ -14,6 +14,7 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -65,6 +66,7 @@ class ScoringPointInTimeRegressionTest {
                 oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
+                UnconfinedTestDispatcher(),
             )
     }
 

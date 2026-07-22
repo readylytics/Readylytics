@@ -27,6 +27,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -69,6 +70,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             oxygenSaturationRecordDao,
             sleepPercentileRhrCalculator,
             scoringHistoryRepository,
+            UnconfinedTestDispatcher(),
         )
 
     @Test

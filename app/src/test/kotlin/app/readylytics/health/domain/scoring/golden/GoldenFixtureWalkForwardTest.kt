@@ -23,6 +23,7 @@ import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -185,6 +186,7 @@ class GoldenFixtureWalkForwardTest {
                     oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
                     sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
                     scoringHistoryRepository = scoringHistoryRepository,
+                    defaultDispatcher = UnconfinedTestDispatcher(),
                 )
             // WP-11/HC-006 fix: this fixture's stage-less-night scenario (`stageLessNightDate`)
             // seeds a SleepSessionEntity with durationMinutes = 0 directly (mirroring a session

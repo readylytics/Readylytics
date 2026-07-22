@@ -16,6 +16,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import java.time.Clock
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,6 +40,7 @@ class DailySyncUseCase
         private val stepCountFetcher: StepCountFetcher,
         private val recomputeSupport: DailyRecomputeSupport,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val clock: Clock,
     ) {
         /**
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
@@ -68,7 +70,7 @@ class DailySyncUseCase
                     // device zone when un-seeded) so the recompute window stays aligned with the
                     // scoring engine even if the device timezone changes.
                     val zoneId = prefs.scoringZone()
-                    val today = java.time.LocalDate.now(zoneId)
+                    val today = java.time.LocalDate.now(clock.withZone(zoneId))
 
                     val outcome = changeSynchronizer.applyPendingChanges()
                     if (outcome.requiresFullResync) {

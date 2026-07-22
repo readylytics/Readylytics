@@ -3,7 +3,6 @@ package app.readylytics.health.feature.dashboard
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
@@ -14,6 +13,7 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -77,6 +77,7 @@ class DashboardViewModelTest {
                 heartRateRepository = heartRateRepository,
                 insightDismissalRepository = insightDismissalRepository,
                 clock = java.time.Clock.systemDefaultZone(),
+                defaultDispatcher = testDispatcher,
             )
     }
 

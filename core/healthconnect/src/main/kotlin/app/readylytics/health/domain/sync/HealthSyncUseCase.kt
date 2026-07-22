@@ -8,6 +8,7 @@ import app.readylytics.health.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +30,7 @@ class HealthSyncUseCase
         private val dailySyncUseCase: DailySyncUseCase,
         private val resyncRangeUseCase: ResyncRangeUseCase,
         private val settingsRepo: SettingsRepository,
+        private val clock: Clock,
     ) {
         private val syncMutex = Mutex()
 
@@ -72,7 +74,7 @@ class HealthSyncUseCase
                     return@withLock Result.success(Unit)
                 }
                 val zoneId = prefs.scoringZone()
-                val today = LocalDate.now(zoneId)
+                val today = LocalDate.now(clock.withZone(zoneId))
                 val startDate = RetentionBounds.resolveResyncStartDate(prefs, today)
                 resyncRangeUseCase.run(
                     startDate = startDate,
