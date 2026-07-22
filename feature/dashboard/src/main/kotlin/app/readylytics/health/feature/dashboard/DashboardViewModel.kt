@@ -205,17 +205,8 @@ class DashboardViewModel
             session: SleepSessionData?,
         ): SleepSessionSummary? {
             session ?: return null
-            val summaryMinutes = summary?.sleepDurationMinutes
-            val sessionMinutes = (session.durationMinutes - session.awakeMinutes).coerceAtLeast(0)
-            if (summaryMinutes != null && summaryMinutes != sessionMinutes) {
-                // Biphasic days can legitimately aggregate more sleep than any single session.
-                // Keep the available session-backed fallback instead of blanking dashboard cards.
-                return SleepSessionSummary(
-                    efficiency = session.efficiency,
-                    startTime = session.startTime,
-                    endTime = session.endTime,
-                )
-            }
+            // Biphasic days can legitimately aggregate more sleep than any single session.
+            // Keep the available session-backed fallback instead of blanking dashboard cards.
             return SleepSessionSummary(
                 efficiency = session.efficiency,
                 startTime = session.startTime,
