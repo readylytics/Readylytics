@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first
@@ -13,12 +13,12 @@ import javax.inject.Singleton
 class HrMaxProvider
     @Inject
     constructor(
-        private val dao: DailySummaryDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
         private val settingsRepository: SettingsRepository,
     ) {
         suspend fun getPreciseHrMax(date: LocalDate): Double {
             val dateMs = date.toMidnightEpochMilli()
-            val dbValue = dao.getPreciseHrMax(dateMs)
+            val dbValue = scoringHistoryRepository.getPreciseHrMax(dateMs)
             if (dbValue != null) return dbValue
 
             val prefs = settingsRepository.userPreferences.first()
@@ -27,7 +27,7 @@ class HrMaxProvider
 
         suspend fun getRoundedHrMax(date: LocalDate): Int {
             val dateMs = date.toMidnightEpochMilli()
-            val dbValue = dao.getRoundedHrMax(dateMs)
+            val dbValue = scoringHistoryRepository.getRoundedHrMax(dateMs)
             if (dbValue != null) return dbValue
 
             val prefs = settingsRepository.userPreferences.first()
