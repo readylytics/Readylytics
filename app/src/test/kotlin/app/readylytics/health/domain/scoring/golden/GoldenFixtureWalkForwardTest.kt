@@ -156,8 +156,7 @@ class GoldenFixtureWalkForwardTest {
             val computeSleepMetricsUseCase =
                 ComputeSleepMetricsUseCase(
                     baselineComputer = baselineComputer,
-                    dailySummaryDao = db.dailySummaryDao(),
-                    heartRateDao = db.heartRateDao(),
+                    scoringHistoryRepository = scoringHistoryRepository,
                     scoringCalculator = scoringCalculator,
                     scoringConfigFactory = scoringConfigFactory,
                     encryptionManager = FakeEncryptionManager(),

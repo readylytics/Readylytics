@@ -305,8 +305,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer = baselineComputer,
-                dailySummaryDao = dailySummaryDao,
-                heartRateDao = heartRateDao,
+                scoringHistoryRepository = scoringHistoryRepository,
                 scoringCalculator = scoringCalculator,
                 scoringConfigFactory = scoringConfigFactory,
                 encryptionManager = encryptionManager,

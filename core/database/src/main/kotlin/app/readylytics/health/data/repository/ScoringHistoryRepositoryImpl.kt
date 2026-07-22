@@ -2,14 +2,14 @@ package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.mapper.HeartRateRecordMapper
+import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.DailySummaryEntity
 import app.readylytics.health.domain.model.HeartRateRecord
-import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepHrSample
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.persistence.HeartRateDao
 import app.readylytics.health.domain.persistence.HrvDao
-import app.readylytics.health.domain.persistence.SleepHrSample
 import app.readylytics.health.domain.persistence.SleepSessionDao
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import java.time.LocalDate
@@ -26,16 +26,18 @@ class ScoringHistoryRepositoryImpl
         private val sleepSessionDao: SleepSessionDao,
         private val dailySummaryDao: DailySummaryDao,
     ) : ScoringHistoryRepository {
-        override suspend fun getSleepSessionsSince(fromMs: Long): List<SleepSessionEntity> =
-            sleepSessionDao.getSince(fromMs)
+        override suspend fun getSleepSessionsSince(fromMs: Long): List<SleepSession> =
+            sleepSessionDao.getSince(fromMs).map(SleepSessionMapper::toDomain)
 
         override suspend fun getSleepSessionsBetween(
             fromMs: Long,
             toMs: Long,
-        ): List<SleepSessionEntity> = sleepSessionDao.getBetween(fromMs, toMs)
+        ): List<SleepSession> = sleepSessionDao.getBetween(fromMs, toMs).map(SleepSessionMapper::toDomain)
 
         override suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample> =
-            heartRateDao.getSleepHrProjectionForSessions(sessionIds)
+            heartRateDao.getSleepHrProjectionForSessions(sessionIds).map {
+                SleepHrSample(sessionId = it.sessionId, beatsPerMinute = it.beatsPerMinute)
+            }
 
         override suspend fun getAvgSleepHrForSessions(sessionIds: List<String>): Map<String, Int> =
             heartRateDao.getAvgSleepHrForSessions(sessionIds)
@@ -56,8 +58,10 @@ class ScoringHistoryRepositoryImpl
             toMs: Long,
         ): List<Float> = hrvDao.getRmssdInTimeRange(fromMs, toMs)
 
-        override suspend fun getDailySummaryByDate(dateMidnightMs: Long): DailySummaryEntity? =
-            dailySummaryDao.getByDate(dateMidnightMs)
+        override suspend fun getDailySummaryByDate(
+            dateMidnightMs: Long,
+            zoneId: ZoneId,
+        ): DailySummary? = dailySummaryDao.getByDate(dateMidnightMs)?.let { DailySummaryMapper.toDomain(it, zoneId) }
 
         override suspend fun getAllDailySummaries(zoneId: ZoneId): List<DailySummary> =
             dailySummaryDao.getAllSummaries().map { DailySummaryMapper.toDomain(it, zoneId) }

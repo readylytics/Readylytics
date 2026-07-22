@@ -112,8 +112,8 @@ object DailySummaryMapper {
             zLnHrv = domain.zLnHrv,
             zRhr = domain.zRhr,
             recoveryFlags =
-                if (domain.recoveryFlags.isNotEmpty()) {
-                    domain.recoveryFlags.joinToString(",") { it.name }
+                if (domain.readinessResult.recoveryFlags.isNotEmpty()) {
+                    domain.readinessResult.recoveryFlags.joinToString(",") { it.name }
                 } else {
                     null
                 },

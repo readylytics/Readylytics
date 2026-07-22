@@ -90,4 +90,22 @@ class DailySummaryMapperTest {
         assertEquals(45, roundTrip.supplementalSleepDurationMinutes)
         assertEquals(2, roundTrip.napCount)
     }
+
+    @Test
+    fun toEntityPersistsRecoveryFlagsFromReadinessResult() {
+        val scoringZone = ZoneId.of("Europe/Berlin")
+        val scoringDate = LocalDate.of(2026, 3, 29)
+        val flags = setOf(RecoveryFlag.REST_DAY_NO_IMPACT)
+        val domain =
+            DailySummary(
+                date = scoringDate,
+                readinessResult = ReadinessResult.EMPTY.copy(recoveryFlags = flags),
+            )
+
+        val entity = DailySummaryMapper.toEntity(domain, scoringZone)
+        val roundTrip = DailySummaryMapper.toDomain(entity, scoringZone)
+
+        assertEquals("REST_DAY_NO_IMPACT", entity.recoveryFlags)
+        assertEquals(flags, roundTrip.readinessResult.recoveryFlags)
+    }
 }
