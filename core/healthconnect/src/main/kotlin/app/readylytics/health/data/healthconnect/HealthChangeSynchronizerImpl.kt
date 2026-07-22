@@ -12,7 +12,11 @@ import androidx.health.connect.client.records.HeartRateRecord as HealthConnectHe
 import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
 import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.StepRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.mapper.BloodPressureDataMapper
 import app.readylytics.health.data.mapper.BodyFatDataMapper
 import app.readylytics.health.data.mapper.OxygenSaturationDataMapper

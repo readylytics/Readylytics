@@ -109,9 +109,7 @@ class CleanArchTest {
                 .files
                 .filter {
                     it.hasPackage("app.readylytics.health.domain..") &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\")) &&
-                        !it.name.endsWith("Aliases.kt") &&
-                        !it.name.endsWith("Aliases")
+                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
                 }.flatMap { file ->
                     val text = file.text
                     val matches = Regex("""app\.readylytics\.health\.data\.[a-zA-Z0-9.]+""").findAll(text)
