@@ -18,7 +18,7 @@ object HeartRateRecordMapper {
 
     fun toEntity(domain: HeartRateRecord): HeartRateRecordEntity =
         HeartRateRecordEntity(
-            id = domain.id,
+            sourceRecordId = domain.id,
             timestampMs = domain.timestampMs,
             beatsPerMinute = domain.beatsPerMinute,
             recordType = domain.recordType,
