@@ -128,6 +128,8 @@ interface HeartRateDao {
         endMs: Long,
     ): Flow<List<HeartRateRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
 
+    // REPLACE deletes+reinserts on (sourceRecordId, timestampMs) conflict — rowId changes
+    // on every re-upsert of the same source record; see HeartRateRecordEntity.rowId.
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)
 

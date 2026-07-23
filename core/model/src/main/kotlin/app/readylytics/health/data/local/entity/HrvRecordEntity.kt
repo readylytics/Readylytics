@@ -17,6 +17,12 @@ import kotlinx.serialization.Serializable
     ],
 )
 data class HrvRecordEntity(
+    /**
+     * Not stable across re-ingestion: [HrvDao.upsertAll] uses
+     * `@Insert(onConflict = REPLACE)`, keyed off the unique (sourceRecordId, timestampMs)
+     * index, and SQLite REPLACE deletes the conflicting row before inserting the new one.
+     * Never persist or compare rowId across sync passes.
+     */
     @PrimaryKey(autoGenerate = true)
     val rowId: Long = 0,
     val sourceRecordId: String,

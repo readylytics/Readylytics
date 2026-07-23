@@ -111,6 +111,8 @@ interface HrvDao {
         toMs: Long,
     ): List<HrvRecordEntity>
 
+    // REPLACE deletes+reinserts on (sourceRecordId, timestampMs) conflict — rowId changes
+    // on every re-upsert of the same source record; see HrvRecordEntity.rowId.
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HrvRecordEntity>)
 
