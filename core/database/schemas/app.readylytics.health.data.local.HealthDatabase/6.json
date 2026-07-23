@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "8e0b6161e1dd8737ac15242170e1c3f8",
+    "identityHash": "8a3f1c9e2d7b4a6f0e5c8d1b3a9f2e7c",
     "entities": [
       {
         "tableName": "sleep_sessions",
@@ -194,17 +194,11 @@
       },
       {
         "tableName": "heart_rate_records",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceRecordId` TEXT NOT NULL, `timestampMs` INTEGER NOT NULL, `beatsPerMinute` INTEGER NOT NULL, `recordType` TEXT NOT NULL, `sessionId` TEXT, `deviceName` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestampMs` INTEGER NOT NULL, `beatsPerMinute` INTEGER NOT NULL, `recordType` TEXT NOT NULL, `sessionId` TEXT, `deviceName` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
-            "fieldPath": "rowId",
-            "columnName": "rowId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "sourceRecordId",
-            "columnName": "sourceRecordId",
+            "fieldPath": "id",
+            "columnName": "id",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -238,22 +232,12 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": true,
+          "autoGenerate": false,
           "columnNames": [
-            "rowId"
+            "id"
           ]
         },
         "indices": [
-          {
-            "name": "index_heart_rate_records_sourceRecordId_timestampMs",
-            "unique": true,
-            "columnNames": [
-              "sourceRecordId",
-              "timestampMs"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_heart_rate_records_sourceRecordId_timestampMs` ON `${TABLE_NAME}` (`sourceRecordId`, `timestampMs`)"
-          },
           {
             "name": "index_heart_rate_records_timestampMs",
             "unique": false,
@@ -262,6 +246,16 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `${TABLE_NAME}` (`timestampMs`)"
+          },
+          {
+            "name": "index_heart_rate_records_recordType_timestampMs",
+            "unique": false,
+            "columnNames": [
+              "recordType",
+              "timestampMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType_timestampMs` ON `${TABLE_NAME}` (`recordType`, `timestampMs`)"
           },
           {
             "name": "index_heart_rate_records_sessionId_recordType_beatsPerMinute",
@@ -278,17 +272,11 @@
       },
       {
         "tableName": "hrv_records",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceRecordId` TEXT NOT NULL, `timestampMs` INTEGER NOT NULL, `rmssdMs` REAL NOT NULL, `recordType` TEXT NOT NULL, `sessionId` TEXT, `deviceName` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestampMs` INTEGER NOT NULL, `rmssdMs` REAL NOT NULL, `recordType` TEXT NOT NULL, `sessionId` TEXT, `deviceName` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
-            "fieldPath": "rowId",
-            "columnName": "rowId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "sourceRecordId",
-            "columnName": "sourceRecordId",
+            "fieldPath": "id",
+            "columnName": "id",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -322,22 +310,12 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": true,
+          "autoGenerate": false,
           "columnNames": [
-            "rowId"
+            "id"
           ]
         },
         "indices": [
-          {
-            "name": "index_hrv_records_sourceRecordId_timestampMs",
-            "unique": true,
-            "columnNames": [
-              "sourceRecordId",
-              "timestampMs"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_hrv_records_sourceRecordId_timestampMs` ON `${TABLE_NAME}` (`sourceRecordId`, `timestampMs`)"
-          },
           {
             "name": "index_hrv_records_timestampMs",
             "unique": false,
@@ -1227,7 +1205,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8e0b6161e1dd8737ac15242170e1c3f8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8a3f1c9e2d7b4a6f0e5c8d1b3a9f2e7c')"
     ]
   }
 }
