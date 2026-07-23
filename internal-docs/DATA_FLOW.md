@@ -249,19 +249,21 @@ entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity
 `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/`. **The database is the single source of truth; the UI never reads Health
 Connect directly.**
 
-`DatabaseMigrations` registers v1→v2, v2→v3, v3→v4, v4→v5, and v5→v6 migrations for existing
-installs. Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
+`DatabaseMigrations` registers v1→v2, v2→v3, v3→v4, v4→v5, v5→v6, and v6→v7 migrations for
+existing installs. Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
 `supplementalSleepDurationMinutes` and `napCount`, for nap/supplemental-sleep tracking; it does
 not change any other table or scoring formula. Version 6 (SCORE-001, HC-005, DB-002): adds a
-few tables and indices. Version 7 (DB-001): updates primary keys for heart_rate_records and hrv_records.
 nullable `workout_records.modelTrimp` column (the user-selected TRIMP model's value, lazily
 backfilled by the next walk-forward recompute — see §2.3); adds the `step_records` table (13th
 entity) holding raw per-record steps rows purely so a later Health Connect `DeletionChange` for
 steps can resolve the deleted record's own date range (§1.2) — it is never read for scoring, daily
 step totals still come from `StepCountFetcher`'s aggregate/device-filtered reads; and drops the
 `daily_summaries` index on `dateMidnightMs`, redundant with that column already being the primary
-key.
+key. Version 7 (DB-001) rebuilds `heart_rate_records` and `hrv_records` onto an autoincrement
+`rowId` primary key: the previous `id` (the Health Connect record id) is renamed `sourceRecordId`
+and is no longer unique on its own — a unique index on `(sourceRecordId, timestampMs)` replaces it,
+because re-ingestion can otherwise see the same source id more than once within a resync window.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
