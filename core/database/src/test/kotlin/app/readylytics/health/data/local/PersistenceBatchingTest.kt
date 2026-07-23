@@ -1,14 +1,23 @@
 package app.readylytics.health.data.local
 
+import app.readylytics.health.data.local.dao.BloodPressureRecordDao
+import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
+import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.data.local.dao.SleepSessionDao
+import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.dao.WeightRecordDao
+import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.HealthIngestionBatch
 import app.readylytics.health.domain.sync.HeartRateInput
+import java.lang.reflect.Proxy
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import java.lang.reflect.Proxy
 import kotlin.test.assertEquals
 
 class PersistenceBatchingTest {
@@ -62,13 +71,7 @@ class PersistenceBatchingTest {
             )
 
             assertEquals(3, transactionRunner.transactionCount)
-            assertEquals(
-                listOf("sleep:0", "heartRate:5000", "heartRate:1"),
-                events.filter {
-                    it.startsWith("sleep:") ||
-                        it.startsWith("heartRate:")
-                },
-            )
+            assertEquals(listOf("sleep:0", "heartRate:5000", "heartRate:1"), events.filter { it.startsWith("sleep:") || it.startsWith("heartRate:") })
         }
 
     @Test

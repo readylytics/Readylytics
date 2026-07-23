@@ -35,12 +35,12 @@ import app.readylytics.health.domain.sync.StepRecordInput
 import app.readylytics.health.domain.sync.WeightInput
 import app.readylytics.health.domain.sync.WorkoutInput
 import app.readylytics.health.domain.util.logD
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.yield
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.yield
 
 @Singleton
 class RoomHealthIngestionStore
@@ -128,25 +128,21 @@ class RoomHealthIngestionStore
             )
         }
 
-        override suspend fun countHeartRateInRange(
-            startMs: Long,
-            endMs: Long,
-        ): Int = heartRateDao.countInRange(startMs, endMs)
+        override suspend fun countHeartRateInRange(startMs: Long, endMs: Long): Int {
+            return heartRateDao.countInRange(startMs, endMs)
+        }
 
-        override suspend fun countHrvInRange(
-            startMs: Long,
-            endMs: Long,
-        ): Int = hrvDao.countInRange(startMs, endMs)
+        override suspend fun countHrvInRange(startMs: Long, endMs: Long): Int {
+            return hrvDao.countInRange(startMs, endMs)
+        }
 
-        override suspend fun countSleepSessionsInRange(
-            startMs: Long,
-            endMs: Long,
-        ): Int = sleepSessionDao.countInRange(startMs, endMs)
+        override suspend fun countSleepSessionsInRange(startMs: Long, endMs: Long): Int {
+            return sleepSessionDao.countInRange(startMs, endMs)
+        }
 
-        override suspend fun countWorkoutsInRange(
-            startMs: Long,
-            endMs: Long,
-        ): Int = workoutDao.countInRange(startMs, endMs)
+        override suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int {
+            return workoutDao.countInRange(startMs, endMs)
+        }
     }
 
 private const val TAG = "RoomHealthIngestionStore"

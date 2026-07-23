@@ -2,7 +2,6 @@ plugins {
     id("readylytics.android-library-conventions")
     id("readylytics.room-conventions")
     alias(libs.plugins.kotlin.serialization)
-    id("org.jlleitschuh.gradle.ktlint")
 }
 
 android {

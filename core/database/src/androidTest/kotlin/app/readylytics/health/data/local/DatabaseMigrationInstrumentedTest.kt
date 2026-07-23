@@ -44,13 +44,12 @@ class DatabaseMigrationInstrumentedTest {
         database.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'audit_events'").use { cursor ->
             assertTrue(cursor.moveToFirst())
         }
-        database
-            .query(
-                "SELECT name FROM sqlite_master " +
-                    "WHERE type = 'index' AND name = 'index_audit_events_occurredAtEpochMs'",
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
-            }
+        database.query(
+            "SELECT name FROM sqlite_master " +
+                "WHERE type = 'index' AND name = 'index_audit_events_occurredAtEpochMs'",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+        }
     }
 
     @Test
@@ -71,15 +70,12 @@ class DatabaseMigrationInstrumentedTest {
                 *DatabaseMigrations.all,
             )
 
-        database
-            .query(
-                "SELECT dateMidnightMs, supplementalSleepDurationMinutes, napCount FROM daily_summaries",
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
-                assertEquals(1_234L, cursor.getLong(0))
-                assertTrue(cursor.isNull(1))
-                assertTrue(cursor.isNull(2))
-            }
+        database.query("SELECT dateMidnightMs, supplementalSleepDurationMinutes, napCount FROM daily_summaries").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1_234L, cursor.getLong(0))
+            assertTrue(cursor.isNull(1))
+            assertTrue(cursor.isNull(2))
+        }
     }
 
     @Test
@@ -120,13 +116,12 @@ class DatabaseMigrationInstrumentedTest {
         }
 
         // The redundant secondary index on daily_summaries' own PK column is gone.
-        database
-            .query(
-                "SELECT name FROM sqlite_master " +
-                    "WHERE type = 'index' AND name = 'index_daily_summaries_dateMidnightMs'",
-            ).use { cursor ->
-                assertTrue("Redundant index must be dropped by MIGRATION_5_6", !cursor.moveToFirst())
-            }
+        database.query(
+            "SELECT name FROM sqlite_master " +
+                "WHERE type = 'index' AND name = 'index_daily_summaries_dateMidnightMs'",
+        ).use { cursor ->
+            assertTrue("Redundant index must be dropped by MIGRATION_5_6", !cursor.moveToFirst())
+        }
     }
 
     private companion object {
