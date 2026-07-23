@@ -304,19 +304,24 @@ class SecureFileLogSink(
 
         internal fun sanitizeLogMessage(message: String): String {
             var sanitized = message
-            
+
             // Redact UUIDs
-            sanitized = sanitized.replace(
-                Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOption.IGNORE_CASE),
-                "***"
-            )
-            
+            sanitized =
+                sanitized.replace(
+                    Regex(
+                        "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                        RegexOption.IGNORE_CASE,
+                    ),
+                    "***",
+                )
+
             // Redact specific health metrics numbers
-            sanitized = sanitized.replace(
-                Regex("(?i)\\b(HR|HRV|BP)\\s*(?:is\\s*)?\\d+(?:\\.\\d+)?(?:/\\d+)?"),
-                "$1 ***"
-            )
-            
+            sanitized =
+                sanitized.replace(
+                    Regex("(?i)\\b(HR|HRV|BP)\\s*(?:is\\s*)?\\d+(?:\\.\\d+)?(?:/\\d+)?"),
+                    "$1 ***",
+                )
+
             return sanitized
         }
     }

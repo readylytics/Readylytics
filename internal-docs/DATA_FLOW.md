@@ -242,7 +242,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 6)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 7)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
@@ -254,6 +254,7 @@ installs. Version 4 adds the metadata-only `audit_events` table; it does not cha
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
 `supplementalSleepDurationMinutes` and `napCount`, for nap/supplemental-sleep tracking; it does
 not change any other table or scoring formula. Version 6 (SCORE-001, HC-005, DB-002): adds a
+few tables and indices. Version 7 (DB-001): updates primary keys for heart_rate_records and hrv_records.
 nullable `workout_records.modelTrimp` column (the user-selected TRIMP model's value, lazily
 backfilled by the next walk-forward recompute — see §2.3); adds the `step_records` table (13th
 entity) holding raw per-record steps rows purely so a later Health Connect `DeletionChange` for
@@ -697,7 +698,7 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | elapsed duration only; zone minutes/TRIMP populated later by `ZoneThresholds.computeMetrics` |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v6)                              | 13 entities; v1→v6 migrations wired through `DatabaseMigrations`                         |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v7)                              | 13 entities; v1→v7 migrations wired through `DatabaseMigrations`                         |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |

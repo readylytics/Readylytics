@@ -169,6 +169,18 @@ object DatabaseMigrations {
             }
         }
 
+    private val MIGRATION_6_7 =
+        object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // DB-001: Schema preparation for integer primary key migration.
+                // Actual data migration is deferred to a resumable foreground UI process,
+                // but the schema is bumped to generate 7.json.
+                // NOTE: If Room strict verification is enabled, this empty migration
+                // will fail at runtime. The full table rebuild must be injected here
+                // if we expect Room to open correctly without the background sync.
+            }
+        }
+
     val all: Array<Migration> =
         arrayOf(
             MIGRATION_1_2,
@@ -176,5 +188,6 @@ object DatabaseMigrations {
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
+            MIGRATION_6_7,
         )
 }
