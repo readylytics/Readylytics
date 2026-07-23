@@ -108,11 +108,17 @@ class HealthConnectRepositoryImpl
                         }
                         throw e
                     }
-                app.readylytics.health.domain.util.logD(
-                    "HealthConnectRepository",
-                ) { "Granted permissions: $granted" }
-                app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                    "Required permissions: $requiredPermissions"
+                if (app.readylytics.health.core.healthconnect.BuildConfig.DEBUG) {
+                    app.readylytics.health.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "Granted permissions: $granted" }
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Required permissions: $requiredPermissions"
+                    }
+                } else {
+                    app.readylytics.health.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "Granted permissions count: ${granted.size}" }
                 }
 
                 if (granted.containsAll(requiredPermissions)) {
@@ -122,9 +128,15 @@ class HealthConnectRepositoryImpl
                     PermissionStatus.Granted
                 } else {
                     val missing = requiredPermissions - granted
-                    app.readylytics.health.domain.util.logD(
-                        "HealthConnectRepository",
-                    ) { "Missing permissions: $missing" }
+                    if (app.readylytics.health.core.healthconnect.BuildConfig.DEBUG) {
+                        app.readylytics.health.domain.util.logD(
+                            "HealthConnectRepository",
+                        ) { "Missing permissions: $missing" }
+                    } else {
+                        app.readylytics.health.domain.util.logD(
+                            "HealthConnectRepository",
+                        ) { "Missing permissions count: ${missing.size}" }
+                    }
                     PermissionStatus.Missing(missing)
                 }
             }
