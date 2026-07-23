@@ -368,6 +368,37 @@ class SecureFileLogSinkTest {
         assertTrue("Should contain redaction markers", sanitized.contains("***"))
     }
 
+    @Test
+    fun testLogSanitizationHandlesSeparatorVariants() {
+        val original = "HR=120, HR:118, BPM 150"
+        val sanitized = SecureFileLogSink.sanitizeLogMessage(original)
+
+        assertFalse("Should redact HR=120", sanitized.contains("120"))
+        assertFalse("Should redact HR:118", sanitized.contains("118"))
+        assertFalse("Should redact BPM 150", sanitized.contains("150"))
+    }
+
+    @Test
+    fun testStackTraceRedactsHealthMetrics() =
+        runBlocking {
+            val secureFileStore = FakeSecureFileStore()
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10000L,
+                    maxBackups = 2,
+                    encryptStreams = true,
+                    coroutineContext = Dispatchers.Unconfined,
+                    secureFileStore = secureFileStore,
+                )
+
+            val exception = RuntimeException("Invalid reading: HR is 245")
+            sink.log(LogLevel.ERROR, "ErrorTag", "Validation failed", exception, LogContext("session-1"))
+
+            val content = sink.readLogsDecrypted()
+            assertFalse("Stack trace text should be redacted too", content.contains("245"))
+        }
+
     private class FakeSecureFileStore : SecureFileStore {
         private val storedContents = linkedMapOf<String, String>()
         private val unreadableFiles = mutableSetOf<String>()

@@ -82,9 +82,10 @@ class SecureFileLogSink(
         val timestamp = dateFormat.format(Date())
         val sessionId = logContext.sessionId ?: "none"
         val sanitizedMessage = sanitizeLogMessage(message)
+        val sanitizedStackTrace = throwable?.let { sanitizeLogMessage(Log.getStackTraceString(it)) }
         val logLine =
             "$timestamp [$level] [$tag] [Session:$sessionId] $sanitizedMessage" +
-                (throwable?.let { "\n${Log.getStackTraceString(it)}" } ?: "") + "\n"
+                (sanitizedStackTrace?.let { "\n$it" } ?: "") + "\n"
 
         pendingLogs.add(logLine)
 
@@ -318,7 +319,7 @@ class SecureFileLogSink(
             // Redact specific health metrics numbers
             sanitized =
                 sanitized.replace(
-                    Regex("(?i)\\b(HR|HRV|BP)\\s*(?:is\\s*)?\\d+(?:\\.\\d+)?(?:/\\d+)?"),
+                    Regex("(?i)\\b(HR|HRV|BP|BPM)\\s*[:=]?\\s*(?:is\\s*)?\\d+(?:\\.\\d+)?(?:/\\d+)?"),
                     "$1 ***",
                 )
 
