@@ -173,7 +173,7 @@ object DatabaseMigrations {
         object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // DB-001: Schema preparation for integer primary key migration.
-                
+
                 // Rebuild heart_rate_records
                 db.execSQL(
                     """
