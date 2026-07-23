@@ -124,6 +124,43 @@ class DatabaseMigrationInstrumentedTest {
         }
     }
 
+    @Test
+    fun migrate6To7RebuildsPrimaryKeyAndPreservesExistingData() {
+        helper.createDatabase(TEST_DATABASE, 6).apply {
+            execSQL(
+                "INSERT INTO heart_rate_records (id, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf<Any?>("hc-hr-1", 1_000L, 62, "SLEEP", "session-1", "Test Ring"),
+            )
+            execSQL(
+                "INSERT INTO hrv_records (id, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf<Any?>("hc-hrv-1", 1_000L, 45.2f, "SLEEP", "session-1", "Test Ring"),
+            )
+            close()
+        }
+
+        val database =
+            helper.runMigrationsAndValidate(
+                TEST_DATABASE,
+                7,
+                true,
+                *DatabaseMigrations.all,
+            )
+
+        database.query("SELECT rowId, sourceRecordId, timestampMs, beatsPerMinute FROM heart_rate_records").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1L, cursor.getLong(0))
+            assertEquals("hc-hr-1", cursor.getString(1))
+        }
+
+        database.query("SELECT rowId, sourceRecordId, rmssdMs FROM hrv_records").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1L, cursor.getLong(0))
+            assertEquals("hc-hrv-1", cursor.getString(1))
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "audit-migration-test"
     }
