@@ -13,6 +13,7 @@ import kotlinx.serialization.Serializable
         Index(value = ["sourceRecordId", "timestampMs"], unique = true),
         Index(value = ["timestampMs"]),
         Index(value = ["sessionId", "recordType", "beatsPerMinute"]),
+        Index(value = ["recordType", "timestampMs"]),
     ],
 )
 data class HeartRateRecordEntity(

@@ -199,6 +199,7 @@ object DatabaseMigrations {
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_heart_rate_records_sourceRecordId_timestampMs` ON `heart_rate_records` (`sourceRecordId`, `timestampMs`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId_recordType_beatsPerMinute` ON `heart_rate_records` (`sessionId`, `recordType`, `beatsPerMinute`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType_timestampMs` ON `heart_rate_records` (`recordType`, `timestampMs`)")
 
                 // Rebuild hrv_records
                 db.execSQL(

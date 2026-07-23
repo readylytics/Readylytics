@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "8e0b6161e1dd8737ac15242170e1c3f8",
+    "identityHash": "9caedb2eab0d3eb983d9896b2da875ea",
     "entities": [
       {
         "tableName": "sleep_sessions",
@@ -273,6 +273,16 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId_recordType_beatsPerMinute` ON `${TABLE_NAME}` (`sessionId`, `recordType`, `beatsPerMinute`)"
+          },
+          {
+            "name": "index_heart_rate_records_recordType_timestampMs",
+            "unique": false,
+            "columnNames": [
+              "recordType",
+              "timestampMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType_timestampMs` ON `${TABLE_NAME}` (`recordType`, `timestampMs`)"
           }
         ]
       },
@@ -1227,7 +1237,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8e0b6161e1dd8737ac15242170e1c3f8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9caedb2eab0d3eb983d9896b2da875ea')"
     ]
   }
 }
