@@ -81,8 +81,9 @@ class SecureFileLogSink(
     ) {
         val timestamp = dateFormat.format(Date())
         val sessionId = logContext.sessionId ?: "none"
+        val sanitizedMessage = sanitizeLogMessage(message)
         val logLine =
-            "$timestamp [$level] [$tag] [Session:$sessionId] $message" +
+            "$timestamp [$level] [$tag] [Session:$sessionId] $sanitizedMessage" +
                 (throwable?.let { "\n${Log.getStackTraceString(it)}" } ?: "") + "\n"
 
         pendingLogs.add(logLine)
@@ -300,5 +301,11 @@ class SecureFileLogSink(
     companion object {
         const val DEFAULT_MAX_FILE_SIZE_BYTES: Long = 2L * 1024L * 1024L
         const val DEFAULT_MAX_BACKUPS: Int = 2
+
+        internal fun sanitizeLogMessage(message: String): String {
+            // Basic heuristic to redact numbers that might be health data (e.g. HR, BP, etc.)
+            // Replaces numeric sequences with ***
+            return message.replace(Regex("\\b\\d+(?:\\.\\d+)?\\b"), "***")
+        }
     }
 }
