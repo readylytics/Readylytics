@@ -173,11 +173,59 @@ object DatabaseMigrations {
         object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // DB-001: Schema preparation for integer primary key migration.
-                // Actual data migration is deferred to a resumable foreground UI process,
-                // but the schema is bumped to generate 7.json.
-                // NOTE: If Room strict verification is enabled, this empty migration
-                // will fail at runtime. The full table rebuild must be injected here
-                // if we expect Room to open correctly without the background sync.
+                
+                // Rebuild heart_rate_records
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `heart_rate_records_new` (
+                        `rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `sourceRecordId` TEXT NOT NULL,
+                        `timestampMs` INTEGER NOT NULL,
+                        `beatsPerMinute` INTEGER NOT NULL,
+                        `recordType` TEXT NOT NULL,
+                        `sessionId` TEXT,
+                        `deviceName` TEXT
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO `heart_rate_records_new` (`sourceRecordId`, `timestampMs`, `beatsPerMinute`, `recordType`, `sessionId`, `deviceName`)
+                    SELECT `id`, `timestampMs`, `beatsPerMinute`, `recordType`, `sessionId`, `deviceName` FROM `heart_rate_records`
+                    """.trimIndent(),
+                )
+                db.execSQL("DROP TABLE `heart_rate_records`")
+                db.execSQL("ALTER TABLE `heart_rate_records_new` RENAME TO `heart_rate_records`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_heart_rate_records_sourceRecordId_timestampMs` ON `heart_rate_records` (`sourceRecordId`, `timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId_recordType_beatsPerMinute` ON `heart_rate_records` (`sessionId`, `recordType`, `beatsPerMinute`)")
+
+                // Rebuild hrv_records
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `hrv_records_new` (
+                        `rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `sourceRecordId` TEXT NOT NULL,
+                        `timestampMs` INTEGER NOT NULL,
+                        `rmssdMs` REAL NOT NULL,
+                        `recordType` TEXT NOT NULL,
+                        `sessionId` TEXT,
+                        `deviceName` TEXT
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO `hrv_records_new` (`sourceRecordId`, `timestampMs`, `rmssdMs`, `recordType`, `sessionId`, `deviceName`)
+                    SELECT `id`, `timestampMs`, `rmssdMs`, `recordType`, `sessionId`, `deviceName` FROM `hrv_records`
+                    """.trimIndent(),
+                )
+                db.execSQL("DROP TABLE `hrv_records`")
+                db.execSQL("ALTER TABLE `hrv_records_new` RENAME TO `hrv_records`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_hrv_records_sourceRecordId_timestampMs` ON `hrv_records` (`sourceRecordId`, `timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_timestampMs` ON `hrv_records` (`timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_recordType_timestampMs` ON `hrv_records` (`recordType`, `timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_sessionId` ON `hrv_records` (`sessionId`)")
             }
         }
 
