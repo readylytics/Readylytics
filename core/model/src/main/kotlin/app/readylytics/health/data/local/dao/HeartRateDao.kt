@@ -1,9 +1,10 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.MapColumn
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.domain.model.HrRangeAggregate
@@ -127,7 +128,7 @@ interface HeartRateDao {
         endMs: Long,
     ): Flow<List<HeartRateRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)
 
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")

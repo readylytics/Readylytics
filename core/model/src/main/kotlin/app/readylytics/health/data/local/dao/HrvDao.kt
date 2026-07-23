@@ -1,9 +1,10 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.MapColumn
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -110,7 +111,7 @@ interface HrvDao {
         toMs: Long,
     ): List<HrvRecordEntity>
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HrvRecordEntity>)
 
     @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")

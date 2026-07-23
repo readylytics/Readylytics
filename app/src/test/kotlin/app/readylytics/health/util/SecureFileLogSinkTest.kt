@@ -135,7 +135,7 @@ class SecureFileLogSinkTest {
             assertTrue(!logFile.exists() || logFile.readText().isEmpty())
 
             val content = sink.readLogsDecrypted()
-            assertTrue(content.contains("Log ***"))
+            assertTrue(content.contains("Log 1"))
         }
 
     @Test
@@ -158,7 +158,9 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
 
-            assertTrue(content.contains("Encrypted log ***"))
+            for (i in 1..5) {
+                assertTrue(content.contains("Encrypted log $i"))
+            }
             assertTrue("Encrypted write should delegate to helper", secureFileStore.writeCalls.isNotEmpty())
             assertEquals("prod_logs.txt", secureFileStore.writeCalls.last())
             assertTrue("Encrypted read should delegate to helper", secureFileStore.readCalls.contains("prod_logs.txt"))
@@ -182,7 +184,9 @@ class SecureFileLogSinkTest {
             val logFile = File(cacheDir, "logs/prod_logs.txt")
             assertTrue(logFile.exists())
             val content = logFile.readText()
-            assertTrue(content.contains("Log ***"))
+            for (i in 1..5) {
+                assertTrue(content.contains("Log $i"))
+            }
         }
 
     @Test
@@ -212,11 +216,13 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
 
-            assertTrue(content.contains("Fresh log ***"))
+            for (i in 1..5) {
+                assertTrue(content.contains("Fresh log $i"))
+            }
             assertTrue(!content.contains("legacy-garbage"))
             assertTrue(
                 "Unreadable content should be replaced with new readable data",
-                secureFileStore.readableContentFor(legacyFile).contains("Fresh log ***"),
+                secureFileStore.readableContentFor(legacyFile).contains("Fresh log 5"),
             )
         }
 
@@ -348,7 +354,7 @@ class SecureFileLogSinkTest {
                         .toLong()
                 }
 
-            assertTrue(content.contains("Log ***"))
+            assertTrue(content.contains("Log 20"))
             assertTrue(totalBytes <= 160L)
         }
 

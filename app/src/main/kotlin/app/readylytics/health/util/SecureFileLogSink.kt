@@ -303,9 +303,21 @@ class SecureFileLogSink(
         const val DEFAULT_MAX_BACKUPS: Int = 2
 
         internal fun sanitizeLogMessage(message: String): String {
-            // Basic heuristic to redact numbers that might be health data (e.g. HR, BP, etc.)
-            // Replaces numeric sequences with ***
-            return message.replace(Regex("\\b\\d+(?:\\.\\d+)?\\b"), "***")
+            var sanitized = message
+            
+            // Redact UUIDs
+            sanitized = sanitized.replace(
+                Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOption.IGNORE_CASE),
+                "***"
+            )
+            
+            // Redact specific health metrics numbers
+            sanitized = sanitized.replace(
+                Regex("(?i)\\b(HR|HRV|BP)\\s*(?:is\\s*)?\\d+(?:\\.\\d+)?(?:/\\d+)?"),
+                "$1 ***"
+            )
+            
+            return sanitized
         }
     }
 }

@@ -77,6 +77,6 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun stepRecordDao(): StepRecordDao
 
     companion object {
-        const val DATABASE_VERSION = 6
+        const val DATABASE_VERSION = 7
     }
 }
