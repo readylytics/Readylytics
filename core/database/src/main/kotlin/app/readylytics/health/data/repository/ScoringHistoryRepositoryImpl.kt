@@ -1,5 +1,9 @@
 package app.readylytics.health.data.repository
 
+import app.readylytics.health.data.local.dao.DailySummaryDao
+import app.readylytics.health.data.local.dao.HeartRateDao
+import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.mapper.HeartRateRecordMapper
 import app.readylytics.health.data.mapper.SleepSessionMapper
@@ -7,10 +11,6 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.HeartRateRecord
 import app.readylytics.health.domain.model.SleepHrSample
 import app.readylytics.health.domain.model.SleepSession
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import java.time.LocalDate
 import java.time.ZoneId
@@ -83,8 +83,7 @@ class ScoringHistoryRepositoryImpl
         override suspend fun getPreciseRas(dateMidnightMs: Long): Double? =
             dailySummaryDao.getPreciseRas(dateMidnightMs)
 
-        override suspend fun getRoundedRas(dateMidnightMs: Long): Int? =
-            dailySummaryDao.getRoundedRas(dateMidnightMs)
+        override suspend fun getRoundedRas(dateMidnightMs: Long): Int? = dailySummaryDao.getRoundedRas(dateMidnightMs)
 
         override suspend fun getPreciseRhrBaseline(dateMidnightMs: Long): Double? =
             dailySummaryDao.getPreciseRhrBaseline(dateMidnightMs)

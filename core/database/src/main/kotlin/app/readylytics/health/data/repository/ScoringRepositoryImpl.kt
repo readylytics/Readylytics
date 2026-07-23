@@ -8,19 +8,19 @@ import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.preferences.scoringZone
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
@@ -44,7 +44,6 @@ import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
-import app.readylytics.health.di.DefaultDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -52,7 +51,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import java.util.TreeMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -142,7 +140,12 @@ class ScoringRepositoryImpl
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
-            val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val toMs =
+                endDate
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             return WalkForwardTrimpContext(
                 dailyTrimpByDate = TreeMap(TrimpDateBucketer.bucket(workoutDao.getTrimpPoints(fromMs, toMs), zoneId)),
                 everydayTrimpByDate =
@@ -275,7 +278,9 @@ class ScoringRepositoryImpl
                 // must exclude every sleep segment contributing to this score day. Recovery metrics still
                 // run only against the core cluster via currentSessionIds.
                 val aggregatedSleep = resolveSleepAggregation(targetDate, zoneId, prefs)
-                val session = aggregatedSleep?.scoringSession ?: sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+                val session =
+                    aggregatedSleep?.scoringSession
+                        ?: sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
 
                 // Everyday-HR load variant: waking, non-workout, non-sleep minutes (interval
@@ -285,7 +290,13 @@ class ScoringRepositoryImpl
                 val everydayHrBuckets = heartRateDao.getMinuteBuckets(dayMidnightMs, nextDayMidnightMs)
                 val sleepIntervalsMs =
                     aggregatedSleep?.allSleepIntervals
-                        ?: if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
+                        ?: if (session !=
+                            null
+                        ) {
+                            listOf(LongInterval(session.startTime, session.endTime))
+                        } else {
+                            emptyList()
+                        }
                 val workoutIntervalsMs = workouts.map { LongInterval(it.startTime, it.endTime) }
                 val everydayResult =
                     assembleEverydayLoadInputUseCase.execute(
@@ -661,7 +672,12 @@ class ScoringRepositoryImpl
                     .atStartOfDay(zoneId)
                     .toInstant()
                     .toEpochMilli()
-            val fetchEndMs = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val fetchEndMs =
+                targetDate
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val sessions = sleepSessionDao.getOverlapping(fetchStartMs, fetchEndMs)
             if (sessions.isEmpty()) return null
 
@@ -680,7 +696,10 @@ class ScoringRepositoryImpl
                     policy = policy,
                 ) ?: return null
 
-            val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }.toSet()
+            val coreSessionIds =
+                aggregate.coreCluster.segments
+                    .map { it.stableId }
+                    .toSet()
             val coreSessions = sessions.filter { it.id in coreSessionIds }
             val baseSession = coreSessions.minByOrNull { it.endTime } ?: return null
             val stageTotals = aggregate.architectureTotals
@@ -698,7 +717,11 @@ class ScoringRepositoryImpl
             val allSleepIntervals =
                 buildList {
                     aggregate.coreCluster.segments.forEach { add(LongInterval(it.startTimeMs, it.endTimeMs)) }
-                    aggregate.supplementalBlocks.forEach { add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs)) }
+                    aggregate.supplementalBlocks.forEach {
+                        add(
+                            LongInterval(it.segment.startTimeMs, it.segment.endTimeMs),
+                        )
+                    }
                 }
 
             return SleepAggregationContext(

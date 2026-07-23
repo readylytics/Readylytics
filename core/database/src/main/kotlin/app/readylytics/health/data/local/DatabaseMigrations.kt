@@ -91,9 +91,11 @@ object DatabaseMigrations {
                         `contrib_loadContribution` REAL,
                         PRIMARY KEY(`dateMidnightMs`)
                     )
-                    """.trimIndent()
+                    """.trimIndent(),
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_summaries_dateMidnightMs` ON `daily_summaries` (`dateMidnightMs`)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_daily_summaries_dateMidnightMs` ON `daily_summaries` (`dateMidnightMs`)",
+                )
             }
         }
 
@@ -107,7 +109,7 @@ object DatabaseMigrations {
                         `type` TEXT NOT NULL,
                         PRIMARY KEY(`dateMidnightMs`, `type`)
                     )
-                    """.trimIndent()
+                    """.trimIndent(),
                 )
             }
         }
@@ -133,7 +135,7 @@ object DatabaseMigrations {
                 )
             }
         }
-        
+
     private val MIGRATION_4_5 =
         object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -196,9 +198,15 @@ object DatabaseMigrations {
                 )
                 db.execSQL("DROP TABLE `heart_rate_records`")
                 db.execSQL("ALTER TABLE `heart_rate_records_new` RENAME TO `heart_rate_records`")
-                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_heart_rate_records_sourceRecordId_timestampMs` ON `heart_rate_records` (`sourceRecordId`, `timestampMs`)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId_recordType_beatsPerMinute` ON `heart_rate_records` (`sessionId`, `recordType`, `beatsPerMinute`)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_heart_rate_records_sourceRecordId_timestampMs` ON `heart_rate_records` (`sourceRecordId`, `timestampMs`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId_recordType_beatsPerMinute` ON `heart_rate_records` (`sessionId`, `recordType`, `beatsPerMinute`)",
+                )
 
                 // Rebuild hrv_records
                 db.execSQL(
@@ -222,9 +230,15 @@ object DatabaseMigrations {
                 )
                 db.execSQL("DROP TABLE `hrv_records`")
                 db.execSQL("ALTER TABLE `hrv_records_new` RENAME TO `hrv_records`")
-                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_hrv_records_sourceRecordId_timestampMs` ON `hrv_records` (`sourceRecordId`, `timestampMs`)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_timestampMs` ON `hrv_records` (`timestampMs`)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_recordType_timestampMs` ON `hrv_records` (`recordType`, `timestampMs`)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_hrv_records_sourceRecordId_timestampMs` ON `hrv_records` (`sourceRecordId`, `timestampMs`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_hrv_records_timestampMs` ON `hrv_records` (`timestampMs`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_hrv_records_recordType_timestampMs` ON `hrv_records` (`recordType`, `timestampMs`)",
+                )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_sessionId` ON `hrv_records` (`sessionId`)")
             }
         }

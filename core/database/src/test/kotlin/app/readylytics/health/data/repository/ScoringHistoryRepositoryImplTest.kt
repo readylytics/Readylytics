@@ -9,9 +9,9 @@ import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.lang.reflect.Proxy
 import java.time.LocalDate
 import java.time.ZoneOffset
-import java.lang.reflect.Proxy
 
 class ScoringHistoryRepositoryImplTest {
     private val heartRateResults = mutableMapOf<String, Any?>()
@@ -74,7 +74,7 @@ class ScoringHistoryRepositoryImplTest {
 
             assertEquals(1, result.size)
             assertEquals(LocalDate.of(1970, 1, 1), result.first().date)
-    }
+        }
 
     @Suppress("UNCHECKED_CAST")
     private inline fun <reified T> fakeDao(results: MutableMap<String, Any?> = mutableMapOf()): T =
