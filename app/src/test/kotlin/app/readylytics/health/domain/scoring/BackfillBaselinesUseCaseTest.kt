@@ -5,10 +5,13 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.util.stdev
@@ -85,8 +88,8 @@ class BackfillBaselinesUseCaseTest {
         rhrHistory: List<Int> = emptyList(),
     ) {
         coEvery { computer.computeBackfillBaselines(any(), any(), any()) } answers {
-            firstArg<List<DailySummaryEntity>>().associate {
-                it.dateMidnightMs to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
+            firstArg<List<DailySummary>>().associate {
+                it.date to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
             }
         }
     }
@@ -554,7 +557,30 @@ class BackfillBaselinesUseCaseTest {
         dao: DailySummaryDao,
         settingsRepo: SettingsRepository,
         compute: ComputeHistoricalBaselinesUseCase,
-    ) = BackfillHistoricalBaselinesUseCase(dao, settingsRepo, compute, passthroughTransactionRunner)
+    ): BackfillHistoricalBaselinesUseCase {
+        val history = mockk<ScoringHistoryRepository>(relaxed = true)
+        coEvery { history.getAllDailySummaries(any()) } coAnswers {
+            dao.getAllSummaries().map { DailySummaryMapper.toDomain(it, testZone) }
+        }
+        coEvery {
+            history.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } coAnswers {
+            dao.updateBaselines(
+                firstArg(),
+                secondArg(),
+                thirdArg(),
+                arg(3),
+                arg(4),
+                arg(5),
+                arg(6),
+                arg(7),
+                arg(8),
+                arg(9),
+                arg(10),
+            )
+        }
+        return BackfillHistoricalBaselinesUseCase(history, settingsRepo, compute, passthroughTransactionRunner)
+    }
 
     private fun buildComputeUseCase(): Triple<
         BaselineComputer,
@@ -586,7 +612,7 @@ class BackfillBaselinesUseCaseTest {
         }
 
     @Test
-    fun `execute recomputes and writes all rows even if they were already frozen`() =
+    fun `execute never recomputes or rewrites rows that are already frozen — true freeze (OD-4)`() =
         runTest {
             val frozen =
                 listOf(
@@ -597,20 +623,18 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns frozen
 
             val (bc, ls, compute) = buildComputeUseCase()
-            stubBackfill(bc, listOf(50f), listOf(50f), 60f)
-            coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
             val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
-            assertEquals(2, count)
-            coVerify(exactly = 1) { dao.wipeDerivedBaselines() }
-            coVerify(exactly = 2) {
+            assertEquals(0, count, "Already-frozen rows must not be recomputed")
+            coVerify(exactly = 0) { bc.computeBackfillBaselines(any(), any(), any()) }
+            coVerify(exactly = 0) {
                 dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 
     @Test
-    fun `execute always recomputes and writes rows on subsequent runs`() =
+    fun `execute is a no-op on a second consecutive run once every row is frozen`() =
         runTest {
             val summary = makeSummary(daysAgo = 7)
             val dao = mockk<DailySummaryDao>(relaxed = true)
@@ -620,17 +644,52 @@ class BackfillBaselinesUseCaseTest {
             stubBackfill(bc, listOf(48f), listOf(48f), 60f)
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
-            // First run: processed.
+            // First run: the row is unfrozen, so it gets computed and written.
             val firstCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
             assertEquals(1, firstCount)
 
-            // Simulate DAO returning the now-frozen row.
+            // Simulate the DAO now returning the frozen row the first run produced.
             val frozenRow = summary.copy(baselineCalculatedAtDate = LocalDate.now().minusDays(7))
             coEvery { dao.getAllSummaries() } returns listOf(frozenRow)
 
-            // Second run: still processed (full rebuild behavior).
+            // Second run: nothing is unfrozen, so this is a 0-write no-op.
             val secondCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
-            assertEquals(1, secondCount)
+            assertEquals(0, secondCount)
+            coVerify(exactly = 1) {
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            }
+        }
+
+    @Test
+    fun `execute only recomputes the unfrozen subset when some rows are already frozen`() =
+        runTest {
+            val frozen = makeSummary(daysAgo = 20, baselineCalculatedAtDate = LocalDate.now().minusDays(20))
+            val unfrozen = makeSummary(daysAgo = 3)
+            val dao = mockk<DailySummaryDao>(relaxed = true)
+            coEvery { dao.getAllSummaries() } returns listOf(frozen, unfrozen)
+
+            val (bc, ls, compute) = buildComputeUseCase()
+            val passedSummaries = slot<List<DailySummary>>()
+            coEvery { bc.computeBackfillBaselines(capture(passedSummaries), any(), any()) } answers {
+                passedSummaries.captured.associate {
+                    it.date to BaselineComputer.BackfillBaseline(listOf(50f), listOf(50f), 60f, emptyList())
+                }
+            }
+            coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
+
+            val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
+
+            assertEquals(1, count)
+            assertEquals(
+                listOf(unfrozen.dateMidnightMs),
+                passedSummaries.captured.map {
+                    it.date
+                        .atStartOfDay(testZone)
+                        .toInstant()
+                        .toEpochMilli()
+                },
+                "Only the never-frozen row should be handed to the batched computation",
+            )
         }
 
     @Test
@@ -776,3 +835,10 @@ class BackfillBaselinesUseCaseTest {
             assertEquals(expectedDate, computed[0].baselineCalculatedAtDate)
         }
 }
+
+private val testZone = ZoneId.systemDefault()
+
+private suspend fun ComputeHistoricalBaselinesUseCase.computeHistoricalBaselines(
+    summaries: List<DailySummaryEntity>,
+    prefs: UserPreferences,
+): List<DailySummary> = computeHistoricalBaselines(summaries.map { DailySummaryMapper.toDomain(it, testZone) }, prefs)

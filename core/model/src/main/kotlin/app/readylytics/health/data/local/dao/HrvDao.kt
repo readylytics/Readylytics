@@ -1,34 +1,35 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.MapColumn
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface HrvDao {
-    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC")
+    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordId ASC")
     fun _observeSince(fromMs: Long): Flow<List<HrvRecordEntity>>
 
     fun observeSince(fromMs: Long): Flow<List<HrvRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT * FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
-            "ORDER BY timestampMs ASC, id ASC",
+            "ORDER BY timestampMs ASC, sourceRecordId ASC",
     )
     fun _observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>>
 
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>> =
         _observeSleepHrvSince(fromMs).distinctUntilChanged()
 
-    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC")
+    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordId ASC")
     suspend fun getSince(fromMs: Long): List<HrvRecordEntity>
 
     @Query(
-        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC LIMIT :limit OFFSET :offset",
+        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordId ASC LIMIT :limit OFFSET :offset",
     )
     suspend fun getPaged(
         fromMs: Long,
@@ -39,8 +40,8 @@ interface HrvDao {
     @Query(
         "SELECT * FROM hrv_records " +
             "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
-            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND id > :lastId)) " +
-            "ORDER BY timestampMs ASC, id ASC LIMIT :limit",
+            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordId > :lastId)) " +
+            "ORDER BY timestampMs ASC, sourceRecordId ASC LIMIT :limit",
     )
     suspend fun getKeysetPage(
         startMs: Long,
@@ -52,7 +53,7 @@ interface HrvDao {
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
-            "ORDER BY timestampMs ASC, id ASC",
+            "ORDER BY timestampMs ASC, sourceRecordId ASC",
     )
     suspend fun getSleepRmssdValues(fromMs: Long): List<Float>
 
@@ -67,13 +68,13 @@ interface HrvDao {
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId " +
-            "ORDER BY timestampMs ASC, id ASC",
+            "ORDER BY timestampMs ASC, sourceRecordId ASC",
     )
     suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
 
     @Query(
         "SELECT sessionId, rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds) " +
-            "ORDER BY sessionId ASC, timestampMs ASC, id ASC",
+            "ORDER BY sessionId ASC, timestampMs ASC, sourceRecordId ASC",
     )
     suspend fun getSleepRmssdForSessionsMap(
         sessionIds: List<String>,
@@ -88,13 +89,13 @@ interface HrvDao {
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds) " +
-            "ORDER BY sessionId ASC, timestampMs ASC, id ASC",
+            "ORDER BY sessionId ASC, timestampMs ASC, sourceRecordId ASC",
     )
     suspend fun getSleepRmssdValuesForSessions(sessionIds: List<String>): List<Float>
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs " +
-            "ORDER BY timestampMs ASC, id ASC",
+            "ORDER BY timestampMs ASC, sourceRecordId ASC",
     )
     suspend fun getRmssdInTimeRange(
         fromMs: Long,
@@ -103,37 +104,39 @@ interface HrvDao {
 
     @Query(
         "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs " +
-            "ORDER BY timestampMs ASC, id ASC",
+            "ORDER BY timestampMs ASC, sourceRecordId ASC",
     )
     suspend fun getByTimeRange(
         fromMs: Long,
         toMs: Long,
     ): List<HrvRecordEntity>
 
-    @Upsert
+    // REPLACE deletes+reinserts on (sourceRecordId, timestampMs) conflict — rowId changes
+    // on every re-upsert of the same source record; see HrvRecordEntity.rowId.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HrvRecordEntity>)
 
     @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
-    @Query("DELETE FROM hrv_records WHERE id = :id")
+    @Query("DELETE FROM hrv_records WHERE sourceRecordId = :id")
     suspend fun deleteById(id: String): Int
 
-    @Query("SELECT * FROM hrv_records WHERE id = :id")
+    @Query("SELECT * FROM hrv_records WHERE sourceRecordId = :id")
     suspend fun getById(id: String): HrvRecordEntity?
 
     @Query(
         "SELECT * FROM hrv_records " +
-            "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
-            "ORDER BY timestampMs ASC, id ASC",
+            "WHERE sourceRecordId = :sourceRecordId " +
+            "OR (sourceRecordId >= :sourceRecordId || '_' AND sourceRecordId < :sourceRecordId || '`') " +
+            "ORDER BY timestampMs ASC, sourceRecordId ASC",
     )
     suspend fun getBySourceRecordId(sourceRecordId: String): List<HrvRecordEntity>
 
     @Query(
         "DELETE FROM hrv_records " +
-            "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+            "WHERE sourceRecordId = :sourceRecordId " +
+            "OR (sourceRecordId >= :sourceRecordId || '_' AND sourceRecordId < :sourceRecordId || '`')",
     )
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
 

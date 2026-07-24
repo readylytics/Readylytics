@@ -12,7 +12,6 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,7 +46,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.DayTimelineScale
@@ -535,29 +533,3 @@ private fun DrawScope.drawZoneBand(
 }
 
 // HrChartHelper handles splitIntoSegments now
-
-@Composable
-fun HrSparkline(
-    hourlySamples: List<Pair<Int, Int>>,
-    modifier: Modifier = Modifier,
-) {
-    if (hourlySamples.isEmpty()) return
-    val lineColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-    val minBpm = hourlySamples.minOf { it.second }
-    val maxBpm = hourlySamples.maxOf { it.second }
-    val range = (maxBpm - minBpm).coerceAtLeast(10)
-
-    Canvas(modifier = modifier.padding(vertical = MaterialTheme.spacing.hairline)) {
-        val path = Path()
-        hourlySamples.forEachIndexed { i, (hour, bpm) ->
-            val x = hour / 23f * size.width
-            val y = (1f - (bpm - minBpm).toFloat() / range.toFloat()) * size.height
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-    }
-}

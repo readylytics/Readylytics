@@ -5,15 +5,18 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logE
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import java.time.Clock
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,16 +40,8 @@ class DailySyncUseCase
         private val stepCountFetcher: StepCountFetcher,
         private val recomputeSupport: DailyRecomputeSupport,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val clock: Clock,
     ) {
-        private companion object {
-            // How far back a foreground sync will widen its walk-forward recompute to absorb
-            // recent out-of-window Health Connect changes (e.g. last night's sleep dated
-            // yesterday, HR/HRV backfilled for the prior day) inline instead of escalating to a
-            // full historical resync. This is a foreground-cost guard, not a correctness bound:
-            // changes older than this still recompute correctly via the durable resync worker.
-            const val MAX_INLINE_RECOMPUTE_DAYS = 7
-        }
-
         /**
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
          *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress
@@ -75,7 +70,7 @@ class DailySyncUseCase
                     // device zone when un-seeded) so the recompute window stays aligned with the
                     // scoring engine even if the device timezone changes.
                     val zoneId = prefs.scoringZone()
-                    val today = java.time.LocalDate.now(zoneId)
+                    val today = java.time.LocalDate.now(clock.withZone(zoneId))
 
                     val outcome = changeSynchronizer.applyPendingChanges()
                     if (outcome.requiresFullResync) {
@@ -117,7 +112,7 @@ class DailySyncUseCase
                         startMs = ingestStart.toEpochMilli(),
                         endMs = windowEnd.toEpochMilli() - 1,
                         zoneThresholds =
-                            app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
+                            app.readylytics.health.domain.heartrate.ZoneThresholds.zoneThresholds(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,
@@ -137,13 +132,13 @@ class DailySyncUseCase
                     var successCount = 0
                     var failureCount = 0
 
-                    healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1))
+                    healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
 
                     var dayToScore = oldestTargetDay
                     while (!dayToScore.isAfter(today)) {
                         ensureActive()
                         val steps = stepsMap[dayToScore]
-                        val result = recomputeSupport.recomputeDay(dayToScore, steps)
+                        val result = recomputeSupport.recomputeDay(dayToScore, steps, prefs)
 
                         when (result) {
                             is Result.Success -> {
@@ -184,7 +179,13 @@ class DailySyncUseCase
                     }
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    // Rethrow (rather than flattening to SYNC_ERROR below) so ForegroundSyncController
+                    // can route the user to the permission-recovery flow instead of a generic failure.
+                    logE("DailySyncUseCase") { "Sync stopped by Health Connect permission failure: ${e.message}" }
+                    throw e
                 } catch (e: Exception) {
+                    logE("DailySyncUseCase", e) { "Sync failed" }
                     Result.failure("Sync failed", "SYNC_ERROR")
                 }
             }

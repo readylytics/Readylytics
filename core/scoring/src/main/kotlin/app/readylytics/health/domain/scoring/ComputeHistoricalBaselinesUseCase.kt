@@ -1,15 +1,12 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.model.DailySummaryEntity
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.stdev
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.ln
 
@@ -20,9 +17,9 @@ class ComputeHistoricalBaselinesUseCase
         private val loadScoringStrategy: LoadScoringStrategy,
     ) {
     suspend fun computeHistoricalBaselines(
-        allDailySummaries: List<DailySummaryEntity>,
+        allDailySummaries: List<DailySummary>,
         prefs: UserPreferences,
-    ): List<DailySummaryEntity> {
+    ): List<DailySummary> {
         if (allDailySummaries.isEmpty()) return emptyList()
 
         val profile = prefs.physiologyProfile
@@ -51,10 +48,9 @@ class ComputeHistoricalBaselinesUseCase
             )
 
         return allDailySummaries.mapNotNull { summary ->
-            val windows = baselines[summary.dateMidnightMs] ?: return@mapNotNull null
+            val windows = baselines[summary.date] ?: return@mapNotNull null
             if (windows.muHistory.isEmpty()) return@mapNotNull null
 
-            val date = summary.dateMidnightMs.toLocalDate(prefs.scoringZone())
             val lnMuHistory = windows.muHistory.map { ln(it.coerceAtLeast(0.001f)) }
             val lnSigmaHistory = windows.sigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
 
@@ -75,15 +71,10 @@ class ComputeHistoricalBaselinesUseCase
                 snapshotProfile = profile.name,
                 rasScalingFactor = rasScalingFactor,
                 hrvSigmaPrior = sigmaPrior,
-                baselineCalculatedAtDate = date,
+                baselineCalculatedAtDate = summary.date,
                 baselineObservationCount = windows.muHistory.size,
             )
         }
     }
 
-    private fun Long.toLocalDate(zone: ZoneId): LocalDate =
-        Instant
-            .ofEpochMilli(this)
-            .atZone(zone)
-            .toLocalDate()
 }

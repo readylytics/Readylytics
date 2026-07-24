@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.domain.model.DomainHeartRateRecord
+import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -22,6 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -42,6 +45,11 @@ class DailySyncUseCaseTest {
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
 
+    // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
+    // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
+    // clock instance the tests build their expected dates from.
+    private val fixedClock = Clock.fixed(Instant.parse("2024-06-15T12:00:00Z"), ZoneId.of("UTC"))
+
     private lateinit var useCase: DailySyncUseCase
 
     @Before
@@ -61,6 +69,7 @@ class DailySyncUseCaseTest {
                 stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
                 ioDispatcher = Dispatchers.Unconfined,
+                clock = fixedClock,
             )
     }
 
@@ -68,7 +77,7 @@ class DailySyncUseCaseTest {
     fun `sync processes days in chronological order`() =
         runTest {
             val windowDays = 3
-            val today = LocalDate.now(ZoneId.systemDefault())
+            val today = LocalDate.now(fixedClock.withZone(ZoneId.systemDefault()))
             val day0 = today.minusDays(2)
             val day1 = today.minusDays(1)
             val day2 = today
@@ -76,10 +85,33 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = windowDays, onProgress = null)
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(day0, 0L)
-                scoringRepository.computeAndPersistDailySummary(day1, 0L)
-                scoringRepository.computeAndPersistDailySummary(day2, 0L)
+                scoringRepository.computeAndPersistDailySummary(day0, 0L, any())
+                scoringRepository.computeAndPersistDailySummary(day1, 0L, any())
+                scoringRepository.computeAndPersistDailySummary(day2, 0L, any())
             }
+        }
+
+    @Test
+    fun `sync shares one preferences snapshot across every recomputed day`() =
+        runTest {
+            // Each independent read of settingsRepo.userPreferences returns a distinct value here,
+            // simulating a preference change mid-sync. SCORE-004 requires the walk-forward to
+            // recompute every day from the single snapshot taken at the start of run(), never a
+            // fresh per-day read, so every day's captured prefs argument must be identical.
+            var accessCount = 0
+            every { settingsRepo.userPreferences } answers {
+                accessCount++
+                flowOf(UserPreferences(scoringZoneId = "snapshot-$accessCount"))
+            }
+            val capturedPrefs = mutableListOf<UserPreferences>()
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), capture(capturedPrefs))
+            } returns Unit
+
+            useCase.run(windowDays = 3, onProgress = null)
+
+            assertEquals(3, capturedPrefs.size)
+            assertEquals(1, capturedPrefs.distinct().size)
         }
 
     @Test
@@ -96,7 +128,7 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = 1, onProgress = null)
 
             coVerifyOrder {
-                scoringRepository.computeAndPersistDailySummary(any(), any())
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any())
                 changeSynchronizer.commitTokens(nextTokens)
             }
         }
@@ -106,14 +138,14 @@ class DailySyncUseCaseTest {
         runTest {
             val windowDays = 2
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
 
             useCase.run(windowDays = windowDays, onProgress = null)
 
             coVerifyOrder {
-                healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1))
-                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L)
-                scoringRepository.computeAndPersistDailySummary(today, 0L)
+                healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1), zoneId)
+                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L, any())
+                scoringRepository.computeAndPersistDailySummary(today, 0L, any())
             }
         }
 
@@ -122,7 +154,7 @@ class DailySyncUseCaseTest {
         runTest {
             val windowDays = 1
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             val ingestStartMs =
                 today
                     .minusDays(1)
@@ -146,26 +178,33 @@ class DailySyncUseCaseTest {
                     endMs = windowEndExclusiveMs - 1,
                     zoneThresholds = any(),
                 )
-                healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1))
-                scoringRepository.computeAndPersistDailySummary(today, 0L)
+                healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1), zoneId)
+                scoringRepository.computeAndPersistDailySummary(today, 0L, any())
             }
         }
 
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            // Mock non-empty returns to ensure mapping logic is triggered
-            coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns listOf(mockk(relaxed = true))
-            coEvery { hcRepo.readHrvSamples(any(), any()) } returns listOf(mockk(relaxed = true))
+            // HR/HRV are streamed page-by-page (HC-001); drive one non-empty page through each
+            // callback to ensure the per-page mapping/persist logic is triggered.
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
+                thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            }
+            coEvery { hcRepo.readHrvSamplesPaged(any(), any(), any()) } coAnswers {
+                thirdArg<suspend (List<DomainHrvRecord>) -> Unit>().invoke(listOf(mockk(relaxed = true)))
+            }
             coEvery { hcRepo.readSteps(any(), any()) } returns 0L
 
             useCase.run(windowDays = 8, onProgress = null)
 
             coVerify {
-                hcRepo.readHeartRateSamples(any(), any())
-                hcRepo.readHrvSamples(any(), any())
+                hcRepo.readHeartRateSamplesPaged(any(), any(), any())
+                hcRepo.readHrvSamplesPaged(any(), any(), any())
                 hcRepo.readSteps(any(), any())
                 healthIngestionStore.persist(any())
+                healthIngestionStore.persistHeartRateSamples(any())
+                healthIngestionStore.persistHrvSamples(any())
             }
         }
 
@@ -174,8 +213,8 @@ class DailySyncUseCaseTest {
         runTest {
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
-            coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coJustRun { hcRepo.readHrvSamplesPaged(capture(hrvFromSlot), any(), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
 
             useCase.run(windowDays = 1, onProgress = null)
 
@@ -185,7 +224,7 @@ class DailySyncUseCaseTest {
             val zoneId = ZoneId.systemDefault()
             val yesterdayMidnight =
                 LocalDate
-                    .now(zoneId)
+                    .now(fixedClock.withZone(zoneId))
                     .minusDays(1)
                     .atStartOfDay(zoneId)
                     .toInstant()
@@ -197,7 +236,7 @@ class DailySyncUseCaseTest {
     fun `daily sync keeps current-day range and requests historical resync for older changes`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             // Beyond the inline-recompute floor: must escalate to the durable historical resync
             // rather than being absorbed by the foreground walk-forward.
             val oldestAffectedDay = today.minusDays(8)
@@ -210,8 +249,8 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
                 )
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
-            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
@@ -229,7 +268,7 @@ class DailySyncUseCaseTest {
     fun `daily sync absorbs recent out-of-window change inline without historical resync`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             val yesterday = today.minusDays(1)
             val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
             val hrFromSlot = slot<Instant>()
@@ -241,8 +280,8 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
-            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+            coJustRun { hcRepo.readHeartRateSamplesPaged(capture(hrFromSlot), any(), any()) }
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
@@ -258,7 +297,7 @@ class DailySyncUseCaseTest {
     fun `daily sync absorbs change exactly at the inline floor inline`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
-            val today = LocalDate.now(zoneId)
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
             // Exactly MAX_INLINE_RECOMPUTE_DAYS (7) back: the floor is inclusive, so still inline.
             val floorDay = today.minusDays(7)
             val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
@@ -270,7 +309,7 @@ class DailySyncUseCaseTest {
                     requiresFullResync = false,
                     nextTokens = nextTokens,
                 )
-            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any(), any()) }
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
@@ -287,6 +326,58 @@ class DailySyncUseCaseTest {
 
             assertFailsWith<CancellationException> {
                 useCase.run(windowDays = 1, onProgress = null)
+            }
+        }
+
+    @Test
+    fun `sync rethrows permission-revoked instead of flattening to SYNC_ERROR`() =
+        runTest {
+            // HC-008: a revoked Health Connect permission must surface distinctly so
+            // ForegroundSyncController/the periodic worker can route to the permission-recovery
+            // flow, not be swallowed into a generic Result.Failure("SYNC_ERROR").
+            coEvery { hcRepo.readSleepSessions(any(), any()) } throws
+                app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException(
+                    SecurityException("revoked"),
+                )
+
+            assertFailsWith<app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException> {
+                useCase.run(windowDays = 1, onProgress = null)
+            }
+        }
+
+    @Test
+    fun `sync resolves today from the injected clock, not the real system clock`() =
+        runTest {
+            // DI-002: a use case wired to a clock fixed on a historical date must resolve "today"
+            // from that clock, never from the machine's real wall-clock date. A historical instant
+            // (2019, long past) makes the assertion exact and immune to coincidental matches with
+            // whatever day this test actually runs on.
+            val historicalClock = Clock.fixed(Instant.parse("2019-01-10T08:00:00Z"), ZoneId.of("UTC"))
+            val clockedUseCase =
+                DailySyncUseCase(
+                    settingsRepo = settingsRepo,
+                    sessionLinkReconciler = sessionLinkReconciler,
+                    rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
+                    changeSynchronizer = changeSynchronizer,
+                    healthIngestionStore = healthIngestionStore,
+                    ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                    stepCountFetcher = StepCountFetcher(hcRepo),
+                    recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
+                    ioDispatcher = Dispatchers.Unconfined,
+                    clock = historicalClock,
+                )
+            every { settingsRepo.userPreferences } returns flowOf(UserPreferences(scoringZoneId = "UTC"))
+            val expectedDay = LocalDate.of(2019, 1, 10)
+
+            clockedUseCase.run(windowDays = 1, onProgress = null)
+
+            coVerify { scoringRepository.computeAndPersistDailySummary(expectedDay, any(), any()) }
+            coVerify(exactly = 0) {
+                scoringRepository.computeAndPersistDailySummary(
+                    LocalDate.now(ZoneId.of("UTC")),
+                    any(),
+                    any(),
+                )
             }
         }
 }

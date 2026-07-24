@@ -10,8 +10,10 @@ import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
@@ -20,8 +22,6 @@ import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.DailySummaryEntity
-import app.readylytics.health.domain.model.DailySummaryMapper
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
@@ -33,6 +33,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -305,8 +306,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer = baselineComputer,
-                dailySummaryDao = dailySummaryDao,
-                heartRateDao = heartRateDao,
+                scoringHistoryRepository = scoringHistoryRepository,
                 scoringCalculator = scoringCalculator,
                 scoringConfigFactory = scoringConfigFactory,
                 encryptionManager = encryptionManager,
@@ -324,6 +324,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 settingsRepo = settingsRepo,
                 scoringCalculator = scoringCalculator,
                 baselineComputer = baselineComputer,
+                buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
+                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
@@ -334,6 +336,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 scoringHistoryRepository = scoringHistoryRepository,
+                defaultDispatcher = UnconfinedTestDispatcher(),
             )
 
         return ScopeResult(label = label, summary = repo.computeDailySummary(targetDate))

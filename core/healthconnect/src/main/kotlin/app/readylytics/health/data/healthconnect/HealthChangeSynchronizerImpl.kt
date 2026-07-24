@@ -6,19 +6,29 @@ import androidx.health.connect.client.changes.Change
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.BloodPressureRecord as HealthConnectBloodPressureRecord
+import androidx.health.connect.client.records.BodyFatRecord as HealthConnectBodyFatRecord
+import androidx.health.connect.client.records.HeartRateRecord as HealthConnectHeartRateRecord
+import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
 import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.local.entity.StepRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.mapper.BloodPressureDataMapper
 import app.readylytics.health.data.mapper.BodyFatDataMapper
 import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
 import app.readylytics.health.data.mapper.WeightDataMapper
+import app.readylytics.health.data.local.entity.SleepStageEntity
+import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.model.*
 import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.sync.HealthChangeSyncOutcome
-import app.readylytics.health.domain.sync.HealthChangeSynchronizer
-import app.readylytics.health.domain.sync.HealthChangeTokenStore
+import app.readylytics.health.domain.sync.*
+import app.readylytics.health.domain.sync.mappers.*
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -46,6 +56,7 @@ class HealthChangeSynchronizerImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val stepRecordDao: StepRecordDao,
     ) : HealthChangeSynchronizer {
         private val client by lazy { HealthConnectClient.getOrCreate(context) }
 
@@ -187,25 +198,38 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.SLEEP -> {
                     if (record is SleepSessionRecord) {
                         val domainRecord = record.toDomain()
-                        val sleepEntity = SleepDataMapper.mapSleepSession(domainRecord)
+                        val sleepInput = SleepDataMapper.mapSleepSession(domainRecord)
+                        val sleepEntity = sleepInput.toEntity()
                         sleepSessionDao.upsertAll(listOf(sleepEntity))
 
-                        val allStages = SleepDataMapper.mapSleepSessionStages(domainRecord)
+                        val stageInputs = SleepDataMapper.mapSleepSessionStages(domainRecord)
+                        val allStages = stageInputs.map { it.toEntity() }
                         sleepStageDao.deleteForSessions(listOf(sleepEntity.id))
                         sleepStageDao.upsertAll(allStages)
                     }
                 }
                 HealthDataType.HEART_RATE -> {
-                    if (record is HeartRateRecord) {
+                    if (record is HealthConnectHeartRateRecord) {
                         val domainHr = record.toDomain()
-                        val entities = HeartRateMapper.mapToEntities(listOf(domainHr), emptyList(), emptyList())
+                        // Resolve real session spans overlapping this record's own time range so the
+                        // sample is tagged SLEEP/EXERCISE immediately instead of RESTING/sessionId=null
+                        // until the next reconcile pass corrects it (HC-004).
+                        val startMs = record.startTime.toEpochMilli()
+                        val endMs = record.endTime.toEpochMilli()
+                        val sleepSpans = sleepSessionDao.getOverlapping(startMs, endMs).map { it.toInput() }
+                        val workoutSpans = workoutDao.getOverlapping(startMs, endMs).map { it.toInput() }
+                        val hrInputs = HeartRateMapper.mapToInputs(listOf(domainHr), sleepSpans, workoutSpans)
+                        val entities = hrInputs.map { it.toEntity() }
                         heartRateDao.upsertAll(entities)
                     }
                 }
                 HealthDataType.HRV -> {
                     if (record is HeartRateVariabilityRmssdRecord) {
                         val domainHrv = record.toDomain()
-                        val entities = HrvMapper.mapToEntities(listOf(domainHrv), emptyList())
+                        val sampleMs = record.time.toEpochMilli()
+                        val sleepSpans = sleepSessionDao.getOverlapping(sampleMs, sampleMs).map { it.toInput() }
+                        val hrvInputs = HrvMapper.mapToInputs(listOf(domainHrv), sleepSpans)
+                        val entities = hrvInputs.map { it.toEntity() }
                         hrvDao.upsertAll(entities)
                     }
                 }
@@ -213,33 +237,64 @@ class HealthChangeSynchronizerImpl
                     if (record is ExerciseSessionRecord) {
                         val domainExercise = record.toDomain()
                         val thresholds =
-                            WorkoutMapper.zoneThresholds(
+                            ZoneThresholds.zoneThresholds(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,
                                 prefs.zone3MaxBpm,
                                 prefs.zone4MaxBpm,
                             )
-                        val entity = WorkoutMapper.mapExerciseSession(domainExercise, emptyList(), thresholds)
+                        // Compute metrics from already-stored HR rows overlapping this session so a
+                        // workout upsert has non-zero TRIMP/zones/avgHr immediately (HC-004); a sample
+                        // arriving in the very same changes batch is still corrected by the next
+                        // reconcile pass, matching SessionLinkReconcilerImpl.recomputeWorkouts.
+                        val hrSamples =
+                            heartRateDao.getByTimeRange(
+                                record.startTime.toEpochMilli(),
+                                record.endTime.toEpochMilli(),
+                            )
+                        val hrSamplesMapped = hrSamples.map { sample ->
+                            DomainHeartRateSample(
+                                time = Instant.ofEpochMilli(sample.timestampMs),
+                                beatsPerMinute = sample.beatsPerMinute
+                            )
+                        }
+                        val metrics = ZoneThresholds.computeMetrics(
+                            record.startTime.toEpochMilli(),
+                            record.endTime.toEpochMilli(),
+                            hrSamplesMapped,
+                            thresholds
+                        )
+                        val workoutInput = WorkoutMapper.mapExerciseSession(domainExercise)
+                        val entity = workoutInput.toEntity().copy(
+                            durationMinutes = metrics.durationMinutes,
+                            zone1Minutes = metrics.zoneMinutes[0],
+                            zone2Minutes = metrics.zoneMinutes[1],
+                            zone3Minutes = metrics.zoneMinutes[2],
+                            zone4Minutes = metrics.zoneMinutes[3],
+                            zone5Minutes = metrics.zoneMinutes[4],
+                            trimp = metrics.trimp,
+                            avgHr = metrics.avgHr
+                        )
                         workoutDao.upsertAll(listOf(entity))
                     }
                 }
                 HealthDataType.WEIGHT -> {
-                    if (record is WeightRecord) {
+                    if (record is HealthConnectWeightRecord) {
                         val domainWeight = record.toDomain()
                         val entity = WeightDataMapper.toEntities(listOf(domainWeight))
                         weightRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.BODY_FAT -> {
-                    if (record is BodyFatRecord) {
+                    if (record is HealthConnectBodyFatRecord) {
                         val domainBodyFat = record.toDomain()
                         val entity = BodyFatDataMapper.toEntities(listOf(domainBodyFat))
                         bodyFatRecordDao.upsertAll(entity)
                     }
                 }
                 HealthDataType.BLOOD_PRESSURE -> {
-                    if (record is BloodPressureRecord) {
+                    if (record is HealthConnectBloodPressureRecord) {
                         val domainBloodPressure = record.toDomain()
                         val entity = BloodPressureDataMapper.toEntities(listOf(domainBloodPressure))
                         bloodPressureRecordDao.upsertAll(entity)
@@ -253,7 +308,22 @@ class HealthChangeSynchronizerImpl
                     }
                 }
                 HealthDataType.STEPS -> {
-                    // Steps do not have a dedicated DB table, so we do nothing.
+                    if (record is StepsRecord) {
+                        // Steps have no dedicated table for scoring (daily totals come from
+                        // StepCountFetcher's aggregate reads) -- this row exists purely so a later
+                        // DeletionChange for this record can resolve its own date range (HC-005).
+                        stepRecordDao.upsertAll(
+                            listOf(
+                                StepRecordEntity(
+                                    id = record.metadata.id,
+                                    startTime = record.startTime.toEpochMilli(),
+                                    endTime = record.endTime.toEpochMilli(),
+                                    count = record.count,
+                                    deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+                                ),
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -262,11 +332,11 @@ class HealthChangeSynchronizerImpl
             when (dataType) {
                 HealthDataType.EXERCISE -> setOf(ExerciseSessionRecord::class)
                 HealthDataType.STEPS -> setOf(StepsRecord::class)
-                HealthDataType.BODY_FAT -> setOf(BodyFatRecord::class)
-                HealthDataType.WEIGHT -> setOf(WeightRecord::class)
+                HealthDataType.BODY_FAT -> setOf(HealthConnectBodyFatRecord::class)
+                HealthDataType.WEIGHT -> setOf(HealthConnectWeightRecord::class)
                 HealthDataType.SLEEP -> setOf(SleepSessionRecord::class)
-                HealthDataType.BLOOD_PRESSURE -> setOf(BloodPressureRecord::class)
-                HealthDataType.HEART_RATE -> setOf(HeartRateRecord::class)
+                HealthDataType.BLOOD_PRESSURE -> setOf(HealthConnectBloodPressureRecord::class)
+                HealthDataType.HEART_RATE -> setOf(HealthConnectHeartRateRecord::class)
                 HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
                 HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
             }
@@ -305,11 +375,11 @@ class HealthChangeSynchronizerImpl
                 is SleepSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is ExerciseSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is StepsRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
-                is HeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
+                is HealthConnectHeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is HeartRateVariabilityRmssdRecord -> getDateFor(record.time, zoneId)
-                is WeightRecord -> getDateFor(record.time, zoneId)
-                is BodyFatRecord -> getDateFor(record.time, zoneId)
-                is BloodPressureRecord -> getDateFor(record.time, zoneId)
+                is HealthConnectWeightRecord -> getDateFor(record.time, zoneId)
+                is HealthConnectBodyFatRecord -> getDateFor(record.time, zoneId)
+                is HealthConnectBloodPressureRecord -> getDateFor(record.time, zoneId)
                 is OxygenSaturationRecord -> getDateFor(record.time, zoneId)
                 else -> emptySet()
             }
@@ -360,7 +430,13 @@ class HealthChangeSynchronizerImpl
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
-                HealthDataType.STEPS -> emptySet()
+                HealthDataType.STEPS -> {
+                    // Resolve from the raw row upsertRecord's STEPS branch persisted, before
+                    // deleteRecordLocal removes it (HC-005) -- must be called before the delete.
+                    stepRecordDao.getById(id)?.let {
+                        getDatesBetween(Instant.ofEpochMilli(it.startTime), Instant.ofEpochMilli(it.endTime), zoneId)
+                    } ?: emptySet()
+                }
             }
 
         private suspend fun deleteRecordLocal(
@@ -376,100 +452,104 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.BODY_FAT -> bodyFatRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.BLOOD_PRESSURE -> bloodPressureRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.OXYGEN_SATURATION -> oxygenSaturationRecordDao.deleteBySourceRecordId(id)
-                HealthDataType.STEPS -> Unit
+                HealthDataType.STEPS -> stepRecordDao.deleteById(id)
             }
         }
-
-        private fun SleepSessionRecord.toDomain(): DomainSleepSessionRecord =
-            DomainSleepSessionRecord(
-                id = metadata.id,
-                startTime = startTime,
-                endTime = endTime,
-                startZoneOffsetSeconds = startZoneOffset?.totalSeconds,
-                endZoneOffsetSeconds = endZoneOffset?.totalSeconds,
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-                stages =
-                    stages.map { stage ->
-                        DomainSleepStage(
-                            startTime = stage.startTime,
-                            endTime = stage.endTime,
-                            stageType =
-                                when (stage.stage) {
-                                    SleepSessionRecord.STAGE_TYPE_DEEP -> DomainSleepStageType.DEEP
-                                    SleepSessionRecord.STAGE_TYPE_REM -> DomainSleepStageType.REM
-                                    SleepSessionRecord.STAGE_TYPE_LIGHT,
-                                    SleepSessionRecord.STAGE_TYPE_SLEEPING,
-                                    -> DomainSleepStageType.LIGHT
-                                    SleepSessionRecord.STAGE_TYPE_AWAKE,
-                                    SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
-                                    -> DomainSleepStageType.AWAKE
-                                    else -> DomainSleepStageType.UNKNOWN
-                                },
-                        )
-                    },
-            )
-
-        private fun HeartRateRecord.toDomain(): DomainHeartRateRecord =
-            DomainHeartRateRecord(
-                id = metadata.id,
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-                samples =
-                    samples.map { sample ->
-                        DomainHeartRateSample(
-                            time = sample.time,
-                            beatsPerMinute = sample.beatsPerMinute.toInt(),
-                        )
-                    },
-            )
-
-        private fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
-            DomainHrvRecord(
-                id = metadata.id,
-                time = time,
-                rmssdMs = heartRateVariabilityMillis.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord =
-            DomainExerciseSessionRecord(
-                id = metadata.id,
-                startTime = startTime,
-                endTime = endTime,
-                exerciseType = exerciseType.toString(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun WeightRecord.toDomain(): DomainWeightRecord =
-            DomainWeightRecord(
-                id = metadata.id,
-                time = time,
-                weightKg = weight.inKilograms.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun BodyFatRecord.toDomain(): DomainBodyFatRecord =
-            DomainBodyFatRecord(
-                id = metadata.id,
-                time = time,
-                percentage = percentage.value.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun BloodPressureRecord.toDomain(): DomainBloodPressureRecord =
-            DomainBloodPressureRecord(
-                id = metadata.id,
-                time = time,
-                systolicMmHg = systolic.inMillimetersOfMercury.toInt(),
-                diastolicMmHg = diastolic.inMillimetersOfMercury.toInt(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun OxygenSaturationRecord.toDomain(): DomainOxygenSaturationRecord =
-            DomainOxygenSaturationRecord(
-                id = metadata.id,
-                time = time,
-                percentage = percentage.value.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
     }
+
+private fun SleepSessionInput.toEntity() =
+    SleepSessionEntity(
+        id = id,
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+        efficiency = efficiency,
+        deepSleepMinutes = deepSleepMinutes,
+        remSleepMinutes = remSleepMinutes,
+        lightSleepMinutes = lightSleepMinutes,
+        awakeMinutes = awakeMinutes,
+        sleepScore = sleepScore,
+        startZoneOffsetSeconds = startZoneOffsetSeconds,
+        endZoneOffsetSeconds = endZoneOffsetSeconds,
+        deviceName = deviceName,
+    )
+
+private fun SleepSessionEntity.toInput() =
+    SleepSessionInput(
+        id = id,
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+        efficiency = efficiency,
+        deepSleepMinutes = deepSleepMinutes,
+        remSleepMinutes = remSleepMinutes,
+        lightSleepMinutes = lightSleepMinutes,
+        awakeMinutes = awakeMinutes,
+        sleepScore = sleepScore,
+        startZoneOffsetSeconds = startZoneOffsetSeconds,
+        endZoneOffsetSeconds = endZoneOffsetSeconds,
+        deviceName = deviceName,
+    )
+
+private fun SleepStageInput.toEntity() =
+    SleepStageEntity(
+        sessionId = sessionId,
+        stageType = stageType,
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+    )
+
+private fun HeartRateInput.toEntity() =
+    HeartRateRecordEntity(
+        sourceRecordId = id,
+        timestampMs = timestampMs,
+        beatsPerMinute = beatsPerMinute,
+        recordType = recordType,
+        sessionId = sessionId,
+        deviceName = deviceName,
+    )
+
+private fun HrvInput.toEntity() =
+    HrvRecordEntity(
+        sourceRecordId = id,
+        timestampMs = timestampMs,
+        rmssdMs = rmssdMs,
+        recordType = recordType,
+        sessionId = sessionId,
+        deviceName = deviceName,
+    )
+
+private fun WorkoutInput.toEntity() =
+    WorkoutRecordEntity(
+        id = id,
+        startTime = startTime,
+        endTime = endTime,
+        exerciseType = exerciseType,
+        durationMinutes = durationMinutes,
+        zone1Minutes = zone1Minutes,
+        zone2Minutes = zone2Minutes,
+        zone3Minutes = zone3Minutes,
+        zone4Minutes = zone4Minutes,
+        zone5Minutes = zone5Minutes,
+        trimp = trimp,
+        avgHr = avgHr,
+        deviceName = deviceName,
+    )
+
+private fun WorkoutRecordEntity.toInput() =
+    WorkoutInput(
+        id = id,
+        startTime = startTime,
+        endTime = endTime,
+        exerciseType = exerciseType,
+        durationMinutes = durationMinutes,
+        zone1Minutes = zone1Minutes,
+        zone2Minutes = zone2Minutes,
+        zone3Minutes = zone3Minutes,
+        zone4Minutes = zone4Minutes,
+        zone5Minutes = zone5Minutes,
+        trimp = trimp,
+        avgHr = avgHr,
+        deviceName = deviceName,
+    )

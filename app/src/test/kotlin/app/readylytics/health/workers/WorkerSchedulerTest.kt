@@ -2,12 +2,16 @@ package app.readylytics.health.workers
 
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import app.readylytics.health.data.preferences.BackupSchedule
 import dagger.Lazy
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -23,15 +27,41 @@ class WorkerSchedulerTest {
     }
 
     @Test
-    fun `scheduleResyncWorker enqueues unique work`() {
-        scheduler.scheduleResyncWorker()
-        verify(exactly = 1) {
+    fun `full resync keeps existing unique work`() {
+        val request = slot<OneTimeWorkRequest>()
+
+        scheduler.scheduleResyncWorker(recomputeOnly = false)
+
+        verify {
             workManager.enqueueUniqueWork(
                 WorkerScheduler.RESYNC_WORK_NAME,
                 ExistingWorkPolicy.KEEP,
-                any<androidx.work.OneTimeWorkRequest>(),
+                capture(request),
             )
         }
+        assertFalse(
+            request.captured.workSpec.input
+                .getBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true),
+        )
+    }
+
+    @Test
+    fun `recompute request appends behind active unique work`() {
+        val request = slot<OneTimeWorkRequest>()
+
+        scheduler.scheduleResyncWorker(recomputeOnly = true)
+
+        verify {
+            workManager.enqueueUniqueWork(
+                WorkerScheduler.RESYNC_WORK_NAME,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                capture(request),
+            )
+        }
+        assertTrue(
+            request.captured.workSpec.input
+                .getBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, false),
+        )
     }
 
     @Test

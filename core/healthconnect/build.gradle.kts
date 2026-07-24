@@ -7,6 +7,9 @@ plugins {
 
 android {
     namespace = "app.readylytics.health.core.healthconnect"
+    buildFeatures {
+        buildConfig = true
+    }
     buildTypes {
         debug {
             enableUnitTestCoverage = true

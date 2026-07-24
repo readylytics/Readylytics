@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.sync
 
 import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.domain.sync.mappers.StepsMapper
 import app.readylytics.health.domain.util.logD
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -70,13 +71,11 @@ class StepCountFetcher
                 val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
                 val stepEntries =
                     DeviceSourceFilter.filterToDevice(
-                        app.readylytics.health.data.healthconnect.StepsMapper
-                            .toStepEntries(stepsRecords),
+                        StepsMapper.toStepEntries(stepsRecords),
                         stepsDevice,
                     ) { it.deviceName }
                 stepsMap.putAll(
-                    app.readylytics.health.data.healthconnect.StepsMapper
-                        .sumByDay(stepEntries, zoneId),
+                    StepsMapper.sumByDay(stepEntries, zoneId),
                 )
             }
             return stepsMap
@@ -97,13 +96,19 @@ class StepCountFetcher
             if (startDate.isAfter(endDate)) return stepsMap
 
             if (stepsDevice == null) {
-                var day = startDate
-                while (!day.isAfter(endDate)) {
+                // HC-003: one grouped-by-day aggregate call per chunk instead of one aggregate
+                // call per calendar day -- a 10-year resync issues ~(range/chunkDays) HC calls
+                // instead of ~3,650.
+                var chunkStart = startDate
+                while (!chunkStart.isAfter(endDate)) {
                     currentCoroutineContext().ensureActive()
-                    val dayStart = day.atStartOfDay(zoneId).toInstant()
-                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                    stepsMap[day] = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
-                    day = day.plusDays(1)
+                    val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                    val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+                    val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+                    stepsMap.putAll(
+                        retryWithBackoff { hcRepo.readDailyStepTotals(windowStart, windowEnd, zoneId) },
+                    )
+                    chunkStart = chunkEndExclusive
                     yield()
                 }
                 return stepsMap
@@ -121,13 +126,11 @@ class StepCountFetcher
                     }
                 val stepEntries =
                     DeviceSourceFilter.filterToDevice(
-                        app.readylytics.health.data.healthconnect.StepsMapper
-                            .toStepEntries(stepsRecords),
+                        StepsMapper.toStepEntries(stepsRecords),
                         stepsDevice,
                     ) { it.deviceName }
                 stepsMap.putAll(
-                    app.readylytics.health.data.healthconnect.StepsMapper
-                        .sumByDay(stepEntries, zoneId),
+                    StepsMapper.sumByDay(stepEntries, zoneId),
                 )
                 chunkStart = chunkEndExclusive
                 yield()

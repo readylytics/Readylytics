@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -75,7 +74,7 @@ class BloodPressureDetailViewModel
                             ChronoUnit.DAYS
                                 .between(
                                     rangeStart.atZone(zoneId).toLocalDate(),
-                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                    record.time.atZone(zoneId).toLocalDate(),
                                 ).toInt()
                         }
 
@@ -135,10 +134,10 @@ class BloodPressureDetailViewModel
 
                     val historyItems =
                         records
-                            .sortedByDescending { it.timestampMs }
+                            .sortedByDescending { it.time }
                             .map { record ->
                                 BloodPressureHistoryItem(
-                                    timestampMs = record.timestampMs,
+                                    timestampMs = record.time.toEpochMilli(),
                                     systolic = record.systolicMmHg,
                                     diastolic = record.diastolicMmHg,
                                     status =
@@ -152,7 +151,7 @@ class BloodPressureDetailViewModel
                     BloodPressureDetailUiState(
                         latestSystolic = latestSystolic,
                         latestDiastolic = latestDiastolic,
-                        latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
+                        latestDate = latest?.time?.atZone(zoneId)?.toLocalDate(),
                         selectedRange = range,
                         dailySystolic = dailySystolic,
                         dailyDiastolic = dailyDiastolic,

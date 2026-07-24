@@ -8,6 +8,7 @@ import app.readylytics.health.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,18 +30,32 @@ class HealthSyncUseCase
         private val dailySyncUseCase: DailySyncUseCase,
         private val resyncRangeUseCase: ResyncRangeUseCase,
         private val settingsRepo: SettingsRepository,
+        private val clock: Clock,
     ) {
         private val syncMutex = Mutex()
 
         /**
+         * Serializes [block] against the daily sync / resync flows above. Used by callers outside
+         * this facade that must not run concurrently with a sync or resync — e.g. the app-start
+         * baseline backfill (SCORE-003), which reads/writes `daily_summaries` rows a concurrent
+         * walk-forward recompute could be mid-write on.
+         */
+        suspend fun <T> withSyncLock(block: suspend () -> T): T = syncMutex.withLock { block() }
+
+        /**
          * Runs the foreground sync / recalculation over a recent [windowDays] window.
+         *
+         * No default: HC-009 -- every call site must name the window it actually wants rather than
+         * silently inheriting a magic constant. See [app.readylytics.health.domain.sync.MAX_INLINE_RECOMPUTE_DAYS]
+         * for the inline-vs-durable-resync cutoff both [DailySyncUseCase] and
+         * [ForegroundSyncController] use.
          *
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
          *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress
          *   instead of a silent spinner. Invoked off the main thread.
          */
         suspend fun sync(
-            windowDays: Int = 8,
+            windowDays: Int,
             onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {
@@ -59,7 +74,7 @@ class HealthSyncUseCase
                     return@withLock Result.success(Unit)
                 }
                 val zoneId = prefs.scoringZone()
-                val today = LocalDate.now(zoneId)
+                val today = LocalDate.now(clock.withZone(zoneId))
                 val startDate = RetentionBounds.resolveResyncStartDate(prefs, today)
                 resyncRangeUseCase.run(
                     startDate = startDate,
@@ -84,5 +99,28 @@ class HealthSyncUseCase
         ): Result<Unit> =
             syncMutex.withLock {
                 resyncRangeUseCase.run(startDate, endDate, chunkDays, onProgress)
+            }
+
+        /**
+         * Recompute-only pass over [startDate]..[endDate] (SCORE-007): skips Health Connect
+         * re-ingestion entirely and rebuilds session-linking + scores from already-stored raw data.
+         * For settings changes that invalidate the *derived* history without touching raw HC data
+         * (TRIMP model/parameters, HR zones, hrMax source, RHR/HRV overrides, physiology profile) --
+         * see [ResyncRangeUseCase.run]'s `skipIngestAndPrune` parameter for the phase/checkpoint
+         * details.
+         */
+        suspend fun recomputeRange(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
+        ): Result<Unit> =
+            syncMutex.withLock {
+                resyncRangeUseCase.run(
+                    startDate = startDate,
+                    endDate = endDate,
+                    chunkDays = 30,
+                    onProgress = onProgress,
+                    skipIngestAndPrune = true,
+                )
             }
     }

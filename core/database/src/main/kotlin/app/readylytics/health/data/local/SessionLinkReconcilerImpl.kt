@@ -1,16 +1,18 @@
 package app.readylytics.health.data.local
 
-import app.readylytics.health.data.healthconnect.WorkoutMapper
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.domain.heartrate.ZoneThresholds
+import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.repository.TransactionRunner
+import java.time.Instant
 import app.readylytics.health.domain.sync.link.SampleLink
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
-import app.readylytics.health.domain.sync.link.SessionLinker
+import app.readylytics.health.domain.sync.link.SessionLinkSweep
 import app.readylytics.health.domain.sync.link.SessionSpan
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -56,6 +58,7 @@ class SessionLinkReconcilerImpl
             var lastTimestampMs = 0L
             var lastId = ""
             val limit = 5000
+            val sweep = SessionLinkSweep(sleepSpans, workoutSpans)
             while (true) {
                 currentCoroutineContext().ensureActive()
                 val records = heartRateDao.getKeysetPage(
@@ -68,7 +71,7 @@ class SessionLinkReconcilerImpl
                 if (records.isEmpty()) break
 
                 val updated = records.mapNotNull { record ->
-                    val link = SessionLinker.resolve(record.timestampMs, sleepSpans, workoutSpans)
+                    val link = sweep.resolve(record.timestampMs)
                     record.relinkedOrNull(link)
                 }
 
@@ -94,6 +97,7 @@ class SessionLinkReconcilerImpl
             var lastTimestampMs = 0L
             var lastId = ""
             val limit = 5000
+            val sweep = SessionLinkSweep(sleepSpans, emptyList())
             while (true) {
                 currentCoroutineContext().ensureActive()
                 val records = hrvDao.getKeysetPage(
@@ -106,7 +110,7 @@ class SessionLinkReconcilerImpl
                 if (records.isEmpty()) break
 
                 val updated = records.mapNotNull { record ->
-                    val link = SessionLinker.resolve(record.timestampMs, sleepSpans, emptyList())
+                    val link = sweep.resolve(record.timestampMs)
                     record.relinkedOrNull(link)
                 }
 
@@ -132,13 +136,18 @@ class SessionLinkReconcilerImpl
                 currentCoroutineContext().ensureActive()
                 val existing = workoutDao.getById(span.id) ?: continue
                 val hrSamples = heartRateDao.getByTimeRange(existing.startTime, existing.endTime)
-                val metrics =
-                    WorkoutMapper.computeMetrics(
-                        existing.startTime,
-                        existing.endTime,
-                        hrSamples,
-                        zoneThresholds,
+                val hrSamplesMapped = hrSamples.map { sample ->
+                    DomainHeartRateSample(
+                        time = Instant.ofEpochMilli(sample.timestampMs),
+                        beatsPerMinute = sample.beatsPerMinute
                     )
+                }
+                val metrics = ZoneThresholds.computeMetrics(
+                    existing.startTime,
+                    existing.endTime,
+                    hrSamplesMapped,
+                    zoneThresholds
+                )
                 transactionRunner.runInTransaction {
                     workoutDao.upsertAll(
                         listOf(

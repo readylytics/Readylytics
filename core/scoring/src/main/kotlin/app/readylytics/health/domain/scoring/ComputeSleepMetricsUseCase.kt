@@ -1,15 +1,14 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.model.DailySummaryEntity
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.Diagnostics
 import app.readylytics.health.domain.model.Contributors
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.model.SleepSessionEntity
-import app.readylytics.health.domain.persistence.DailySummaryDao
-import app.readylytics.health.domain.persistence.HeartRateDao
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.components.PhaseCalculator
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
@@ -35,8 +34,7 @@ class ComputeSleepMetricsUseCase
     @Inject
     constructor(
         private val baselineComputer: BaselineComputer,
-        private val dailySummaryDao: DailySummaryDao,
-        private val heartRateDao: HeartRateDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
         private val scoringCalculator: ScoringCalculator,
         private val scoringConfigFactory: ScoringConfigFactory,
         private val encryptionManager: EncryptionManager,
@@ -46,18 +44,18 @@ class ComputeSleepMetricsUseCase
         private val coverageValidator: HrCoverageValidator,
     ) {
         suspend operator fun invoke(
-            session: SleepSessionEntity,
+            session: SleepSession,
             dayMidnight: Instant,
             targetDate: LocalDate,
             prefs: UserPreferences,
-            summary: DailySummaryEntity,
+            summary: DailySummary,
             loadScore: Float,
             loadScoreEverydayHr: Float?,
             zoneId: ZoneId,
             rhrBaselineValue: Float,
             dayEndMs: Long,
             currentSessionIds: Set<String> = setOf(session.id),
-        ): Result<DailySummaryEntity> =
+        ): Result<DailySummary> =
             try {
                 val installDate =
                     if (prefs.installDate > 0) {
@@ -96,7 +94,7 @@ class ComputeSleepMetricsUseCase
                 val rhrValues: List<Int>
                 val muHrvHistory: List<Float>
                 val sigmaHrvHistory: List<Float>
-                val historicalSessions: List<SleepSessionEntity>
+                val historicalSessions: List<SleepSession>
                 val validHistoricalSessionIds: List<String>
                 val validHistoricalDayCount: Int
                 val frozenHrvMu: Float?
@@ -157,7 +155,7 @@ class ComputeSleepMetricsUseCase
                         .atStartOfDay(zoneId)
                         .toInstant()
                         .toEpochMilli()
-                val yesterdaySummary = dailySummaryDao.getByDate(yesterdayMidnightMs)
+                val yesterdaySummary = scoringHistoryRepository.getDailySummaryByDate(yesterdayMidnightMs, zoneId)
 
                 val hrvResult = hrvResolver.resolve(session, currentSessionIds)
                 val sessionHrvSamples = hrvResult.samples
@@ -189,7 +187,7 @@ class ComputeSleepMetricsUseCase
                     }
 
                 val allWakeHrRecords =
-                    heartRateDao.getByTimeRange(
+                    scoringHistoryRepository.getHeartRateRecordsByTimeRange(
                         session.startTime,
                         session.endTime,
                     )
@@ -264,7 +262,16 @@ class ComputeSleepMetricsUseCase
                     } else {
                         null
                     }
-                val stagesSuspicious = !validation.stagesValid || validation.stagesSuspicious
+                // HC-006/OD-2: a stage-less session (SleepDataMapper's raw-span duration fallback)
+                // has zero deep/rem/light minutes despite a positive duration -- validateNight's
+                // deep/rem *fraction* checks read that as 0%, i.e. trivially "valid", when it's
+                // actually total architecture blindness. Force the existing reweight pathway.
+                val hasNoStageBreakdown =
+                    session.durationMinutes > 0 &&
+                        session.deepSleepMinutes == 0 &&
+                        session.remSleepMinutes == 0 &&
+                        session.lightSleepMinutes == 0
+                val stagesSuspicious = hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
 
                 // Compute calibration status early for freeze gate (HIGH-1)
                 val totalValidHrvNights =
@@ -589,11 +596,9 @@ class ComputeSleepMetricsUseCase
                             },
                         zLnHrv = persistedZLnHrv,
                         zRhr = persistedZRhr,
-                        recoveryFlags = persistedFlags,
                         hrvSigma = hrvSigma,
                         snapshotCalibrationPhase = sessionPhase.name,
-                        diagnosticsEmbedded = readinessResult.diagnostics,
-                        contributorsEmbedded = readinessResult.contributors,
+                        readinessResult = readinessResult,
                         sRest = sRest,
                     ),
                 )

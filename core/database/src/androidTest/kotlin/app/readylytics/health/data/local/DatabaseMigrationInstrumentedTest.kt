@@ -78,6 +78,89 @@ class DatabaseMigrationInstrumentedTest {
         }
     }
 
+    @Test
+    fun migrate5To6AddsModelTrimpAndStepRecordsAndDropsRedundantIndex() {
+        helper.createDatabase(TEST_DATABASE, 5).apply {
+            execSQL(
+                "INSERT INTO workout_records (id, startTime, endTime, exerciseType, durationMinutes, " +
+                    "zone1Minutes, zone2Minutes, zone3Minutes, zone4Minutes, zone5Minutes, trimp, avgHr) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                arrayOf<Any>("w1", 1_000L, 2_000L, "RUNNING", 30, 0f, 5f, 10f, 0f, 0f, 45f, 140f),
+            )
+            close()
+        }
+
+        val database =
+            helper.runMigrationsAndValidate(
+                TEST_DATABASE,
+                6,
+                true,
+                *DatabaseMigrations.all,
+            )
+
+        // Existing workout rows survive, unified-TRIMP column is additive/nullable.
+        database.query("SELECT id, trimp, modelTrimp FROM workout_records WHERE id = 'w1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(45.0, cursor.getFloat(1).toDouble(), 0.001)
+            assertTrue(cursor.isNull(2))
+        }
+
+        // New step_records table exists and accepts a row.
+        database.execSQL(
+            "INSERT INTO step_records (id, startTime, endTime, count, deviceName) VALUES (?, ?, ?, ?, ?)",
+            arrayOf<Any>("s1", 1_000L, 2_000L, 500L, "Watch"),
+        )
+        database.query("SELECT id, count FROM step_records WHERE id = 's1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(500L, cursor.getLong(1))
+        }
+
+        // The redundant secondary index on daily_summaries' own PK column is gone.
+        database.query(
+            "SELECT name FROM sqlite_master " +
+                "WHERE type = 'index' AND name = 'index_daily_summaries_dateMidnightMs'",
+        ).use { cursor ->
+            assertTrue("Redundant index must be dropped by MIGRATION_5_6", !cursor.moveToFirst())
+        }
+    }
+
+    @Test
+    fun migrate6To7RebuildsPrimaryKeyAndPreservesExistingData() {
+        helper.createDatabase(TEST_DATABASE, 6).apply {
+            execSQL(
+                "INSERT INTO heart_rate_records (id, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf<Any?>("hc-hr-1", 1_000L, 62, "SLEEP", "session-1", "Test Ring"),
+            )
+            execSQL(
+                "INSERT INTO hrv_records (id, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf<Any?>("hc-hrv-1", 1_000L, 45.2f, "SLEEP", "session-1", "Test Ring"),
+            )
+            close()
+        }
+
+        val database =
+            helper.runMigrationsAndValidate(
+                TEST_DATABASE,
+                7,
+                true,
+                *DatabaseMigrations.all,
+            )
+
+        database.query("SELECT rowId, sourceRecordId, timestampMs, beatsPerMinute FROM heart_rate_records").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1L, cursor.getLong(0))
+            assertEquals("hc-hr-1", cursor.getString(1))
+        }
+
+        database.query("SELECT rowId, sourceRecordId, rmssdMs FROM hrv_records").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1L, cursor.getLong(0))
+            assertEquals("hc-hrv-1", cursor.getString(1))
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "audit-migration-test"
     }

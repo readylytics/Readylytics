@@ -8,23 +8,28 @@ import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
+import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.DailySummaryEntity
-import app.readylytics.health.domain.model.DailySummaryMapper
+import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
+import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-import app.readylytics.health.domain.scoring.EverydayHeartRateLoadCalculator
-import app.readylytics.health.domain.scoring.EverydayHrLoadInput
 import app.readylytics.health.domain.scoring.LongInterval
 import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.ScoringCalculator
@@ -39,15 +44,16 @@ import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
-import kotlinx.coroutines.Dispatchers
+import app.readylytics.health.di.DefaultDispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import java.util.TreeMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.round
@@ -62,6 +68,8 @@ class ScoringRepositoryImpl
         private val settingsRepo: SettingsRepository,
         private val scoringCalculator: ScoringCalculator,
         private val baselineComputer: BaselineComputer,
+        private val buildLoadSeriesUseCase: BuildLoadSeriesUseCase,
+        private val assembleEverydayLoadInputUseCase: AssembleEverydayLoadInputUseCase,
         private val computeSleepMetricsUseCase: ComputeSleepMetricsUseCase,
         private val scoringConfigFactory: ScoringConfigFactory,
         private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
@@ -72,6 +80,7 @@ class ScoringRepositoryImpl
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
         private val scoringHistoryRepository: ScoringHistoryRepository,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
@@ -79,8 +88,15 @@ class ScoringRepositoryImpl
             targetDate: LocalDate,
             steps: Long?,
         ) {
+            computeAndPersistDailySummary(targetDate, steps, settingsRepo.userPreferences.first())
+        }
+
+        override suspend fun computeAndPersistDailySummary(
+            targetDate: LocalDate,
+            steps: Long?,
+            prefs: UserPreferences,
+        ) {
             calculationMutex.withLock {
-                val prefs = settingsRepo.userPreferences.first()
                 val zoneId = prefs.scoringZone()
                 val summary =
                     computeDailySummary(targetDate, prefs).let { computed ->
@@ -94,14 +110,63 @@ class ScoringRepositoryImpl
             }
         }
 
+        override suspend fun computeAndPersistDailySummary(
+            targetDate: LocalDate,
+            steps: Long?,
+            prefs: UserPreferences,
+            trimpContext: WalkForwardTrimpContext,
+            baselineContext: WalkForwardBaselineContext,
+        ) {
+            calculationMutex.withLock {
+                val zoneId = prefs.scoringZone()
+                val summary =
+                    computeDailySummary(targetDate, prefs, trimpContext, baselineContext).let { computed ->
+                        if (steps != null) {
+                            computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                        } else {
+                            computed
+                        }
+                    }
+                persist(summary, zoneId)
+            }
+        }
+
+        override suspend fun fetchWalkForwardTrimpContext(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            zoneId: ZoneId,
+        ): WalkForwardTrimpContext {
+            val fromMs =
+                startDate
+                    .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            return WalkForwardTrimpContext(
+                dailyTrimpByDate = TreeMap(TrimpDateBucketer.bucket(workoutDao.getTrimpPoints(fromMs, toMs), zoneId)),
+                everydayTrimpByDate =
+                    TreeMap(TrimpDateBucketer.bucket(dailySummaryDao.getEverydayTrimpPoints(fromMs, toMs), zoneId)),
+            )
+        }
+
+        override suspend fun fetchWalkForwardBaselineContext(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            zoneId: ZoneId,
+        ): WalkForwardBaselineContext =
+            WalkForwardBaselineContext(baselineComputer.prefetchWalkForwardSessions(startDate, endDate, zoneId))
+
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary =
             computeDailySummary(targetDate, settingsRepo.userPreferences.first())
 
         private suspend fun computeDailySummary(
             targetDate: LocalDate,
             prefs: app.readylytics.health.data.preferences.UserPreferences,
+            trimpContext: WalkForwardTrimpContext? = null,
+            baselineContext: WalkForwardBaselineContext? = null,
         ): DailySummary =
-            withContext(Dispatchers.Default) {
+            withContext(defaultDispatcher) {
                 val zoneId = prefs.scoringZone()
                 val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
                 val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
@@ -117,7 +182,7 @@ class ScoringRepositoryImpl
                     )
 
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
-                val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs)
+                val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId)
 
                 val frozenSnapshot = dailySummary?.takeIf { it.baselineCalculatedAtDate != null }
                 val frozenHrMax = frozenSnapshot?.hrMax
@@ -132,6 +197,7 @@ class ScoringRepositoryImpl
                             toMs = nextDayMidnightMs,
                             percentile = prefs.restingHrPercentile,
                             sleepDayPolicy = sleepDayPolicy,
+                            prefetchedSessions = baselineContext?.sessions,
                         )
                         ?: ScoringConstants.DEFAULT_RHR_BPM
 
@@ -161,6 +227,7 @@ class ScoringRepositoryImpl
                         emptyList()
                     }
                 var dailyTrimpRaw = 0f
+                val workoutModelTrimpUpdates = mutableListOf<WorkoutRecordEntity>()
 
                 workouts.forEach { workout ->
                     val workoutHrSamples =
@@ -193,6 +260,15 @@ class ScoringRepositoryImpl
                         )
                     val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f
                     dailyTrimpRaw += workoutTrimp
+                    // SCORE-001: persist the user-selected-model TRIMP (Banister/Cheng/iTRIMP)
+                    // alongside the existing zone-weighted `trimp` column, so WorkoutDao.getTrimpPoints'
+                    // COALESCE(modelTrimp, trimp) can prefer it once this row has been touched.
+                    if (workout.modelTrimp != workoutTrimp) {
+                        workoutModelTrimpUpdates += workout.copy(modelTrimp = workoutTrimp)
+                    }
+                }
+                if (workoutModelTrimpUpdates.isNotEmpty()) {
+                    workoutDao.upsertAll(workoutModelTrimpUpdates)
                 }
 
                 // Sleep intervals are resolved before the everyday-HR block because the load calculator
@@ -202,38 +278,47 @@ class ScoringRepositoryImpl
                 val session = aggregatedSleep?.scoringSession ?: sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
 
-                // Everyday-HR load variant: full-day HR samples bucketed into waking, non-workout,
-                // non-sleep minutes (interval exclusion handled inside the calculator).
-                val everydayHrSamples =
-                    heartRateDao
-                        .getByTimeRange(dayMidnightMs, nextDayMidnightMs)
-                        .map { sample ->
-                            ComputeWorkoutTrimpUseCase.HeartRateSample(
-                                Instant.ofEpochMilli(sample.timestampMs),
-                                sample.beatsPerMinute,
-                            )
-                        }
+                // Everyday-HR load variant: waking, non-workout, non-sleep minutes (interval
+                // exclusion handled inside the calculator). PERF-006/WP-21: buckets are
+                // pre-averaged and plausibility-filtered in SQL (getMinuteBuckets), not fetched as
+                // raw per-sample rows and bucketed in Kotlin.
+                val everydayHrBuckets = heartRateDao.getMinuteBuckets(dayMidnightMs, nextDayMidnightMs)
                 val sleepIntervalsMs =
                     aggregatedSleep?.allSleepIntervals
                         ?: if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
                 val workoutIntervalsMs = workouts.map { LongInterval(it.startTime, it.endTime) }
                 val everydayResult =
-                    EverydayHeartRateLoadCalculator.calculate(
-                        EverydayHrLoadInput(
-                            dayStartMs = dayMidnightMs,
-                            dayEndMs = nextDayMidnightMs,
-                            hrSamples = everydayHrSamples,
-                            sleepIntervalsMs = sleepIntervalsMs,
-                            workoutIntervalsMs = workoutIntervalsMs,
-                            workoutOnlyTrimp = dailyTrimpRaw,
-                            rhrBaseline = rhrBaselineValue,
-                            hrMax = hrMax,
-                            prefs = prefs,
-                        ),
+                    assembleEverydayLoadInputUseCase.execute(
+                        dayStartMs = dayMidnightMs,
+                        dayEndMs = nextDayMidnightMs,
+                        hrBuckets = everydayHrBuckets,
+                        sleepIntervalsMs = sleepIntervalsMs,
+                        workoutIntervalsMs = workoutIntervalsMs,
+                        workoutOnlyTrimp = dailyTrimpRaw,
+                        rhrBaseline = rhrBaselineValue,
+                        hrMax = hrMax,
+                        prefs = prefs,
                     )
                 val trimpEverydayHr = everydayResult.totalEverydayTrimp
                 val everydayCoverageMinutes = everydayResult.coverageMinutes
                 val everydayLoadConfidence = everydayResult.confidence.name
+
+                // PERF-002/WP-20: publish today's freshly computed TRIMP values into the shared
+                // walk-forward context (if any) as soon as they're known, regardless of whether the
+                // calibration branch below returns early -- future days in the same run must see
+                // this day's contribution exactly as a fresh DB query would. `trimpEverydayHr` is
+                // always persisted (every recomputed day gets a daily_summaries row), matching
+                // DailySummaryDao.getEverydayTrimpPoints' `IS NOT NULL` filter unconditionally.
+                // `dailyTrimpRaw` only becomes a real WorkoutDao.getTrimpPoints row when a workout
+                // exists for the day -- gate on that so a zero-workout day doesn't synthesize a
+                // bucket key no DB query would ever produce (which would shift a later day's
+                // `earliestDataDate` and change its EMA result).
+                trimpContext?.let { ctx ->
+                    ctx.everydayTrimpByDate[targetDate] = trimpEverydayHr
+                    if (workouts.isNotEmpty()) {
+                        ctx.dailyTrimpByDate[targetDate] = dailyTrimpRaw
+                    }
+                }
 
                 // Enforce 75-point daily cap. Standard RAS is pure load, no readiness penalty.
                 // Round daily RAS to 1 decimal place to ensure display consistency.
@@ -261,7 +346,9 @@ class ScoringRepositoryImpl
 
                 var summary =
                     (
-                        scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs)
+                        scoringHistoryRepository
+                            .getDailySummaryByDate(dayMidnightMs, zoneId)
+                            ?.let { DailySummaryMapper.toEntity(it, zoneId) }
                             ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
                     ).copy(
                         trimpWorkoutOnly = dailyTrimpRaw,
@@ -287,6 +374,7 @@ class ScoringRepositoryImpl
                                 fromMs = dayMidnightMs,
                                 toMs = nextDayMidnightMs,
                                 sleepDayPolicy = sleepDayPolicy,
+                                prefetchedSessions = baselineContext?.sessions,
                             )?.validHistoricalDayCount
                             ?.plus(if (session != null) 1 else 0)
                             ?.let { it >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION }
@@ -382,13 +470,14 @@ class ScoringRepositoryImpl
                             toMs = nextDayMidnightMs,
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
                             sleepDayPolicy = sleepDayPolicy,
+                            prefetchedSessions = baselineContext?.sessions,
                         )
 
                     // Calibration bypasses computeSleepMetricsUseCase; collect directly to populate restingHrBaseline + rhrRatio
                     val rhrWakeResult =
                         if (session != null) {
                             sleepPercentileRhrCalculator.collect(
-                                session = session,
+                                session = SleepSessionMapper.toDomain(session),
                                 dayMidnight = dayMidnight,
                                 percentile = prefs.restingHrPercentile,
                                 currentSessionIds = currentSessionIds,
@@ -415,50 +504,54 @@ class ScoringRepositoryImpl
                     return@withContext DailySummaryMapper.toDomain(summary, zoneId)
                 }
 
-                val ctlFetchFrom =
-                    targetDate
-                        .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli()
+                // PERF-002/WP-20: fromDate is a fixed 84-day-lookback anchor identical to the DB
+                // query's window this replaces (WorkoutDao.getTrimpPoints /
+                // DailySummaryDao.getEverydayTrimpPoints's `startTime/dateMidnightMs >= ctlFetchFrom`
+                // bound), so slicing a shared walk-forward map for `[fromDate, targetDate]` returns
+                // exactly what a fresh per-day query would have. SCORE-005: today's freshly computed
+                // value is always injected directly (already true in the shared context via the
+                // publish step above; re-applied here too since the single-day fallback path below
+                // has no such prior write) -- mirrors the everyday-HR series and keeps this read
+                // independent of the upsertAll above being visible through this exact query.
+                val fromDate = targetDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
                 val dailyTrimpByDate =
-                    TrimpDateBucketer.bucket(
-                        workoutDao.getTrimpPoints(ctlFetchFrom, nextDayMidnightMs),
-                        zoneId,
-                    )
+                    (
+                        trimpContext?.dailyTrimpByDate?.subMap(fromDate, true, targetDate, true)
+                            ?: TrimpDateBucketer.bucket(
+                                workoutDao.getTrimpPoints(
+                                    fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                                    nextDayMidnightMs,
+                                ),
+                                zoneId,
+                            )
+                    ).toMutableMap().apply { put(targetDate, dailyTrimpRaw) }
 
-                val ctl = scoringCalculator.computeCtlEmaWithDecay(dailyTrimpByDate, targetDate)
-                val atl = scoringCalculator.computeAtlEmaWithDecay(dailyTrimpByDate, targetDate)
-
-                val sr = scoringCalculator.computeStrainRatio(atl, ctl)
-                val loadScore = scoringCalculator.computeLoadScore(sr)
-
-                // Everyday-HR ATL/CTL: build the series from the persisted everyday TRIMP column, then
-                // inject the current day's freshly computed value (not yet persisted). A defensive copy
+                // Everyday-HR ATL/CTL: same batched-vs-fallback resolution as above. A defensive copy
                 // (toMutableMap) ensures the workout-only series above is never mutated/contaminated.
                 val everydayTrimpByDate =
-                    TrimpDateBucketer
-                        .bucket(
-                            dailySummaryDao.getEverydayTrimpPoints(ctlFetchFrom, nextDayMidnightMs),
-                            zoneId,
-                        ).toMutableMap()
-                        .apply { put(targetDate, trimpEverydayHr) }
+                    (
+                        trimpContext?.everydayTrimpByDate?.subMap(fromDate, true, targetDate, true)
+                            ?: TrimpDateBucketer.bucket(
+                                dailySummaryDao.getEverydayTrimpPoints(
+                                    fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                                    nextDayMidnightMs,
+                                ),
+                                zoneId,
+                            )
+                    ).toMutableMap().apply { put(targetDate, trimpEverydayHr) }
 
-                val ctlEverydayHr = scoringCalculator.computeCtlEmaWithDecay(everydayTrimpByDate, targetDate)
-                val atlEverydayHr = scoringCalculator.computeAtlEmaWithDecay(everydayTrimpByDate, targetDate)
-                val srEverydayHr = scoringCalculator.computeStrainRatio(atlEverydayHr, ctlEverydayHr)
-                val loadScoreEverydayHr = scoringCalculator.computeLoadScore(srEverydayHr)
+                val loadSeries = buildLoadSeriesUseCase.execute(targetDate, dailyTrimpByDate, everydayTrimpByDate)
 
                 summary =
                     summary.copy(
-                        atlWorkoutOnly = atl,
-                        ctlWorkoutOnly = ctl,
-                        strainRatioWorkoutOnly = sr,
-                        loadScoreWorkoutOnly = loadScore,
-                        atlEverydayHr = atlEverydayHr,
-                        ctlEverydayHr = ctlEverydayHr,
-                        strainRatioEverydayHr = srEverydayHr,
-                        loadScoreEverydayHr = loadScoreEverydayHr,
+                        atlWorkoutOnly = loadSeries.atl,
+                        ctlWorkoutOnly = loadSeries.ctl,
+                        strainRatioWorkoutOnly = loadSeries.strainRatio,
+                        loadScoreWorkoutOnly = loadSeries.loadScore,
+                        atlEverydayHr = loadSeries.atlEverydayHr,
+                        ctlEverydayHr = loadSeries.ctlEverydayHr,
+                        strainRatioEverydayHr = loadSeries.strainRatioEverydayHr,
+                        loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
                     )
 
                 val computedHrvBaseline =
@@ -467,25 +560,26 @@ class ScoringRepositoryImpl
                         toMs = nextDayMidnightMs,
                         hrvBaselineOverride = prefs.hrvBaselineOverride,
                         sleepDayPolicy = sleepDayPolicy,
+                        prefetchedSessions = baselineContext?.sessions,
                     )
                 summary = summary.copy(hrvBaseline = computedHrvBaseline)
 
                 if (session != null) {
                     val sleepMetricsResult =
                         computeSleepMetricsUseCase(
-                            session = session,
+                            session = SleepSessionMapper.toDomain(session),
                             dayMidnight = dayMidnight,
                             targetDate = targetDate,
                             prefs = prefs,
-                            summary = summary,
-                            loadScore = loadScore,
-                            loadScoreEverydayHr = loadScoreEverydayHr,
+                            summary = DailySummaryMapper.toDomain(summary, zoneId),
+                            loadScore = loadSeries.loadScore,
+                            loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
                             zoneId = zoneId,
                             rhrBaselineValue = rhrBaselineValue,
                             dayEndMs = nextDayMidnightMs,
                             currentSessionIds = currentSessionIds,
                         )
-                    summary = sleepMetricsResult.getOrNull() ?: summary
+                    summary = sleepMetricsResult.getOrNull()?.let { DailySummaryMapper.toEntity(it, zoneId) } ?: summary
                 }
 
                 val hrvMuMssd =
@@ -615,12 +709,23 @@ class ScoringRepositoryImpl
             )
         }
 
-        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment =
-            SleepDaySegment(
+        private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment {
+            // HC-006: defensive guard for sessions already persisted with durationMinutes = 0 by the
+            // pre-fix stage-less-session mapping (SleepDataMapper's raw-span fallback only applies to
+            // freshly ingested sessions). Without this, a recompute-only pass -- which never re-reads
+            // Health Connect -- would still see the old stored 0 and SleepDaySegment's
+            // `durationMinutes > 0` invariant would throw.
+            val durationMinutes =
+                if (session.durationMinutes > 0) {
+                    session.durationMinutes
+                } else {
+                    ((session.endTime - session.startTime) / 60_000L).toInt()
+                }
+            return SleepDaySegment(
                 stableId = session.id,
                 startTimeMs = session.startTime,
                 endTimeMs = session.endTime,
-                durationMinutes = session.durationMinutes,
+                durationMinutes = durationMinutes,
                 lightSleepMinutes = session.lightSleepMinutes,
                 deepSleepMinutes = session.deepSleepMinutes,
                 remSleepMinutes = session.remSleepMinutes,
@@ -630,6 +735,7 @@ class ScoringRepositoryImpl
                 endZoneOffsetSeconds = session.endZoneOffsetSeconds,
                 sourcePackageName = session.deviceName,
             )
+        }
 
         private fun aggregateEfficiency(coreSessions: List<SleepSessionEntity>): Float {
             val weightedSessions = coreSessions.filter { it.durationMinutes > 0 }

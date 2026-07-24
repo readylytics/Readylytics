@@ -88,6 +88,48 @@ class CleanArchTest {
     }
 
     @Test
+    fun `domain package does not reference data package via fully-qualified names`() {
+        val allowedDataReferences =
+            setOf(
+                "app.readylytics.health.data.preferences.UserPreferences",
+                "app.readylytics.health.data.preferences.Gender",
+                "app.readylytics.health.data.preferences.AppTheme",
+                "app.readylytics.health.data.preferences.SettingsDefaults",
+                "app.readylytics.health.data.preferences.PhysiologyProfile",
+                "app.readylytics.health.data.preferences.UnitSystem",
+                "app.readylytics.health.data.preferences.SyncPreference",
+                "app.readylytics.health.data.preferences.BackgroundSyncInterval",
+                "app.readylytics.health.data.preferences.FallbackThemeColor",
+                "app.readylytics.health.data.preferences.BackupSchedule",
+            )
+
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter {
+                    it.hasPackage("app.readylytics.health.domain..") &&
+                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                }.flatMap { file ->
+                    val text = file.text
+                    val matches = Regex("""app\.readylytics\.health\.data\.[a-zA-Z0-9.]+""").findAll(text)
+                    matches
+                        .map { it.value }
+                        .filter { ref ->
+                            allowedDataReferences.none { allowed ->
+                                ref == allowed || ref.startsWith("$allowed.")
+                            }
+                        }.map { violation -> "${file.name}: referenced FQN $violation" }
+                        .toList()
+                }
+
+        org.junit.Assert.assertTrue(
+            "Domain layer must not use data layer FQNs. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
     fun `domain and data packages do not import feature package`() {
         val violations =
             Konsist
@@ -144,6 +186,50 @@ class CleanArchTest {
 
         org.junit.Assert.assertTrue(
             "Feature imports are restricted in app shell. Forbidden imports:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `no hardcoded dispatchers outside of di packages`() {
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    val path = file.path
+                    val isSource = (path.contains("/src/main/") || path.contains("\\src\\main\\"))
+                    val isDi = (path.contains("/di/") || path.contains("\\di\\"))
+                    val isDomainOrDataOrVm =
+                        file.hasPackage("app.readylytics.health.domain..") ||
+                            file.hasPackage("app.readylytics.health.data..") ||
+                            (file.hasPackage("app.readylytics.health.feature..") && file.name.endsWith("ViewModel.kt"))
+                    isSource && !isDi && isDomainOrDataOrVm
+                }.flatMap { file ->
+                    val text = file.text
+                    val matches = Regex("""Dispatchers\.(Default|IO)""").findAll(text)
+                    matches.map { "${file.name}: hardcoded ${it.value}" }.toList()
+                }
+
+        val message =
+            "Hardcoded dispatchers forbidden. Use @DefaultDispatcher or @IoDispatcher." +
+                " Violations:\n${violations.joinToString("\n")}"
+        org.junit.Assert.assertTrue(message, violations.isEmpty())
+    }
+
+    @Test
+    fun `no doubled package segments exist`() {
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { file ->
+                    val pkg = file.packagee?.name ?: ""
+                    pkg.contains("dashboard.dashboard") || pkg.contains("circadian.circadian")
+                }.map { "${it.name}: doubled package segment" }
+
+        org.junit.Assert.assertTrue(
+            "Doubled package segments are forbidden. Violations:\n${violations.joinToString("\n")}",
             violations.isEmpty(),
         )
     }
