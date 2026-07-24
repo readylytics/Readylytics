@@ -75,43 +75,7 @@ class LocalRestoreManager
                             zipFile.setPassword(password.toCharArray())
                         }
 
-                        val header =
-                            zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
-                                ?: throw IllegalStateException("No JSON file found in backup ZIP")
-
-                        zipFile.getInputStream(header).use { inputStream ->
-                            val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                            var schemaVersion = -1
-                            var exportedAt = ""
-                            var rowCounts = emptyMap<String, Int>()
-
-                            reader.beginObject()
-                            while (reader.hasNext()) {
-                                when (reader.nextName()) {
-                                    "schemaVersion" -> schemaVersion = reader.nextInt()
-                                    "exportedAt" -> exportedAt = reader.nextString()
-                                    "rowCounts" -> {
-                                        val counts = mutableMapOf<String, Int>()
-                                        reader.beginObject()
-                                        while (reader.hasNext()) {
-                                            counts[reader.nextName()] = reader.nextInt()
-                                        }
-                                        reader.endObject()
-                                        rowCounts = counts
-                                    }
-                                    else -> reader.skipValue()
-                                }
-                            }
-                            reader.endObject()
-
-                            if (schemaVersion != HealthDatabase.DATABASE_VERSION) {
-                                throw IllegalStateException(
-                                    "Backup schema version $schemaVersion does not match database version ${HealthDatabase.DATABASE_VERSION}",
-                                )
-                            }
-
-                            BackupManifest(schemaVersion, exportedAt, rowCounts)
-                        }
+                        readManifest(zipFile)
                     } finally {
                         tempZipFile.delete()
                     }
@@ -144,6 +108,7 @@ class LocalRestoreManager
                             zipFile.setPassword(password.toCharArray())
                         }
 
+                        val manifest = readManifest(zipFile)
                         val header =
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
                                 ?: throw IllegalStateException("No JSON file found in backup ZIP")
@@ -152,7 +117,7 @@ class LocalRestoreManager
                         healthDatabase.withTransaction {
                             zipFile.getInputStream(header).use { inputStream ->
                                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                                performStreamingRestore(reader) { parsedPreferences ->
+                                performStreamingRestore(reader, manifest.schemaVersion) { parsedPreferences ->
                                     prefsBackup = parsedPreferences
                                 }
                             }
@@ -212,8 +177,44 @@ class LocalRestoreManager
                 }
             }
 
+        private fun readManifest(zipFile: ZipFile): BackupManifest {
+            val header =
+                zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
+                    ?: throw IllegalStateException("No JSON file found in backup ZIP")
+
+            return zipFile.getInputStream(header).use { inputStream ->
+                val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
+                var schemaVersion = -1
+                var exportedAt = ""
+                var rowCounts = emptyMap<String, Int>()
+
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "schemaVersion" -> schemaVersion = reader.nextInt()
+                        "exportedAt" -> exportedAt = reader.nextString()
+                        "rowCounts" -> {
+                            val counts = mutableMapOf<String, Int>()
+                            reader.beginObject()
+                            while (reader.hasNext()) {
+                                counts[reader.nextName()] = reader.nextInt()
+                            }
+                            reader.endObject()
+                            rowCounts = counts
+                        }
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+
+                BackupSchemaPolicy.requireSupported(schemaVersion)
+                BackupManifest(schemaVersion, exportedAt, rowCounts)
+            }
+        }
+
         private suspend fun performStreamingRestore(
             reader: JsonReader,
+            schemaVersion: Int,
             onPreferencesParsed: (UserPreferencesBackup) -> Unit,
         ) {
             val sleepSessionDao = healthDatabase.sleepSessionDao()
@@ -254,7 +255,14 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<HeartRateRecordEntity>()
                         while (reader.hasNext()) {
-                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            val row = readNextObjectAsString(reader)
+                            val entity =
+                                if (schemaVersion >= 7) {
+                                    json.decodeFromString<HeartRateRecordEntity>(row)
+                                } else {
+                                    json.decodeFromString<LegacyHeartRateRecordBackup>(row).toCurrent()
+                                }
+                            batch.add(entity)
                             if (batch.size >= 500) {
                                 heartRateDao.upsertAll(batch)
                                 batch.clear()
@@ -267,7 +275,14 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<HrvRecordEntity>()
                         while (reader.hasNext()) {
-                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            val row = readNextObjectAsString(reader)
+                            val entity =
+                                if (schemaVersion >= 7) {
+                                    json.decodeFromString<HrvRecordEntity>(row)
+                                } else {
+                                    json.decodeFromString<LegacyHrvRecordBackup>(row).toCurrent()
+                                }
+                            batch.add(entity)
                             if (batch.size >= 500) {
                                 hrvDao.upsertAll(batch)
                                 batch.clear()

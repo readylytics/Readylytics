@@ -120,16 +120,127 @@ class LocalRestoreManagerTest {
         }
 
     @Test
-    fun validate_wrongVersion_returnsFailure() =
+    fun validate_acceptsBackupVersionsFiveThroughSeven() =
+        runTest {
+            for (version in 5..HealthDatabase.DATABASE_VERSION) {
+                val json = createValidBackupJson().put("schemaVersion", version)
+                val zipFile = createBackupZipFile("backup-v$version.zip", json)
+
+                assertTrue(manager.validate(Uri.fromFile(zipFile)).isSuccess)
+
+                zipFile.delete()
+            }
+        }
+
+    @Test
+    fun validate_futureVersion_returnsFailure() =
         runTest {
             val json = createValidBackupJson()
             json.put("schemaVersion", HealthDatabase.DATABASE_VERSION + 1)
-            val zipFile = createBackupZipFile("old_backup.zip", json)
+            val zipFile = createBackupZipFile("future_backup.zip", json)
 
             val result = manager.validate(Uri.fromFile(zipFile))
 
             assertTrue(result.isFailure)
             assertTrue(result.exceptionOrNull()?.message?.contains("schema version") == true)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_legacyHeartAndHrvIdsMigrateToSourceRecordIds() =
+        runTest {
+            val timestamp = 1_700_000_000_000L
+            val json =
+                createValidBackupJson()
+                    .put("schemaVersion", 5)
+                    .put(
+                        "heartRateRecords",
+                        JSONArray().put(
+                            JSONObject()
+                                .put("id", "hc-heart_$timestamp")
+                                .put("timestampMs", timestamp)
+                                .put("beatsPerMinute", 61)
+                                .put("recordType", "SLEEP"),
+                        ),
+                    ).put(
+                        "hrvRecords",
+                        JSONArray().put(
+                            JSONObject()
+                                .put("id", "hc-hrv_$timestamp")
+                                .put("timestampMs", timestamp)
+                                .put("rmssdMs", 48.5)
+                                .put("recordType", "SLEEP"),
+                        ),
+                    )
+            val zipFile = createBackupZipFile("legacy-v5.zip", json)
+
+            assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
+            assertEquals(
+                "hc-heart",
+                db
+                    .heartRateDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordId,
+            )
+            assertEquals(
+                "hc-hrv",
+                db
+                    .hrvDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordId,
+            )
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_legacyIdWithoutExactTimestampSuffixIsPreserved() =
+        runTest {
+            val timestamp = 1_700_000_000_000L
+            val malformedHeartId = "hc-heart_${timestamp}x"
+            val mismatchedHrvId = "hc-hrv_${timestamp + 1}"
+            val json =
+                createValidBackupJson()
+                    .put("schemaVersion", 6)
+                    .put(
+                        "heartRateRecords",
+                        JSONArray().put(
+                            JSONObject()
+                                .put("id", malformedHeartId)
+                                .put("timestampMs", timestamp)
+                                .put("beatsPerMinute", 61)
+                                .put("recordType", "SLEEP"),
+                        ),
+                    ).put(
+                        "hrvRecords",
+                        JSONArray().put(
+                            JSONObject()
+                                .put("id", mismatchedHrvId)
+                                .put("timestampMs", timestamp)
+                                .put("rmssdMs", 48.5)
+                                .put("recordType", "SLEEP"),
+                        ),
+                    )
+            val zipFile = createBackupZipFile("legacy-malformed-suffix-v6.zip", json)
+
+            assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
+            assertEquals(
+                malformedHeartId,
+                db
+                    .heartRateDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordId,
+            )
+            assertEquals(
+                mismatchedHrvId,
+                db
+                    .hrvDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordId,
+            )
             zipFile.delete()
         }
 
