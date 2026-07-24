@@ -2,6 +2,7 @@ package app.readylytics.health.data.backup
 
 import android.content.Context
 import android.net.Uri
+import android.util.JsonReader
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.HealthDatabase
@@ -35,6 +36,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.io.StringReader
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -122,7 +124,7 @@ class LocalRestoreManagerTest {
     @Test
     fun validate_acceptsBackupVersionsFiveThroughSeven() =
         runTest {
-            for (version in 5..HealthDatabase.DATABASE_VERSION) {
+            for (version in listOf(5, 6, 7)) {
                 val json = createValidBackupJson().put("schemaVersion", version)
                 val zipFile = createBackupZipFile("backup-v$version.zip", json)
 
@@ -133,17 +135,47 @@ class LocalRestoreManagerTest {
         }
 
     @Test
-    fun validate_futureVersion_returnsFailure() =
+    fun validate_rejectsBackupVersionsFourAndEight() =
         runTest {
-            val json = createValidBackupJson()
-            json.put("schemaVersion", HealthDatabase.DATABASE_VERSION + 1)
-            val zipFile = createBackupZipFile("future_backup.zip", json)
+            for (version in listOf(4, 8)) {
+                val json = createValidBackupJson().put("schemaVersion", version)
+                val zipFile = createBackupZipFile("unsupported-v$version.zip", json)
 
-            val result = manager.validate(Uri.fromFile(zipFile))
+                val result = manager.validate(Uri.fromFile(zipFile))
 
-            assertTrue(result.isFailure)
-            assertTrue(result.exceptionOrNull()?.message?.contains("schema version") == true)
-            zipFile.delete()
+                assertTrue(result.isFailure)
+                assertTrue(result.exceptionOrNull()?.message?.contains("schema version") == true)
+                zipFile.delete()
+            }
+        }
+
+    @Test
+    fun backupSchemaPolicy_pinsMaximumSupportedVersionToSeven() {
+        assertEquals(7, BackupSchemaPolicy.MAX_SUPPORTED_VERSION)
+    }
+
+    @Test
+    fun applyRestore_unsupportedVersionsPreserveExistingRows() =
+        runTest {
+            val seedZipFile = createBackupZipFile("preservation-seed.zip", createValidBackupJson())
+            assertTrue(manager.applyRestore(Uri.fromFile(seedZipFile)) is RestoreResult.SuccessRequiresRestart)
+            seedZipFile.delete()
+
+            for (version in listOf(4, 8)) {
+                val unsupportedJson =
+                    createValidBackupJson()
+                        .put("schemaVersion", version)
+                        .put("sleepSessions", JSONArray())
+                val unsupportedZipFile =
+                    createBackupZipFile("unsupported-restore-v$version.zip", unsupportedJson)
+
+                assertTrue(manager.applyRestore(Uri.fromFile(unsupportedZipFile)) is RestoreResult.Failure)
+                assertEquals(
+                    listOf("session_1"),
+                    db.sleepSessionDao().getSince(0).map { it.id },
+                )
+                unsupportedZipFile.delete()
+            }
         }
 
     @Test
@@ -259,6 +291,47 @@ class LocalRestoreManagerTest {
             assertEquals("session_1", sessions[0].id)
             zipFile.delete()
         }
+
+    @Test
+    fun applyRestore_preservesEveryJsonControlCharacterInStrings() =
+        runTest {
+            val controlCharacters = (0x00..0x1f).map { it.toChar() }.joinToString("")
+            val json =
+                createValidBackupJson().apply {
+                    getJSONArray("sleepSessions")
+                        .getJSONObject(0)
+                        .put("deviceName", controlCharacters)
+                }
+            val zipFile = createBackupZipFile("control_characters.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            assertEquals(
+                controlCharacters,
+                db
+                    .sleepSessionDao()
+                    .getSince(0)
+                    .single()
+                    .deviceName,
+            )
+            zipFile.delete()
+        }
+
+    @Test
+    fun streamingParser_reemitsStringsWithoutRawJsonControlCharacters() {
+        val controlCharacters = (0x00..0x1f).map { it.toChar() }.joinToString("")
+        val source = JSONObject().put("value", controlCharacters).toString()
+        val reader = JsonReader(StringReader(source))
+        val readNextObjectAsString =
+            LocalRestoreManager::class.java
+                .getDeclaredMethod("readNextObjectAsString", JsonReader::class.java)
+                .apply { isAccessible = true }
+
+        val reemitted = readNextObjectAsString.invoke(manager, reader) as String
+
+        assertTrue(reemitted.none { it.code in 0x00..0x1f })
+    }
 
     @Test
     fun applyRestore_updatesPreferences() =

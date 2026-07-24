@@ -1,6 +1,5 @@
 package app.readylytics.health.data.backup
 
-import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.domain.dashboard.CardConfiguration
@@ -8,11 +7,12 @@ import kotlinx.serialization.Serializable
 
 internal object BackupSchemaPolicy {
     const val MIN_SUPPORTED_VERSION = 5
+    const val MAX_SUPPORTED_VERSION = 7
 
     fun requireSupported(version: Int) {
-        require(version in MIN_SUPPORTED_VERSION..HealthDatabase.DATABASE_VERSION) {
+        require(version in MIN_SUPPORTED_VERSION..MAX_SUPPORTED_VERSION) {
             "Unsupported backup schema version $version; supported range is " +
-                "$MIN_SUPPORTED_VERSION..${HealthDatabase.DATABASE_VERSION}"
+                "$MIN_SUPPORTED_VERSION..$MAX_SUPPORTED_VERSION"
         }
     }
 }

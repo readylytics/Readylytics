@@ -33,6 +33,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
@@ -257,7 +258,7 @@ class LocalRestoreManager
                         while (reader.hasNext()) {
                             val row = readNextObjectAsString(reader)
                             val entity =
-                                if (schemaVersion >= 7) {
+                                if (schemaVersion == BackupSchemaPolicy.MAX_SUPPORTED_VERSION) {
                                     json.decodeFromString<HeartRateRecordEntity>(row)
                                 } else {
                                     json.decodeFromString<LegacyHeartRateRecordBackup>(row).toCurrent()
@@ -277,7 +278,7 @@ class LocalRestoreManager
                         while (reader.hasNext()) {
                             val row = readNextObjectAsString(reader)
                             val entity =
-                                if (schemaVersion >= 7) {
+                                if (schemaVersion == BackupSchemaPolicy.MAX_SUPPORTED_VERSION) {
                                     json.decodeFromString<HrvRecordEntity>(row)
                                 } else {
                                     json.decodeFromString<LegacyHrvRecordBackup>(row).toCurrent()
@@ -340,7 +341,7 @@ class LocalRestoreManager
                     var first = true
                     while (reader.hasNext()) {
                         if (!first) sb.append(",")
-                        sb.append("\"").append(reader.nextName()).append("\":")
+                        sb.append(json.encodeToString(reader.nextName())).append(":")
                         parseValue(reader, sb)
                         first = false
                     }
@@ -360,20 +361,7 @@ class LocalRestoreManager
                     sb.append("]")
                 }
                 JsonToken.STRING -> {
-                    val s = reader.nextString()
-                    sb.append("\"")
-                    for (i in 0 until s.length) {
-                        val c = s[i]
-                        when (c) {
-                            '\\' -> sb.append("\\\\")
-                            '"' -> sb.append("\\\"")
-                            '\n' -> sb.append("\\n")
-                            '\r' -> sb.append("\\r")
-                            '\t' -> sb.append("\\t")
-                            else -> sb.append(c)
-                        }
-                    }
-                    sb.append("\"")
+                    sb.append(json.encodeToString(reader.nextString()))
                 }
                 JsonToken.NUMBER -> {
                     sb.append(reader.nextString())
