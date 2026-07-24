@@ -74,7 +74,8 @@ enables WAL, and covers:
   revalidation, with the v6 sources and shadows intact;
 - final counts, WAL mode, cleanup of `_v7`/metadata tables, explicit Room identity hash, and
   `MigrationTestHelper.runMigrationsAndValidate(name, 7, true)` on a plaintext export without a
-  Room v6→v7 migration.
+  Room v6→v7 migration. The plaintext copy drops `room_master_table` first, forcing the helper to
+  validate the physical tables and indexes instead of trusting an identity shortcut.
 
 The forced callback throws `CancellationException`. The migrator rethrows it, and every durable
 checkpoint mutation being tested has already committed in the same transaction as its data/index
@@ -154,6 +155,58 @@ BUILD SUCCESSFUL in 1m 31s
 
 No file was added by the review follow-up, so the AGENTS.md new-file rule did not require another
 `codegraph index`.
+
+## Cumulative Schema Follow-up
+
+Follow-up commit: `e53c561` (`fix: synchronize v7 schema identity`)
+
+Final cumulative review found that the exported v7 schema's top-level `identityHash` still held an
+older value even though its setup query, generated `HealthDatabase_Impl`, and migrator cutover used
+`54bca00d5cb026eb7ed7aa31e58c34f8`. It also found that the plaintext instrumentation copy retained
+`room_master_table`, allowing `MigrationTestHelper` to trust the identity instead of checking the
+physical schema.
+
+The synchronization regression was added first:
+
+```text
+./gradlew :app:testDebugUnitTest \
+  --tests app.readylytics.health.data.migration.DatabaseMigrationModelsTest
+DatabaseMigrationModelsTest.kt:140,141:
+Unresolved reference 'V7_DATABASE_IDENTITY_HASH'
+BUILD FAILED in 6s
+```
+
+The fix exposes one internal `V7_DATABASE_IDENTITY_HASH` owned by the migrator package, uses it for
+cutover and instrumentation assertions, aligns both exported identity locations, and unit-checks
+the exported top hash plus setup-query hash against that production constant. The plaintext
+validation copy now drops `room_master_table` before `runMigrationsAndValidate`.
+
+Focused GREEN and schema/KSP consistency:
+
+```text
+./gradlew ktlintFormat :core:database:kspDebugKotlin \
+  :core:database:compileDebugKotlin :core:database:compileDebugAndroidTestKotlin \
+  :app:kspDebugKotlin :app:compileDebugKotlin :app:testDebugUnitTest \
+  --tests app.readylytics.health.data.migration.DatabaseMigrationModelsTest
+BUILD SUCCESSFUL in 7s
+428 actionable tasks: 7 executed, 421 up-to-date
+
+generated HealthDatabase_Impl identity:
+54bca00d5cb026eb7ed7aa31e58c34f8
+exported top/setup identities:
+54bca00d5cb026eb7ed7aa31e58c34f8
+```
+
+Final local gates:
+
+```text
+./gradlew testDebugUnitTest lintRelease
+BUILD SUCCESSFUL in 1m 25s
+1013 actionable tasks: 25 executed, 988 up-to-date
+```
+
+The app Android-test compile was retried and remains blocked by the same 11 unrelated errors
+listed below. It reports no diagnostic in `V7DatabaseMigratorInstrumentedTest`.
 
 ## Verification
 
