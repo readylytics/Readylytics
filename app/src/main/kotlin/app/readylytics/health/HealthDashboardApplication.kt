@@ -90,10 +90,9 @@ class HealthDashboardApplication :
                 settingsRepository = settingsRepo,
                 workerScheduler = workerScheduler,
             )
+        val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         appScope.launch {
-            databaseMigrationController.state.collect { state ->
-                startupInitializer.initializeIfReady(state.readiness)
-            }
+            startupCoordinator.observe(databaseMigrationController.state)
         }
     }
 
