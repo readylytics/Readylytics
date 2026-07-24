@@ -14,7 +14,7 @@ The remediation covers:
 2. Explicit zero totals for grouped step days with no records.
 3. DST-safe walk-forward baseline prefetching.
 4. Restore-time migration of v5 and v6 backups into the v7 entity model.
-5. A resumable, foreground v6-to-v7 database migration.
+5. A resumable, foreground v5/v6-to-v7 database migration.
 6. Synchronized stage-less-sleep methodology documentation.
 
 No scoring coefficients or formulas change. The sleep documentation work describes behavior already
@@ -75,24 +75,31 @@ table. Manifest row counts are still checked for every entry that exists in that
 Tests will use real v5-shaped JSON rows for HR and HRV, verify exact field conversion and restored
 counts, and retain rejection tests for unsupported future versions.
 
-### Resumable v6-to-v7 migration
+### Resumable v5/v6-to-v7 migration
 
 Room's `Migration.migrate` callback cannot provide the required recovery semantics because Room
 wraps the entire callback in one transaction. The large-table work therefore moves to a pre-open
 migration coordinator that accesses the encrypted SQLite file directly through SQLCipher before any
 `HealthDatabase` instance is created.
 
-The coordinator is a deterministic state machine with durable state stored in a small migration
-metadata table inside the database:
+The coordinator accepts both v5 (the schema currently on `main`) and v6 databases. A v5 file first
+receives the existing small additive v5→v6 changes in one transaction: add nullable
+`workout_records.modelTrimp`, create `step_records`, drop the redundant summary index, and set
+`user_version = 6`. The SQL statements are shared with `DatabaseMigrations.MIGRATION_5_6` so the
+external and Room paths cannot drift.
+
+The large v6→v7 portion is a deterministic state machine with durable state stored in a small
+migration metadata table inside the database:
 
 1. `PREFLIGHT`
-2. `CREATE_SHADOW_TABLES`
-3. `COPY_HEART_RATE`
-4. `COPY_HRV`
-5. one state per required v7 index
-6. `VALIDATE`
-7. `SWAP`
-8. `COMPLETE`
+2. `UPGRADE_5_TO_6` when required
+3. `CREATE_SHADOW_TABLES`
+4. `COPY_HEART_RATE`
+5. `COPY_HRV`
+6. one state per required v7 index
+7. `VALIDATE`
+8. `SWAP`
+9. `COMPLETE`
 
 Copies use keyset pagination over the legacy text primary key:
 
@@ -123,14 +130,14 @@ returns a recoverable blocked state without changing legacy data and presents ac
 
 ### Startup and progress gating
 
-The app must not instantiate Room while a v6 database is being upgraded. Database-bound application
+The app must not instantiate Room while a v5 or v6 database is being upgraded. Database-bound application
 dependencies will be injected lazily, and startup scheduling/backfill will wait on a
 `DatabaseReadinessGate`.
 
 `MainActivity` will resolve readiness before constructing the normal navigation graph:
 
 - new database or v7 database: continue normally;
-- v6 database: enqueue unique foreground migration work and show a blocking Material 3 migration
+- v5/v6 database: enqueue unique foreground migration work and show a blocking Material 3 migration
   surface;
 - recoverable preflight failure: show the required-space message and retry action;
 - unrecoverable validation failure: preserve the v6 file, show a non-destructive error, and offer
@@ -185,7 +192,7 @@ also document the resumable v7 upgrade and accepted backup versions.
 
 ### Instrumented database tests
 
-- Seeded encrypted v6 database migrates to the exported v7 Room schema.
+- Seeded encrypted v5 and v6 databases migrate to the exported v7 Room schema.
 - Killing after every copy batch/index phase resumes without loss or duplication.
 - Validation failure preserves readable legacy tables and version 6.
 - WAL sidecars and SQLCipher opening are exercised.
