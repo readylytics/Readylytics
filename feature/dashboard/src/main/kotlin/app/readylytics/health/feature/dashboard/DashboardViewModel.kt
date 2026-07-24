@@ -128,7 +128,6 @@ class DashboardViewModel
             val selectedDate = basicInputs.selectedDate
             val sessionSummary =
                 resolveDashboardSleepSessionSummary(
-                    summary = basicInputs.summary,
                     session = cardState.lastSleepSession,
                 )
 
@@ -200,10 +199,7 @@ class DashboardViewModel
 
         // Time-of-day gating for insights only makes sense for the current day;
         // for past days, treat as end-of-day so it never suppresses a finding.
-        internal fun resolveDashboardSleepSessionSummary(
-            summary: DailySummary?,
-            session: SleepSessionData?,
-        ): SleepSessionSummary? {
+        internal fun resolveDashboardSleepSessionSummary(session: SleepSessionData?): SleepSessionSummary? {
             session ?: return null
             // Biphasic days can legitimately aggregate more sleep than any single session.
             // Keep the available session-backed fallback instead of blanking dashboard cards.

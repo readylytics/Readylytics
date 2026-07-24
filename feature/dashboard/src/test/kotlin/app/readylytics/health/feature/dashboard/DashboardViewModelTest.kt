@@ -4,7 +4,6 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
@@ -28,7 +27,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -160,28 +158,15 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun `dashboard session summary stays when aggregate matches single session actual sleep`() {
+    fun `dashboard session summary derives from session data`() {
         val summary =
             viewModel.resolveDashboardSleepSessionSummary(
-                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 480),
                 session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
             )
 
         assertEquals(0.9f, summary?.efficiency)
         assertEquals(0L, summary?.startTime)
         assertEquals(510 * 60_000L, summary?.endTime)
-    }
-
-    @Test
-    fun `dashboard session summary falls back to session when aggregate duration no longer matches single session`() {
-        val summary =
-            viewModel.resolveDashboardSleepSessionSummary(
-                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 540),
-                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
-            )
-
-        assertEquals(0.9f, summary?.efficiency)
-        assertNull(summary?.takeIf { it.endTime <= it.startTime })
     }
 
     private fun sleepSession(
