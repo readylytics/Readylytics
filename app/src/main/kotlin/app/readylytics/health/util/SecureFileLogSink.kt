@@ -81,9 +81,11 @@ class SecureFileLogSink(
     ) {
         val timestamp = dateFormat.format(Date())
         val sessionId = logContext.sessionId ?: "none"
+        val sanitizedMessage = sanitizeLogMessage(message)
+        val sanitizedStackTrace = throwable?.let { sanitizeLogMessage(Log.getStackTraceString(it)) }
         val logLine =
-            "$timestamp [$level] [$tag] [Session:$sessionId] $message" +
-                (throwable?.let { "\n${Log.getStackTraceString(it)}" } ?: "") + "\n"
+            "$timestamp [$level] [$tag] [Session:$sessionId] $sanitizedMessage" +
+                (sanitizedStackTrace?.let { "\n$it" } ?: "") + "\n"
 
         pendingLogs.add(logLine)
 
@@ -300,5 +302,28 @@ class SecureFileLogSink(
     companion object {
         const val DEFAULT_MAX_FILE_SIZE_BYTES: Long = 2L * 1024L * 1024L
         const val DEFAULT_MAX_BACKUPS: Int = 2
+
+        internal fun sanitizeLogMessage(message: String): String {
+            var sanitized = message
+
+            // Redact UUIDs
+            sanitized =
+                sanitized.replace(
+                    Regex(
+                        "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                        RegexOption.IGNORE_CASE,
+                    ),
+                    "***",
+                )
+
+            // Redact specific health metrics numbers
+            sanitized =
+                sanitized.replace(
+                    Regex("(?i)\\b(HR|HRV|BP|BPM)\\s*[:=]?\\s*(?:is\\s*)?\\d+(?:\\.\\d+)?(?:/\\d+)?"),
+                    "$1 ***",
+                )
+
+            return sanitized
+        }
     }
 }

@@ -189,7 +189,7 @@ private fun SleepStageInput.toEntity() =
 
 private fun HeartRateInput.toEntity() =
     HeartRateRecordEntity(
-        id = id,
+        sourceRecordId = id,
         timestampMs = timestampMs,
         beatsPerMinute = beatsPerMinute,
         recordType = recordType,
@@ -199,7 +199,7 @@ private fun HeartRateInput.toEntity() =
 
 private fun HrvInput.toEntity() =
     HrvRecordEntity(
-        id = id,
+        sourceRecordId = id,
         timestampMs = timestampMs,
         rmssdMs = rmssdMs,
         recordType = recordType,

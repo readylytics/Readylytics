@@ -133,7 +133,7 @@ object DatabaseMigrations {
                 )
             }
         }
-        
+
     private val MIGRATION_4_5 =
         object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -169,6 +169,67 @@ object DatabaseMigrations {
             }
         }
 
+    private val MIGRATION_6_7 =
+        object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // DB-001: Schema preparation for integer primary key migration.
+
+                // Rebuild heart_rate_records
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `heart_rate_records_new` (
+                        `rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `sourceRecordId` TEXT NOT NULL,
+                        `timestampMs` INTEGER NOT NULL,
+                        `beatsPerMinute` INTEGER NOT NULL,
+                        `recordType` TEXT NOT NULL,
+                        `sessionId` TEXT,
+                        `deviceName` TEXT
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO `heart_rate_records_new` (`sourceRecordId`, `timestampMs`, `beatsPerMinute`, `recordType`, `sessionId`, `deviceName`)
+                    SELECT `id`, `timestampMs`, `beatsPerMinute`, `recordType`, `sessionId`, `deviceName` FROM `heart_rate_records`
+                    """.trimIndent(),
+                )
+                db.execSQL("DROP TABLE `heart_rate_records`")
+                db.execSQL("ALTER TABLE `heart_rate_records_new` RENAME TO `heart_rate_records`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_heart_rate_records_sourceRecordId_timestampMs` ON `heart_rate_records` (`sourceRecordId`, `timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId_recordType_beatsPerMinute` ON `heart_rate_records` (`sessionId`, `recordType`, `beatsPerMinute`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType_timestampMs` ON `heart_rate_records` (`recordType`, `timestampMs`)")
+
+                // Rebuild hrv_records
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `hrv_records_new` (
+                        `rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `sourceRecordId` TEXT NOT NULL,
+                        `timestampMs` INTEGER NOT NULL,
+                        `rmssdMs` REAL NOT NULL,
+                        `recordType` TEXT NOT NULL,
+                        `sessionId` TEXT,
+                        `deviceName` TEXT
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO `hrv_records_new` (`sourceRecordId`, `timestampMs`, `rmssdMs`, `recordType`, `sessionId`, `deviceName`)
+                    SELECT `id`, `timestampMs`, `rmssdMs`, `recordType`, `sessionId`, `deviceName` FROM `hrv_records`
+                    """.trimIndent(),
+                )
+                db.execSQL("DROP TABLE `hrv_records`")
+                db.execSQL("ALTER TABLE `hrv_records_new` RENAME TO `hrv_records`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_hrv_records_sourceRecordId_timestampMs` ON `hrv_records` (`sourceRecordId`, `timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_timestampMs` ON `hrv_records` (`timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_recordType_timestampMs` ON `hrv_records` (`recordType`, `timestampMs`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hrv_records_sessionId` ON `hrv_records` (`sessionId`)")
+            }
+        }
+
     val all: Array<Migration> =
         arrayOf(
             MIGRATION_1_2,
@@ -176,5 +237,6 @@ object DatabaseMigrations {
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
+            MIGRATION_6_7,
         )
 }
