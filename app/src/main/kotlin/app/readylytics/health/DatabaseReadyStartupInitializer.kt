@@ -24,26 +24,43 @@ internal class DatabaseReadyStartupInitializer(
         if (readiness != DatabaseReadiness.Ready || !initialized.compareAndSet(false, true)) return
 
         try {
-            val backfilled =
-                healthSyncUseCase.get().withSyncLock {
-                    backfillHistoricalBaselines.get().execute()
+            try {
+                val backfilled =
+                    healthSyncUseCase.get().withSyncLock {
+                        backfillHistoricalBaselines.get().execute()
+                    }
+                if (backfilled > 0) {
+                    logD(TAG) { "Backfilled $backfilled historical baselines" }
                 }
-            if (backfilled > 0) {
-                logD(TAG) { "Backfilled $backfilled historical baselines" }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logE(TAG, e) { "Historical baseline backfill failed" }
+            }
+
+            val backupSchedule = settingsRepository.backupSchedule.first()
+            val backgroundSyncEnabled = settingsRepository.backgroundSyncEnabled.first()
+            val periodicSyncMinutes =
+                if (backgroundSyncEnabled) {
+                    settingsRepository.backgroundSyncIntervalMinutes.first()
+                } else {
+                    null
+                }
+            workerScheduler.scheduleBackupWorker(backupSchedule)
+            workerScheduler.scheduleBirthdayWorker()
+            workerScheduler.scheduleDataCleanupWorker()
+            if (periodicSyncMinutes != null) {
+                workerScheduler.schedulePeriodicSync(periodicSyncMinutes.toLong())
+            } else {
+                workerScheduler.cancelPeriodicSync()
             }
         } catch (e: CancellationException) {
             initialized.set(false)
             throw e
         } catch (e: Exception) {
-            logE(TAG, e) { "Historical baseline backfill failed" }
+            initialized.set(false)
+            logE(TAG, e) { "Database-ready startup initialization failed" }
         }
-
-        val backupSchedule = settingsRepository.backupSchedule.first()
-        val periodicSyncMinutes = settingsRepository.backgroundSyncIntervalMinutes.first()
-        workerScheduler.scheduleBackupWorker(backupSchedule)
-        workerScheduler.scheduleBirthdayWorker()
-        workerScheduler.scheduleDataCleanupWorker()
-        workerScheduler.schedulePeriodicSync(periodicSyncMinutes.toLong())
     }
 
     private companion object {
