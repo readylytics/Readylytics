@@ -32,7 +32,7 @@ class HealthDatabaseIndexTest {
         db.openHelper.readableDatabase
             .query(
                 "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'heart_rate_records' " +
-                    "AND name = 'index_heart_rate_records_recordType_timestampMs'",
+                    "AND name = 'index_hr_v7_type_timestamp'",
             ).use { cursor ->
                 assertEquals(1, cursor.count)
             }

@@ -10,10 +10,10 @@ import kotlinx.serialization.Serializable
 @Entity(
     tableName = "hrv_records",
     indices = [
-        Index(value = ["sourceRecordId", "timestampMs"], unique = true),
-        Index(value = ["timestampMs"]),
-        Index(value = ["recordType", "timestampMs"]),
-        Index(value = ["sessionId"]),
+        Index(name = "index_hrv_v7_source_time", value = ["sourceRecordId", "timestampMs"], unique = true),
+        Index(name = "index_hrv_v7_timestamp", value = ["timestampMs"]),
+        Index(name = "index_hrv_v7_type_timestamp", value = ["recordType", "timestampMs"]),
+        Index(name = "index_hrv_v7_session", value = ["sessionId"]),
     ],
 )
 data class HrvRecordEntity(

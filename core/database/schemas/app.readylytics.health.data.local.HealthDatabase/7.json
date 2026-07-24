@@ -245,26 +245,26 @@
         },
         "indices": [
           {
-            "name": "index_heart_rate_records_sourceRecordId_timestampMs",
+            "name": "index_hr_v7_source_time",
             "unique": true,
             "columnNames": [
               "sourceRecordId",
               "timestampMs"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_heart_rate_records_sourceRecordId_timestampMs` ON `${TABLE_NAME}` (`sourceRecordId`, `timestampMs`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_hr_v7_source_time` ON `${TABLE_NAME}` (`sourceRecordId`, `timestampMs`)"
           },
           {
-            "name": "index_heart_rate_records_timestampMs",
+            "name": "index_hr_v7_timestamp",
             "unique": false,
             "columnNames": [
               "timestampMs"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `${TABLE_NAME}` (`timestampMs`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hr_v7_timestamp` ON `${TABLE_NAME}` (`timestampMs`)"
           },
           {
-            "name": "index_heart_rate_records_sessionId_recordType_beatsPerMinute",
+            "name": "index_hr_v7_session_type_bpm",
             "unique": false,
             "columnNames": [
               "sessionId",
@@ -272,17 +272,17 @@
               "beatsPerMinute"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId_recordType_beatsPerMinute` ON `${TABLE_NAME}` (`sessionId`, `recordType`, `beatsPerMinute`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hr_v7_session_type_bpm` ON `${TABLE_NAME}` (`sessionId`, `recordType`, `beatsPerMinute`)"
           },
           {
-            "name": "index_heart_rate_records_recordType_timestampMs",
+            "name": "index_hr_v7_type_timestamp",
             "unique": false,
             "columnNames": [
               "recordType",
               "timestampMs"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType_timestampMs` ON `${TABLE_NAME}` (`recordType`, `timestampMs`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hr_v7_type_timestamp` ON `${TABLE_NAME}` (`recordType`, `timestampMs`)"
           }
         ]
       },
@@ -339,42 +339,42 @@
         },
         "indices": [
           {
-            "name": "index_hrv_records_sourceRecordId_timestampMs",
+            "name": "index_hrv_v7_source_time",
             "unique": true,
             "columnNames": [
               "sourceRecordId",
               "timestampMs"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_hrv_records_sourceRecordId_timestampMs` ON `${TABLE_NAME}` (`sourceRecordId`, `timestampMs`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_hrv_v7_source_time` ON `${TABLE_NAME}` (`sourceRecordId`, `timestampMs`)"
           },
           {
-            "name": "index_hrv_records_timestampMs",
+            "name": "index_hrv_v7_timestamp",
             "unique": false,
             "columnNames": [
               "timestampMs"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_hrv_records_timestampMs` ON `${TABLE_NAME}` (`timestampMs`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hrv_v7_timestamp` ON `${TABLE_NAME}` (`timestampMs`)"
           },
           {
-            "name": "index_hrv_records_recordType_timestampMs",
+            "name": "index_hrv_v7_type_timestamp",
             "unique": false,
             "columnNames": [
               "recordType",
               "timestampMs"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_hrv_records_recordType_timestampMs` ON `${TABLE_NAME}` (`recordType`, `timestampMs`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hrv_v7_type_timestamp` ON `${TABLE_NAME}` (`recordType`, `timestampMs`)"
           },
           {
-            "name": "index_hrv_records_sessionId",
+            "name": "index_hrv_v7_session",
             "unique": false,
             "columnNames": [
               "sessionId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_hrv_records_sessionId` ON `${TABLE_NAME}` (`sessionId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hrv_v7_session` ON `${TABLE_NAME}` (`sessionId`)"
           }
         ]
       },
@@ -1237,7 +1237,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9caedb2eab0d3eb983d9896b2da875ea')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '54bca00d5cb026eb7ed7aa31e58c34f8')"
     ]
   }
 }

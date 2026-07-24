@@ -10,10 +10,10 @@ import kotlinx.serialization.Serializable
 @Entity(
     tableName = "heart_rate_records",
     indices = [
-        Index(value = ["sourceRecordId", "timestampMs"], unique = true),
-        Index(value = ["timestampMs"]),
-        Index(value = ["sessionId", "recordType", "beatsPerMinute"]),
-        Index(value = ["recordType", "timestampMs"]),
+        Index(name = "index_hr_v7_source_time", value = ["sourceRecordId", "timestampMs"], unique = true),
+        Index(name = "index_hr_v7_timestamp", value = ["timestampMs"]),
+        Index(name = "index_hr_v7_session_type_bpm", value = ["sessionId", "recordType", "beatsPerMinute"]),
+        Index(name = "index_hr_v7_type_timestamp", value = ["recordType", "timestampMs"]),
     ],
 )
 data class HeartRateRecordEntity(

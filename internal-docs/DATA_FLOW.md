@@ -253,7 +253,17 @@ Connect directly.**
 and v5→v6. Room has no v6→v7 migration: `DatabaseReadinessGate` inspects the encrypted file before
 Room construction, and `DatabaseModule` refuses to open any existing database that has not reached
 v7 through the external `V7DatabaseMigrator`. The v5→v6 statements are shared through
-`DatabaseUpgradeSql.V5_TO_V6`, preventing the Room and external paths from drifting. Version 4 adds
+`DatabaseUpgradeSql.V5_TO_V6`, preventing the Room and external paths from drifting.
+`V7DatabaseMigrator` preflights free space before mutation, then copies HR and HRV into shadow
+tables in committed 10,000-row keyset batches. A durable single-row checkpoint stores the current
+copy/index/validation phase and both last source ids/counts, so cancellation or process death
+resumes without deleting the authoritative v6 tables. Legacy ids are normalized only when they end
+with the exact `_<timestampMs>` suffix. Secondary indexes are checkpointed one transaction at a
+time; equal source/target counts and unique `(sourceRecordId, timestampMs)` groups are required
+before one atomic table swap removes the checkpoint and advances `user_version` to 7.
+That cutover also installs Room v7's generated schema identity in `room_master_table`, so the first
+Room open accepts the externally migrated schema.
+Version 4 adds
 the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
 `supplementalSleepDurationMinutes` and `napCount`, for nap/supplemental-sleep tracking; it does
@@ -706,6 +716,7 @@ resetting to zero.
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v7)                              | 13 entities; Room migration chain ends at v6; external migration owns v7                 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing/v7 ready; v5/v6 or resumable metadata require external migration                 |
+| `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `app/src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt`                                               | Storage — scoped encrypted DB access                | opens raw SQLCipher DB only inside a callback and zeroes plaintext key bytes              |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
