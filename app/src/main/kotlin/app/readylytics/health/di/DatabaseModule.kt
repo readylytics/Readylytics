@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import app.readylytics.health.BuildConfig
 import app.readylytics.health.data.local.DatabaseMigrations
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
@@ -21,6 +20,8 @@ import app.readylytics.health.data.local.dao.SleepStageDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.migration.DatabaseReadiness
+import app.readylytics.health.data.migration.DatabaseReadinessGate
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.repository.TransactionRunner
 import dagger.Binds
@@ -44,15 +45,16 @@ abstract class DatabaseModule {
         fun provideDatabase(
             @ApplicationContext context: Context,
             sqlCipherKeyManager: SqlCipherKeyManager,
+            databaseReadinessGate: DatabaseReadinessGate,
         ): HealthDatabase {
             val dbFile = context.getDatabasePath("health_dashboard.db")
             sqlCipherKeyManager.migrateIfNeeded(dbFile)
+            requireDatabaseReady(databaseReadinessGate)
 
             val builder =
                 Room
                     .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
                     .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory(dbFile))
-                    .apply { if (BuildConfig.DEBUG) fallbackToDestructiveMigration(dropAllTables = true) }
                     .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                     .setQueryCoroutineContext(Dispatchers.IO)
                     .addMigrations(*DatabaseMigrations.all)
@@ -108,5 +110,11 @@ abstract class DatabaseModule {
 
         @Provides
         fun provideStepRecordDao(db: HealthDatabase): StepRecordDao = db.stepRecordDao()
+    }
+}
+
+internal fun requireDatabaseReady(databaseReadinessGate: DatabaseReadinessGate) {
+    check(databaseReadinessGate.inspect() == DatabaseReadiness.Ready) {
+        "HealthDatabase cannot open before the external v7 migration is complete"
     }
 }

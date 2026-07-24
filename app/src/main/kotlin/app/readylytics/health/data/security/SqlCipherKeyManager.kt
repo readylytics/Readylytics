@@ -67,6 +67,21 @@ class SqlCipherKeyManager
             }
         }
 
+        fun <T> withWritableDatabase(
+            dbFile: File,
+            block: (net.zetetic.database.sqlcipher.SQLiteDatabase) -> T,
+        ): T {
+            val rawKey = getOrCreateDbKey(dbFile)
+            return try {
+                val keyHex = rawKey.toHex()
+                net.zetetic.database.sqlcipher.SQLiteDatabase
+                    .openOrCreateDatabase(dbFile, "x'$keyHex'", null, null, null)
+                    .use(block)
+            } finally {
+                rawKey.fill(0)
+            }
+        }
+
         /**
          * Detects if the database file is plaintext (SQLite format) and migrates it to encrypted format.
          * Checks the first 16 bytes for SQLite magic header; if found, performs migration.

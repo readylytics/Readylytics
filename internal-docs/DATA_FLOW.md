@@ -249,8 +249,12 @@ entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity
 `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/`. **The database is the single source of truth; the UI never reads Health
 Connect directly.**
 
-`DatabaseMigrations` registers v1→v2, v2→v3, v3→v4, v4→v5, v5→v6, and v6→v7 migrations for
-existing installs. Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
+`DatabaseMigrations` registers only the small Room migrations v1→v2, v2→v3, v3→v4, v4→v5,
+and v5→v6. Room has no v6→v7 migration: `DatabaseReadinessGate` inspects the encrypted file before
+Room construction, and `DatabaseModule` refuses to open any existing database that has not reached
+v7 through the external `V7DatabaseMigrator`. The v5→v6 statements are shared through
+`DatabaseUpgradeSql.V5_TO_V6`, preventing the Room and external paths from drifting. Version 4 adds
+the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
 `supplementalSleepDurationMinutes` and `napCount`, for nap/supplemental-sleep tracking; it does
 not change any other table or scoring formula. Version 6 (SCORE-001, HC-005, DB-002): adds a
@@ -700,7 +704,9 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | elapsed duration only; zone minutes/TRIMP populated later by `ZoneThresholds.computeMetrics` |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v7)                              | 13 entities; v1→v7 migrations wired through `DatabaseMigrations`                         |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v7)                              | 13 entities; Room migration chain ends at v6; external migration owns v7                 |
+| `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing/v7 ready; v5/v6 or resumable metadata require external migration                 |
+| `app/src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt`                                               | Storage — scoped encrypted DB access                | opens raw SQLCipher DB only inside a callback and zeroes plaintext key bytes              |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |

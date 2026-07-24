@@ -281,8 +281,12 @@ class DocumentationDriftTest {
             "expected internal-docs/DATA_FLOW.md to mention Room schema version $version",
         )
         assertTrue(
-            dataFlowMd.contains("v1→v$version"),
-            "expected internal-docs/DATA_FLOW.md's migration chain to end at v1→v$version",
+            dataFlowMd.contains("Room migration chain ends at v6"),
+            "expected internal-docs/DATA_FLOW.md to record that Room migrations end at v6",
+        )
+        assertTrue(
+            dataFlowMd.contains("external migration owns v$version"),
+            "expected internal-docs/DATA_FLOW.md to record that external migration owns v$version",
         )
     }
 
