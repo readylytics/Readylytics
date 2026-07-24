@@ -26,6 +26,16 @@ class DocumentationDriftTest {
     private val aboutMd = readRepoFile("ABOUT.md")
     private val publicAboutMd = readRepoFile("docs/about.md")
     private val aboutStringsXml = readRepoFile("feature/about/src/main/res/values/strings.xml")
+    private val aboutContributorsSource =
+        readRepoFile("feature/about/src/main/kotlin/app/readylytics/health/feature/about/ContributorsSection.kt")
+    private val aboutScreenSource =
+        readRepoFile("feature/about/src/main/kotlin/app/readylytics/health/feature/about/AboutScreen.kt")
+    private val aboutStageLessResource =
+        Regex(
+            """<string\s+name="about_stage_less_reweight"[^>]*>(.*?)</string>""",
+            RegexOption.DOT_MATCHES_ALL,
+        ).find(aboutStringsXml)?.groupValues?.get(1)
+            ?: error("Missing about_stage_less_reweight resource")
     private val stringsXml =
         listOf(
             "app/src/main/res/values/strings.xml",
@@ -79,12 +89,24 @@ class DocumentationDriftTest {
         for ((surface, text) in listOf(
             "ABOUT.md" to aboutMd,
             "docs/about.md" to publicAboutMd,
-            "About strings" to aboutStringsXml,
+            "about_stage_less_reweight" to aboutStageLessResource,
         )) {
             for (phrase in requiredStageLessPhrases) {
                 assertTrue(text.contains(phrase), "$surface must contain '$phrase'")
             }
         }
+    }
+
+    @Test
+    fun `stage-less About resource is rendered by the About screen`() {
+        assertTrue(
+            aboutContributorsSource.contains("stringResource(R.string.about_stage_less_reweight)"),
+            "ContributorsSection must render about_stage_less_reweight",
+        )
+        assertTrue(
+            aboutScreenSource.contains("item { ContributorsSection() }"),
+            "AboutScreen must include ContributorsSection in its rendered content",
+        )
     }
 
     @Test
