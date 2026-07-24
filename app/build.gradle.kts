@@ -170,6 +170,7 @@ android {
             matchingFallbacks += listOf("release")
         }
     }
+    testBuildType = "benchmark"
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

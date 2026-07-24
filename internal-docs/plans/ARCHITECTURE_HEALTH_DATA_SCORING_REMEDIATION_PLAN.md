@@ -804,6 +804,21 @@ reproduction or measurement.
   or DB size shrinks ≥25% on the 1M fixture; migration tested with WAL + SQLCipher on a seeded
   multi-GB DB, interruptible and resumable.
 
+#### DB-001 decision evidence
+
+- **Benchmark implementation:** The release-like `connectedBenchmarkAndroidTest` fixture seeds
+  1,000,000 deterministic heart-rate rows plus five-minute HRV history into encrypted v6 and v7
+  databases, uses 5,000-row insert transactions, checkpoints WAL, measures equal 5,000-row ingest
+  batches and final file sizes, and records full-migration peak disk footprint plus
+  cancel-after-copy-batch resume time/result.
+- **Execution status (2026-07-24):** Not executed. `adb devices -l` returned an empty device list in
+  the implementation environment, so no compatible release-like device was available for the
+  required command. No device/API, size, throughput, migration-duration, or resume measurements
+  are claimed.
+- **Decision:** Pending an actual compatible-device run. Retaining v7 is not accepted by this
+  implementation-only evidence; the original ≥30% ingest-throughput or ≥25% final-size gate remains
+  unchanged.
+
 ---
 
 ### DB-002 — Redundant index on `daily_summaries.dateMidnightMs`
