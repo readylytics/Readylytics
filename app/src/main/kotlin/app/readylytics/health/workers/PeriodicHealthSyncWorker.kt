@@ -35,7 +35,7 @@ class PeriodicHealthSyncWorker
         @Assisted private val appContext: Context,
         @Assisted params: WorkerParameters,
         private val healthSyncUseCase: Lazy<HealthSyncUseCase>,
-        private val foregroundSyncController: ForegroundSyncController,
+        private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val workerScheduler: WorkerScheduler,
         private val databaseReadinessGate: DatabaseReadinessInspector,
     ) : CoroutineWorker(appContext, params) {
@@ -45,6 +45,7 @@ class PeriodicHealthSyncWorker
                 return Result.retry()
             }
             val syncUseCase = healthSyncUseCase.get()
+            val syncController = foregroundSyncController.get()
             SyncNotifications.ensureBackgroundSyncChannel(appContext)
             val notificationManager = NotificationManagerCompat.from(appContext)
             runCatching {
@@ -54,7 +55,7 @@ class PeriodicHealthSyncWorker
                 )
             }
 
-            foregroundSyncController.onBackgroundRecalcStarted()
+            syncController.onBackgroundRecalcStarted()
             var success = false
             return try {
                 val result = syncUseCase.sync(windowDays = WINDOW_DAYS)
@@ -80,7 +81,7 @@ class PeriodicHealthSyncWorker
                     Result.retry()
                 }
             } finally {
-                foregroundSyncController.onBackgroundRecalcFinished(success)
+                syncController.onBackgroundRecalcFinished(success)
                 runCatching {
                     notificationManager.cancel(SyncNotifications.BACKGROUND_SYNC_NOTIFICATION_ID)
                 }

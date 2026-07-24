@@ -38,7 +38,7 @@ class HealthResyncWorker
         @Assisted private val appContext: Context,
         @Assisted params: WorkerParameters,
         private val fullHistoricalResyncUseCase: Lazy<FullHistoricalResyncUseCase>,
-        private val foregroundSyncController: ForegroundSyncController,
+        private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val databaseReadinessGate: DatabaseReadinessInspector,
     ) : CoroutineWorker(appContext, params) {
         // Progress notifications are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is
@@ -49,17 +49,18 @@ class HealthResyncWorker
                 return Result.retry()
             }
             val resyncUseCase = fullHistoricalResyncUseCase.get()
+            val syncController = foregroundSyncController.get()
             SyncNotifications.ensureChannel(appContext)
             runCatching { setForeground(buildForegroundInfo(null, 0, 0)) }
 
-            foregroundSyncController.onBackgroundRecalcStarted()
+            syncController.onBackgroundRecalcStarted()
             val recomputeOnly = inputData.getBoolean(KEY_RECOMPUTE_ONLY, false)
             var success = false
             return try {
                 val result =
                     resyncUseCase.execute(recomputeOnly = recomputeOnly) { phase, current, total ->
                         setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
-                        foregroundSyncController.onBackgroundRecalcProgress(phase, current, total)
+                        syncController.onBackgroundRecalcProgress(phase, current, total)
                         runCatching {
                             NotificationManagerCompat
                                 .from(appContext)
@@ -88,7 +89,7 @@ class HealthResyncWorker
                 logE(TAG, e) { "Resync worker failed" }
                 Result.retry()
             } finally {
-                foregroundSyncController.onBackgroundRecalcFinished(success)
+                syncController.onBackgroundRecalcFinished(success)
             }
         }
 

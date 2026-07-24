@@ -29,6 +29,7 @@ class PeriodicHealthSyncWorkerTest {
     private val healthSyncUseCaseLazy = mockk<Lazy<HealthSyncUseCase>>()
     private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
     private val foregroundSyncController = mockk<ForegroundSyncController>(relaxed = true)
+    private val foregroundSyncControllerLazy = mockk<Lazy<ForegroundSyncController>>()
     private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
 
     @Before
@@ -37,6 +38,7 @@ class PeriodicHealthSyncWorkerTest {
         workerParams = mockk(relaxed = true)
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
         every { healthSyncUseCaseLazy.get() } returns healthSyncUseCase
+        every { foregroundSyncControllerLazy.get() } returns foregroundSyncController
         every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
     }
 
@@ -51,6 +53,9 @@ class PeriodicHealthSyncWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
+            verify(exactly = 1) { foregroundSyncControllerLazy.get() }
+            verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcStarted() }
+            verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcFinished(true) }
         }
 
     @Test
@@ -112,6 +117,7 @@ class PeriodicHealthSyncWorkerTest {
 
             assertEquals(ListenableWorker.Result.retry(), result)
             verify(exactly = 0) { healthSyncUseCaseLazy.get() }
+            verify(exactly = 0) { foregroundSyncControllerLazy.get() }
         }
 
     private fun createWorker() =
@@ -119,7 +125,7 @@ class PeriodicHealthSyncWorkerTest {
             appContext = context,
             params = workerParams,
             healthSyncUseCase = healthSyncUseCaseLazy,
-            foregroundSyncController = foregroundSyncController,
+            foregroundSyncController = foregroundSyncControllerLazy,
             workerScheduler = workerScheduler,
             databaseReadinessGate = databaseReadinessGate,
         )

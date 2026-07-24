@@ -29,6 +29,7 @@ class HealthResyncWorkerTest {
     private val useCaseLazy = mockk<Lazy<FullHistoricalResyncUseCase>>()
     private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
     private val foregroundSyncController = mockk<ForegroundSyncController>(relaxed = true)
+    private val foregroundSyncControllerLazy = mockk<Lazy<ForegroundSyncController>>()
 
     @Before
     fun setUp() {
@@ -37,6 +38,7 @@ class HealthResyncWorkerTest {
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
         every { workerParams.inputData } returns androidx.work.Data.EMPTY
         every { useCaseLazy.get() } returns useCase
+        every { foregroundSyncControllerLazy.get() } returns foregroundSyncController
         every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
 
         val progressUpdater = mockk<androidx.work.ProgressUpdater>()
@@ -85,6 +87,10 @@ class HealthResyncWorkerTest {
                     .success(),
                 result,
             )
+            verify(exactly = 1) { foregroundSyncControllerLazy.get() }
+            verify(exactly = 1) {
+                foregroundSyncController.onBackgroundRecalcProgress(ResyncPhase.RECOMPUTE, 1, 10)
+            }
         }
 
     @Test
@@ -177,6 +183,7 @@ class HealthResyncWorkerTest {
                 result,
             )
             verify(exactly = 0) { useCaseLazy.get() }
+            verify(exactly = 0) { foregroundSyncControllerLazy.get() }
         }
 
     private fun createWorker() =
@@ -184,7 +191,7 @@ class HealthResyncWorkerTest {
             appContext = context,
             params = workerParams,
             fullHistoricalResyncUseCase = useCaseLazy,
-            foregroundSyncController = foregroundSyncController,
+            foregroundSyncController = foregroundSyncControllerLazy,
             databaseReadinessGate = databaseReadinessGate,
         )
 }
