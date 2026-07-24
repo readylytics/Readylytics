@@ -33,6 +33,12 @@ android {
     }
 }
 
+androidComponents {
+    beforeVariants(selector().withBuildType("debug")) { variantBuilder ->
+        variantBuilder.enable = false
+    }
+}
+
 ktlint {
     version.set("1.5.0")
 }

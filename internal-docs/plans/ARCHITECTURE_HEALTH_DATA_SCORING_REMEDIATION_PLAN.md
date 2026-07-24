@@ -811,10 +811,12 @@ reproduction or measurement.
   templates with 1,000,000 deterministic heart-rate rows plus five-minute HRV history, using
   5,000-row insert transactions and a WAL checkpoint. It captures pre-ingest file size, discards two
   AB/BA warm-up pairs, then alternates eight AB/BA fresh-clone pairs and applies the gate to median
-  5,000-row ingest throughput. Separate AndroidX `BenchmarkRule` methods provide diagnostic timing.
-  The migration measurement exercises the production fail-closed space preflight, uses real
-  `StatFs` capacity for execution, samples DB/WAL/SHM footprint throughout the run, and verifies
-  cancel-after-durable-copy-batch resume time/result.
+  5,000-row ingest throughput. Database opening and schema-version lookup on that already-open
+  connection occur before each ingest timer starts. The module disables only its automatically
+  created debug variant; `:app` debug tasks remain intact. Separate AndroidX `BenchmarkRule` methods
+  provide diagnostic timing. The migration measurement exercises the production fail-closed space
+  preflight, uses real `StatFs` capacity for execution, samples DB/WAL/SHM footprint throughout the
+  run, and verifies cancel-after-durable-copy-batch resume time/result.
 - **Execution status (2026-07-25):** Not executed. `adb devices -l` returned an empty device list in
   the implementation environment, so no compatible release-like device was available. The
   isolated benchmark module compiles, but no device/API, size, throughput, migration-duration,

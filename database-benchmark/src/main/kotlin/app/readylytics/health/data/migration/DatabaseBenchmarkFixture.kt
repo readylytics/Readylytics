@@ -48,10 +48,11 @@ internal class DatabaseBenchmarkFixture(
         val fixture = copyTemplate(template, suffix)
         val elapsedNanos =
             fixture.driver.withWritableDatabase { database ->
+                val version = pragmaUserVersion(database)
                 val startedAt = SystemClock.elapsedRealtimeNanos()
                 insertHeartRateRows(
                     database,
-                    fixture.version(),
+                    version,
                     BenchmarkConstants.HEART_RATE_ROWS,
                     BenchmarkConstants.INGEST_ROWS,
                 )
@@ -209,9 +210,7 @@ internal data class Fixture(
     val name: String,
     val file: File,
     val driver: V7DatabaseBenchmarkDriver,
-) {
-    fun version(): Int = driver.withWritableDatabase(::pragmaUserVersion)
-}
+)
 
 internal object BenchmarkConstants {
     const val HEART_RATE_ROWS = 1_000_000
