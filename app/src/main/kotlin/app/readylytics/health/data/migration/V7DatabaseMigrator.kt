@@ -17,6 +17,8 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal const val V7_DATABASE_IDENTITY_HASH = "54bca00d5cb026eb7ed7aa31e58c34f8"
+
 @Singleton
 class V7DatabaseMigrator
     internal constructor(
@@ -312,7 +314,7 @@ class V7DatabaseMigrator
                     database.execSQL("DROP TABLE $METADATA_TABLE")
                     database.execSQL(
                         "INSERT OR REPLACE INTO room_master_table (id, identity_hash) VALUES (42, ?)",
-                        arrayOf(V7_IDENTITY_HASH),
+                        arrayOf(V7_DATABASE_IDENTITY_HASH),
                     )
                     database.execSQL("PRAGMA user_version = 7")
                     database.setTransactionSuccessful()
@@ -442,7 +444,6 @@ class V7DatabaseMigrator
             const val HRV_V7_TABLE = "hrv_records_v7"
             const val BATCH_SIZE = 10_000
             const val SPACE_RESERVE_BYTES = 64L * 1024L * 1024L
-            const val V7_IDENTITY_HASH = "54bca00d5cb026eb7ed7aa31e58c34f8"
 
             val CREATE_METADATA_TABLE =
                 """

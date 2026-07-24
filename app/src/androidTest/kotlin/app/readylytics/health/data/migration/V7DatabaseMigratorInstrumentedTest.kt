@@ -376,7 +376,7 @@ class V7DatabaseMigratorInstrumentedTest {
                 assertEquals("wal", cursor.getString(0).lowercase())
             }
             assertEquals(
-                V7_IDENTITY_HASH,
+                V7_DATABASE_IDENTITY_HASH,
                 queryStrings(
                     database,
                     "SELECT identity_hash FROM room_master_table WHERE id = 42",
@@ -394,7 +394,10 @@ class V7DatabaseMigratorInstrumentedTest {
         fixture.keyManager.exportPlaintext(fixture.file, plaintextFile)
         android.database.sqlite.SQLiteDatabase
             .openDatabase(plaintextFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
-            .use { database -> database.version = 7 }
+            .use { database ->
+                database.execSQL("DROP TABLE room_master_table")
+                database.version = 7
+            }
         helper.runMigrationsAndValidate(plaintextName, 7, true).close()
     }
 
@@ -488,7 +491,6 @@ class V7DatabaseMigratorInstrumentedTest {
 
     private companion object {
         const val BATCH_SIZE = 10_000
-        const val V7_IDENTITY_HASH = "54bca00d5cb026eb7ed7aa31e58c34f8"
 
         val INTERRUPTIBLE_PHASES =
             listOf(

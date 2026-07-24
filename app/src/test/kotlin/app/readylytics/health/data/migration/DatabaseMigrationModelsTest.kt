@@ -118,6 +118,29 @@ class DatabaseMigrationModelsTest {
         file.delete()
     }
 
+    @Test
+    fun `exported v7 identities match migrator identity`() {
+        val schema =
+            readRepoFile(
+                "core/database/schemas/app.readylytics.health.data.local.HealthDatabase/7.json",
+            )
+        val topLevelIdentity =
+            Regex(""""identityHash":\s*"([0-9a-f]+)"""")
+                .find(schema)
+                ?.groupValues
+                ?.get(1)
+                ?: error("Missing exported v7 identityHash")
+        val setupQueryIdentity =
+            Regex("""VALUES\(42, '([0-9a-f]+)'\)""")
+                .find(schema)
+                ?.groupValues
+                ?.get(1)
+                ?: error("Missing exported v7 room_master_table setup identity")
+
+        assertEquals(V7_DATABASE_IDENTITY_HASH, topLevelIdentity)
+        assertEquals(V7_DATABASE_IDENTITY_HASH, setupQueryIdentity)
+    }
+
     private fun inspect(
         version: Int,
         hasMigrationMetadata: Boolean = false,
@@ -139,5 +162,17 @@ class DatabaseMigrationModelsTest {
         } finally {
             file.delete()
         }
+    }
+
+    private fun readRepoFile(pathFromRepoRoot: String): String {
+        val candidates =
+            listOf(
+                File(pathFromRepoRoot),
+                File("../$pathFromRepoRoot"),
+                File("../../$pathFromRepoRoot"),
+            )
+        return requireNotNull(candidates.firstOrNull(File::exists)) {
+            "Could not locate $pathFromRepoRoot from ${File(".").absolutePath}"
+        }.readText()
     }
 }

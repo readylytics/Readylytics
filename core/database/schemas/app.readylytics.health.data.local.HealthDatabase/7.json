@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "9caedb2eab0d3eb983d9896b2da875ea",
+    "identityHash": "54bca00d5cb026eb7ed7aa31e58c34f8",
     "entities": [
       {
         "tableName": "sleep_sessions",

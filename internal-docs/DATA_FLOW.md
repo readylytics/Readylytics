@@ -279,10 +279,14 @@ counts and unique `(sourceRecordId, timestampMs)` groups are required during val
 checked again under the final `BEGIN IMMEDIATE` write lock immediately before the destructive
 renames. The atomic table swap removes the checkpoint and advances `user_version` to 7.
 That cutover also installs Room v7's generated schema identity in `room_master_table`, so the first
-Room open accepts the externally migrated schema. `DatabaseMigrationWorker` performs this state
-machine as foreground `dataSync` work and publishes phase plus copied/total-row progress; the
-migration screen gates normal app content, and Room-backed startup, sync, backup, and cleanup work
-remain blocked or retry until `DatabaseReadinessGate` reports v7 ready.
+Room open accepts the externally migrated schema. A unit drift check keeps the exported schema's
+top-level identity, its `room_master_table` setup query, and the migrator-owned identity constant
+synchronized; migration instrumentation drops `room_master_table` from its plaintext validation
+copy so `MigrationTestHelper` must inspect the physical tables and indexes.
+`DatabaseMigrationWorker` performs this state machine as foreground `dataSync` work and publishes
+phase plus copied/total-row progress; the migration screen gates normal app content, and
+Room-backed startup, sync, backup, and cleanup work remain blocked or retry until
+`DatabaseReadinessGate` reports v7 ready.
 Version 4 adds
 the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
