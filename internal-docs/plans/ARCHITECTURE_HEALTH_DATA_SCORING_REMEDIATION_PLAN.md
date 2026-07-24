@@ -806,15 +806,19 @@ reproduction or measurement.
 
 #### DB-001 decision evidence
 
-- **Benchmark implementation:** The release-like `connectedBenchmarkAndroidTest` fixture seeds
-  1,000,000 deterministic heart-rate rows plus five-minute HRV history into encrypted v6 and v7
-  databases, uses 5,000-row insert transactions, checkpoints WAL, measures equal 5,000-row ingest
-  batches and final file sizes, and records full-migration peak disk footprint plus
-  cancel-after-copy-batch resume time/result.
-- **Execution status (2026-07-24):** Not executed. `adb devices -l` returned an empty device list in
-  the implementation environment, so no compatible release-like device was available for the
-  required command. No device/API, size, throughput, migration-duration, or resume measurements
-  are claimed.
+- **Benchmark implementation:** The isolated release-like
+  `:database-benchmark:connectedBenchmarkAndroidTest` fixture seeds immutable encrypted v6 and v7
+  templates with 1,000,000 deterministic heart-rate rows plus five-minute HRV history, using
+  5,000-row insert transactions and a WAL checkpoint. It captures pre-ingest file size, discards two
+  AB/BA warm-up pairs, then alternates eight AB/BA fresh-clone pairs and applies the gate to median
+  5,000-row ingest throughput. Separate AndroidX `BenchmarkRule` methods provide diagnostic timing.
+  The migration measurement exercises the production fail-closed space preflight, uses real
+  `StatFs` capacity for execution, samples DB/WAL/SHM footprint throughout the run, and verifies
+  cancel-after-durable-copy-batch resume time/result.
+- **Execution status (2026-07-25):** Not executed. `adb devices -l` returned an empty device list in
+  the implementation environment, so no compatible release-like device was available. The
+  isolated benchmark module compiles, but no device/API, size, throughput, migration-duration,
+  required-space, peak-disk, or resume measurements are claimed.
 - **Decision:** Pending an actual compatible-device run. Retaining v7 is not accepted by this
   implementation-only evidence; the original ≥30% ingest-throughput or ≥25% final-size gate remains
   unchanged.

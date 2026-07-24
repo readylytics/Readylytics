@@ -3,13 +3,17 @@
 ## Scope
 
 - Base commit: `169ee74e0c347b97967ec024d1281f1dc49bc840`
-- Added the release-like benchmark Android-test variant wiring.
-- Added the deterministic encrypted v6/v7 one-million-row fixture, unchanged DB-001 gate,
-  uninterrupted migration measurement, and cancel/resume measurement.
-- Kept benchmark code in `app/src/androidTest`; no runtime or unit-test source set uses it.
+- Added the isolated release-like `:database-benchmark` Android test module. It targets
+  `:app`'s existing `benchmark` build type without changing the app-wide Android-test build type,
+  so normal `:app` debug instrumentation remains available.
+- Added a benchmark-build-only public bridge to the internal production v7 migrator. The bridge is
+  absent from debug and release runtime artifacts.
+- Added deterministic encrypted v6/v7 one-million-row templates, the unchanged DB-001 gate,
+  production space-preflight and peak-disk measurements, uninterrupted migration timing, and
+  cancel/resume timing.
 - The repository already pinned AndroidX Benchmark JUnit 1.4.1 and already declared
-  `androidTestImplementation(libs.androidx.benchmark.junit4)`, so no dependency version change was
-  necessary.
+  `androidTestImplementation(libs.androidx.benchmark.junit4)`. The isolated module reuses that
+  version; no dependency version change was necessary.
 
 ## Availability and baseline diagnostics
 
@@ -23,11 +27,33 @@ adb devices -l
 
 Results:
 
-- `connectedBenchmarkAndroidTest` did not exist before the Task 9 build-type wiring.
+- `:app:connectedBenchmarkAndroidTest` did not exist before the original Task 9 build-type wiring.
 - `adb devices -l` returned `List of devices attached` with no device entries.
 - Existing, unrelated debug Android-test compilation errors were present in
   `ScoringWalkForwardBenchmark.kt`, `BloodPressureRepositoryImplTest.kt`,
   `BodyFatRepositoryImplTest.kt`, and `WeightRepositoryImplTest.kt`. Task 9 does not repair them.
+
+The review correction removes the global `android.testBuildType = "benchmark"` override. The
+database benchmark now has its own `:database-benchmark:connectedBenchmarkAndroidTest` task, while
+`:app:connectedDebugAndroidTest` remains the app's normal instrumentation entry point.
+
+## Measurement methodology
+
+- Build immutable encrypted v6 and v7 templates with 1,000,000 heart-rate rows and representative
+  five-minute HRV history. Seed in 5,000-row transactions and checkpoint/truncate WAL.
+- Capture each template's database-file size before any timed ingest.
+- Discard two warm-up pairs in AB then BA order.
+- Measure eight fresh-clone pairs, alternating AB and BA order. Each sample times only one
+  5,000-row insert transaction; template copying, database opening, and cleanup are outside the
+  timed interval. The acceptance calculation uses each schema's median rows/second.
+- Keep separate AndroidX `BenchmarkRule` diagnostics with two warmups and eight measurements per
+  schema. These diagnostics do not decide the cross-schema DB-001 gate.
+- Exercise the production migrator's fail-closed space preflight to record `requiredBytes`, then
+  run the actual migration with real `StatFs.availableBytes`.
+- Sample the database, WAL, and SHM footprint concurrently every 10 ms throughout migration and
+  report absolute peak bytes and additional peak bytes.
+- Cancel after the first durable 10,000-row heart-rate copy checkpoint, verify the checkpoint, then
+  time the production resume path and verify final row counts.
 
 ## Benchmark evidence
 
@@ -44,7 +70,7 @@ command could not execute. In particular, this report makes no claim about:
 Required device command:
 
 ```text
-./gradlew :app:connectedBenchmarkAndroidTest \
+./gradlew :database-benchmark:connectedBenchmarkAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.data.migration.V7DatabaseMigrationBenchmark
 ```
 
@@ -62,46 +88,60 @@ Commands and outcomes:
 ./gradlew ktlintFormat
 ```
 
-- Passed (`BUILD SUCCESSFUL`).
+- Passed on the final formatted source (`BUILD SUCCESSFUL`).
 
 ```text
-./gradlew :app:tasks --all
+./gradlew :database-benchmark:compileBenchmarkKotlin
 ```
 
-- Passed. `connectedBenchmarkAndroidTest` and `compileBenchmarkAndroidTestKotlin` are now present.
+- Passed (`BUILD SUCCESSFUL`). This proves the isolated test module can compile against the
+  benchmark-only app bridge and production database model.
 
 ```text
-./gradlew :app:compileBenchmarkAndroidTestKotlin
+./gradlew :database-benchmark:assembleBenchmark
 ```
 
-- Blocked by the same pre-existing Android-test failures established before implementation.
-- The Task 9 benchmark file produced no compiler diagnostics.
-- Exact unrelated diagnostics: eight errors in `ScoringWalkForwardBenchmark.kt` and one
-  `timestampMs` error in each of `BloodPressureRepositoryImplTest.kt`,
-  `BodyFatRepositoryImplTest.kt`, and `WeightRepositoryImplTest.kt`.
+- Passed (`BUILD SUCCESSFUL`). This includes R8 shrinking for both the benchmark target and test
+  APK, tested-app obfuscation compatibility, schema-asset packaging, and APK packaging.
+
+```text
+./gradlew :app:compileDebugAndroidTestKotlin
+```
+
+- Failed only with the same pre-existing diagnostics established before Task 9: eight errors in
+  `ScoringWalkForwardBenchmark.kt` and one `timestampMs` error in each of
+  `BloodPressureRepositoryImplTest.kt`, `BodyFatRepositoryImplTest.kt`, and
+  `WeightRepositoryImplTest.kt`. The restored task targets the debug variant, and no Task 9 file
+  appears in its diagnostics.
 
 ```text
 ./gradlew testDebugUnitTest
 ```
 
-- Passed (`BUILD SUCCESSFUL`, 439 actionable tasks up-to-date).
+- Passed (`BUILD SUCCESSFUL`). A first run caught the benchmark sampler's hardcoded
+  `Dispatchers.IO` through the repository-wide `CleanArchTest`; the dispatcher was moved into the
+  isolated module's DI package, the focused architecture test passed, and then the full suite
+  passed.
 
 ```text
 ./gradlew lintRelease
 ```
 
-- Passed (`BUILD SUCCESSFUL`, 18 executed and 494 up-to-date).
+- Passed (`BUILD SUCCESSFUL`).
 
 ```text
+codegraph sync
 codegraph index
 ```
 
-- Passed: indexed 896 files; 75 nodes and 359 edges.
+- `codegraph sync` passed: seven files added, two modified, and one removed.
+- `codegraph index` exited successfully after indexing 902 files. It reported one unread path: the
+  tracked-but-deleted old benchmark file. The error log identifies only that intentional deletion,
+  and CodeGraph reports the resulting index as fully usable.
 
 ```text
-./gradlew :app:connectedBenchmarkAndroidTest \
+./gradlew :database-benchmark:connectedBenchmarkAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.data.migration.V7DatabaseMigrationBenchmark
 ```
 
-- Not executed because `adb devices -l` showed no connected device. This no-device condition is
-  independent of the unrelated Android-test compilation failures above.
+- Not executed because `adb devices -l` showed no connected device. DB-001 remains Pending.
