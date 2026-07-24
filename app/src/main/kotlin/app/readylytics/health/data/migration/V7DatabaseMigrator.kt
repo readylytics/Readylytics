@@ -31,17 +31,20 @@ class V7DatabaseMigrator
         )
 
         suspend fun migrate(onProgress: suspend (DatabaseMigrationProgress) -> Unit): V7MigrationResult {
-            val space = calculateSpace()
-            if (space.availableBytes < space.requiredBytes) {
-                return V7MigrationResult.InsufficientSpace(
-                    requiredBytes = space.requiredBytes,
-                    availableBytes = space.availableBytes,
-                )
+            val readiness = readReadiness()
+            if (!readiness.hasResumableCheckpoint) {
+                val space = calculateSpace()
+                if (space.availableBytes < space.requiredBytes) {
+                    return V7MigrationResult.InsufficientSpace(
+                        requiredBytes = space.requiredBytes,
+                        availableBytes = space.availableBytes,
+                    )
+                }
             }
             onProgress(DatabaseMigrationProgress(V7MigrationPhase.PREFLIGHT, 0L, 0L))
 
             return try {
-                when (val version = readUserVersion()) {
+                when (val version = readiness.version) {
                     CURRENT_VERSION -> return V7MigrationResult.Complete
                     5 -> {
                         upgradeV5ToV6()
@@ -149,12 +152,31 @@ class V7DatabaseMigrator
             return Space(requiredBytes, availableBytes(dbFile))
         }
 
-        private fun readUserVersion(): Int =
+        private fun readReadiness(): Readiness =
             withDatabase { database ->
-                database.rawQuery("PRAGMA user_version", emptyArray<String>()).use { cursor ->
-                    check(cursor.moveToFirst()) { "Database has no user_version" }
-                    cursor.getInt(0)
-                }
+                val version =
+                    database.rawQuery("PRAGMA user_version", emptyArray<String>()).use { cursor ->
+                        check(cursor.moveToFirst()) { "Database has no user_version" }
+                        cursor.getInt(0)
+                    }
+                val hasResumableCheckpoint =
+                    version == 6 &&
+                        database.queryLong(
+                            """
+                            SELECT COUNT(*)
+                            FROM sqlite_master
+                            WHERE type = 'table' AND name = '$METADATA_TABLE'
+                            """.trimIndent(),
+                        ) == 1L &&
+                        database
+                            .rawQuery(
+                                "SELECT COUNT(*) FROM $METADATA_TABLE WHERE migrationId = ?",
+                                arrayOf(MIGRATION_ID),
+                            ).use { cursor ->
+                                check(cursor.moveToFirst())
+                                cursor.getLong(0) == 1L
+                            }
+                Readiness(version, hasResumableCheckpoint)
             }
 
         private fun upgradeV5ToV6() {
@@ -265,25 +287,7 @@ class V7DatabaseMigrator
         private fun validateAndCheckpoint() {
             withDatabase { database ->
                 database.transaction {
-                    val checkpoint = readCheckpoint(database)
-                    val sourceHeartRateRows = database.queryLong("SELECT COUNT(*) FROM $HEART_RATE_TABLE")
-                    val sourceHrvRows = database.queryLong("SELECT COUNT(*) FROM $HRV_TABLE")
-                    val targetHeartRateRows = database.queryLong("SELECT COUNT(*) FROM $HEART_RATE_V7_TABLE")
-                    val targetHrvRows = database.queryLong("SELECT COUNT(*) FROM $HRV_V7_TABLE")
-                    check(sourceHeartRateRows == checkpoint.totalHeartRateRows)
-                    check(sourceHrvRows == checkpoint.totalHrvRows)
-                    check(sourceHeartRateRows == targetHeartRateRows) {
-                        "Heart-rate migration count mismatch: source=$sourceHeartRateRows target=$targetHeartRateRows"
-                    }
-                    check(sourceHrvRows == targetHrvRows) {
-                        "HRV migration count mismatch: source=$sourceHrvRows target=$targetHrvRows"
-                    }
-                    check(duplicateGroupCount(database, HEART_RATE_V7_TABLE) == 0L) {
-                        "Duplicate heart-rate source/time groups"
-                    }
-                    check(duplicateGroupCount(database, HRV_V7_TABLE) == 0L) {
-                        "Duplicate HRV source/time groups"
-                    }
+                    validateSourceAndShadows(database)
                     database.execSQL(
                         "UPDATE $METADATA_TABLE SET phase = ? WHERE migrationId = ?",
                         arrayOf(V7MigrationPhase.SWAP.name, MIGRATION_ID),
@@ -297,6 +301,7 @@ class V7DatabaseMigrator
             withDatabase { database ->
                 database.beginTransactionNonExclusive()
                 try {
+                    validateSourceAndShadows(database)
                     database.execSQL("DROP TABLE $HEART_RATE_TABLE")
                     database.execSQL("ALTER TABLE $HEART_RATE_V7_TABLE RENAME TO $HEART_RATE_TABLE")
                     database.execSQL("DROP TABLE $HRV_TABLE")
@@ -311,6 +316,28 @@ class V7DatabaseMigrator
                 } finally {
                     database.endTransaction()
                 }
+            }
+        }
+
+        private fun validateSourceAndShadows(database: SQLiteDatabase) {
+            val checkpoint = readCheckpoint(database)
+            val sourceHeartRateRows = database.queryLong("SELECT COUNT(*) FROM $HEART_RATE_TABLE")
+            val sourceHrvRows = database.queryLong("SELECT COUNT(*) FROM $HRV_TABLE")
+            val targetHeartRateRows = database.queryLong("SELECT COUNT(*) FROM $HEART_RATE_V7_TABLE")
+            val targetHrvRows = database.queryLong("SELECT COUNT(*) FROM $HRV_V7_TABLE")
+            check(sourceHeartRateRows == checkpoint.totalHeartRateRows)
+            check(sourceHrvRows == checkpoint.totalHrvRows)
+            check(sourceHeartRateRows == targetHeartRateRows) {
+                "Heart-rate migration count mismatch: source=$sourceHeartRateRows target=$targetHeartRateRows"
+            }
+            check(sourceHrvRows == targetHrvRows) {
+                "HRV migration count mismatch: source=$sourceHrvRows target=$targetHrvRows"
+            }
+            check(duplicateGroupCount(database, HEART_RATE_V7_TABLE) == 0L) {
+                "Duplicate heart-rate source/time groups"
+            }
+            check(duplicateGroupCount(database, HRV_V7_TABLE) == 0L) {
+                "Duplicate HRV source/time groups"
             }
         }
 
@@ -361,6 +388,11 @@ class V7DatabaseMigrator
         private data class Space(
             val requiredBytes: Long,
             val availableBytes: Long,
+        )
+
+        private data class Readiness(
+            val version: Int,
+            val hasResumableCheckpoint: Boolean,
         )
 
         private data class Checkpoint(

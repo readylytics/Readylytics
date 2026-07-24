@@ -183,6 +183,42 @@ class V7DatabaseMigratorInstrumentedTest {
         }
 
     @Test
+    fun resumedMigrationDoesNotRepeatDiskPreflightAfterCheckpointExists() =
+        runBlocking {
+            val fixture =
+                createEncryptedFixture(
+                    version = 6,
+                    heartRateCount = BATCH_SIZE + 1,
+                    hrvCount = 1,
+                    suffix = "low-space-resume",
+                )
+
+            expectCancellation {
+                V7DatabaseMigrator(
+                    sqlCipherKeyManager = fixture.keyManager,
+                    dbFile = fixture.file,
+                    availableBytes = { Long.MAX_VALUE },
+                ).migrate { progress ->
+                    if (progress.phase == V7MigrationPhase.COPY_HEART_RATE &&
+                        progress.copiedRows == BATCH_SIZE.toLong()
+                    ) {
+                        throw CancellationException("interrupt after accepted preflight")
+                    }
+                }
+            }
+
+            val result =
+                V7DatabaseMigrator(
+                    sqlCipherKeyManager = fixture.keyManager,
+                    dbFile = fixture.file,
+                    availableBytes = { 0L },
+                ).migrate {}
+
+            assertEquals(V7MigrationResult.Complete, result)
+            assertSuccessfulV7(fixture, BATCH_SIZE + 1, 1)
+        }
+
+    @Test
     fun validationFailureLeavesAuthoritativeV6TablesIntact() =
         runBlocking {
             val fixture = createEncryptedFixture(version = 6, heartRateCount = 0, hrvCount = 0)
@@ -199,6 +235,47 @@ class V7DatabaseMigratorInstrumentedTest {
                 assertEquals(2L, queryLong(database, "SELECT COUNT(*) FROM heart_rate_records"))
                 assertTrue(tableExists(database, "heart_rate_records"))
                 assertTrue(tableExists(database, "hrv_records"))
+            }
+        }
+
+    @Test
+    fun resumeRevalidatesSourceMutationInsideAtomicCutover() =
+        runBlocking {
+            val fixture =
+                createEncryptedFixture(
+                    version = 6,
+                    heartRateCount = 1,
+                    hrvCount = 1,
+                    suffix = "source-mutated-after-validation",
+                )
+            val migrator = V7DatabaseMigrator(fixture.keyManager, fixture.file)
+
+            expectCancellation {
+                migrator.migrate { progress ->
+                    if (progress.phase == V7MigrationPhase.VALIDATE) {
+                        throw CancellationException("interrupt after validation checkpoint")
+                    }
+                }
+            }
+            fixture.keyManager.withWritableDatabase(fixture.file) { database ->
+                assertEquals(
+                    V7MigrationPhase.SWAP.name,
+                    queryStrings(
+                        database,
+                        "SELECT phase FROM readylytics_schema_migration WHERE migrationId = 'v7'",
+                    ).single(),
+                )
+                insertHeartRate(database, "late-source_3000000", 3_000_000L)
+            }
+
+            val result = migrator.migrate {}
+
+            assertTrue(result is V7MigrationResult.Failed)
+            fixture.keyManager.withWritableDatabase(fixture.file) { database ->
+                assertEquals(6, pragmaUserVersion(database))
+                assertEquals(2L, queryLong(database, "SELECT COUNT(*) FROM heart_rate_records"))
+                assertEquals(1L, queryLong(database, "SELECT COUNT(*) FROM heart_rate_records_v7"))
+                assertTrue(tableExists(database, "readylytics_schema_migration"))
             }
         }
 
