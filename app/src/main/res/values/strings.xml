@@ -21,9 +21,14 @@
     <string name="database_migration_description">Readylytics is optimizing locally stored
         heart-rate history. Keep the app open or let the foreground notification finish.</string>
     <plurals name="database_migration_progress">
-        <item quantity="one">%1$d of %2$d record</item>
-        <item quantity="other">%1$d of %2$d records</item>
+        <item quantity="one">%1$s of %2$s record</item>
+        <item quantity="other">%1$s of %2$s records</item>
     </plurals>
+    <string name="database_migration_space_error">More device storage is required. Free at least
+        %1$s, then retry.</string>
+    <string name="database_migration_retry">Retry</string>
+    <string name="database_migration_failed">Your existing data is unchanged. Retry the update or
+        export diagnostics before continuing.</string>
     <string name="database_migration_channel_name">Database updates</string>
     <string name="database_migration_channel_description">Progress for required local database
         updates</string>

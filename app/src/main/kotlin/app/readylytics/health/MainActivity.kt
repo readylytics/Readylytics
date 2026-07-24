@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -18,11 +19,15 @@ import app.readylytics.health.data.backup.LocalRestoreManager
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.backup.RestoreResult
+import app.readylytics.health.domain.migration.DatabaseMigrationController
+import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.ui.crashreport.CrashReportPrompt
+import app.readylytics.health.ui.migration.DatabaseMigrationScreen
 import app.readylytics.health.ui.navigation.AppNavHost
 import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
 import app.readylytics.health.ui.theme.FitDashboardTheme
+import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -40,81 +45,112 @@ class MainActivity : ComponentActivity() {
     lateinit var sqlCipherKeyManager: SqlCipherKeyManager
 
     @Inject
-    lateinit var localRestoreManager: LocalRestoreManager
+    lateinit var localRestoreManager: Lazy<LocalRestoreManager>
+
+    @Inject
+    lateinit var databaseMigrationController: DatabaseMigrationController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val dbFile = getDatabasePath("health_dashboard.db")
-        var isDatabaseCorrupted = false
-        try {
-            sqlCipherKeyManager.validateKeyDecryption()
-        } catch (e: Exception) {
-            isDatabaseCorrupted = true
-        }
-
         setContent {
-            if (isDatabaseCorrupted) {
-                FitDashboardTheme {
-                    DatabaseRecoveryScreen(
-                        onResetDatabase = {
-                            sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
-                            recreate()
-                        },
-                        onRestoreBackup = { uri, onResult ->
-                            lifecycleScope.launch {
-                                val result = localRestoreManager.applyRestore(uri)
-                                if (result is RestoreResult.Success ||
-                                    result is RestoreResult.SuccessRequiresRestart
-                                ) {
-                                    onResult(true, null)
-                                } else if (result is RestoreResult.Failure) {
-                                    onResult(false, getString(R.string.recovery_error_default))
-                                }
-                            }
-                        },
-                    )
-                }
-            } else {
-                val viewModel: SyncViewModel = hiltViewModel()
-                val prefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
-
-                // Keep splash screen on until preferences are loaded to prevent theme
-                // flash, but bound the wait so a stalled/slow DataStore read can never
-                // trap the app (or an instrumented test) on the splash indefinitely.
-                // While the keep-condition returns true the first frame is withheld,
-                // which keeps the main looper busy and blocks Espresso idle sync.
-                val splashStartMillis = remember { android.os.SystemClock.elapsedRealtime() }
-                splashScreen.setKeepOnScreenCondition {
-                    prefs == null &&
-                        android.os.SystemClock.elapsedRealtime() - splashStartMillis < SPLASH_MAX_WAIT_MS
-                }
-
-                val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
-
-                FitDashboardTheme(
-                    appTheme = appTheme,
-                ) {
-                    // Trigger permission check every time the activity comes to the foreground
-                    val lifecycleOwner = LocalLifecycleOwner.current
-                    DisposableEffect(lifecycleOwner) {
-                        val observer =
-                            LifecycleEventObserver { _, event ->
-                                if (event == Lifecycle.Event.ON_RESUME) {
-                                    viewModel.onAppForeground()
-                                }
-                            }
-                        lifecycleOwner.lifecycle.addObserver(observer)
-                        onDispose {
-                            lifecycleOwner.lifecycle.removeObserver(observer)
-                        }
+            val migrationState by databaseMigrationController.state.collectAsStateWithLifecycle()
+            when (val readiness = migrationState.readiness) {
+                DatabaseReadiness.Ready -> ReadylyticsContent(splashScreen)
+                is DatabaseReadiness.MigrationRequired -> {
+                    LaunchedEffect(readiness) {
+                        databaseMigrationController.startOrResume()
                     }
-
-                    AppNavHost(viewModel = viewModel)
-                    CrashReportPrompt()
+                    FitDashboardTheme {
+                        DatabaseMigrationScreen(
+                            readiness = readiness,
+                            progress = migrationState.progress,
+                            onRetry = databaseMigrationController::startOrResume,
+                        )
+                    }
                 }
+                is DatabaseReadiness.InsufficientSpace,
+                is DatabaseReadiness.Failed,
+                -> {
+                    FitDashboardTheme {
+                        DatabaseMigrationScreen(
+                            readiness = readiness,
+                            progress = migrationState.progress,
+                            onRetry = databaseMigrationController::startOrResume,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun ReadylyticsContent(splashScreen: androidx.core.splashscreen.SplashScreen) {
+        val dbFile = remember { getDatabasePath("health_dashboard.db") }
+        val isDatabaseCorrupted =
+            remember {
+                runCatching { sqlCipherKeyManager.validateKeyDecryption() }.isFailure
+            }
+        if (isDatabaseCorrupted) {
+            FitDashboardTheme {
+                DatabaseRecoveryScreen(
+                    onResetDatabase = {
+                        sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
+                        recreate()
+                    },
+                    onRestoreBackup = { uri, onResult ->
+                        lifecycleScope.launch {
+                            val result = localRestoreManager.get().applyRestore(uri)
+                            if (result is RestoreResult.Success ||
+                                result is RestoreResult.SuccessRequiresRestart
+                            ) {
+                                onResult(true, null)
+                            } else if (result is RestoreResult.Failure) {
+                                onResult(false, getString(R.string.recovery_error_default))
+                            }
+                        }
+                    },
+                )
+            }
+        } else {
+            val viewModel: SyncViewModel = hiltViewModel()
+            val prefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
+
+            // Keep splash screen on until preferences are loaded to prevent theme
+            // flash, but bound the wait so a stalled/slow DataStore read can never
+            // trap the app (or an instrumented test) on the splash indefinitely.
+            // While the keep-condition returns true the first frame is withheld,
+            // which keeps the main looper busy and blocks Espresso idle sync.
+            val splashStartMillis = remember { android.os.SystemClock.elapsedRealtime() }
+            splashScreen.setKeepOnScreenCondition {
+                prefs == null &&
+                    android.os.SystemClock.elapsedRealtime() - splashStartMillis < SPLASH_MAX_WAIT_MS
+            }
+
+            val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
+
+            FitDashboardTheme(
+                appTheme = appTheme,
+            ) {
+                // Trigger permission check every time the activity comes to the foreground
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer =
+                        LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) {
+                                viewModel.onAppForeground()
+                            }
+                        }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                    }
+                }
+
+                AppNavHost(viewModel = viewModel)
+                CrashReportPrompt()
             }
         }
     }
