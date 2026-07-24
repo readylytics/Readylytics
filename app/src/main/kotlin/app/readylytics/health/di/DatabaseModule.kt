@@ -20,9 +20,9 @@ import app.readylytics.health.data.local.dao.SleepStageDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.migration.DatabaseReadiness
 import app.readylytics.health.data.migration.DatabaseReadinessGate
 import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.repository.TransactionRunner
 import dagger.Binds
 import dagger.Module

@@ -2,6 +2,8 @@ package app.readylytics.health.data.migration
 
 import android.content.Context
 import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -17,7 +19,7 @@ class DatabaseReadinessGate
     internal constructor(
         private val dbFile: File,
         private val inspectExistingDatabase: (File) -> ExistingDatabaseState,
-    ) {
+    ) : DatabaseReadinessInspector {
         @Inject
         constructor(
             @ApplicationContext context: Context,
@@ -47,7 +49,7 @@ class DatabaseReadinessGate
             },
         )
 
-        fun inspect(): DatabaseReadiness {
+        override fun inspect(): DatabaseReadiness {
             if (!dbFile.exists()) return DatabaseReadiness.Ready
 
             return try {

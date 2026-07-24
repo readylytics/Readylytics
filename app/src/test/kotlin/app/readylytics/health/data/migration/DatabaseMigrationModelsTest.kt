@@ -1,5 +1,9 @@
 package app.readylytics.health.data.migration
 
+import app.readylytics.health.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.V7MigrationPhase
+import app.readylytics.health.domain.migration.fraction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

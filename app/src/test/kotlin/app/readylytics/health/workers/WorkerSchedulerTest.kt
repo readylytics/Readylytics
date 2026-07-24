@@ -1,5 +1,6 @@
 package app.readylytics.health.workers
 
+import androidx.work.BackoffPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
@@ -10,6 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -43,6 +45,25 @@ class WorkerSchedulerTest {
             request.captured.workSpec.input
                 .getBoolean(HealthResyncWorker.KEY_RECOMPUTE_ONLY, true),
         )
+    }
+
+    @Test
+    fun `database migration uses unique keep work with exponential backoff`() {
+        val request = slot<OneTimeWorkRequest>()
+
+        scheduler.scheduleDatabaseMigration()
+
+        verify(exactly = 1) {
+            workManager.enqueueUniqueWork(
+                WorkerScheduler.DATABASE_MIGRATION_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                capture(request),
+            )
+        }
+        assertEquals(DatabaseMigrationWorker::class.java.name, request.captured.workSpec.workerClassName)
+        assertEquals(BackoffPolicy.EXPONENTIAL, request.captured.workSpec.backoffPolicy)
+        assertEquals(30_000L, request.captured.workSpec.backoffDelayDuration)
+        assertFalse(request.captured.workSpec.expedited)
     }
 
     @Test

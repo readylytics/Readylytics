@@ -28,6 +28,20 @@ class WorkerSchedulerImpl
             const val DATA_CLEANUP_WORK_NAME = WorkerScheduler.DATA_CLEANUP_WORK_NAME
             const val RESYNC_WORK_NAME = WorkerScheduler.RESYNC_WORK_NAME
             const val PERIODIC_SYNC_WORK_NAME = WorkerScheduler.PERIODIC_SYNC_WORK_NAME
+            const val DATABASE_MIGRATION_WORK_NAME = WorkerScheduler.DATABASE_MIGRATION_WORK_NAME
+        }
+
+        override fun scheduleDatabaseMigration() {
+            val request =
+                OneTimeWorkRequestBuilder<DatabaseMigrationWorker>()
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .build()
+
+            workManager.get().enqueueUniqueWork(
+                DATABASE_MIGRATION_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                request,
+            )
         }
 
         /**

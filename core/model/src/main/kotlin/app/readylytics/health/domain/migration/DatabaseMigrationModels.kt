@@ -1,4 +1,4 @@
-package app.readylytics.health.data.migration
+package app.readylytics.health.domain.migration
 
 enum class V7MigrationPhase {
     PREFLIGHT,
@@ -32,6 +32,10 @@ sealed interface DatabaseReadiness {
     data class Failed(
         val message: String,
     ) : DatabaseReadiness
+}
+
+fun interface DatabaseReadinessInspector {
+    fun inspect(): DatabaseReadiness
 }
 
 data class DatabaseMigrationProgress(

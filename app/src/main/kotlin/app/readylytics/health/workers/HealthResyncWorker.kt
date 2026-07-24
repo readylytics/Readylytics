@@ -9,11 +9,14 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.domain.sync.ResyncPhase
 import app.readylytics.health.domain.util.logE
+import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -34,13 +37,18 @@ class HealthResyncWorker
     constructor(
         @Assisted private val appContext: Context,
         @Assisted params: WorkerParameters,
-        private val fullHistoricalResyncUseCase: FullHistoricalResyncUseCase,
+        private val fullHistoricalResyncUseCase: Lazy<FullHistoricalResyncUseCase>,
         private val foregroundSyncController: ForegroundSyncController,
+        private val databaseReadinessGate: DatabaseReadinessInspector,
     ) : CoroutineWorker(appContext, params) {
         // Progress notifications are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is
         // declared in the manifest and a missing runtime grant simply drops the update.
         @SuppressLint("MissingPermission")
         override suspend fun doWork(): Result {
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
+                return Result.retry()
+            }
+            val resyncUseCase = fullHistoricalResyncUseCase.get()
             SyncNotifications.ensureChannel(appContext)
             runCatching { setForeground(buildForegroundInfo(null, 0, 0)) }
 
@@ -49,7 +57,7 @@ class HealthResyncWorker
             var success = false
             return try {
                 val result =
-                    fullHistoricalResyncUseCase.execute(recomputeOnly = recomputeOnly) { phase, current, total ->
+                    resyncUseCase.execute(recomputeOnly = recomputeOnly) { phase, current, total ->
                         setProgressAsync(workDataOf(KEY_CURRENT to current, KEY_TOTAL to total))
                         foregroundSyncController.onBackgroundRecalcProgress(phase, current, total)
                         runCatching {

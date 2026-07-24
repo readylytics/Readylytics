@@ -4,6 +4,9 @@ import android.content.Context
 import android.os.StatFs
 import app.readylytics.health.data.local.DatabaseUpgradeSql
 import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.domain.migration.V7MigrationPhase
+import app.readylytics.health.domain.migration.V7MigrationResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext

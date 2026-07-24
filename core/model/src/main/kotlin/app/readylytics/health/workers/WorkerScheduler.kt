@@ -9,8 +9,10 @@ interface WorkerScheduler {
         const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
         const val RESYNC_WORK_NAME = "health_resync_onetime"
         const val PERIODIC_SYNC_WORK_NAME = "health_periodic_sync"
+        const val DATABASE_MIGRATION_WORK_NAME = "database_v7_migration"
     }
 
+    fun scheduleDatabaseMigration()
     /**
      * @param recomputeOnly SCORE-007: true routes the durable worker through a recompute-only pass
      *   (skips Health Connect re-ingestion) for a historical-scope settings change; false (default)

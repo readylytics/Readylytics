@@ -5,10 +5,13 @@ import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.domain.sync.ResyncPhase
+import dagger.Lazy
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -23,6 +26,8 @@ class HealthResyncWorkerTest {
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val useCase = mockk<FullHistoricalResyncUseCase>()
+    private val useCaseLazy = mockk<Lazy<FullHistoricalResyncUseCase>>()
+    private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
     private val foregroundSyncController = mockk<ForegroundSyncController>(relaxed = true)
 
     @Before
@@ -31,6 +36,8 @@ class HealthResyncWorkerTest {
         workerParams = mockk(relaxed = true)
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
         every { workerParams.inputData } returns androidx.work.Data.EMPTY
+        every { useCaseLazy.get() } returns useCase
+        every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
 
         val progressUpdater = mockk<androidx.work.ProgressUpdater>()
         every { workerParams.progressUpdater } returns progressUpdater
@@ -48,7 +55,7 @@ class HealthResyncWorkerTest {
     @Test
     fun `getForegroundInfo uses resync notification id and data sync service type`() =
         runBlocking {
-            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val worker = createWorker()
             val foregroundInfo: ForegroundInfo = worker.getForegroundInfo()
 
             assertEquals(SyncNotifications.NOTIFICATION_ID, foregroundInfo.notificationId)
@@ -71,7 +78,7 @@ class HealthResyncWorkerTest {
                 app.readylytics.health.domain.model.Result
                     .Success(Unit)
             }
-            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val worker = createWorker()
             val result = worker.doWork()
             assertEquals(
                 androidx.work.ListenableWorker.Result
@@ -93,7 +100,7 @@ class HealthResyncWorkerTest {
                 app.readylytics.health.domain.model.Result
                     .Success(Unit)
 
-            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val worker = createWorker()
             worker.doWork()
 
             assertTrue(recomputeOnlySlot.captured)
@@ -107,7 +114,7 @@ class HealthResyncWorkerTest {
                 app.readylytics.health.domain.model.Result
                     .Success(Unit)
 
-            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val worker = createWorker()
             worker.doWork()
 
             assertTrue(!recomputeOnlySlot.captured)
@@ -119,7 +126,7 @@ class HealthResyncWorkerTest {
             coEvery { useCase.execute(any(), any()) } returns
                 app.readylytics.health.domain.model.Result
                     .Failure("error", "network error")
-            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val worker = createWorker()
             val result = worker.doWork()
             assertEquals(
                 androidx.work.ListenableWorker.Result
@@ -132,7 +139,7 @@ class HealthResyncWorkerTest {
     fun `doWork returns retry when resync usecase throws exception`() =
         runBlocking {
             coEvery { useCase.execute(any(), any()) } throws RuntimeException("critical error")
-            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val worker = createWorker()
             val result = worker.doWork()
             assertEquals(
                 androidx.work.ListenableWorker.Result
@@ -146,7 +153,7 @@ class HealthResyncWorkerTest {
         runBlocking {
             coEvery { useCase.execute(any(), any()) } throws
                 HealthConnectPermissionRevokedException(SecurityException("permission revoked"))
-            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val worker = createWorker()
 
             val result = worker.doWork()
 
@@ -156,4 +163,28 @@ class HealthResyncWorkerTest {
                 result,
             )
         }
+
+    @Test
+    fun `doWork retries without resolving Room dependency when database is not ready`() =
+        runBlocking {
+            every { databaseReadinessGate.inspect() } returns DatabaseReadiness.MigrationRequired(6)
+
+            val result = createWorker().doWork()
+
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .retry(),
+                result,
+            )
+            verify(exactly = 0) { useCaseLazy.get() }
+        }
+
+    private fun createWorker() =
+        HealthResyncWorker(
+            appContext = context,
+            params = workerParams,
+            fullHistoricalResyncUseCase = useCaseLazy,
+            foregroundSyncController = foregroundSyncController,
+            databaseReadinessGate = databaseReadinessGate,
+        )
 }
