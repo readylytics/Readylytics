@@ -81,11 +81,13 @@ class DatabaseMigrationModelsTest {
     }
 
     @Test
-    fun `migration metadata identifies a resumable v6 migration`() {
-        assertEquals(
-            DatabaseReadiness.MigrationRequired(6),
-            inspect(version = 0, hasMigrationMetadata = true),
-        )
+    fun `migration metadata does not make unsupported versions resumable`() {
+        listOf(0, 8).forEach { version ->
+            assertEquals(
+                DatabaseReadiness.Failed("Unsupported database version: $version"),
+                inspect(version = version, hasMigrationMetadata = true),
+            )
+        }
     }
 
     @Test

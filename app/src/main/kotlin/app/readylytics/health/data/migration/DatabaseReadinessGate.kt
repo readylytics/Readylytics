@@ -56,7 +56,6 @@ class DatabaseReadinessGate
                     state.userVersion == CURRENT_DATABASE_VERSION -> DatabaseReadiness.Ready
                     state.userVersion == 5 -> DatabaseReadiness.MigrationRequired(5)
                     state.userVersion == 6 -> DatabaseReadiness.MigrationRequired(6)
-                    state.hasMigrationMetadata -> DatabaseReadiness.MigrationRequired(6)
                     else ->
                         DatabaseReadiness.Failed(
                             "Unsupported database version: ${state.userVersion}",
