@@ -253,28 +253,36 @@ entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity
 Connect directly.**
 
 `DatabaseMigrations` registers only the small Room migrations v1→v2, v2→v3, v3→v4, v4→v5,
-and v5→v6. Room has no v6→v7 migration: `DatabaseReadinessGate` inspects the encrypted file before
-Room construction, and `DatabaseModule` refuses to open any existing database that has not reached
-v7 through the external `V7DatabaseMigrator`. Pure readiness, phase, progress, result, and
+and v5→v6. Existing v5/v6 files complete their upgrade before Room opens: after a fail-closed
+free-space preflight, a v5 file receives the additive v5→v6 setup in one SQLCipher transaction,
+then the external v6→v7 state machine runs. Insufficient space returns the required/available-byte
+failure without mutating any legacy table. Room has no v6→v7 migration or one-shot
+`MIGRATION_6_7` `INSERT SELECT`: `DatabaseReadinessGate` inspects the encrypted file before Room
+construction, and `DatabaseModule` refuses to open any existing database that has not reached v7
+through the external `V7DatabaseMigrator`. Pure readiness, phase, progress, result, and
 `DatabaseReadinessInspector` contracts live in
 `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`;
 the SQLCipher/file-backed `DatabaseReadinessGate` remains in the app data layer and implements that
 inspector. The v5→v6 statements are shared through
 `DatabaseUpgradeSql.V5_TO_V6`, preventing the Room and external paths from drifting.
-`V7DatabaseMigrator` preflights free space before its first mutation, then copies HR and HRV into
-shadow tables in committed 10,000-row keyset batches. A durable single-row checkpoint stores the
-current copy/index/validation phase and both last source ids/counts, so cancellation or process
-death resumes without deleting the authoritative v6 tables. Once that checkpoint exists, resume
-reuses the already-accepted preflight instead of recalculating against the expanded database and
-shadow files. Readiness/open/preflight failures return the migration's typed `Failed` result;
-cooperative `CancellationException` is still rethrown. Legacy ids are normalized only when they
-end with the exact `_<timestampMs>` suffix.
+`V7DatabaseMigrator` copies HR and HRV into shadow tables in committed 10,000-row keyset pages. A
+durable single-row checkpoint stores the current copy/index/validation phase plus both last source
+ids and copied/total counts, so cancellation or process death resumes at the next page or phase.
+The original v6 tables remain authoritative throughout all copy and index phases; no source table
+is deleted or renamed before validation and atomic cutover. Once a checkpoint exists, resume reuses
+the already-accepted preflight instead of recalculating against the expanded database and shadow
+files. Readiness/open/preflight failures return the migration's typed `Failed` result; cooperative
+`CancellationException` is still rethrown. Legacy ids are normalized only when they end with the
+exact `_<timestampMs>` suffix.
 Secondary indexes are checkpointed one transaction at a time; equal source/target/fixed-start
 counts and unique `(sourceRecordId, timestampMs)` groups are required during validation and are
 checked again under the final `BEGIN IMMEDIATE` write lock immediately before the destructive
 renames. The atomic table swap removes the checkpoint and advances `user_version` to 7.
 That cutover also installs Room v7's generated schema identity in `room_master_table`, so the first
-Room open accepts the externally migrated schema.
+Room open accepts the externally migrated schema. `DatabaseMigrationWorker` performs this state
+machine as foreground `dataSync` work and publishes phase plus copied/total-row progress; the
+migration screen gates normal app content, and Room-backed startup, sync, backup, and cleanup work
+remain blocked or retry until `DatabaseReadinessGate` reports v7 ready.
 Version 4 adds
 the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
@@ -315,7 +323,9 @@ Health Connect payloads.
 Restore is staged. Database replacement is atomic within Room. Preferences are restored after the
 database transaction commits because Room and DataStore cannot share a transaction. If a later
 stage fails, the app returns an explicit partial-success result requiring restart and instructs
-the user to rerun restore.
+the user to rerun restore. Backup manifests v5, v6, and v7 restore into the current v7 entities.
+For v5/v6 payloads, legacy HR/HRV composite IDs normalize to
+`(sourceRecordId, timestampMs)` by removing only an exact trailing `_<timestampMs>` suffix.
 
 **Encryption & Key Management:**
 Local encryption keys are versioned (e.g., `readylytics_master_key_v1`) and protected via Android Keystore.

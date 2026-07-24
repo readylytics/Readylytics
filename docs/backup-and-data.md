@@ -12,17 +12,19 @@ Readylytics stores everything locally on your device—no cloud account, no data
 
 ## Local encrypted backup
 
-All your settings, preferences, and app configuration can be backed up to a local folder on your device, encrypted with AES-256 (bank-grade security).
+Your imported health records, calculated summaries, settings, preferences, and app configuration can be backed up to a local folder on your device, encrypted with AES-256 (bank-grade security).
 
 **Find it:** Settings → Data & Backup → Local Backup
 
 **What gets backed up:**
+- Imported sleep sessions, heart rate, HRV, workouts, and other locally stored health records
+- Calculated daily summaries and baselines
 - All user settings (sleep goal, zones, thresholds, baselines)
 - Readiness configuration (TRIMP model, RAS scaling, load sources)
 - UI preferences (theme, colors, unit system)
 - Backup scheduling and metadata
 
-**Note:** The app backs up *settings only*, not your Health Connect data. Your raw health data stays synced to Health Connect itself, which you control separately.
+**Note:** A backup contains Readylytics' local copy of imported records; it does not modify or replace the original data managed by Health Connect.
 
 ### Create a backup
 
@@ -50,6 +52,10 @@ Lost your settings after reinstalling the app? Restore them in seconds.
 2. **Select the backup** you want to restore.
 3. **Enter the backup password** (if you set one).
 4. **Tap "Restore"** — Settings are restored; the app may restart to apply changes.
+
+Backup manifests v5, v6, and v7 all restore into the current v7 entities. When restoring a v5 or v6
+backup, Readylytics normalizes legacy heart-rate and HRV composite IDs to
+`(sourceRecordId, timestampMs)` so records retain their current stable identity.
 
 ### Changing your backup password
 

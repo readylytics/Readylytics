@@ -24,6 +24,8 @@ import kotlin.test.assertTrue
  */
 class DocumentationDriftTest {
     private val aboutMd = readRepoFile("ABOUT.md")
+    private val publicAboutMd = readRepoFile("docs/about.md")
+    private val aboutStringsXml = readRepoFile("feature/about/src/main/res/values/strings.xml")
     private val stringsXml =
         listOf(
             "app/src/main/res/values/strings.xml",
@@ -62,6 +64,27 @@ class DocumentationDriftTest {
         assertTrue(aboutMd.contains("Duration (50%)"))
         assertTrue(aboutMd.contains("Architecture (25%)"))
         assertTrue(aboutMd.contains("Restoration (25%)"))
+    }
+
+    @Test
+    fun `stage-less sleep scoring is synchronized across About surfaces`() {
+        val requiredStageLessPhrases =
+            listOf(
+                "raw session span",
+                "Duration 75%",
+                "Architecture 0%",
+                "Restoration 25%",
+            )
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "About strings" to aboutStringsXml,
+        )) {
+            for (phrase in requiredStageLessPhrases) {
+                assertTrue(text.contains(phrase), "$surface must contain '$phrase'")
+            }
+        }
     }
 
     @Test
