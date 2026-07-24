@@ -183,6 +183,30 @@ class V7DatabaseMigratorInstrumentedTest {
         }
 
     @Test
+    fun readinessFailureReturnsFailedInsteadOfEscaping() =
+        runBlocking {
+            val fixture =
+                createEncryptedFixture(
+                    version = 6,
+                    heartRateCount = 1,
+                    hrvCount = 1,
+                    suffix = "unreadable-readiness",
+                )
+            File("${fixture.file.absolutePath}-wal").delete()
+            File("${fixture.file.absolutePath}-shm").delete()
+            fixture.file.writeBytes("not-a-sqlcipher-database".encodeToByteArray())
+
+            val result =
+                V7DatabaseMigrator(
+                    sqlCipherKeyManager = fixture.keyManager,
+                    dbFile = fixture.file,
+                    availableBytes = { Long.MAX_VALUE },
+                ).migrate {}
+
+            assertTrue(result is V7MigrationResult.Failed)
+        }
+
+    @Test
     fun resumedMigrationDoesNotRepeatDiskPreflightAfterCheckpointExists() =
         runBlocking {
             val fixture =

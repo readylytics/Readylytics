@@ -31,19 +31,19 @@ class V7DatabaseMigrator
         )
 
         suspend fun migrate(onProgress: suspend (DatabaseMigrationProgress) -> Unit): V7MigrationResult {
-            val readiness = readReadiness()
-            if (!readiness.hasResumableCheckpoint) {
-                val space = calculateSpace()
-                if (space.availableBytes < space.requiredBytes) {
-                    return V7MigrationResult.InsufficientSpace(
-                        requiredBytes = space.requiredBytes,
-                        availableBytes = space.availableBytes,
-                    )
-                }
-            }
-            onProgress(DatabaseMigrationProgress(V7MigrationPhase.PREFLIGHT, 0L, 0L))
-
             return try {
+                val readiness = readReadiness()
+                if (!readiness.hasResumableCheckpoint) {
+                    val space = calculateSpace()
+                    if (space.availableBytes < space.requiredBytes) {
+                        return V7MigrationResult.InsufficientSpace(
+                            requiredBytes = space.requiredBytes,
+                            availableBytes = space.availableBytes,
+                        )
+                    }
+                }
+                onProgress(DatabaseMigrationProgress(V7MigrationPhase.PREFLIGHT, 0L, 0L))
+
                 when (val version = readiness.version) {
                     CURRENT_VERSION -> return V7MigrationResult.Complete
                     5 -> {

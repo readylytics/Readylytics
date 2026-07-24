@@ -259,7 +259,9 @@ shadow tables in committed 10,000-row keyset batches. A durable single-row check
 current copy/index/validation phase and both last source ids/counts, so cancellation or process
 death resumes without deleting the authoritative v6 tables. Once that checkpoint exists, resume
 reuses the already-accepted preflight instead of recalculating against the expanded database and
-shadow files. Legacy ids are normalized only when they end with the exact `_<timestampMs>` suffix.
+shadow files. Readiness/open/preflight failures return the migration's typed `Failed` result;
+cooperative `CancellationException` is still rethrown. Legacy ids are normalized only when they
+end with the exact `_<timestampMs>` suffix.
 Secondary indexes are checkpointed one transaction at a time; equal source/target/fixed-start
 counts and unique `(sourceRecordId, timestampMs)` groups are required during validation and are
 checked again under the final `BEGIN IMMEDIATE` write lock immediately before the destructive

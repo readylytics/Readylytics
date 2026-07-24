@@ -6,6 +6,8 @@
 - Preflights `db + WAL + 25% + 64 MiB` against `StatFs.availableBytes` before any migration table
   is created. A v6 database with the durable `v7` checkpoint resumes under the originally accepted
   preflight instead of recalculating against its already-expanded database and shadow files.
+- Converts SQLCipher readiness/open and preflight exceptions to `V7MigrationResult.Failed` while
+  continuing to rethrow cooperative cancellation.
 - Advances v5 to v6 with every statement in `DatabaseUpgradeSql.V5_TO_V6` plus the version pragma
   in one transaction.
 - Creates one durable `v7` checkpoint row and HR/HRV shadow tables with explicit, collision-free
@@ -64,6 +66,8 @@ enables WAL, and covers:
 - v5 shared additive upgrade with workout `modelTrimp` and `step_records` preservation;
 - exact suffix normalization and non-matching suffix preservation;
 - insufficient-space return before metadata/shadow creation;
+- an unreadable/corrupt SQLCipher file returning typed `Failed` during readiness instead of
+  escaping an exception;
 - low-space resume after an accepted preflight and durable 10,000-row checkpoint;
 - normalized source/time collision failing closed with both legacy tables intact;
 - a source insert after the durable validation checkpoint failing closed during locked cutover
@@ -93,7 +97,7 @@ with checked-in `7.json` and matched.
 
 ## Reviewer Follow-up
 
-Two Important review findings were addressed test-first:
+Three Important review findings were addressed test-first:
 
 1. The low-space resume regression was written before the readiness change. With the original
    implementation it would return `InsufficientSpace`, because the preflight included the
@@ -105,8 +109,14 @@ Two Important review findings were addressed test-first:
    lose the inserted row. The same fixed-total, source/target-count, and duplicate-group checks now
    execute again inside `beginTransactionNonExclusive()` before either source table is dropped.
    A mismatch rolls back and returns `Failed`, preserving the authoritative v6 source.
+3. The unreadable-readiness regression was written before widening the exception boundary. With
+   the reviewed implementation, SQLCipher open/decryption/schema-read failures escaped because
+   `readReadiness()` ran before the `try`. Readiness and the ordered preflight decision now execute
+   inside the same boundary as the state machine: ordinary exceptions become typed `Failed`, while
+   `CancellationException` is rethrown unchanged. Checkpoint detection still precedes the
+   fresh-only disk calculation.
 
-The app instrumentation compiler remains blocked before either regression can execute by the
+The app instrumentation compiler remains blocked before these regressions can execute by the
 unrelated sources listed below. The regression sources were nevertheless added before production
 changes, and the fresh compiler diagnostics contain no migration-test error.
 
@@ -127,6 +137,19 @@ BUILD SUCCESSFUL in 23s
 ./gradlew testDebugUnitTest lintRelease
 BUILD SUCCESSFUL in 1m 23s
 1004 actionable tasks: 22 executed, 982 up-to-date
+```
+
+Final exception-boundary follow-up:
+
+```text
+./gradlew ktlintFormat
+./gradlew :app:compileDebugKotlin :app:testDebugUnitTest \
+  --tests app.readylytics.health.data.migration.DatabaseMigrationModelsTest
+BUILD SUCCESSFUL in 9s
+
+./gradlew testDebugUnitTest lintRelease
+BUILD SUCCESSFUL in 1m 31s
+1004 actionable tasks: 21 executed, 983 up-to-date
 ```
 
 No file was added by the review follow-up, so the AGENTS.md new-file rule did not require another
@@ -176,10 +199,10 @@ unrelated files were not modified.
 ## Backprop and Self-review
 
 The SQLCipher transaction reinterpretation, missing Room identity, repeated-preflight resume
-failure, and validation/cutover write race were traced during self-review and review. They are now
-represented by executable instrumented assertions/phase coverage and by the synchronized data-flow
-documentation. There is no repository-root `SPEC.md`, so the backprop skill had no §B/§V ledger to
-amend.
+failure, readiness exception escape, and validation/cutover write race were traced during
+self-review and review. They are now represented by executable instrumented assertions/phase
+coverage and by the synchronized data-flow documentation. There is no repository-root `SPEC.md`,
+so the backprop skill had no §B/§V ledger to amend.
 
 Self-review confirmed:
 
