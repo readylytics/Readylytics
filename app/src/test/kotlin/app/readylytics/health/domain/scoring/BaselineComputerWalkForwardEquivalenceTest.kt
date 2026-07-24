@@ -123,6 +123,40 @@ class BaselineComputerWalkForwardEquivalenceTest {
     }
 
     @Test
+    fun `walk-forward prefetch is a fixed-duration superset across spring forward`() =
+        runTest {
+            val berlin = ZoneId.of("Europe/Berlin")
+            val scoreDay = LocalDate.of(2025, 4, 1)
+            val fixedFrom =
+                scoreDay
+                    .atStartOfDay(berlin)
+                    .toInstant()
+                    .minus(56, java.time.temporal.ChronoUnit.DAYS)
+                    .toEpochMilli()
+            val boundarySession =
+                SleepSessionEntity(
+                    id = "dst-boundary",
+                    startTime = fixedFrom + 30 * 60 * 1000L,
+                    endTime = fixedFrom + 6 * 60 * 60 * 1000L,
+                    durationMinutes = 330,
+                    efficiency = 92f,
+                    deepSleepMinutes = 70,
+                    remSleepMinutes = 80,
+                    lightSleepMinutes = 170,
+                    awakeMinutes = 10,
+                )
+            sessions += boundarySession
+            rmssdById[boundarySession.id] = listOf(42f, 44f)
+            avgHrById[boundarySession.id] = 54
+            hrProjectionById[boundarySession.id] = (48..60).toList()
+
+            val prefetched =
+                baselineComputer.prefetchWalkForwardSessions(scoreDay, scoreDay, berlin)
+
+            assertEquals(true, prefetched.any { it.id == boundarySession.id })
+        }
+
+    @Test
     fun `prefetched RHR baseline matches the per-day DB-querying overload across a varied history`() =
         runTest {
             val startDate = day0.plusDays(10)

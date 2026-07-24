@@ -498,9 +498,11 @@ class BaselineComputer
         /**
          * PERF-002/WP-22: fetches sleep sessions once, covering the widest baseline lookback
          * ([ScoringConstants.HRV_SIGMA_WINDOW_DAYS], 56 days) every day in `[startDate, endDate]`
-         * will need. Callers slice the result per day via the `prefetchedSessions` parameter on
-         * [computeAdaptiveBaselineRhrBpmBetween]/[computeHrvBaselineBetween]/[computeHrvWindowsBetween]
-         * instead of each of those independently re-querying its own 30- or 56-day window.
+         * will need. The lower bound is a fixed-duration superset matching the per-day consumers,
+         * including across DST transitions. Callers slice the result per day via the
+         * `prefetchedSessions` parameter on [computeAdaptiveBaselineRhrBpmBetween]/
+         * [computeHrvBaselineBetween]/[computeHrvWindowsBetween] instead of each of those
+         * independently re-querying its own 30- or 56-day window.
          */
         suspend fun prefetchWalkForwardSessions(
             startDate: LocalDate,
@@ -509,9 +511,12 @@ class BaselineComputer
         ): List<SleepSession> {
             val fromMs =
                 startDate
-                    .minusDays(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong())
                     .atStartOfDay(zoneId)
                     .toInstant()
+                    .minus(
+                        ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(),
+                        ChronoUnit.DAYS,
+                    )
                     .toEpochMilli()
             val inclusiveToMs =
                 endDate
