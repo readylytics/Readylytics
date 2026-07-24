@@ -21,6 +21,36 @@ class StepCountFetcherRangeTest {
     private val zoneId: ZoneId = ZoneId.of("UTC")
 
     @Test
+    fun `fetchRange materializes zero for every day omitted by grouped aggregates`() =
+        runTest {
+            val start = LocalDate.of(2024, 1, 1)
+            val end = LocalDate.of(2024, 1, 3)
+            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns emptyMap()
+
+            val result = fetcher.fetchRange(start, end, 30, null, zoneId)
+
+            assertEquals(
+                mapOf(start to 0L, start.plusDays(1) to 0L, end to 0L),
+                result,
+            )
+        }
+
+    @Test
+    fun `fetchRange overlays sparse grouped totals onto zero-filled days`() =
+        runTest {
+            val start = LocalDate.of(2024, 1, 1)
+            val end = LocalDate.of(2024, 1, 3)
+            coEvery { hcRepo.readDailyStepTotals(any(), any(), any()) } returns
+                mapOf(start.plusDays(1) to 4_321L)
+
+            val result = fetcher.fetchRange(start, end, 30, null, zoneId)
+
+            assertEquals(0L, result[start])
+            assertEquals(4_321L, result[start.plusDays(1)])
+            assertEquals(0L, result[end])
+        }
+
+    @Test
     fun `fetchRange with no selected device issues one grouped call per chunk`() =
         runTest {
             val startDate = LocalDate.of(2024, 1, 1)

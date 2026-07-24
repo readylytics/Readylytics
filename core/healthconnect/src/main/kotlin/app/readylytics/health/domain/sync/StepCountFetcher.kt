@@ -105,6 +105,11 @@ class StepCountFetcher
                     val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
                     val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
                     val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+                    var day = chunkStart
+                    while (day.isBefore(chunkEndExclusive)) {
+                        stepsMap[day] = 0L
+                        day = day.plusDays(1)
+                    }
                     stepsMap.putAll(
                         retryWithBackoff { hcRepo.readDailyStepTotals(windowStart, windowEnd, zoneId) },
                     )
