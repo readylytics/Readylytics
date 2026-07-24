@@ -360,12 +360,22 @@ class ResyncRangeUseCaseTest {
         }
 
     @Test
-    fun `skipIngestAndPrune runs reconcile and recompute without touching Health Connect or pruning`() =
+    fun `skipIngestAndPrune recomputes from Room without Health Connect and preserves steps`() =
         runTest {
             // SCORE-007: a settings-driven recompute-only pass must never re-read Health Connect
             // or prune, only rebuild session-linking and scores from already-stored raw data.
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
+            val stepOverrides = mutableListOf<Long?>()
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(
+                    any(),
+                    captureNullable(stepOverrides),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns Unit
 
             useCase.run(
                 startDate = startDate,
@@ -375,14 +385,21 @@ class ResyncRangeUseCaseTest {
                 skipIngestAndPrune = true,
             )
 
+            assertEquals(listOf(null, null), stepOverrides)
+            coVerify(exactly = 0) { hcRepo.readDailyStepTotals(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readStepsRecords(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readHrvSamplesPaged(any(), any(), any()) }
             coVerify(exactly = 0) { selectedSourcePruner.prune(any(), any(), any(), any()) }
             coVerify(exactly = 0) { changeSynchronizer.captureChangesTokens() }
             coVerify(exactly = 0) { changeSynchronizer.applyPendingChanges() }
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
             coVerify(exactly = 1) { sessionLinkReconciler.reconcile(any(), any(), any()) }
-            coVerify(exactly = 2) { scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 2) {
+                scoringRepository.computeAndPersistDailySummary(any(), null, any(), any(), any())
+            }
         }
 
     @Test

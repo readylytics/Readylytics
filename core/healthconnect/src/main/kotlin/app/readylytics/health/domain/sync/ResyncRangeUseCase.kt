@@ -392,7 +392,7 @@ class ResyncRangeUseCase
                     // recompute per day and recent sync/resync use the same baseline path.
                     val recomputeStart = System.currentTimeMillis()
                     val stepsMap =
-                        if (!recomputeStartDate.isAfter(endDate)) {
+                        if (!skipIngestAndPrune && !recomputeStartDate.isAfter(endDate)) {
                             stepCountFetcher.fetchRange(
                                 startDate = recomputeStartDate,
                                 endDate = endDate,
@@ -427,7 +427,12 @@ class ResyncRangeUseCase
                     var recomputedDays = completedDays
                     while (!day.isAfter(endDate)) {
                         ensureActive()
-                        val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
+                        val stepsForDay =
+                            when {
+                                skipIngestAndPrune -> null
+                                stepsDevice != null -> stepsMap[day] ?: 0L
+                                else -> stepsMap[day]
+                            }
                         val dayResult =
                             if (trimpContext != null && baselineContext != null) {
                                 recomputeSupport.recomputeDay(day, stepsForDay, prefs, trimpContext, baselineContext)
