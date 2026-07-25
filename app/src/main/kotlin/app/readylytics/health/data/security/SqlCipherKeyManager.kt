@@ -306,11 +306,11 @@ class SqlCipherKeyManager
 
             private val CIPHER_COMPATIBILITY_HOOK =
                 object : net.zetetic.database.sqlcipher.SQLiteDatabaseHook {
-                    override fun preKey(database: net.zetetic.database.sqlcipher.SQLiteDatabase) {
-                        database.rawExecSQL("PRAGMA cipher_compatibility = $CIPHER_COMPATIBILITY")
+                    override fun preKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) {
+                        connection.execute("PRAGMA cipher_compatibility = $CIPHER_COMPATIBILITY", null, null)
                     }
 
-                    override fun postKey(database: net.zetetic.database.sqlcipher.SQLiteDatabase) = Unit
+                    override fun postKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) = Unit
                 }
         }
     }
