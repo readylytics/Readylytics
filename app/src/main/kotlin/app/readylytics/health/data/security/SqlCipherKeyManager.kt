@@ -77,9 +77,21 @@ class SqlCipherKeyManager
                 // derives a PBKDF2 key from the literal "x'hex'" text instead of recognizing it
                 // as a raw-hex key, silently opening with the wrong key (see getOrCreateFactory).
                 val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
+                // The convenience openOrCreateDatabase() overloads hardcode CREATE_IF_NECESSARY
+                // only, so every open runs setWalModeFromConfiguration() without the WAL flag and
+                // forcibly resets journal_mode back to the default (delete) -- even if a previous
+                // session had explicitly set WAL. Passing ENABLE_WRITE_AHEAD_LOGGING here makes
+                // WAL mode stick across every reopen, matching Room's own WRITE_AHEAD_LOGGING config.
                 net.zetetic.database.sqlcipher.SQLiteDatabase
-                    .openOrCreateDatabase(dbFile, rawKeyBytes, null, null, CIPHER_COMPATIBILITY_HOOK)
-                    .use(block)
+                    .openDatabase(
+                        dbFile.absolutePath,
+                        rawKeyBytes,
+                        null,
+                        net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY or
+                            net.zetetic.database.sqlcipher.SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
+                        null,
+                        CIPHER_COMPATIBILITY_HOOK,
+                    ).use(block)
             } finally {
                 rawKey.fill(0)
             }
@@ -107,30 +119,23 @@ class SqlCipherKeyManager
             val tempFile = File(dbFile.parent, "${dbFile.name}.cipher_tmp")
             val rawKey = getOrCreateDbKey(dbFile)
             try {
-                // Open plaintext DB with empty password
-                val db =
-                    net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
-                        dbFile,
-                        "",
-                        null,
-                        null,
-                        null,
-                    )
-
-                val keyHex = rawKey.toHex()
-                // Use the standard SQLCipher syntax for raw keys: ATTACH ... KEY x'hex'
-                db.rawExecSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY x'$keyHex'")
-                // Pin the attached copy to a known cipher_compatibility so it matches whatever
-                // level withWritableDatabase's SQLiteDatabaseHook applies on reopen -- the legacy
-                // openOrCreateDatabase() overloads can default to a different compatibility level
-                // than a freshly-ATTACHed database, which reads back as "file is not a database".
-                db.rawExecSQL("PRAGMA encrypted.cipher_compatibility = $CIPHER_COMPATIBILITY")
-                // Force rollback journaling on the attached copy so sqlcipher_export's writes land
-                // directly in tempFile instead of a WAL side-file that DETACH won't checkpoint away.
-                db.rawExecSQL("PRAGMA encrypted.journal_mode = DELETE")
-                db.rawExecSQL("SELECT sqlcipher_export('encrypted')")
-                db.rawExecSQL("DETACH DATABASE encrypted")
-                db.close()
+                val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
+                // Create the encrypted target via the same nativeKey-backed open path used to
+                // reopen it later (withWritableDatabase/getOrCreateFactory), instead of ATTACH's
+                // KEY clause. ATTACH's KEY clause and the Java-level password/nativeKey() path are
+                // separate native code paths in SQLCipher and are not guaranteed to agree on
+                // cipher settings -- opening the target the same way it will always be reopened
+                // guarantees self-consistency.
+                val encryptedDb =
+                    net.zetetic.database.sqlcipher.SQLiteDatabase
+                        .openOrCreateDatabase(tempFile, rawKeyBytes, null, null, CIPHER_COMPATIBILITY_HOOK)
+                encryptedDb.rawExecSQL("ATTACH DATABASE '${dbFile.absolutePath}' AS plaintext KEY ''")
+                // Force rollback journaling on the attached source so its full contents are
+                // visible to the export regardless of any pending WAL state from its creator.
+                encryptedDb.rawExecSQL("PRAGMA plaintext.journal_mode = DELETE")
+                encryptedDb.rawExecSQL("SELECT sqlcipher_export('main', 'plaintext')")
+                encryptedDb.rawExecSQL("DETACH DATABASE plaintext")
+                encryptedDb.close()
 
                 Files.move(
                     tempFile.toPath(),
@@ -162,11 +167,16 @@ class SqlCipherKeyManager
             try {
                 // Raw key must be passed as bytes, not a String: see withWritableDatabase.
                 val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
+                // ENABLE_WRITE_AHEAD_LOGGING here too: see withWritableDatabase. dbFile is the
+                // live app database -- opening it without this flag would silently downgrade its
+                // journal_mode from wal back to delete as a side effect of a backup export.
                 val db =
-                    net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
-                        dbFile,
+                    net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+                        dbFile.absolutePath,
                         rawKeyBytes,
                         null,
+                        net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY or
+                            net.zetetic.database.sqlcipher.SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
                         null,
                         CIPHER_COMPATIBILITY_HOOK,
                     )
