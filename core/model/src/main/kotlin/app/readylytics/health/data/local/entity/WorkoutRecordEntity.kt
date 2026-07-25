@@ -26,4 +26,9 @@ data class WorkoutRecordEntity(
     val trimp: Float,
     val avgHr: Float,
     val deviceName: String? = null,
+    // SCORE-001: the user-selected TRIMP model's value (Banister/Cheng/iTRIMP), as opposed to
+    // [trimp] which is the zone-weighted (Edwards-style) value. Nullable additive column (v5->v6);
+    // lazily backfilled by the next walk-forward recompute -- read paths use COALESCE(modelTrimp,
+    // trimp) until every row has been touched. See WorkoutDao.getTrimpPoints.
+    val modelTrimp: Float? = null,
 )

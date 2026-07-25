@@ -6,10 +6,13 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.logE
+import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -31,12 +34,18 @@ class PeriodicHealthSyncWorker
     constructor(
         @Assisted private val appContext: Context,
         @Assisted params: WorkerParameters,
-        private val healthSyncUseCase: HealthSyncUseCase,
-        private val foregroundSyncController: ForegroundSyncController,
+        private val healthSyncUseCase: Lazy<HealthSyncUseCase>,
+        private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val workerScheduler: WorkerScheduler,
+        private val databaseReadinessGate: DatabaseReadinessInspector,
     ) : CoroutineWorker(appContext, params) {
         @SuppressLint("MissingPermission")
         override suspend fun doWork(): Result {
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
+                return Result.retry()
+            }
+            val syncUseCase = healthSyncUseCase.get()
+            val syncController = foregroundSyncController.get()
             SyncNotifications.ensureBackgroundSyncChannel(appContext)
             val notificationManager = NotificationManagerCompat.from(appContext)
             runCatching {
@@ -46,10 +55,10 @@ class PeriodicHealthSyncWorker
                 )
             }
 
-            foregroundSyncController.onBackgroundRecalcStarted()
+            syncController.onBackgroundRecalcStarted()
             var success = false
             return try {
-                val result = healthSyncUseCase.sync(windowDays = WINDOW_DAYS)
+                val result = syncUseCase.sync(windowDays = WINDOW_DAYS)
                 when {
                     result.isSuccess -> {
                         success = true
@@ -72,7 +81,7 @@ class PeriodicHealthSyncWorker
                     Result.retry()
                 }
             } finally {
-                foregroundSyncController.onBackgroundRecalcFinished(success)
+                syncController.onBackgroundRecalcFinished(success)
                 runCatching {
                     notificationManager.cancel(SyncNotifications.BACKGROUND_SYNC_NOTIFICATION_ID)
                 }

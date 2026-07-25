@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.vitals.weight
 
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.BmiStatus
+import app.readylytics.health.domain.model.WeightRecord
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.WeightRepository
 import io.mockk.coEvery
@@ -24,7 +24,15 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
+
+private fun WeightRecordEntity(
+    id: String,
+    timestampMs: Long,
+    weightKg: Float,
+    deviceName: String? = null,
+): WeightRecord = WeightRecord(id, Instant.ofEpochMilli(timestampMs), weightKg, deviceName)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WeightDetailViewModelTest {

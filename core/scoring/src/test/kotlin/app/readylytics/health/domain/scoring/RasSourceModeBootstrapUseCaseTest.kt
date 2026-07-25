@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -11,19 +11,19 @@ import org.junit.Test
 
 class RasSourceModeBootstrapUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
-    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private lateinit var useCase: RasSourceModeBootstrapUseCase
 
     @Before
     fun setup() {
-        useCase = RasSourceModeBootstrapUseCase(settingsRepo, dailySummaryDao)
+        useCase = RasSourceModeBootstrapUseCase(settingsRepo, scoringHistoryRepository)
     }
 
     @Test
     fun `delegates to settingsRepo with true when workout-only history exists`() =
         runTest {
-            coEvery { dailySummaryDao.hasAnyWorkoutOnlyTrimpData() } returns true
+            coEvery { scoringHistoryRepository.hasAnyWorkoutOnlyTrimpData() } returns true
 
             useCase()
 
@@ -33,7 +33,7 @@ class RasSourceModeBootstrapUseCaseTest {
     @Test
     fun `delegates to settingsRepo with false when no workout-only history exists`() =
         runTest {
-            coEvery { dailySummaryDao.hasAnyWorkoutOnlyTrimpData() } returns false
+            coEvery { scoringHistoryRepository.hasAnyWorkoutOnlyTrimpData() } returns false
 
             useCase()
 

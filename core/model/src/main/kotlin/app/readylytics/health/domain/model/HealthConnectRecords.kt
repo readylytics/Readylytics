@@ -53,7 +53,9 @@ data class DomainExerciseSessionRecord(
 )
 
 data class DomainStepsRecord(
+    val id: String,
     val startTime: Instant,
+    val endTime: Instant,
     val count: Long,
     val deviceName: String,
 )

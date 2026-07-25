@@ -3,14 +3,6 @@ package app.readylytics.health.domain.model
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.ScoringConstants
 
-fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
-    when {
-        efficiency >= 85f -> MetricStatus.OPTIMAL
-        efficiency >= 80f -> MetricStatus.NEUTRAL
-        efficiency >= 70f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-
 fun SleepSessionData.efficiencyStatus(): MetricStatus =
     when {
         efficiency >= 85f -> MetricStatus.OPTIMAL

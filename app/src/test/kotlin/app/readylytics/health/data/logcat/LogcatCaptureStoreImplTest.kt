@@ -69,7 +69,7 @@ class LogcatCaptureStoreImplTest {
                         .LogContext(),
             )
 
-            val captureStore = LogcatCaptureStoreImpl(mockContext, sink)
+            val captureStore = LogcatCaptureStoreImpl(mockContext, sink, Dispatchers.Unconfined)
             val output = captureStore.capture(10)
 
             assertTrue(output != null && output.contains("Direct Local Log Message"))
@@ -86,7 +86,7 @@ class LogcatCaptureStoreImplTest {
                     coroutineContext = Dispatchers.Unconfined,
                 )
 
-            val captureStore = LogcatCaptureStoreImpl(mockContext, sink)
+            val captureStore = LogcatCaptureStoreImpl(mockContext, sink, Dispatchers.Unconfined)
             captureStore.debugLogReader = { "debug log output" }
 
             val output = captureStore.capture(10)

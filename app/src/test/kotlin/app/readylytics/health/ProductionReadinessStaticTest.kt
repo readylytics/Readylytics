@@ -361,4 +361,42 @@ class ProductionReadinessStaticTest {
                 content.contains("lateinit var secureLogSink: SecureFileLogSink"),
         )
     }
+
+    @Test
+    fun `application keeps indirectly Room-backed settings lazy until database Ready`() {
+        val content =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/HealthDashboardApplication.kt",
+            ).readText()
+
+        assertTrue(content.contains("lateinit var settingsRepo: Lazy<SettingsRepository>"))
+        assertFalse(content.contains("lateinit var settingsRepo: SettingsRepository"))
+    }
+
+    @Test
+    fun `non-ready activity content uses a Room-free theme`() {
+        val activity =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/MainActivity.kt",
+            ).readText()
+        val readinessContent =
+            activity
+                .substringAfter("setContent {")
+                .substringBefore("private fun ReadylyticsContent")
+
+        assertTrue(readinessContent.contains("DatabaseReadinessTheme"))
+        assertFalse(readinessContent.contains("FitDashboardTheme {"))
+
+        val theme =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/ui/theme/FitDashboardTheme.kt",
+            ).readText()
+        val readinessTheme =
+            theme
+                .substringAfter("fun DatabaseReadinessTheme")
+                .substringBefore("fun FitDashboardTheme")
+
+        assertTrue(readinessTheme.contains("CoreFitDashboardTheme"))
+        assertFalse(readinessTheme.contains("hiltViewModel"))
+    }
 }

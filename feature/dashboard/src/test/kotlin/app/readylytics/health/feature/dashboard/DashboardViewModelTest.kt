@@ -1,10 +1,10 @@
 package app.readylytics.health.feature.dashboard
 
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -12,14 +12,29 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
+    private val testDispatcher = StandardTestDispatcher()
     private lateinit var dailySummaryRepository: DailySummaryRepository
     private lateinit var getDashboardDataUseCase: GetDashboardDataUseCase
     private lateinit var foregroundSyncController: ForegroundSyncGateway
@@ -34,6 +49,8 @@ class DashboardViewModelTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+
         dailySummaryRepository = mockk(relaxed = true)
         getDashboardDataUseCase = mockk(relaxed = true)
         foregroundSyncController = mockk(relaxed = true)
@@ -58,8 +75,34 @@ class DashboardViewModelTest {
                 heartRateRepository = heartRateRepository,
                 insightDismissalRepository = insightDismissalRepository,
                 clock = java.time.Clock.systemDefaultZone(),
+                defaultDispatcher = testDispatcher,
             )
     }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `DismissInsight resolves dateMs from the scoring zone, not the device zone`() =
+        runTest {
+            val selectedDate = LocalDate.of(2024, 6, 1)
+            every { selectedDateRepository.selectedDate } returns MutableStateFlow(selectedDate)
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = "Pacific/Kiritimati"))
+            coEvery { insightDismissalRepository.dismiss(any(), any()) } returns Unit
+
+            viewModel.onEvent(DashboardEvent.DismissInsight(InsightType.LATE_NADIR))
+            advanceUntilIdle()
+
+            val expectedDateMs =
+                selectedDate
+                    .atStartOfDay(ZoneId.of("Pacific/Kiritimati"))
+                    .toInstant()
+                    .toEpochMilli()
+            coVerify { insightDismissalRepository.dismiss(expectedDateMs, InsightType.LATE_NADIR) }
+        }
 
     @Test
     fun validateSelectedDate_today_succeeds() {
@@ -115,28 +158,15 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun `dashboard session summary stays when aggregate matches single session actual sleep`() {
+    fun `dashboard session summary derives from session data`() {
         val summary =
             viewModel.resolveDashboardSleepSessionSummary(
-                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 480),
                 session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
             )
 
         assertEquals(0.9f, summary?.efficiency)
         assertEquals(0L, summary?.startTime)
         assertEquals(510 * 60_000L, summary?.endTime)
-    }
-
-    @Test
-    fun `dashboard session summary falls back to session when aggregate duration no longer matches single session`() {
-        val summary =
-            viewModel.resolveDashboardSleepSessionSummary(
-                summary = DailySummary(date = LocalDate.of(2026, 7, 9), sleepDurationMinutes = 540),
-                session = sleepSession(durationMinutes = 510, awakeMinutes = 30),
-            )
-
-        assertEquals(0.9f, summary?.efficiency)
-        assertNull(summary?.takeIf { it.endTime <= it.startTime })
     }
 
     private fun sleepSession(

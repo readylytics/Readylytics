@@ -14,20 +14,18 @@ import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.di.ReleaseLogSink
-import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.domain.migration.DatabaseMigrationController
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
-import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logE
 import app.readylytics.health.util.SecureFileLogSink
 import app.readylytics.health.workers.WorkerScheduler
+import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -37,13 +35,7 @@ class HealthDashboardApplication :
     LifecycleEventObserver,
     Configuration.Provider {
     @Inject
-    lateinit var hcRepository: HealthConnectRepository
-
-    @Inject
-    lateinit var foregroundSyncController: ForegroundSyncController
-
-    @Inject
-    lateinit var settingsRepo: SettingsRepository
+    lateinit var settingsRepo: Lazy<SettingsRepository>
 
     @Inject
     lateinit var workerScheduler: WorkerScheduler
@@ -52,7 +44,13 @@ class HealthDashboardApplication :
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
-    lateinit var backfillHistoricalBaselines: BackfillHistoricalBaselinesUseCase
+    lateinit var backfillHistoricalBaselines: Lazy<BackfillHistoricalBaselinesUseCase>
+
+    @Inject
+    lateinit var healthSyncUseCase: Lazy<HealthSyncUseCase>
+
+    @Inject
+    lateinit var databaseMigrationController: DatabaseMigrationController
 
     @Inject
     @ApplicationScope
@@ -85,21 +83,16 @@ class HealthDashboardApplication :
         app.readylytics.health.workers.SyncNotifications
             .ensureChannel(this)
 
+        val startupInitializer =
+            DatabaseReadyStartupInitializer(
+                healthSyncUseCase = healthSyncUseCase,
+                backfillHistoricalBaselines = backfillHistoricalBaselines,
+                settingsRepository = settingsRepo,
+                workerScheduler = workerScheduler,
+            )
+        val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         appScope.launch {
-            // Run historical baseline backfill once per app start
-            runCatching {
-                val backfilled = backfillHistoricalBaselines.execute()
-                if (backfilled > 0) {
-                    logD("HealthDashboardApplication") { "Backfilled $backfilled historical baselines" }
-                }
-            }.onFailure { e ->
-                logE("HealthDashboardApplication", e) { "Historical baseline backfill failed" }
-            }
-
-            val schedule = settingsRepo.backupSchedule.first()
-            workerScheduler.scheduleBackupWorker(schedule)
-            workerScheduler.scheduleBirthdayWorker()
-            workerScheduler.scheduleDataCleanupWorker()
+            startupCoordinator.observe(databaseMigrationController.state)
         }
     }
 
