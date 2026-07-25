@@ -89,7 +89,6 @@ private data class WorkoutFlowData(
 private data class CombinedParams(
     val range: TimeRange,
     val date: LocalDate,
-    val isSyncing: Boolean,
     val page: Int,
 )
 
@@ -124,9 +123,8 @@ class WorkoutsViewModel
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
-                foregroundSyncController.isSyncing,
                 _currentPage,
-            ) { range, date, isSyncing, page -> CombinedParams(range, date, isSyncing, page) }
+            ) { range, date, page -> CombinedParams(range, date, page) }
                 .scan(null as CombinedParams?) { prev, current ->
                     if (prev != null && (prev.range != current.range || prev.date != current.date)) {
                         _currentPage.value = 1
@@ -139,7 +137,6 @@ class WorkoutsViewModel
                 .flatMapLatest { params ->
                     val range = params.range
                     val date = params.date
-                    val isSyncing = params.isSyncing
                     val page = params.page
                     val earliestWorkoutMs = workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
                     val zoneId = ZoneId.systemDefault()
@@ -399,7 +396,6 @@ class WorkoutsViewModel
                                             prefs.rasSourceMode,
                                         )
                                     },
-                                isLoading = isSyncing,
                                 currentPage = clampedPage,
                                 totalPages = totalPages,
                                 yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
@@ -408,7 +404,12 @@ class WorkoutsViewModel
                             ).also { emit(it) }
                         }
                     }
-                }.flowOn(defaultDispatcher)
+                }.distinctUntilChanged()
+                // isSyncing is merged in after the heavy pipeline instead of inside it (mirrors
+                // DashboardViewModel.kt:104-113) so a sync toggle only triggers a cheap copy, not a
+                // full pipeline restart (Room re-subscriptions, EMA series, N+1 HR-sample loop).
+                .combine(foregroundSyncController.isSyncing) { state, syncing -> state.copy(isLoading = syncing) }
+                .flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

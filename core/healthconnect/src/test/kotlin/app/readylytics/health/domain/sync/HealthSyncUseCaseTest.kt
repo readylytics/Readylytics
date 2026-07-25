@@ -8,6 +8,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -143,6 +144,7 @@ class HealthSyncUseCaseTest {
         assertEquals("value", result)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun withSyncLock_serializesAgainstAConcurrentSync() = runTest {
         // SCORE-003: withSyncLock must share the same mutex sync()/resyncRange() use, so a caller

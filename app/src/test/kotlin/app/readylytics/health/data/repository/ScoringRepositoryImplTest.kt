@@ -12,6 +12,7 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.*
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -23,6 +24,7 @@ import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScoringRepositoryImplTest {
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)

@@ -20,6 +20,7 @@ import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -41,6 +42,7 @@ import kotlin.test.assertEquals
  *  - [archSubScoreIsNotPreRoundedInsideSleepScore] proves the architecture sub-score is no longer
  *    pre-rounded before entering the weighted sleep-score sum (the actual ±1 toggle source).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScoringDeterminismRegressionTest {
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)

@@ -28,6 +28,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -36,6 +37,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScoringRepositoryBiphasicIntegrationTest {
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
