@@ -116,9 +116,9 @@ class SqlCipherKeyManager
 
                 val keyHex = rawKey.toHex()
                 // Use the standard SQLCipher syntax for raw keys: ATTACH ... KEY x'hex'
-                db.execSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY x'$keyHex'")
-                db.rawQuery("SELECT sqlcipher_export('encrypted')", null).use { it.moveToFirst() }
-                db.execSQL("DETACH DATABASE encrypted")
+                db.rawExecSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY x'$keyHex'")
+                db.rawExecSQL("SELECT sqlcipher_export('encrypted')")
+                db.rawExecSQL("DETACH DATABASE encrypted")
                 db.close()
 
                 Files.move(
@@ -158,9 +158,9 @@ class SqlCipherKeyManager
                         null,
                         null,
                     )
-                db.execSQL("ATTACH DATABASE '${destFile.absolutePath}' AS plaintext KEY ''")
-                db.rawQuery("SELECT sqlcipher_export('plaintext')", null).use { it.moveToFirst() }
-                db.execSQL("DETACH DATABASE plaintext")
+                db.rawExecSQL("ATTACH DATABASE '${destFile.absolutePath}' AS plaintext KEY ''")
+                db.rawExecSQL("SELECT sqlcipher_export('plaintext')")
+                db.rawExecSQL("DETACH DATABASE plaintext")
                 db.close()
             } finally {
                 rawKey.fill(0)
