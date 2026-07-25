@@ -78,7 +78,7 @@ class SqlCipherKeyManager
                 // as a raw-hex key, silently opening with the wrong key (see getOrCreateFactory).
                 val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
                 net.zetetic.database.sqlcipher.SQLiteDatabase
-                    .openOrCreateDatabase(dbFile, rawKeyBytes, null, null, null)
+                    .openOrCreateDatabase(dbFile, rawKeyBytes, null, null, CIPHER_COMPATIBILITY_HOOK)
                     .use(block)
             } finally {
                 rawKey.fill(0)
@@ -120,6 +120,11 @@ class SqlCipherKeyManager
                 val keyHex = rawKey.toHex()
                 // Use the standard SQLCipher syntax for raw keys: ATTACH ... KEY x'hex'
                 db.rawExecSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY x'$keyHex'")
+                // Pin the attached copy to a known cipher_compatibility so it matches whatever
+                // level withWritableDatabase's SQLiteDatabaseHook applies on reopen -- the legacy
+                // openOrCreateDatabase() overloads can default to a different compatibility level
+                // than a freshly-ATTACHed database, which reads back as "file is not a database".
+                db.rawExecSQL("PRAGMA encrypted.cipher_compatibility = $CIPHER_COMPATIBILITY")
                 // Force rollback journaling on the attached copy so sqlcipher_export's writes land
                 // directly in tempFile instead of a WAL side-file that DETACH won't checkpoint away.
                 db.rawExecSQL("PRAGMA encrypted.journal_mode = DELETE")
@@ -163,7 +168,7 @@ class SqlCipherKeyManager
                         rawKeyBytes,
                         null,
                         null,
-                        null,
+                        CIPHER_COMPATIBILITY_HOOK,
                     )
                 db.rawExecSQL("ATTACH DATABASE '${destFile.absolutePath}' AS plaintext KEY ''")
                 // Force rollback journaling on the attached copy so sqlcipher_export's writes land
@@ -292,5 +297,20 @@ class SqlCipherKeyManager
             private const val PREF_FILE_NAME = "sqlcipher_key_prefs"
             private const val PREF_ENCRYPTED_KEY = "encrypted_key"
             private const val PREF_IV = "encryption_iv"
+
+            // SQLCipher 4 default; pinned explicitly so a freshly-ATTACHed database (which uses
+            // the library's current default) and a reopened one (via the legacy
+            // openOrCreateDatabase overloads, which can default to an older compatibility level)
+            // always agree on page size / KDF / HMAC settings.
+            private const val CIPHER_COMPATIBILITY = 4
+
+            private val CIPHER_COMPATIBILITY_HOOK =
+                object : net.zetetic.database.sqlcipher.SQLiteDatabaseHook {
+                    override fun preKey(database: net.zetetic.database.sqlcipher.SQLiteDatabase) {
+                        database.rawExecSQL("PRAGMA cipher_compatibility = $CIPHER_COMPATIBILITY")
+                    }
+
+                    override fun postKey(database: net.zetetic.database.sqlcipher.SQLiteDatabase) = Unit
+                }
         }
     }
