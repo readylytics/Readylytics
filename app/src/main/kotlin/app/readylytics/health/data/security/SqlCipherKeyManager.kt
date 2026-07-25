@@ -73,9 +73,12 @@ class SqlCipherKeyManager
         ): T {
             val rawKey = getOrCreateDbKey(dbFile)
             return try {
-                val keyHex = rawKey.toHex()
+                // Raw key must be passed as bytes, not a String: the String-password overload
+                // derives a PBKDF2 key from the literal "x'hex'" text instead of recognizing it
+                // as a raw-hex key, silently opening with the wrong key (see getOrCreateFactory).
+                val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
                 net.zetetic.database.sqlcipher.SQLiteDatabase
-                    .openOrCreateDatabase(dbFile, "x'$keyHex'", null, null, null)
+                    .openOrCreateDatabase(dbFile, rawKeyBytes, null, null, null)
                     .use(block)
             } finally {
                 rawKey.fill(0)
@@ -133,21 +136,6 @@ class SqlCipherKeyManager
 
                 File("${dbFile.absolutePath}-wal").delete()
                 File("${dbFile.absolutePath}-shm").delete()
-
-                // TEMP DIAGNOSTIC: verify the migrated file is actually openable with the derived
-                // key before returning, to disambiguate export-time corruption from a later
-                // cross-call key mismatch. Remove once root cause is confirmed.
-                try {
-                    net.zetetic.database.sqlcipher.SQLiteDatabase
-                        .openOrCreateDatabase(dbFile, "x'$keyHex'", null, null, null)
-                        .use { verifyDb -> verifyDb.rawQuery("SELECT count(*) FROM sqlite_master", null).use { it.moveToFirst() } }
-                } catch (verifyError: Exception) {
-                    throw RuntimeException(
-                        "POST-MIGRATION VERIFY FAILED: dbFile.length=${dbFile.length()} " +
-                            "tempFile.exists=${tempFile.exists()} keyHexLen=${keyHex.length}",
-                        verifyError,
-                    )
-                }
             } catch (e: Exception) {
                 tempFile.delete()
                 throw RuntimeException("SQLCipher migration failed", e)
@@ -167,11 +155,12 @@ class SqlCipherKeyManager
             if (!dbFile.exists()) return
             val rawKey = getOrCreateDbKey(null)
             try {
-                val keyHex = rawKey.toHex()
+                // Raw key must be passed as bytes, not a String: see withWritableDatabase.
+                val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
                 val db =
                     net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
                         dbFile,
-                        "x'$keyHex'",
+                        rawKeyBytes,
                         null,
                         null,
                         null,
