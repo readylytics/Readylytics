@@ -4,6 +4,7 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.domain.model.HrRangeAggregate
 import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.HrvRecordData
@@ -19,11 +20,6 @@ class HeartRateRepositoryImpl
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
     ) : HeartRateRepository {
-        override fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordData>> =
-            heartRateDao.observeSleepHrSince(fromMs).map { list ->
-                list.map { mapToDomain(it) }
-            }
-
         override suspend fun getMinHrInRange(
             startTimeMs: Long,
             endTimeMs: Long,
@@ -46,6 +42,11 @@ class HeartRateRepositoryImpl
             heartRateDao.observeByTimeRange(startMs, endMs).map { list ->
                 list.map { mapToDomain(it) }
             }
+
+        override fun observeAggregateByTimeRange(
+            startMs: Long,
+            endMs: Long,
+        ): Flow<HrRangeAggregate?> = heartRateDao.observeAggregateByTimeRange(startMs, endMs)
 
         private fun mapToDomain(entity: HeartRateRecordEntity): HeartRateRecordData =
             HeartRateRecordData(

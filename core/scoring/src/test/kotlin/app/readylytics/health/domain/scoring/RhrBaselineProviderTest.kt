@@ -1,9 +1,9 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.PhysiologyConstants
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.BaselineComputer
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -15,15 +15,15 @@ import java.time.Instant
 import kotlin.test.assertEquals
 
 class RhrBaselineProviderTest {
-    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
     private val baselineComputer = mockk<BaselineComputer>()
     private val settingsRepository = mockk<SettingsRepository>()
-    private val provider = AdaptiveRhrBaselineProvider(dailySummaryDao, settingsRepository, baselineComputer)
+    private val provider = AdaptiveRhrBaselineProvider(scoringHistoryRepository, settingsRepository, baselineComputer)
 
     @Before
     fun setUp() {
-        coEvery { dailySummaryDao.getPreciseRhrBaseline(any()) } returns null
-        coEvery { dailySummaryDao.getRoundedRhrBaseline(any()) } returns null
+        coEvery { scoringHistoryRepository.getPreciseRhrBaseline(any()) } returns null
+        coEvery { scoringHistoryRepository.getRoundedRhrBaseline(any()) } returns null
     }
 
     @Test

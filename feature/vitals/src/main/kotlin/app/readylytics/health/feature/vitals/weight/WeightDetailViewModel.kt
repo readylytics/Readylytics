@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -72,7 +71,7 @@ class WeightDetailViewModel
 
                     val records = weightRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = weightRepository.getLatest()
-                    val previous = if (latest != null) weightRepository.getPrevious(latest.timestampMs) else null
+                    val previous = latest?.let { weightRepository.getPrevious(it.time.toEpochMilli()) }
                     val deltaWeightDisplay =
                         if (latest != null && previous != null) {
                             val diffKg = latest.weightKg - previous.weightKg
@@ -117,7 +116,7 @@ class WeightDetailViewModel
                             ChronoUnit.DAYS
                                 .between(
                                     rangeStart.atZone(zoneId).toLocalDate(),
-                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                    record.time.atZone(zoneId).toLocalDate(),
                                 ).toInt()
                         }
 
@@ -155,7 +154,7 @@ class WeightDetailViewModel
                             null
                         }
 
-                    val recordsAscending = records.sortedBy { it.timestampMs }
+                    val recordsAscending = records.sortedBy { it.time }
                     val historyItems =
                         recordsAscending
                             .mapIndexed { index, record ->
@@ -174,7 +173,7 @@ class WeightDetailViewModel
                                             .assessBmi(HealthMetricsCalculator.calculateBmi(record.weightKg, heightCm))
                                     }
                                 WeightHistoryItem(
-                                    timestampMs = record.timestampMs,
+                                    timestampMs = record.time.toEpochMilli(),
                                     weightDisplay = toDisplayUnit(record.weightKg),
                                     deltaDisplay = deltaKg?.let(toDisplayUnit),
                                     unitSystem = userPrefs.unitSystem,
@@ -196,7 +195,7 @@ class WeightDetailViewModel
 
                     WeightDetailUiState(
                         latestWeight = latestWeight,
-                        latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
+                        latestDate = latest?.time?.atZone(zoneId)?.toLocalDate(),
                         bmi = bmi,
                         heightCm = userPrefs.heightCm,
                         averageWeight = averageWeight,

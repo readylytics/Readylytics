@@ -7,6 +7,7 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
@@ -23,7 +24,6 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -78,6 +78,7 @@ class SleepViewModel
         private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedTrendRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
@@ -262,7 +263,7 @@ class SleepViewModel
                             yesterdaySleepScoreRounded = yesterdaySummary?.sleepScore?.roundToInt(),
                         )
                     }
-                }.flowOn(Dispatchers.Default)
+                }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

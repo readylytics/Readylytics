@@ -16,6 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class WeightRepositoryImplTest {
@@ -266,7 +267,7 @@ class WeightRepositoryImplTest {
 
             assertEquals(68.4f, result.weightKg)
             assertEquals("SmartScale", result.deviceName)
-            assertEquals(day1Mid, result.timestampMs)
+            assertEquals(Instant.ofEpochMilli(day1Mid), result.time)
         }
 
     // ---- ordering ----

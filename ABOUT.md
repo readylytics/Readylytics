@@ -42,6 +42,8 @@ A 100-point summary of last night's sleep, made of three parts:
 - **Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
 - **Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalizes the skewed distribution of raw HRV data.
 
+If a source provides a sleep session with no stage records, Readylytics uses the raw session span as total sleep duration. Because Architecture is unavailable, the Sleep Score reweights to Duration 75%, Architecture 0%, and Restoration 25%. This differs from suspicious but non-empty stage data: the source supplied stages, but their distribution failed plausibility checks.
+
 **Reading the score**
 
 - **85–100** Excellent. You slept enough, your sleep stages looked balanced, and your autonomic recovery markers were strong.

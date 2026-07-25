@@ -74,7 +74,7 @@ class UISettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             displaySettings.updateRasScalingFactor(value = event.value)
-                            healthDataRefresh.refreshAffectedWindow()
+                            healthDataRefresh.refreshHistorical()
                         }
                     }
                 }
@@ -106,14 +106,16 @@ class UISettingsViewModel
                 is SettingsEvent.TrimpModelChanged ->
                     viewModelScope.launch {
                         displaySettings.updateTrimpModel(event.model)
-                        healthDataRefresh.refreshAffectedWindow()
+                        // SCORE-007: the TRIMP model is the textbook historical-scope setting --
+                        // every persisted day's TRIMP/RAS/ATL/CTL was computed under the old model.
+                        healthDataRefresh.refreshHistorical()
                     }
                 is SettingsEvent.BanisterMultiplierChanged -> {
                     val validation = SettingsValidators.TRIMP_BANISTER_MULTIPLIER_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             displaySettings.updateBanisterMultiplier(event.value)
-                            healthDataRefresh.refreshAffectedWindow()
+                            healthDataRefresh.refreshHistorical()
                         }
                     }
                 }
@@ -122,7 +124,7 @@ class UISettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             displaySettings.updateChengBeta(event.value)
-                            healthDataRefresh.refreshAffectedWindow()
+                            healthDataRefresh.refreshHistorical()
                         }
                     }
                 }
@@ -131,7 +133,7 @@ class UISettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             displaySettings.updateItrimB(event.value)
-                            healthDataRefresh.refreshAffectedWindow()
+                            healthDataRefresh.refreshHistorical()
                         }
                     }
                 }
@@ -142,7 +144,7 @@ class UISettingsViewModel
                         displaySettings.updateBanisterMultiplier(profile.banisterMultiplier)
                         displaySettings.updateChengBeta(profile.defaultChengBeta)
                         displaySettings.updateItrimB(profile.defaultItrimB)
-                        healthDataRefresh.refreshAffectedWindow()
+                        healthDataRefresh.refreshHistorical()
                     }
                 is SettingsEvent.UnitSystemChanged ->
                     viewModelScope.launch { displaySettings.updateUnitSystem(unitSystem = event.unitSystem) }

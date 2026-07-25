@@ -226,6 +226,7 @@ class HealthIngestionStoreTest {
                 bodyFatSamples = emptyList(),
                 bloodPressureSamples = emptyList(),
                 oxygenSaturationSamples = emptyList(),
+                stepRecords = emptyList(),
             )
         assertEquals(0, batch.sleepSessions.size)
         assertEquals(0, batch.sleepStages.size)

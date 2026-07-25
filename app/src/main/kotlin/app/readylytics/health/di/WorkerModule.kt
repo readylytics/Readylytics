@@ -2,6 +2,8 @@ package app.readylytics.health.di
 
 import android.content.Context
 import androidx.work.WorkManager
+import app.readylytics.health.data.migration.DatabaseReadinessGate
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,4 +25,14 @@ object WorkerModule {
     fun provideWorkerScheduler(
         impl: app.readylytics.health.workers.WorkerSchedulerImpl,
     ): app.readylytics.health.workers.WorkerScheduler = impl
+
+    @Provides
+    @Singleton
+    fun provideDatabaseMigrationController(
+        impl: app.readylytics.health.domain.migration.DatabaseMigrationControllerImpl,
+    ): app.readylytics.health.domain.migration.DatabaseMigrationController = impl
+
+    @Provides
+    @Singleton
+    fun provideDatabaseReadinessInspector(gate: DatabaseReadinessGate): DatabaseReadinessInspector = gate
 }

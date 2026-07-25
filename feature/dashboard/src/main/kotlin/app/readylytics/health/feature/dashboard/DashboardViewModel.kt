@@ -6,12 +6,12 @@ import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.insights.InsightContext
@@ -25,6 +25,7 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
@@ -33,21 +34,22 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
+import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -65,6 +67,7 @@ class DashboardViewModel
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
         private val clock: Clock,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now()) {
@@ -107,7 +110,7 @@ class DashboardViewModel
                         recalcProgress = realtimeState.recalcProgress,
                         isComputingMetrics = realtimeState.isSyncing && coreState.summary == null,
                     )
-                }.flowOn(Dispatchers.Default)
+                }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
@@ -125,7 +128,6 @@ class DashboardViewModel
             val selectedDate = basicInputs.selectedDate
             val sessionSummary =
                 resolveDashboardSleepSessionSummary(
-                    summary = basicInputs.summary,
                     session = cardState.lastSleepSession,
                 )
 
@@ -197,22 +199,10 @@ class DashboardViewModel
 
         // Time-of-day gating for insights only makes sense for the current day;
         // for past days, treat as end-of-day so it never suppresses a finding.
-        internal fun resolveDashboardSleepSessionSummary(
-            summary: DailySummary?,
-            session: SleepSessionData?,
-        ): SleepSessionSummary? {
+        internal fun resolveDashboardSleepSessionSummary(session: SleepSessionData?): SleepSessionSummary? {
             session ?: return null
-            val summaryMinutes = summary?.sleepDurationMinutes
-            val sessionMinutes = (session.durationMinutes - session.awakeMinutes).coerceAtLeast(0)
-            if (summaryMinutes != null && summaryMinutes != sessionMinutes) {
-                // Biphasic days can legitimately aggregate more sleep than any single session.
-                // Keep the available session-backed fallback instead of blanking dashboard cards.
-                return SleepSessionSummary(
-                    efficiency = session.efficiency,
-                    startTime = session.startTime,
-                    endTime = session.endTime,
-                )
-            }
+            // Biphasic days can legitimately aggregate more sleep than any single session.
+            // Keep the available session-backed fallback instead of blanking dashboard cards.
             return SleepSessionSummary(
                 efficiency = session.efficiency,
                 startTime = session.startTime,
@@ -294,26 +284,24 @@ class DashboardViewModel
                 DashboardEvent.Refresh -> onRefresh()
                 DashboardEvent.ToggleCardManagement -> toggleCardManagement()
                 is DashboardEvent.DismissInsight -> {
-                    val zoneId = ZoneId.systemDefault()
-                    val dateMs =
-                        selectedDateRepository.selectedDate.value
-                            .atStartOfDay(
-                                zoneId,
-                            ).toInstant()
-                            .toEpochMilli()
                     viewModelScope.launch {
+                        val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                        val dateMs =
+                            selectedDateRepository.selectedDate.value
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli()
                         insightDismissalRepository.dismiss(dateMs, event.type)
                     }
                 }
                 DashboardEvent.RestoreInsights -> {
-                    val zoneId = ZoneId.systemDefault()
-                    val dateMs =
-                        selectedDateRepository.selectedDate.value
-                            .atStartOfDay(
-                                zoneId,
-                            ).toInstant()
-                            .toEpochMilli()
                     viewModelScope.launch {
+                        val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                        val dateMs =
+                            selectedDateRepository.selectedDate.value
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli()
                         insightDismissalRepository.restoreAllForDate(dateMs)
                     }
                 }

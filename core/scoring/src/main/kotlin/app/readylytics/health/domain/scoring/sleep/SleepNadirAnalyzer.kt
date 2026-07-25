@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring.sleep
 
-import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
 import javax.inject.Inject
@@ -19,8 +19,8 @@ class SleepNadirAnalyzer
         )
 
         suspend fun analyze(
-            session: SleepSessionEntity,
-            historicalSessions: List<SleepSessionEntity>,
+            session: SleepSession,
+            historicalSessions: List<SleepSession>,
             minHrTimestamp: Long?,
         ): NadirContext {
             val currentOffset = session.endZoneOffsetSeconds

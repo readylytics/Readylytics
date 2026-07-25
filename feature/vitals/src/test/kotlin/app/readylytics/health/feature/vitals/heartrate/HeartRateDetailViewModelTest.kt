@@ -12,15 +12,21 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -229,6 +235,85 @@ class HeartRateDetailViewModelTest {
             val zone = state.zoneTotals.values.first()
             assertEquals(60_000L, zone.durationMs)
             assertEquals("100%", zone.formattedPercent)
+        }
+
+    @Test
+    fun `sustained invalidations continue updating state before the source becomes quiet`() =
+        runTest {
+            val updates = MutableSharedFlow<List<HeartRateRecordData>>(replay = 1)
+            updates.tryEmit(emptyList())
+            every { heartRateRepository.observeByTimeRange(any(), any()) } returns updates
+            viewModel = createViewModel()
+
+            val collected = mutableListOf<HeartRateDetailUiState>()
+            val job = launch { viewModel.uiState.collect { collected += it } }
+            runCurrent()
+
+            repeat(15) { index ->
+                updates.emit(
+                    listOf(
+                        HeartRateRecordData(
+                            id = "update$index",
+                            timestampMs = index * 1_000L,
+                            beatsPerMinute = 100,
+                            recordType = "instant",
+                        ),
+                    ),
+                )
+                advanceTimeBy(100)
+                runCurrent()
+            }
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertTrue(collected.count { it.samples.isNotEmpty() } >= 2)
+            job.cancel()
+        }
+
+    @Test
+    fun `rapid successive invalidations render only the latest sampled value`() =
+        runTest {
+            // PERF-005/WP-23: simulates a resync's 5,000-row ingest batches invalidating
+            // observeByTimeRange in quick succession -- the 500 ms sampling cadence must render
+            // only the latest value in the period instead of one downstream state per batch.
+            val burst = MutableSharedFlow<List<HeartRateRecordData>>(replay = 1)
+            burst.tryEmit(emptyList())
+            every { heartRateRepository.observeByTimeRange(any(), any()) } returns burst
+
+            viewModel = createViewModel()
+
+            val collected = mutableListOf<HeartRateDetailUiState>()
+            val job = launch { viewModel.uiState.collect { collected += it } }
+            advanceTimeBy(600)
+            val countAfterInitialSettle = collected.size
+
+            repeat(4) { i ->
+                burst.emit(
+                    listOf(
+                        HeartRateRecordData(
+                            id = "batch$i",
+                            timestampMs = i * 1_000L,
+                            beatsPerMinute = 100,
+                            recordType = "instant",
+                        ),
+                    ),
+                )
+                advanceTimeBy(100) // all four updates stay within one 500 ms sampling period
+            }
+            advanceTimeBy(200) // let the sampling period emit its latest value
+            job.cancel()
+            advanceUntilIdle()
+
+            assertEquals(countAfterInitialSettle + 1, collected.size)
+            assertEquals(1, collected.last().samples.size)
+            // The sampled emission reflects the fourth batch, not an intermediate one.
+            assertEquals(
+                3_000L,
+                collected
+                    .last()
+                    .samples
+                    .single()
+                    .timeMs,
+            )
         }
 
     @Test

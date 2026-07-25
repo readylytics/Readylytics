@@ -146,6 +146,7 @@ class WorkoutsViewModelTest {
             foregroundSyncController = foregroundSyncController,
             savedStateHandle = savedStateHandle,
             ioDispatcher = testDispatcher,
+            defaultDispatcher = testDispatcher,
         )
 
     @After

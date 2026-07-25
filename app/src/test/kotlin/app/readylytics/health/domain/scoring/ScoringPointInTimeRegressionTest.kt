@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.local.dao.*
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
@@ -13,6 +14,7 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -54,6 +56,8 @@ class ScoringPointInTimeRegressionTest {
                 settingsRepo,
                 scoringCalculator,
                 baselineComputer,
+                BuildLoadSeriesUseCase(scoringCalculator),
+                AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
@@ -64,6 +68,7 @@ class ScoringPointInTimeRegressionTest {
                 oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
+                UnconfinedTestDispatcher(),
             )
     }
 
@@ -85,7 +90,8 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
 
             // 2. Setup mock workouts/samples
             val workout =
@@ -170,7 +176,8 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
 
@@ -247,7 +254,8 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
@@ -290,11 +298,26 @@ class ScoringPointInTimeRegressionTest {
 
             repo.computeDailySummary(today)
 
-            // First ATL call = workout-only series (no today key). Second = everyday series (today injected).
+            // SCORE-005: both variants now inject today's freshly computed value directly (workout-only
+            // gets dailyTrimpRaw, everyday gets trimpEverydayHr) -- each from its own toMutableMap(),
+            // so neither series' historical entries or today's injected value can leak into the other.
             assertEquals(2, atlMaps.size, "ATL computed once per variant")
             val workoutOnlyMap = atlMaps[0]
             val everydayMap = atlMaps[1]
-            assertNull(workoutOnlyMap[today], "Workout-only series must NOT contain injected everyday value")
+            assertEquals(
+                30f,
+                workoutOnlyMap[today.minusDays(1)],
+                "Workout-only historical entry preserved",
+            )
+            assertNull(
+                everydayMap[today.minusDays(1)],
+                "Workout-only historical entry must not leak into the everyday series",
+            )
+            assertEquals(
+                0f,
+                workoutOnlyMap[today],
+                "Workout-only series now injects today's dailyTrimpRaw too (SCORE-005)",
+            )
             assertEquals(0f, everydayMap[today], "Everyday series injects today's everyday TRIMP (0 with no HR)")
         }
 
@@ -320,8 +343,8 @@ class ScoringPointInTimeRegressionTest {
                         baselineObservationCount = 10,
                     )
                 coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns targetFrozenSnapshot
-                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs) } returns
-                    targetFrozenSnapshot
+                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs, zoneId) } returns
+                    DailySummaryMapper.toDomain(targetFrozenSnapshot, zoneId)
                 coEvery { sleepSessionDao.countSince(any()) } returns 10
                 coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
                 coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
@@ -408,7 +431,8 @@ class ScoringPointInTimeRegressionTest {
                         baselineObservationCount = 10,
                     )
                 coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns frozenSnapshot
-                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs) } returns frozenSnapshot
+                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs, zoneId) } returns
+                    DailySummaryMapper.toDomain(frozenSnapshot, zoneId)
                 coEvery { workoutDao.getTrimpPoints(capture(fromMs), any()) } returns emptyList()
 
                 repo.computeDailySummary(targetDate)

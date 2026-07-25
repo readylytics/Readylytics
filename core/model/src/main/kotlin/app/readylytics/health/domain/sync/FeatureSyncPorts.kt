@@ -42,7 +42,18 @@ interface ForegroundSyncGateway {
 }
 
 interface HealthDataRefresh {
+    /** Recent-window refresh for settings that don't change how *past* days were scored. */
     suspend fun refreshAffectedWindow()
+
+    /**
+     * SCORE-007: full retention-bounded recompute for settings that change the scoring inputs
+     * every persisted historical day was computed from -- the TRIMP model or its parameters, HR
+     * zones, hrMax source, RHR/HRV overrides, physiology profile. A recent-window refresh here
+     * would leave old days on the previous inputs, mixing them into the same ATL/CTL EMA window as
+     * newly-recomputed days. Runs durably (WorkManager, foreground service) since it can cover
+     * years of history; raw Health Connect data is untouched, so it never re-reads HC.
+     */
+    suspend fun refreshHistorical()
 }
 
 interface HistoricalResyncController {

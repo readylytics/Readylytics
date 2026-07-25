@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 
 /**
  * One-time bootstrap for existing users' `rasSourceMode` preference.
@@ -14,10 +14,10 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 class RasSourceModeBootstrapUseCase
     constructor(
         private val settingsRepo: SettingsRepository,
-        private val dailySummaryDao: DailySummaryDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
     ) {
         suspend operator fun invoke() {
-            val hasWorkoutOnlyHistory = dailySummaryDao.hasAnyWorkoutOnlyTrimpData()
+            val hasWorkoutOnlyHistory = scoringHistoryRepository.hasAnyWorkoutOnlyTrimpData()
             settingsRepo.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory)
         }
     }
