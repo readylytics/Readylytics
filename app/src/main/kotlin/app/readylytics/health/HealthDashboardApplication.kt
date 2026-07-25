@@ -35,7 +35,7 @@ class HealthDashboardApplication :
     LifecycleEventObserver,
     Configuration.Provider {
     @Inject
-    lateinit var settingsRepo: SettingsRepository
+    lateinit var settingsRepo: Lazy<SettingsRepository>
 
     @Inject
     lateinit var workerScheduler: WorkerScheduler

@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class DatabaseReadyStartupInitializer(
     private val healthSyncUseCase: Lazy<HealthSyncUseCase>,
     private val backfillHistoricalBaselines: Lazy<BackfillHistoricalBaselinesUseCase>,
-    private val settingsRepository: SettingsRepository,
+    private val settingsRepository: Lazy<SettingsRepository>,
     private val workerScheduler: WorkerScheduler,
 ) {
     private val initialized = AtomicBoolean(false)
@@ -43,11 +43,12 @@ internal class DatabaseReadyStartupInitializer(
                 logE(TAG, e) { "Historical baseline backfill failed" }
             }
 
-            val backupSchedule = settingsRepository.backupSchedule.first()
-            val backgroundSyncEnabled = settingsRepository.backgroundSyncEnabled.first()
+            val settings = settingsRepository.get()
+            val backupSchedule = settings.backupSchedule.first()
+            val backgroundSyncEnabled = settings.backgroundSyncEnabled.first()
             val periodicSyncMinutes =
                 if (backgroundSyncEnabled) {
-                    settingsRepository.backgroundSyncIntervalMinutes.first()
+                    settings.backgroundSyncIntervalMinutes.first()
                 } else {
                     null
                 }

@@ -35,6 +35,7 @@ class DatabaseReadyStartupInitializerTest {
     private val healthSyncLazy = mockk<Lazy<HealthSyncUseCase>>()
     private val backfillLazy = mockk<Lazy<BackfillHistoricalBaselinesUseCase>>()
     private val settingsRepository = mockk<SettingsRepository>()
+    private val settingsRepositoryLazy = mockk<Lazy<SettingsRepository>>()
     private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
 
     @Test
@@ -46,6 +47,7 @@ class DatabaseReadyStartupInitializerTest {
 
             verify(exactly = 0) { healthSyncLazy.get() }
             verify(exactly = 0) { backfillLazy.get() }
+            verify(exactly = 0) { settingsRepositoryLazy.get() }
             verify(exactly = 0) { workerScheduler.scheduleBackupWorker(any()) }
             verify(exactly = 0) { workerScheduler.scheduleBirthdayWorker() }
             verify(exactly = 0) { workerScheduler.scheduleDataCleanupWorker() }
@@ -71,6 +73,7 @@ class DatabaseReadyStartupInitializerTest {
 
             verify(exactly = 1) { healthSyncLazy.get() }
             verify(exactly = 1) { backfillLazy.get() }
+            verify(exactly = 1) { settingsRepositoryLazy.get() }
             coVerify(exactly = 1) { backfill.execute() }
             verify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.DAILY) }
             verify(exactly = 1) { workerScheduler.scheduleBirthdayWorker() }
@@ -253,11 +256,13 @@ class DatabaseReadyStartupInitializerTest {
             verify(exactly = 0) { workerScheduler.schedulePeriodicSync(any()) }
         }
 
-    private fun createInitializer() =
-        DatabaseReadyStartupInitializer(
+    private fun createInitializer(): DatabaseReadyStartupInitializer {
+        every { settingsRepositoryLazy.get() } returns settingsRepository
+        return DatabaseReadyStartupInitializer(
             healthSyncUseCase = healthSyncLazy,
             backfillHistoricalBaselines = backfillLazy,
-            settingsRepository = settingsRepository,
+            settingsRepository = settingsRepositoryLazy,
             workerScheduler = workerScheduler,
         )
+    }
 }

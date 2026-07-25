@@ -361,4 +361,15 @@ class ProductionReadinessStaticTest {
                 content.contains("lateinit var secureLogSink: SecureFileLogSink"),
         )
     }
+
+    @Test
+    fun `application keeps indirectly Room-backed settings lazy until database Ready`() {
+        val content =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/HealthDashboardApplication.kt",
+            ).readText()
+
+        assertTrue(content.contains("lateinit var settingsRepo: Lazy<SettingsRepository>"))
+        assertFalse(content.contains("lateinit var settingsRepo: SettingsRepository"))
+    }
 }
