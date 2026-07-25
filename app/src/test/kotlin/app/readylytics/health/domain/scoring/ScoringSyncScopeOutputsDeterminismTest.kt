@@ -32,6 +32,7 @@ import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -44,6 +45,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.fail
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScoringSyncScopeOutputsDeterminismTest {
     private val zoneId: ZoneId = ZoneId.systemDefault()
     private val targetDate: LocalDate = LocalDate.of(2026, 2, 15)
