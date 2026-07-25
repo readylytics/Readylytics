@@ -133,6 +133,21 @@ class SqlCipherKeyManager
 
                 File("${dbFile.absolutePath}-wal").delete()
                 File("${dbFile.absolutePath}-shm").delete()
+
+                // TEMP DIAGNOSTIC: verify the migrated file is actually openable with the derived
+                // key before returning, to disambiguate export-time corruption from a later
+                // cross-call key mismatch. Remove once root cause is confirmed.
+                try {
+                    net.zetetic.database.sqlcipher.SQLiteDatabase
+                        .openOrCreateDatabase(dbFile, "x'$keyHex'", null, null, null)
+                        .use { verifyDb -> verifyDb.rawQuery("SELECT count(*) FROM sqlite_master", null).use { it.moveToFirst() } }
+                } catch (verifyError: Exception) {
+                    throw RuntimeException(
+                        "POST-MIGRATION VERIFY FAILED: dbFile.length=${dbFile.length()} " +
+                            "tempFile.exists=${tempFile.exists()} keyHexLen=${keyHex.length}",
+                        verifyError,
+                    )
+                }
             } catch (e: Exception) {
                 tempFile.delete()
                 throw RuntimeException("SQLCipher migration failed", e)
