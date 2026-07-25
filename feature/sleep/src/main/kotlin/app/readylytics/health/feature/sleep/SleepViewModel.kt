@@ -264,7 +264,9 @@ class SleepViewModel
                         // isSyncing is merged in after the heavy pipeline instead of inside it
                         // (mirrors DashboardViewModel.kt:104-113) so a sync toggle only triggers a
                         // cheap copy, not a full re-run of the trend-day-loop unpacking above.
-                        .combine(foregroundSyncController.isSyncing) { state, syncing -> state.copy(isLoading = syncing) }
+                        .combine(
+                            foregroundSyncController.isSyncing,
+                        ) { state, syncing -> state.copy(isLoading = syncing) }
                 }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
