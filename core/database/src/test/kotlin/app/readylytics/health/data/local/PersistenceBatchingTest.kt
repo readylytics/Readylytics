@@ -50,6 +50,7 @@ class PersistenceBatchingTest {
                     bodyFatRecordDao = recordingDao(events, "bodyFat"),
                     bloodPressureRecordDao = recordingDao(events, "bloodPressure"),
                     oxygenSaturationRecordDao = recordingDao(events, "oxygen"),
+                    stepRecordDao = recordingDao(events, "steps"),
                     dailySummaryDao = recordingDao(events, "summary"),
                     transactionRunner = transactionRunner,
                 )
@@ -65,6 +66,7 @@ class PersistenceBatchingTest {
                     bodyFatSamples = emptyList(),
                     bloodPressureSamples = emptyList(),
                     oxygenSaturationSamples = emptyList(),
+                    stepRecords = emptyList(),
                 ),
             )
 

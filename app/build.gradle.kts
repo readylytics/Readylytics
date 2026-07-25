@@ -217,7 +217,9 @@ listOf(
 }
 
 room {
-    schemaDirectory("$projectDir/schemas")
+    // HealthDatabase lives in :core:database; its exported schemas are the ones
+    // MigrationTestHelper needs as androidTest assets for tests in this module.
+    schemaDirectory(rootDir.resolve("core/database/schemas").path)
 }
 
 play {
@@ -373,6 +375,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test)
     androidTestImplementation(libs.play.services.stats)
     androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.benchmark.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
@@ -380,6 +383,7 @@ dependencies {
 tasks.withType<Test>().configureEach {
     jvmArgs("-Xshare:off")
     systemProperty("robolectric.coverage.enabled", "true")
+    systemProperty("update.golden", providers.systemProperty("update.golden").getOrElse("false"))
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
         excludes = listOf("jdk.internal.*")

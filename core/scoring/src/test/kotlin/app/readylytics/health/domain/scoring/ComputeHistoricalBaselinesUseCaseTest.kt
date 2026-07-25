@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.util.stdev
 import io.mockk.coEvery
@@ -28,11 +28,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
     private val loadScoringStrategy = mockk<LoadScoringStrategy>()
     private val useCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
 
-    private val zone: ZoneId = ZoneId.systemDefault()
-
-    private fun midnightMs(date: LocalDate): Long = date.atStartOfDay(zone).toInstant().toEpochMilli()
-
-    private fun fakeSummary(date: LocalDate): DailySummaryEntity = DailySummaryEntity(dateMidnightMs = midnightMs(date))
+    private fun fakeSummary(date: LocalDate): DailySummary = DailySummary(date = date)
 
     private fun fakeBaseline(
         mu: List<Float> = listOf(50f, 52f),
@@ -53,7 +49,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             val summaries = (0..4).map { fakeSummary(day1.plusDays(it.toLong())) }
 
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns
-                summaries.associate { it.dateMidnightMs to fakeBaseline() }
+                summaries.associate { it.date to fakeBaseline() }
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
             val result = useCase.computeHistoricalBaselines(summaries, UserPreferences())
@@ -67,7 +63,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             val summary = fakeSummary(LocalDate.of(2026, 1, 1))
             val percentileSlot = slot<Int>()
             coEvery { baselineComputer.computeBackfillBaselines(any(), capture(percentileSlot), any()) } returns
-                mapOf(summary.dateMidnightMs to fakeBaseline())
+                mapOf(summary.date to fakeBaseline())
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
             useCase.computeHistoricalBaselines(listOf(summary), UserPreferences(restingHrPercentile = 9))
@@ -81,7 +77,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             val summary = fakeSummary(LocalDate.of(2026, 1, 1))
 
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns
-                mapOf(summary.dateMidnightMs to fakeBaseline())
+                mapOf(summary.date to fakeBaseline())
 
             val capturedSigmaPrior = slot<Float>()
             every { loadScoringStrategy.hrvSigma(any(), capture(capturedSigmaPrior)) } returns 0.10f
@@ -100,7 +96,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
         runTest {
             val summary = fakeSummary(LocalDate.of(2026, 1, 1))
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns
-                mapOf(summary.dateMidnightMs to fakeBaseline(mu = listOf(48f, 49f, 51f), rhr = 57f))
+                mapOf(summary.date to fakeBaseline(mu = listOf(48f, 49f, 51f), rhr = 57f))
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
             val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
@@ -115,7 +111,7 @@ class ComputeHistoricalBaselinesUseCaseTest {
             val summary = fakeSummary(LocalDate.of(2026, 1, 1))
             val rhrHistory = listOf(52, 54, 56, 58)
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns
-                mapOf(summary.dateMidnightMs to fakeBaseline(rhrHistory = rhrHistory))
+                mapOf(summary.date to fakeBaseline(rhrHistory = rhrHistory))
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
             val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
@@ -130,25 +126,25 @@ class ComputeHistoricalBaselinesUseCaseTest {
             val noData = fakeSummary(LocalDate.of(2026, 1, 2))
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns
                 mapOf(
-                    withData.dateMidnightMs to fakeBaseline(),
-                    noData.dateMidnightMs to fakeBaseline(mu = emptyList(), sigma = emptyList()),
+                    withData.date to fakeBaseline(),
+                    noData.date to fakeBaseline(mu = emptyList(), sigma = emptyList()),
                 )
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
             val result = useCase.computeHistoricalBaselines(listOf(withData, noData), UserPreferences())
 
             assertEquals(1, result.size)
-            assertEquals(withData.dateMidnightMs, result.first().dateMidnightMs)
+            assertEquals(withData.date, result.first().date)
         }
 
     @Test
     fun `already-frozen summaries are not pre-skipped by the use case`() =
         runTest {
             val date = LocalDate.of(2026, 1, 1)
-            val frozen = DailySummaryEntity(dateMidnightMs = midnightMs(date), baselineCalculatedAtDate = date)
+            val frozen = DailySummary(date = date, baselineCalculatedAtDate = date)
 
             coEvery { baselineComputer.computeBackfillBaselines(any(), any(), any()) } returns
-                mapOf(frozen.dateMidnightMs to fakeBaseline())
+                mapOf(frozen.date to fakeBaseline())
             every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
             val result = useCase.computeHistoricalBaselines(listOf(frozen), UserPreferences())

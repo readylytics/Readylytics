@@ -9,6 +9,16 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.ui.scaffold.ThemeViewModel
 import app.readylytics.health.core.designsystem.FitDashboardTheme as CoreFitDashboardTheme
 
+/**
+ * Material 3 theme for startup states that must render before Room can open.
+ *
+ * Keep this wrapper free of injected dependencies: [ThemeViewModel] is indirectly Room-backed.
+ */
+@Composable
+fun DatabaseReadinessTheme(content: @Composable () -> Unit) {
+    CoreFitDashboardTheme(content = content)
+}
+
 @Composable
 fun FitDashboardTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,

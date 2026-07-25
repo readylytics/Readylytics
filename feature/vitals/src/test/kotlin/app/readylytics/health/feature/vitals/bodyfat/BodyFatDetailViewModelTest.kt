@@ -2,13 +2,13 @@ package app.readylytics.health.feature.vitals.bodyfat
 
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.local.entity.BodyFatRecordEntity
-import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.BodyFatRecord
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.WeightRecord
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.WeightRepository
@@ -29,7 +29,22 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
+
+private fun BodyFatRecordEntity(
+    id: String,
+    timestampMs: Long,
+    bodyFatPercent: Float,
+    deviceName: String? = null,
+): BodyFatRecord = BodyFatRecord(id, Instant.ofEpochMilli(timestampMs), bodyFatPercent, deviceName)
+
+private fun WeightRecordEntity(
+    id: String,
+    timestampMs: Long,
+    weightKg: Float,
+    deviceName: String? = null,
+): WeightRecord = WeightRecord(id, Instant.ofEpochMilli(timestampMs), weightKg, deviceName)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BodyFatDetailViewModelTest {

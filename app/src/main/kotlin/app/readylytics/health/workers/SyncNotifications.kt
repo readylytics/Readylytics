@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import app.readylytics.health.R
+import app.readylytics.health.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.domain.migration.fraction
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.domain.sync.ResyncPhase
 import app.readylytics.health.domain.sync.fraction
@@ -21,6 +23,9 @@ object SyncNotifications {
 
     const val BACKGROUND_SYNC_CHANNEL_ID = "background_sync"
     const val BACKGROUND_SYNC_NOTIFICATION_ID = 4012
+
+    const val DATABASE_MIGRATION_CHANNEL_ID = "database_migration"
+    const val DATABASE_MIGRATION_NOTIFICATION_ID = 4013
 
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
@@ -52,6 +57,53 @@ object SyncNotifications {
                 }
             manager.createNotificationChannel(channel)
         }
+    }
+
+    fun ensureDatabaseMigrationChannel(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        if (manager.getNotificationChannel(DATABASE_MIGRATION_CHANNEL_ID) == null) {
+            val channel =
+                NotificationChannel(
+                    DATABASE_MIGRATION_CHANNEL_ID,
+                    context.getString(R.string.database_migration_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
+                    description = context.getString(R.string.database_migration_channel_description)
+                    setShowBadge(false)
+                }
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    fun buildDatabaseMigrationNotification(
+        context: Context,
+        progress: DatabaseMigrationProgress,
+    ): Notification {
+        val determinate = progress.totalRows > 0L
+        val text =
+            if (determinate) {
+                context.resources.getQuantityString(
+                    R.plurals.database_migration_progress,
+                    progress.totalRows.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                    progress.copiedRows,
+                    progress.totalRows,
+                )
+            } else {
+                context.getString(R.string.database_migration_description)
+            }
+        return NotificationCompat
+            .Builder(context, DATABASE_MIGRATION_CHANNEL_ID)
+            .setContentTitle(context.getString(R.string.database_migration_title))
+            .setContentText(text)
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setProgress(
+                100,
+                (progress.fraction() * 100).roundToInt(),
+                !determinate,
+            ).setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
     }
 
     fun buildBackgroundSyncNotification(context: Context): Notification =

@@ -166,6 +166,8 @@ class SettingsReopenAfterSetupFlowTest {
         private val healthDataRefresh =
             object : HealthDataRefresh {
                 override suspend fun refreshAffectedWindow() = Unit
+
+                override suspend fun refreshHistorical() = Unit
             }
 
         fun seedProfile(

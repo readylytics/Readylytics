@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -157,7 +158,9 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
 
-            assertTrue(content.contains("Encrypted log 5"))
+            for (i in 1..5) {
+                assertTrue(content.contains("Encrypted log $i"))
+            }
             assertTrue("Encrypted write should delegate to helper", secureFileStore.writeCalls.isNotEmpty())
             assertEquals("prod_logs.txt", secureFileStore.writeCalls.last())
             assertTrue("Encrypted read should delegate to helper", secureFileStore.readCalls.contains("prod_logs.txt"))
@@ -213,11 +216,13 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
 
-            assertTrue(content.contains("Fresh log 5"))
+            for (i in 1..5) {
+                assertTrue(content.contains("Fresh log $i"))
+            }
             assertTrue(!content.contains("legacy-garbage"))
             assertTrue(
                 "Unreadable content should be replaced with new readable data",
-                secureFileStore.readableContentFor(legacyFile).contains("Fresh log 1"),
+                secureFileStore.readableContentFor(legacyFile).contains("Fresh log 5"),
             )
         }
 
@@ -351,6 +356,47 @@ class SecureFileLogSinkTest {
 
             assertTrue(content.contains("Log 20"))
             assertTrue(totalBytes <= 160L)
+        }
+
+    @Test
+    fun testLogSanitization() {
+        val original = "User HR is 120 bpm, HRV 45.2, BP 120/80"
+        val sanitized = SecureFileLogSink.sanitizeLogMessage(original)
+
+        assertFalse("Should redact heart rate", sanitized.contains("120"))
+        assertFalse("Should redact HRV", sanitized.contains("45.2"))
+        assertTrue("Should contain redaction markers", sanitized.contains("***"))
+    }
+
+    @Test
+    fun testLogSanitizationHandlesSeparatorVariants() {
+        val original = "HR=120, HR:118, BPM 150"
+        val sanitized = SecureFileLogSink.sanitizeLogMessage(original)
+
+        assertFalse("Should redact HR=120", sanitized.contains("120"))
+        assertFalse("Should redact HR:118", sanitized.contains("118"))
+        assertFalse("Should redact BPM 150", sanitized.contains("150"))
+    }
+
+    @Test
+    fun testStackTraceRedactsHealthMetrics() =
+        runBlocking {
+            val secureFileStore = FakeSecureFileStore()
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10000L,
+                    maxBackups = 2,
+                    encryptStreams = true,
+                    coroutineContext = Dispatchers.Unconfined,
+                    secureFileStore = secureFileStore,
+                )
+
+            val exception = RuntimeException("Invalid reading: HR is 245")
+            sink.log(LogLevel.ERROR, "ErrorTag", "Validation failed", exception, LogContext("session-1"))
+
+            val content = sink.readLogsDecrypted()
+            assertFalse("Stack trace text should be redacted too", content.contains("245"))
         }
 
     private class FakeSecureFileStore : SecureFileStore {

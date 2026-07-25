@@ -6,7 +6,10 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.data.local.RetentionCleanup
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.util.RetentionBounds
+import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -18,16 +21,21 @@ class DataCleanupWorker
     constructor(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
-        private val retentionCleanup: RetentionCleanup,
+        private val retentionCleanup: Lazy<RetentionCleanup>,
         private val settingsRepo: SettingsRepository,
+        private val databaseReadinessGate: DatabaseReadinessInspector,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
+                return Result.retry()
+            }
+            val cleanup = retentionCleanup.get()
             return try {
                 val prefs = settingsRepo.userPreferences.first()
                 // Null cutoff means retention is disabled ("unlimited") — keep everything.
                 val cutoffMs = RetentionBounds.resolveRetentionCutoffMs(prefs) ?: return Result.success()
 
-                retentionCleanup.deleteBefore(cutoffMs)
+                cleanup.deleteBefore(cutoffMs)
 
                 Result.success()
             } catch (e: CancellationException) {

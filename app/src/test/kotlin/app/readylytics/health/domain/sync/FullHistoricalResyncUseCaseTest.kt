@@ -56,6 +56,24 @@ class FullHistoricalResyncUseCaseTest {
         }
 
     @Test
+    fun `recomputeOnly delegates to recomputeRange instead of resyncRange`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(UserPreferences(retentionDaysEnabled = true, retentionDays = 365))
+            val startSlot = slot<LocalDate>()
+            val endSlot = slot<LocalDate>()
+            coEvery {
+                healthSyncUseCase.recomputeRange(capture(startSlot), capture(endSlot), any())
+            } returns Result.success(Unit)
+
+            useCase.execute(recomputeOnly = true)
+
+            assertEquals(today.minusDays(365), startSlot.captured)
+            assertEquals(today, endSlot.captured)
+            coVerify(exactly = 0) { healthSyncUseCase.resyncRange(any(), any(), any(), any()) }
+        }
+
+    @Test
     fun `delegates failure from the underlying resync`() =
         runTest {
             every { settingsRepo.userPreferences } returns

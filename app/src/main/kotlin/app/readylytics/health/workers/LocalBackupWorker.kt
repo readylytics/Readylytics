@@ -6,8 +6,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import app.readylytics.health.data.backup.LocalBackupManager
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
+import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.io.IOException
@@ -19,10 +22,14 @@ class LocalBackupWorker
     constructor(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
-        private val localBackupManager: LocalBackupManager,
+        private val localBackupManager: Lazy<LocalBackupManager>,
+        private val databaseReadinessGate: DatabaseReadinessInspector,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            val result = localBackupManager.createBackup()
+            if (databaseReadinessGate.inspect() != DatabaseReadiness.Ready) {
+                return Result.retry()
+            }
+            val result = localBackupManager.get().createBackup()
             return when {
                 result.isSuccess -> {
                     logD(TAG) { "Local backup created successfully" }

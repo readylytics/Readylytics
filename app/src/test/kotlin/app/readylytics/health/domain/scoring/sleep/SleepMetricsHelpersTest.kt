@@ -5,8 +5,7 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import io.mockk.coEvery
@@ -18,6 +17,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import app.readylytics.health.domain.model.HeartRateRecord as HeartRateRecordEntity
+import app.readylytics.health.domain.model.SleepSession as SleepSessionEntity
 
 private const val DELTA = 0.5f
 
@@ -110,7 +111,7 @@ class SleepPercentileRhrCalculatorTest {
                 listOf(
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
-                )
+                ).map(SleepSessionMapper::toEntity)
             coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns
                 listOf(
                     SleepHrSample(sessionId = "1", beatsPerMinute = 55),
@@ -131,7 +132,8 @@ class SleepPercentileRhrCalculatorTest {
             val session = mockSession(id = "1")
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
-            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(session)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns
+                listOf(session).map(SleepSessionMapper::toEntity)
             coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
 
             val result = collector.collect(session, dayMidnight)
@@ -151,7 +153,7 @@ class SleepPercentileRhrCalculatorTest {
                 listOf(
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
-                )
+                ).map(SleepSessionMapper::toEntity)
             coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns
                 listOf(
                     SleepHrSample(sessionId = "2", beatsPerMinute = 50),
@@ -169,7 +171,8 @@ class SleepPercentileRhrCalculatorTest {
             val session = mockSession(id = "1", endTime = 10000L)
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
-            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(session)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns
+                listOf(session).map(SleepSessionMapper::toEntity)
 
             // Provide 10 heart rate records for the current window: bpm values from 50 to 59
             val records =
@@ -207,7 +210,8 @@ class SleepPercentileRhrCalculatorTest {
             val targetHrSamples = (50..59).map { SleepHrSample(sessionId = "target", beatsPerMinute = it) }
 
             // Minimal DB: only target session
-            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(session)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns
+                listOf(session).map(SleepSessionMapper::toEntity)
             coEvery { heartRateDao.getSleepHrProjectionForSessions(listOf("target")) } returns targetHrSamples
 
             val resultMinimal = collector.collect(session, dayMidnight)
@@ -218,7 +222,8 @@ class SleepPercentileRhrCalculatorTest {
                 extraSessions.flatMap { s ->
                     (70..79).map { SleepHrSample(sessionId = s.id, beatsPerMinute = it) }
                 }
-            coEvery { sleepSessionDao.getBetween(any(), any()) } returns (extraSessions + session)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns
+                (extraSessions + session).map(SleepSessionMapper::toEntity)
             coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns (targetHrSamples + extraHrSamples)
 
             val resultFull = collector.collect(session, dayMidnight)

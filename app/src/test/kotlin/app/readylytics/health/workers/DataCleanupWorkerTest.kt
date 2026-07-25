@@ -6,11 +6,15 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.data.local.RetentionCleanup
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.preferences.UserPreferences
+import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -24,6 +28,8 @@ class DataCleanupWorkerTest {
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val retentionCleanup = mockk<RetentionCleanup>(relaxed = true)
+    private val retentionCleanupLazy = mockk<Lazy<RetentionCleanup>>()
+    private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
     private val settingsRepo = mockk<SettingsRepository>()
 
     @Before
@@ -31,6 +37,8 @@ class DataCleanupWorkerTest {
         context = ApplicationProvider.getApplicationContext()
         workerParams = mockk(relaxed = true)
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
+        every { retentionCleanupLazy.get() } returns retentionCleanup
+        every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
     }
 
     @Test
@@ -39,7 +47,7 @@ class DataCleanupWorkerTest {
             val prefs = UserPreferences(retentionDaysEnabled = true, retentionDays = 30)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
 
-            val worker = DataCleanupWorker(context, workerParams, retentionCleanup, settingsRepo)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
@@ -52,7 +60,7 @@ class DataCleanupWorkerTest {
             val prefs = UserPreferences(retentionDaysEnabled = false)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
 
-            val worker = DataCleanupWorker(context, workerParams, retentionCleanup, settingsRepo)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
@@ -66,9 +74,29 @@ class DataCleanupWorkerTest {
             every { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { retentionCleanup.deleteBefore(any()) } throws RuntimeException("Database error")
 
-            val worker = DataCleanupWorker(context, workerParams, retentionCleanup, settingsRepo)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.failure(), result)
         }
+
+    @Test
+    fun `doWork retries without resolving Room dependency when database is not ready`() =
+        runBlocking {
+            every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Failed("locked")
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(exactly = 0) { retentionCleanupLazy.get() }
+        }
+
+    private fun createWorker() =
+        DataCleanupWorker(
+            context = context,
+            params = workerParams,
+            retentionCleanup = retentionCleanupLazy,
+            settingsRepo = settingsRepo,
+            databaseReadinessGate = databaseReadinessGate,
+        )
 }

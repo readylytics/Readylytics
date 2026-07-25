@@ -59,7 +59,8 @@ class HeartRateZonesViewModel
                     if (value != null && isValid) {
                         viewModelScope.launch {
                             heartRateZoneSettings.updateMaxHeartRate(bpm = value)
-                            healthDataRefresh.refreshAffectedWindow()
+                            // hrMax is historical-scope (SCORE-007): feeds every persisted day's TRIMP.
+                            healthDataRefresh.refreshHistorical()
                         }
                     }
                 }
@@ -85,7 +86,9 @@ class HeartRateZonesViewModel
                             z3Max = event.z3Max,
                             z4Max = event.z4Max,
                         )
-                        healthDataRefresh.refreshAffectedWindow()
+                        // HR zones are historical-scope (SCORE-007): feed every persisted day's
+                        // zone-weighted TRIMP and the reconcile pass's zone thresholds.
+                        healthDataRefresh.refreshHistorical()
                     }
                 }
                 is SettingsEvent.ZoneBpmsChanged -> {
@@ -97,7 +100,7 @@ class HeartRateZonesViewModel
                             z3Max = event.z3Max,
                             z4Max = event.z4Max,
                         )
-                        healthDataRefresh.refreshAffectedWindow()
+                        healthDataRefresh.refreshHistorical()
                     }
                 }
                 else -> {}

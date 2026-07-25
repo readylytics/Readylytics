@@ -7,6 +7,7 @@ import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import io.mockk.coEvery
 import io.mockk.every
@@ -145,7 +146,11 @@ class BaselineComputerBackfillEquivalenceTest {
             val dayIndices = listOf(0, 1, 3, 7, 8, 15, 30, 40, 56, 59)
             val summaries = dayIndices.map { DailySummaryEntity(dateMidnightMs = dayStartMs(it)) }
 
-            val batched = baselineComputer.computeBackfillBaselines(summaries, percentile)
+            val batched =
+                baselineComputer.computeBackfillBaselines(
+                    summaries.map { DailySummaryMapper.toDomain(it, zone) },
+                    percentile,
+                )
 
             for (summary in summaries) {
                 val dayMidnightMs = summary.dateMidnightMs
@@ -165,7 +170,16 @@ class BaselineComputerBackfillEquivalenceTest {
                     )
                 val expectedRhr =
                     baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
-                val actual = batched[dayMidnightMs]
+                val actual =
+                    batched[
+                        summary.dateMidnightMs.let {
+                            java.time.Instant
+                                .ofEpochMilli(
+                                    it,
+                                ).atZone(zone)
+                                .toLocalDate()
+                        },
+                    ]
                 requireNotNull(actual) { "missing batched result for day $dayMidnightMs" }
 
                 assertEquals(
@@ -187,7 +201,11 @@ class BaselineComputerBackfillEquivalenceTest {
             sessions.clear()
             val summaries = listOf(0, 5, 10).map { DailySummaryEntity(dateMidnightMs = dayStartMs(it)) }
 
-            val batched = baselineComputer.computeBackfillBaselines(summaries, percentile)
+            val batched =
+                baselineComputer.computeBackfillBaselines(
+                    summaries.map { DailySummaryMapper.toDomain(it, zone) },
+                    percentile,
+                )
 
             assertEquals(3, batched.size)
             batched.values.forEach {

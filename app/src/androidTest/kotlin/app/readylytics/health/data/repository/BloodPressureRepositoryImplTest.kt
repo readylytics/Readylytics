@@ -16,6 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class BloodPressureRepositoryImplTest {
@@ -273,7 +274,7 @@ class BloodPressureRepositoryImplTest {
             assertEquals(118, result.systolicMmHg)
             assertEquals(76, result.diastolicMmHg)
             assertEquals("WristBand", result.deviceName)
-            assertEquals(day1Mid, result.timestampMs)
+            assertEquals(Instant.ofEpochMilli(day1Mid), result.time)
         }
 
     // ---- ordering ----

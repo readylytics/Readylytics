@@ -8,6 +8,7 @@ import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
@@ -87,51 +88,54 @@ fun createDashboardBasicInputsFlow(
     circadianRepository: CircadianConsistencyRepository,
     insightDismissalRepository: InsightDismissalRepository,
 ): Flow<DashboardBasicInputs> =
-    selectedDate.flatMapLatest { date ->
-        val zoneId = ZoneId.systemDefault()
-        val today = LocalDate.now(zoneId)
+    combine(selectedDate, settingsRepository.userPreferences) { date, prefs -> date to prefs }
+        .flatMapLatest { (date, prefs) ->
+            // Every date-range query below must key off the same scoring-zone midnight that
+            // DailySummaryEntity.dateMidnightMs is written with, not the device zone, or the
+            // summary/RAS/dismissal lookups can silently miss or hit the wrong day.
+            val zoneId = prefs.scoringZone()
+            val today = LocalDate.now(zoneId)
 
-        // Select appropriate summary flow based on whether date is today or historical
-        val summaryFlow =
-            if (date == today) {
-                val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
-            } else {
-                val midnightMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                dailySummaryRepository.observeByDate(midnightMs)
+            // Select appropriate summary flow based on whether date is today or historical
+            val summaryFlow =
+                if (date == today) {
+                    val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
+                } else {
+                    val midnightMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    dailySummaryRepository.observeByDate(midnightMs)
+                }
+
+            // RAS breakdown is always 7-day window
+            val rasFromMs =
+                date
+                    .minusDays(6)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
+
+            val dismissalFlow =
+                insightDismissalRepository
+                    .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
+
+            // Combine all basic inputs
+            combine(
+                summaryFlow,
+                circadianRepository.resultFor(date),
+                rasBreakdownFlow,
+                dismissalFlow,
+            ) { summary, circadian, rasSummaries, dismissed ->
+                DashboardBasicInputs(
+                    selectedDate = date,
+                    summary = summary,
+                    userPreferences = prefs,
+                    circadianResult = circadian,
+                    rasSummaries = rasSummaries,
+                    dismissedInsightTypes = dismissed,
+                )
             }
-
-        // RAS breakdown is always 7-day window
-        val rasFromMs =
-            date
-                .minusDays(6)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
-        val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
-
-        val dismissalFlow =
-            insightDismissalRepository
-                .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
-
-        // Combine all basic inputs
-        combine(
-            summaryFlow,
-            settingsRepository.userPreferences,
-            circadianRepository.resultFor(date),
-            rasBreakdownFlow,
-            dismissalFlow,
-        ) { summary, prefs, circadian, rasSummaries, dismissed ->
-            DashboardBasicInputs(
-                selectedDate = date,
-                summary = summary,
-                userPreferences = prefs,
-                circadianResult = circadian,
-                rasSummaries = rasSummaries,
-                dismissedInsightTypes = dismissed,
-            )
         }
-    }
 
 /**
  * Creates the card state flow.
@@ -207,33 +211,18 @@ fun createDashboardHrFlow(
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
-            if (entities.isEmpty()) return@map null
-            // entities already sorted ASC by the DAO query; single pass for stats
-            var minBpm = Int.MAX_VALUE
-            var maxBpm = Int.MIN_VALUE
-            var sumBpm = 0
-            for (entity in entities) {
-                val bpm = entity.beatsPerMinute
-                if (bpm < minBpm) minBpm = bpm
-                if (bpm > maxBpm) maxBpm = bpm
-                sumBpm += bpm
+        // PERF-005/WP-23: SQL-aggregated min/max/avg instead of observing every raw row -- a
+        // 5,000-row ingest batch invalidating this Flow re-runs a cheap single-row aggregate
+        // instead of re-materializing and re-mapping the whole day.
+        heartRateRepository.observeAggregateByTimeRange(startMs, endMs).map { aggregate ->
+            aggregate?.let {
+                HeartRateDaySummary(
+                    minBpm = it.minBpm,
+                    maxBpm = it.maxBpm,
+                    // toInt() truncates toward zero, matching the previous sumBpm/entities.size
+                    // integer division exactly (both truncate the same sum/count quotient).
+                    avgBpm = it.avgBpm.toInt(),
+                )
             }
-            val hourlyMap =
-                entities.groupBy { entity ->
-                    ((entity.timestampMs - startMs) / 60_000L).toInt() / 60
-                }
-            val hourly =
-                (0..23).mapNotNull { hour ->
-                    hourlyMap[hour]?.let { group ->
-                        hour to group.sumOf { it.beatsPerMinute } / group.size
-                    }
-                }
-            HeartRateDaySummary(
-                minBpm = minBpm,
-                maxBpm = maxBpm,
-                avgBpm = sumBpm / entities.size,
-                hourlySamples = hourly,
-            )
         }
     }
