@@ -117,6 +117,9 @@ class SqlCipherKeyManager
                 val keyHex = rawKey.toHex()
                 // Use the standard SQLCipher syntax for raw keys: ATTACH ... KEY x'hex'
                 db.rawExecSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY x'$keyHex'")
+                // Force rollback journaling on the attached copy so sqlcipher_export's writes land
+                // directly in tempFile instead of a WAL side-file that DETACH won't checkpoint away.
+                db.rawExecSQL("PRAGMA encrypted.journal_mode = DELETE")
                 db.rawExecSQL("SELECT sqlcipher_export('encrypted')")
                 db.rawExecSQL("DETACH DATABASE encrypted")
                 db.close()
@@ -159,6 +162,9 @@ class SqlCipherKeyManager
                         null,
                     )
                 db.rawExecSQL("ATTACH DATABASE '${destFile.absolutePath}' AS plaintext KEY ''")
+                // Force rollback journaling on the attached copy so sqlcipher_export's writes land
+                // directly in destFile instead of a WAL side-file that DETACH won't checkpoint away.
+                db.rawExecSQL("PRAGMA plaintext.journal_mode = DELETE")
                 db.rawExecSQL("SELECT sqlcipher_export('plaintext')")
                 db.rawExecSQL("DETACH DATABASE plaintext")
                 db.close()
