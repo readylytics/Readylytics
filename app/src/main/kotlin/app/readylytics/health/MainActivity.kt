@@ -26,6 +26,7 @@ import app.readylytics.health.ui.migration.DatabaseMigrationScreen
 import app.readylytics.health.ui.navigation.AppNavHost
 import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
+import app.readylytics.health.ui.theme.DatabaseReadinessTheme
 import app.readylytics.health.ui.theme.FitDashboardTheme
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
@@ -63,7 +64,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(readiness) {
                         databaseMigrationController.startOrResume()
                     }
-                    FitDashboardTheme {
+                    DatabaseReadinessTheme {
                         DatabaseMigrationScreen(
                             readiness = readiness,
                             progress = migrationState.progress,
@@ -74,7 +75,7 @@ class MainActivity : ComponentActivity() {
                 is DatabaseReadiness.InsufficientSpace,
                 is DatabaseReadiness.Failed,
                 -> {
-                    FitDashboardTheme {
+                    DatabaseReadinessTheme {
                         DatabaseMigrationScreen(
                             readiness = readiness,
                             progress = migrationState.progress,
