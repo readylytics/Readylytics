@@ -206,7 +206,9 @@ listOf(
 }
 
 room {
-    schemaDirectory("$projectDir/schemas")
+    // HealthDatabase lives in :core:database; its exported schemas are the ones
+    // MigrationTestHelper needs as androidTest assets for tests in this module.
+    schemaDirectory(rootDir.resolve("core/database/schemas").path)
 }
 
 play {

@@ -29,7 +29,13 @@ test_status=0
 while [ "${attempt}" -le "${max_attempts}" ]; do
     echo "==> Attempt ${attempt}/${max_attempts}..."
     test_status=0
-    timeout --signal=TERM --kill-after=30s 15m ./gradlew connectedDebugAndroidTest -x :benchmark:connectedDebugAndroidTest --stacktrace --console=plain || test_status=$?
+    # ScoringWalkForwardBenchmark (androidx.benchmark-junit4, in-process) hard-fails on CI's
+    # debuggable/emulator runner unless these known-inapplicable environment checks are
+    # suppressed; the benchmark still executes and asserts correctness, just without
+    # trustworthy timing numbers on this runner.
+    timeout --signal=TERM --kill-after=30s 15m ./gradlew connectedDebugAndroidTest -x :benchmark:connectedDebugAndroidTest \
+        -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=ACTIVITY-MISSING,DEBUGGABLE,EMULATOR \
+        --stacktrace --console=plain || test_status=$?
 
     echo "==> Attempt ${attempt} finished with exit code: ${test_status}"
 

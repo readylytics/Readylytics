@@ -298,8 +298,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             block()
         } catch (_: SecurityException) {
             emptyList()
-        } catch (_: Exception) {
-            emptyList()
         }
 
     private fun inRange(

@@ -11,7 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import app.readylytics.health.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.V7MigrationPhase
-import app.readylytics.health.ui.theme.FitDashboardTheme
+import app.readylytics.health.ui.theme.DatabaseReadinessTheme
 import org.junit.Rule
 import org.junit.Test
 
@@ -79,7 +79,7 @@ class DatabaseMigrationScreenTest {
         progress: DatabaseMigrationProgress? = null,
     ) {
         composeRule.setContent {
-            FitDashboardTheme {
+            DatabaseReadinessTheme {
                 DatabaseMigrationScreen(
                     readiness = readiness,
                     progress = progress,
