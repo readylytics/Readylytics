@@ -26,12 +26,14 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -55,6 +57,7 @@ class SleepViewModelTest {
     private val selectedSummaryFlow = MutableStateFlow<DailySummary?>(null)
     private val selectedMetricsFlow = MutableStateFlow<DailyMetrics?>(null)
     private val yesterdaySummaryFlow = MutableStateFlow<DailySummary?>(null)
+    private val isSyncingFlow = MutableStateFlow(false)
     private lateinit var viewModel: SleepViewModel
 
     @Before
@@ -64,7 +67,7 @@ class SleepViewModelTest {
         every { selectedDateRepository.selectedDate } returns selectedDateFlow
         every { selectedDateRepository.earliestDate } returns MutableStateFlow(null)
         every { circadianRepo.resultFor(any()) } returns flowOf(CircadianConsistencyResult.Calibrating)
-        every { foregroundSyncController.isSyncing } returns MutableStateFlow(false)
+        every { foregroundSyncController.isSyncing } returns isSyncingFlow
         every { dailyMetricsRepository.observeByDate(any()) } returns selectedMetricsFlow
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
@@ -310,5 +313,32 @@ class SleepViewModelTest {
                         it.yesterdaySleepScoreRounded == 81
                 }
             assertEquals(81, state.yesterdaySleepScoreRounded)
+        }
+
+    @Test
+    fun `isSyncing toggle does not recompute content, only isLoading changes`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val stateBeforeToggle = viewModel.uiState.value
+            assertEquals(false, stateBeforeToggle.isLoading)
+
+            isSyncingFlow.value = true
+            testDispatcher.scheduler.advanceUntilIdle()
+            val stateSyncing = viewModel.uiState.value
+            assertEquals(true, stateSyncing.isLoading)
+            // Only isLoading should differ -- the content (trend lists etc.) must be the exact
+            // same object, proving the sync toggle did not re-run the heavy day-loop unpacking.
+            assertSame(stateBeforeToggle.trendStartOffsetPoints, stateSyncing.trendStartOffsetPoints)
+
+            isSyncingFlow.value = false
+            testDispatcher.scheduler.advanceUntilIdle()
+            val stateAfterToggle = viewModel.uiState.value
+            assertEquals(false, stateAfterToggle.isLoading)
+            assertSame(stateBeforeToggle.trendStartOffsetPoints, stateAfterToggle.trendStartOffsetPoints)
+
+            collectJob.cancelAndJoin()
         }
 }
