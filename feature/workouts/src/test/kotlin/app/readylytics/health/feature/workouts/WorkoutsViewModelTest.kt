@@ -603,4 +603,39 @@ class WorkoutsViewModelTest {
 
             collectJob.cancel()
         }
+
+    @Test
+    fun `heart-rate samples are batched, not fetched once per workout`() =
+        runTest(testDispatcher) {
+            // 5 close-together workouts must collapse into a single getByTimeRange call
+            // (F10) instead of one query per workout.
+            val dummyWorkouts =
+                (1..5).map { id ->
+                    WorkoutData(
+                        id = id.toString(),
+                        startTime = System.currentTimeMillis() - (id * 1000 * 60),
+                        endTime = System.currentTimeMillis() - (id * 1000 * 60) + 1000 * 30,
+                        exerciseType = "running",
+                        durationMinutes = 30,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 50f,
+                        avgHr = 130f,
+                    )
+                }
+            workoutsFlow.value = dummyWorkouts
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            viewModel.uiState.first { it.recentWorkouts.size == 5 }
+
+            coVerify(exactly = 1) { heartRateRepository.getByTimeRange(any(), any()) }
+
+            collectJob.cancel()
+        }
 }
