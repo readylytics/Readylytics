@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -296,6 +297,7 @@ fun VitalsScreen(
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(CoreUiR.string.label_hrv),
                             baselineUnit = stringResource(app.readylytics.health.core.ui.R.string.unit_ms),
+                            modifier = Modifier.testTag("HrvTrendChart"),
                             baseline = baselineHrv,
                             showBaseline = !isCalibrating,
                             scrollState = chartScrollState,
@@ -333,6 +335,7 @@ fun VitalsScreen(
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(CoreUiR.string.label_rhr),
                             baselineUnit = "bpm",
+                            modifier = Modifier.testTag("RestingHeartRateTrendChart"),
                             baseline = baselineRhr?.toFloat(),
                             showBaseline = !isCalibrating,
                             scrollState = chartScrollState,
@@ -369,6 +372,7 @@ fun VitalsScreen(
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(CoreUiR.string.label_spo2),
                             baselineUnit = "%",
+                            modifier = Modifier.testTag("OxygenSaturationTrendChart"),
                             baseline = 95f,
                             baselineLabel = stringResource(CoreUiR.string.label_normal_limit),
                             showBaseline = true,
