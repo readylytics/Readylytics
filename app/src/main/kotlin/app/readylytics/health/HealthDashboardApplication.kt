@@ -10,6 +10,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import app.readylytics.health.BuildConfig
+import app.readylytics.health.benchmark.BenchmarkDataSeeder
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
@@ -26,6 +27,7 @@ import app.readylytics.health.workers.WorkerScheduler
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -93,6 +95,9 @@ class HealthDashboardApplication :
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
         appScope.launch {
             startupCoordinator.observe(databaseMigrationController.state)
+        }
+        appScope.launch(Dispatchers.IO) {
+            BenchmarkDataSeeder.seedIfNeeded(this@HealthDashboardApplication)
         }
     }
 
