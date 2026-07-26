@@ -6,7 +6,6 @@ import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
-import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
@@ -23,6 +22,14 @@ private const val JOURNEY_ITERATIONS = 10
 private const val HRV_CHART_TAG = "HrvTrendChart"
 private const val THIRTY_DAY_RANGE_LABEL = "30D"
 
+// Magic string must match R.string.message_no_data_available (core/ui module).
+// TrendChart's EmptyChartPlaceholder branch forwards the SAME modifier (and
+// therefore the SAME testTag) as the real chart content, so a hasObject(By.res(...))
+// wait alone cannot tell a rendered chart apart from the "no data" placeholder --
+// e.g. if BenchmarkDataSeeder failed to seed. Waiting for this text's absence
+// closes that gap.
+private const val NO_DATA_TEXT = "No data available"
+
 @RunWith(AndroidJUnit4::class)
 class ScrollBenchmark {
     @get:Rule
@@ -36,7 +43,7 @@ class ScrollBenchmark {
             iterations = JOURNEY_ITERATIONS,
             setupBlock = {
                 startActivityAndWait()
-                navigateToVitals(device)
+                navigateToVitals()
             },
             measureBlock = {
                 val scrollable =
@@ -59,16 +66,22 @@ class ScrollBenchmark {
             iterations = JOURNEY_ITERATIONS,
             setupBlock = {
                 startActivityAndWait()
-                navigateToVitals(device)
+                navigateToVitals()
                 device
                     .findObject(By.text(THIRTY_DAY_RANGE_LABEL))
                     ?.click()
                     ?: error("30D range selector not found")
-                device.wait(Until.hasObject(By.res(PACKAGE_NAME, HRV_CHART_TAG)), WAIT_TIMEOUT_MS)
+                check(device.wait(Until.hasObject(By.res(HRV_CHART_TAG)), WAIT_TIMEOUT_MS)) {
+                    "HRV chart not found after selecting $THIRTY_DAY_RANGE_LABEL range"
+                }
+                check(device.wait(Until.gone(By.text(NO_DATA_TEXT)), WAIT_TIMEOUT_MS)) {
+                    "HRV chart still showing empty-state placeholder after selecting " +
+                        "$THIRTY_DAY_RANGE_LABEL range (seeding may have failed)"
+                }
             },
             measureBlock = {
                 val chart =
-                    device.findObject(By.res(PACKAGE_NAME, HRV_CHART_TAG))
+                    device.findObject(By.res(HRV_CHART_TAG))
                         ?: error("HRV chart not found")
                 val bounds = chart.visibleBounds
                 val centerY = bounds.centerY()
@@ -94,7 +107,13 @@ class ScrollBenchmark {
                 repeat(3) {
                     device.findObject(By.text("Vitals"))?.click()
                         ?: error("Vitals nav item not found")
-                    device.wait(Until.hasObject(By.res(PACKAGE_NAME, HRV_CHART_TAG)), WAIT_TIMEOUT_MS)
+                    check(device.wait(Until.hasObject(By.res(HRV_CHART_TAG)), WAIT_TIMEOUT_MS)) {
+                        "HRV chart not found after switching to Vitals tab"
+                    }
+                    check(device.wait(Until.gone(By.text(NO_DATA_TEXT)), WAIT_TIMEOUT_MS)) {
+                        "HRV chart still showing empty-state placeholder after switching to " +
+                            "Vitals tab (seeding may have failed)"
+                    }
                     device.findObject(By.text("Dashboard"))?.click()
                         ?: error("Dashboard nav item not found")
                     device.waitForIdle()
@@ -103,8 +122,16 @@ class ScrollBenchmark {
         )
 }
 
-private fun MacrobenchmarkScope.navigateToVitals(device: UiDevice) {
-    device.wait(Until.hasObject(By.text("Vitals")), WAIT_TIMEOUT_MS)
+private fun MacrobenchmarkScope.navigateToVitals() {
+    check(device.wait(Until.hasObject(By.text("Vitals")), WAIT_TIMEOUT_MS)) {
+        "Vitals nav item not found"
+    }
     device.findObject(By.text("Vitals"))?.click() ?: error("Vitals nav item not found")
-    device.wait(Until.hasObject(By.res(PACKAGE_NAME, HRV_CHART_TAG)), WAIT_TIMEOUT_MS)
+    check(device.wait(Until.hasObject(By.res(HRV_CHART_TAG)), WAIT_TIMEOUT_MS)) {
+        "HRV chart not found after navigating to Vitals"
+    }
+    check(device.wait(Until.gone(By.text(NO_DATA_TEXT)), WAIT_TIMEOUT_MS)) {
+        "HRV chart still showing empty-state placeholder after navigating to Vitals " +
+            "(seeding may have failed)"
+    }
 }
