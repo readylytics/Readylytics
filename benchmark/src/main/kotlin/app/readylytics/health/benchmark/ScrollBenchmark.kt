@@ -30,6 +30,14 @@ private const val THIRTY_DAY_RANGE_LABEL = "30D"
 // closes that gap.
 private const val NO_DATA_TEXT = "No data available"
 
+// By.text(NO_DATA_TEXT) alone matches ANYWHERE in the accessibility tree, not just
+// the HRV chart -- e.g. OxygenSaturationRecord is an optional HC permission, so on a
+// device with real synced data (no optional SpO2 grant) the SpO2 chart can legitimately
+// show its own "No data available" placeholder while the HRV chart is fine. Scoping the
+// selector to a node tagged HRV_CHART_TAG that itself has NO_DATA_TEXT as a descendant
+// keeps the wait specific to the HRV chart's own subtree.
+private fun hrvChartShowingNoData() = By.res(HRV_CHART_TAG).hasDescendant(By.text(NO_DATA_TEXT))
+
 @RunWith(AndroidJUnit4::class)
 class ScrollBenchmark {
     @get:Rule
@@ -74,7 +82,7 @@ class ScrollBenchmark {
                 check(device.wait(Until.hasObject(By.res(HRV_CHART_TAG)), WAIT_TIMEOUT_MS)) {
                     "HRV chart not found after selecting $THIRTY_DAY_RANGE_LABEL range"
                 }
-                check(device.wait(Until.gone(By.text(NO_DATA_TEXT)), WAIT_TIMEOUT_MS)) {
+                check(device.wait(Until.gone(hrvChartShowingNoData()), WAIT_TIMEOUT_MS)) {
                     "HRV chart still showing empty-state placeholder after selecting " +
                         "$THIRTY_DAY_RANGE_LABEL range (seeding may have failed)"
                 }
@@ -110,7 +118,7 @@ class ScrollBenchmark {
                     check(device.wait(Until.hasObject(By.res(HRV_CHART_TAG)), WAIT_TIMEOUT_MS)) {
                         "HRV chart not found after switching to Vitals tab"
                     }
-                    check(device.wait(Until.gone(By.text(NO_DATA_TEXT)), WAIT_TIMEOUT_MS)) {
+                    check(device.wait(Until.gone(hrvChartShowingNoData()), WAIT_TIMEOUT_MS)) {
                         "HRV chart still showing empty-state placeholder after switching to " +
                             "Vitals tab (seeding may have failed)"
                     }
@@ -130,7 +138,7 @@ private fun MacrobenchmarkScope.navigateToVitals() {
     check(device.wait(Until.hasObject(By.res(HRV_CHART_TAG)), WAIT_TIMEOUT_MS)) {
         "HRV chart not found after navigating to Vitals"
     }
-    check(device.wait(Until.gone(By.text(NO_DATA_TEXT)), WAIT_TIMEOUT_MS)) {
+    check(device.wait(Until.gone(hrvChartShowingNoData()), WAIT_TIMEOUT_MS)) {
         "HRV chart still showing empty-state placeholder after navigating to Vitals " +
             "(seeding may have failed)"
     }

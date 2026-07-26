@@ -14,14 +14,20 @@ device/emulator:
 
 ### Prerequisites
 
-The target device/emulator needs Health Connect installed with the app's
-`READ_SLEEP`/`READ_HEART_RATE`/`READ_HEART_RATE_VARIABILITY`/`READ_EXERCISE`
-permissions already granted, and onboarding already completed once.
-Otherwise the app routes to `AppDestination.Onboarding`/
-`AppDestination.Unavailable` instead of the tab UI, and `ScrollBenchmark`'s
-nav-item lookups (`By.text("Vitals")`) will fail. Grant permissions and
-complete onboarding manually on the device before running the suite — this
-is not automated.
+The target device/emulator needs Health Connect installed with all of the
+app's required permissions granted:
+`READ_SLEEP`/`READ_HEART_RATE`/`READ_HEART_RATE_VARIABILITY`/`READ_EXERCISE`/
+`READ_STEPS` plus `android.permission.health.READ_HEALTH_DATA_HISTORY` (see
+`criticalPermissions`/`requiredPermissions` in
+`core/healthconnect/.../HealthConnectRepositoryImpl.kt`). There is no
+separate "onboarding completed" flag: `SyncViewModel`/`AppNavHost` route to
+`AppDestination.Onboarding`/`AppDestination.Unavailable` instead of the tab
+UI purely based on this live permission check
+(`HealthConnectRepositoryImpl.checkPermissions()` returning
+`PermissionStatus.Missing`/`Unavailable`), so `ScrollBenchmark`'s nav-item
+lookups (`By.text("Vitals")`) will fail unless the check reports `Granted`.
+Grant the required permissions manually on the device before running the
+suite — this is not automated.
 
 ## Test classes
 
@@ -46,5 +52,13 @@ variant and there is no redeclaration conflict. Seeding is async and
 idempotent, and only runs once DB migration readiness is confirmed
 (`HealthDashboardApplication`); it never affects `StartupBenchmark`'s numbers
 and only costs time once.
+
+Note this only applies to a fresh install: the seeder is gated on
+`dao.count() == 0`, so it only fires against an empty `daily_summaries`
+table. A device that already satisfies the Prerequisites section above
+(real, synced Health Connect data) will already have rows and the seeder
+will skip — the journeys will exercise that real data instead, which still
+satisfies "the chart has content" but won't match the specific deterministic
+values described below.
 
 See `BASELINE.md` for the last-recorded numbers and when/how to refresh them.
