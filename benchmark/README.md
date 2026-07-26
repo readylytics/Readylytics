@@ -12,6 +12,17 @@ device/emulator:
 ./gradlew :benchmark:connectedBenchmarkAndroidTest
 ```
 
+### Prerequisites
+
+The target device/emulator needs Health Connect installed with the app's
+`READ_SLEEP`/`READ_HEART_RATE`/`READ_HEART_RATE_VARIABILITY`/`READ_EXERCISE`
+permissions already granted, and onboarding already completed once.
+Otherwise the app routes to `AppDestination.Onboarding`/
+`AppDestination.Unavailable` instead of the tab UI, and `ScrollBenchmark`'s
+nav-item lookups (`By.text("Vitals")`) will fail. Grant permissions and
+complete onboarding manually on the device before running the suite — this
+is not automated.
+
 ## Test classes
 
 - `StartupBenchmark.kt` — cold/warm/hot start `StartupTimingMetric`.
@@ -26,9 +37,14 @@ device/emulator:
 `ScrollBenchmark`'s journeys need real `daily_summaries` rows for the Vitals
 charts to render (an empty DB shows skeletons/placeholders, not charts). The
 `benchmark` build type seeds 180 days of deterministic data once, on first
-launch, via `app/src/benchmark/kotlin/.../benchmark/BenchmarkDataSeeder.kt`
-(overrides the no-op `app/src/main` version of the same class for this build
-type only — see that file's doc comment). Seeding is async and idempotent, so
-it never affects `StartupBenchmark`'s numbers and only costs time once.
+launch, via `app/src/benchmark/kotlin/.../benchmark/BenchmarkDataSeeder.kt`.
+There is no `app/src/main` copy of this class: `debug`, `release`, and
+`benchmark` each compile their own copy of `BenchmarkDataSeeder` from their
+own source set (the `debug`/`release` copies are no-ops; only `benchmark`'s
+actually seeds data), so exactly one is on the compile path per build
+variant and there is no redeclaration conflict. Seeding is async and
+idempotent, and only runs once DB migration readiness is confirmed
+(`HealthDashboardApplication`); it never affects `StartupBenchmark`'s numbers
+and only costs time once.
 
 See `BASELINE.md` for the last-recorded numbers and when/how to refresh them.
