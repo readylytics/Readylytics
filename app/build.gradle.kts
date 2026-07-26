@@ -176,6 +176,7 @@ android {
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
+            applicationIdSuffix = ".macrobenchmark"
             signingConfig = signingConfigs.getByName("debug")
             isDebuggable = false
             matchingFallbacks += listOf("release")

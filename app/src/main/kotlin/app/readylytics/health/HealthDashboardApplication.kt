@@ -10,22 +10,28 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import app.readylytics.health.BuildConfig
+import app.readylytics.health.benchmark.BenchmarkDataSeeder
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController
+import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
+import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.util.SecureFileLogSink
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -94,6 +100,21 @@ class HealthDashboardApplication :
         appScope.launch {
             startupCoordinator.observe(databaseMigrationController.state)
         }
+        appScope.launch {
+            // Wait for the same DB-migration readiness gate the startup coordinator above
+            // observes -- seeding before the DB is ready would race the migration and
+            // silently no-op (BenchmarkDataSeeder no-ops outside the "benchmark" build type
+            // anyway, but on that build type this ordering matters).
+            databaseMigrationController.state.first { it.readiness == DatabaseReadiness.Ready }
+            try {
+                BenchmarkDataSeeder.seedIfNeeded(this@HealthDashboardApplication)
+                logD(BENCHMARK_SEED_LOG_TAG) { "Benchmark data seeding completed" }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logE(BENCHMARK_SEED_LOG_TAG, e) { "Benchmark data seeding failed" }
+            }
+        }
     }
 
     override fun onStateChanged(
@@ -146,5 +167,9 @@ class HealthDashboardApplication :
             // Release build secure log file sink (includes sanitized logcat mirroring)
             DomainLogger.installSink(secureLogSink)
         }
+    }
+
+    private companion object {
+        const val BENCHMARK_SEED_LOG_TAG = "BenchmarkDataSeeder"
     }
 }

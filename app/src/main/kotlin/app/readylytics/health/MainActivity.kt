@@ -4,10 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -15,6 +17,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import app.readylytics.health.benchmark.applyBenchmarkTestTagSemantics
 import app.readylytics.health.data.backup.LocalRestoreManager
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.security.SqlCipherKeyManager
@@ -57,30 +60,35 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val migrationState by databaseMigrationController.state.collectAsStateWithLifecycle()
-            when (val readiness = migrationState.readiness) {
-                DatabaseReadiness.Ready -> ReadylyticsContent(splashScreen)
-                is DatabaseReadiness.MigrationRequired -> {
-                    LaunchedEffect(readiness) {
-                        databaseMigrationController.startOrResume()
+            // Applied once at the composition root: no-op outside the "benchmark" build type,
+            // and required inside it so UiAutomator's By.res(...) selectors can find
+            // Modifier.testTag-ed Compose nodes (see BenchmarkSemantics.kt).
+            Box(modifier = Modifier.applyBenchmarkTestTagSemantics()) {
+                val migrationState by databaseMigrationController.state.collectAsStateWithLifecycle()
+                when (val readiness = migrationState.readiness) {
+                    DatabaseReadiness.Ready -> ReadylyticsContent(splashScreen)
+                    is DatabaseReadiness.MigrationRequired -> {
+                        LaunchedEffect(readiness) {
+                            databaseMigrationController.startOrResume()
+                        }
+                        DatabaseReadinessTheme {
+                            DatabaseMigrationScreen(
+                                readiness = readiness,
+                                progress = migrationState.progress,
+                                onRetry = databaseMigrationController::startOrResume,
+                            )
+                        }
                     }
-                    DatabaseReadinessTheme {
-                        DatabaseMigrationScreen(
-                            readiness = readiness,
-                            progress = migrationState.progress,
-                            onRetry = databaseMigrationController::startOrResume,
-                        )
-                    }
-                }
-                is DatabaseReadiness.InsufficientSpace,
-                is DatabaseReadiness.Failed,
-                -> {
-                    DatabaseReadinessTheme {
-                        DatabaseMigrationScreen(
-                            readiness = readiness,
-                            progress = migrationState.progress,
-                            onRetry = databaseMigrationController::startOrResume,
-                        )
+                    is DatabaseReadiness.InsufficientSpace,
+                    is DatabaseReadiness.Failed,
+                    -> {
+                        DatabaseReadinessTheme {
+                            DatabaseMigrationScreen(
+                                readiness = readiness,
+                                progress = migrationState.progress,
+                                onRetry = databaseMigrationController::startOrResume,
+                            )
+                        }
                     }
                 }
             }
