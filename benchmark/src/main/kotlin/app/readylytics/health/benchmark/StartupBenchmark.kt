@@ -16,7 +16,7 @@ class StartupBenchmark {
     @Test
     fun coldStart() =
         benchmarkRule.measureRepeated(
-            packageName = "app.readylytics.health",
+            packageName = "app.readylytics.health.macrobenchmark",
             metrics = listOf(StartupTimingMetric()),
             iterations = 3,
             startupMode = StartupMode.COLD,
@@ -27,7 +27,7 @@ class StartupBenchmark {
     @Test
     fun warmStart() =
         benchmarkRule.measureRepeated(
-            packageName = "app.readylytics.health",
+            packageName = "app.readylytics.health.macrobenchmark",
             metrics = listOf(StartupTimingMetric()),
             iterations = 5,
             startupMode = StartupMode.WARM,
@@ -41,7 +41,7 @@ class StartupBenchmark {
     @Test
     fun hotStart() =
         benchmarkRule.measureRepeated(
-            packageName = "app.readylytics.health",
+            packageName = "app.readylytics.health.macrobenchmark",
             metrics = listOf(StartupTimingMetric()),
             iterations = 10,
             startupMode = StartupMode.HOT,

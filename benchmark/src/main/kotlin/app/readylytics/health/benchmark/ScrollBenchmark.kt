@@ -4,14 +4,16 @@ import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.Until
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val PACKAGE_NAME = "app.readylytics.health"
+private const val PACKAGE_NAME = "app.readylytics.health.macrobenchmark"
 private const val WAIT_TIMEOUT_MS = 15_000L
 private const val JOURNEY_ITERATIONS = 10
 
@@ -38,10 +40,34 @@ private const val NO_DATA_TEXT = "No data available"
 // keeps the wait specific to the HRV chart's own subtree.
 private fun hrvChartShowingNoData() = By.res(HRV_CHART_TAG).hasDescendant(By.text(NO_DATA_TEXT))
 
+// AGP's connectedBenchmarkAndroidTest reinstalls the target app fresh on every
+// invocation, which wipes any Health Connect permission grant made between runs --
+// confirmed by observing a new install-path hash logged on each run. Granting these
+// at @Before time (the same androidx.test.rules.GrantPermissionRule mechanism, called
+// directly here since the permission set is fixed and known statically) makes the
+// suite self-sufficient regardless of prior device state.
+private val REQUIRED_HEALTH_CONNECT_PERMISSIONS =
+    listOf(
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_HEALTH_DATA_HISTORY",
+    )
+
 @RunWith(AndroidJUnit4::class)
 class ScrollBenchmark {
     @get:Rule
     val benchmarkRule = MacrobenchmarkRule()
+
+    @Before
+    fun grantHealthConnectPermissions() {
+        val uiAutomation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        REQUIRED_HEALTH_CONNECT_PERMISSIONS.forEach { permission ->
+            uiAutomation.grantRuntimePermission(PACKAGE_NAME, permission)
+        }
+    }
 
     @Test
     fun vitalsFling() =

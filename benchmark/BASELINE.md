@@ -1,8 +1,15 @@
 # Baseline frame-timing numbers
 
-**STATUS: PENDING** — No Android device or emulator is currently connected. The
-baseline numbers below have not been recorded yet. To fill in the real numbers,
-run the following command on a connected device/emulator:
+**STATUS: PENDING** — `ScrollBenchmark`'s three journeys have not been recorded.
+A device was connected and repeatedly tested against this session, but every
+fresh install hit a real, reproducible SQLCipher key/DB race on first launch
+that routes the app into its recovery screen instead of the tab UI — see
+`internal-docs/plans/KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md` for the
+full writeup. This is unrelated to the M2 Macrobenchmark work itself (the
+`ScrollBenchmark` code, testTags, and permission auto-granting were all
+verified working correctly once the app actually reaches the Vitals tab).
+Once that race is fixed, run the following on a connected device/emulator to
+fill in the numbers below:
 
 ```bash
 ./gradlew :benchmark:connectedBenchmarkAndroidTest
@@ -19,17 +26,26 @@ lands.
 
 | Journey | P50 (ms) | P90 (ms) | P99 (ms) |
 |---|---|---|---|
-| vitalsFling | Pending (no device available) | Pending (no device available) | Pending (no device available) |
-| vitalsChartPanAndZoom | Pending (no device available) | Pending (no device available) | Pending (no device available) |
-| dashboardVitalsTabSwitch | Pending (no device available) | Pending (no device available) | Pending (no device available) |
+| vitalsFling | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) |
+| vitalsChartPanAndZoom | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) |
+| dashboardVitalsTabSwitch | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) |
 
 ## Startup (StartupBenchmark, same run)
 
+`coldStart`/`warmStart` passed cleanly in multiple runs this session (both
+unaffected by the tab-navigation blocker above, since they only measure
+launch-to-first-frame, not reaching Vitals). `hotStart` failed intermittently
+with "Unable to read any metrics during benchmark" — not yet investigated,
+may be related to the same first-launch instability or may be a separate,
+narrower issue. None of these numbers were captured/extracted this session
+(the run's purpose was verifying `ScrollBenchmark` reachability, not yet
+recording a clean full-suite baseline) — do not treat "passed" as "recorded."
+
 | Mode | timeToInitialDisplayMs P50 |
 |---|---|
-| coldStart | Pending (no device available) |
-| warmStart | Pending (no device available) |
-| hotStart | Pending (no device available) |
+| coldStart | Pending (passed in test runs this session, numbers not extracted) |
+| warmStart | Pending (passed in test runs this session, numbers not extracted) |
+| hotStart | Pending (failed intermittently this session, see note above) |
 
 ## How to record the baseline
 
