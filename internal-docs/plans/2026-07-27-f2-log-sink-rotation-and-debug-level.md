@@ -157,7 +157,7 @@ class LogSlotStoreTest {
 
         subject.appendLines((1..6).map { line("line$it") })
 
-        val slots = fake.storedPlaintextByName()
+        val slots = fake.storedPlaintextByName(directory)
         assertTrue("No slot may contain a partial line", slots.values.all { it.endsWith("\n") })
         assertTrue("Slot count is bounded by maxBackups + 1", slots.size <= 3)
         // Six 6-byte lines into a 10-byte slot: each line seals the previous one, so the two
@@ -248,15 +248,18 @@ class LogSlotStoreTest {
      * under a different one. The production store swallows that failure and returns "" — this fake
      * does the same, and records it so a test can assert it never happened.
      *
-     * Ciphertext is keyed by filename, so a rename by [LogSlotStore] would orphan the entry. Each
-     * on-disk placeholder therefore carries the name it was written under; [followRenames] re-keys
-     * the map when it sees the file has moved. That mirrors reality: a rename moves the bytes and
-     * leaves the AD binding alone.
+     * Content is keyed by a per-write token that is written into the on-disk placeholder, so it
+     * travels with the bytes when [LogSlotStore] renames a slot — exactly like real ciphertext.
+     * Keying by filename does NOT work here: the store always writes the active slot under the same
+     * name and renames it away afterwards, so two seals with no read in between would collide on a
+     * single map entry and the older slot's content would vanish from the fake while its file is
+     * still on disk. (The whole point of F2 is that nothing reads between seals.)
      */
     private class AdAwareSecureFileStore : SecureFileStore {
         private data class Entry(val content: String, val associatedData: String)
 
         private val entries = linkedMapOf<String, Entry>()
+        private var nextToken = 0
         val writtenNames = mutableListOf<String>()
         val readsThatFailedAuthentication = mutableListOf<String>()
 
@@ -264,8 +267,8 @@ class LogSlotStoreTest {
             file: File,
             associatedData: ByteArray,
         ): String {
-            followRenames(file)
-            val entry = entries[file.name] ?: return ""
+            val token = tokenOf(file) ?: return ""
+            val entry = entries[token] ?: return ""
             if (entry.associatedData != associatedData.toString(Charsets.UTF_8)) {
                 readsThatFailedAuthentication += file.name
                 return ""
@@ -279,20 +282,28 @@ class LogSlotStoreTest {
             associatedData: ByteArray,
         ) {
             writtenNames += file.name
-            entries[file.name] = Entry(content, associatedData.toString(Charsets.UTF_8))
+            val token = "t${nextToken++}"
+            entries[token] = Entry(content, associatedData.toString(Charsets.UTF_8))
             file.parentFile?.mkdirs()
-            file.writeText(CIPHERTEXT_PREFIX + file.name)
+            file.writeText(CIPHERTEXT_PREFIX + token)
         }
 
-        fun storedPlaintextByName(): Map<String, String> = entries.mapValues { it.value.content }
+        /**
+         * Plaintext of every slot currently present in [directory], keyed by its current filename.
+         * Files this fake never wrote (the migration marker, raw garbage) resolve to no token and
+         * are skipped — the same way an undecryptable file reads back as "".
+         */
+        fun storedPlaintextByName(directory: File): Map<String, String> =
+            directory
+                .listFiles()
+                .orEmpty()
+                .sortedBy { it.name }
+                .mapNotNull { file ->
+                    tokenOf(file)?.let { entries[it] }?.let { file.name to it.content }
+                }.toMap()
 
-        private fun followRenames(file: File) {
-            if (entries.containsKey(file.name) || !file.exists()) return
-            val writtenUnder = file.readText().removePrefix(CIPHERTEXT_PREFIX)
-            if (writtenUnder != file.name) {
-                entries.remove(writtenUnder)?.let { entries[file.name] = it }
-            }
-        }
+        private fun tokenOf(file: File): String? =
+            if (file.exists()) file.readText().removePrefix(CIPHERTEXT_PREFIX) else null
 
         private companion object {
             const val CIPHERTEXT_PREFIX = "ciphertext:"
@@ -541,9 +552,26 @@ on its own.
 
 - [ ] **Step 1: Update the two existing tests whose invariants change, and add a threshold test**
 
-Two current assertions encode the old *byte-exact trimming* behavior, which mid-line-truncated log
-entries via `takeLastUtf8Bytes`. The new design never emits a partial line, so a slot may exceed
-`maxFileSize` when a single line is larger than a slot. Update them:
+**First, fix this file's `FakeSecureFileStore` (`:402-439`) the same way Task 1 fixed its own fake.**
+It currently keys stored content by `file.name`. Rotation now renames slots, and the store always
+writes the active slot under the same name before renaming it away, so two seals with no read in
+between collide on one map entry and the older slot silently disappears from the fake's bookkeeping
+while its file is still on disk. Replace the identity scheme with the per-write token from
+`LogSlotStoreTest.AdAwareSecureFileStore` (Task 1): `writeText` stores under `"t${nextToken++}"` and
+writes `"ciphertext:$token"` into the file; `readText` resolves the token by reading the placeholder
+off disk. Keep `readCalls`/`writeCalls` recording `file.name` as they do today. Two consequences:
+
+- `storedContents()` becomes `storedContents(directory: File)` — it lists the directory and maps each
+  present file to its token's content. Both call sites pass `File(cacheDir, "logs")`.
+- `stubUnreadable(...)` becomes unnecessary and should be deleted along with its call in
+  `testUnreadableOldEncryptedContentTreatedAsEmptyAndRewritten`: a file this fake never wrote has no
+  token, so it already reads back as `""`. That test's raw `writeText("legacy-garbage")` on disk is
+  exactly such a file, and the rest of its assertions stand unchanged.
+- `readableContentFor(file)` resolves through the token the same way.
+
+Then update the two assertions that encode the old *byte-exact trimming* behavior, which mid-line
+truncated log entries via `takeLastUtf8Bytes`. The new design never emits a partial line, so a slot
+may exceed `maxFileSize` when a single line is larger than a slot:
 
 In `testFileRotationCreatesRotatedBackups`, replace the per-slot size assertion:
 
@@ -570,11 +598,9 @@ and add to the test class:
 In `testTotalRetentionStaysWithinConfiguredBound`, replace `assertTrue(totalBytes <= 160L)` with:
 
 ```kotlin
-            assertTrue("Slot count is structurally bounded", secureFileStore.storedContents().size <= 2)
-            assertTrue(
-                "Total retention must stay bounded",
-                totalBytes <= 2 * (80L + longestLineBytes(secureFileStore.storedContents())),
-            )
+            val slots = secureFileStore.storedContents(File(cacheDir, "logs"))
+            assertTrue("Slot count is structurally bounded", slots.size <= 2)
+            assertTrue("Total retention must stay bounded", totalBytes <= 2 * (80L + longestLineBytes(slots)))
 ```
 
 Rename and retarget the two threshold tests. `testBufferingBeforeFiveLogs` → keep the name but pass
