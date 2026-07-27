@@ -78,6 +78,13 @@ object ChartDefaults {
             scrollState to zoomState
         }
 
+    /**
+     * The returned placer is stateful: it owns a [DayOffsetTickCalculator] holding per-instance
+     * candidate and single-entry result caches. Callers must scope it to a single chart via
+     * `remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) }` — constructing it
+     * inline on every recomposition silently discards the caching (no test failure, no visual
+     * difference, just the optimization evaporating).
+     */
     fun itemPlacerForRangeDays(rangeDays: Int): HorizontalAxis.ItemPlacer {
         val basePlacer =
             HorizontalAxis.ItemPlacer.aligned(

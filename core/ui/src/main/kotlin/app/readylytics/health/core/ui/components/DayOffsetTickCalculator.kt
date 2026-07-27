@@ -86,6 +86,11 @@ internal class DayOffsetTickCalculator(
             }
         }
 
+        // Unreachable in practice: 0.0 is always the first candidate emitted by buildCandidates
+        // (current starts at 0.0), and if 0.0 is in visibleXRange it trivially survives the
+        // (start - buffer)..(end + buffer) filter above, so visibleValues already contains it
+        // whenever this condition's first half is true. Preserved verbatim from the pre-cache
+        // implementation per the byte-identity mandate.
         val firstDay = 0.0
         if (firstDay in visibleXRange && !visibleValues.contains(firstDay)) {
             visibleValues.add(0, firstDay)
@@ -105,6 +110,16 @@ internal class DayOffsetTickCalculator(
                 }
             val lastValue = visibleValues.lastOrNull() ?: 0.0
             if (maxVal - lastValue < minSeparation) {
+                // removeAt would throw IndexOutOfBoundsException on an empty visibleValues, but
+                // that is unreachable today: TimeRange only ships {7, 30, 180}
+                // (core/ui/.../common/TimeRange.kt), and ChartDefaults.rememberChartState disables
+                // zoom/scroll entirely for rangeDays == 7 and floors zoom-out at
+                // Zoom.min(Zoom.Content, Zoom.fixed(1f)) for 30/180, so the visible range can never
+                // exceed the full domain. The smallest achievable windows (5 days at 30d/6x max
+                // zoom, ~7.2 days at 180d/25x max zoom) both land in spacing = 2, where a multiple
+                // of 2 is always in range, so visibleValues is never empty here. Preserved verbatim
+                // from the pre-cache implementation per the byte-identity mandate. Adding a fourth
+                // TimeRange value requires re-checking this invariant.
                 visibleValues.removeAt(visibleValues.size - 1)
             }
             visibleValues.add(maxVal)

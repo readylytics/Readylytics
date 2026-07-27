@@ -158,6 +158,19 @@ class DayOffsetTickCalculatorTest {
     }
 
     @Test
+    fun `cache hit returns the identical instance for the zoomed-out early return`() {
+        // rangeDays = 30, visibleDays = 29 > (rangeDays - 2.0) = 28.0, so this hits the
+        // zoomedOutValues early return rather than the general spacing path above.
+        val calculator = DayOffsetTickCalculator(30)
+        val range = 0.0..29.0
+
+        val first = calculator.values(range)
+        val second = calculator.values(range)
+
+        assertSame(first, second)
+    }
+
+    @Test
     fun `cache miss on a changed range recomputes and matches reference`() {
         val calculator = DayOffsetTickCalculator(30)
         val rangeA = 0.0..10.0

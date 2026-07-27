@@ -1,7 +1,9 @@
 # Performance Optimization Plan
 
-**Status:** Approved plan — not yet implemented. Each work item below is scoped to land as one
-independent, production-ready commit.
+**Status:** Approved plan — partially implemented. F3, F11, and F12 have landed (see their item
+sections and the §7 implementation-order table for commit SHAs); the remainder of this plan is not
+yet implemented. Each work item below is scoped to land as one independent, production-ready
+commit.
 **Origin:** Full static performance audit (July 2026) of the UI/Compose/Vico layer, the
 state/ViewModel/Flow layer, and the Room/ingestion/workers/startup/logging/build layers. Every
 finding was verified against source; line anchors were correct at the time of writing — re-locate
@@ -260,6 +262,9 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
 
 ### F3. Cache axis label strings in `ChartDefaults.rememberDayOffsetFormatter` — **Critical, Effort S**
 
+**Implemented:** `3f122ea` (implementation), `5b2239d` (review fix: documented the zone/locale
+freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEMENTATION_PLAN.md`.
+
 - **Location:** `core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/ChartDefaults.kt:48-65`
   (the `CartesianValueFormatter` created inside `remember(rangeStartMs)`).
 - **Problem:** The formatter *object* is remembered, but its lambda body executes
@@ -443,6 +448,8 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
 
 ### F11. Cache/reduce allocations in `itemPlacerForRangeDays` — **High, Effort S**
 
+**Implemented:** `d9edd5f`. See `internal-docs/plans/F3_F11_F12_IMPLEMENTATION_PLAN.md`.
+
 - **Location:** `ChartDefaults.kt:98-193`. The anonymous `ItemPlacer`'s `getLabelValues` (`:179`)
   and `getLineValues` (`:186`) each call `calculateValues(...)` per draw pass; that function
   allocates `mutableListOf`, `filter`, `toMutableList`, and a final `.sorted()` (`:176`) every
@@ -465,6 +472,8 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
   buckets (7/30/90/180) and representative visible ranges; M2 journey (b) non-regression.
 
 ### F12. Startup: pre-warm the first DataStore read + cheap migration short-circuit — **High, Effort S-M**
+
+**Implemented:** `8624334`. See `internal-docs/plans/F3_F11_F12_IMPLEMENTATION_PLAN.md`.
 
 - **Location:** `MainActivity.kt:36` (`SPLASH_MAX_WAIT_MS = 2000`), `:82-95` (splash
   `setKeepOnScreenCondition` waits for the first `userPreferences` emission — intentional
@@ -622,11 +631,11 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
 | 7 | F8 `@Immutable` annotations | before F5 |
 | 8 | F1 sync-UX / CardLoader semantics (approved) | coordinate with F4/F9 flag fields |
 | 9 | F5 Vitals section extraction + hoisted delta strings | after F8 |
-| 10 | F3 axis formatter cache | measure with M2 journey (b) |
-| 11 | F11 item placer cache | measure with M2 journey (b) |
+| 10 | F3 axis formatter cache | **Implemented** — `3f122ea`, `5b2239d` |
+| 11 | F11 item placer cache | **Implemented** — `d9edd5f` |
 | 12 | F15 zone band colors | — |
 | 13 | F7 sync transaction coalescing (+ DATA_FLOW.md) | — |
-| 14 | F12 DataStore pre-warm | measure with StartupBenchmark |
+| 14 | F12 DataStore pre-warm | **Implemented** — `8624334` |
 | 15 | F13 key validation off-main | after tracing the corruption path |
 | 16 | F14 baseline profile | LAST perf item (captures final code) |
 | 17 | Remainder per appetite: F17, F18, F19 (benchmark-gated), F20, F22 (confirm first), F23 | — |
