@@ -268,15 +268,22 @@ class SleepViewModel
                         // (mirrors DashboardViewModel.kt:104-113) so a sync toggle only triggers a
                         // cheap copy, not a full re-run of the trend-day-loop unpacking above.
                         // isLoading means "true first-load, no data yet" (skeleton); isRefreshing
-                        // tracks every sync regardless of data presence. The trend point lists are
+                        // tracks every sync regardless of data presence. The "no data yet" signal
+                        // is based on whether the trend chart has any real historical point loaded,
+                        // not on whether the *selected day's* summary/session exists --
+                        // latestSummary/latestSession are scoped to the selected date, so on the
+                        // first sync of a new day (before today's session/summary is computed) they
+                        // are null even though the trend already has unchanged history loaded.
+                        // Checking the trend list instead avoids flashing the skeleton and tearing
+                        // down/rebuilding the Vico chart once per day. The trend point lists are
                         // always padded to range.days entries (null-valued, never actually empty),
-                        // so latestSummary/latestSession null-checks are the correct "no data yet"
-                        // signal here, not a trend-list emptiness check.
+                        // so this must be an any-non-null check, not a trend-list emptiness check.
                         .combine(
                             foregroundSyncController.isSyncing,
                         ) { state, syncing ->
+                            val hasHistoricalData = state.trendStartOffsetPoints.any { it.value != null }
                             state.copy(
-                                isLoading = syncing && (state.latestSummary == null && state.latestSession == null),
+                                isLoading = syncing && !hasHistoricalData,
                                 isRefreshing = syncing,
                             )
                         }

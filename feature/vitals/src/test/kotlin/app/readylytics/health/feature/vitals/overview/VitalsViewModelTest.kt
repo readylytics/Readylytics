@@ -29,11 +29,13 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class VitalsViewModelTest {
@@ -182,6 +184,50 @@ class VitalsViewModelTest {
                 advanceUntilIdle()
                 val state = viewModel.uiState.value
                 assertTrue(state.isLoading)
+                assertTrue(state.isRefreshing)
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `isLoading stays false when historical chart data exists even if today's summary is missing`() =
+        runTest {
+            // Reproduces the once-per-day gap: today's summary hasn't landed yet (so
+            // latestSummary is null), but yesterday's summary is already in the loaded range and
+            // has real values -- the charts have historical data to show, so no skeleton should
+            // appear during this sync.
+            //
+            // Note: the class-level `observeSince(any())` stub returns the same `summaries` flow
+            // for every call regardless of the ms argument -- it does not filter by date the way
+            // the real repository would. So merely trimming `summaries` down to yesterday's entry
+            // is not enough to make `latestSummary` null: Vitals' "today" lookup
+            // (`observeSince(todayMs).map { it.firstOrNull() }`) would still see yesterday's entry
+            // as the list's first (and only) element. To faithfully reproduce "today's summary is
+            // missing", override the today-scoped call specifically to return an empty list, while
+            // the chart-range call (a different ms argument) keeps returning yesterday's data via
+            // the existing generic stub.
+            val zoneId = ZoneId.systemDefault()
+            val todayMs =
+                LocalDate
+                    .now(zoneId)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            every { dailySummaryRepository.observeSince(match { it == todayMs }) } returns MutableStateFlow(emptyList())
+            summaries.value =
+                listOf(
+                    summary(date = LocalDate.now().minusDays(1), hrv = 40, rhr = 49, spo2 = 95f),
+                )
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                syncing.value = true
+                advanceUntilIdle()
+                val state = viewModel.uiState.value
+                assertNull(state.latestSummary)
+                assertFalse(state.isLoading)
                 assertTrue(state.isRefreshing)
             } finally {
                 collector.cancel()

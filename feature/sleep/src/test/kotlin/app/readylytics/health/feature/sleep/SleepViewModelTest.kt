@@ -349,6 +349,65 @@ class SleepViewModelTest {
         }
 
     @Test
+    fun `isLoading stays false when historical trend data exists even if today's session is missing`() =
+        runTest(testDispatcher) {
+            // Reproduces the once-per-day gap: today's session/summary haven't landed yet, but a
+            // session from a prior day is already in the trend range with real data -- the trend
+            // chart has historical data to show, so no skeleton should appear during this sync.
+            val zoneId = ZoneId.systemDefault()
+            val selectedDate = selectedDateFlow.value
+            val priorSession =
+                SleepSessionData(
+                    id = "session_prior",
+                    deviceName = "SmartRing",
+                    startTime =
+                        selectedDate
+                            .minusDays(3)
+                            .atTime(22, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    endTime =
+                        selectedDate
+                            .minusDays(2)
+                            .atTime(6, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 480,
+                    efficiency = 0.93f,
+                    deepSleepMinutes = 90,
+                    lightSleepMinutes = 300,
+                    remSleepMinutes = 90,
+                    awakeMinutes = 30,
+                    sleepScore = 85f,
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(priorSession))
+            // observeFirstSessionEndingInRange (today's session) and getByDate/observeByDate
+            // (today's summary) stay at their setUp() defaults: null.
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // The provided template for this test checked isRefreshing == true without ever
+            // toggling isSyncingFlow -- with the setUp() default of isSyncingFlow.value == false,
+            // that assertion could never hold, and isLoading == false is trivially true whenever
+            // syncing is false regardless of this fix (isLoading requires syncing && !hasData).
+            // Toggling isSyncingFlow to true here is what actually exercises the fix: it proves
+            // isLoading stays false *during* a sync, once the trend already has a real historical
+            // point from the prior-day session.
+            isSyncingFlow.value = true
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { it.trendStartOffsetPoints.any { p -> p.value != null } }
+            assertEquals(false, state.isLoading)
+            assertEquals(true, state.isRefreshing)
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
     fun `isLoading stays false and isRefreshing toggles when sleep data is present`() =
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
@@ -380,6 +439,11 @@ class SleepViewModelTest {
                 )
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
+            // Also feed the same session into the trend query (observeSince), which is what
+            // isLoading is now based on -- without this, the trend list stays empty (setUp()
+            // default) and isLoading would (correctly, per the fix) be true while syncing, since
+            // "today has a session" no longer implies "the chart has historical data to show".
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
