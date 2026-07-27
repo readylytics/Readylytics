@@ -72,6 +72,7 @@ data class WorkoutsUiState(
     val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayRasScore: Float? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val currentPage: Int = 1,
     val totalPages: Int = 1,
     val yesterdayStrainRatio: Float? = null,
@@ -396,8 +397,16 @@ class WorkoutsViewModel
                 // isSyncing is merged in after the heavy pipeline instead of inside it (mirrors
                 // DashboardViewModel.kt:104-113) so a sync toggle only triggers a cheap copy, not a
                 // full pipeline restart (Room re-subscriptions, EMA series, N+1 HR-sample loop).
-                .combine(foregroundSyncController.isSyncing) { state, syncing -> state.copy(isLoading = syncing) }
-                .flowOn(defaultDispatcher)
+                // isLoading means "true first-load, no data yet" (skeleton); isRefreshing tracks
+                // every sync regardless of data presence. dailyTrimp/dailyStrainRatio are always
+                // padded to displayDayMidnights.size entries (null-valued, never actually empty),
+                // so latestSummary/recentWorkouts are the correct "no data yet" signal here.
+                .combine(foregroundSyncController.isSyncing) { state, syncing ->
+                    state.copy(
+                        isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
+                        isRefreshing = syncing,
+                    )
+                }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
