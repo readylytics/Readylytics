@@ -14,6 +14,11 @@ import java.util.Locale
  * instance lives and dies with the caller's remember(rangeStartMs) scope, so a range change
  * discards it. Output is byte-identical to formatting on every call -- non-integral values
  * already truncate through toLong().
+ *
+ * Zone and locale are captured once, for the lifetime of the caller's remember(rangeStartMs)
+ * scope. The prior code re-read ZoneId.systemDefault() per label, but rangeStartMs and the
+ * plotted day offsets are computed upstream against a fixed zone, so a mid-composition zone
+ * change produced labels that disagreed with the data. Freezing both here keeps them consistent.
  */
 internal class DayOffsetLabelCache(
     rangeStartMs: Long,

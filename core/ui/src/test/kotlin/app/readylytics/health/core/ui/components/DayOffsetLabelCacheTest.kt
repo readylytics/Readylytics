@@ -96,6 +96,20 @@ class DayOffsetLabelCacheTest {
     }
 
     @Test
+    fun `default constructor arguments pin to systemDefault zone and locale`() {
+        // Production (ChartDefaults.rememberDayOffsetFormatter) always constructs via the
+        // no-arg-zone-locale path. Pin it against ZoneId.systemDefault() / Locale.getDefault()
+        // explicitly, so a change to the defaults doesn't silently drift from what's shipped.
+        val rangeStartMs = epochMs(2026, 6, 15, ZoneId.systemDefault())
+        val defaultCache = DayOffsetLabelCache(rangeStartMs)
+        val explicitCache = DayOffsetLabelCache(rangeStartMs, ZoneId.systemDefault(), Locale.getDefault())
+
+        for (offset in 0..179) {
+            assertEquals(explicitCache.label(offset.toDouble()), defaultCache.label(offset.toDouble()))
+        }
+    }
+
+    @Test
     fun `labels advance one calendar day per offset across a DST transition week`() {
         // Europe/Berlin spring-forward DST transition is the last Sunday of March; 2026-03-29.
         val zone = ZoneId.of("Europe/Berlin")
