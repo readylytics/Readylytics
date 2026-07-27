@@ -72,6 +72,7 @@ class SleepViewModelTest {
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
         every { dailySummaryRepository.observeSince(any()) } returns flowOf(emptyList())
+        coEvery { dailySummaryRepository.getByDate(any()) } returns null
         every { dailySummaryRepository.observeByDate(any()) } answers {
             val requestedMidnightMs = firstArg<Long>()
             val selectedMidnightMs =
@@ -316,7 +317,7 @@ class SleepViewModelTest {
         }
 
     @Test
-    fun `isSyncing toggle does not recompute content, only isLoading changes`() =
+    fun `isSyncing toggle does not recompute content, only isLoading and isRefreshing change`() =
         runTest(testDispatcher) {
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -324,12 +325,16 @@ class SleepViewModelTest {
 
             val stateBeforeToggle = viewModel.uiState.value
             assertEquals(false, stateBeforeToggle.isLoading)
+            assertEquals(false, stateBeforeToggle.isRefreshing)
 
             isSyncingFlow.value = true
             testDispatcher.scheduler.advanceUntilIdle()
             val stateSyncing = viewModel.uiState.value
+            // No summary/session exists in this fixture, so this is genuinely the first-load
+            // case: isLoading correctly stays true.
             assertEquals(true, stateSyncing.isLoading)
-            // Only isLoading should differ -- the content (trend lists etc.) must be the exact
+            assertEquals(true, stateSyncing.isRefreshing)
+            // Only the flags should differ -- the content (trend lists etc.) must be the exact
             // same object, proving the sync toggle did not re-run the heavy day-loop unpacking.
             assertSame(stateBeforeToggle.trendStartOffsetPoints, stateSyncing.trendStartOffsetPoints)
 
@@ -337,7 +342,64 @@ class SleepViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
             val stateAfterToggle = viewModel.uiState.value
             assertEquals(false, stateAfterToggle.isLoading)
+            assertEquals(false, stateAfterToggle.isRefreshing)
             assertSame(stateBeforeToggle.trendStartOffsetPoints, stateAfterToggle.trendStartOffsetPoints)
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `isLoading stays false and isRefreshing toggles when sleep data is present`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val selectedDate = selectedDateFlow.value
+            val session =
+                SleepSessionData(
+                    id = "session_1",
+                    deviceName = "SmartRing",
+                    startTime =
+                        selectedDate
+                            .minusDays(1)
+                            .atTime(22, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    endTime =
+                        selectedDate
+                            .atTime(6, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 480,
+                    efficiency = 0.93f,
+                    deepSleepMinutes = 90,
+                    lightSleepMinutes = 300,
+                    remSleepMinutes = 90,
+                    awakeMinutes = 30,
+                    sleepScore = 85f,
+                )
+            every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
+            every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val stateBeforeToggle = viewModel.uiState.first { it.latestSession != null }
+            assertEquals(false, stateBeforeToggle.isLoading)
+            assertEquals(false, stateBeforeToggle.isRefreshing)
+
+            isSyncingFlow.value = true
+            testDispatcher.scheduler.advanceUntilIdle()
+            val stateSyncing = viewModel.uiState.value
+            assertEquals(false, stateSyncing.isLoading)
+            assertEquals(true, stateSyncing.isRefreshing)
+
+            isSyncingFlow.value = false
+            testDispatcher.scheduler.advanceUntilIdle()
+            val stateAfterToggle = viewModel.uiState.value
+            assertEquals(false, stateAfterToggle.isLoading)
+            assertEquals(false, stateAfterToggle.isRefreshing)
 
             collectJob.cancelAndJoin()
         }

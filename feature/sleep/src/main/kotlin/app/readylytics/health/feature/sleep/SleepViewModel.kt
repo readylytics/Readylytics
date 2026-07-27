@@ -52,6 +52,7 @@ data class SleepUiState(
     val stageTimeline: List<SleepStageData> = emptyList(),
     val selectedDate: LocalDate = LocalDate.now(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val selectedTrendRange: TimeRange = TimeRange.SEVEN_DAYS,
     val trendStartOffsetPoints: List<DailyDataPoint> = emptyList(),
     val trendDurationSpanPoints: List<DailyDataPoint> = emptyList(),
@@ -266,9 +267,19 @@ class SleepViewModel
                         // isSyncing is merged in after the heavy pipeline instead of inside it
                         // (mirrors DashboardViewModel.kt:104-113) so a sync toggle only triggers a
                         // cheap copy, not a full re-run of the trend-day-loop unpacking above.
+                        // isLoading means "true first-load, no data yet" (skeleton); isRefreshing
+                        // tracks every sync regardless of data presence. The trend point lists are
+                        // always padded to range.days entries (null-valued, never actually empty),
+                        // so latestSummary/latestSession null-checks are the correct "no data yet"
+                        // signal here, not a trend-list emptiness check.
                         .combine(
                             foregroundSyncController.isSyncing,
-                        ) { state, syncing -> state.copy(isLoading = syncing) }
+                        ) { state, syncing ->
+                            state.copy(
+                                isLoading = syncing && (state.latestSummary == null && state.latestSession == null),
+                                isRefreshing = syncing,
+                            )
+                        }
                 }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
