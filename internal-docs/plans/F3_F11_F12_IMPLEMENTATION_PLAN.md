@@ -1,7 +1,8 @@
 # Implementation Plan — F3, F11, F12
 
 **Parent plan:** `internal-docs/plans/PERFORMANCE_OPTIMIZATION_PLAN.md` (items F3, F11, F12).
-**Status:** Approved design — ready to implement.
+**Status:** Implemented. F3 `3f122ea` + `5b2239d`, F11 `d9edd5f`, F12 `8624334`, review fix wave
+`9cf0578`. Manual on-device checks (§5) still outstanding — no device was available.
 **Order:** F3 → F11 → F12, one commit each.
 **Audience:** A coding agent with no other context. Everything needed is in this document plus the
 referenced source files.
@@ -28,12 +29,13 @@ source on 2026-07-27:
    spot-check manually after F3 and F11.
 2. **Output must be byte-identical.** F3 and F11 are pure caching. Axis label strings and tick
    value lists must match the current implementation exactly, for every input. This is enforced by
-   golden tests that keep the *current* implementation as the reference (§2.3, §3.3).
+   golden tests that keep the *current* implementation as the reference (§2.3, §3.3). One approved
+   deviation: F3's `ZoneId.systemDefault()` resolution timing — see §2.3.
 3. **Load-bearing intent comments are mandatory** for every caching change (repo rule). Each cache
    introduced below ships with a comment explaining why it is safe.
 4. **Pre-commit, every commit:** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`.
    `./gradlew lintRelease` once after the final commit.
-5. **File lifecycle:** run `codegraph index` after creating the two new source files.
+5. **File lifecycle:** run `codegraph index` after creating the three new source files.
 6. **No `DATA_FLOW.md` update required.** None of F3/F11/F12 touches the ingestion pipeline, Room
    schema/DAOs, scoring coordinators, or scoring formulas. (Confirm this claim still holds at
    implementation time; if the diff grows to touch any of those, the update becomes mandatory.)
