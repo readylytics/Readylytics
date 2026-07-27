@@ -97,6 +97,8 @@ class HealthDashboardApplication :
                 workerScheduler = workerScheduler,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
+        val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)
+        appScope.launch { preferencesPrewarmer.prewarm() }
         appScope.launch {
             startupCoordinator.observe(databaseMigrationController.state)
         }
