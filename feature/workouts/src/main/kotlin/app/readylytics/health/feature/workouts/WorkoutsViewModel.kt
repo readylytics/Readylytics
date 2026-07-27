@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -58,6 +59,7 @@ data class WorkoutDisplayItem(
     val classification: WorkoutLoadClassification?,
 )
 
+@Immutable
 data class WorkoutsUiState(
     val latestSummary: DailySummary? = null,
     val latestMetrics: DailyMetrics? = null,

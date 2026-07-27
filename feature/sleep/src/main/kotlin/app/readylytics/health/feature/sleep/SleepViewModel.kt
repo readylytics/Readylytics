@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.sleep
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -43,6 +44,7 @@ import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
+@Immutable
 data class SleepUiState(
     val latestSummary: DailySummary? = null,
     val latestMetrics: DailyMetrics? = null,

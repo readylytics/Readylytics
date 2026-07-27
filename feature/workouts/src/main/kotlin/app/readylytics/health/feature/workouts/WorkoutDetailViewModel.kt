@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,6 +33,7 @@ data class HeartRatePoint(
     val bpm: Int,
 )
 
+@Immutable
 data class WorkoutDetailUiState(
     val workout: WorkoutData? = null,
     val hrSamples: List<HeartRatePoint> = emptyList(),
