@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.vitals.overview
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,117 +37,119 @@ internal fun VitalsTrendSection(
     val chartSeries = chartInputs.chartSeries
     val presentation = chartInputs.presentation
 
-    // Chart 1: HRV Trend
-    CardLoader(
-        isLoading = chartInputs.isLoading,
-        skeleton = {
-            SkeletonCard(
-                modifier = modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                height = 250.dp,
-            )
-        },
-        content = {
-            TrendCard(
-                title = stringResource(R.string.label_hrv_rmssd),
-                modifier =
-                    modifier
-                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                        .graphicsLayer { },
-            ) {
-                TrendChart(
-                    points = chartSeries.hrv,
-                    rangeStartMs = chartInputs.rangeStartMs,
-                    rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_hrv),
-                    baselineUnit = stringResource(CoreUiR.string.unit_ms),
-                    modifier = Modifier.testTag("HrvTrendChart"),
-                    baseline = presentation.baselineHrv,
-                    showBaseline = !chartInputs.isCalibrating,
-                    scrollState = chartScrollState,
-                    zoomState = chartZoomState,
-                    zoneBands = presentation.hrvZoneBands,
-                    parentScrollInProgress = parentScrollInProgress,
+    Column(modifier = modifier) {
+        // Chart 1: HRV Trend
+        CardLoader(
+            isLoading = chartInputs.isLoading,
+            skeleton = {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    height = 250.dp,
                 )
-            }
-        },
-    )
+            },
+            content = {
+                TrendCard(
+                    title = stringResource(R.string.label_hrv_rmssd),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
+                            .graphicsLayer { },
+                ) {
+                    TrendChart(
+                        points = chartSeries.hrv,
+                        rangeStartMs = chartInputs.rangeStartMs,
+                        rangeDays = chartInputs.selectedRange.days,
+                        metricName = stringResource(CoreUiR.string.label_hrv),
+                        baselineUnit = stringResource(CoreUiR.string.unit_ms),
+                        modifier = Modifier.testTag("HrvTrendChart"),
+                        baseline = presentation.baselineHrv,
+                        showBaseline = !chartInputs.isCalibrating,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                        zoneBands = presentation.hrvZoneBands,
+                        parentScrollInProgress = parentScrollInProgress,
+                    )
+                }
+            },
+        )
 
-    Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
-    // Chart 2: Resting HR Trend
-    CardLoader(
-        isLoading = chartInputs.isLoading,
-        skeleton = {
-            SkeletonCard(
-                modifier = modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                height = 250.dp,
-            )
-        },
-        content = {
-            TrendCard(
-                title = stringResource(R.string.label_resting_heart_rate),
-                modifier =
-                    modifier
-                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                        .graphicsLayer { },
-            ) {
-                TrendChart(
-                    points = chartSeries.rhr,
-                    rangeStartMs = chartInputs.rangeStartMs,
-                    rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_rhr),
-                    baselineUnit = "bpm",
-                    modifier = Modifier.testTag("RestingHeartRateTrendChart"),
-                    baseline = presentation.baselineRhr?.toFloat(),
-                    showBaseline = !chartInputs.isCalibrating,
-                    scrollState = chartScrollState,
-                    zoomState = chartZoomState,
-                    zoneBands = presentation.rhrZoneBands,
-                    parentScrollInProgress = parentScrollInProgress,
+        // Chart 2: Resting HR Trend
+        CardLoader(
+            isLoading = chartInputs.isLoading,
+            skeleton = {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    height = 250.dp,
                 )
-            }
-        },
-    )
+            },
+            content = {
+                TrendCard(
+                    title = stringResource(R.string.label_resting_heart_rate),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
+                            .graphicsLayer { },
+                ) {
+                    TrendChart(
+                        points = chartSeries.rhr,
+                        rangeStartMs = chartInputs.rangeStartMs,
+                        rangeDays = chartInputs.selectedRange.days,
+                        metricName = stringResource(CoreUiR.string.label_rhr),
+                        baselineUnit = "bpm",
+                        modifier = Modifier.testTag("RestingHeartRateTrendChart"),
+                        baseline = presentation.baselineRhr?.toFloat(),
+                        showBaseline = !chartInputs.isCalibrating,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                        zoneBands = presentation.rhrZoneBands,
+                        parentScrollInProgress = parentScrollInProgress,
+                    )
+                }
+            },
+        )
 
-    Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
-    // Chart 3: SpO2 Trend
-    CardLoader(
-        isLoading = chartInputs.isLoading,
-        skeleton = {
-            SkeletonCard(
-                modifier = modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                height = 250.dp,
-            )
-        },
-        content = {
-            TrendCard(
-                title = stringResource(R.string.label_oxygen_saturation),
-                modifier =
-                    modifier
-                        .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                        .graphicsLayer { },
-            ) {
-                TrendChart(
-                    points = chartSeries.spo2,
-                    rangeStartMs = chartInputs.rangeStartMs,
-                    rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_spo2),
-                    baselineUnit = "%",
-                    modifier = Modifier.testTag("OxygenSaturationTrendChart"),
-                    baseline = 95f,
-                    baselineLabel = stringResource(CoreUiR.string.label_normal_limit),
-                    showBaseline = true,
-                    scrollState = chartScrollState,
-                    zoomState = chartZoomState,
-                    zoneBands = presentation.spo2ZoneBands,
-                    axisDecimalPlaces = 0,
-                    baselineDecimalPlaces = 0,
-                    minYOverride = 90.0,
-                    maxYOverride = 100.0,
-                    parentScrollInProgress = parentScrollInProgress,
+        // Chart 3: SpO2 Trend
+        CardLoader(
+            isLoading = chartInputs.isLoading,
+            skeleton = {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    height = 250.dp,
                 )
-            }
-        },
-    )
+            },
+            content = {
+                TrendCard(
+                    title = stringResource(R.string.label_oxygen_saturation),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
+                            .graphicsLayer { },
+                ) {
+                    TrendChart(
+                        points = chartSeries.spo2,
+                        rangeStartMs = chartInputs.rangeStartMs,
+                        rangeDays = chartInputs.selectedRange.days,
+                        metricName = stringResource(CoreUiR.string.label_spo2),
+                        baselineUnit = "%",
+                        modifier = Modifier.testTag("OxygenSaturationTrendChart"),
+                        baseline = 95f,
+                        baselineLabel = stringResource(CoreUiR.string.label_normal_limit),
+                        showBaseline = true,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                        zoneBands = presentation.spo2ZoneBands,
+                        axisDecimalPlaces = 0,
+                        baselineDecimalPlaces = 0,
+                        minYOverride = 90.0,
+                        maxYOverride = 100.0,
+                        parentScrollInProgress = parentScrollInProgress,
+                    )
+                }
+            },
+        )
+    }
 }
