@@ -124,9 +124,16 @@ imports from `ChartDefaults.kt` if nothing else there uses them (`ktlint` will f
 
 ### 2.3 Behavior-preservation notes
 
-- `ZoneId.systemDefault()` and `Locale.getDefault()` are still read at exactly the same moment as
-  today (inside `remember(rangeStartMs)`, at formatter construction). A locale or timezone change
-  without a `rangeStartMs` change is therefore *equally* stale before and after — no regression.
+- `Locale.getDefault()` is read at exactly the same moment as today (inside `remember(rangeStartMs)`,
+  at formatter construction) — no change.
+- **`ZoneId.systemDefault()` timing does change**, and this is a deliberate, maintainer-approved
+  deviation from the byte-identity constraint (ruling 2026-07-27, Task 1 review). The current code
+  re-reads the zone *inside* the formatter lambda, i.e. on every label on every draw pass; the cache
+  resolves it once at construction. Rationale for accepting: `rangeStartMs` and the plotted day
+  offsets are computed upstream against a fixed zone, so re-reading the zone per label only produced
+  labels that disagreed with the plotted data. Freezing zone and locale together is the consistent
+  behavior. The class comment must state this explicitly, and a test must pin the default-argument
+  construction path (the one production uses).
 - `plusDays` on a `LocalDate` is DST-immune, so the day arithmetic is unchanged.
 - `value.toLong()` truncates toward zero, same as today.
 
