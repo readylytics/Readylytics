@@ -1,8 +1,6 @@
 package app.readylytics.health.feature.vitals.overview
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,36 +16,18 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.ui.common.CardLoader
-import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
-import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.StatusLegend
-import app.readylytics.health.core.ui.components.TrendCard
-import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.hrvStatus
-import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.feature.vitals.R
-import kotlin.math.roundToInt
-import app.readylytics.health.core.ui.R as CoreUiR
-
-private const val RHR_DIAL_FLOOR = 30
-private const val RHR_BASELINE_FILL = 0.5f
 
 @Composable
 fun VitalsRoute(
@@ -91,12 +71,10 @@ fun VitalsScreen(
             key = "vitals-${uiState.selectedRange}",
         )
     val scrollState = rememberScrollState()
-    val chartSeries = uiState.chartSeries
-    val presentation = uiState.presentation
-    val baselineHrv = presentation.baselineHrv
-    val baselineRhr = presentation.baselineRhr
 
     Column(modifier = modifier.fillMaxSize()) {
+        // isRefreshing (not isLoading) gates the date-switcher: date navigation stays disabled for
+        // the full sync duration, not just on true first-load (F1).
         ScreenHeaderSection(isLoading = uiState.isRefreshing) { isDisabled ->
             DateSwitcher(
                 selectedDate = uiState.selectedDate,
@@ -124,124 +102,12 @@ fun VitalsScreen(
                         bottom = MaterialTheme.spacing.pageBottom,
                     ),
         ) {
-            // Twin gauges side-by-side
-            CardLoader(
+            VitalsGaugeRow(
                 isLoading = uiState.isLoading,
-                skeleton = {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    horizontal = MaterialTheme.spacing.pageHorizontal,
-                                    vertical = MaterialTheme.spacing.small,
-                                ),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ScoreDialSkeleton(modifier = Modifier.weight(1f))
-                        ScoreDialSkeleton(modifier = Modifier.weight(1f))
-                    }
-                },
-                content = {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    horizontal = MaterialTheme.spacing.pageHorizontal,
-                                    vertical = MaterialTheme.spacing.small,
-                                ),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val summary = uiState.latestSummary
-                        val currentRhr = summary?.restingHeartRate
-                        val currentHrv = summary?.nocturnalHrv
-
-                        val rhrFill =
-                            if (baselineRhr != null && baselineRhr > RHR_DIAL_FLOOR && currentRhr != null) {
-                                (
-                                    (currentRhr - RHR_DIAL_FLOOR).toFloat() /
-                                        (baselineRhr - RHR_DIAL_FLOOR) * RHR_BASELINE_FILL
-                                ).coerceIn(0f, 1f)
-                            } else {
-                                null
-                            }
-                        val rhrStatus =
-                            summary?.rhrStatus(
-                                optimalThreshold = presentation.rhrOptimalThreshold,
-                                warningThreshold = presentation.rhrWarningThreshold,
-                            ) ?: MetricStatus.CALIBRATING
-                        val rhrTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_sleep_rhr)
-
-                        val rhrDelta =
-                            if (currentRhr != null && baselineRhr != null) {
-                                val diff = currentRhr - baselineRhr
-                                when {
-                                    diff > 0 ->
-                                        stringResource(CoreUiR.string.delta_up) + " $diff " +
-                                            stringResource(app.readylytics.health.core.ui.R.string.unit_bpm)
-                                    diff < 0 ->
-                                        stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                            stringResource(app.readylytics.health.core.ui.R.string.unit_bpm)
-                                    else -> stringResource(CoreUiR.string.delta_no_change)
-                                }
-                            } else {
-                                null
-                            }
-
-                        M3ScoreGaugeCard(
-                            modifier = Modifier.weight(1f),
-                            title = stringResource(CoreUiR.string.label_rhr),
-                            score = rhrFill,
-                            displayText = currentRhr?.toString() ?: "—",
-                            unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_bpm),
-                            maxScore = 1f,
-                            status = rhrStatus,
-                            deltaText = rhrDelta,
-                            tooltipDescription = rhrTooltip,
-                            onClick = onNavigateToRhr,
-                        )
-
-                        val hrvMax = if (baselineHrv != null && baselineHrv > 0f) baselineHrv * 2.0f else 150f
-                        val hrvStatus =
-                            summary?.hrvStatus(
-                                optimalThreshold = presentation.hrvOptimalThreshold,
-                                warningThreshold = presentation.hrvWarningThreshold,
-                            ) ?: MetricStatus.CALIBRATING
-                        val hrvTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv)
-
-                        val hrvDelta =
-                            if (currentHrv != null && baselineHrv != null) {
-                                val diff = (currentHrv - baselineHrv).roundToInt()
-                                when {
-                                    diff > 0 ->
-                                        stringResource(CoreUiR.string.delta_up) + " $diff " +
-                                            stringResource(app.readylytics.health.core.ui.R.string.unit_ms)
-                                    diff < 0 ->
-                                        stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                            stringResource(app.readylytics.health.core.ui.R.string.unit_ms)
-                                    else -> stringResource(CoreUiR.string.delta_no_change)
-                                }
-                            } else {
-                                null
-                            }
-
-                        M3ScoreGaugeCard(
-                            modifier = Modifier.weight(1f),
-                            title = stringResource(CoreUiR.string.label_hrv),
-                            score = currentHrv?.toFloat(),
-                            displayText = currentHrv?.toString() ?: "—",
-                            unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_ms),
-                            maxScore = hrvMax,
-                            status = hrvStatus,
-                            deltaText = hrvDelta,
-                            tooltipDescription = hrvTooltip,
-                            onClick = onNavigateToHrv,
-                        )
-                    }
-                },
+                latestSummary = uiState.latestSummary,
+                presentation = uiState.presentation,
+                onNavigateToHrv = onNavigateToHrv,
+                onNavigateToRhr = onNavigateToRhr,
             )
 
             // Time Range selection
@@ -273,120 +139,11 @@ fun VitalsScreen(
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
-            // Chart 1: HRV Trend
-            CardLoader(
-                isLoading = uiState.isLoading,
-                skeleton = {
-                    SkeletonCard(
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                        height = 250.dp,
-                    )
-                },
-                content = {
-                    val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
-                    TrendCard(
-                        title = stringResource(R.string.label_hrv_rmssd),
-                        modifier =
-                            Modifier
-                                .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                                .graphicsLayer { },
-                    ) {
-                        TrendChart(
-                            points = chartSeries.hrv,
-                            rangeStartMs = uiState.rangeStartMs,
-                            rangeDays = uiState.selectedRange.days,
-                            metricName = stringResource(CoreUiR.string.label_hrv),
-                            baselineUnit = stringResource(app.readylytics.health.core.ui.R.string.unit_ms),
-                            modifier = Modifier.testTag("HrvTrendChart"),
-                            baseline = baselineHrv,
-                            showBaseline = !isCalibrating,
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState,
-                            zoneBands = presentation.hrvZoneBands,
-                            parentScrollInProgress = { scrollState.isScrollInProgress },
-                        )
-                    }
-                },
-            )
-
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-
-            // Chart 2: Resting HR Trend
-            CardLoader(
-                isLoading = uiState.isLoading,
-                skeleton = {
-                    SkeletonCard(
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                        height = 250.dp,
-                    )
-                },
-                content = {
-                    val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
-                    TrendCard(
-                        title = stringResource(R.string.label_resting_heart_rate),
-                        modifier =
-                            Modifier
-                                .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                                .graphicsLayer { },
-                    ) {
-                        TrendChart(
-                            points = chartSeries.rhr,
-                            rangeStartMs = uiState.rangeStartMs,
-                            rangeDays = uiState.selectedRange.days,
-                            metricName = stringResource(CoreUiR.string.label_rhr),
-                            baselineUnit = "bpm",
-                            modifier = Modifier.testTag("RestingHeartRateTrendChart"),
-                            baseline = baselineRhr?.toFloat(),
-                            showBaseline = !isCalibrating,
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState,
-                            zoneBands = presentation.rhrZoneBands,
-                            parentScrollInProgress = { scrollState.isScrollInProgress },
-                        )
-                    }
-                },
-            )
-
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-
-            // Chart 3: SpO2 Trend
-            CardLoader(
-                isLoading = uiState.isLoading,
-                skeleton = {
-                    SkeletonCard(
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                        height = 250.dp,
-                    )
-                },
-                content = {
-                    TrendCard(
-                        title = stringResource(R.string.label_oxygen_saturation),
-                        modifier =
-                            Modifier
-                                .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                                .graphicsLayer { },
-                    ) {
-                        TrendChart(
-                            points = chartSeries.spo2,
-                            rangeStartMs = uiState.rangeStartMs,
-                            rangeDays = uiState.selectedRange.days,
-                            metricName = stringResource(CoreUiR.string.label_spo2),
-                            baselineUnit = "%",
-                            modifier = Modifier.testTag("OxygenSaturationTrendChart"),
-                            baseline = 95f,
-                            baselineLabel = stringResource(CoreUiR.string.label_normal_limit),
-                            showBaseline = true,
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState,
-                            zoneBands = presentation.spo2ZoneBands,
-                            axisDecimalPlaces = 0,
-                            baselineDecimalPlaces = 0,
-                            minYOverride = 90.0,
-                            maxYOverride = 100.0,
-                            parentScrollInProgress = { scrollState.isScrollInProgress },
-                        )
-                    }
-                },
+            VitalsTrendSection(
+                chartInputs = uiState.chartInputs(),
+                chartScrollState = chartScrollState,
+                chartZoomState = chartZoomState,
+                parentScrollInProgress = { scrollState.isScrollInProgress },
             )
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))

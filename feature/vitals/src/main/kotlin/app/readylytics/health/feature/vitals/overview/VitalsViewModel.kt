@@ -149,11 +149,21 @@ class VitalsViewModel
             // isLoading now means "true first-load, no data yet" (skeleton). isRefreshing tracks
             // every sync regardless of data presence, and only gates the date-switcher (see
             // VitalsScreen). Mirrors DashboardViewModel's isComputingMetrics/isRefreshing split.
+            // The "no data yet" signal is based on whether the trend charts have any real
+            // historical point loaded, not on whether the *selected day's* summary exists --
+            // latestSummary is scoped to the selected date, so on the first sync of a new day
+            // (before today's summary is computed) it is null even though 7-90 days of unchanged
+            // chart history are already loaded. Checking chart history instead avoids flashing the
+            // skeleton and tearing down/rebuilding the Vico charts once per day.
             combine(
                 contentFlow,
                 presentationFlow,
                 foregroundSyncController.isSyncing,
             ) { content, presentation, isSyncing ->
+                val hasHistoricalData =
+                    content.chartSeries.hrv.any { it.value != null } ||
+                        content.chartSeries.rhr.any { it.value != null } ||
+                        content.chartSeries.spo2.any { it.value != null }
                 VitalsUiState(
                     latestSummary = content.latestSummary,
                     chartSeries = content.chartSeries,
@@ -161,7 +171,7 @@ class VitalsViewModel
                     selectedRange = content.selection.range,
                     selectedDate = content.selection.date,
                     rangeStartMs = content.rangeStartMs,
-                    isLoading = isSyncing && content.latestSummary == null,
+                    isLoading = isSyncing && !hasHistoricalData,
                     isRefreshing = isSyncing,
                 )
             }.stateIn(

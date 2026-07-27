@@ -586,20 +586,41 @@ class WorkoutsViewModelTest {
 
             val stateBeforeToggle = viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
             assertEquals(false, stateBeforeToggle.isLoading)
+            assertEquals(false, stateBeforeToggle.isRefreshing)
 
             isSyncingFlow.value = true
             testScheduler.advanceUntilIdle()
-            assertEquals(true, viewModel.uiState.value.isLoading)
+            // Workouts are already present, so this is a routine refresh, not a first load:
+            // isLoading must stay false (no skeleton/chart rebuild) and only isRefreshing flips.
+            assertEquals(false, viewModel.uiState.value.isLoading)
+            assertEquals(true, viewModel.uiState.value.isRefreshing)
 
             isSyncingFlow.value = false
             testScheduler.advanceUntilIdle()
             val stateAfterToggle = viewModel.uiState.value
             assertEquals(false, stateAfterToggle.isLoading)
+            assertEquals(false, stateAfterToggle.isRefreshing)
 
             // The heavy pipeline (Room subscriptions, earliest-workout lookup, EMA series) must
-            // not restart on a sync toggle -- only the cheap isLoading merge should run.
+            // not restart on a sync toggle -- only the cheap isLoading/isRefreshing merge should run.
             coVerify(exactly = 1) { workoutRepository.getEarliestWorkoutTimestamp() }
             assertSame(stateBeforeToggle.recentWorkouts, stateAfterToggle.recentWorkouts)
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `isLoading stays true while syncing when no workouts or summary exist yet`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            isSyncingFlow.value = true
+            testScheduler.advanceUntilIdle()
+            val state = viewModel.uiState.value
+            assertEquals(true, state.isLoading)
+            assertEquals(true, state.isRefreshing)
 
             collectJob.cancel()
         }
