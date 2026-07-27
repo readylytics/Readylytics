@@ -283,32 +283,69 @@ Also unchanged: `SPLASH_MAX_WAIT_MS`, the `setKeepOnScreenCondition` predicate, 
 
 ### 4.3 Change
 
-`app/src/main/kotlin/app/readylytics/health/HealthDashboardApplication.kt`, in `onCreate`,
-**immediately before** the existing `appScope.launch { startupCoordinator.observe(...) }`
-(currently `:100-102`):
+**Ruling (2026-07-27, maintainer):** extract the pre-warm into its own testable class rather than
+inlining it in `onCreate`, so F12 ships with real unit coverage. This supersedes the earlier
+"inline it" decision.
+
+**New file:** `app/src/main/kotlin/app/readylytics/health/PreferencesPrewarmer.kt` — sibling of
+`DatabaseReadyStartupInitializer.kt`, same package (`app.readylytics.health`), same
+`Lazy<...>`-injection style so it mirrors the existing startup class and its test.
 
 ```kotlin
-// Pre-warm the user-preferences proto store. The first frame is gated on its first
-// emission (MainActivity's splash keep-condition), and that read is otherwise only
-// triggered by composition -- serializing DataStore load (and its one-time migrations)
-// after Activity startup instead of overlapping it. DataStore caches after the first
-// read, so the Activity's collection then resolves immediately.
-// Deliberately its own ungated launch: DatabaseReadyStartupCoordinator's work waits for
-// DatabaseReadiness.Ready, and gating the pre-warm on that would defeat its purpose.
-appScope.launch {
-    try {
-        settingsRepo.get().userPreferences.first()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        logE(PREFS_PREWARM_LOG_TAG, e) { "User preferences pre-warm failed" }
+package app.readylytics.health
+
+import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.util.logE
+import dagger.Lazy
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+
+/**
+ * Pulls the first user-preferences emission off the first-frame critical path.
+ *
+ * MainActivity's splash keep-condition blocks the first frame until userPreferences emits, and
+ * that read is otherwise triggered only by composition -- serializing the proto-store load (and
+ * its one-time DataMigrations) after Activity startup instead of overlapping it. DataStore caches
+ * after the first read, so the Activity's collection then resolves immediately.
+ *
+ * Deliberately NOT part of DatabaseReadyStartupInitializer: that work waits for
+ * DatabaseReadiness.Ready, and gating the pre-warm on the DB migration would defeat its purpose.
+ */
+internal class PreferencesPrewarmer(
+    private val settingsRepository: Lazy<SettingsRepository>,
+) {
+    suspend fun prewarm() {
+        try {
+            settingsRepository.get().userPreferences.first()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Fire-and-forget: the Activity's own collection is the authoritative read, and the
+            // splash timeout already bounds a stalled store. A failure here must not crash startup.
+            logE(TAG) { "User preferences pre-warm failed: ${e.message}" }
+        }
+    }
+
+    private companion object {
+        const val TAG = "HealthDashboardApplication"
     }
 }
 ```
 
-Add `const val PREFS_PREWARM_LOG_TAG = "HealthDashboardApplication"` to the existing private
-companion (`:172-174`). `CancellationException`, `first`, `logE`, and `launch` are already
-imported.
+Use whichever `logE` overload matches the existing call sites in this package
+(`DatabaseReadyStartupInitializer.kt:43` uses `logE(TAG, e) { "..." }`) — prefer passing the
+throwable through if that overload exists.
+
+**Edit** `HealthDashboardApplication.onCreate`, **immediately before** the existing
+`appScope.launch { startupCoordinator.observe(...) }` (currently `:100-102`):
+
+```kotlin
+val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)
+appScope.launch { preferencesPrewarmer.prewarm() }
+```
+
+Keep it ungated and above the coordinator launch. Do not route it through
+`DatabaseReadyStartupCoordinator`.
 
 ### 4.4 Safety notes
 
@@ -323,15 +360,28 @@ imported.
   still the authoritative read, and the splash timeout already bounds a stalled store.
 - The pre-warm is fire-and-forget; nothing waits on it.
 
-### 4.5 Coverage gap (accepted)
+### 4.5 Tests
 
-`HealthDashboardApplication.onCreate` is not JVM-unit-testable, and this design deliberately does
-not introduce a `PreferencesPrewarmer` class to make it so. **F12 therefore ships with no automated
-coverage.** Verification is manual (§4.6) plus "existing suites stay green".
+**New file:** `app/src/test/kotlin/app/readylytics/health/PreferencesPrewarmerTest.kt`. Mirror the
+existing `DatabaseReadyStartupInitializerTest.kt` style: `mockk` for `SettingsRepository` and its
+`Lazy`, `runTest`, `org.junit.Test`.
+
+Required cases:
+
+1. **Reads the first emission.** Fake `userPreferences` flow; assert `prewarm()` resolves the
+   `Lazy` (`verify { settingsRepositoryLazy.get() }`) and collects exactly one value — a flow that
+   emits then suspends forever must not hang `prewarm()`.
+2. **Failure is swallowed.** A `userPreferences` flow that throws (and separately: a `Lazy.get()`
+   that throws) must not propagate out of `prewarm()`.
+3. **Cancellation propagates.** A flow that throws `CancellationException` (or a `prewarm()` call
+   cancelled mid-collection) must rethrow, not be swallowed by the generic catch.
+
+`HealthDashboardApplication.onCreate` itself remains untested — the wiring is two lines. Its
+correctness is covered by the manual checks in §4.6.
 
 ### 4.6 Acceptance
 
-- `./gradlew ktlintFormat && ./gradlew testDebugUnitTest` green (nothing should change).
+- New unit tests green; `./gradlew ktlintFormat && ./gradlew testDebugUnitTest` green.
 - Manual, on a real install:
   1. Cold start in dark mode, then in light mode — no theme flash, splash behaves as before.
   2. Cold start with a non-default `AppTheme` set — correct theme on first frame.
@@ -346,14 +396,14 @@ coverage.** Verification is manual (§4.6) plus "existing suites stay green".
 ## 5. Verification summary
 
 Per commit: `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`.
-After the final commit: `./gradlew lintRelease`, then `codegraph index` (two new source files, two
-new test files).
+After the final commit: `./gradlew lintRelease`, then `codegraph index` (three new source files,
+three new test files).
 
 | Item | Automated | Manual |
 |---|---|---|
 | F3 | `DayOffsetLabelCacheTest` golden + caching + DST | Axis labels unchanged at 7/30/90/180 on all five chart screens; no chart recreation on scroll-back |
 | F11 | `DayOffsetTickCalculatorTest` golden grid + cache behavior | Tick/label placement unchanged while panning and zooming; no chart recreation on scroll-back |
-| F12 | none (see §4.5) | Cold start theme correctness (dark/light/custom), fresh install, pending-DB-migration start |
+| F12 | `PreferencesPrewarmerTest` (first-emission read, failure swallowed, cancellation propagates) | Cold start theme correctness (dark/light/custom), fresh install, pending-DB-migration start |
 
 No device is available for this batch, so `ScrollBenchmark.vitalsChartPanAndZoom` and
 `StartupBenchmark.coldStart` are recorded here as **optional follow-up** measurements, not gates.
@@ -366,7 +416,7 @@ document.
 |---|---|---|
 | 1 | F3 — cache day-offset axis labels | new `DayOffsetLabelCache.kt`, new `DayOffsetLabelCacheTest.kt`, edit `ChartDefaults.kt` |
 | 2 | F11 — cache item-placer tick values | new `DayOffsetTickCalculator.kt`, new `DayOffsetTickCalculatorTest.kt`, edit `ChartDefaults.kt` |
-| 3 | F12 — pre-warm the first DataStore read | edit `HealthDashboardApplication.kt` |
+| 3 | F12 — pre-warm the first DataStore read | new `PreferencesPrewarmer.kt`, new `PreferencesPrewarmerTest.kt`, edit `HealthDashboardApplication.kt` |
 
 After the batch, mark F3, F11, and F12 as implemented in
 `internal-docs/plans/PERFORMANCE_OPTIMIZATION_PLAN.md`.
