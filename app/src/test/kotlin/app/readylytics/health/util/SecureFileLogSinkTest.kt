@@ -430,6 +430,11 @@ class SecureFileLogSinkTest {
             assertFalse("Stack trace text should be redacted too", content.contains("245"))
         }
 
+    private fun longestLineBytes(storedContents: Map<String, String>): Long =
+        storedContents.values
+            .flatMap { it.split("\n") }
+            .maxOfOrNull { it.toByteArray(Charsets.UTF_8).size.toLong() + 1L } ?: 0L
+
     /**
      * Content is keyed by a per-write token that is written into the on-disk placeholder, so it
      * travels with the bytes when [LogSlotStore] renames a slot — exactly like real ciphertext.
@@ -439,11 +444,6 @@ class SecureFileLogSinkTest {
      * still on disk. (The whole point of F2 is that nothing reads between seals.) Same scheme as
      * `LogSlotStoreTest.AdAwareSecureFileStore`.
      */
-    private fun longestLineBytes(storedContents: Map<String, String>): Long =
-        storedContents.values
-            .flatMap { it.split("\n") }
-            .maxOfOrNull { it.toByteArray(Charsets.UTF_8).size.toLong() + 1L } ?: 0L
-
     private class FakeSecureFileStore : SecureFileStore {
         private val entries = linkedMapOf<String, String>()
         private var nextToken = 0
