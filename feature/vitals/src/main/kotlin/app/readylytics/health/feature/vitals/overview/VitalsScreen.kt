@@ -97,7 +97,7 @@ fun VitalsScreen(
     val baselineRhr = presentation.baselineRhr
 
     Column(modifier = modifier.fillMaxSize()) {
-        ScreenHeaderSection(isLoading = uiState.isLoading) { isDisabled ->
+        ScreenHeaderSection(isLoading = uiState.isRefreshing) { isDisabled ->
             DateSwitcher(
                 selectedDate = uiState.selectedDate,
                 onPreviousDay = onPreviousDay,

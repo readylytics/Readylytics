@@ -30,6 +30,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -137,6 +138,51 @@ class VitalsViewModelTest {
                 assertSame(before.chartSeries.hrv, during.chartSeries.hrv)
                 assertSame(before.chartSeries.rhr, during.chartSeries.rhr)
                 assertSame(before.chartSeries.spo2, during.chartSeries.spo2)
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `isRefreshing toggles independently of isLoading when data is present`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                val before = viewModel.uiState.value
+                assertFalse(before.isLoading)
+                assertFalse(before.isRefreshing)
+
+                syncing.value = true
+                advanceUntilIdle()
+                val during = viewModel.uiState.value
+                assertFalse(during.isLoading)
+                assertTrue(during.isRefreshing)
+
+                syncing.value = false
+                advanceUntilIdle()
+                val after = viewModel.uiState.value
+                assertFalse(after.isLoading)
+                assertFalse(after.isRefreshing)
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `isLoading stays true while syncing when no summary exists yet`() =
+        runTest {
+            summaries.value = emptyList()
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                syncing.value = true
+                advanceUntilIdle()
+                val state = viewModel.uiState.value
+                assertTrue(state.isLoading)
+                assertTrue(state.isRefreshing)
             } finally {
                 collector.cancel()
             }

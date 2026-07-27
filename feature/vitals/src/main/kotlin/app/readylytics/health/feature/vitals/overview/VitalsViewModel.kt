@@ -44,6 +44,7 @@ data class VitalsUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val rangeStartMs: Long = System.currentTimeMillis(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
 )
 
 private data class VitalsSelection(
@@ -145,6 +146,9 @@ class VitalsViewModel
                 .flowOn(ioDispatcher)
 
         val uiState: StateFlow<VitalsUiState> =
+            // isLoading now means "true first-load, no data yet" (skeleton). isRefreshing tracks
+            // every sync regardless of data presence, and only gates the date-switcher (see
+            // VitalsScreen). Mirrors DashboardViewModel's isComputingMetrics/isRefreshing split.
             combine(
                 contentFlow,
                 presentationFlow,
@@ -157,7 +161,8 @@ class VitalsViewModel
                     selectedRange = content.selection.range,
                     selectedDate = content.selection.date,
                     rangeStartMs = content.rangeStartMs,
-                    isLoading = isSyncing,
+                    isLoading = isSyncing && content.latestSummary == null,
+                    isRefreshing = isSyncing,
                 )
             }.stateIn(
                 scope = viewModelScope,
