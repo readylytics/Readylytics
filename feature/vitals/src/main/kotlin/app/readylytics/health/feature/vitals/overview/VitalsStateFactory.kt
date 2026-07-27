@@ -2,6 +2,7 @@ package app.readylytics.health.feature.vitals.overview
 
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.core.ui.model.Baselines
 import app.readylytics.health.domain.model.DailySummary
@@ -47,6 +48,31 @@ data class VitalsPresentationState(
             )
     }
 }
+
+/**
+ * The subset of [VitalsUiState] the three trend charts read. Passing only this into
+ * [VitalsTrendSection] means gauge-only or refresh-only state changes never recompose the chart
+ * subtree — mirrors [app.readylytics.health.feature.dashboard.DashboardUiState.cardInputs].
+ */
+@Immutable
+data class VitalsChartInputs(
+    val chartSeries: VitalsChartSeries,
+    val rangeStartMs: Long,
+    val selectedRange: TimeRange,
+    val presentation: VitalsPresentationState,
+    val isCalibrating: Boolean,
+    val isLoading: Boolean,
+)
+
+fun VitalsUiState.chartInputs(): VitalsChartInputs =
+    VitalsChartInputs(
+        chartSeries = chartSeries,
+        rangeStartMs = rangeStartMs,
+        selectedRange = selectedRange,
+        presentation = presentation,
+        isCalibrating = latestSummary?.isCalibrating ?: false,
+        isLoading = isLoading,
+    )
 
 internal fun buildVitalsChartSeries(
     summaries: List<DailySummary>,
