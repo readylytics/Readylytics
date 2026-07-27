@@ -127,6 +127,7 @@ composables), and a fresh-install skeleton check.
        val selectedRange: TimeRange,
        val presentation: VitalsPresentationState,
        val isCalibrating: Boolean,
+       val isLoading: Boolean,
    )
 
    fun VitalsUiState.chartInputs(): VitalsChartInputs = VitalsChartInputs(
@@ -135,6 +136,7 @@ composables), and a fresh-install skeleton check.
        selectedRange = selectedRange,
        presentation = presentation,
        isCalibrating = latestSummary?.isCalibrating ?: false,
+       isLoading = isLoading,
    )
    ```
    (Mirrors `DashboardUiState.cardInputs()` exactly.)
