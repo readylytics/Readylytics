@@ -17,7 +17,6 @@ import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringCalculator
@@ -282,23 +281,10 @@ class WorkoutsViewModel
 
                             val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
 
-                            // Batch load HR samples for all recent workouts
+                            // Batch load HR samples for all recent workouts: one getByTimeRange
+                            // per span-bounded cluster instead of one per workout (F10).
                             val samplesByWorkoutId =
-                                mutableMapOf<
-                                    String,
-                                    List<ComputeWorkoutTrimpUseCase.HeartRateSample>,
-                                >()
-                            for (workout in recentWorkouts) {
-                                val samples = heartRateRepository.getByTimeRange(workout.startTime, workout.endTime)
-                                samplesByWorkoutId[workout.id] =
-                                    samples.map {
-                                        app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-                                            .HeartRateSample(
-                                                timestamp = java.time.Instant.ofEpochMilli(it.timestampMs),
-                                                bpm = it.beatsPerMinute,
-                                            )
-                                    }
-                            }
+                                fetchHeartRateSamplesByWorkout(recentWorkouts, heartRateRepository)
 
                             val recentItems =
                                 recentWorkouts
