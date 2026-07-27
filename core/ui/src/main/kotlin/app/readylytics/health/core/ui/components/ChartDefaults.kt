@@ -6,7 +6,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.core.ui.common.DateFormatUtils
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -20,10 +19,6 @@ import com.patrykandpatrick.vico.compose.common.component.LineComponent
 import com.patrykandpatrick.vico.compose.common.component.TextComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 object ChartDefaults {
     @Composable
@@ -48,20 +43,8 @@ object ChartDefaults {
     @Composable
     fun rememberDayOffsetFormatter(rangeStartMs: Long): CartesianValueFormatter =
         remember(rangeStartMs) {
-            val formatter =
-                DateTimeFormatter.ofPattern(
-                    DateFormatUtils.DATE_FORMAT_SHORT,
-                    Locale.getDefault(),
-                )
-
-            CartesianValueFormatter { _, value, _ ->
-                Instant
-                    .ofEpochMilli(rangeStartMs)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-                    .plusDays(value.toLong())
-                    .format(formatter)
-            }
+            val labels = DayOffsetLabelCache(rangeStartMs)
+            CartesianValueFormatter { _, value, _ -> labels.label(value) }
         }
 
     @Composable
