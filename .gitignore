@@ -61,3 +61,6 @@ ktlint
 build-logic/bin/
 .artifacts/
 .codegraph/
+
+# Superpowers SDD scratch workspace
+.superpowers/
