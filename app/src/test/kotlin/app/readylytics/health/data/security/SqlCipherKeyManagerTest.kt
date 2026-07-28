@@ -29,11 +29,11 @@ class SqlCipherKeyManagerTest {
 
     @Test
     fun validateKeyDecryption_withCorruptedData_setsCorruptionState() {
-        val prefs = context.getSharedPreferences("sqlcipher_key_prefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
         prefs
             .edit()
-            .putString("encrypted_key", "corrupted_base64_data")
-            .putString("encryption_iv", "corrupted_iv_data")
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted_base64_data")
+            .putString(SqlCipherKeyManager.PREF_IV, "corrupted_iv_data")
             .commit()
 
         assertThrows(KeyDecryptionException::class.java) {
@@ -45,11 +45,11 @@ class SqlCipherKeyManagerTest {
 
     @Test
     fun resetKeyAndDatabase_clearsCorruptionState() {
-        val prefs = context.getSharedPreferences("sqlcipher_key_prefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
         prefs
             .edit()
-            .putString("encrypted_key", "corrupted_base64_data")
-            .putString("encryption_iv", "corrupted_iv_data")
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted_base64_data")
+            .putString(SqlCipherKeyManager.PREF_IV, "corrupted_iv_data")
             .commit()
 
         assertThrows(KeyDecryptionException::class.java) {

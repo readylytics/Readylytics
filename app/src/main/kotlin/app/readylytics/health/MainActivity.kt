@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
         val isDatabaseCorrupted by sqlCipherKeyManager.isKeyCorrupted.collectAsStateWithLifecycle()
 
         if (isDatabaseCorrupted) {
+            splashScreen.setKeepOnScreenCondition { false }
             FitDashboardTheme {
                 DatabaseRecoveryScreen(
                     onResetDatabase = {

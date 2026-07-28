@@ -313,9 +313,12 @@ class SqlCipherKeyManager
 
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"
-            private const val PREF_FILE_NAME = "sqlcipher_key_prefs"
-            private const val PREF_ENCRYPTED_KEY = "encrypted_key"
-            private const val PREF_IV = "encryption_iv"
+            @androidx.annotation.VisibleForTesting
+            internal const val PREF_FILE_NAME = "sqlcipher_key_prefs"
+            @androidx.annotation.VisibleForTesting
+            internal const val PREF_ENCRYPTED_KEY = "encrypted_key"
+            @androidx.annotation.VisibleForTesting
+            internal const val PREF_IV = "encryption_iv"
 
             // SQLCipher 4 default; pinned explicitly so a freshly-ATTACHed database (which uses
             // the library's current default) and a reopened one (via the legacy
