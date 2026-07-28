@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -33,6 +35,7 @@ import app.readylytics.health.ui.theme.DatabaseReadinessTheme
 import app.readylytics.health.ui.theme.FitDashboardTheme
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -54,10 +57,17 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var databaseMigrationController: DatabaseMigrationController
 
+    private var isKeyValidationComplete by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { sqlCipherKeyManager.validateKeyDecryption() }
+            isKeyValidationComplete = true
+        }
 
         setContent {
             // Applied once at the composition root: no-op outside the "benchmark" build type,
@@ -98,10 +108,8 @@ class MainActivity : ComponentActivity() {
     @androidx.compose.runtime.Composable
     private fun ReadylyticsContent(splashScreen: androidx.core.splashscreen.SplashScreen) {
         val dbFile = remember { getDatabasePath("health_dashboard.db") }
-        val isDatabaseCorrupted =
-            remember {
-                runCatching { sqlCipherKeyManager.validateKeyDecryption() }.isFailure
-            }
+        val isDatabaseCorrupted by sqlCipherKeyManager.isKeyCorrupted.collectAsStateWithLifecycle()
+
         if (isDatabaseCorrupted) {
             FitDashboardTheme {
                 DatabaseRecoveryScreen(
@@ -134,7 +142,7 @@ class MainActivity : ComponentActivity() {
             // which keeps the main looper busy and blocks Espresso idle sync.
             val splashStartMillis = remember { android.os.SystemClock.elapsedRealtime() }
             splashScreen.setKeepOnScreenCondition {
-                prefs == null &&
+                (!isKeyValidationComplete || prefs == null) &&
                     android.os.SystemClock.elapsedRealtime() - splashStartMillis < SPLASH_MAX_WAIT_MS
             }
 
