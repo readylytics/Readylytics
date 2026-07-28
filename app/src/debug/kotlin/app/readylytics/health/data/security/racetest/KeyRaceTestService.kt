@@ -13,8 +13,16 @@ import app.readylytics.health.data.security.SqlCipherKeyManager
 import java.io.File
 
 /**
- * Test-only Service (see androidTest/AndroidManifest.xml) that runs SqlCipherKeyManager's
+ * Test-only Service (declared in app/src/debug/AndroidManifest.xml, driven from
+ * SqlCipherKeyManagerCrossProcessRaceTest in app/src/androidTest) that runs SqlCipherKeyManager's
  * real getOrCreateDbKey() path in a genuinely separate OS process, driven by a Messenger.
+ *
+ * Lives in app/src/debug rather than app/src/androidTest: a `<service>` declared only in the
+ * androidTest manifest is packaged as part of the separately-installed test APK, and a standalone
+ * `android:process` launch of that APK (as opposed to test code loaded into the target app's
+ * process via `am instrument`) doesn't carry a complete classpath (missing kotlin-stdlib),
+ * crashing with `NoClassDefFoundError`. app/src/debug compiles into the real app APK for the
+ * debug build type only -- never release or benchmark -- so this still never ships to production.
  *
  * Declared as an open base class with two subclasses ([KeyRaceTestServiceProcess1] /
  * [KeyRaceTestServiceProcess2]), one per `android:process` manifest entry, so the test can
@@ -74,8 +82,8 @@ open class KeyRaceTestService : Service() {
     override fun onBind(intent: Intent): IBinder = incomingMessenger.binder
 }
 
-/** Runs in the `:racetest1` process (see androidTest/AndroidManifest.xml). */
+/** Runs in the `:racetest1` process (see app/src/debug/AndroidManifest.xml). */
 class KeyRaceTestServiceProcess1 : KeyRaceTestService()
 
-/** Runs in the `:racetest2` process (see androidTest/AndroidManifest.xml). */
+/** Runs in the `:racetest2` process (see app/src/debug/AndroidManifest.xml). */
 class KeyRaceTestServiceProcess2 : KeyRaceTestService()

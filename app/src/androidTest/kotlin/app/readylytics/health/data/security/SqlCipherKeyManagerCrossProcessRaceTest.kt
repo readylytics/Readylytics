@@ -29,24 +29,19 @@ import java.util.concurrent.TimeUnit
  * Genuine two-OS-process regression test for the SqlCipherKeyManager cross-process key race
  * (see KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md). Unlike Task 1's Robolectric test, which
  * proves the in-process ReentrantLock works within a single JVM, this drives two real Android
- * Service processes (`:racetest1` / `:racetest2`, declared in androidTest/AndroidManifest.xml)
- * that both race to call SqlCipherKeyManager.withWritableDatabase() on the same fresh DB file.
- * Because this app is self-instrumenting (no separate testApplicationId), these test-only
- * processes share the app's UID/files-dir/Keystore with the app under test, so they genuinely
- * contend on the same lock file, SharedPreferences file, and Keystore alias production code uses.
+ * Service processes (`:racetest1` / `:racetest2`, declared in app/src/debug/AndroidManifest.xml
+ * and compiled into the real debug app APK -- see KeyRaceTestService's doc comment for why they
+ * live there rather than in this androidTest module) that both race to call
+ * SqlCipherKeyManager.withWritableDatabase() on the same fresh DB file. Because the services are
+ * part of the app-under-test's own package/UID, this test uses a single targetContext throughout:
+ * these test-only processes share the app's UID/files-dir/Keystore with the app under test, so
+ * they genuinely contend on the same lock file, SharedPreferences file, and Keystore alias
+ * production code uses.
  */
 @RunWith(AndroidJUnit4::class)
 class SqlCipherKeyManagerCrossProcessRaceTest {
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
-
-    // The test's own installed package (e.g. "...local.test"), distinct from the app-under-test's
-    // package ("context"/targetContext, e.g. "...local"). KeyRaceTestServiceProcess1/2 are declared
-    // in androidTest/AndroidManifest.xml, which merges into this test-package manifest, not the
-    // target app's manifest -- so component resolution for Intent(context, serviceClass) must use
-    // this context, not targetContext, or ActivityManager fails to find the service ("not found").
-    private val testContext: Context
-        get() = InstrumentationRegistry.getInstrumentation().context
 
     private lateinit var dbFile: File
     private val connections = mutableListOf<Pair<ServiceConnection, Messenger>>()
@@ -64,11 +59,7 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
 
     @After
     fun tearDown() {
-        // Must unbind via testContext, matching the context bindService() was called with in
-        // bindRaceService(): Android's ContextImpl tracks bound ServiceConnections per the calling
-        // context's own LoadedApk (i.e. per installed package), so unbinding via a different
-        // package's context (targetContext) throws "Service not registered".
-        connections.forEach { (connection, _) -> testContext.unbindService(connection) }
+        connections.forEach { (connection, _) -> context.unbindService(connection) }
         connections.clear()
         dbFile.delete()
         File("${dbFile.absolutePath}-wal").delete()
@@ -144,10 +135,10 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
                 override fun onServiceDisconnected(name: ComponentName) = Unit
             }
         val intent =
-            Intent(testContext, serviceClass).apply {
-                setPackage(testContext.packageName)
+            Intent(context, serviceClass).apply {
+                setPackage(context.packageName)
             }
-        testContext.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         connections.add(connection to Messenger(android.os.Binder()))
         while (boundMessenger == null) {
             Thread.sleep(10)
