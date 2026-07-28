@@ -14,10 +14,10 @@
         <service
             android:name="app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess1"
             android:process=":racetest1"
-            android:exported="false" />
+            android:exported="true" />
         <service
             android:name="app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess2"
             android:process=":racetest2"
-            android:exported="false" />
+            android:exported="true" />
     </application>
 </manifest>
