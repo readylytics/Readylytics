@@ -49,7 +49,7 @@ keeps only formatting, sanitizing, and flush scheduling. Separately, `LogLevel` 
 | `core/model/src/main/kotlin/app/readylytics/health/domain/util/AppLog.kt` (**modify**) | `LogLevel.DEBUG`, `logD` → DEBUG, new `logI` → INFO. |
 | `core/model/src/test/kotlin/app/readylytics/health/domain/util/AppLogTest.kt` (**modify**) | Level-mapping tests for `logD`/`logI`. |
 | `app/src/main/kotlin/app/readylytics/health/HealthDashboardApplication.kt` (**modify**) | Debug-build sink gains a DEBUG branch; its INFO branch moves from `Log.d` to `Log.i`. |
-| `core/healthconnect/.../ForegroundSyncController.kt`, `.../DailySyncUseCase.kt`, `.../ResyncRangeUseCase.kt`, `.../HealthConnectRepositoryImpl.kt` (**modify**) | Twelve call sites promoted from `logD` to `logI` so release diagnostics keep sync narration. |
+| `core/healthconnect/.../ForegroundSyncController.kt`, `.../DailySyncUseCase.kt`, `.../ResyncRangeUseCase.kt`, `.../HealthConnectRepositoryImpl.kt` (**modify**) | Thirteen call sites promoted from `logD` to `logI` so release diagnostics keep sync narration. |
 | `internal-docs/plans/PERFORMANCE_OPTIMIZATION_PLAN.md` (**modify**) | Mark F2 implemented in Task 4. |
 
 ## Why the current code is slow (context for the implementer)
@@ -974,7 +974,7 @@ git commit -m "feat: add DEBUG log level and filter it out of the release diagno
 **Interfaces:**
 - Consumes: `logI` from Task 3.
 
-- [ ] **Step 1: Promote the twelve sites**
+- [ ] **Step 1: Promote the thirteen sites**
 
 Change `logD` → `logI` at exactly these call sites, leaving their messages untouched. Everything
 else stays `logD` (that per-day/per-chunk narration is precisely the chatter F2 removes from the

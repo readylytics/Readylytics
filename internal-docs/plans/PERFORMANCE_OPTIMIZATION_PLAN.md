@@ -243,7 +243,7 @@ carries `isRefreshing` (`VitalsViewModel.kt:47`) with `isLoading` redefined as f
 **Implemented:** `9535e1a` (`LogSlotStore` with rename-rotation and constant-AD log slots),
 `1b6f84e` + `ef6649c` (flush one log slot instead of rewriting all of them), `df76ff3` + `55f419f`
 (DEBUG log level, filtered out of the release diagnostic file), `70289dd` (promote
-twelve sync-lifecycle log sites back to INFO so release diagnostics still show them). Landed shape
+thirteen sync-lifecycle log sites back to INFO so release diagnostics still show them). Landed shape
 differs from the remediation write-up below in two ways: rotation is a rename **plus** a one-time
 re-encryption of pre-existing legacy slots — the pre-check's premise was wrong, `TinkSecureFileStore`
 does bind `secureFileAssociatedData` to the *filename*, so a bare rename would silently make old
@@ -711,7 +711,7 @@ Status column verified against the tree on 2026-07-27.
 |---|---|---|---|
 | 1 | M1 compose metrics + stability config | ✅ `e3f537c` | — (measurement first) |
 | 2 | M2 frame benchmarks + `profileable` | ⚠️ code `99e9664`; **baseline numbers PENDING** | blocked by the SQLCipher fresh-install race |
-| 3 | F2 log sink rotation, then F2 DEBUG level (2 commits) | ✅ `9535e1a`, `1b6f84e`, `ef6649c`, `df76ff3`, `55f419f`, `70289dd` | — |
+| 3 | F2 log sink rotation, DEBUG level, then INFO promotion of sync-lifecycle sites (6 commits) | ✅ `9535e1a`, `1b6f84e`, `ef6649c`, `df76ff3`, `55f419f`, `70289dd` | — |
 | 4 | F4 Workouts sync split | ✅ `ad1dd58` | — |
 | 5 | F10 N+1 HR batch | ✅ `7df6d7c` | after F4 |
 | 6 | F9 Sleep split + `distinctUntilChanged` | ✅ `ad1dd58` | — |
