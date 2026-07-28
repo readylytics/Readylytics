@@ -1,8 +1,8 @@
 # Performance Optimization Plan
 
 **Status:** Approved plan — partially implemented (last audited against the tree on 2026-07-27).
-**Landed:** M1, M2 (code only — baseline numbers still PENDING), F1, F3, F4, F5, F8, F9, F10, F11,
-F12. **Not yet implemented:** F2, F7, F13, F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
+**Landed:** M1, M2 (code only — baseline numbers still PENDING), F1, F2, F3, F4, F5, F8, F9, F10,
+F11, F12. **Not yet implemented:** F7, F13, F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
 per-item "Implemented" lines and the §7 implementation-order table for commit SHAs. Each work item
 below is scoped to land as one independent, production-ready commit.
 **Known blocker for measurement:** `ScrollBenchmark`'s baseline frame numbers cannot be recorded
@@ -239,6 +239,15 @@ carries `isRefreshing` (`VitalsViewModel.kt:47`) with `isLoading` redefined as f
   fresh-install first launch still shows skeletons.
 
 ### F2. `SecureFileLogSink`: append/rotate instead of decrypt-everything-rewrite-everything; add DEBUG level — **Critical, Effort M-L** *(approved decision 2)*
+
+**Implemented:** `9535e1a` (`LogSlotStore` with rename-rotation and constant-AD log slots),
+`1b6f84e` + `ef6649c` (flush one log slot instead of rewriting all of them), `df76ff3` + `55f419f`
+(DEBUG log level, filtered out of the release diagnostic file), `TASK4_SHA_PLACEHOLDER` (promote
+twelve sync-lifecycle log sites back to INFO so release diagnostics still show them). Landed shape
+differs from the remediation write-up below in two ways: rotation is a rename **plus** a one-time
+re-encryption of pre-existing legacy slots — the pre-check's premise was wrong, `TinkSecureFileStore`
+does bind `secureFileAssociatedData` to the *filename*, so a bare rename would silently make old
+logs undecryptable; and slots are 512 KB × 12 rather than the 2 MB × 3 assumed below.
 
 - **Location:** `app/src/main/kotlin/app/readylytics/health/util/SecureFileLogSink.kt` —
   `log()` `:50-73` (logcat + coroutine buffer), flush trigger `pendingLogs.size >= 5 || 2s` `:91`,
@@ -702,7 +711,7 @@ Status column verified against the tree on 2026-07-27.
 |---|---|---|---|
 | 1 | M1 compose metrics + stability config | ✅ `e3f537c` | — (measurement first) |
 | 2 | M2 frame benchmarks + `profileable` | ⚠️ code `99e9664`; **baseline numbers PENDING** | blocked by the SQLCipher fresh-install race |
-| 3 | F2 log sink rotation, then F2 DEBUG level (2 commits) | ⬜ **open** | — |
+| 3 | F2 log sink rotation, then F2 DEBUG level (2 commits) | ✅ `9535e1a`, `1b6f84e`, `ef6649c`, `df76ff3`, `55f419f`, `TASK4_SHA_PLACEHOLDER` | — |
 | 4 | F4 Workouts sync split | ✅ `ad1dd58` | — |
 | 5 | F10 N+1 HR batch | ✅ `7df6d7c` | after F4 |
 | 6 | F9 Sleep split + `distinctUntilChanged` | ✅ `ad1dd58` | — |
@@ -719,8 +728,7 @@ Status column verified against the tree on 2026-07-27.
 | 17 | Remainder: F17 ⬜, F18 ⬜, F19 ⬜ (benchmark-gated → blocked on #2), F20 ⬜, F22 ⬜ (confirm first), F23 ⬜ (`org.gradle.parallel` still commented out at `gradle.properties:15`, `android.nonTransitiveRClass=false` at `:25`) | ⬜ **all open** | — |
 
 **Remaining work, in the order it should now be taken:** #2 baseline numbers (unblocks all
-measurement) → F2 (biggest remaining win, and independent of everything) → F7 → F15 → F13 → F17 /
-F18 / F20 / F19 / F22 / F23 per appetite → F14 last.
+measurement) → F7 → F15 → F13 → F17 / F18 / F20 / F19 / F22 / F23 per appetite → F14 last.
 
 N1 (⬜ open — `M3ScoreGaugeCard.kt:60` still `onClick != {}`) and N2 (⬜ open) land as separate
 non-perf fixes. Run `./gradlew lintRelease` after the batch. New files → `codegraph index`.
