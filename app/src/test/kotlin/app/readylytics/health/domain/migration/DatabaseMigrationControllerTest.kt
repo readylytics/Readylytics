@@ -47,6 +47,18 @@ class DatabaseMigrationControllerTest {
     }
 
     @Test
+    fun `key corruption maps to KeyCorrupted state`() {
+        every { gate.inspect() } returns DatabaseReadiness.KeyCorrupted
+
+        val controller = controller()
+
+        assertEquals(
+            DatabaseMigrationUiState(DatabaseReadiness.KeyCorrupted),
+            controller.state.value,
+        )
+    }
+
+    @Test
     fun `running work maps exact migration progress keys`() {
         every { gate.inspect() } returns DatabaseReadiness.MigrationRequired(6)
         val controller = controller()

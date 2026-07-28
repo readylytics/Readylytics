@@ -77,6 +77,30 @@ class MainActivity : ComponentActivity() {
                 val migrationState by databaseMigrationController.state.collectAsStateWithLifecycle()
                 when (val readiness = migrationState.readiness) {
                     DatabaseReadiness.Ready -> ReadylyticsContent(splashScreen)
+                    DatabaseReadiness.KeyCorrupted -> {
+                        splashScreen.setKeepOnScreenCondition { false }
+                        val dbFile = remember { getDatabasePath("health_dashboard.db") }
+                        DatabaseReadinessTheme {
+                            DatabaseRecoveryScreen(
+                                onResetDatabase = {
+                                    sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
+                                    recreate()
+                                },
+                                onRestoreBackup = { uri, onResult ->
+                                    lifecycleScope.launch {
+                                        val result = localRestoreManager.get().applyRestore(uri)
+                                        if (result is RestoreResult.Success ||
+                                            result is RestoreResult.SuccessRequiresRestart
+                                        ) {
+                                            onResult(true, null)
+                                        } else if (result is RestoreResult.Failure) {
+                                            onResult(false, getString(R.string.recovery_error_default))
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
                     is DatabaseReadiness.MigrationRequired -> {
                         LaunchedEffect(readiness) {
                             databaseMigrationController.startOrResume()

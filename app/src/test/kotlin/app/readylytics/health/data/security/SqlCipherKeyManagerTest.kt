@@ -9,17 +9,29 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import javax.crypto.SecretKey
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class SqlCipherKeyManagerTest {
     private lateinit var keyManager: SqlCipherKeyManager
+    private lateinit var fakeKeyProvider: FakeKeyProvider
     private val context: Context = ApplicationProvider.getApplicationContext()
+
+    private class FakeKeyProvider : KeyProvider {
+        var callCount = 0
+
+        override fun getOrCreateKey(alias: String): SecretKey {
+            callCount++
+            return javax.crypto.spec.SecretKeySpec(ByteArray(32), "AES")
+        }
+    }
 
     @Before
     fun setUp() {
-        keyManager = SqlCipherKeyManager(context)
+        fakeKeyProvider = FakeKeyProvider()
+        keyManager = SqlCipherKeyManager(context, fakeKeyProvider)
     }
 
     @Test
@@ -28,7 +40,7 @@ class SqlCipherKeyManagerTest {
     }
 
     @Test
-    fun validateKeyDecryption_withCorruptedData_setsCorruptionState() {
+    fun validateKeyDecryption_delegatesToKeyProvider() {
         val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
         prefs
             .edit()
@@ -41,6 +53,7 @@ class SqlCipherKeyManagerTest {
         }
 
         assertTrue(keyManager.isKeyCorrupted.value)
+        assertTrue(fakeKeyProvider.callCount > 0)
     }
 
     @Test

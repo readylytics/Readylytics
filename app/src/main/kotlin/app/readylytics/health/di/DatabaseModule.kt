@@ -33,11 +33,17 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 
+import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
+import app.readylytics.health.data.security.KeyProvider
+
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DatabaseModule {
     @Binds
     abstract fun bindTransactionRunner(impl: RoomTransactionRunner): TransactionRunner
+
+    @Binds
+    abstract fun bindKeyProvider(impl: AndroidKeystoreKeyProvider): KeyProvider
 
     companion object {
         @Provides

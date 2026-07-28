@@ -1,5 +1,7 @@
 package app.readylytics.health.data.migration
 
+import app.readylytics.health.data.migration.DatabaseReadinessGate
+import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.V7MigrationPhase
@@ -115,6 +117,27 @@ class DatabaseMigrationModelsTest {
             )
 
         assertEquals(DatabaseReadiness.Failed("cannot decrypt"), gate.inspect())
+        file.delete()
+    }
+
+    @Test
+    fun `inspection returns KeyCorrupted on KeyDecryptionException`() {
+        val file =
+            kotlin.io.path
+                .createTempFile()
+                .toFile()
+        val gate =
+            DatabaseReadinessGate(
+                dbFile = file,
+                inspectExistingDatabase = {
+                    throw SqlCipherKeyManager.KeyDecryptionException(
+                        "Failed to open encrypted database",
+                        Exception(),
+                    )
+                },
+            )
+
+        assertEquals(DatabaseReadiness.KeyCorrupted, gate.inspect())
         file.delete()
     }
 

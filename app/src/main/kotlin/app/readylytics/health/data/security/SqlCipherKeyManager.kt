@@ -35,6 +35,7 @@ class SqlCipherKeyManager
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        private val keyProvider: KeyProvider,
     ) {
         init {
             try {
@@ -254,30 +255,7 @@ class SqlCipherKeyManager
             }
         }
 
-        private fun getOrCreateKeystoreKey(): SecretKey {
-            val isTest = System.getProperty("java.runtime.name")?.contains("Android", ignoreCase = true) == false
-            if (isTest) {
-                // In unit tests, we return a fixed key to avoid KeyStore dependency.
-                return javax.crypto.spec.SecretKeySpec(ByteArray(32), "AES")
-            }
-            val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-            return if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
-                (keyStore.getEntry(KEYSTORE_ALIAS, null) as KeyStore.SecretKeyEntry).secretKey
-            } else {
-                val keyGenerator = KeyGenerator.getInstance("AES", "AndroidKeyStore")
-                keyGenerator.init(
-                    KeyGenParameterSpec
-                        .Builder(
-                            KEYSTORE_ALIAS,
-                            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-                        ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                        .setKeySize(256)
-                        .build(),
-                )
-                keyGenerator.generateKey()
-            }
-        }
+        private fun getOrCreateKeystoreKey(): SecretKey = keyProvider.getOrCreateKey(KEYSTORE_ALIAS)
 
         private fun encryptAndStoreKey(rawKey: ByteArray) {
             val keystoreKey = getOrCreateKeystoreKey()
@@ -313,10 +291,13 @@ class SqlCipherKeyManager
 
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"
+
             @androidx.annotation.VisibleForTesting
             internal const val PREF_FILE_NAME = "sqlcipher_key_prefs"
+
             @androidx.annotation.VisibleForTesting
             internal const val PREF_ENCRYPTED_KEY = "encrypted_key"
+
             @androidx.annotation.VisibleForTesting
             internal const val PREF_IV = "encryption_iv"
 
