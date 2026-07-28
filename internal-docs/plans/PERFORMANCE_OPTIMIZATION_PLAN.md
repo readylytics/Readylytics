@@ -248,6 +248,33 @@ differs from the remediation write-up below in two ways: rotation is a rename **
 re-encryption of pre-existing legacy slots — the pre-check's premise was wrong, `TinkSecureFileStore`
 does bind `secureFileAssociatedData` to the *filename*, so a bare rename would silently make old
 logs undecryptable; and slots are 512 KB × 12 rather than the 2 MB × 3 assumed below.
+`649e581` then made hydration failure-safe (a throw mid-normalization used to leave the store able
+to overwrite the active slot) and fused the normalization loop so it no longer holds every legacy
+slot's plaintext in memory at once.
+
+**OUTSTANDING — manual, before this ships:** the unit tests validate the upgrade path against a
+*model* of Tink's AEAD binding, never Tink itself. Install a pre-F2 build, generate log traffic,
+upgrade in place, export diagnostics, and confirm the pre-upgrade lines survive. Every decryption
+failure in this stack returns `""` rather than throwing, so a mistake here is invisible in testing
+and shows up only as a user's bug report arriving with no history.
+
+**Follow-ups deferred from the F2 reviews (none block the merge):**
+1. `LogSlotStore.rotate()` discards `File.renameTo()`'s boolean at all three call sites. The worst
+   sub-case: if `activeFile.renameTo(backupFile(1))` fails, the next `appendLines` overwrites
+   `activeFile` and the just-sealed slot is gone. Log it with `android.util.Log.w` — deliberately
+   NOT `DomainLogger`, which would feed the failure back into this same sink on every later seal.
+2. Two `logD` sites arguably belong on the `logI` list and are now invisible in release:
+   `HealthChangeSynchronizerImpl.kt:74,84,123` ("token expired, requesting full resync" — the
+   explanation for an unexpected full resync) and `RetryWithBackoff.kt:25` (HC read backoff — the
+   explanation for a slow sync).
+3. Replace `LogSlotStore.rotate()`'s `maxBackups <= 0` branch with `require(maxBackups >= 1)`; no
+   configuration reaches it.
+4. Optional durability: `if (level == LogLevel.ERROR) flush(fromSchedule = false)` in `bufferLog`.
+   With DEBUG dropped the line trigger rarely fires, so the effective window is the 5 s timer;
+   crash *stacks* are already safe via `CrashReportHandler`, but the INFO/WARN lines narrating what
+   led there are not.
+5. `SecureFileLogSinkTest.kt` is 538 lines, past the 400-line soft target. Route new slot-level
+   tests to `LogSlotStoreTest.kt` instead of growing it further.
 
 - **Location:** `app/src/main/kotlin/app/readylytics/health/util/SecureFileLogSink.kt` —
   `log()` `:50-73` (logcat + coroutine buffer), flush trigger `pendingLogs.size >= 5 || 2s` `:91`,
