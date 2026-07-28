@@ -9,6 +9,9 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileInputStream
 import java.nio.file.Files
@@ -42,6 +45,9 @@ class SqlCipherKeyManager
                 }
             }
         }
+
+        private val _isKeyCorrupted = MutableStateFlow(false)
+        val isKeyCorrupted: StateFlow<Boolean> = _isKeyCorrupted.asStateFlow()
 
         private val prefs by lazy {
             context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -203,12 +209,14 @@ class SqlCipherKeyManager
                     val decrypted = decryptKey()
                     decrypted.fill(0)
                 } catch (e: Exception) {
+                    _isKeyCorrupted.value = true
                     throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
                 }
             }
         }
 
         fun resetKeyAndDatabase(dbFile: File) {
+            _isKeyCorrupted.value = false
             prefs.edit {
                 remove(PREF_ENCRYPTED_KEY)
                 remove(PREF_IV)
@@ -225,6 +233,7 @@ class SqlCipherKeyManager
                 try {
                     decryptKey()
                 } catch (e: Exception) {
+                    _isKeyCorrupted.value = true
                     logE("SqlCipherKeyManager", e) {
                         "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
                     }
