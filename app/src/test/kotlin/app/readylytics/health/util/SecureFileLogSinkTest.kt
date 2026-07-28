@@ -3,8 +3,11 @@ package app.readylytics.health.util
 import android.content.Context
 import android.util.Log
 import app.readylytics.health.data.security.SecureFileStore
+import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
+import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logI
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -37,6 +40,7 @@ class SecureFileLogSinkTest {
 
         // Mock android.util.Log to prevent RuntimeException during JVM tests
         mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
         every { Log.i(any(), any()) } returns 0
         every { Log.w(any(), any() as String) } returns 0
         every { Log.w(any(), any() as String, any()) } returns 0
@@ -428,6 +432,30 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
             assertFalse("Stack trace text should be redacted too", content.contains("245"))
+        }
+
+    @Test
+    fun testDebugIsNotLoggableAndNeverReachesTheFile() =
+        runBlocking {
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10_000L,
+                    maxBackups = 2,
+                    encryptStreams = false,
+                    coroutineContext = Dispatchers.Unconfined,
+                )
+
+            assertFalse("Release sink must drop DEBUG", sink.isLoggable(LogLevel.DEBUG, "TestTag"))
+            assertTrue("INFO must still be persisted", sink.isLoggable(LogLevel.INFO, "TestTag"))
+
+            DomainLogger.installSink(sink)
+            logD("TestTag") { "chatty sync detail" }
+            logI("TestTag") { "sync milestone" }
+
+            val content = sink.readLogsDecrypted()
+            assertFalse("DEBUG must not reach the diagnostic file", content.contains("chatty sync detail"))
+            assertTrue("INFO must reach the diagnostic file", content.contains("sync milestone"))
         }
 
     private fun longestLineBytes(storedContents: Map<String, String>): Long =

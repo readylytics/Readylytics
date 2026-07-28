@@ -158,7 +158,8 @@ class HealthDashboardApplication :
                     ) {
                         val formatted = "[Session:${context.sessionId ?: "none"}] $message"
                         when (level) {
-                            LogLevel.INFO -> Log.d(tag, formatted)
+                            LogLevel.DEBUG -> Log.d(tag, formatted)
+                            LogLevel.INFO -> Log.i(tag, formatted)
                             LogLevel.WARN -> Log.w(tag, formatted, throwable)
                             LogLevel.ERROR -> Log.e(tag, formatted, throwable)
                         }

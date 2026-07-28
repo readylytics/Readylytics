@@ -72,4 +72,17 @@ class AppLogTest {
         }
         assertFalse(msgEvaluated)
     }
+
+    @Test
+    fun testLogDEmitsDebugAndLogIEmitsInfo() {
+        val sink = TestLogSink()
+        DomainLogger.installSink(sink)
+
+        logD("SyncTest") { "chatty detail" }
+        logI("SyncTest") { "lifecycle milestone" }
+
+        assertEquals(2, sink.logs.size)
+        assertEquals("[DEBUG] [SyncTest] [Session:none] chatty detail", sink.logs[0])
+        assertEquals("[INFO] [SyncTest] [Session:none] lifecycle milestone", sink.logs[1])
+    }
 }

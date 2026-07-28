@@ -59,6 +59,14 @@ class SecureFileLogSink(
         }
     }
 
+    // Release sink: DEBUG is developer chatter (per-day sync narration, per-batch ingest counts) and
+    // is dropped before the message lambda even runs -- DomainLogger.log checks isLoggable first.
+    // INFO/WARN/ERROR still reach the encrypted diagnostic file.
+    override fun isLoggable(
+        level: LogLevel,
+        tag: String,
+    ): Boolean = level != LogLevel.DEBUG
+
     override fun log(
         level: LogLevel,
         tag: String,
@@ -69,6 +77,7 @@ class SecureFileLogSink(
         // Log to standard Logcat for developers/debugging in real-time
         val formattedMessage = "[Session:${context.sessionId ?: "none"}] $message"
         when (level) {
+            LogLevel.DEBUG -> Log.d(tag, formattedMessage)
             LogLevel.INFO -> Log.i(tag, formattedMessage)
             LogLevel.WARN -> Log.w(tag, formattedMessage, throwable)
             LogLevel.ERROR -> Log.e(tag, formattedMessage, throwable)
