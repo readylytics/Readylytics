@@ -4,6 +4,7 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.util.HeartRateFormulas
@@ -27,6 +28,7 @@ class DailyRecomputeSupport
     constructor(
         private val scoringRepository: ScoringRepository,
         private val settingsRepo: SettingsRepository,
+        private val transactionRunner: TransactionRunner,
     ) {
         /**
          * Recomputes and persists the daily summary for [day]. Already invoked from an IO context;
@@ -114,6 +116,33 @@ class DailyRecomputeSupport
             endDate: LocalDate,
             zoneId: ZoneId,
         ): WalkForwardBaselineContext = scoringRepository.fetchWalkForwardBaselineContext(startDate, endDate, zoneId)
+
+        /**
+         * F7: runs a whole walk-forward's worth of [recomputeDay] calls inside ONE Room
+         * transaction.
+         *
+         * Room's invalidation tracker fires per table per *transaction*, so N per-day
+         * `daily_summaries` upserts (plus the per-day `workout_records` modelTrimp writes
+         * `ScoringRepositoryImpl` issues) collapse into a single invalidation round instead of one
+         * per day. Every observed DAO `Flow` in the UI — Dashboard's today-summary and 7-day RAS
+         * window, Vitals/Sleep/Workouts `observeSince` — therefore re-runs its `SELECT` + mapping
+         * once per sync rather than once per synced day, while the user is looking at the screen.
+         *
+         * Two properties make this safe and are load-bearing:
+         * - **Reads see the transaction's own uncommitted writes.** The walk-forward depends on
+         *   this: day N sums days N-1..N-6 (`ScoringRepositoryImpl.sumRasLastSixDays`) and reads
+         *   day N-1 (`ComputeSleepMetricsUseCase`). Deferring the writes to after the loop instead
+         *   would make those reads see stale rows and change the scores.
+         * - **The dispatcher switch inside `ScoringRepositoryImpl.computeDailySummary` stays in the
+         *   transaction.** Room's `TransactionElement` propagates across `withContext(...)` and
+         *   suspend DAO calls resolve it to dispatch back onto the transaction thread
+         *   (`RoomDatabase.withTransactionContext` / `DBUtil.getCoroutineContext`).
+         *
+         * Never perform Health Connect I/O inside [block] — that would pin the transaction thread
+         * across a remote IPC read. Cancellation inside [block] rolls the whole unit back; that is
+         * intended, because recompute is idempotent and the next run redoes the same range.
+         */
+        suspend fun <R> inRecomputeTransaction(block: suspend () -> R): R = transactionRunner.runInTransaction(block)
 
         /** Recalculates estimated Max HR if auto-calculation is enabled (age may have changed). */
         suspend fun refreshAutoMaxHr(prefs: UserPreferences) {

@@ -5,6 +5,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.scoring.TrimpModel
@@ -39,6 +40,7 @@ class ResyncCheckpointResumeTest {
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = InMemoryResyncCheckpointStore()
     private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
+    private val transactionRunner = RecordingTransactionRunner()
 
     private lateinit var useCase: ResyncRangeUseCase
 
@@ -65,7 +67,7 @@ class ResyncCheckpointResumeTest {
                 healthIngestionStore = healthIngestionStore,
                 ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                 stepCountFetcher = StepCountFetcher(hcRepo),
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
+                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
             )
     }
@@ -343,6 +345,26 @@ class ResyncCheckpointResumeTest {
 
         override suspend fun clear() {
             state.value = null
+        }
+    }
+
+    private class RecordingTransactionRunner : TransactionRunner {
+        var transactionCount = 0
+            private set
+        var openDepth = 0
+            private set
+        var maxDepth = 0
+            private set
+
+        override suspend fun <R> runInTransaction(block: suspend () -> R): R {
+            transactionCount++
+            openDepth++
+            maxDepth = maxOf(maxDepth, openDepth)
+            try {
+                return block()
+            } finally {
+                openDepth--
+            }
         }
     }
 }

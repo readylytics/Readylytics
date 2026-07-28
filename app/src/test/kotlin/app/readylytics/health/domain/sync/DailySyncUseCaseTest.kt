@@ -7,6 +7,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
@@ -46,6 +47,7 @@ class DailySyncUseCaseTest {
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
+    private val transactionRunner = RecordingTransactionRunner()
 
     // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
     // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
@@ -69,7 +71,7 @@ class DailySyncUseCaseTest {
                 healthIngestionStore = healthIngestionStore,
                 ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                 stepCountFetcher = StepCountFetcher(hcRepo),
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
+                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
                 clock = fixedClock,
             )
@@ -452,7 +454,7 @@ class DailySyncUseCaseTest {
                     healthIngestionStore = healthIngestionStore,
                     ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                     stepCountFetcher = StepCountFetcher(hcRepo),
-                    recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
+                    recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                     ioDispatcher = Dispatchers.Unconfined,
                     clock = historicalClock,
                 )
@@ -474,4 +476,76 @@ class DailySyncUseCaseTest {
                 )
             }
         }
+
+    @Test
+    fun `sync recomputes the whole window inside exactly one transaction`() =
+        runTest {
+            // F7: Room invalidates per table per transaction. One transaction for the whole
+            // walk-forward means every observed daily_summaries/workout_records query in the UI
+            // re-runs once per sync instead of once per synced day.
+            useCase.run(windowDays = 8, onProgress = null)
+
+            assertEquals(1, transactionRunner.transactionCount)
+            assertEquals(1, transactionRunner.maxDepth)
+        }
+
+    @Test
+    fun `sync clears frozen baselines and scores every day inside the transaction`() =
+        runTest {
+            // The frozen-baseline clear is a daily_summaries write too; leaving it outside would
+            // cost a second invalidation round per sync.
+            val insideTransaction = mutableListOf<String>()
+            coEvery { healthIngestionStore.clearFrozenBaselines(any(), any(), any()) } answers {
+                insideTransaction += "clear:${transactionRunner.openDepth}"
+            }
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
+            } answers {
+                insideTransaction += "score:${transactionRunner.openDepth}"
+            }
+
+            useCase.run(windowDays = 3, onProgress = null)
+
+            assertEquals(
+                listOf("clear:1", "score:1", "score:1", "score:1"),
+                insideTransaction,
+            )
+        }
+
+    @Test
+    fun `sync opens no transaction around the Health Connect window read`() =
+        runTest {
+            // Holding a write transaction across HC IPC would pin the transaction thread for the
+            // duration of a remote read. Ingestion, reconcile and the step fetch must all be done
+            // before the transaction opens.
+            var depthDuringHcRead = -1
+            coEvery { hcRepo.readSteps(any(), any()) } answers {
+                depthDuringHcRead = transactionRunner.openDepth
+                0L
+            }
+
+            useCase.run(windowDays = 2, onProgress = null)
+
+            assertEquals(0, depthDuringHcRead)
+        }
+
+    private class RecordingTransactionRunner : TransactionRunner {
+        var transactionCount = 0
+            private set
+        var openDepth = 0
+            private set
+        var maxDepth = 0
+            private set
+
+        override suspend fun <R> runInTransaction(block: suspend () -> R): R {
+            transactionCount++
+            openDepth++
+            maxDepth = maxOf(maxDepth, openDepth)
+            try {
+                return block()
+            } finally {
+                openDepth--
+            }
+        }
+    }
 }

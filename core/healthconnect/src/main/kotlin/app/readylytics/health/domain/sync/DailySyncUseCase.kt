@@ -145,35 +145,46 @@ class DailySyncUseCase
                     var successCount = 0
                     var failureCount = 0
 
-                    healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
+                    // F7: one transaction for the frozen-baseline clear plus the whole walk-forward,
+                    // so a routine sync produces a single daily_summaries/workout_records
+                    // invalidation round instead of one per synced day. Everything that touches
+                    // Health Connect (ingestWindow, reconcile, fetchWindow) has already completed
+                    // above -- keep it that way. A per-day Result.Failure does not abort the
+                    // transaction: recomputeDay catches and returns rather than rethrowing, so the
+                    // existing log-and-continue + SYNC_PARTIAL_FAILURE semantics are unchanged.
+                    // Cancellation does roll the window back, which is fine: the next sync redoes
+                    // the same idempotent range.
+                    recomputeSupport.inRecomputeTransaction {
+                        healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
 
-                    var dayToScore = oldestTargetDay
-                    while (!dayToScore.isAfter(today)) {
-                        ensureActive()
-                        val steps = stepsMap[dayToScore]
-                        val result =
-                            recomputeSupport.recomputeDay(
-                                dayToScore,
-                                steps,
-                                prefs,
-                                trimpContext,
-                                baselineContext,
-                            )
+                        var dayToScore = oldestTargetDay
+                        while (!dayToScore.isAfter(today)) {
+                            ensureActive()
+                            val steps = stepsMap[dayToScore]
+                            val result =
+                                recomputeSupport.recomputeDay(
+                                    dayToScore,
+                                    steps,
+                                    prefs,
+                                    trimpContext,
+                                    baselineContext,
+                                )
 
-                        when (result) {
-                            is Result.Success -> {
-                                successCount++
-                                logD("DailySyncUseCase") { "Day $dayToScore: SUCCESS" }
+                            when (result) {
+                                is Result.Success -> {
+                                    successCount++
+                                    logD("DailySyncUseCase") { "Day $dayToScore: SUCCESS" }
+                                }
+                                is Result.Failure -> {
+                                    failureCount++
+                                    logI("DailySyncUseCase") { "Day $dayToScore: FAILED - ${result.reason}" }
+                                }
                             }
-                            is Result.Failure -> {
-                                failureCount++
-                                logI("DailySyncUseCase") { "Day $dayToScore: FAILED - ${result.reason}" }
-                            }
+                            processedDays++
+                            onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
+                            dayToScore = dayToScore.plusDays(1)
+                            yield()
                         }
-                        processedDays++
-                        onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
-                        dayToScore = dayToScore.plusDays(1)
-                        yield()
                     }
 
                     logI("DailySyncUseCase") {
