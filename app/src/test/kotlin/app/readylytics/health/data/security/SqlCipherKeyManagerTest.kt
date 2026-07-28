@@ -34,6 +34,15 @@ class SqlCipherKeyManagerTest {
         keyManager = SqlCipherKeyManager(context, fakeKeyProvider)
     }
 
+    private fun setupCorruptedPrefs() {
+        context
+            .getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted_base64_data")
+            .putString(SqlCipherKeyManager.PREF_IV, "corrupted_iv_data")
+            .commit()
+    }
+
     @Test
     fun isKeyCorrupted_initiallyFalse() {
         assertFalse(keyManager.isKeyCorrupted.value)
@@ -41,12 +50,7 @@ class SqlCipherKeyManagerTest {
 
     @Test
     fun validateKeyDecryption_withCorruptedData_setsCorruptionState() {
-        val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
-        prefs
-            .edit()
-            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted_base64_data")
-            .putString(SqlCipherKeyManager.PREF_IV, "corrupted_iv_data")
-            .commit()
+        setupCorruptedPrefs()
 
         assertThrows(KeyDecryptionException::class.java) {
             keyManager.validateKeyDecryption()
@@ -57,16 +61,10 @@ class SqlCipherKeyManagerTest {
 
     @Test
     fun validateKeyDecryption_delegatesToKeyProvider() {
-        val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
-        prefs
-            .edit()
-            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted_base64_data")
-            .putString(SqlCipherKeyManager.PREF_IV, "corrupted_iv_data")
-            .commit()
+        setupCorruptedPrefs()
 
-        try {
+        assertThrows(KeyDecryptionException::class.java) {
             keyManager.validateKeyDecryption()
-        } catch (_: KeyDecryptionException) {
         }
 
         assertTrue(fakeKeyProvider.callCount > 0)
@@ -74,12 +72,7 @@ class SqlCipherKeyManagerTest {
 
     @Test
     fun resetKeyAndDatabase_clearsCorruptionState() {
-        val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
-        prefs
-            .edit()
-            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted_base64_data")
-            .putString(SqlCipherKeyManager.PREF_IV, "corrupted_iv_data")
-            .commit()
+        setupCorruptedPrefs()
 
         assertThrows(KeyDecryptionException::class.java) {
             keyManager.validateKeyDecryption()
