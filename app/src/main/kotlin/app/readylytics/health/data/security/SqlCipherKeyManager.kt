@@ -240,13 +240,15 @@ class SqlCipherKeyManager
         ) : Exception(message, cause)
 
         fun validateKeyDecryption() {
-            if (prefs.contains(PREF_ENCRYPTED_KEY)) {
-                try {
-                    val decrypted = decryptKey()
-                    decrypted.fill(0)
-                } catch (e: Exception) {
-                    _isKeyCorrupted.value = true
-                    throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
+            withCrossProcessKeyLock {
+                if (prefs.contains(PREF_ENCRYPTED_KEY)) {
+                    try {
+                        val decrypted = decryptKey()
+                        decrypted.fill(0)
+                    } catch (e: Exception) {
+                        _isKeyCorrupted.value = true
+                        throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
+                    }
                 }
             }
         }
