@@ -6,7 +6,6 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
@@ -488,24 +487,4 @@ class ResyncRangeUseCaseTest {
             assertTrue(actual.message.orEmpty().contains("recordType=HeartRateRecord"))
             assertTrue(actual.message.orEmpty().contains("READ_HEART_RATE denied"))
         }
-
-    private class RecordingTransactionRunner : TransactionRunner {
-        var transactionCount = 0
-            private set
-        var openDepth = 0
-            private set
-        var maxDepth = 0
-            private set
-
-        override suspend fun <R> runInTransaction(block: suspend () -> R): R {
-            transactionCount++
-            openDepth++
-            maxDepth = maxOf(maxDepth, openDepth)
-            try {
-                return block()
-            } finally {
-                openDepth--
-            }
-        }
-    }
 }

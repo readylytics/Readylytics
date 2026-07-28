@@ -18,7 +18,6 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
@@ -230,26 +229,6 @@ class FirstSetupDummyIngestionFlowTest {
             // without needing to assert on it directly (DI-002).
             clock = Clock.fixed(Instant.parse("2026-06-29T12:00:00Z"), ZoneId.of("UTC")),
         )
-    }
-
-    private class RecordingTransactionRunner : TransactionRunner {
-        var transactionCount = 0
-            private set
-        var openDepth = 0
-            private set
-        var maxDepth = 0
-            private set
-
-        override suspend fun <R> runInTransaction(block: suspend () -> R): R {
-            transactionCount++
-            openDepth++
-            maxDepth = maxOf(maxDepth, openDepth)
-            try {
-                return block()
-            } finally {
-                openDepth--
-            }
-        }
     }
 
     private class RecordingHealthIngestionStore : HealthIngestionStore {
