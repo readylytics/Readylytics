@@ -71,7 +71,13 @@ class RoomHealthIngestionStore
                         .filter { it.sessionId in sessionIds }
                         .map(SleepStageInput::toEntity),
                 )
-                workoutDao.upsertAll(batch.workouts.map(WorkoutInput::toEntity))
+                val workoutEntities =
+                    batch.workouts.map { workout ->
+                        workout.toEntity().copy(
+                            modelTrimp = workoutDao.getModelTrimpById(workout.id),
+                        )
+                    }
+                workoutDao.upsertAll(workoutEntities)
                 weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
                 bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
                 bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))
