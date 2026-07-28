@@ -332,6 +332,9 @@ class SqlCipherKeyManager
 
         private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
+        @androidx.annotation.VisibleForTesting
+        internal fun getOrCreateDbKeyForTest(dbFile: File? = null): ByteArray = getOrCreateDbKey(dbFile)
+
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"
 
