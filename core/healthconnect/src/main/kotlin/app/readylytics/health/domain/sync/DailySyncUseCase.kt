@@ -127,6 +127,18 @@ class DailySyncUseCase
                     val totalDays = ChronoUnit.DAYS.between(oldestTargetDay, today).toInt() + 1
                     val stepsMap = stepCountFetcher.fetchWindow(today, totalDays, zoneId, stepsDevice)
 
+                    // PERF-002/WP-20/WP-22 on the daily path: fetch the workout-only/everyday-HR
+                    // TRIMP series and the RHR/HRV baseline sleep-session window ONCE for the whole
+                    // walk-forward, instead of every recomputed day independently re-querying its
+                    // own 84-/56-day lookback. Same batched-once shape as stepsMap above, and the
+                    // same contexts ResyncRangeUseCase already builds. Built over the *widened*
+                    // [oldestTargetDay, today] range so a day absorbed from outcome.affectedDates
+                    // sees a complete series.
+                    val trimpContext =
+                        recomputeSupport.buildWalkForwardTrimpContext(oldestTargetDay, today, zoneId)
+                    val baselineContext =
+                        recomputeSupport.buildWalkForwardBaselineContext(oldestTargetDay, today, zoneId)
+
                     var processedDays = 0
                     onProgress?.invoke(ResyncPhase.RECOMPUTE, processedDays, totalDays)
 
@@ -139,7 +151,14 @@ class DailySyncUseCase
                     while (!dayToScore.isAfter(today)) {
                         ensureActive()
                         val steps = stepsMap[dayToScore]
-                        val result = recomputeSupport.recomputeDay(dayToScore, steps, prefs)
+                        val result =
+                            recomputeSupport.recomputeDay(
+                                dayToScore,
+                                steps,
+                                prefs,
+                                trimpContext,
+                                baselineContext,
+                            )
 
                         when (result) {
                             is Result.Success -> {
