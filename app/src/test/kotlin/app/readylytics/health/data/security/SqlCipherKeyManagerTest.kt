@@ -40,7 +40,7 @@ class SqlCipherKeyManagerTest {
     }
 
     @Test
-    fun validateKeyDecryption_delegatesToKeyProvider() {
+    fun validateKeyDecryption_withCorruptedData_setsCorruptionState() {
         val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
         prefs
             .edit()
@@ -53,6 +53,22 @@ class SqlCipherKeyManagerTest {
         }
 
         assertTrue(keyManager.isKeyCorrupted.value)
+    }
+
+    @Test
+    fun validateKeyDecryption_delegatesToKeyProvider() {
+        val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+        prefs
+            .edit()
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted_base64_data")
+            .putString(SqlCipherKeyManager.PREF_IV, "corrupted_iv_data")
+            .commit()
+
+        try {
+            keyManager.validateKeyDecryption()
+        } catch (_: KeyDecryptionException) {
+        }
+
         assertTrue(fakeKeyProvider.callCount > 0)
     }
 
