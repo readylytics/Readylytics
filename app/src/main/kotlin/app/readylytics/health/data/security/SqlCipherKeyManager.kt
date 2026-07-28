@@ -12,9 +12,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileInputStream
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.SecureRandom
+import java.util.concurrent.locks.ReentrantLock
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
@@ -48,6 +50,30 @@ class SqlCipherKeyManager
 
         private val prefs by lazy {
             context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
+        }
+
+        // Serializes getOrCreateDbKey() across threads in THIS process (so we never attempt to
+        // acquire the cross-process FileLock twice concurrently from the same JVM, which throws
+        // OverlappingFileLockException instead of blocking) and, inside that, across OS processes
+        // via an advisory FileLock on a marker file in the app's private (per-UID, not per-process)
+        // files dir. Without this, two processes racing Application.onCreate() on a fresh install
+        // (e.g. the profileinstaller broadcast process and the launcher activity process, which
+        // share the app's default process since neither declares android:process) can each
+        // generate a different key and concurrently create the SQLCipher DB file, corrupting it.
+        private val inProcessKeyLock = ReentrantLock()
+
+        private fun <T> withCrossProcessKeyLock(block: () -> T): T {
+            inProcessKeyLock.lock()
+            try {
+                val lockFile = File(context.filesDir, "sqlcipher_key.lock")
+                RandomAccessFile(lockFile, "rw").use { raf ->
+                    raf.channel.lock().use {
+                        return block()
+                    }
+                }
+            } finally {
+                inProcessKeyLock.unlock()
+            }
         }
 
         /**
@@ -239,18 +265,20 @@ class SqlCipherKeyManager
         }
 
         private fun getOrCreateDbKey(dbFile: File? = null): ByteArray =
-            if (prefs.contains(PREF_ENCRYPTED_KEY)) {
-                try {
-                    decryptKey()
-                } catch (e: Exception) {
-                    _isKeyCorrupted.value = true
-                    logE("SqlCipherKeyManager", e) {
-                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+            withCrossProcessKeyLock {
+                if (prefs.contains(PREF_ENCRYPTED_KEY)) {
+                    try {
+                        decryptKey()
+                    } catch (e: Exception) {
+                        _isKeyCorrupted.value = true
+                        logE("SqlCipherKeyManager", e) {
+                            "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+                        }
+                        throw KeyDecryptionException("Database key decryption failed", e)
                     }
-                    throw KeyDecryptionException("Database key decryption failed", e)
+                } else {
+                    generateAndStoreNewKey()
                 }
-            } else {
-                generateAndStoreNewKey()
             }
 
         private fun generateAndStoreNewKey(): ByteArray {
@@ -273,7 +301,11 @@ class SqlCipherKeyManager
             val iv = cipher.iv
             val encryptedKey = cipher.doFinal(rawKey)
 
-            prefs.edit {
+            // commit = true: must be durably on disk before the cross-process lock is released,
+            // so a losing process's first (post-lock) read of this SharedPreferences file is
+            // guaranteed to see it. The default apply() is async and gives no cross-process
+            // ordering guarantee -- see withCrossProcessKeyLock's doc comment above.
+            prefs.edit(commit = true) {
                 putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
                 putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
             }
