@@ -222,7 +222,7 @@ class FirstSetupDummyIngestionFlowTest {
             healthIngestionStore = ingestionStore,
             ingestionCoordinator = HealthIngestionCoordinator(hcRepo, ingestionStore),
             stepCountFetcher = StepCountFetcher(hcRepo),
-            recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
+            recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, RecordingTransactionRunner()),
             ioDispatcher = Dispatchers.Unconfined,
             // The fixture data below is keyed to fixed epoch millis (2026-06-28/29), independent
             // of the sync window boundaries, so a fixed clock in that era is used for determinism

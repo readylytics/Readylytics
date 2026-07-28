@@ -424,47 +424,83 @@ class ResyncRangeUseCase
                         healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1), zoneId)
                     }
                     onProgress?.invoke(ResyncPhase.RECOMPUTE, completedDays, totalDays)
-                    var day = recomputeStartDate
+                    // F7: recompute in RECOMPUTE_CHECKPOINT_INTERVAL_DAYS-day units, each unit one
+                    // Room transaction. Room invalidates per table per transaction, so a 10-year
+                    // resync fires one daily_summaries/workout_records invalidation round per chunk
+                    // instead of one per day -- while its foreground-service notification is up and
+                    // the user may be on a chart screen. The chunk size doubles as the checkpoint
+                    // interval so transaction boundary == resume boundary: a kill or a rollback
+                    // discards at most one chunk, and the checkpoint (saved only AFTER the chunk
+                    // commits) still points at the first day of that chunk, so the resumed run
+                    // idempotently redoes exactly what was lost.
+                    var chunkStartDay = recomputeStartDate
                     var recomputedDays = completedDays
-                    while (!day.isAfter(endDate)) {
-                        ensureActive()
-                        val stepsForDay =
-                            when {
-                                skipIngestAndPrune -> null
-                                stepsDevice != null -> stepsMap[day] ?: 0L
-                                else -> stepsMap[day]
-                            }
-                        val dayResult =
-                            if (trimpContext != null && baselineContext != null) {
-                                recomputeSupport.recomputeDay(day, stepsForDay, prefs, trimpContext, baselineContext)
-                            } else {
-                                recomputeSupport.recomputeDay(day, stepsForDay, prefs)
-                            }
-                        if (dayResult is Result.Failure) {
-                            logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
-                            return@withContext dayResult
-                        }
-                        recomputedDays++
-                        // PERF-002/WP-20: checkpoint every RECOMPUTE_CHECKPOINT_INTERVAL_DAYS days
-                        // (or on the final day, so completion is always durably recorded) instead of
-                        // every single day -- a kill-and-resume redoes at most one interval's worth
-                        // of already-idempotent recompute work instead of losing zero.
-                        val isLastDay = day == endDate
-                        if (recomputedDays % RECOMPUTE_CHECKPOINT_INTERVAL_DAYS == 0 || isLastDay) {
-                            checkpointStore.save(
-                                ResyncCheckpoint(
-                                    startDate = startDate,
-                                    endDate = endDate,
-                                    phase = ResyncPhase.RECOMPUTE,
-                                    nextDate = day.plusDays(1),
-                                    selectionHash = selectionHash,
-                                    baselineChangeTokens = baselineChangeTokens,
-                                ),
+                    while (!chunkStartDay.isAfter(endDate)) {
+                        val chunkEndDay =
+                            minOf(
+                                chunkStartDay.plusDays((RECOMPUTE_CHECKPOINT_INTERVAL_DAYS - 1).toLong()),
+                                endDate,
                             )
+                        val daysBeforeChunk = recomputedDays
+                        val chunkFailure =
+                            recomputeSupport.inRecomputeTransaction {
+                                var day = chunkStartDay
+                                var failure: Result.Failure? = null
+                                var daysDone = daysBeforeChunk
+                                while (!day.isAfter(chunkEndDay)) {
+                                    ensureActive()
+                                    val stepsForDay =
+                                        when {
+                                            skipIngestAndPrune -> null
+                                            stepsDevice != null -> stepsMap[day] ?: 0L
+                                            else -> stepsMap[day]
+                                        }
+                                    val dayResult =
+                                        if (trimpContext != null && baselineContext != null) {
+                                            recomputeSupport.recomputeDay(
+                                                day,
+                                                stepsForDay,
+                                                prefs,
+                                                trimpContext,
+                                                baselineContext,
+                                            )
+                                        } else {
+                                            recomputeSupport.recomputeDay(day, stepsForDay, prefs)
+                                        }
+                                    if (dayResult is Result.Failure) {
+                                        logD(TELEMETRY_TAG) { "[RECOMPUTE] Failed at day $day: ${dayResult.reason}" }
+                                        failure = dayResult
+                                        break
+                                    }
+                                    daysDone++
+                                    onProgress?.invoke(ResyncPhase.RECOMPUTE, daysDone, totalDays)
+                                    day = day.plusDays(1)
+                                    yield()
+                                }
+                                failure
+                            }
+                        if (chunkFailure != null) {
+                            // The chunk rolled back, so no checkpoint advance: the stored checkpoint
+                            // still starts at this chunk's first day and a retry redoes it whole.
+                            return@withContext chunkFailure
                         }
-                        onProgress?.invoke(ResyncPhase.RECOMPUTE, recomputedDays, totalDays)
-                        day = day.plusDays(1)
-                        yield()
+                        recomputedDays =
+                            ChronoUnit
+                                .DAYS
+                                .between(startDate, chunkEndDay.plusDays(1))
+                                .toInt()
+                                .coerceIn(0, totalDays)
+                        checkpointStore.save(
+                            ResyncCheckpoint(
+                                startDate = startDate,
+                                endDate = endDate,
+                                phase = ResyncPhase.RECOMPUTE,
+                                nextDate = chunkEndDay.plusDays(1),
+                                selectionHash = selectionHash,
+                                baselineChangeTokens = baselineChangeTokens,
+                            ),
+                        )
+                        chunkStartDay = chunkEndDay.plusDays(1)
                     }
                     val recomputeEnd = System.currentTimeMillis()
                     logD(TELEMETRY_TAG) {
@@ -511,8 +547,10 @@ class ResyncRangeUseCase
             private const val TELEMETRY_TAG = "ResyncTelemetry"
             private const val MIN_CHUNK_DAYS = 1
 
-            // PERF-002/WP-20: RECOMPUTE-phase checkpoint granularity. Recompute is idempotent, so
-            // resuming from up to this many days back after a kill only redoes already-correct work.
+            // PERF-002/WP-20 + F7: RECOMPUTE-phase transaction *and* checkpoint granularity. Each
+            // unit of this many days is one Room transaction, checkpointed only after it commits,
+            // so transaction rollback and resume boundaries coincide. Recompute is idempotent, so
+            // redoing at most one unit after a kill only repeats already-correct work.
             private const val RECOMPUTE_CHECKPOINT_INTERVAL_DAYS = 30
         }
     }

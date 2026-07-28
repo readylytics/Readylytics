@@ -1,8 +1,8 @@
 # Performance Optimization Plan
 
 **Status:** Approved plan — partially implemented (last audited against the tree on 2026-07-27).
-**Landed:** M1, M2 (code only — baseline numbers still PENDING), F1, F2, F3, F4, F5, F8, F9, F10,
-F11, F12. **Not yet implemented:** F7, F13, F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
+**Landed:** M1, M2 (code only — baseline numbers still PENDING), F1, F2, F3, F4, F5, F7, F8, F9, F10,
+F11, F12. **Not yet implemented:** F13, F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
 per-item "Implemented" lines and the §7 implementation-order table for commit SHAs. Each work item
 below is scoped to land as one independent, production-ready commit.
 **Known blocker for measurement:** `ScrollBenchmark`'s baseline frame numbers cannot be recorded
@@ -420,6 +420,10 @@ implementation-plan doc was deleted in `f0464c1`.
 
 ### F7. Coalesce Room invalidation storms during daily sync — **High, Effort M**
 
+**Implemented:** `eda7c51` (daily-path walk-forward contexts), `e432bd6` (daily sync in one transaction), `f9e7fbc` (resync chunked at 30 days), `d794ecc` (Robolectric A/B equivalence lock). **Landed shape differs from remediation step 1 below.** That step proposed buffering each day's summary and upserting the list after the loop; that would have changed scores. Day N reads rows days N-1..N-6 wrote in the same loop — `ScoringRepositoryImpl.sumRasLastSixDays` (`dailySummaryDao.getByDates`) feeds `totalRasWorkoutOnly`/`totalRasEverydayHr`, and `ComputeSleepMetricsUseCase` reads yesterday's summary. The landed fix wraps the loop in one `withTransaction` instead: reads see the transaction's own uncommitted writes, so output is identical by construction and no buffer or write-through read cache is needed. Two further deltas: the per-day `workout_records` `modelTrimp` write inside `ScoringRepositoryImpl` (a second per-day invalidation the write-up did not mention) is coalesced for free by the same transaction, so it needed no code of its own; and the daily path was additionally moved onto the 5-arg `recomputeDay` overload, which it was not using — read-side batching in the same loop.
+
+**Manual Verification Outcome:** Not run — no physical Android device or active emulator available in test environment. Automated Robolectric test `WalkForwardTransactionEquivalenceTest` verifies byte-identical daily summary and workout TRIMP outputs between per-day and single-transaction execution.
+
 - **Location (re-anchored 2026-07-27 — PERF-002 moved this code):**
   `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/DailySyncUseCase.kt`
   (walk-forward loop) → `DailyRecomputeSupport.recomputeDay(...)` →
@@ -748,14 +752,14 @@ Status column verified against the tree on 2026-07-27.
 | 10 | F3 axis formatter cache | ✅ `3f122ea`, `5b2239d` | — |
 | 11 | F11 item placer cache | ✅ `d9edd5f` | — |
 | 12 | F15 zone band colors | ⬜ **open** — `TrendCharts.kt:225` still calls `zoneBandColors(...)` un-remembered | — |
-| 13 | F7 sync transaction coalescing (+ DATA_FLOW.md) | ⬜ **open** — re-anchor first, PERF-002 moved the code | — |
+| 13 | F7 sync transaction coalescing (+ DATA_FLOW.md) | ✅ `eda7c51`, `e432bd6`, `f9e7fbc`, `d794ecc` | — |
 | 14 | F12 DataStore pre-warm | ✅ `8624334` | — |
 | 15 | F13 key validation off-main | ⬜ **open** | after tracing the corruption path; sequence with the SQLCipher race |
 | 16 | F14 baseline profile | ⬜ **open** — no `androidx.baselineprofile` plugin, no `:baselineprofile` module, no checked-in profile | LAST perf item |
 | 17 | Remainder: F17 ⬜, F18 ⬜, F19 ⬜ (benchmark-gated → blocked on #2), F20 ⬜, F22 ⬜ (confirm first), F23 ⬜ (`org.gradle.parallel` still commented out at `gradle.properties:15`, `android.nonTransitiveRClass=false` at `:25`) | ⬜ **all open** | — |
 
 **Remaining work, in the order it should now be taken:** #2 baseline numbers (unblocks all
-measurement) → F7 → F15 → F13 → F17 / F18 / F20 / F19 / F22 / F23 per appetite → F14 last.
+measurement) → F15 → F13 → F17 / F18 / F20 / F19 / F22 / F23 per appetite → F14 last.
 
 N1 (⬜ open — `M3ScoreGaugeCard.kt:60` still `onClick != {}`) and N2 (⬜ open) land as separate
 non-perf fixes. Run `./gradlew lintRelease` after the batch. New files → `codegraph index`.

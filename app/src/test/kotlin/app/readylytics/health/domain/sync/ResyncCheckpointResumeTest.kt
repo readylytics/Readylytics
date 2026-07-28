@@ -39,6 +39,7 @@ class ResyncCheckpointResumeTest {
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = InMemoryResyncCheckpointStore()
     private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
+    private val transactionRunner = RecordingTransactionRunner()
 
     private lateinit var useCase: ResyncRangeUseCase
 
@@ -65,7 +66,7 @@ class ResyncCheckpointResumeTest {
                 healthIngestionStore = healthIngestionStore,
                 ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                 stepCountFetcher = StepCountFetcher(hcRepo),
-                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
+                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
                 ioDispatcher = Dispatchers.Unconfined,
             )
     }
@@ -325,24 +326,27 @@ class ResyncCheckpointResumeTest {
             }
             assertEquals(null, checkpointStore.value)
         }
+}
 
-    private class InMemoryResyncCheckpointStore : ResyncCheckpointStore {
-        private val state = MutableStateFlow<ResyncCheckpoint?>(null)
+class InMemoryResyncCheckpointStore : ResyncCheckpointStore {
+    private val state = MutableStateFlow<ResyncCheckpoint?>(null)
 
-        var value: ResyncCheckpoint?
-            get() = state.value
-            set(value) {
-                state.value = value
-            }
+    var onSave: (() -> Unit)? = null
 
-        override val checkpoint: Flow<ResyncCheckpoint?> = state
-
-        override suspend fun save(checkpoint: ResyncCheckpoint) {
-            state.value = checkpoint
+    var value: ResyncCheckpoint?
+        get() = state.value
+        set(value) {
+            state.value = value
         }
 
-        override suspend fun clear() {
-            state.value = null
-        }
+    override val checkpoint: Flow<ResyncCheckpoint?> = state
+
+    override suspend fun save(checkpoint: ResyncCheckpoint) {
+        onSave?.invoke()
+        state.value = checkpoint
+    }
+
+    override suspend fun clear() {
+        state.value = null
     }
 }
