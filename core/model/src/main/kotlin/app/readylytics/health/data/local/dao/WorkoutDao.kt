@@ -13,6 +13,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_records WHERE id = :id")
     suspend fun getById(id: String): WorkoutRecordEntity?
 
+    @Query("SELECT modelTrimp FROM workout_records WHERE id = :id")
+    suspend fun getModelTrimpById(id: String): Float?
+
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
     fun _observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>>
 
