@@ -40,6 +40,14 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    // The test's own installed package (e.g. "...local.test"), distinct from the app-under-test's
+    // package ("context"/targetContext, e.g. "...local"). KeyRaceTestServiceProcess1/2 are declared
+    // in androidTest/AndroidManifest.xml, which merges into this test-package manifest, not the
+    // target app's manifest -- so component resolution for Intent(context, serviceClass) must use
+    // this context, not targetContext, or ActivityManager fails to find the service ("not found").
+    private val testContext: Context
+        get() = InstrumentationRegistry.getInstrumentation().context
+
     private lateinit var dbFile: File
     private val connections = mutableListOf<Pair<ServiceConnection, Messenger>>()
 
@@ -56,7 +64,11 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
 
     @After
     fun tearDown() {
-        connections.forEach { (connection, _) -> context.unbindService(connection) }
+        // Must unbind via testContext, matching the context bindService() was called with in
+        // bindRaceService(): Android's ContextImpl tracks bound ServiceConnections per the calling
+        // context's own LoadedApk (i.e. per installed package), so unbinding via a different
+        // package's context (targetContext) throws "Service not registered".
+        connections.forEach { (connection, _) -> testContext.unbindService(connection) }
         connections.clear()
         dbFile.delete()
         File("${dbFile.absolutePath}-wal").delete()
@@ -132,10 +144,10 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
                 override fun onServiceDisconnected(name: ComponentName) = Unit
             }
         val intent =
-            Intent(context, serviceClass).apply {
-                setPackage(context.packageName)
+            Intent(testContext, serviceClass).apply {
+                setPackage(testContext.packageName)
             }
-        context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        testContext.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         connections.add(connection to Messenger(android.os.Binder()))
         while (boundMessenger == null) {
             Thread.sleep(10)
