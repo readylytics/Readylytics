@@ -85,4 +85,40 @@ class SqlCipherKeyManagerTest {
 
         assertFalse(keyManager.isKeyCorrupted.value)
     }
+
+    @Test
+    fun getOrCreateFactory_withCorruptedKey_setsCorruptionState() {
+        val prefs = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+        prefs
+            .edit()
+            .putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, "corrupted")
+            .putString(SqlCipherKeyManager.PREF_IV, "corrupted")
+            .commit()
+
+        val dbFile = File(context.filesDir, "test.db")
+
+        // getOrCreateFactory should return a factory that throws during create()
+        val factory = keyManager.getOrCreateFactory(dbFile)
+
+        assertThrows(KeyDecryptionException::class.java) {
+            val configuration =
+                androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration
+                    .builder(context)
+                    .name("test.db")
+                    .callback(
+                        object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(1) {
+                            override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {}
+
+                            override fun onUpgrade(
+                                db: androidx.sqlite.db.SupportSQLiteDatabase,
+                                oldVersion: Int,
+                                newVersion: Int,
+                            ) {}
+                        },
+                    ).build()
+            factory.create(configuration)
+        }
+
+        assertTrue(keyManager.isKeyCorrupted.value)
+    }
 }

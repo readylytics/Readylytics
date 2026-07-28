@@ -55,20 +55,33 @@ class SqlCipherKeyManager
          * The key is passed as a raw hex string (x'...') to skip SQLCipher's default KDF and
          * use the 256-bit AES key directly.
          */
-        fun getOrCreateFactory(dbFile: File): SupportSQLiteOpenHelper.Factory {
-            val decryptedKey = getOrCreateDbKey(dbFile)
-            return try {
-                val keyHex = decryptedKey.toHex()
-                val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
-                // We must NOT fill rawKeyBytes with zeros here, because SupportOpenHelperFactory
-                // holds a reference to the array and uses it when Room actually opens the database.
-                // The factory clears the array automatically after the database is opened.
-                net.zetetic.database.sqlcipher
-                    .SupportOpenHelperFactory(rawKeyBytes)
-            } finally {
-                decryptedKey.fill(0)
+        fun getOrCreateFactory(dbFile: File): SupportSQLiteOpenHelper.Factory =
+            SupportSQLiteOpenHelper.Factory { configuration ->
+                val decryptedKey =
+                    try {
+                        getOrCreateDbKey(dbFile)
+                    } catch (e: KeyDecryptionException) {
+                        // Key is corrupted. isKeyCorrupted StateFlow is already set to true
+                        // by getOrCreateDbKey. Re-throw from within create() so Room's open
+                        // fails visibly rather than proceeding with a bad key. The exception
+                        // will propagate up through Room's infrastructure.
+                        throw e
+                    }
+
+                try {
+                    val keyHex = decryptedKey.toHex()
+                    val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
+                    // We must NOT fill rawKeyBytes with zeros here, because SupportOpenHelperFactory
+                    // holds a reference to the array and uses it when Room actually opens the database.
+                    // The factory clears the array automatically after the database is opened.
+                    val delegate =
+                        net.zetetic.database.sqlcipher
+                            .SupportOpenHelperFactory(rawKeyBytes)
+                    delegate.create(configuration)
+                } finally {
+                    decryptedKey.fill(0)
+                }
             }
-        }
 
         fun <T> withWritableDatabase(
             dbFile: File,
