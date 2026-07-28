@@ -43,7 +43,7 @@ class ResyncRangeUseCaseTest {
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
-    private val checkpointStore = mockk<ResyncCheckpointStore>(relaxed = true)
+    private val checkpointStore = InMemoryResyncCheckpointStore()
     private val transactionRunner = RecordingTransactionRunner()
 
     private lateinit var useCase: ResyncRangeUseCase
@@ -51,7 +51,6 @@ class ResyncRangeUseCaseTest {
     @Before
     fun setup() {
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
-        every { checkpointStore.checkpoint } returns flowOf(null)
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         // PERF-002/WP-20/WP-22: every non-empty RECOMPUTE range now fetches batched TRIMP-series and
         // baseline contexts once up front via these methods before calling the 5-arg
@@ -322,16 +321,14 @@ class ResyncRangeUseCaseTest {
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 3)
-            every { checkpointStore.checkpoint } returns
-                flowOf(
-                    ResyncCheckpoint(
-                        startDate = startDate,
-                        endDate = endDate,
-                        phase = ResyncPhase.PRUNE,
-                        nextDate = startDate,
-                        selectionHash = "",
-                        baselineChangeTokens = mapOf(HealthDataType.STEPS to "token"),
-                    ),
+            checkpointStore.value =
+                ResyncCheckpoint(
+                    startDate = startDate,
+                    endDate = endDate,
+                    phase = ResyncPhase.PRUNE,
+                    nextDate = startDate,
+                    selectionHash = "",
+                    baselineChangeTokens = mapOf(HealthDataType.STEPS to "token"),
                 )
             val phases = mutableListOf<ResyncPhase>()
 
@@ -486,5 +483,62 @@ class ResyncRangeUseCaseTest {
             assertTrue(actual.message.orEmpty().contains("operation=read"))
             assertTrue(actual.message.orEmpty().contains("recordType=HeartRateRecord"))
             assertTrue(actual.message.orEmpty().contains("READ_HEART_RATE denied"))
+        }
+
+    @Test
+    fun `recompute opens one transaction per thirty-day chunk`() =
+        runTest {
+            // 65 days => chunks of 30 + 30 + 5. One transaction each: bounded enough that a kill
+            // loses at most one chunk, coalesced enough that the resync doesn't fire 65 separate
+            // daily_summaries invalidation rounds at the UI.
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = startDate.plusDays(64)
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertEquals(3, transactionRunner.transactionCount)
+            assertEquals(1, transactionRunner.maxDepth)
+        }
+
+    @Test
+    fun `recompute checkpoints only after a chunk transaction commits`() =
+        runTest {
+            // A checkpoint saved inside the transaction would record days as done that a rollback
+            // then discarded, so a resumed run would skip them.
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = startDate.plusDays(64)
+            val depthAtCheckpoint = mutableListOf<Int>()
+            checkpointStore.onSave = { depthAtCheckpoint += transactionRunner.openDepth }
+
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertTrue(depthAtCheckpoint.all { it == 0 })
+        }
+
+    @Test
+    fun `a failing day rolls back only its own chunk and leaves the prior checkpoint`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = startDate.plusDays(64)
+            // Day 35 is in chunk 2 (days 31..60); chunk 1 (days 1..30) must already be committed
+            // and checkpointed at nextDate = startDate + 30.
+            coEvery {
+                scoringRepository.computeAndPersistDailySummary(
+                    startDate.plusDays(34),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } throws IllegalStateException("scoring failed")
+
+            val result =
+                useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
+
+            assertEquals(false, result.isSuccess)
+            assertEquals(2, transactionRunner.transactionCount)
+            assertEquals(ResyncPhase.RECOMPUTE, checkpointStore.value?.phase)
+            assertEquals(startDate.plusDays(30), checkpointStore.value?.nextDate)
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
         }
 }
