@@ -21,6 +21,8 @@ import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.migration.DatabaseReadinessGate
+import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
+import app.readylytics.health.data.security.KeyProvider
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.repository.TransactionRunner
@@ -32,9 +34,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
-
-import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
-import app.readylytics.health.data.security.KeyProvider
 
 @Module
 @InstallIn(SingletonComponent::class)

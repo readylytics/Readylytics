@@ -318,7 +318,7 @@ class V7DatabaseMigratorInstrumentedTest {
         helper.createDatabase(name, version).close()
 
         val file = context.getDatabasePath(name)
-        val keyManager = SqlCipherKeyManager(context)
+        val keyManager = SqlCipherKeyManager(context, AndroidKeystoreKeyProvider())
         keyManager.migrateIfNeeded(file)
         keyManager.withWritableDatabase(file) { database ->
             database.version = version
