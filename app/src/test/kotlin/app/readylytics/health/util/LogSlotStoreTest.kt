@@ -111,9 +111,14 @@ class LogSlotStoreTest {
         subject.appendLines(listOf(line("new1")))
         subject.appendLines(listOf(line("new2")))
 
+        val finalContent = subject.readAll()
         assertTrue(
-            "Migrated content must stay decryptable after a rename",
-            subject.readAll().contains("old-active"),
+            "Migrated active-slot content must stay decryptable after a rename",
+            finalContent.contains("old-active"),
+        )
+        assertTrue(
+            "Migrated backup-slot content must stay decryptable after the backup-chain rename",
+            finalContent.contains("old-backup"),
         )
         assertFalse(
             "Nothing may still be bound to a filename",
@@ -132,6 +137,46 @@ class LogSlotStoreTest {
         assertTrue(fake.writtenNames.isEmpty())
         assertEquals("plain\n", File(directory, "prod_logs.txt").readText())
         assertEquals("plain\n", subject.readAll())
+    }
+
+    @Test
+    fun constantAssociatedDataAndActiveFileNameArePinned() {
+        val directory = tempFolder.newFolder("logs")
+        val fake = AdAwareSecureFileStore()
+        val subject = store(directory, secureFileStore = fake)
+
+        subject.appendLines(listOf(line("pin-me")))
+
+        // A future refactor that alters either value makes every existing user's slots unreadable
+        // (wrong AD) or undiscoverable (wrong active filename), while the suite stays green unless
+        // something asserts the literal.
+        assertEquals("prod_logs.txt", LogSlotStore.ACTIVE_FILE_NAME)
+        assertEquals(
+            listOf("readylytics_prod_logs"),
+            fake.writtenAssociatedData.distinct(),
+        )
+    }
+
+    @Test
+    fun reNormalizingAfterMarkerEvictionLeavesContentUnchanged() {
+        val directory = tempFolder.newFolder("logs")
+        val fake = AdAwareSecureFileStore()
+        val original = store(directory, maxFileSize = 10L, secureFileStore = fake)
+        original.appendLines(listOf(line("aaaaa")))
+        original.appendLines(listOf(line("bbbbb")))
+        original.appendLines(listOf(line("ccccc")))
+        val expected = original.readAll()
+
+        // Android's idle cache trimming deletes individual cacheDir files by atime; a tiny,
+        // never-touched marker is a prime eviction candidate independent of the slots it guards.
+        assertTrue(File(directory, ".slot_ad_v2").delete())
+
+        val reopened = store(directory, maxFileSize = 10L, secureFileStore = fake)
+        assertEquals(
+            "Re-running normalization on already-converted slots must be a no-op",
+            expected,
+            reopened.readAll(),
+        )
     }
 
     private fun legacyAd(name: String): ByteArray = name.toByteArray(Charsets.UTF_8)
@@ -157,6 +202,7 @@ class LogSlotStoreTest {
         private val entries = linkedMapOf<String, Entry>()
         private var nextToken = 0
         val writtenNames = mutableListOf<String>()
+        val writtenAssociatedData = mutableListOf<String>()
         val readsThatFailedAuthentication = mutableListOf<String>()
 
         override fun readText(
@@ -178,6 +224,7 @@ class LogSlotStoreTest {
             associatedData: ByteArray,
         ) {
             writtenNames += file.name
+            writtenAssociatedData += associatedData.toString(Charsets.UTF_8)
             val token = "t${nextToken++}"
             entries[token] = Entry(content, associatedData.toString(Charsets.UTF_8))
             file.parentFile?.mkdirs()

@@ -155,8 +155,10 @@ class SecureFileLogSink(
         const val DEFAULT_MAX_BACKUPS: Int = 11
 
         // Raised from 5 lines / 2 s: safe now that a flush costs one small encrypt instead of a
-        // full decrypt-rewrite cycle. The durability window (pending lines lost on process death)
-        // stays the same order of magnitude.
+        // full decrypt-rewrite cycle. The 2 s -> 5 s interval keeps the durability window (pending
+        // lines lost on process death) the same order of magnitude; the 5 -> 64 line threshold does
+        // not (up to ~13x more lines can be pending). Accepted because readLogsDecrypted() always
+        // flushes first, so a user-initiated export never misses them.
         const val DEFAULT_FLUSH_LINE_THRESHOLD: Int = 64
         const val DEFAULT_FLUSH_INTERVAL_MS: Long = 5_000L
 

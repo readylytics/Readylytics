@@ -10,8 +10,11 @@ import java.io.File
  * Slots are `prod_logs.txt` (active, newest) plus `prod_logs.txt.1` .. `prod_logs.txt.N`
  * (N = [maxBackups], `.N` oldest). The active slot's plaintext is mirrored in [activeBuffer], so a
  * flush encrypts exactly one slot instead of decrypting and rewriting all of them (perf item F2).
- * Holding it in memory is bounded by [maxFileSize] and is the whole point: without it, appending to
- * a streaming-AEAD file is impossible without re-encrypting what is already there.
+ * Holding it in memory is bounded by `max([maxFileSize], longest single line)`, not [maxFileSize]
+ * alone: a line is never split to force a seal (see the `activeBytes > 0` guard in [appendLines]),
+ * so one line larger than [maxFileSize] occupies the buffer alone until the next line seals it.
+ * That bound is the whole point: without buffering, appending to a streaming-AEAD file is
+ * impossible without re-encrypting what is already there.
  *
  * Every slot is encrypted under the single constant [LOG_ASSOCIATED_DATA] rather than
  * [secureFileAssociatedData]'s per-filename default. That is what makes rotation a rename instead
@@ -63,14 +66,31 @@ internal class LogSlotStore(
         return builder.toString()
     }
 
+    // hydrated is set at the very end, once activeBuffer correctly reflects disk state -- not
+    // before normalizeLegacySlots() runs. That call reaches secureFileStore.writeText, the one
+    // path in this method that can throw (e.g. ENOSPC re-encrypting a legacy slot; every read here
+    // already swallows its own failures). Setting hydrated = true first and then throwing would
+    // leave activeBuffer empty with hydrated permanently true for this instance: the next
+    // appendLines() would skip re-hydrating and overwrite prod_logs.txt with just the new batch,
+    // silently destroying whatever was on disk instead of rotating it to a backup. Safe against
+    // re-entrant hydrate() calls: nothing on this synchronous call stack re-enters it -- the one
+    // thing that can run during normalizeLegacySlots() is TinkSecureFileStore.readText's logW on a
+    // decrypt failure, which only queues a new coroutine on the confined write dispatcher rather
+    // than recursing.
     private fun hydrate() {
         if (hydrated) return
-        hydrated = true
         if (!logDirectory.exists()) logDirectory.mkdirs()
-        normalizeLegacySlots()
-        val existing = readSlot(activeFile)
+        val normalized = runCatching { normalizeLegacySlots() }.isSuccess
+        // If normalization didn't complete, the active slot may still be sitting under its legacy
+        // per-filename AD -- readSlot() under the constant AD then returns "". Fall back to a
+        // legacy-AD read so a partial migration never looks like an empty log.
+        val existing =
+            readSlot(activeFile).ifEmpty {
+                if (normalized) "" else readSlotWithLegacyAssociatedData(activeFile)
+            }
         activeBuffer.append(existing)
         activeBytes = existing.byteSize()
+        hydrated = true
     }
 
     /**
@@ -89,11 +109,13 @@ internal class LogSlotStore(
             markNormalized()
             return
         }
-        val legacyContents =
-            orderedSlotFiles().map { file ->
-                file to readSlotWithLegacyAssociatedData(file)
-            }
-        for ((file, content) in legacyContents) {
+        // One file at a time, not a read-everything-then-write-everything pass: each slot is
+        // independent, each write is atomic, and a crash between two files is already handled by
+        // the skip-if-empty guard on retry. On the legacy geometry (2 MB x 3) reading every slot
+        // into memory first would hold ~12 MB of char[] simultaneously during first-launch UI
+        // bring-up -- exactly the window F2 exists to protect.
+        for (file in orderedSlotFiles()) {
+            val content = readSlotWithLegacyAssociatedData(file)
             if (content.isNotEmpty()) {
                 writeSlot(file, content)
             }
