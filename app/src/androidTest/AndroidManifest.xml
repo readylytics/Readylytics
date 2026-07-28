@@ -3,4 +3,21 @@
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
     <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
+
+    <application>
+        <!-- Test-only: two separate OS processes used by
+             SqlCipherKeyManagerCrossProcessRaceTest to reproduce the real fresh-install
+             cross-process key race (see KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md).
+             Never merged into the shipped app; this file is androidTest-only. Two distinct
+             subclasses (rather than one class under two entries) so each can be targeted
+             unambiguously by an explicit Intent(context, SubClass::class.java). -->
+        <service
+            android:name="app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess1"
+            android:process=":racetest1"
+            android:exported="false" />
+        <service
+            android:name="app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess2"
+            android:process=":racetest2"
+            android:exported="false" />
+    </application>
 </manifest>
