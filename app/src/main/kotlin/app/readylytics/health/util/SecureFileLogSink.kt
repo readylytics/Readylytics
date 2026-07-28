@@ -15,7 +15,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -29,12 +28,25 @@ class SecureFileLogSink(
     private val encryptStreams: Boolean = true,
     coroutineContext: CoroutineContext = Dispatchers.IO.limitedParallelism(1),
     private val secureFileStore: SecureFileStore = TinkSecureFileStore.create(context),
+    private val flushLineThreshold: Int = DEFAULT_FLUSH_LINE_THRESHOLD,
+    private val flushIntervalMs: Long = DEFAULT_FLUSH_INTERVAL_MS,
 ) : DomainLogSink {
     private val writeDispatcher: CoroutineContext = coroutineContext
     private val logDirectory = File(context.cacheDir, "logs")
-    private val logFile = File(logDirectory, "prod_logs.txt")
     private val scope = CoroutineScope(SupervisorJob() + writeDispatcher)
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+
+    // Slot rotation, crypto, and the active-slot memory buffer live here; this class only formats,
+    // sanitizes, and batches. Confined to the single-threaded [writeDispatcher], so LogSlotStore
+    // needs no locking of its own.
+    private val slotStore =
+        LogSlotStore(
+            logDirectory = logDirectory,
+            maxFileSize = maxFileSize,
+            maxBackups = maxBackups,
+            encryptStreams = encryptStreams,
+            secureFileStore = secureFileStore,
+        )
 
     // Memory buffer for logs
     private val pendingLogs = mutableListOf<String>()
@@ -47,6 +59,14 @@ class SecureFileLogSink(
         }
     }
 
+    // Release sink: DEBUG is developer chatter (per-day sync narration, per-batch ingest counts) and
+    // is dropped before the message lambda even runs -- DomainLogger.log checks isLoggable first.
+    // INFO/WARN/ERROR still reach the encrypted diagnostic file.
+    override fun isLoggable(
+        level: LogLevel,
+        tag: String,
+    ): Boolean = level != LogLevel.DEBUG
+
     override fun log(
         level: LogLevel,
         tag: String,
@@ -57,6 +77,7 @@ class SecureFileLogSink(
         // Log to standard Logcat for developers/debugging in real-time
         val formattedMessage = "[Session:${context.sessionId ?: "none"}] $message"
         when (level) {
+            LogLevel.DEBUG -> Log.d(tag, formattedMessage)
             LogLevel.INFO -> Log.i(tag, formattedMessage)
             LogLevel.WARN -> Log.w(tag, formattedMessage, throwable)
             LogLevel.ERROR -> Log.e(tag, formattedMessage, throwable)
@@ -90,11 +111,11 @@ class SecureFileLogSink(
         pendingLogs.add(logLine)
 
         val timeSinceLastWrite = System.currentTimeMillis() - lastWriteTimestamp
-        if (pendingLogs.size >= 5 || timeSinceLastWrite >= 2000) {
+        if (pendingLogs.size >= flushLineThreshold || timeSinceLastWrite >= flushIntervalMs) {
             flush(fromSchedule = false)
         } else {
             if (flushJob == null) {
-                val delayTime = (2000 - timeSinceLastWrite).coerceAtLeast(0)
+                val delayTime = (flushIntervalMs - timeSinceLastWrite).coerceAtLeast(0)
                 flushJob =
                     scope.launch {
                         delay(delayTime.milliseconds)
@@ -111,197 +132,35 @@ class SecureFileLogSink(
         flushJob = null
 
         if (pendingLogs.isEmpty()) return
-        val content = pendingLogs.joinToString("")
+        val lines = pendingLogs.toList()
         pendingLogs.clear()
 
-        persistLogs(content)
+        slotStore.appendLines(lines)
 
         lastWriteTimestamp = System.currentTimeMillis()
-    }
-
-    private fun persistLogs(newContent: String) {
-        val allLogs =
-            buildString {
-                append(readAllLogs())
-                append(newContent)
-            }
-        val boundedLogs = retainWithinTotalCapacity(allLogs)
-        val chunks = partitionIntoSlots(boundedLogs)
-        writeChunks(chunks)
-    }
-
-    private fun readAllLogs(): String =
-        buildString {
-            for (file in orderedLogFiles()) {
-                append(readFileContent(file))
-            }
-        }
-
-    private fun orderedLogFiles(): List<File> {
-        val files = mutableListOf<File>()
-        for (i in maxBackups downTo 1) {
-            files.add(File(logDirectory, "prod_logs.txt.$i"))
-        }
-        files.add(logFile)
-        return files
-    }
-
-    private fun readFileContent(file: File): String {
-        if (!file.exists()) return ""
-        return try {
-            if (encryptStreams) {
-                secureFileStore.readText(file)
-            } else {
-                file.readText()
-            }
-        } catch (_: Exception) {
-            ""
-        }
-    }
-
-    private fun writeChunks(chunks: List<String>) {
-        val slotFiles = orderedLogFiles()
-        val normalizedChunks = chunks.takeLast(slotFiles.size)
-        val emptyPrefixCount = slotFiles.size - normalizedChunks.size
-
-        slotFiles.forEachIndexed { index, file ->
-            val content =
-                if (index < emptyPrefixCount) {
-                    ""
-                } else {
-                    normalizedChunks[index - emptyPrefixCount]
-                }
-            writeFileContent(file, content)
-        }
-    }
-
-    private fun writeFileContent(
-        file: File,
-        content: String,
-    ) {
-        if (file.exists()) {
-            file.delete()
-        }
-        if (content.isEmpty()) return
-
-        if (encryptStreams) {
-            secureFileStore.writeText(file, content)
-        } else {
-            FileOutputStream(file, false).use { output ->
-                output.write(content.toByteArray(Charsets.UTF_8))
-            }
-        }
-    }
-
-    private fun retainWithinTotalCapacity(content: String): String {
-        val totalCapacity = maxFileSize * (maxBackups + 1)
-        if (content.toByteArray(Charsets.UTF_8).size <= totalCapacity) return content
-
-        val segments = content.lineSegments().toMutableList()
-        trimSegmentsToCapacity(segments, totalCapacity)
-        return segments.joinToString("")
-    }
-
-    private fun trimSegmentsToCapacity(
-        segments: MutableList<String>,
-        capacityBytes: Long,
-    ) {
-        var totalBytes = segments.sumOf { it.byteSize() }.toLong()
-        while (segments.isNotEmpty() && totalBytes > capacityBytes) {
-            val first = segments.first()
-            val firstBytes = first.byteSize().toLong()
-            if (totalBytes - firstBytes >= capacityBytes) {
-                segments.removeAt(0)
-                totalBytes -= firstBytes
-            } else {
-                val keepBytes = (capacityBytes - (totalBytes - firstBytes)).toInt()
-                segments[0] = first.takeLastUtf8Bytes(keepBytes)
-                totalBytes = segments.sumOf { it.byteSize() }.toLong()
-            }
-        }
-    }
-
-    private fun partitionIntoSlots(content: String): List<String> {
-        if (content.isEmpty()) return emptyList()
-
-        val segments =
-            content
-                .lineSegments()
-                .map { segment ->
-                    if (segment.byteSize().toLong() <= maxFileSize) {
-                        segment
-                    } else {
-                        segment.takeLastUtf8Bytes(maxFileSize.toInt())
-                    }
-                }
-
-        val chunks = mutableListOf<String>()
-        val currentChunk = StringBuilder()
-        var currentChunkBytes = 0
-
-        for (segment in segments) {
-            val segmentBytes = segment.byteSize()
-            if (currentChunkBytes > 0 && currentChunkBytes + segmentBytes > maxFileSize) {
-                chunks.add(currentChunk.toString())
-                currentChunk.clear()
-                currentChunkBytes = 0
-            }
-            currentChunk.append(segment)
-            currentChunkBytes += segmentBytes
-        }
-
-        if (currentChunk.isNotEmpty()) {
-            chunks.add(currentChunk.toString())
-        }
-
-        return chunks.takeLast(maxBackups + 1)
-    }
-
-    private fun String.lineSegments(): List<String> {
-        if (isEmpty()) return emptyList()
-        val result = mutableListOf<String>()
-        var start = 0
-        for (index in indices) {
-            if (this[index] == '\n') {
-                result.add(substring(start, index + 1))
-                start = index + 1
-            }
-        }
-        if (start < length) {
-            result.add(substring(start))
-        }
-        return result
-    }
-
-    private fun String.byteSize(): Int = toByteArray(Charsets.UTF_8).size
-
-    private fun String.takeLastUtf8Bytes(maxBytes: Int): String {
-        if (maxBytes <= 0 || isEmpty()) return ""
-
-        var bytes = 0
-        var startIndex = length
-        while (startIndex > 0) {
-            val codePoint = codePointBefore(startIndex)
-            val charCount = Character.charCount(codePoint)
-            val nextIndex = startIndex - charCount
-            val charBytes = substring(nextIndex, startIndex).byteSize()
-            if (bytes + charBytes > maxBytes) break
-            bytes += charBytes
-            startIndex = nextIndex
-        }
-        return substring(startIndex)
     }
 
     // Safe decryption exposure helper for internal diagnostics use
     suspend fun readLogsDecrypted(): String =
         withContext(writeDispatcher) {
             flush(fromSchedule = false)
-            readAllLogs()
+            slotStore.readAll()
         }
 
     companion object {
-        const val DEFAULT_MAX_FILE_SIZE_BYTES: Long = 2L * 1024L * 1024L
-        const val DEFAULT_MAX_BACKUPS: Int = 2
+        // 512 KB x 12 slots keeps total retention at the historical ~6 MB while bounding both the
+        // in-memory active-slot buffer and the per-flush encrypt to 512 KB (F2). Before F2 a flush
+        // decrypted and rewrote all 6 MB.
+        const val DEFAULT_MAX_FILE_SIZE_BYTES: Long = 512L * 1024L
+        const val DEFAULT_MAX_BACKUPS: Int = 11
+
+        // Raised from 5 lines / 2 s: safe now that a flush costs one small encrypt instead of a
+        // full decrypt-rewrite cycle. The 2 s -> 5 s interval keeps the durability window (pending
+        // lines lost on process death) the same order of magnitude; the 5 -> 64 line threshold does
+        // not (up to ~13x more lines can be pending). Accepted because readLogsDecrypted() always
+        // flushes first, so a user-initiated export never misses them.
+        const val DEFAULT_FLUSH_LINE_THRESHOLD: Int = 64
+        const val DEFAULT_FLUSH_INTERVAL_MS: Long = 5_000L
 
         internal fun sanitizeLogMessage(message: String): String {
             var sanitized = message

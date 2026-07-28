@@ -1,9 +1,15 @@
 # Performance Optimization Plan
 
-**Status:** Approved plan — partially implemented. F3, F11, and F12 have landed (see their item
-sections and the §7 implementation-order table for commit SHAs); the remainder of this plan is not
-yet implemented. Each work item below is scoped to land as one independent, production-ready
-commit.
+**Status:** Approved plan — partially implemented (last audited against the tree on 2026-07-27).
+**Landed:** M1, M2 (code only — baseline numbers still PENDING), F1, F2, F3, F4, F5, F8, F9, F10,
+F11, F12. **Not yet implemented:** F7, F13, F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
+per-item "Implemented" lines and the §7 implementation-order table for commit SHAs. Each work item
+below is scoped to land as one independent, production-ready commit.
+**Known blocker for measurement:** `ScrollBenchmark`'s baseline frame numbers cannot be recorded
+until the fresh-install SQLCipher key/DB race is fixed — see
+`internal-docs/plans/KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md` and `benchmark/BASELINE.md`.
+Every acceptance criterion phrased as "M2 journey (x) does not regress" is therefore currently
+unverifiable; treat those items as landed-but-unmeasured.
 **Origin:** Full static performance audit (July 2026) of the UI/Compose/Vico layer, the
 state/ViewModel/Flow layer, and the Room/ingestion/workers/startup/logging/build layers. Every
 finding was verified against source; line anchors were correct at the time of writing — re-locate
@@ -56,7 +62,11 @@ this document plus the referenced source files.
 
 `internal-docs/plans/ARCHITECTURE_HEALTH_DATA_SCORING_REMEDIATION_PLAN.md` (branch
 `claude/new-session-y0zdys`) already owns three findings this audit independently confirmed.
-**Do not implement them from this plan:**
+**Do not implement them from this plan.** All three have since LANDED (verified in-tree
+2026-07-27: `HealthSyncUseCase.kt:40` + `withSyncLock` for SCORE-003,
+`HeartRateDao.observeAggregateByTimeRange` / `HrRangeAggregate` for PERF-005, the "no explicit
+`indices`" note at `DailySummaryEntity.kt:14` for DB-002). The architecture plan document itself is
+no longer in `internal-docs/plans/`; the table below is retained as the audit trail:
 
 | Confirmed here | Owned by | Note |
 |---|---|---|
@@ -66,12 +76,15 @@ this document plus the referenced source files.
 
 Cross-references (complementary, NOT duplicates — both may land):
 - **F7** here batches the **daily-sync** upsert loop's transactions; the architecture plan's
-  PERF-002 restructures the **resync walk-forward's** query complexity. Different code paths;
-  coordinate if PERF-002 lands first.
+  PERF-002 restructures the **resync walk-forward's** query complexity. Different code paths.
+  **PERF-002 has landed** (`DailyRecomputeSupport.buildWalkForwardTrimpContext` /
+  `buildWalkForwardBaselineContext`, WP-20/WP-22) — F7 must be written against that shape:
+  persistence still happens per day inside `ScoringRepository.computeAndPersistDailySummary`, so
+  the per-day `daily_summaries` transaction F7 targets is still there.
 - **F18** should reuse the `@DefaultDispatcher` qualifier the architecture plan's DI-001
   introduces, if it has landed; otherwise use the existing `@IoDispatcher`.
-- **M2**'s frame benchmarks should share module setup/fixtures with the Macrobenchmark scaffolding
-  the architecture plan's Phase 0 creates for ingest/reconcile/recompute.
+- **M2**'s frame benchmarks share module setup/fixtures with the Macrobenchmark scaffolding for
+  ingest/reconcile/recompute (`benchmark/.../ScoringWalkForwardBenchmark.kt`). Done.
 
 ## 5. Architecture snapshot (context for a fresh agent)
 
@@ -117,6 +130,10 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
 
 ### M1. Compose compiler metrics + stability configuration file — High, Effort S
 
+**Implemented:** `e3f537c`. `compose_compiler_config.conf` exists at the repo root and
+`readylytics.compose-library-conventions.gradle.kts:20` registers it via
+`stabilityConfigurationFiles.add(...)`.
+
 - **Location:** `build-logic/src/main/kotlin/readylytics.compose-library-conventions.gradle.kts`
   (and the app module's compose setup in `app/build.gradle.kts`); new file
   `compose_compiler_config.conf` at the repo root.
@@ -142,7 +159,17 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
   produces classes/composables reports; a composable taking `LocalDate` is reported skippable.
 - **Verification:** pre-commit commands; inspect generated `*-composables.txt`.
 
-### M2. Frame-timing macrobenchmarks + `profileable` — High, Effort M
+### M2. Frame-timing macrobenchmarks + `profileable` — High, Effort M — **PARTIALLY DONE**
+
+**Implemented (code):** `99e9664`. `benchmark/.../ScrollBenchmark.kt` exists with all three
+journeys; `benchmark/BASELINE.md` + `README.md` exist.
+**OPEN (step 4):** the baseline P50/P90/P99 `frameDurationCpuMs` numbers are **still PENDING** —
+`BASELINE.md` says every cell is blocked by the fresh-install SQLCipher key/DB race
+(`internal-docs/plans/KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md`). `StartupBenchmark`'s
+`hotStart` also failed intermittently and was never extracted. Fix the race (or seed the DB so the
+benchmark build never hits it), then run `./gradlew :benchmark:connectedBenchmarkAndroidTest` and
+fill in the table. Until that happens, F19 (benchmark-gated) cannot be decided and every
+"non-regression vs M2" acceptance criterion in this plan is unverifiable.
 
 - **Location:** new `benchmark/src/main/kotlin/.../ScrollBenchmark.kt` (next to the existing
   `StartupBenchmark.kt`, which only has `StartupTimingMetric` tests); `app/build.gradle.kts` /
@@ -169,6 +196,10 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
 ---
 
 ### F1. Stop routine syncs from destroying and rebuilding all charts — **Critical, Effort M** *(approved decision 1)*
+
+**Implemented:** `6b38ac4` (Vitals split) + `9b18af5` (Sleep/Workouts mirror). `VitalsUiState` now
+carries `isRefreshing` (`VitalsViewModel.kt:47`) with `isLoading` redefined as first-load-only
+(`:149-175`).
 
 - **Location:**
   - `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt:158`
@@ -208,6 +239,42 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
   fresh-install first launch still shows skeletons.
 
 ### F2. `SecureFileLogSink`: append/rotate instead of decrypt-everything-rewrite-everything; add DEBUG level — **Critical, Effort M-L** *(approved decision 2)*
+
+**Implemented:** `9535e1a` (`LogSlotStore` with rename-rotation and constant-AD log slots),
+`1b6f84e` + `ef6649c` (flush one log slot instead of rewriting all of them), `df76ff3` + `55f419f`
+(DEBUG log level, filtered out of the release diagnostic file), `70289dd` (promote
+thirteen sync-lifecycle log sites back to INFO so release diagnostics still show them). Landed shape
+differs from the remediation write-up below in two ways: rotation is a rename **plus** a one-time
+re-encryption of pre-existing legacy slots — the pre-check's premise was wrong, `TinkSecureFileStore`
+does bind `secureFileAssociatedData` to the *filename*, so a bare rename would silently make old
+logs undecryptable; and slots are 512 KB × 12 rather than the 2 MB × 3 assumed below.
+`649e581` then made hydration failure-safe (a throw mid-normalization used to leave the store able
+to overwrite the active slot) and fused the normalization loop so it no longer holds every legacy
+slot's plaintext in memory at once.
+
+**OUTSTANDING — manual, before this ships:** the unit tests validate the upgrade path against a
+*model* of Tink's AEAD binding, never Tink itself. Install a pre-F2 build, generate log traffic,
+upgrade in place, export diagnostics, and confirm the pre-upgrade lines survive. Every decryption
+failure in this stack returns `""` rather than throwing, so a mistake here is invisible in testing
+and shows up only as a user's bug report arriving with no history.
+
+**Follow-ups deferred from the F2 reviews (none block the merge):**
+1. `LogSlotStore.rotate()` discards `File.renameTo()`'s boolean at all three call sites. The worst
+   sub-case: if `activeFile.renameTo(backupFile(1))` fails, the next `appendLines` overwrites
+   `activeFile` and the just-sealed slot is gone. Log it with `android.util.Log.w` — deliberately
+   NOT `DomainLogger`, which would feed the failure back into this same sink on every later seal.
+2. Two `logD` sites arguably belong on the `logI` list and are now invisible in release:
+   `HealthChangeSynchronizerImpl.kt:74,84,123` ("token expired, requesting full resync" — the
+   explanation for an unexpected full resync) and `RetryWithBackoff.kt:25` (HC read backoff — the
+   explanation for a slow sync).
+3. Replace `LogSlotStore.rotate()`'s `maxBackups <= 0` branch with `require(maxBackups >= 1)`; no
+   configuration reaches it.
+4. Optional durability: `if (level == LogLevel.ERROR) flush(fromSchedule = false)` in `bufferLog`.
+   With DEBUG dropped the line trigger rarely fires, so the effective window is the 5 s timer;
+   crash *stacks* are already safe via `CrashReportHandler`, but the INFO/WARN lines narrating what
+   led there are not.
+5. `SecureFileLogSinkTest.kt` is 538 lines, past the 400-line soft target. Route new slot-level
+   tests to `LogSlotStoreTest.kt` instead of growing it further.
 
 - **Location:** `app/src/main/kotlin/app/readylytics/health/util/SecureFileLogSink.kt` —
   `log()` `:50-73` (logcat + coroutine buffer), flush trigger `pendingLogs.size >= 5 || 2s` `:91`,
@@ -263,7 +330,9 @@ Effort: S (<½ day), M (½–2 days), L (>2 days).
 ### F3. Cache axis label strings in `ChartDefaults.rememberDayOffsetFormatter` — **Critical, Effort S**
 
 **Implemented:** `3f122ea` (implementation), `5b2239d` (review fix: documented the zone/locale
-freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEMENTATION_PLAN.md`.
+freeze, pinned the default-arg path). Landed shape: `ChartDefaults.kt:44-48` delegates to a
+`DayOffsetLabelCache` class (covered by `core/ui/src/test/.../DayOffsetLabelCacheTest.kt`). The
+implementation-plan doc was deleted in `f0464c1`.
 
 - **Location:** `core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/ChartDefaults.kt:48-65`
   (the `CartesianValueFormatter` created inside `remember(rangeStartMs)`).
@@ -289,6 +358,8 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
   unit test on the lambda if extracted); M2 journey (b) P90 does not regress.
 
 ### F4. Workouts: take `isSyncing` out of the pipeline-restarting params — **Critical, Effort M**
+
+**Implemented:** `ad1dd58` (landed together with F9).
 
 - **Location:** `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsViewModel.kt:122-415`.
   `isSyncing` is a field of `CombinedParams` (`:126-128`); the params flow goes through
@@ -316,6 +387,9 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
   cheap `copy` emission; UI behavior otherwise identical.
 
 ### F5. Isolate Vitals screen recomposition (chart-inputs slice + hoisted delta strings) — **Critical, Effort M**
+
+**Implemented:** `9b18af5`. Sections extracted to
+`feature/vitals/.../overview/VitalsTrendSection.kt` (three `TrendChart` cards) and the gauge row.
 
 - **Location:** `feature/vitals/.../overview/VitalsScreen.kt` — `uiState` collected at `:57`,
   destructured/read at `:93-96`; RHR/HRV delta strings built inline in composition at `:177-191`
@@ -346,8 +420,16 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F7. Coalesce Room invalidation storms during daily sync — **High, Effort M**
 
-- **Location:** `DailySyncUseCase.kt:142-162` (walk-forward loop: per-day score → per-day
-  `dailySummaryDao.upsert` — one `daily_summaries` table invalidation per day); ingest batches at
+- **Location (re-anchored 2026-07-27 — PERF-002 moved this code):**
+  `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/DailySyncUseCase.kt`
+  (walk-forward loop) → `DailyRecomputeSupport.recomputeDay(...)` →
+  `ScoringRepository.computeAndPersistDailySummary(day, steps, prefs, trimpContext,
+  baselineContext)`. The read side is already batched per walk-forward run (WP-20/WP-22 contexts);
+  the **write** side is still one persist (= one `daily_summaries` transaction + invalidation) per
+  day, which is exactly what F7 targets. F7's buffering must therefore split
+  "compute" from "persist" at the `ScoringRepository` boundary, or add a bulk persist entry point —
+  a shape change vs. the original write-up, which assumed a bare `dailySummaryDao.upsert` in the
+  loop. Do not change any formula while doing it. Ingest batches at
   `RoomHealthIngestionStore.kt:80,92` invalidate `heart_rate_records`/`hrv_records` per 5,000-row
   transaction (leave those as-is — cooperative cancellation between chunks is deliberate).
 - **Problem:** Room invalidates per table per **transaction**. A routine `windowDays=7..8` sync
@@ -384,6 +466,8 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F8. Annotate feature UI states `@Immutable` — **High, Effort S**
 
+**Implemented:** `f71e8d6` (e.g. `VitalsViewModel.kt:38`).
+
 - **Location:** `VitalsUiState` (`VitalsViewModel.kt:37-45`), `SleepUiState`
   (`SleepViewModel.kt:45-65`), `WorkoutsUiState` (`WorkoutsViewModel.kt:62`),
   `WorkoutDetailUiState` (`WorkoutDetailViewModel.kt:35`), plus the new F5 slices. Precedent:
@@ -402,6 +486,9 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
   consumer composables skippable.
 
 ### F9. Sleep: Dashboard-style split + `distinctUntilChanged` — **High, Effort M**
+
+**Implemented:** `ad1dd58`. `SleepViewModel.kt:266` `.distinctUntilChanged()` on the content flow;
+`isSyncing` merged after the heavy pipeline (`:267-282`).
 
 - **Location:** `feature/sleep/.../SleepViewModel.kt:96-270`. The 8-flow array-form `combine`
   (`:215-264`) includes `foregroundSyncController.isSyncing` as element 4 (`:219`); the combined
@@ -426,6 +513,8 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F10. Workouts: batch the N+1 heart-rate query loop — **High, Effort M**
 
+**Implemented:** `7df6d7c` (`WorkoutsViewModel.kt:287` — single span fetch + in-memory partition).
+
 - **Location:** `WorkoutsViewModel.kt:288-303` —
   `for (workout in recentWorkouts) heartRateRepository.getByTimeRange(workout.start, workout.end)`.
 - **Problem:** One suspend DB query per workout, re-executed on every upstream emission (each
@@ -448,7 +537,10 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F11. Cache/reduce allocations in `itemPlacerForRangeDays` — **High, Effort S**
 
-**Implemented:** `d9edd5f`. See `internal-docs/plans/F3_F11_F12_IMPLEMENTATION_PLAN.md`.
+**Implemented:** `d9edd5f`. Landed shape: `ChartDefaults.itemPlacerForRangeDays` (`:88`) owns a
+`DayOffsetTickCalculator` with per-instance candidate + single-entry result caches (covered by
+`core/ui/src/test/.../DayOffsetTickCalculatorTest.kt`). The implementation-plan doc was deleted in
+`f0464c1`.
 
 - **Location:** `ChartDefaults.kt:98-193`. The anonymous `ItemPlacer`'s `getLabelValues` (`:179`)
   and `getLineValues` (`:186`) each call `calculateValues(...)` per draw pass; that function
@@ -473,7 +565,9 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F12. Startup: pre-warm the first DataStore read + cheap migration short-circuit — **High, Effort S-M**
 
-**Implemented:** `8624334`. See `internal-docs/plans/F3_F11_F12_IMPLEMENTATION_PLAN.md`.
+**Implemented:** `8624334`. Landed shape: `HealthDashboardApplication.kt:101`
+`appScope.launch { preferencesPrewarmer.prewarm() }`, ahead of the backfill launch. The
+implementation-plan doc was deleted in `f0464c1`.
 
 - **Location:** `MainActivity.kt:36` (`SPLASH_MAX_WAIT_MS = 2000`), `:82-95` (splash
   `setKeepOnScreenCondition` waits for the first `userPreferences` emission — intentional
@@ -498,9 +592,17 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F13. Move SQLCipher key validation off the pre-frame main thread — **High, Effort M**
 
-- **Location:** `MainActivity.kt:52-56` — synchronous `sqlCipherKeyManager.validateKeyDecryption()`
-  on the main thread before `setContent`; its only consumer is the choice between
-  `DatabaseRecoveryScreen` and the normal tree.
+- **Location (re-anchored 2026-07-27):** `MainActivity.kt` — `MainActivity` was restructured since
+  the audit: `onCreate` now goes straight to `setContent`, which gates on
+  `databaseMigrationController.state` and, in the `Ready` branch, calls `ReadylyticsContent`. The
+  synchronous call now lives there as
+  `val isDatabaseCorrupted = remember { runCatching { sqlCipherKeyManager.validateKeyDecryption() }.isFailure }`
+  — i.e. still main-thread, now on the **first composition** rather than pre-`setContent`. Same
+  problem, same fix; adapt the wiring to the migration-controller structure. Its only consumer is
+  still the choice between `DatabaseRecoveryScreen` and the normal tree.
+- **Related:** the fresh-install SQLCipher race
+  (`internal-docs/plans/KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md`) fires through exactly this
+  path. F13 is not that bug's fix, but the two touch the same code — sequence them together.
 - **Problem:** Keystore + SQLCipher key material work blocks the main thread tens-to-hundreds of
   ms on every cold start.
 - **Remediation steps:**
@@ -551,7 +653,9 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F17. Remember theme computations in `FitDashboardTheme` — **Medium, Effort S**
 
-- **Location:** `core/designsystem/.../Theme.kt:87-212`. `matchingPreset` search, `colorScheme`
+- **Location:** `core/designsystem/src/main/kotlin/app/readylytics/health/core/designsystem/Theme.kt`
+  (`colorScheme` at `:92`, `Spacing()`/`Dimens()` at `:204-205` — confirmed un-remembered
+  2026-07-27). `matchingPreset` search, `colorScheme`
   (incl. `mcuColorScheme` seed generation, `fallbackLight/DarkScheme`, `.copy`, `harmonizeWith`),
   `semanticColors`, `baseExtended`, plus fresh `Spacing()`/`Dimens()` at `:204-205` run on **every**
   `FitDashboardTheme` recomposition. Downstream cascade is bounded (provided types are data
@@ -564,8 +668,10 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F18. `WorkoutDetailViewModel.loadWorkout` off `Main.immediate` — **Medium, Effort S**
 
-- **Location:** `feature/workouts/.../WorkoutDetailViewModel.kt:74-163`. The single
-  `viewModelScope.launch` has no dispatcher (only VM in the app without one injected); repo calls
+- **Location (re-anchored 2026-07-27):**
+  `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutDetailViewModel.kt`
+  (flat under `feature/workouts`, not a `detail/` subpackage) — `viewModelScope.launch` at `:78`,
+  processing through ~`:163`. Still the only VM in the app whose launch has no dispatcher (only VM in the app without one injected); repo calls
   suspend to IO internally, but the in-lambda work — `(hcSamples + dbSamples).distinctBy{}.sortedBy{}`
   (`:101-104`), `ChartDataMapper.mapToChartData`, `RecoveryMetricsMapper`, sample maps/filters —
   runs on the main thread. Thousands of HR samples → visible stall when opening a workout detail.
@@ -576,7 +682,10 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
 
 ### F19. Benchmark removal of the empty `graphicsLayer {}` chart-card wrappers — **Medium, Effort S** *(decision 3)*
 
-- **Location:** `VitalsScreen.kt:291, 328, 364`; also `feature/workouts/.../WorkoutStatsSection.kt:187, 280`.
+- **Location (re-anchored 2026-07-27, post-F5):**
+  `feature/vitals/.../overview/VitalsTrendSection.kt:56, 93, 130`;
+  `feature/workouts/.../WorkoutStatsSection.kt:187, 280`;
+  `feature/workouts/.../WorkoutListSection.kt:129` (a fourth site the original audit missed).
 - **Problem/unknown:** `Modifier.graphicsLayer { }` with an empty block promotes each chart card to
   its own hardware render layer — potentially helping vertical-scroll caching, potentially pure
   memory/bandwidth cost. The maintainer says it is not knowingly intentional.
@@ -613,35 +722,43 @@ freeze, pinned the default-arg path). See `internal-docs/plans/F3_F11_F12_IMPLEM
   a freshly allocated lambda and is therefore **always true**: every gauge is treated as
   clickable. Fix separately by changing the signature to `onClick: (() -> Unit)? = null` and
   `isClickable = onClick != null`.
-- **N2:** hardcoded `baselineUnit = "bpm"` / `"%"` at `VitalsScreen.kt:335/371` violate the
-  strings.xml rule — move to string resources in a separate cleanup.
+- **N2 (re-anchored 2026-07-27, post-F5):** hardcoded `baselineUnit = "bpm"` / `"%"` at
+  `feature/vitals/.../overview/VitalsTrendSection.kt:100` and `:137` violate the strings.xml rule —
+  move to string resources in a separate cleanup. Same fix for
+  `feature/vitals/.../bodyfat/BodyFatDetailScreen.kt:196` (`"%"`). Neighbouring lines already do it
+  right (`stringResource(CoreUiR.string.unit_ms)` at `VitalsTrendSection.kt:63`).
 
 ---
 
 ## 7. Implementation order (one commit each; run pre-commit checks every time)
 
-| # | Item | Gate/dependency |
-|---|---|---|
-| 1 | M1 compose metrics + stability config | — (measurement first) |
-| 2 | M2 frame benchmarks + `profileable`; record baseline numbers | — |
-| 3 | F2 log sink rotation, then F2 DEBUG level (2 commits) | — |
-| 4 | F4 Workouts sync split | — |
-| 5 | F10 N+1 HR batch | after F4 (so the win isn't masked by pipeline restarts) |
-| 6 | F9 Sleep split + `distinctUntilChanged` | — |
-| 7 | F8 `@Immutable` annotations | before F5 |
-| 8 | F1 sync-UX / CardLoader semantics (approved) | coordinate with F4/F9 flag fields |
-| 9 | F5 Vitals section extraction + hoisted delta strings | after F8 |
-| 10 | F3 axis formatter cache | **Implemented** — `3f122ea`, `5b2239d` |
-| 11 | F11 item placer cache | **Implemented** — `d9edd5f` |
-| 12 | F15 zone band colors | — |
-| 13 | F7 sync transaction coalescing (+ DATA_FLOW.md) | — |
-| 14 | F12 DataStore pre-warm | **Implemented** — `8624334` |
-| 15 | F13 key validation off-main | after tracing the corruption path |
-| 16 | F14 baseline profile | LAST perf item (captures final code) |
-| 17 | Remainder per appetite: F17, F18, F19 (benchmark-gated), F20, F22 (confirm first), F23 | — |
+Status column verified against the tree on 2026-07-27.
 
-N1/N2 land as separate non-perf fixes. Run `./gradlew lintRelease` after the batch. New files →
-`codegraph index`.
+| # | Item | Status | Gate/dependency |
+|---|---|---|---|
+| 1 | M1 compose metrics + stability config | ✅ `e3f537c` | — (measurement first) |
+| 2 | M2 frame benchmarks + `profileable` | ⚠️ code `99e9664`; **baseline numbers PENDING** | blocked by the SQLCipher fresh-install race |
+| 3 | F2 log sink rotation, DEBUG level, then INFO promotion of sync-lifecycle sites (6 commits) | ✅ `9535e1a`, `1b6f84e`, `ef6649c`, `df76ff3`, `55f419f`, `70289dd` | — |
+| 4 | F4 Workouts sync split | ✅ `ad1dd58` | — |
+| 5 | F10 N+1 HR batch | ✅ `7df6d7c` | after F4 |
+| 6 | F9 Sleep split + `distinctUntilChanged` | ✅ `ad1dd58` | — |
+| 7 | F8 `@Immutable` annotations | ✅ `f71e8d6` | before F5 |
+| 8 | F1 sync-UX / CardLoader semantics (approved) | ✅ `6b38ac4`, `9b18af5` | — |
+| 9 | F5 Vitals section extraction + hoisted delta strings | ✅ `9b18af5` | after F8 |
+| 10 | F3 axis formatter cache | ✅ `3f122ea`, `5b2239d` | — |
+| 11 | F11 item placer cache | ✅ `d9edd5f` | — |
+| 12 | F15 zone band colors | ⬜ **open** — `TrendCharts.kt:225` still calls `zoneBandColors(...)` un-remembered | — |
+| 13 | F7 sync transaction coalescing (+ DATA_FLOW.md) | ⬜ **open** — re-anchor first, PERF-002 moved the code | — |
+| 14 | F12 DataStore pre-warm | ✅ `8624334` | — |
+| 15 | F13 key validation off-main | ⬜ **open** | after tracing the corruption path; sequence with the SQLCipher race |
+| 16 | F14 baseline profile | ⬜ **open** — no `androidx.baselineprofile` plugin, no `:baselineprofile` module, no checked-in profile | LAST perf item |
+| 17 | Remainder: F17 ⬜, F18 ⬜, F19 ⬜ (benchmark-gated → blocked on #2), F20 ⬜, F22 ⬜ (confirm first), F23 ⬜ (`org.gradle.parallel` still commented out at `gradle.properties:15`, `android.nonTransitiveRClass=false` at `:25`) | ⬜ **all open** | — |
+
+**Remaining work, in the order it should now be taken:** #2 baseline numbers (unblocks all
+measurement) → F7 → F15 → F13 → F17 / F18 / F20 / F19 / F22 / F23 per appetite → F14 last.
+
+N1 (⬜ open — `M3ScoreGaugeCard.kt:60` still `onClick != {}`) and N2 (⬜ open) land as separate
+non-perf fixes. Run `./gradlew lintRelease` after the batch. New files → `codegraph index`.
 
 ## 8. Verification matrix
 

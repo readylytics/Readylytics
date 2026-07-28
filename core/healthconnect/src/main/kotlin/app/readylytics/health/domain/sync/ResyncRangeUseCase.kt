@@ -10,6 +10,7 @@ import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedEx
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
@@ -479,7 +480,7 @@ class ResyncRangeUseCase
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                     }
                     checkpointStore.clear()
-                    logD("ResyncRangeUseCase") {
+                    logI("ResyncRangeUseCase") {
                         if (skipIngestAndPrune) {
                             "Recompute-only complete ($totalDays days)"
                         } else {
@@ -488,20 +489,20 @@ class ResyncRangeUseCase
                     }
                     Result.success(Unit)
                 } catch (e: CancellationException) {
-                    logD(TELEMETRY_TAG) { "Resync cancelled." }
+                    logI(TELEMETRY_TAG) { "Resync cancelled." }
                     throw e
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    logD(TELEMETRY_TAG) { "Resync stopped by Health Connect permission failure: ${e.message}" }
+                    logI(TELEMETRY_TAG) { "Resync stopped by Health Connect permission failure: ${e.message}" }
                     throw e
                 } catch (e: HealthConnectWindowTimeoutException) {
                     // HC-002: distinct from RESYNC_ERROR so telemetry can tell "genuinely stuck even
                     // at the smallest chunk size" apart from other failures; WorkManager's normal
                     // backoff (Result.retry() in HealthResyncWorker) is still the right fallback --
                     // a later retry may find a less dense window or a recovered provider.
-                    logD(TELEMETRY_TAG) { "Resync failed: window read timed out even at the minimum chunk size" }
+                    logI(TELEMETRY_TAG) { "Resync failed: window read timed out even at the minimum chunk size" }
                     Result.failure("Full resync failed: window read timeout", "RESYNC_WINDOW_TIMEOUT")
                 } catch (e: Exception) {
-                    logD(TELEMETRY_TAG) { "Resync failed with exception: ${e.message}" }
+                    logI(TELEMETRY_TAG) { "Resync failed with exception: ${e.message}" }
                     Result.failure("Full resync failed", "RESYNC_ERROR")
                 }
             }

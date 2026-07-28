@@ -10,6 +10,7 @@ import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
+import app.readylytics.health.domain.util.logI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
@@ -55,7 +56,7 @@ class DailySyncUseCase
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    logD("DailySyncUseCase") { "Starting sync (window=$windowDays days)..." }
+                    logI("DailySyncUseCase") { "Starting sync (window=$windowDays days)..." }
                     // Migrate any legacy global "primary device" into the per-data-type map.
                     settingsRepo.migrateDeviceSelectionIfNeeded()
                     // One-time bootstrap of rasSourceMode for existing users (no-op after first run).
@@ -147,7 +148,7 @@ class DailySyncUseCase
                             }
                             is Result.Failure -> {
                                 failureCount++
-                                logD("DailySyncUseCase") { "Day $dayToScore: FAILED - ${result.reason}" }
+                                logI("DailySyncUseCase") { "Day $dayToScore: FAILED - ${result.reason}" }
                             }
                         }
                         processedDays++
@@ -156,7 +157,7 @@ class DailySyncUseCase
                         yield()
                     }
 
-                    logD("DailySyncUseCase") {
+                    logI("DailySyncUseCase") {
                         "Sync complete: $successCount succeeded, $failureCount failed"
                     }
                     if (failureCount > 0) {
