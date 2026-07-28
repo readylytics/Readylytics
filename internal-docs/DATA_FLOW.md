@@ -339,12 +339,16 @@ rotation is managed by `DatabaseKeyRotator`, which rekeys the SQLCipher database
 logs the operation status to the local audit trail. Keys are hardware-bound and do not support cloud backup.
 
 **Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
-re-fetching a record **replaces** rather than duplicates. There is no blanket `deleteAll()`
-in the sync path — a worker that dies mid-resync leaves prior valid data intact, and a retry
-re-runs the same range cleanly. `DailySummaryDao` additionally exposes `updateBaselines()`
-and `clearFrozenBaselinesBetween(fromMs, toExclusiveMs)` (the only up-front baseline mutation
-during sync/resync, scoped to the recomputed scoring range and rebuilt in the same walk-forward
-pass).
+re-fetching a record replaces rather than duplicates. Workout bulk ingestion is a raw-record
+merge rather than an unconditional replacement of every column. `RoomHealthIngestionStore`
+updates Health Connect-owned workout fields for the stable workout `id` while preserving the
+existing nullable `modelTrimp`, because that column is scoring-owned derived state. New rows and
+rows already invalidated to `modelTrimp = null` remain null until their scoring day is recomputed.
+There is no blanket `deleteAll()` in the sync path — a worker that dies mid-resync leaves prior
+valid data intact, and a retry re-runs the same range cleanly. `DailySummaryDao` additionally
+exposes `updateBaselines()` and `clearFrozenBaselinesBetween(fromMs, toExclusiveMs)` (the only
+up-front baseline mutation during sync/resync, scoped to the recomputed scoring range and rebuilt
+in the same walk-forward pass).
 
 **Stable-order scoring contract:** sleep HR/HRV DAO reads used by the scoring pipeline return
 deterministic order (`timestampMs`, then stable `id`, or BPM plus timestamp/id for percentile
@@ -427,6 +431,13 @@ independent per-workout values that must not be confused:
   freshly computed `dailyTrimpRaw` directly into that series (mirroring how `trimpEverydayHr` is
   injected into the everyday-HR series), so today's value never depends on the just-issued
   `workoutDao.upsertAll` being visible through the same bucketed read.
+- Idempotent overlap refetches must never demote a previously recomputed workout from `modelTrimp`
+  back to zone `trimp`. The bulk window path preserves `modelTrimp` during its stable-ID upsert.
+  A genuine exercise `UpsertionChange` in `HealthChangeSynchronizerImpl` invalidates `modelTrimp`
+  and reports the workout's scoring date; `DailySyncUseCase` then widens only for that actual
+  recent change and recomputes the contiguous affected range. Thus an unchanged previous-day
+  workout returned solely because daily ingestion reaches back for cross-midnight sleep cannot
+  alter the current day's ATL/CTL series.
 - A TRIMP-model or -parameter settings change (see 1.2.2) must invalidate every persisted
   historical day, not just a recent window, or the COALESCE transition mixes model-A and model-B
   values inside the same ATL/CTL EMA — this is exactly what `HealthDataRefresh.refreshHistorical()`
