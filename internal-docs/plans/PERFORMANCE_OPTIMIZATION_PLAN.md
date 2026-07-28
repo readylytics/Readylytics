@@ -2,7 +2,7 @@
 
 **Status:** Approved plan — partially implemented (last audited against the tree on 2026-07-27).
 **Landed:** M1, M2 (code only — baseline numbers still PENDING), F1, F2, F3, F4, F5, F7, F8, F9, F10,
-F11, F12. **Not yet implemented:** F13, F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
+F11, F12, F13. **Not yet implemented:** F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
 per-item "Implemented" lines and the §7 implementation-order table for commit SHAs. Each work item
 below is scoped to land as one independent, production-ready commit.
 **Known blocker for measurement:** `ScrollBenchmark`'s baseline frame numbers cannot be recorded
@@ -596,6 +596,15 @@ implementation-plan doc was deleted in `f0464c1`.
 
 ### F13. Move SQLCipher key validation off the pre-frame main thread — **High, Effort M**
 
+**Implemented:** `d3e5026`. Async key validation via `lifecycleScope.launch(IO)` +
+`SqlCipherKeyManager.isKeyCorrupted` StateFlow. `DatabaseReadiness.KeyCorrupted` variant routes
+directly to `DatabaseRecoveryScreen` from the migration-controller gate. `KeyProvider` interface
+replaces the runtime-name test bypass. **OUTSTANDING (deferred):** `DatabaseReadinessGate.inspect()`
+still synchronously calls `withWritableDatabase` during Hilt injection — the main-thread key
+work is removed from composition but not from injection. File a follow-up to make
+`DatabaseMigrationControllerImpl.initialState` async (requires adding a `Loading` state to
+`DatabaseReadiness`).
+
 - **Location (re-anchored 2026-07-27):** `MainActivity.kt` — `MainActivity` was restructured since
   the audit: `onCreate` now goes straight to `setContent`, which gates on
   `databaseMigrationController.state` and, in the `Ready` branch, calls `ReadylyticsContent`. The
@@ -754,7 +763,7 @@ Status column verified against the tree on 2026-07-27.
 | 12 | F15 zone band colors | ⬜ **open** — `TrendCharts.kt:225` still calls `zoneBandColors(...)` un-remembered | — |
 | 13 | F7 sync transaction coalescing (+ DATA_FLOW.md) | ✅ `eda7c51`, `e432bd6`, `f9e7fbc`, `d794ecc` | — |
 | 14 | F12 DataStore pre-warm | ✅ `8624334` | — |
-| 15 | F13 key validation off-main | ⬜ **open** | after tracing the corruption path; sequence with the SQLCipher race |
+| 15 | F13 key validation off-main | ✅ `d3e5026` | after tracing the corruption path; sequence with the SQLCipher race |
 | 16 | F14 baseline profile | ⬜ **open** — no `androidx.baselineprofile` plugin, no `:baselineprofile` module, no checked-in profile | LAST perf item |
 | 17 | Remainder: F17 ⬜, F18 ⬜, F19 ⬜ (benchmark-gated → blocked on #2), F20 ⬜, F22 ⬜ (confirm first), F23 ⬜ (`org.gradle.parallel` still commented out at `gradle.properties:15`, `android.nonTransitiveRClass=false` at `:25`) | ⬜ **all open** | — |
 

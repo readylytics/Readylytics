@@ -21,6 +21,8 @@ import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.migration.DatabaseReadinessGate
+import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
+import app.readylytics.health.data.security.KeyProvider
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.repository.TransactionRunner
@@ -38,6 +40,9 @@ import javax.inject.Singleton
 abstract class DatabaseModule {
     @Binds
     abstract fun bindTransactionRunner(impl: RoomTransactionRunner): TransactionRunner
+
+    @Binds
+    abstract fun bindKeyProvider(impl: AndroidKeystoreKeyProvider): KeyProvider
 
     companion object {
         @Provides

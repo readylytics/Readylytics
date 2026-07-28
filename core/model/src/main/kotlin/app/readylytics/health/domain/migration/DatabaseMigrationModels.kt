@@ -32,6 +32,8 @@ sealed interface DatabaseReadiness {
     data class Failed(
         val message: String,
     ) : DatabaseReadiness
+
+    data object KeyCorrupted : DatabaseReadiness
 }
 
 fun interface DatabaseReadinessInspector {
