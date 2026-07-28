@@ -3,6 +3,7 @@ package app.readylytics.health.util
 import android.content.Context
 import android.util.Log
 import app.readylytics.health.data.security.SecureFileStore
+import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
@@ -51,6 +52,23 @@ class SecureFileLogSinkTest {
 
     @After
     fun tearDown() {
+        // testDebugIsNotLoggableAndNeverReachesTheFile (and any future test in this class) may
+        // install a SecureFileLogSink backed by this test's TemporaryFolder into the
+        // process-wide DomainLogger singleton. Gradle reuses one JVM across test classes, so a
+        // stale sink left installed would outlive the deleted TemporaryFolder and swallow
+        // IOExceptions for every later test in the module that logs without installing its own
+        // sink. Always restore a no-op sink, even if the test body failed.
+        DomainLogger.installSink(
+            object : DomainLogSink {
+                override fun log(
+                    level: LogLevel,
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                    context: LogContext,
+                ) = Unit
+            },
+        )
         unmockkStatic(Log::class)
     }
 
