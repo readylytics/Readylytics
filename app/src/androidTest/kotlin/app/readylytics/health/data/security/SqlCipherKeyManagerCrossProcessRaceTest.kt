@@ -24,6 +24,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Genuine two-OS-process regression test for the SqlCipherKeyManager cross-process key race
@@ -40,43 +41,63 @@ import java.util.concurrent.TimeUnit
  */
 @RunWith(AndroidJUnit4::class)
 class SqlCipherKeyManagerCrossProcessRaceTest {
+    private companion object {
+        const val BIND_TIMEOUT_SECONDS = 10L
+    }
+
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     private lateinit var dbFile: File
-    private val connections = mutableListOf<Pair<ServiceConnection, Messenger>>()
+    private val connections = mutableListOf<ServiceConnection>()
+
+    // Snapshot of the REAL app's stored key, taken before this test clears it. These prefs are
+    // the installed app's actual SQLCipher key storage (this test runs in the app's own UID), so
+    // clearing them without restoring would leave the app's real health_dashboard.db permanently
+    // undecryptable and strand the next launch on DatabaseRecoveryScreen.
+    private var savedEncryptedKey: String? = null
+    private var savedIv: String? = null
+
+    private val keyPrefs
+        get() = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
 
     @Before
     fun setUp() {
         dbFile = File(context.filesDir, "racetest_${System.nanoTime()}.db")
-        File(context.filesDir, "sqlcipher_key.lock").delete()
-        context
-            .getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
+        // NOTE: deliberately does NOT delete the sqlcipher_key.lock marker file. On POSIX
+        // filesystems unlinking a file does not release locks held on already-open descriptors,
+        // and a later RandomAccessFile() on the same path yields a NEW inode -- so deleting it
+        // mid-run can leave two "holders" locking different inodes with no mutual exclusion,
+        // silently defeating the very lock under test (a false pass). The marker is a reusable
+        // zero-byte file; there is nothing to clean up.
+        savedEncryptedKey = keyPrefs.getString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, null)
+        savedIv = keyPrefs.getString(SqlCipherKeyManager.PREF_IV, null)
+        keyPrefs.edit().clear().commit()
     }
 
     @After
     fun tearDown() {
-        connections.forEach { (connection, _) -> context.unbindService(connection) }
+        // runCatching: unbindService throws IllegalArgumentException for a connection that never
+        // actually bound (e.g. the test failed before onServiceConnected fired). Swallowing that
+        // here keeps teardown from masking the real failure with a secondary exception.
+        connections.forEach { connection -> runCatching { context.unbindService(connection) } }
         connections.clear()
         dbFile.delete()
         File("${dbFile.absolutePath}-wal").delete()
         File("${dbFile.absolutePath}-shm").delete()
+        // Restore the real app's key (commit, not apply, so it is durably on disk before the
+        // instrumentation process can be torn down).
+        val editor = keyPrefs.edit()
+        editor.clear()
+        savedEncryptedKey?.let { editor.putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, it) }
+        savedIv?.let { editor.putString(SqlCipherKeyManager.PREF_IV, it) }
+        editor.commit()
     }
 
     @Test
     fun twoProcesses_raceOnFreshKey_bothSucceedAndConverge() {
-        val process1Ready = CountDownLatch(1)
-        val process2Ready = CountDownLatch(1)
-        val process1Messenger =
-            bindRaceService(KeyRaceTestServiceProcess1::class.java) { process1Ready.countDown() }
-        val process2Messenger =
-            bindRaceService(KeyRaceTestServiceProcess2::class.java) { process2Ready.countDown() }
-
-        assertTrue("service 1 did not bind in time", process1Ready.await(10, TimeUnit.SECONDS))
-        assertTrue("service 2 did not bind in time", process2Ready.await(10, TimeUnit.SECONDS))
+        val process1Messenger = bindRaceService(KeyRaceTestServiceProcess1::class.java, "service 1")
+        val process2Messenger = bindRaceService(KeyRaceTestServiceProcess2::class.java, "service 2")
 
         val doneLatch = CountDownLatch(2)
         val errors = java.util.concurrent.ConcurrentLinkedQueue<String>()
@@ -86,7 +107,9 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
                     when (message.what) {
                         KeyRaceTestService.MSG_DONE -> doneLatch.countDown()
                         KeyRaceTestService.MSG_ERROR -> {
-                            errors.add(message.data.getString("error"))
+                            // getString is platform-typed: a null here would NPE inside this
+                            // main-thread Handler callback and crash the test process.
+                            errors.add(message.data.getString("error") ?: "unknown error")
                             doneLatch.countDown()
                         }
                     }
@@ -116,20 +139,28 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
      * by its own concrete class rather than a shared base class + intent extra: the manifest
      * declares each subclass under its own `android:process` entry, so an explicit
      * `Intent(context, serviceClass)` deterministically targets the matching process.
+     *
+     * Waits on a [CountDownLatch] with a real [BIND_TIMEOUT_SECONDS] bound and fails the test
+     * with [label] if binding never completes, so a regression that stops the service from
+     * starting surfaces as a named assertion failure rather than an unbounded hang with no
+     * diagnostic. The messenger is published through an [AtomicReference] because
+     * `onServiceConnected` runs on the main thread while this method runs on the instrumentation
+     * thread.
      */
     private fun bindRaceService(
         serviceClass: Class<out KeyRaceTestService>,
-        onReady: () -> Unit,
+        label: String,
     ): Messenger {
-        var boundMessenger: Messenger? = null
+        val messengerRef = AtomicReference<Messenger?>(null)
+        val bound = CountDownLatch(1)
         val connection =
             object : ServiceConnection {
                 override fun onServiceConnected(
                     name: ComponentName,
                     binder: IBinder,
                 ) {
-                    boundMessenger = Messenger(binder)
-                    onReady()
+                    messengerRef.set(Messenger(binder))
+                    bound.countDown()
                 }
 
                 override fun onServiceDisconnected(name: ComponentName) = Unit
@@ -139,11 +170,12 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
                 setPackage(context.packageName)
             }
         context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        connections.add(connection to Messenger(android.os.Binder()))
-        while (boundMessenger == null) {
-            Thread.sleep(10)
-        }
-        return boundMessenger!!
+        connections.add(connection)
+        assertTrue(
+            "$label did not bind within $BIND_TIMEOUT_SECONDS s",
+            bound.await(BIND_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        )
+        return requireNotNull(messengerRef.get()) { "$label bound but published no messenger" }
     }
 
     private fun sendRun(

@@ -38,12 +38,11 @@ import javax.inject.Inject
  * app's own @HiltAndroidApp HealthDashboardApplication.onCreate() runs first in every process and
  * eagerly builds DatabaseMigrationController, which immediately calls
  * DatabaseReadinessGate.inspect() -> SqlCipherKeyManager.withWritableDatabase() on the process's
- * @Singleton SqlCipherKeyManager. A hand-constructed second instance here bypasses that singleton
- * scope, so the two instances' independent ReentrantLocks cannot serialize each other and both
- * race to FileChannel.lock() the same marker file -- which the JVM tracks per-process, not per
- * channel, so the second attempt throws OverlappingFileLockException instead of blocking.
- * Injecting the singleton makes this service contend on exactly the instance (and therefore the
- * in-process lock) production code uses, which is what the cross-process assertion needs.
+ * @Singleton SqlCipherKeyManager. Injecting the singleton makes this service contend on exactly
+ * the instance production code uses, which is what the cross-process assertion needs. (The
+ * in-process half of the lock now lives in SqlCipherKeyManager's companion object, so a
+ * hand-constructed second instance would no longer break mutual exclusion outright -- but it
+ * would still be testing a different object than the one the app actually races with.)
  */
 @AndroidEntryPoint
 open class KeyRaceTestService : Service() {

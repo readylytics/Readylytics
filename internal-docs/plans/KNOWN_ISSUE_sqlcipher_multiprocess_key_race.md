@@ -95,9 +95,15 @@ available logcat evidence, not a confirmed fix target. Whoever picks this up sho
 
 ## Resolution
 
-Root cause confirmed exactly as hypothesized above: no cross-process guard existed on
+Root cause narrowed to the unguarded critical section in
 `SqlCipherKeyManager.getOrCreateDbKey()` (`app/src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt`),
-and `androidx.profileinstaller.ProfileInstallReceiver` runs in the app's default process
+confirmed by the code trace above; the fix covers both an in-process race (e.g. the main-thread
+`DatabaseMigrationControllerImpl` constructor racing an `appScope` coroutine within one process)
+and a genuine cross-process race (via the `FileLock`). This doc's original open question of
+exactly which process wins/loses in the field was not isolated further — the "Start proc" lines
+in the original logcat are equally consistent with the process starting, dying and restarting in
+sequence as with two genuinely concurrent processes — since the fix closes the race either way.
+Notably `androidx.profileinstaller.ProfileInstallReceiver` runs in the app's default process
 (confirmed via the merged manifest — it declares no `android:process`), so the "detect and
 skip DB init in a receiver-only process" idea speculated above turned out not to be viable:
 there is no process-identity signal available in `Application.onCreate()` to distinguish it
@@ -136,3 +142,17 @@ originally found on):
   metrics-capture gap), not the SQLCipher race — no `sqlcipher`/HMAC/`SQLiteNotADatabaseException`
   signature appears anywhere in that run's logcat. `benchmark/BASELINE.md` can now be filled
   in via this command; the selector/metrics failures are a separate, unrelated follow-up.
+
+**Testing gaps (known, deliberate):** Task 1's Robolectric test proves in-process *thread*
+convergence with a fake `KeyProvider`; Task 2's instrumented test proves real two-*process*
+convergence with the real Keystore. Neither covers (a) multiple `SqlCipherKeyManager` instances
+coexisting in one process — a real gap found in final review, since test/benchmark code
+hand-constructs extra instances; now closed structurally by moving the in-process `ReentrantLock`
+into the companion object (JVM-wide) so correctness no longer depends on `@Singleton` DI scoping;
+(b) `resetKeyAndDatabase()` under concurrency — now also inside the same lock with a durable
+`commit = true` removal, but not exercised concurrently by a test; or (c) the actual production
+trigger path (`Application.onCreate()` on a genuinely fresh install), which remains
+manual-repro-only because it requires a truly fresh install rather than a test fixture. Also note
+no CI job in this repo runs `connectedAndroidTest`, so Task 2's instrumented test is currently a
+manual regression guard a developer must run locally, not an automated gate — a worthwhile future
+improvement.
