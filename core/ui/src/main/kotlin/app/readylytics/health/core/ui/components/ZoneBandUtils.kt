@@ -67,3 +67,36 @@ fun zoneBandColors(
             HealthZone.CRITICAL -> errorContainer.copy(alpha = criticalAlpha)
         }
     }
+
+@Composable
+fun rememberZoneBandColors(
+    bands: List<ZoneBand>,
+    extendedColors: ExtendedColors,
+    primaryContainer: Color,
+    errorContainer: Color,
+    optimalAlpha: Float = ChartZoneAlphas.HIGH,
+    neutralAlpha: Float = ChartZoneAlphas.RESTING,
+    warningAlpha: Float = ChartZoneAlphas.HIGH,
+    criticalAlpha: Float = ChartZoneAlphas.HIGH,
+): List<Color> =
+    remember(
+        bands,
+        extendedColors,
+        primaryContainer,
+        errorContainer,
+        optimalAlpha,
+        neutralAlpha,
+        warningAlpha,
+        criticalAlpha,
+    ) {
+        zoneBandColors(
+            bands = bands,
+            extendedColors = extendedColors,
+            primaryContainer = primaryContainer,
+            errorContainer = errorContainer,
+            optimalAlpha = optimalAlpha,
+            neutralAlpha = neutralAlpha,
+            warningAlpha = warningAlpha,
+            criticalAlpha = criticalAlpha,
+        )
+    }

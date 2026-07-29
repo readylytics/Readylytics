@@ -29,7 +29,7 @@ import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
-import app.readylytics.health.core.ui.components.zoneBandColors
+import app.readylytics.health.core.ui.components.rememberZoneBandColors
 import app.readylytics.health.domain.model.diastolicZoneBands
 import app.readylytics.health.domain.model.systolicZoneBands
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -150,7 +150,7 @@ fun SingleBloodPressureChart(
                 .systolicZoneBands()
         }
     val colors =
-        zoneBandColors(
+        rememberZoneBandColors(
             bands = bands,
             extendedColors = extendedColors,
             primaryContainer = primaryContainer,

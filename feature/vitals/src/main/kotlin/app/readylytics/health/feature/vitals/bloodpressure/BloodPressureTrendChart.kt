@@ -37,7 +37,7 @@ import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
-import app.readylytics.health.core.ui.components.zoneBandColors
+import app.readylytics.health.core.ui.components.rememberZoneBandColors
 import app.readylytics.health.feature.vitals.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -148,7 +148,7 @@ fun BloodPressureTrendChart(
 
     // Use generic utility for colors; increase optimal opacity for better distinction
     val colors =
-        zoneBandColors(
+        rememberZoneBandColors(
             bands = bands,
             extendedColors = extendedColors,
             primaryContainer = primaryContainer,
