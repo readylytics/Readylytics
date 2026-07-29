@@ -1,7 +1,14 @@
 plugins {
     id("com.android.test")
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.ktlint)
 }
+
+val useConnectedProfileDevice =
+    providers
+        .gradleProperty("readylytics.baselineprofile.connected")
+        .map(String::toBoolean)
+        .orElse(false)
 
 android {
     namespace = "app.readylytics.health.benchmark"
@@ -22,12 +29,33 @@ android {
         }
     }
 
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("pixel9Api37") {
+                    device = "Pixel 9"
+                    apiLevel = 37
+                    systemImageSource = "aosp"
+                }
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
     experimentalProperties["android.experimental.self-instrumenting"] = true
+}
+
+baselineProfile {
+    if (useConnectedProfileDevice.get()) {
+        useConnectedDevices = true
+    } else {
+        managedDevices += "pixel9Api37"
+        useConnectedDevices = false
+    }
 }
 
 ktlint {
