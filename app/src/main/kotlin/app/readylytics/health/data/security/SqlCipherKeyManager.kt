@@ -12,9 +12,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileInputStream
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.SecureRandom
+import java.util.concurrent.locks.ReentrantLock
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
@@ -48,6 +50,31 @@ class SqlCipherKeyManager
 
         private val prefs by lazy {
             context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
+        }
+
+        /**
+         * Runs [block] holding both the JVM-wide [inProcessKeyLock] and the cross-process
+         * advisory `FileLock` on the key marker file.
+         *
+         * NOT REENTRANT. Do not call this (directly or transitively) from within the [block]
+         * passed to it: the outer [ReentrantLock] silently permits re-entry from the same
+         * thread, but the inner [java.nio.channels.FileChannel.lock] on the freshly-opened
+         * channel then throws [java.nio.channels.OverlappingFileLockException] (Java tracks
+         * held file locks per-JVM, not per-channel, and has no reentrant semantics), so a
+         * nested call fails loudly rather than deadlocking or blocking.
+         */
+        private fun <T> withCrossProcessKeyLock(block: () -> T): T {
+            inProcessKeyLock.lock()
+            try {
+                val lockFile = File(context.filesDir, "sqlcipher_key.lock")
+                RandomAccessFile(lockFile, "rw").use { raf ->
+                    raf.channel.lock().use {
+                        return block()
+                    }
+                }
+            } finally {
+                inProcessKeyLock.unlock()
+            }
         }
 
         /**
@@ -214,43 +241,59 @@ class SqlCipherKeyManager
         ) : Exception(message, cause)
 
         fun validateKeyDecryption() {
-            if (prefs.contains(PREF_ENCRYPTED_KEY)) {
-                try {
-                    val decrypted = decryptKey()
-                    decrypted.fill(0)
-                } catch (e: Exception) {
-                    _isKeyCorrupted.value = true
-                    throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
+            withCrossProcessKeyLock {
+                if (prefs.contains(PREF_ENCRYPTED_KEY)) {
+                    try {
+                        val decrypted = decryptKey()
+                        decrypted.fill(0)
+                    } catch (e: Exception) {
+                        _isKeyCorrupted.value = true
+                        throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
+                    }
                 }
             }
         }
 
+        /**
+         * Clears the stored key and deletes the encrypted database, so the next open regenerates
+         * both from scratch (the recovery path behind DatabaseRecoveryScreen).
+         *
+         * Holds the same cross-process lock as [getOrCreateDbKey]: the key *removal* needs the
+         * identical treatment as the key *write*, otherwise a concurrent getOrCreateDbKey() in
+         * another thread/process can interleave with a reset and read a stale key against an
+         * already-deleted DB file (or vice versa). The removal is likewise `commit = true` so it
+         * is durably on disk before the lock is released.
+         */
         fun resetKeyAndDatabase(dbFile: File) {
-            _isKeyCorrupted.value = false
-            prefs.edit {
-                remove(PREF_ENCRYPTED_KEY)
-                remove(PREF_IV)
-            }
-            if (dbFile.exists()) {
-                dbFile.delete()
-                File("${dbFile.absolutePath}-wal").delete()
-                File("${dbFile.absolutePath}-shm").delete()
+            withCrossProcessKeyLock {
+                _isKeyCorrupted.value = false
+                prefs.edit(commit = true) {
+                    remove(PREF_ENCRYPTED_KEY)
+                    remove(PREF_IV)
+                }
+                if (dbFile.exists()) {
+                    dbFile.delete()
+                    File("${dbFile.absolutePath}-wal").delete()
+                    File("${dbFile.absolutePath}-shm").delete()
+                }
             }
         }
 
         private fun getOrCreateDbKey(dbFile: File? = null): ByteArray =
-            if (prefs.contains(PREF_ENCRYPTED_KEY)) {
-                try {
-                    decryptKey()
-                } catch (e: Exception) {
-                    _isKeyCorrupted.value = true
-                    logE("SqlCipherKeyManager", e) {
-                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+            withCrossProcessKeyLock {
+                if (prefs.contains(PREF_ENCRYPTED_KEY)) {
+                    try {
+                        decryptKey()
+                    } catch (e: Exception) {
+                        _isKeyCorrupted.value = true
+                        logE("SqlCipherKeyManager", e) {
+                            "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+                        }
+                        throw KeyDecryptionException("Database key decryption failed", e)
                     }
-                    throw KeyDecryptionException("Database key decryption failed", e)
+                } else {
+                    generateAndStoreNewKey()
                 }
-            } else {
-                generateAndStoreNewKey()
             }
 
         private fun generateAndStoreNewKey(): ByteArray {
@@ -273,7 +316,11 @@ class SqlCipherKeyManager
             val iv = cipher.iv
             val encryptedKey = cipher.doFinal(rawKey)
 
-            prefs.edit {
+            // commit = true: must be durably on disk before the cross-process lock is released,
+            // so a losing process's first (post-lock) read of this SharedPreferences file is
+            // guaranteed to see it. The default apply() is async and gives no cross-process
+            // ordering guarantee -- see withCrossProcessKeyLock's doc comment above.
+            prefs.edit(commit = true) {
                 putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
                 putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
             }
@@ -298,8 +345,31 @@ class SqlCipherKeyManager
 
         private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
+        @androidx.annotation.VisibleForTesting
+        internal fun getOrCreateDbKeyForTest(dbFile: File? = null): ByteArray = getOrCreateDbKey(dbFile)
+
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"
+
+            // Serializes the key critical section across threads in THIS process (so we never
+            // attempt to acquire the cross-process FileLock twice concurrently from the same JVM,
+            // which throws OverlappingFileLockException instead of blocking) and, inside that,
+            // across OS processes via an advisory FileLock on a marker file in the app's private
+            // (per-UID, not per-process) files dir. Without this, two processes racing
+            // Application.onCreate() on a fresh install (e.g. the profileinstaller broadcast
+            // process and the launcher activity process, which share the app's default process
+            // since neither declares android:process) can each generate a different key and
+            // concurrently create the SQLCipher DB file, corrupting it.
+            //
+            // Deliberately in the companion object (JVM-wide), NOT an instance field: correctness
+            // must not depend on @Singleton DI scoping. Test and benchmark code hand-constructs
+            // extra SqlCipherKeyManager instances in the same process (e.g.
+            // V7DatabaseMigratorInstrumentedTest, V7DatabaseBenchmarkDriver); with a per-instance
+            // lock those would not serialize against the app's own singleton, and both would race
+            // to FileChannel.lock() the same marker file from one JVM -- which throws
+            // OverlappingFileLockException rather than blocking. A static lock makes at most one
+            // file-lock attempt in flight per process by construction, whatever the instance count.
+            private val inProcessKeyLock = ReentrantLock()
 
             @androidx.annotation.VisibleForTesting
             internal const val PREF_FILE_NAME = "sqlcipher_key_prefs"
