@@ -42,6 +42,7 @@ import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.domain.model.bodyFatZoneBands
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun BodyFatDetailRoute(
@@ -138,7 +139,7 @@ fun BodyFatDetailScreen(
                     title = stringResource(R.string.label_body_fat),
                     score = uiState.latestBodyFat,
                     displayText = uiState.bodyFatDisplay ?: "—",
-                    unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_percent),
+                    unitText = stringResource(CoreUiR.string.unit_percent),
                     maxScore = uiState.optimalRangeMax * 2f,
                     status = uiState.bodyFatStatus,
                     deltaText = uiState.deltaBodyFatDisplay.resolveOrNull(),
@@ -193,7 +194,7 @@ fun BodyFatDetailScreen(
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
                         metricName = "Body Fat",
-                        baselineUnit = "%",
+                        baselineUnit = stringResource(CoreUiR.string.unit_percent),
                         baseline = uiState.averageBodyFat,
                         baselineLabel = stringResource(R.string.label_average),
                         baselineDecimalPlaces = 1,
