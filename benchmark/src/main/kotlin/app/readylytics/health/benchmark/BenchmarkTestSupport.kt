@@ -73,11 +73,20 @@ internal fun MacrobenchmarkScope.navigateToTab(label: String) {
 }
 
 internal fun MacrobenchmarkScope.selectThirtyDayRange() {
-    waitForObject(
-        By.text(THIRTY_DAY_RANGE_LABEL),
-        "$THIRTY_DAY_RANGE_LABEL selector not found",
-    ).click()
-    device.waitForIdle()
+    val selector = By.text(THIRTY_DAY_RANGE_LABEL)
+    repeat(MAX_VERTICAL_SCROLLS) {
+        device.findObject(selector)?.let { rangeSelector ->
+            rangeSelector.click()
+            device.waitForIdle()
+            return
+        }
+        val scrollable =
+            device.findObject(By.scrollable(true))
+                ?: error("Scrollable container not found while revealing $THIRTY_DAY_RANGE_LABEL selector")
+        scrollable.scroll(Direction.DOWN, 0.8f)
+        device.waitForIdle()
+    }
+    error("$THIRTY_DAY_RANGE_LABEL selector not found after $MAX_VERTICAL_SCROLLS vertical scroll attempts")
 }
 
 internal fun MacrobenchmarkScope.revealChart(tag: String) {
