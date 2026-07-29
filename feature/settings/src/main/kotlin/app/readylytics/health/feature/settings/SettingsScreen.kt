@@ -47,6 +47,7 @@ import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
 import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
@@ -402,8 +403,8 @@ fun SettingsScreen(
                         Column {
                             AppThemeItem(uiState = uiState, onEvent = onUIEvent)
                             SettingsToggleItem(
-                                label = stringResource(R.string.onboarding_dynamic_color_label),
-                                description = stringResource(R.string.onboarding_dynamic_color_desc),
+                                label = stringResource(CoreUiR.string.onboarding_dynamic_color_label),
+                                description = stringResource(CoreUiR.string.onboarding_dynamic_color_desc),
                                 checked = uiState.dynamicColorEnabled,
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )

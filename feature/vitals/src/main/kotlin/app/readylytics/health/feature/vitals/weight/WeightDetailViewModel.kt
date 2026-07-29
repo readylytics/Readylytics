@@ -6,6 +6,7 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.WeightHistoryItem
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
@@ -84,15 +85,15 @@ class WeightDetailViewModel
                                 if (userPrefs.unitSystem ==
                                     UnitSystem.METRIC
                                 ) {
-                                    R.string.unit_kg
+                                    CoreUiR.string.unit_kg
                                 } else {
-                                    R.string.unit_lbs
+                                    CoreUiR.string.unit_lbs
                                 }
                             when {
                                 diffKg > 0f ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.StringRes(CoreUiR.string.delta_up),
                                             UiText.RawString(" $formattedDiff "),
                                             UiText.StringRes(unitRes),
                                         ),
@@ -100,12 +101,12 @@ class WeightDetailViewModel
                                 diffKg < 0f ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.StringRes(CoreUiR.string.delta_down),
                                             UiText.RawString(" $formattedDiff "),
                                             UiText.StringRes(unitRes),
                                         ),
                                     )
-                                else -> UiText.StringRes(R.string.delta_no_change)
+                                else -> UiText.StringRes(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null

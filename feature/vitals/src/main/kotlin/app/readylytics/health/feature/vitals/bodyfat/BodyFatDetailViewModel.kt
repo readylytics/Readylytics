@@ -6,6 +6,7 @@ import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
@@ -85,7 +86,7 @@ class BodyFatDetailViewModel
                                 diff > 0 ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.StringRes(CoreUiR.string.delta_up),
                                             UiText.RawString(" $formattedDiff"),
                                             UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
@@ -93,12 +94,12 @@ class BodyFatDetailViewModel
                                 diff < 0 ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.StringRes(CoreUiR.string.delta_down),
                                             UiText.RawString(" $formattedDiff"),
                                             UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
                                     )
-                                else -> UiText.StringRes(R.string.delta_no_change)
+                                else -> UiText.StringRes(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null

@@ -11,6 +11,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.data.preferences.UnitSystem
@@ -27,7 +28,7 @@ fun BodyFatHistorySection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        SectionHeader(title = stringResource(R.string.label_history))
+        SectionHeader(title = stringResource(CoreUiR.string.label_history))
         items.forEach { item ->
             BodyFatHistoryCard(
                 item = item,

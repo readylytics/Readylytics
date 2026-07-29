@@ -256,9 +256,9 @@ private fun HrTimelineChartContent(
                     offset = IntOffset(sampleX.roundToInt(), sampleY.roundToInt()),
                 )
             }
-        val prevActionLabel = stringResource(R.string.action_previous_point)
-        val nextActionLabel = stringResource(R.string.action_next_point)
-        val clearActionLabel = stringResource(R.string.action_clear_selection)
+        val prevActionLabel = stringResource(CoreUiR.string.action_previous_point)
+        val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
+        val clearActionLabel = stringResource(CoreUiR.string.action_clear_selection)
 
         val customActionsList =
             remember(selectedSample, samples) {

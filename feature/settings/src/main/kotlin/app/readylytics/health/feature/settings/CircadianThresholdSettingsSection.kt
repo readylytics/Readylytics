@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.feature.settings.R
@@ -97,7 +98,7 @@ fun CircadianThresholdSettingsSection(
                             ),
                         modifier = Modifier.heightIn(min = 32.dp),
                     ) {
-                        Text(stringResource(R.string.action_dismiss), style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(CoreUiR.string.action_dismiss), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }

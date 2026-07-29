@@ -46,6 +46,7 @@ import androidx.core.net.toUri
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.domain.backup.BackupFileInfo
@@ -194,7 +195,7 @@ fun LocalBackupSection(
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { onEvent(SettingsEvent.DismissBackupError) }) {
-                    Text(stringResource(R.string.action_dismiss))
+                    Text(stringResource(CoreUiR.string.action_dismiss))
                 }
             }
         }
@@ -269,9 +270,9 @@ private fun BackupPasswordSection(
                         contentDescription =
                             stringResource(
                                 if (showTestPassword) {
-                                    R.string.accessibility_password_hide
+                                    CoreUiR.string.accessibility_password_hide
                                 } else {
-                                    R.string.accessibility_password_show
+                                    CoreUiR.string.accessibility_password_show
                                 },
                             ),
                     )
@@ -347,9 +348,9 @@ private fun SetPasswordDialog(
                                 contentDescription =
                                     stringResource(
                                         if (showPassword) {
-                                            R.string.accessibility_password_hide
+                                            CoreUiR.string.accessibility_password_hide
                                         } else {
-                                            R.string.accessibility_password_show
+                                            CoreUiR.string.accessibility_password_show
                                         },
                                     ),
                             )

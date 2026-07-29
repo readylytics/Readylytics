@@ -11,6 +11,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.domain.model.BloodPressureStatus
@@ -27,7 +28,7 @@ fun BloodPressureHistorySection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        SectionHeader(title = stringResource(R.string.label_history))
+        SectionHeader(title = stringResource(CoreUiR.string.label_history))
         items.forEach { item ->
             BloodPressureHistoryCard(
                 item = item,

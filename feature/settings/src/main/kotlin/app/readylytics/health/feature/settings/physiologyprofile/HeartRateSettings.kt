@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.data.preferences.Gender
@@ -205,11 +206,11 @@ fun HeartRateZonesDisplay(
     ) {
         val zones =
             listOf(
-                stringResource(R.string.hr_zone_n, 1) to (z1MinP.toDouble()..z1p.toDouble()),
-                stringResource(R.string.hr_zone_n, 2) to (z1p.toDouble()..z2p.toDouble()),
-                stringResource(R.string.hr_zone_n, 3) to (z2p.toDouble()..z3p.toDouble()),
-                stringResource(R.string.hr_zone_n, 4) to (z3p.toDouble()..z4p.toDouble()),
-                stringResource(R.string.hr_zone_n, 5) to (z4p.toDouble()..1.00),
+                stringResource(CoreUiR.string.hr_zone_n, 1) to (z1MinP.toDouble()..z1p.toDouble()),
+                stringResource(CoreUiR.string.hr_zone_n, 2) to (z1p.toDouble()..z2p.toDouble()),
+                stringResource(CoreUiR.string.hr_zone_n, 3) to (z2p.toDouble()..z3p.toDouble()),
+                stringResource(CoreUiR.string.hr_zone_n, 4) to (z3p.toDouble()..z4p.toDouble()),
+                stringResource(CoreUiR.string.hr_zone_n, 5) to (z4p.toDouble()..1.00),
             )
 
         zones.forEach { (name, range) ->
@@ -268,11 +269,11 @@ fun ZoneEditingSection(
             color = MaterialTheme.colorScheme.primary,
         )
 
-        ZoneRow(stringResource(R.string.hr_zone_n, 1), z1Min, { z1Min = it }, true, z1Max, { z1Max = it }, true)
-        ZoneRow(stringResource(R.string.hr_zone_n, 2), z1Max, null, false, z2Max, { z2Max = it }, true)
-        ZoneRow(stringResource(R.string.hr_zone_n, 3), z2Max, null, false, z3Max, { z3Max = it }, true)
-        ZoneRow(stringResource(R.string.hr_zone_n, 4), z3Max, null, false, z4Max, { z4Max = it }, true)
-        ZoneRow(stringResource(R.string.hr_zone_n, 5), z4Max, null, false, maxHr.toString(), null, false)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 1), z1Min, { z1Min = it }, true, z1Max, { z1Max = it }, true)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 2), z1Max, null, false, z2Max, { z2Max = it }, true)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 3), z2Max, null, false, z3Max, { z3Max = it }, true)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 4), z3Max, null, false, z4Max, { z4Max = it }, true)
+        ZoneRow(stringResource(CoreUiR.string.hr_zone_n, 5), z4Max, null, false, maxHr.toString(), null, false)
 
         if (isValid) {
             Button(
@@ -423,7 +424,7 @@ fun GenderSelector(
                     ?: stringResource(app.readylytics.health.core.ui.R.string.label_not_set),
             onValueChange = {},
             readOnly = true,
-            label = { Text(stringResource(R.string.label_gender)) },
+            label = { Text(stringResource(CoreUiR.string.label_gender)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier =
                 Modifier
@@ -458,8 +459,8 @@ fun GenderSelector(
 @StringRes
 private fun Gender.labelRes(): Int =
     when (this) {
-        Gender.MALE -> R.string.gender_male
-        Gender.FEMALE -> R.string.gender_female
-        Gender.OTHER -> R.string.gender_other
-        Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
+        Gender.MALE -> CoreUiR.string.gender_male
+        Gender.FEMALE -> CoreUiR.string.gender_female
+        Gender.OTHER -> CoreUiR.string.gender_other
+        Gender.PREFER_NOT_TO_SAY -> CoreUiR.string.gender_prefer_not_to_say
     }
