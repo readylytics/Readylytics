@@ -68,7 +68,7 @@ internal fun MacrobenchmarkScope.waitForDashboard() {
 }
 
 internal fun MacrobenchmarkScope.navigateToTab(label: String) {
-    waitForObject(By.text(label), "$label tab not found").click()
+    waitForObject(By.desc(label), "$label tab not found").click()
     device.waitForIdle()
 }
 
