@@ -2,7 +2,7 @@
 
 **Status:** Approved plan — partially implemented (last audited against the tree on 2026-07-27).
 **Landed:** M1, M2 (code only — baseline numbers still PENDING), F1, F2, F3, F4, F5, F7, F8, F9, F10,
-F11, F12, F13. **Not yet implemented:** F14, F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
+F11, F12, F13, F14. **Not yet implemented:** F15, F17, F18, F19, F20, F22, F23, N1, N2. See the
 per-item "Implemented" lines and the §7 implementation-order table for commit SHAs. Each work item
 below is scoped to land as one independent, production-ready commit.
 **Known blocker for measurement:** `ScrollBenchmark`'s baseline frame numbers cannot be recorded
@@ -634,25 +634,22 @@ work is removed from composition but not from injection. File a follow-up to mak
 
 ### F14. Baseline Profile generation — **High, Effort M**
 
-- **Location:** new `:baselineprofile` module (or extend `:benchmark`); `app/build.gradle.kts`;
-  `gradle/libs.versions.toml`.
-- **Problem:** `app` depends on `androidx.profileinstaller` but **no profile exists** — no
-  `BaselineProfileRule`, no `baseline-prof.txt`, no `androidx.baselineprofile` plugin anywhere.
-  Cold start and first chart render run fully JIT; the profileinstaller dependency is inert.
-- **Remediation steps:**
-  1. Add the `androidx.baselineprofile` Gradle plugin (version catalog + plugin block) and a
-     generator module with a `BaselineProfileRule` test whose journey is: cold start → Dashboard
-     rendered → visit each tab (Vitals/Sleep/Workouts/Insights/Settings) → one Vico horizontal
-     scroll + zoom. This captures Compose, Vico, Room, and Tink hot paths.
-  2. Wire `baselineProfile(project(":baselineprofile"))` in `app/build.gradle.kts`; check the
-     generated profile in; document the regeneration cadence (e.g. once per release) in the repo
-     docs (AGENTS.md-adjacent or the benchmark README).
-  3. Land LAST among the perf items so the profile captures final code.
-- **Expected:** Typical 15–30 % cold-start improvement; reduced first-interaction jank on chart
-  screens.
-- **Risk:** Low (stale profiles managed by documented cadence).
-- **Acceptance criteria:** `StartupBenchmark` cold start improves with the profile installed vs
-  `CompilationMode.None`; profile file checked in and installed in release builds.
+- **Implemented:** `e85977a`.
+- **Location:** existing `:benchmark` producer; `app/build.gradle.kts`; generated profile text in
+  `app/src/release/generated/baselineProfiles/`.
+- **Implementation:** AndroidX Baseline Profile tooling generates checked-in baseline and startup
+  rules. The isolated profile package is `app.readylytics.health.baselineprofile`; the benchmark
+  package remains `app.readylytics.health.macrobenchmark`. The runtime journey covers Dashboard,
+  Sleep, Vitals, Workouts, and Settings (Insights omitted), with chart interaction only on Sleep,
+  HRV, and ACWR. Profiles are explicitly generated, never during normal release assembly.
+- **Managed-device fallback:** Canonical generation uses Pixel 9/API 36/AOSP. The originally
+  requested Pixel 9/API 37/AOSP ARM64 image is unavailable in the local SDK.
+- **Measurement:** On 2026-07-29, physical SM-A576B/API 36 cold-start medians were 563.629961 ms
+  for `CompilationMode.None()` and 467.200859 ms for
+  `CompilationMode.Partial(BaselineProfileMode.Require)` (three iterations each). The latter was
+  lower; F14 has no enforced performance threshold. See `benchmark/BASELINE.md` for the JSON path.
+- **Cadence:** Regenerate and review both profiles once per release and after performance-critical
+  navigation or chart changes.
 
 ### F15. Remember `zoneBandColors` — **Medium, Effort S**
 
@@ -764,11 +761,11 @@ Status column verified against the tree on 2026-07-27.
 | 13 | F7 sync transaction coalescing (+ DATA_FLOW.md) | ✅ `eda7c51`, `e432bd6`, `f9e7fbc`, `d794ecc` | — |
 | 14 | F12 DataStore pre-warm | ✅ `8624334` | — |
 | 15 | F13 key validation off-main | ✅ `d3e5026` | after tracing the corruption path; sequence with the SQLCipher race |
-| 16 | F14 baseline profile | ⬜ **open** — no `androidx.baselineprofile` plugin, no `:baselineprofile` module, no checked-in profile | LAST perf item |
+| 16 | F14 baseline profile | ✅ `e85977a` — profiles checked in; API 36 measured, no threshold | LAST perf item |
 | 17 | Remainder: F17 ⬜, F18 ⬜, F19 ⬜ (benchmark-gated → blocked on #2), F20 ⬜, F22 ⬜ (confirm first), F23 ⬜ (`org.gradle.parallel` still commented out at `gradle.properties:15`, `android.nonTransitiveRClass=false` at `:25`) | ⬜ **all open** | — |
 
 **Remaining work, in the order it should now be taken:** #2 baseline numbers (unblocks all
-measurement) → F15 → F13 → F17 / F18 / F20 / F19 / F22 / F23 per appetite → F14 last.
+measurement) → F15 → F13 → F17 / F18 / F20 / F19 / F22 / F23 per appetite.
 
 N1 (⬜ open — `M3ScoreGaugeCard.kt:60` still `onClick != {}`) and N2 (⬜ open) land as separate
 non-perf fixes. Run `./gradlew lintRelease` after the batch. New files → `codegraph index`.

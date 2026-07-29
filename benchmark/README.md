@@ -51,24 +51,59 @@ instrumented test itself, after the fresh install.
 
 ## Deterministic data
 
-`ScrollBenchmark`'s journeys need real `daily_summaries` rows for the Vitals
-charts to render (an empty DB shows skeletons/placeholders, not charts). The
-`benchmark` build type seeds 180 days of deterministic data once, on first
-launch, via `app/src/benchmark/kotlin/.../benchmark/BenchmarkDataSeeder.kt`.
-There is no `app/src/main` copy of this class: `debug`, `release`, and
-`benchmark` each compile their own copy of `BenchmarkDataSeeder` from their
-own source set (the `debug`/`release` copies are no-ops; only `benchmark`'s
-actually seeds data), so exactly one is on the compile path per build
-variant and there is no redeclaration conflict. Seeding is async and
-idempotent, and only runs once DB migration readiness is confirmed
-(`HealthDashboardApplication`); it never affects `StartupBenchmark`'s numbers
-and only costs time once.
+Android/Hilt seeding and performance-only Compose semantics are shared from
+`app/src/profileSupport/kotlin`; pure row construction is shared from
+`app/src/profileSeed/kotlin`. Both the benchmark and non-minified profile
+builds receive those directories; production release receives neither.
 
-Seeding is gated on `dao.count() == 0`, so it only fires against an empty
-`daily_summaries` table — in practice this is every `connectedBenchmarkAndroidTest`
-run, since the same fresh-reinstall behavior described in Prerequisites also
-wipes any previously-synced app data, not just permissions. So the deterministic
-180-day dataset is what every run actually measures against, not incidental
-real device data.
+The seed covers 180 days, which includes 7D, 30D, and 180D ranges. Summary and
+sleep-session rows are checked and upserted independently, so the seeder never
+deletes existing data. Seeding happens before scroll journeys and is excluded
+from `StartupBenchmark` timing.
+
+## Baseline and Startup Profiles
+
+Canonical generation uses the Gradle-managed Pixel 9 API 36 AOSP device. API
+36 is the approved fallback because the requested API 37 AOSP ARM64 system
+image is unavailable in the local SDK:
+
+```bash
+./gradlew :app:generateReleaseBaselineProfile
+```
+
+Connected generation requires one selected rooted device or API 33+ device
+with Health Connect:
+
+```bash
+./gradlew :app:generateReleaseBaselineProfile \
+  -Preadylytics.baselineprofile.connected=true
+```
+
+The generated files are:
+
+- `app/src/release/generated/baselineProfiles/baseline-prof.txt`
+- `app/src/release/generated/baselineProfiles/startup-prof.txt`
+
+Validate packaged binary assets with:
+
+```bash
+./gradlew :app:assembleBenchmark
+unzip -l app/build/outputs/apk/benchmark/app-benchmark.apk \
+  | rg 'assets/dexopt/baseline\\.prof$|assets/dexopt/baseline\\.profm$'
+unzip -p app/build/outputs/apk/benchmark/app-benchmark.apk \
+  assets/dexopt/baseline.prof | wc -c
+```
+
+Measure startup compilation modes with the explicit debug-signed benchmark
+variant:
+
+```bash
+ANDROID_SERIAL=<serial> ./gradlew :benchmark:connectedBenchmarkBenchmarkAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.benchmark.StartupBenchmark
+```
+
+Regenerate and review both profiles once per release and after
+performance-critical navigation or chart changes. Generation is explicit and
+is not part of normal release assembly.
 
 See `BASELINE.md` for the last-recorded numbers and when/how to refresh them.

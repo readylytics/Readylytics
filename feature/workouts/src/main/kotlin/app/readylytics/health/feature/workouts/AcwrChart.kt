@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -335,7 +336,17 @@ private fun AcwrChart(
     val chartHeight = 220.dp
     val trimpTitle = stringResource(R.string.workout_metric_trimp)
     val strainTitle = stringResource(R.string.workout_metric_strain)
-    Box(modifier = modifier.fillMaxWidth()) {
+    val hasData =
+        remember(trimpPoints, ratioPoints) {
+            trimpPoints.any { it.value != null } || ratioPoints.any { it.value != null }
+        }
+    val chartModifier =
+        if (hasData) {
+            modifier.testTag("AcwrChart")
+        } else {
+            modifier
+        }
+    Box(modifier = chartModifier.fillMaxWidth()) {
         CartesianChartHost(
             chart =
                 com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart(
