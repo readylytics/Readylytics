@@ -6,7 +6,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 
 /**
- * Only compiled into the "benchmark" build type. Compose only publishes
+ * Only compiled into performance build types. Compose only publishes
  * `Modifier.testTag` values into the accessibility tree (as
  * `viewIdResourceName`) when the composition opts in via
  * `testTagsAsResourceId = true` on some ancestor semantics node. Without

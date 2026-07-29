@@ -199,7 +199,21 @@ android {
         configureEach {
             when (name) {
                 "nonMinifiedRelease" ->
-                    kotlin.srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
+                    kotlin.apply {
+                        srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
+                        val releaseBenchmarkStubs =
+                            setOf(
+                                project.file(
+                                    "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkDataSeeder.kt",
+                                ).absoluteFile,
+                                project.file(
+                                    "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkSemantics.kt",
+                                ).absoluteFile,
+                            )
+                        (this as com.android.build.gradle.api.AndroidSourceDirectorySet).filter.exclude {
+                            it.file.absoluteFile in releaseBenchmarkStubs
+                        }
+                    }
                 "test" -> kotlin.srcDir("src/profileSeed/kotlin")
             }
         }
