@@ -86,6 +86,11 @@ internal fun MacrobenchmarkScope.selectThirtyDayRange() {
         scrollable.scroll(Direction.DOWN, 0.8f)
         device.waitForIdle()
     }
+    device.findObject(selector)?.let { rangeSelector ->
+        rangeSelector.click()
+        device.waitForIdle()
+        return
+    }
     error("$THIRTY_DAY_RANGE_LABEL selector not found after $MAX_VERTICAL_SCROLLS vertical scroll attempts")
 }
 
