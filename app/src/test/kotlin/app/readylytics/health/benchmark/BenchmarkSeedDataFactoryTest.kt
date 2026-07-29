@@ -1,11 +1,11 @@
 package app.readylytics.health.benchmark
 
-import java.time.Duration
-import java.time.LocalDate
-import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Duration
+import java.time.LocalDate
+import java.time.ZoneId
 
 class BenchmarkSeedDataFactoryTest {
     private val today = LocalDate.of(2026, 10, 26)
@@ -19,8 +19,20 @@ class BenchmarkSeedDataFactoryTest {
         assertEquals(BENCHMARK_SEED_DAYS, first.summaries.size)
         assertEquals(BENCHMARK_SEED_DAYS, first.sleepSessions.size)
         assertEquals(first, second)
-        assertEquals(BENCHMARK_SEED_DAYS, first.summaries.map { it.dateMidnightMs }.toSet().size)
-        assertEquals(BENCHMARK_SEED_DAYS, first.sleepSessions.map { it.id }.toSet().size)
+        assertEquals(
+            BENCHMARK_SEED_DAYS,
+            first.summaries
+                .map { it.dateMidnightMs }
+                .toSet()
+                .size,
+        )
+        assertEquals(
+            BENCHMARK_SEED_DAYS,
+            first.sleepSessions
+                .map { it.id }
+                .toSet()
+                .size,
+        )
     }
 
     @Test
@@ -29,7 +41,11 @@ class BenchmarkSeedDataFactoryTest {
 
         assertEquals(today.atStartOfDay(zoneId).toInstant().toEpochMilli(), rows.first().dateMidnightMs)
         assertEquals(
-            today.minusDays(179).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+            today
+                .minusDays(179)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli(),
             rows.last().dateMidnightMs,
         )
         assertTrue(rows.all { (it.trimpWorkoutOnly ?: 0f) > 0f })
