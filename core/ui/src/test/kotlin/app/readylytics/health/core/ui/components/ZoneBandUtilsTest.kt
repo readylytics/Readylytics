@@ -7,6 +7,7 @@ import app.readylytics.health.domain.model.ZoneBand
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+// Note: rememberZoneBandColors is a pure wrapper around zoneBandColors; its logic is covered by testing the underlying zoneBandColors function here.
 class ZoneBandUtilsTest {
     private val dummyExtendedColors =
         ExtendedColors(
