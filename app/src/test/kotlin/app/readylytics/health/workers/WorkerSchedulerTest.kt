@@ -4,6 +4,7 @@ import androidx.work.BackoffPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
+import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import app.readylytics.health.data.preferences.BackupSchedule
 import dagger.Lazy
@@ -127,14 +128,22 @@ class WorkerSchedulerTest {
 
     @Test
     fun `schedulePeriodicSync enqueues unique periodic work`() {
+        val request = slot<PeriodicWorkRequest>()
+
         scheduler.schedulePeriodicSync(15L)
+
         verify(exactly = 1) {
             workManager.enqueueUniquePeriodicWork(
                 WorkerScheduler.PERIODIC_SYNC_WORK_NAME,
                 ExistingPeriodicWorkPolicy.UPDATE,
-                any<androidx.work.PeriodicWorkRequest>(),
+                capture(request),
             )
         }
+
+        val constraints = request.captured.workSpec.constraints
+        assertTrue(constraints.requiresBatteryNotLow())
+        assertFalse(constraints.requiresCharging())
+        assertFalse(constraints.requiresDeviceIdle())
     }
 
     @Test
