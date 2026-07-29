@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -183,8 +182,7 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .graphicsLayer { },
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                     shape = MaterialTheme.shapes.large,
                 ) {
                     Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
@@ -274,10 +272,7 @@ fun WorkoutStatsSection(
                     scrollState = scrollState,
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
-                    modifier =
-                        Modifier
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .graphicsLayer { },
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },
         )

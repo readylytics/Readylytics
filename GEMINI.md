@@ -66,3 +66,4 @@ Offline-first Android health app (Health Connect + Room DB). minSdk=26, targetSd
 - **New/Deleted Files:** Upon creation of any new file, agent MUST execute `codegraph index` after finishing to ensure the codebase context remains current.
 - **Refactors:** Any structural change or directory movement requires a post-task `codegraph sync`.
 - **Validation:** Verification of the indexing status is required if subsequent searches or agent queries return stale path information.
+- **Device Testing:** NEVER uninstall the production/playstore app (`app.readylytics.health`) without explicit permission.

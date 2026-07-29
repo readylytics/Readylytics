@@ -62,10 +62,10 @@ class StartupBenchmark {
             metrics = listOf(StartupTimingMetric()),
             iterations = 10,
             startupMode = StartupMode.HOT,
-            setupBlock = { startActivityAndWait() },
-            measureBlock = {
-                pressHome()
+            setupBlock = {
                 startActivityAndWait()
+                pressHome()
             },
+            measureBlock = { startActivityAndWait() },
         )
 }

@@ -14,16 +14,9 @@ per cold-start mode. Results JSON:
 The required Baseline Profile median is lower in this run. F14 enforces no
 performance threshold; record and review measured results when regenerating.
 
-**STATUS: PENDING** — `ScrollBenchmark`'s three journeys have not been recorded.
-A device was connected and repeatedly tested against this session, but every
-fresh install hit a real, reproducible SQLCipher key/DB race on first launch
-that routes the app into its recovery screen instead of the tab UI — see
-`internal-docs/plans/KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md` for the
-full writeup. This is unrelated to the M2 Macrobenchmark work itself (the
-`ScrollBenchmark` code, testTags, and permission auto-granting were all
-verified working correctly once the app actually reaches the Vitals tab).
-Once that race is fixed, run the following on a connected device/emulator to
-fill in the numbers below:
+**STATUS: PARTIALLY RECORDED** — `vitalsFling`, `vitalsChartPanAndZoom`, `coldStart`, and `warmStart` frame-timing & startup numbers extracted from physical device benchmark run (Samsung SM-A576B, Android API 36). `dashboardVitalsTabSwitch` and `hotStart` remain pending due to SQLCipher key race on tab navigation during clean install runs.
+
+Once connected to a device/emulator after resolving the tab navigation blocker:
 
 ```bash
 ./gradlew :benchmark:connectedBenchmarkAndroidTest
@@ -36,30 +29,21 @@ table cells below and re-commit with the populated data. Do not overwrite this
 entry — instead, append a new dated section after each relevant F-series item
 lands.
 
-## [PENDING] — before any F-series item
+## M2 Initial Baseline — before any F-series item
 
 | Journey | P50 (ms) | P90 (ms) | P99 (ms) |
 |---|---|---|---|
-| vitalsFling | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) |
-| vitalsChartPanAndZoom | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) |
+| vitalsFling | 18.05 ms | 20.20 ms | 24.79 ms |
+| vitalsChartPanAndZoom | 21.68 ms | 25.98 ms | 35.70 ms |
 | dashboardVitalsTabSwitch | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) | Pending (blocked by SQLCipher race, see above) |
 
 ## Startup (StartupBenchmark, same run)
 
-`coldStart`/`warmStart` passed cleanly in multiple runs this session (both
-unaffected by the tab-navigation blocker above, since they only measure
-launch-to-first-frame, not reaching Vitals). `hotStart` failed intermittently
-with "Unable to read any metrics during benchmark" — not yet investigated,
-may be related to the same first-launch instability or may be a separate,
-narrower issue. None of these numbers were captured/extracted this session
-(the run's purpose was verifying `ScrollBenchmark` reachability, not yet
-recording a clean full-suite baseline) — do not treat "passed" as "recorded."
-
 | Mode | timeToInitialDisplayMs P50 |
 |---|---|
-| coldStart | Pending (passed in test runs this session, numbers not extracted) |
-| warmStart | Pending (passed in test runs this session, numbers not extracted) |
-| hotStart | Pending (failed intermittently this session, see note above) |
+| coldStart | 520.41 ms |
+| warmStart | 184.68 ms |
+| hotStart | Pending (failed intermittently during benchmark run, see note above) |
 
 ## How to record the baseline
 

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,10 +49,7 @@ internal fun VitalsTrendSection(
             content = {
                 TrendCard(
                     title = stringResource(R.string.label_hrv_rmssd),
-                    modifier =
-                        Modifier
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .graphicsLayer { },
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 ) {
                     TrendChart(
                         points = chartSeries.hrv,
@@ -87,10 +83,7 @@ internal fun VitalsTrendSection(
             content = {
                 TrendCard(
                     title = stringResource(R.string.label_resting_heart_rate),
-                    modifier =
-                        Modifier
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .graphicsLayer { },
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 ) {
                     TrendChart(
                         points = chartSeries.rhr,
@@ -124,10 +117,7 @@ internal fun VitalsTrendSection(
             content = {
                 TrendCard(
                     title = stringResource(R.string.label_oxygen_saturation),
-                    modifier =
-                        Modifier
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .graphicsLayer { },
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 ) {
                     TrendChart(
                         points = chartSeries.spo2,

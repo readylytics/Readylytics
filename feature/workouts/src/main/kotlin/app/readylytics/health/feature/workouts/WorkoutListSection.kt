@@ -23,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.SectionHeader
@@ -126,7 +125,7 @@ private fun WorkoutHistoryItem(
         }
 
     Card(
-        modifier = modifier.fillMaxWidth().graphicsLayer { },
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         onClick = onClick,
     ) {
