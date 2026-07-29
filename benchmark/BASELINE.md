@@ -1,5 +1,19 @@
 # Baseline frame-timing numbers
 
+## F14 cold-start compilation comparison — 2026-07-29
+
+Measured on physical Samsung SM-A576B (Android API 36), using three iterations
+per cold-start mode. Results JSON:
+`benchmark/build/outputs/connected_android_test_additional_output/benchmarkBenchmark/connected/SM-A576B - 16/app.readylytics.health.benchmark-benchmarkData.json`.
+
+| Compilation mode | `timeToInitialDisplayMs` median |
+|---|---:|
+| `CompilationMode.None()` | 563.629961 ms |
+| `CompilationMode.Partial(BaselineProfileMode.Require)` | 467.200859 ms |
+
+The required Baseline Profile median is lower in this run. F14 enforces no
+performance threshold; record and review measured results when regenerating.
+
 **STATUS: PENDING** — `ScrollBenchmark`'s three journeys have not been recorded.
 A device was connected and repeatedly tested against this session, but every
 fresh install hit a real, reproducible SQLCipher key/DB race on first launch
