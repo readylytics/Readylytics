@@ -13,4 +13,11 @@ import androidx.compose.ui.Modifier
  * {debug, release, benchmark} is on the compile path per variant and there
  * is no redeclaration conflict.
  */
-internal fun Modifier.applyBenchmarkTestTagSemantics(): Modifier = this
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal fun Modifier.applyBenchmarkTestTagSemantics(): Modifier = this.semantics {
+    testTagsAsResourceId = true
+}
