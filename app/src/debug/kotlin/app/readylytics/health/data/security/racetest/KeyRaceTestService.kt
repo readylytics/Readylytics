@@ -8,9 +8,10 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
-import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
 import app.readylytics.health.data.security.SqlCipherKeyManager
+import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
+import javax.inject.Inject
 
 /**
  * Test-only Service (declared in app/src/debug/AndroidManifest.xml, driven from
@@ -31,7 +32,20 @@ import java.io.File
  * class name cannot be reliably disambiguated by class-based Intent resolution -- Android
  * resolves the class name to whichever manifest entry it picks, not necessarily the one the
  * caller wants.
+ *
+ * Annotated @AndroidEntryPoint and injecting [SqlCipherKeyManager] rather than constructing one:
+ * `android:process` only decides where the *component* runs, not which Application boots -- the
+ * app's own @HiltAndroidApp HealthDashboardApplication.onCreate() runs first in every process and
+ * eagerly builds DatabaseMigrationController, which immediately calls
+ * DatabaseReadinessGate.inspect() -> SqlCipherKeyManager.withWritableDatabase() on the process's
+ * @Singleton SqlCipherKeyManager. A hand-constructed second instance here bypasses that singleton
+ * scope, so the two instances' independent ReentrantLocks cannot serialize each other and both
+ * race to FileChannel.lock() the same marker file -- which the JVM tracks per-process, not per
+ * channel, so the second attempt throws OverlappingFileLockException instead of blocking.
+ * Injecting the singleton makes this service contend on exactly the instance (and therefore the
+ * in-process lock) production code uses, which is what the cross-process assertion needs.
  */
+@AndroidEntryPoint
 open class KeyRaceTestService : Service() {
     companion object {
         const val MSG_RUN = 1
@@ -40,6 +54,13 @@ open class KeyRaceTestService : Service() {
         const val EXTRA_DB_PATH = "db_path"
         const val EXTRA_WRITER_ID = "writer_id"
     }
+
+    /**
+     * Injected by Hilt in the generated `Hilt_KeyRaceTestService.onCreate()`, i.e. from the
+     * `super.onCreate()` call below -- always before any MSG_RUN can be handled.
+     */
+    @Inject
+    lateinit var keyManager: SqlCipherKeyManager
 
     private lateinit var incomingMessenger: Messenger
 
@@ -65,7 +86,6 @@ open class KeyRaceTestService : Service() {
         val writerId = requireNotNull(data.getString(EXTRA_WRITER_ID))
         Thread {
             try {
-                val keyManager = SqlCipherKeyManager(applicationContext, AndroidKeystoreKeyProvider())
                 keyManager.withWritableDatabase(File(dbPath)) { database ->
                     database.execSQL("CREATE TABLE IF NOT EXISTS race_marker (writer TEXT)")
                     database.execSQL("INSERT INTO race_marker (writer) VALUES ('$writerId')")
@@ -82,8 +102,16 @@ open class KeyRaceTestService : Service() {
     override fun onBind(intent: Intent): IBinder = incomingMessenger.binder
 }
 
-/** Runs in the `:racetest1` process (see app/src/debug/AndroidManifest.xml). */
+/**
+ * Runs in the `:racetest1` process (see app/src/debug/AndroidManifest.xml).
+ *
+ * Also annotated @AndroidEntryPoint: Hilt requires every class extending an @AndroidEntryPoint
+ * base class to carry the annotation itself ("Classes that extend an @AndroidEntryPoint base
+ * class must also be annotated @AndroidEntryPoint").
+ */
+@AndroidEntryPoint
 class KeyRaceTestServiceProcess1 : KeyRaceTestService()
 
 /** Runs in the `:racetest2` process (see app/src/debug/AndroidManifest.xml). */
+@AndroidEntryPoint
 class KeyRaceTestServiceProcess2 : KeyRaceTestService()
