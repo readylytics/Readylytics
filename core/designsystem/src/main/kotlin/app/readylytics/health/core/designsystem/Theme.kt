@@ -2,17 +2,25 @@ package app.readylytics.health.core.designsystem
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.data.preferences.SettingsDefaults
+
+private data class ThemeHolder(
+    val colorScheme: ColorScheme,
+    val semanticColors: StatusColors,
+    val extendedColors: ExtendedColors,
+)
 
 data class StatusColors(
     val optimal: Color,
@@ -84,128 +92,149 @@ fun FitDashboardTheme(
             AppTheme.SYSTEM -> isSystemInDarkTheme()
         }
 
-    val secondarySeed = if (isCustomPaletteEnabled) Color(customSecondaryColor) else null
-    val tertiarySeed = if (isCustomPaletteEnabled) Color(customTertiaryColor) else null
+    val context = LocalContext.current
 
-    val matchingPreset = FallbackThemeColor.entries.find { it.primaryColor == customPrimaryColor }
+    val themeHolder =
+        remember(
+            darkTheme,
+            dynamicColor,
+            customPrimaryColor,
+            customSecondaryColor,
+            customTertiaryColor,
+            isCustomPaletteEnabled,
+            context,
+        ) {
+            val secondarySeed = if (isCustomPaletteEnabled) Color(customSecondaryColor) else null
+            val tertiarySeed = if (isCustomPaletteEnabled) Color(customTertiaryColor) else null
 
-    val colorScheme =
-        when {
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                val context = LocalContext.current
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            }
+            val matchingPreset = FallbackThemeColor.entries.find { it.primaryColor == customPrimaryColor }
 
-            matchingPreset != null -> {
-                if (darkTheme) {
-                    fallbackDarkScheme(
-                        seed = Color(matchingPreset.primaryColor),
-                        secondarySeed = Color(matchingPreset.secondaryColor),
-                        tertiarySeed = Color(matchingPreset.tertiaryColor),
-                    ).copy(
-                        primary = Color(matchingPreset.primaryColor),
-                        secondary = Color(matchingPreset.secondaryColor),
-                        tertiary = Color(matchingPreset.tertiaryColor),
+            val colorScheme =
+                when {
+                    dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                    }
+
+                    matchingPreset != null -> {
+                        if (darkTheme) {
+                            fallbackDarkScheme(
+                                seed = Color(matchingPreset.primaryColor),
+                                secondarySeed = Color(matchingPreset.secondaryColor),
+                                tertiarySeed = Color(matchingPreset.tertiaryColor),
+                            ).copy(
+                                primary = Color(matchingPreset.primaryColor),
+                                secondary = Color(matchingPreset.secondaryColor),
+                                tertiary = Color(matchingPreset.tertiaryColor),
+                            )
+                        } else {
+                            fallbackLightScheme(
+                                seed = Color(matchingPreset.primaryColor),
+                                secondarySeed = Color(matchingPreset.secondaryColor),
+                                tertiarySeed = Color(matchingPreset.tertiaryColor),
+                            ).copy(
+                                primary = Color(matchingPreset.primaryColor),
+                                secondary = Color(matchingPreset.secondaryColor),
+                                tertiary = Color(matchingPreset.tertiaryColor),
+                            )
+                        }
+                    }
+
+                    else -> {
+                        mcuColorScheme(
+                            seedColor = Color(customPrimaryColor),
+                            secondaryColor = secondarySeed,
+                            tertiaryColor = tertiarySeed,
+                            isDark = darkTheme,
+                        )
+                    }
+                }
+
+            val semanticColors =
+                if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    StatusColors(
+                        optimal = colorScheme.primary,
+                        neutral = colorScheme.secondary,
+                        warning = colorScheme.tertiary,
+                        poor = colorScheme.error,
                     )
                 } else {
-                    fallbackLightScheme(
-                        seed = Color(matchingPreset.primaryColor),
-                        secondarySeed = Color(matchingPreset.secondaryColor),
-                        tertiarySeed = Color(matchingPreset.tertiaryColor),
-                    ).copy(
-                        primary = Color(matchingPreset.primaryColor),
-                        secondary = Color(matchingPreset.secondaryColor),
-                        tertiary = Color(matchingPreset.tertiaryColor),
+                    if (darkTheme) {
+                        StatusColors(
+                            optimal = SuccessGreenDark,
+                            neutral = Color(0xFFD1E4FF), // M3 Blue 80
+                            warning = WarningOrangeDark,
+                            poor = colorScheme.error,
+                        )
+                    } else {
+                        StatusColors(
+                            optimal = SuccessGreenLight,
+                            neutral = Color(0xFF0061A4), // M3 Blue 40
+                            warning = WarningOrangeLight,
+                            poor = colorScheme.error,
+                        )
+                    }
+                }
+
+            val baseExtended =
+                if (darkTheme) {
+                    ExtendedColors(
+                        success = SuccessGreenDark,
+                        onSuccess = OnSuccessGreenDark,
+                        successContainer = SuccessGreenContainerDark,
+                        onSuccessContainer = OnSuccessGreenContainerDark,
+                        warning = WarningOrangeDark,
+                        onWarning = OnWarningOrangeDark,
+                        warningContainer = WarningOrangeContainerDark,
+                        onWarningContainer = OnWarningOrangeContainerDark,
+                        neutralContainer = colorScheme.primaryContainer,
+                        onNeutralContainer = colorScheme.onPrimaryContainer,
+                    )
+                } else {
+                    ExtendedColors(
+                        success = SuccessGreenLight,
+                        onSuccess = OnSuccessGreenLight,
+                        successContainer = SuccessGreenContainerLight,
+                        onSuccessContainer = OnSuccessGreenContainerLight,
+                        warning = WarningOrangeLight,
+                        onWarning = OnWarningOrangeLight,
+                        warningContainer = WarningOrangeContainerLight,
+                        onWarningContainer = OnWarningOrangeContainerLight,
+                        neutralContainer = colorScheme.primaryContainer,
+                        onNeutralContainer = colorScheme.onPrimaryContainer,
                     )
                 }
-            }
 
-            else -> {
-                mcuColorScheme(
-                    seedColor = Color(customPrimaryColor),
-                    secondaryColor = secondarySeed,
-                    tertiaryColor = tertiarySeed,
-                    isDark = darkTheme,
-                )
-            }
-        }
+            val extendedColors =
+                if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val p = colorScheme.primary
+                    baseExtended.copy(
+                        success = baseExtended.success.harmonizeWith(p),
+                        successContainer = baseExtended.successContainer.harmonizeWith(p),
+                        warning = baseExtended.warning.harmonizeWith(p),
+                        warningContainer = baseExtended.warningContainer.harmonizeWith(p),
+                    )
+                } else {
+                    baseExtended
+                }
 
-    val semanticColors =
-        if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            StatusColors(
-                optimal = colorScheme.primary,
-                neutral = colorScheme.secondary,
-                warning = colorScheme.tertiary,
-                poor = colorScheme.error,
-            )
-        } else {
-            if (darkTheme) {
-                StatusColors(
-                    optimal = SuccessGreenDark,
-                    neutral = Color(0xFFD1E4FF), // M3 Blue 80
-                    warning = WarningOrangeDark,
-                    poor = colorScheme.error,
-                )
-            } else {
-                StatusColors(
-                    optimal = SuccessGreenLight,
-                    neutral = Color(0xFF0061A4), // M3 Blue 40
-                    warning = WarningOrangeLight,
-                    poor = colorScheme.error,
-                )
-            }
-        }
-
-    val baseExtended =
-        if (darkTheme) {
-            ExtendedColors(
-                success = SuccessGreenDark,
-                onSuccess = OnSuccessGreenDark,
-                successContainer = SuccessGreenContainerDark,
-                onSuccessContainer = OnSuccessGreenContainerDark,
-                warning = WarningOrangeDark,
-                onWarning = OnWarningOrangeDark,
-                warningContainer = WarningOrangeContainerDark,
-                onWarningContainer = OnWarningOrangeContainerDark,
-                neutralContainer = colorScheme.primaryContainer,
-                onNeutralContainer = colorScheme.onPrimaryContainer,
-            )
-        } else {
-            ExtendedColors(
-                success = SuccessGreenLight,
-                onSuccess = OnSuccessGreenLight,
-                successContainer = SuccessGreenContainerLight,
-                onSuccessContainer = OnSuccessGreenContainerLight,
-                warning = WarningOrangeLight,
-                onWarning = OnWarningOrangeLight,
-                warningContainer = WarningOrangeContainerLight,
-                onWarningContainer = OnWarningOrangeContainerLight,
-                neutralContainer = colorScheme.primaryContainer,
-                onNeutralContainer = colorScheme.onPrimaryContainer,
+            ThemeHolder(
+                colorScheme = colorScheme,
+                semanticColors = semanticColors,
+                extendedColors = extendedColors,
             )
         }
 
-    val extendedColors =
-        if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val p = colorScheme.primary
-            baseExtended.copy(
-                success = baseExtended.success.harmonizeWith(p),
-                successContainer = baseExtended.successContainer.harmonizeWith(p),
-                warning = baseExtended.warning.harmonizeWith(p),
-                warningContainer = baseExtended.warningContainer.harmonizeWith(p),
-            )
-        } else {
-            baseExtended
-        }
+    val spacing = remember { Spacing() }
+    val dimens = remember { Dimens() }
 
     CompositionLocalProvider(
-        LocalExtendedColors provides extendedColors,
-        LocalStatusColors provides semanticColors,
-        LocalSpacing provides Spacing(),
-        LocalDimens provides Dimens(),
+        LocalExtendedColors provides themeHolder.extendedColors,
+        LocalStatusColors provides themeHolder.semanticColors,
+        LocalSpacing provides spacing,
+        LocalDimens provides dimens,
     ) {
         MaterialTheme(
-            colorScheme = colorScheme,
+            colorScheme = themeHolder.colorScheme,
             typography = Typography,
             content = content,
         )
