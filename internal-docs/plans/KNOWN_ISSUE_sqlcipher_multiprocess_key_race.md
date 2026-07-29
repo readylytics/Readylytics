@@ -1,10 +1,16 @@
 # Known issue: SQLCipher key/DB race on fresh install
 
-**Status:** Confirmed, reproducible, not yet fixed. Out of scope for M2 (Macrobenchmark
-work, `internal-docs/plans/PERFORMANCE_OPTIMIZATION_PLAN.md`) — found while trying to run
-the new `ScrollBenchmark` suite on a physical device (Samsung SM-A576B, API 36-ish) during
-that work, but the bug is unrelated to anything M2 changed and reproduces on a completely
-fresh install of the `benchmark` build type.
+**Status:** Fixed — see `docs/superpowers/plans/2026-07-28-sqlcipher-multiprocess-key-race.md`
+for the full implementation plan and root-cause trace. `SqlCipherKeyManager` now holds a
+cross-process `FileLock` (plus an in-process `ReentrantLock`) around the entire key
+check/generate/decrypt critical section (`getOrCreateDbKey()` and `validateKeyDecryption()`),
+and the key write is now a synchronous `commit()` rather than an async `apply()`, so every
+process racing `Application.onCreate()` on a fresh install converges on one key before any
+of them touches the DB file. See "Resolution" below for verification details. Originally
+out of scope for M2 (Macrobenchmark work, `internal-docs/plans/PERFORMANCE_OPTIMIZATION_PLAN.md`)
+— found while trying to run the new `ScrollBenchmark` suite on a physical device (Samsung
+SM-A576B, API 36-ish) during that work, but the bug is unrelated to anything M2 changed and
+reproduces on a completely fresh install of the `benchmark` build type.
 
 ## Symptom
 
@@ -86,3 +92,47 @@ available logcat evidence, not a confirmed fix target. Whoever picks this up sho
 - It is a real first-launch data-integrity risk for actual end users too, not just an
   artifact of the benchmark environment — any real user's very first launch after
   install is subject to the same multi-process race.
+
+## Resolution
+
+Root cause confirmed exactly as hypothesized above: no cross-process guard existed on
+`SqlCipherKeyManager.getOrCreateDbKey()` (`app/src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt`),
+and `androidx.profileinstaller.ProfileInstallReceiver` runs in the app's default process
+(confirmed via the merged manifest — it declares no `android:process`), so the "detect and
+skip DB init in a receiver-only process" idea speculated above turned out not to be viable:
+there is no process-identity signal available in `Application.onCreate()` to distinguish it
+from the activity-launch process. Fixed instead with a real cross-process mutex (`FileLock`
++ `ReentrantLock`) around the key-generation critical section, plus a durable
+(`commit = true`) key write so a losing process's post-lock read is guaranteed to see the
+winner's persisted key rather than a stale per-process `SharedPreferences` cache.
+
+`validateKeyDecryption()` (called from `MainActivity.onCreate()`) is also covered by the
+same lock — an earlier draft of the fix left it unlocked on the reasoning that it only
+reads, but code review surfaced a real gap: a process's first read of `SharedPreferences`
+can be cached before another process's key write lands, causing that process to later
+regenerate a *different* key even after correctly acquiring the lock elsewhere. Locking
+`validateKeyDecryption()` too closes that gap unconditionally, without depending on
+version-specific Android `SharedPreferences` reload timing.
+
+**Verification performed** (device: Samsung SM-A576B, the same model this issue was
+originally found on):
+- Unit tests (`SqlCipherKeyManagerTest`, Robolectric): a concurrency regression test spins
+  up 8 threads calling the locked critical section simultaneously and asserts they all
+  converge on a byte-identical key; sanity-checked to fail without the lock and pass with
+  it restored.
+- A genuine two-OS-process instrumented test
+  (`SqlCipherKeyManagerCrossProcessRaceTest`, `app/src/androidTest/kotlin/app/readylytics/health/data/security/`)
+  drives two real Android `Service` processes (`app/src/debug/kotlin/app/readylytics/health/data/security/racetest/KeyRaceTestService.kt`)
+  racing to open the same fresh SQLCipher DB file, using the app's real Hilt-singleton
+  `SqlCipherKeyManager` instance. Passed 4/4 runs on fresh app data on the physical device.
+- Manual fresh-install repro per this doc's own steps (uninstall, fresh `installBenchmark`,
+  launch, watch `logcat` for the `sqlcipher`/`SQLiteNotADatabaseException` signature),
+  repeated 3 times as originally documented above: **zero occurrences** across all 3 runs.
+- `./gradlew :benchmark:connectedBenchmarkAndroidTest`: the app now reaches the tab UI
+  `ScrollBenchmark` needs (the specific thing this doc said was blocked). 4/6 benchmark
+  tests passed; the 2 failures (`ScrollBenchmark.dashboardVitalsTabSwitch` — "Vitals nav
+  item not found"; `StartupBenchmark.hotStart` — "Unable to read any metrics during
+  benchmark") are unrelated pre-existing issues (a UI test-selector mismatch and a startup
+  metrics-capture gap), not the SQLCipher race — no `sqlcipher`/HMAC/`SQLiteNotADatabaseException`
+  signature appears anywhere in that run's logcat. `benchmark/BASELINE.md` can now be filled
+  in via this command; the selector/metrics failures are a separate, unrelated follow-up.
