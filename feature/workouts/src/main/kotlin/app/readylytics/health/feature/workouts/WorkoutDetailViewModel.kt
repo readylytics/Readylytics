@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
@@ -18,11 +19,13 @@ import app.readylytics.health.feature.workouts.mappers.ChartDataMapper
 import app.readylytics.health.feature.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.feature.workouts.mappers.RecoveryMetricsMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -63,6 +66,7 @@ class WorkoutDetailViewModel
         private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val savedStateHandle: SavedStateHandle,
+        @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
@@ -83,85 +87,97 @@ class WorkoutDetailViewModel
                     return@launch
                 }
 
-                val start = Instant.ofEpochMilli(workout.startTime)
-                val end = Instant.ofEpochMilli(workout.endTime)
-                val prefs = settingsRepo.userPreferences.first()
-                val toleranceSeconds = prefs.hrrToleranceSeconds.toLong()
-                val recoveryWindowEnd = end.plus(3, ChronoUnit.MINUTES).plusSeconds(toleranceSeconds)
+                val newState =
+                    withContext(defaultDispatcher) {
+                        val start = Instant.ofEpochMilli(workout.startTime)
+                        val end = Instant.ofEpochMilli(workout.endTime)
+                        val prefs = settingsRepo.userPreferences.first()
+                        val toleranceSeconds = prefs.hrrToleranceSeconds.toLong()
+                        val recoveryWindowEnd = end.plus(3, ChronoUnit.MINUTES).plusSeconds(toleranceSeconds)
 
-                val hcSamples =
-                    hcRepo
-                        .readHeartRateSamples(start, recoveryWindowEnd)
-                        .asSequence()
-                        .flatMap { record ->
-                            record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute) }
-                        }.toList()
-                val dbSamples =
-                    heartRateRepository
-                        .getByTimeRange(start.toEpochMilli(), recoveryWindowEnd.toEpochMilli())
-                        .map { HeartRatePoint(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
-                val allSamples =
-                    (hcSamples + dbSamples)
-                        .distinctBy { it.timestamp }
-                        .sortedBy { it.timestamp }
+                        val hcSamples =
+                            hcRepo
+                                .readHeartRateSamples(start, recoveryWindowEnd)
+                                .asSequence()
+                                .flatMap { record ->
+                                    record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute) }
+                                }.toList()
+                        val dbSamples =
+                            heartRateRepository
+                                .getByTimeRange(start.toEpochMilli(), recoveryWindowEnd.toEpochMilli())
+                                .map { HeartRatePoint(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
+                        val allSamples =
+                            (hcSamples + dbSamples)
+                                .distinctBy { it.timestamp }
+                                .sortedBy { it.timestamp }
 
-                val (chartData, durationMinutes) =
-                    ChartDataMapper.mapToChartData(allSamples, workout.startTime, workout.endTime)
+                        val (chartData, durationMinutes) =
+                            ChartDataMapper.mapToChartData(allSamples, workout.startTime, workout.endTime)
 
-                val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
-                val endHr = allSamples.lastOrNull { it.timestamp <= workoutEndInstant }?.bpm
+                        val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
+                        val endHr = allSamples.lastOrNull { it.timestamp <= workoutEndInstant }?.bpm
 
-                val workoutDate = start.atZone(ZoneId.systemDefault()).toLocalDate()
-                val midnight = workoutDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val summary = dailySummaryRepository.getByDate(midnight)
+                        val workoutDate = start.atZone(ZoneId.systemDefault()).toLocalDate()
+                        val midnight = workoutDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        val summary = dailySummaryRepository.getByDate(midnight)
 
-                val thirtyDaysAgo =
-                    workoutDate
-                        .minusDays(30)
-                        .atStartOfDay(ZoneId.systemDefault())
-                        .toInstant()
-                        .toEpochMilli()
-                val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
+                        val thirtyDaysAgo =
+                            workoutDate
+                                .minusDays(30)
+                                .atStartOfDay(ZoneId.systemDefault())
+                                .toInstant()
+                                .toEpochMilli()
+                        val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
 
-                val rasBreakdown =
-                    DailyRasBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries, prefs.rasSourceMode)
+                        val rasBreakdown =
+                            DailyRasBreakdownMapper.mapDailyBreakdown(
+                                workoutDate,
+                                thirtyDaySummaries,
+                                prefs.rasSourceMode,
+                            )
 
-                val recoveryMetrics =
-                    RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr, toleranceSeconds)
+                        val recoveryMetrics =
+                            RecoveryMetricsMapper.mapRecoveryMetrics(
+                                allSamples,
+                                workout.endTime,
+                                endHr,
+                                toleranceSeconds,
+                            )
 
-                val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
-                val displayMetrics =
-                    getWorkoutDisplayMetricsUseCase.execute(
-                        workout = workout,
-                        samples =
-                            workoutSamples.map {
-                                app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-                                    .HeartRateSample(
-                                        it.timestamp,
-                                        it.bpm,
-                                    )
-                            },
-                    )
+                        val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
+                        val displayMetrics =
+                            getWorkoutDisplayMetricsUseCase.execute(
+                                workout = workout,
+                                samples =
+                                    workoutSamples.map {
+                                        app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
+                                            .HeartRateSample(
+                                                it.timestamp,
+                                                it.bpm,
+                                            )
+                                    },
+                            )
 
-                _uiState.update {
-                    it.copy(
-                        workout = workout,
-                        hrSamples = allSamples,
-                        hrChartData = chartData,
-                        durationMinutes = durationMinutes,
-                        hrr1Min = recoveryMetrics.hrr1Min,
-                        hrr2Min = recoveryMetrics.hrr2Min,
-                        hrr3Min = recoveryMetrics.hrr3Min,
-                        totalRas = summary?.let { LoadSourceSelector.selectTotalRas(it, prefs.rasSourceMode) },
-                        rasDailyBreakdown = rasBreakdown,
-                        computedTrimp = displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
-                        gainedStrain = displayMetrics.gainedStrain,
-                        gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
-                        ras = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
-                        classification = displayMetrics.classification,
-                        isLoading = false,
-                    )
-                }
+                        _uiState.value.copy(
+                            workout = workout,
+                            hrSamples = allSamples,
+                            hrChartData = chartData,
+                            durationMinutes = durationMinutes,
+                            hrr1Min = recoveryMetrics.hrr1Min,
+                            hrr2Min = recoveryMetrics.hrr2Min,
+                            hrr3Min = recoveryMetrics.hrr3Min,
+                            totalRas = summary?.let { LoadSourceSelector.selectTotalRas(it, prefs.rasSourceMode) },
+                            rasDailyBreakdown = rasBreakdown,
+                            computedTrimp = displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
+                            gainedStrain = displayMetrics.gainedStrain,
+                            gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
+                            ras = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
+                            classification = displayMetrics.classification,
+                            isLoading = false,
+                        )
+                    }
+
+                _uiState.value = newState
             }
         }
     }
