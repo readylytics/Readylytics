@@ -8,7 +8,7 @@ import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 
-internal const val MACROBENCHMARK_PACKAGE_NAME = "app.readylytics.health.macrobenchmark"
+internal const val MACROBENCHMARK_PACKAGE_NAME = "app.readylytics.health.local"
 internal const val BASELINE_PROFILE_PACKAGE_NAME = "app.readylytics.health.baselineprofile"
 internal const val DASHBOARD_ROOT_TAG = "dashboard_lazy_column"
 internal const val SLEEP_CHART_TAG = "SleepTrendChart"
@@ -68,7 +68,7 @@ internal fun MacrobenchmarkScope.waitForDashboard() {
 }
 
 internal fun MacrobenchmarkScope.navigateToTab(label: String) {
-    waitForObject(By.desc(label), "$label tab not found").click()
+    waitForObject(By.text(label), "$label tab not found").click()
     device.waitForIdle()
 }
 
