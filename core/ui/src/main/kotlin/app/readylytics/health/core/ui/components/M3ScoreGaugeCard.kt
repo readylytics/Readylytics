@@ -55,9 +55,9 @@ fun M3ScoreGaugeCard(
     status: MetricStatus? = null,
     deltaText: String? = null,
     tooltipDescription: String? = null,
-    onClick: () -> Unit = {},
+    onClick: (() -> Unit)? = null,
 ) {
-    val isClickable = onClick != {}
+    val isClickable = onClick != null
     val effectiveStatus =
         status ?: when {
             score == null -> MetricStatus.CALIBRATING
@@ -104,7 +104,7 @@ fun M3ScoreGaugeCard(
             }
         }
 
-    if (isClickable) {
+    if (onClick != null) {
         Card(
             onClick = onClick,
             modifier = semanticsModifier,
