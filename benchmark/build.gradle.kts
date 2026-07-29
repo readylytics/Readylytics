@@ -32,9 +32,9 @@ android {
     testOptions {
         managedDevices {
             localDevices {
-                create("pixel9Api37") {
+                create("pixel9Api36") {
                     device = "Pixel 9"
-                    apiLevel = 37
+                    apiLevel = 36
                     systemImageSource = "aosp"
                 }
             }
@@ -53,7 +53,7 @@ baselineProfile {
     if (useConnectedProfileDevice.get()) {
         useConnectedDevices = true
     } else {
-        managedDevices += "pixel9Api37"
+        managedDevices += "pixel9Api36"
         useConnectedDevices = false
     }
 }
@@ -65,5 +65,6 @@ ktlint {
 dependencies {
     implementation(libs.androidx.benchmark.macro)
     implementation(libs.androidx.junit)
+    implementation(libs.androidx.test.runner)
     implementation(libs.androidx.test.uiautomator)
 }
