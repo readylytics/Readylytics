@@ -7,6 +7,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.feature.sleep.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private const val SLEEP_TIME_GOAL_FILL_RATIO = 0.5f
 
@@ -32,19 +33,19 @@ internal fun buildSleepTimeGaugeData(
             if (diffMinutes > 0) {
                 UiText.Compound(
                     listOf(
-                        UiText.StringRes(R.string.delta_up),
+                        UiText.StringRes(CoreUiR.string.delta_up),
                         UiText.RawString(" ${formatSleepDiff(diffMinutes)}"),
                     ),
                 )
             } else if (diffMinutes < 0) {
                 UiText.Compound(
                     listOf(
-                        UiText.StringRes(R.string.delta_down),
+                        UiText.StringRes(CoreUiR.string.delta_down),
                         UiText.RawString(" ${formatSleepDiff(-diffMinutes)}"),
                     ),
                 )
             } else {
-                UiText.StringRes(R.string.delta_no_change)
+                UiText.StringRes(CoreUiR.string.delta_no_change)
             }
         } else {
             null

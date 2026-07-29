@@ -41,6 +41,7 @@ import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import app.readylytics.health.core.ui.R as CoreUiR
 
 internal enum class RasSummaryValueTextStyle {
     TITLE,
@@ -113,19 +114,19 @@ fun WorkoutStatsSection(
                 ) {
                     val strainRatio = uiState.latestMetrics?.strainRatioRaw
                     val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
-                    val strainTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_strain_ratio)
+                    val strainTooltip = stringResource(CoreUiR.string.tooltip_strain_ratio)
 
                     val strainDelta =
                         if (uiState.todayStrainIncrease != null) {
                             if (uiState.todayStrainIncrease > 0.005f) {
                                 val diffFormatted = MetricFormatter.formatStrain(uiState.todayStrainIncrease)
                                 stringResource(
-                                    app.readylytics.health.core.ui.R.string.delta_up_format,
-                                    stringResource(app.readylytics.health.core.ui.R.string.delta_up),
+                                    CoreUiR.string.delta_up_format,
+                                    stringResource(CoreUiR.string.delta_up),
                                     diffFormatted,
                                 )
                             } else {
-                                stringResource(app.readylytics.health.core.ui.R.string.delta_no_change)
+                                stringResource(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null
@@ -133,10 +134,10 @@ fun WorkoutStatsSection(
 
                     M3ScoreGaugeCard(
                         modifier = Modifier.weight(1f),
-                        title = stringResource(app.readylytics.health.core.ui.R.string.card_title_strain_ratio),
+                        title = stringResource(CoreUiR.string.card_title_strain_ratio),
                         score = strainRatio,
                         displayText =
-                            uiState.latestMetrics?.strainRatioDisplay ?: stringResource(R.string.delta_no_change),
+                            uiState.latestMetrics?.strainRatioDisplay ?: stringResource(CoreUiR.string.delta_no_change),
                         unitText = "",
                         maxScore = 2.0f,
                         status = strainStatus,
@@ -153,14 +154,14 @@ fun WorkoutStatsSection(
 
                     M3ScoreGaugeCard(
                         modifier = Modifier.weight(1f),
-                        title = stringResource(app.readylytics.health.core.ui.R.string.card_title_readiness),
+                        title = stringResource(CoreUiR.string.card_title_readiness),
                         score = readinessVal,
                         displayText =
                             uiState.latestMetrics?.readinessRounded?.toString()
-                                ?: stringResource(R.string.delta_no_change),
+                                ?: stringResource(CoreUiR.string.delta_no_change),
                         unitText = "",
                         deltaText = readinessDelta,
-                        tooltipDescription = stringResource(app.readylytics.health.core.ui.R.string.tooltip_readiness),
+                        tooltipDescription = stringResource(CoreUiR.string.tooltip_readiness),
                     )
                 }
             },
@@ -208,7 +209,7 @@ fun WorkoutStatsSection(
                                     )
                                 }
                                 MetricTooltip(
-                                    description = stringResource(app.readylytics.health.core.ui.R.string.tooltip_ras),
+                                    description = stringResource(CoreUiR.string.tooltip_ras),
                                 )
                             }
                         }

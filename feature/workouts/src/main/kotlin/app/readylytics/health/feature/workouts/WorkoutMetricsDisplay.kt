@@ -33,6 +33,7 @@ import app.readylytics.health.feature.workouts.R
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun WorkoutMetricsDisplay(
@@ -180,12 +181,12 @@ private fun ZoneBreakdownCard(workout: WorkoutData) {
     val statusColors = LocalStatusColors.current
     val zones =
         listOf(
-            Triple(stringResource(R.string.hr_zone_n, 5), workout.zone5Minutes, statusColors.poor),
-            Triple(stringResource(R.string.hr_zone_n, 4), workout.zone4Minutes, statusColors.warning),
-            Triple(stringResource(R.string.hr_zone_n, 3), workout.zone3Minutes, statusColors.optimal),
-            Triple(stringResource(R.string.hr_zone_n, 2), workout.zone2Minutes, statusColors.neutral),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 5), workout.zone5Minutes, statusColors.poor),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 4), workout.zone4Minutes, statusColors.warning),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 3), workout.zone3Minutes, statusColors.optimal),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 2), workout.zone2Minutes, statusColors.neutral),
             Triple(
-                stringResource(R.string.hr_zone_n, 1),
+                stringResource(CoreUiR.string.hr_zone_n, 1),
                 workout.zone1Minutes,
                 MaterialTheme.colorScheme.onSurfaceVariant,
             ),

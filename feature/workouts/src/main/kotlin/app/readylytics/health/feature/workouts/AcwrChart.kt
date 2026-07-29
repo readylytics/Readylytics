@@ -55,6 +55,7 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import kotlin.math.ceil
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 internal fun AcwrChartCard(
@@ -441,7 +442,7 @@ private fun EmptyAcwrChartPlaceholder(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(R.string.message_no_data_available),
+            text = stringResource(CoreUiR.string.message_no_data_available),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
