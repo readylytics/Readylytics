@@ -3,6 +3,7 @@ package app.readylytics.health.data.security
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.security.SqlCipherKeyManager.KeyDecryptionException
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
@@ -120,5 +121,52 @@ class SqlCipherKeyManagerTest {
         }
 
         assertTrue(keyManager.isKeyCorrupted.value)
+    }
+
+    @Test
+    fun getOrCreateDbKey_concurrentThreads_convergeOnSingleKey() {
+        val dbFile = File(context.filesDir, "concurrent_test.db")
+        val threadCount = 8
+        val startBarrier = java.util.concurrent.CyclicBarrier(threadCount)
+        val keys = java.util.concurrent.ConcurrentLinkedQueue<ByteArray>()
+        val errors = java.util.concurrent.ConcurrentLinkedQueue<Throwable>()
+        val threads =
+            (1..threadCount).map { index ->
+                Thread {
+                    try {
+                        startBarrier.await()
+                        // All threads call getOrCreateDbKey() concurrently (protected by lock).
+                        // Each thread either generates a new key if none exists, or retrieves
+                        // an existing one. All threads should converge on the same key.
+                        val key = keyManager.getOrCreateDbKeyForTest(dbFile)
+                        keys.add(key)
+                    } catch (t: Throwable) {
+                        errors.add(t)
+                    }
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join(10_000) }
+
+        // Check that all threads completed (didn't deadlock or hang)
+        assertTrue(threads.none { it.isAlive }, "Some threads did not complete within timeout")
+
+        // Assert no exceptions occurred during key retrieval
+        assertTrue(
+            errors.isEmpty(),
+            "Concurrent key access threw errors: ${errors.toList()}",
+        )
+
+        // Verify that all threads converged on the same key (byte-for-byte identical).
+        // ByteArray doesn't override equals, so convert to List for comparison.
+        val distinctKeys = keys.map { it.toList() }.distinct()
+        assertEquals(
+            "All concurrent callers must converge on a single key",
+            1,
+            distinctKeys.size,
+        )
+
+        // Verify we got exactly the expected number of keys (all threads succeeded)
+        assertEquals("All threads should have returned a key", threadCount, keys.size)
     }
 }
