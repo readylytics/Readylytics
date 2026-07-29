@@ -33,7 +33,7 @@ while [ "${attempt}" -le "${max_attempts}" ]; do
     # debuggable/emulator runner unless these known-inapplicable environment checks are
     # suppressed; the benchmark still executes and asserts correctness, just without
     # trustworthy timing numbers on this runner.
-    timeout --signal=TERM --kill-after=30s 15m ./gradlew connectedDebugAndroidTest -x :benchmark:connectedDebugAndroidTest \
+    timeout --signal=TERM --kill-after=30s 15m ./gradlew connectedDebugAndroidTest \
         -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=ACTIVITY-MISSING,DEBUGGABLE,EMULATOR \
         --stacktrace --console=plain || test_status=$?
 
