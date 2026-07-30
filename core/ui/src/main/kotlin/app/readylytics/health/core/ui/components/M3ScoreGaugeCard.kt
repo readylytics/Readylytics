@@ -78,11 +78,7 @@ fun M3ScoreGaugeCard(
     val progressColor = effectiveStatus.gaugeColor()
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
 
-    val animatedProgress by animateFloatAsState(
-        targetValue = ((score ?: 0f) / maxScore).coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-        label = "gauge_progress_$title",
-    )
+    val markerFraction = ((score ?: 0f) / maxScore).coerceIn(0f, 1f)
 
     val semanticDesc =
         if (deltaText != null) {
@@ -119,7 +115,7 @@ fun M3ScoreGaugeCard(
                 title = title,
                 displayText = displayText,
                 unitText = unitText,
-                animatedProgress = animatedProgress,
+                markerFraction = markerFraction,
                 progressColor = progressColor,
                 trackColor = trackColor,
                 deltaText = deltaText,
@@ -141,7 +137,7 @@ fun M3ScoreGaugeCard(
                 title = title,
                 displayText = displayText,
                 unitText = unitText,
-                animatedProgress = animatedProgress,
+                markerFraction = markerFraction,
                 progressColor = progressColor,
                 trackColor = trackColor,
                 deltaText = deltaText,
@@ -157,7 +153,7 @@ private fun GaugeCardContent(
     title: String,
     displayText: String,
     unitText: String,
-    animatedProgress: Float,
+    markerFraction: Float,
     progressColor: androidx.compose.ui.graphics.Color,
     trackColor: androidx.compose.ui.graphics.Color,
     deltaText: String?,
@@ -208,65 +204,18 @@ private fun GaugeCardContent(
                     .fillMaxWidth(),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            // Soft Arc Gauge (shifted up slightly to leave more space below)
-            Canvas(
-                modifier =
-                    Modifier
-                        .width(120.dp)
-                        .height(60.dp)
-                        .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
-            ) {
-                val strokeWidthPx = 8.dp.toPx()
-                val dotRadiusPx = 5.dp.toPx()
-
-                // Add padding to prevent any clipping of rounded caps or the endpoint dot
-                val horizontalPadding = strokeWidthPx / 2f + dotRadiusPx
-                val verticalPadding = strokeWidthPx / 2f + dotRadiusPx
-
-                val arcWidth = size.width - 2 * horizontalPadding
-                val radius = arcWidth / 2f
-                val centerX = size.width / 2f
-                val centerY = size.height - verticalPadding
-
-                val topLeft = Offset(centerX - radius, centerY - radius)
-                val arcSize = Size(radius * 2, radius * 2)
-
-                // Draw track
-                drawArc(
-                    color = trackColor,
-                    startAngle = 180f,
-                    sweepAngle = 180f,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
-                )
-
-                // Draw active arc progress
-                if (animatedProgress > 0f) {
-                    drawArc(
-                        color = progressColor,
-                        startAngle = 180f,
-                        sweepAngle = 180f * animatedProgress,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
+            M3MetricGauge(
+                markerFraction = markerFraction,
+                activeColor = progressColor,
+                segments = listOf(
+                    M3GaugeSegment(
+                        startFraction = 0f,
+                        endFraction = 1f,
+                        color = trackColor
                     )
-
-                    // Draw endpoint dot
-                    val endAngle = 180f + (180f * animatedProgress)
-                    val endAngleRad = Math.toRadians(endAngle.toDouble())
-                    val dotX = centerX + radius * cos(endAngleRad).toFloat()
-                    val dotY = centerY + radius * sin(endAngleRad).toFloat()
-
-                    drawCircle(
-                        color = progressColor,
-                        radius = dotRadiusPx,
-                        center = Offset(dotX, dotY),
-                    )
-                }
-            }
+                ),
+                animateMarker = true
+            )
 
             // Centered Value & Unit
             Column(
