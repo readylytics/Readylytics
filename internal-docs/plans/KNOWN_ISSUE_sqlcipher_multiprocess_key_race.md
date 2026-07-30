@@ -150,13 +150,21 @@ coexisting in one process — a real gap found in final review, since test/bench
 hand-constructs extra instances; now closed structurally by moving the in-process `ReentrantLock`
 into the companion object (JVM-wide) so correctness no longer depends on `@Singleton` DI scoping;
 (b) `resetKeyAndDatabase()` under concurrency — now also inside the same lock with a durable
-`commit = true` removal, but not exercised concurrently by a test; or (c) the complete
-`Application.onCreate()` fresh-install orchestration, which remains manual-repro-only. This is not
-a gap in the Room-helper race coverage: the factory-path instrumentation fixture exercises the
-same lazy `SupportSQLiteOpenHelper` first-open path used by the production database. Also note no
-CI job in this repo runs `connectedAndroidTest`, so the factory-path instrumented test is currently
-a manual regression guard a developer must run locally, not an automated gate — a worthwhile future
-improvement.
+`commit = true` removal, but not exercised concurrently by a test; (c) the complete
+`Application.onCreate()` fresh-install orchestration, which remains manual-repro-only; (d) the
+direct `withWritableDatabase()` helper when an existing but not-yet-initialized file is supplied;
+that helper intentionally retains its historical file-existence-based lock scope, while the
+production Room factory decorator described below locks every helper instance's first accessor; or
+(e) deterministic coverage that a shared `readableDatabase`/`writableDatabase` first-open state
+is serialized, or that a failed first accessor leaves that decorator retryable. The factory-path
+instrumentation fixture exercises the production lazy `SupportSQLiteOpenHelper` first-open path,
+but this final review did not add a test seam or fake SQLCipher helper solely for (d) or (e).
+
+The tracked pull-request workflow `.github/workflows/instrumented-tests.yml` starts an emulator
+and invokes `scripts/run-instrumented-tests.sh`, which runs `./gradlew connectedDebugAndroidTest`.
+The factory-path test is therefore part of that automated connected suite when the workflow runs;
+this change has not independently recorded a passing CI or connected-device result for the current
+factory-path case.
 
 **2026-07-30 direct-helper history — superseded by the factory-path resolution below.** Once
 `.github/workflows/instrumented-tests.yml` actually ran `connectedDebugAndroidTest` for the first
@@ -194,11 +202,14 @@ that production-equivalent path is resolved and covered separately below.
 
 **Resolution:** `SupportOpenHelperFactory.create()` is lazy: its returned
 `SupportSQLiteOpenHelper` performs the physical open only when Room first calls
-`readableDatabase` or `writableDatabase`. The factory now decorates that helper. When the database
-file was observed as fresh, the decorator keeps the existing cross-process key lock through that
-first accessor call, including Room's callback and schema write. This serializes the first
-SQLCipher page write on the production `HealthDatabase`/`health_dashboard.db` path. Existing files
-continue to use the short lock scope because their initialization is already complete.
+`readableDatabase` or `writableDatabase`. The factory now decorates that helper. For every helper
+instance, whichever of those accessors is called first takes the existing cross-process key lock
+through the delegate call, including Room's callback and schema write. The shared first-open state
+covers both accessors, and it is marked only after a successful delegate call, so a failed first
+accessor retries under the lock. This serializes the first SQLCipher page write on the production
+`HealthDatabase`/`health_dashboard.db` path even if an earlier process has already created the
+file but has not completed schema initialization. Later accessors pass directly to the opened
+delegate.
 
 `SqlCipherKeyManagerCrossProcessRaceTest#twoProcesses_raceOnFreshFactoryOpen_bothSucceedAndConverge`
 now exercises this production-equivalent lazy-helper path across two OS processes. The targeted

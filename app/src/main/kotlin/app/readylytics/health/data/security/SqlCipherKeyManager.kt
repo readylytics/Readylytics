@@ -26,7 +26,9 @@ import javax.inject.Singleton
 /**
  * Manages SQLCipher database encryption key generation, storage, and decryption.
  * Uses Android KeyStore to protect a 256-bit AES key, with encrypted key + IV stored in SharedPreferences.
- * Memory safety: all plaintext ByteArray instances are zeroed with .fill(0) after use.
+ * Memory safety: transient plaintext ByteArray instances are zeroed with .fill(0) after use.
+ * The raw SQLCipher password array is intentionally retained by SQLCipher's helper for the
+ * helper's lifecycle, including later opens or connections, and therefore cannot be zeroed here.
  */
 @Singleton
 class SqlCipherKeyManager
@@ -107,9 +109,9 @@ class SqlCipherKeyManager
                         try {
                             val keyHex = decryptedKey.toHex()
                             val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
-                            // We must NOT fill rawKeyBytes with zeros here, because SupportOpenHelperFactory
-                            // holds a reference to the array and uses it when Room actually opens the database.
-                            // The factory clears the array automatically after the database is opened.
+                            // We must NOT fill rawKeyBytes with zeros: SupportOpenHelperFactory retains this
+                            // array as the SQLCipher password for its helper's lifecycle, including later
+                            // opens or connections. SQLCipher does not clear this caller-owned array for us.
                             val delegate =
                                 net.zetetic.database.sqlcipher
                                     .SupportOpenHelperFactory(rawKeyBytes)
