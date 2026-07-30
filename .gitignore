@@ -64,3 +64,5 @@ build-logic/bin/
 
 # Superpowers SDD scratch workspace
 .superpowers/
+
+.worktrees/

@@ -15,7 +15,6 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
-import app.readylytics.health.feature.vitals.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +27,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 data class WeightDetailUiState(
     val latestWeight: Float? = null,
@@ -84,15 +84,15 @@ class WeightDetailViewModel
                                 if (userPrefs.unitSystem ==
                                     UnitSystem.METRIC
                                 ) {
-                                    R.string.unit_kg
+                                    CoreUiR.string.unit_kg
                                 } else {
-                                    R.string.unit_lbs
+                                    CoreUiR.string.unit_lbs
                                 }
                             when {
                                 diffKg > 0f ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.StringRes(CoreUiR.string.delta_up),
                                             UiText.RawString(" $formattedDiff "),
                                             UiText.StringRes(unitRes),
                                         ),
@@ -100,12 +100,12 @@ class WeightDetailViewModel
                                 diffKg < 0f ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.StringRes(CoreUiR.string.delta_down),
                                             UiText.RawString(" $formattedDiff "),
                                             UiText.StringRes(unitRes),
                                         ),
                                     )
-                                else -> UiText.StringRes(R.string.delta_no_change)
+                                else -> UiText.StringRes(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null

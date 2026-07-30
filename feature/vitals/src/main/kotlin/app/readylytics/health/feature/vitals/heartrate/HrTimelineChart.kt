@@ -52,7 +52,6 @@ import app.readylytics.health.core.ui.components.DayTimelineScale
 import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
 import app.readylytics.health.core.ui.components.hrZoneColors
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.feature.vitals.R
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -256,9 +255,9 @@ private fun HrTimelineChartContent(
                     offset = IntOffset(sampleX.roundToInt(), sampleY.roundToInt()),
                 )
             }
-        val prevActionLabel = stringResource(R.string.action_previous_point)
-        val nextActionLabel = stringResource(R.string.action_next_point)
-        val clearActionLabel = stringResource(R.string.action_clear_selection)
+        val prevActionLabel = stringResource(CoreUiR.string.action_previous_point)
+        val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
+        val clearActionLabel = stringResource(CoreUiR.string.action_clear_selection)
 
         val customActionsList =
             remember(selectedSample, samples) {
