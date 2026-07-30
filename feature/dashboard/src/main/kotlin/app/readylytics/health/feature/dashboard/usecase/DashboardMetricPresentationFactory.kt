@@ -5,7 +5,6 @@ import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.display.MetricFormatter
-import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
@@ -21,7 +20,6 @@ import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
 import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import app.readylytics.health.feature.dashboard.RawMetricBand
 import java.time.LocalDate
-import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -185,32 +183,6 @@ class DashboardMetricPresentationFactory
                     scaleAvailable = isHeightValid,
                     unavailableReason = if (!isHeightValid) DashboardMetricUnavailableReason.MISSING_BMI else null,
                 )
-            val bmiStatus =
-                bmi?.let {
-                    BodyCompositionAssessment.assessBmi(it).status
-                }
-            val categoryStr =
-                bmiStatus?.let { status ->
-                    resourceProvider.getString(
-                        when (status) {
-                            BmiStatus.Optimal -> DashboardR.string.bmi_optimal
-                            BmiStatus.Neutral -> DashboardR.string.bmi_neutral
-                            BmiStatus.Warning -> DashboardR.string.bmi_warning
-                            BmiStatus.Poor -> DashboardR.string.bmi_poor
-                        },
-                    )
-                }
-            val bmiSecondary =
-                if (bmi != null && categoryStr != null) {
-                    resourceProvider.getString(
-                        CoreUiR.string.bmi_secondary_text,
-                        String.format(Locale.getDefault(), "%.1f", bmi),
-                        categoryStr,
-                    )
-                } else {
-                    null
-                }
-
             val weightTitle =
                 resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_weight)
             val weightValueText = m?.weightKgDisplay?.replace(" kg", "")?.replace(" lbs", "") ?: "—"
@@ -226,18 +198,17 @@ class DashboardMetricPresentationFactory
                 weightVisual.unavailableReason?.let { reason ->
                     unavailableDescription(weightTitle, reason)
                 } ?: resourceProvider.getString(
-                    app.readylytics.health.feature.dashboard.R.string.semantics_weight_bmi_format,
+                    app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
                     weightTitle,
                     "$weightValueText $weightUnitText",
-                    bmiSecondary ?: "",
-                    categoryStr ?: "",
+                    classificationText(weightVisual.getResolvedStatus()),
                 )
             map[CardId.WEIGHT] =
                 DashboardMetricPresentation(
                     title = weightTitle,
                     valueText = weightValueText,
                     unitText = weightUnitText,
-                    secondaryText = bmiSecondary,
+                    secondaryText = null,
                     status = weightVisual.getResolvedStatus(),
                     tooltip = "",
                     accessibilityDescription = weightDescription,
@@ -311,9 +282,9 @@ class DashboardMetricPresentationFactory
             val effStatus =
                 if (efficiency != null) {
                     when {
-                        efficiency >= 0.85f -> MetricStatus.OPTIMAL
-                        efficiency >= 0.75f -> MetricStatus.NEUTRAL
-                        efficiency >= 0.65f -> MetricStatus.WARNING
+                        efficiency >= 85f -> MetricStatus.OPTIMAL
+                        efficiency >= 75f -> MetricStatus.NEUTRAL
+                        efficiency >= 65f -> MetricStatus.WARNING
                         else -> MetricStatus.POOR
                     }
                 } else {
@@ -326,13 +297,11 @@ class DashboardMetricPresentationFactory
                 } else if (efficiency == 0f) {
                     "0"
                 } else {
-                    String.format(Locale.getDefault(), "%.0f", efficiency * 100)
+                    efficiency.roundToInt().toString()
                 }
             val effVisual =
                 DashboardMetricScalePreparer.score(
-                    efficiency?.let {
-                        it * 100f
-                    },
+                    efficiency,
                     0f,
                     100f,
                     listOf(
@@ -491,7 +460,7 @@ class DashboardMetricPresentationFactory
                 resourceProvider.getString(
                     app.readylytics.health.feature.dashboard.R.string.card_title_circadian_consistency,
                 )
-            val circValueText = circReady?.score?.toString() ?: "—"
+            val circValueText = circReady?.score?.roundToInt()?.toString() ?: "—"
             val circVisual =
                 DashboardMetricScalePreparer.score(
                     circReady?.score,

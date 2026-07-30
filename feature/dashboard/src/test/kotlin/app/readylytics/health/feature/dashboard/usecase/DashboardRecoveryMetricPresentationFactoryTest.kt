@@ -8,6 +8,7 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.util.ResourceProvider
+import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -17,6 +18,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import kotlin.math.ln
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
@@ -89,6 +91,11 @@ class DashboardRecoveryMetricPresentationFactoryTest {
         every { resourceProvider.getString(CoreUiR.string.metric_status_warning) } returns "Warning"
         every { resourceProvider.getString(CoreUiR.string.metric_status_neutral) } returns "Neutral"
         every { resourceProvider.getString(CoreUiR.string.metric_status_optimal) } returns "Optimal"
+        every { resourceProvider.getString(CoreUiR.string.delta_up) } returns "↑"
+        every { resourceProvider.getString(CoreUiR.string.delta_down) } returns "↓"
+        every { resourceProvider.getString(CoreUiR.string.delta_no_change) } returns "—"
+        every { resourceProvider.getString(CoreUiR.string.unit_ms) } returns "ms"
+        every { resourceProvider.getString(CoreUiR.string.unit_bpm) } returns "bpm"
     }
 
     @Test
@@ -111,6 +118,52 @@ class DashboardRecoveryMetricPresentationFactoryTest {
         assertEquals(MetricStatus.POOR, cards.getValue(CardId.HRV).status)
         assertEquals(MetricStatus.POOR, cards.getValue(CardId.RESTING_HR).status)
         assertEquals(MetricStatus.WARNING, cards.getValue(CardId.RAS_DAILY).status)
+    }
+
+    @Test
+    fun `HRV equal to its personal baseline renders at 50 percent progress`() {
+        val cards =
+            buildCards(
+                baseSummary.copy(
+                    nocturnalHrv = 50,
+                    hrvMuMssd = ln(50.0).toFloat(),
+                    isCalibrating = false,
+                ),
+                preferences,
+                null,
+            )
+
+        val visual = cards.getValue(CardId.HRV).visual as DashboardMetricVisual.PersonalBaseline
+
+        assertEquals(0.5f, visual.markerFraction!!, 0.001f)
+        assertEquals(0.5f, visual.baselineMarkerFraction, 0.001f)
+    }
+
+    @Test
+    fun `HRV and RHR preserve their existing baseline delta indicators`() {
+        every {
+            resourceProvider.getString(CoreUiR.string.delta_up_format, "↑", "5 ms")
+        } returns "↑ 5 ms"
+        every {
+            resourceProvider.getString(CoreUiR.string.delta_up_format, "↓", "5 bpm")
+        } returns "↓ 5 bpm"
+
+        val cards =
+            buildCards(
+                baseSummary.copy(
+                    nocturnalHrv = 55,
+                    hrvMuMssd = ln(50.0).toFloat(),
+                    restingHeartRate = 60,
+                    rhrBpm = 65f,
+                    isCalibrating = false,
+                ),
+                preferences,
+                null,
+            )
+
+        assertEquals("↑ 5 ms", cards.getValue(CardId.HRV).secondaryText)
+        assertEquals("↓ 5 bpm", cards.getValue(CardId.SLEEP_RHR).secondaryText)
+        assertEquals("↓ 5 bpm", cards.getValue(CardId.RESTING_HR).secondaryText)
     }
 
     @Test

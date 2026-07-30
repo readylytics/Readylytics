@@ -264,6 +264,7 @@ class DashboardVisualizationRegressionTest {
         composeRule.onNodeWithText("↓ 1").assertIsDisplayed()
         composeRule.onNodeWithText("Optimal").assertDoesNotExist()
         composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
 
         assertTextIsAboveBar("48")
         assertTextIsAboveBar("bpm")
@@ -274,17 +275,22 @@ class DashboardVisualizationRegressionTest {
     fun barMode_keepsSleepDurationOutsideTrack() {
         setMetricCard(
             mode = DashboardCardDisplayMode.BAR,
+            specification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_DURATION)),
             presentation =
                 presentation.copy(
                     valueText = "6h 50m",
                     unitText = "",
+                    secondaryText = "22:51 → 06:02",
                     accessibilityDescription = "Sleep duration 6 hours 50 minutes.",
                 ),
         )
 
         composeRule.onNodeWithText("6h 50m").assertIsDisplayed()
+        composeRule.onNodeWithText("22:51 → 06:02").assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertDoesNotExist()
         composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
         assertTextIsAboveBar("6h 50m")
+        assertTextIsBelowBar("22:51 → 06:02")
     }
 
     @Test
@@ -413,6 +419,7 @@ class DashboardVisualizationRegressionTest {
     private fun setMetricCard(
         mode: DashboardCardDisplayMode,
         presentation: DashboardMetricPresentation,
+        specification: DashboardCardSpec = this.specification,
     ) {
         composeRule.setContent {
             TestTheme {

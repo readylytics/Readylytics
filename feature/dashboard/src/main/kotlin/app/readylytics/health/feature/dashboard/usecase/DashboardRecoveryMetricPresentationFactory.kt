@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.model.BaselineArrow
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
@@ -18,6 +19,7 @@ import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
 import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
 import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
 import app.readylytics.health.feature.dashboard.RawMetricBand
+import kotlin.math.abs
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
@@ -100,7 +102,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
         metrics: DailyMetrics?,
         prefs: UserPreferences,
     ): DashboardMetricPresentation {
-        val baseline = metrics?.hrvBaselineMeanRaw
+        val baseline = metrics?.hrvBaselineRounded?.toFloat()
         val poorRatio = prefs.hrvWarningThreshold - (1f - prefs.hrvWarningThreshold)
         val visual =
             DashboardMetricScalePreparer.personalBaseline(
@@ -124,7 +126,12 @@ internal class DashboardRecoveryMetricPresentationFactory(
             title = title,
             valueText = valueText,
             unitText = unitText,
-            secondaryText = null,
+            secondaryText =
+                baselineDeltaText(
+                    arrow = metrics?.hrvBaselineArrow,
+                    difference = metrics?.hrvBaselineDiff,
+                    unitText = unitText,
+                ),
             status = status,
             tooltip = hrvTooltip(metrics),
             accessibilityDescription =
@@ -160,12 +167,18 @@ internal class DashboardRecoveryMetricPresentationFactory(
             } else {
                 summary?.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
             } ?: MetricStatus.CALIBRATING
+        val (arrow, difference) =
+            if (isSleep) {
+                metrics?.rhrBaselineArrow to metrics?.rhrBaselineDiff
+            } else {
+                metrics?.restingHrBaselineArrow to metrics?.restingHrBaselineDiff
+            }
 
         return DashboardMetricPresentation(
             title = title,
             valueText = valueText,
             unitText = unitText,
-            secondaryText = null,
+            secondaryText = baselineDeltaText(arrow, difference, unitText),
             status = status,
             tooltip = rhrTooltip(metrics, isSleep),
             accessibilityDescription =
@@ -359,6 +372,30 @@ internal class DashboardRecoveryMetricPresentationFactory(
                 resourceProvider.getString(tooltipResources.second)
             }
         return if (isSleep) resourceProvider.getString(CoreUiR.string.tooltip_sleep_rhr) + details else details
+    }
+
+    private fun baselineDeltaText(
+        arrow: BaselineArrow?,
+        difference: Int?,
+        unitText: String,
+    ): String? {
+        if (arrow == null || difference == null) return null
+
+        return when (arrow) {
+            BaselineArrow.EQUAL -> resourceProvider.getString(CoreUiR.string.delta_no_change)
+            BaselineArrow.UP ->
+                resourceProvider.getString(
+                    CoreUiR.string.delta_up_format,
+                    resourceProvider.getString(CoreUiR.string.delta_up),
+                    "$difference $unitText",
+                )
+            BaselineArrow.DOWN ->
+                resourceProvider.getString(
+                    CoreUiR.string.delta_up_format,
+                    resourceProvider.getString(CoreUiR.string.delta_down),
+                    "${abs(difference)} $unitText",
+                )
+        }
     }
 
     private fun formatTime(timestamp: Long): String = DateFormatUtils.epochMilliToTimeString(timestamp)

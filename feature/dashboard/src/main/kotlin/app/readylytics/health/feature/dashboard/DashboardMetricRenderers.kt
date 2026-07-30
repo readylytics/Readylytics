@@ -34,6 +34,7 @@ import app.readylytics.health.core.ui.components.metricVisualizationTrackColor
 internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
 internal const val DASHBOARD_GAUGE_TAG = "dashboard_metric_gauge"
 internal const val DASHBOARD_BAR_TAG = "dashboard_metric_bar"
+internal const val DASHBOARD_DELTA_PILL_TAG = "dashboard_metric_delta_pill"
 
 internal fun DashboardMetricVisual.progressFraction(): Float? =
     when (this) {
@@ -122,22 +123,7 @@ fun DashboardGaugeRenderer(
             contentAlignment = Alignment.Center,
         ) {
             presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ) {
-                    Text(
-                        text = deltaText,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        modifier =
-                            Modifier.padding(
-                                horizontal = MaterialTheme.spacing.small,
-                                vertical = MaterialTheme.spacing.hairline,
-                            ),
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                DashboardMetricDeltaPill(deltaText)
             }
         }
     }
@@ -146,6 +132,7 @@ fun DashboardGaugeRenderer(
 @Composable
 fun DashboardBarRenderer(
     presentation: DashboardMetricPresentation,
+    secondaryUsesPill: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val progressFraction = presentation.visual.progressFraction()
@@ -214,15 +201,47 @@ fun DashboardBarRenderer(
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
 
-        presentation.secondaryText?.let { secondary ->
-            Text(
-                text = secondary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        Box(
+            modifier = Modifier.fillMaxWidth().height(20.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
+                if (secondaryUsesPill) {
+                    DashboardMetricDeltaPill(deltaText)
+                } else {
+                    Text(
+                        text = deltaText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun DashboardMetricDeltaPill(deltaText: String) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Text(
+            text = deltaText,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            modifier =
+                Modifier
+                    .padding(
+                        horizontal = MaterialTheme.spacing.small,
+                        vertical = MaterialTheme.spacing.hairline,
+                    ).testTag(DASHBOARD_DELTA_PILL_TAG),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

@@ -151,6 +151,22 @@ class DashboardMetricScalePreparerTest {
         assertEquals(1.2f, aboveRatio.ratio!!, 0.001f)
     }
 
+    @Test
+    fun `personal baseline maps an equal value to the midpoint`() {
+        val visual =
+            DashboardMetricScalePreparer.personalBaseline(
+                value = 50f,
+                baseline = 50f,
+                axisMinimumRatio = 0.8f,
+                axisMaximumRatio = 1.2f,
+                bands = emptyList(),
+                baselineReady = true,
+            )
+
+        assertEquals(0.5f, visual.markerFraction!!, 0.001f)
+        assertEquals(0.5f, visual.baselineMarkerFraction, 0.001f)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `invalid piecewise anchors throws exception`() {
         DashboardMetricScalePreparer.piecewiseFraction(10f, 20f, 15f, 30f) // min > mid

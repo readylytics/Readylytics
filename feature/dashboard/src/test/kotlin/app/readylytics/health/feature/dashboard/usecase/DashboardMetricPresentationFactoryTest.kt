@@ -75,7 +75,7 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `weight keeps real value and positions bmi around 21 point 7`() {
+    fun `weight keeps real value and positions its reference midpoint`() {
         val cards =
             factory.build(
                 summary(weightKg = 66.44f),
@@ -88,7 +88,23 @@ class DashboardMetricPresentationFactoryTest {
         val card = cards.getValue(CardId.WEIGHT)
         val visual = card.visual as DashboardMetricVisual.ReferenceRange
         assertEquals(0.5f, visual.referenceMarkerFraction)
-        assertTrue(card.secondaryText.orEmpty().contains("BMI"))
+    }
+
+    @Test
+    fun `weight card displays only its value and unit without BMI`() {
+        val cards =
+            factory.build(
+                summary(weightKg = 66.44f),
+                preferences(heightCm = 175f),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val card = cards.getValue(CardId.WEIGHT)
+        assertEquals("kg", card.unitText)
+        assertNull(card.secondaryText)
     }
 
     @Test
@@ -144,11 +160,35 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
+    fun `circadian consistency rounds its displayed score to a whole number`() {
+        val circResult =
+            app.readylytics.health.domain.scoring.CircadianConsistencyResult
+                .Ready(86.66666f, 0, 0, 0, 0)
+
+        val cards = factory.build(summary(), preferences(), date, null, circResult, null)
+
+        assertEquals("87", cards.getValue(CardId.CIRCADIAN_CONSISTENCY).valueText)
+    }
+
+    @Test
     fun `sleep efficiency uses 0 to 100 bounds`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         val visual = cards.getValue(CardId.SLEEP_EFFICIENCY).visual as DashboardMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(100f, visual.maxValue)
+    }
+
+    @Test
+    fun `sleep efficiency displays its stored percentage without scaling it again`() {
+        val lastSleepSession = SleepSessionSummary(efficiency = 95.13f, startTime = 0L, endTime = 0L)
+
+        val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
+        val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
+        val visual = presentation.visual as DashboardMetricVisual.Score
+
+        assertEquals("95", presentation.valueText)
+        assertEquals("%", presentation.unitText)
+        assertEquals(95.13f, visual.rawValue)
     }
 
     @Test

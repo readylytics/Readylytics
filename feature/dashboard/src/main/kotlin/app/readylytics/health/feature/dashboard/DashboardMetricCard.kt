@@ -25,6 +25,7 @@ import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
+import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 import app.readylytics.health.feature.dashboard.R
@@ -173,6 +174,7 @@ private fun DashboardMetricCardContent(
                 DashboardCardDisplayMode.BAR ->
                     DashboardBarRenderer(
                         presentation = presentation,
+                        secondaryUsesPill = specification.cardId != CardId.SLEEP_DURATION,
                     )
                 DashboardCardDisplayMode.VALUE ->
                     DashboardValueRenderer(
