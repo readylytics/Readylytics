@@ -82,6 +82,7 @@ fun WorkoutStatsSection(
     parentScrollInProgress: () -> Boolean = { false },
 ) {
     Column(modifier = modifier) {
+        // Note: graphicsLayer{} intentionally omitted for performance (F19)
         CardLoader(
             isLoading = uiState.isLoading,
             skeleton = {

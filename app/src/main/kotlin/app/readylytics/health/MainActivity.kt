@@ -70,6 +70,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            if (!isKeyValidationComplete) return@setContent
+
             // Applied once at the composition root: no-op outside the "benchmark" build type,
             // and required inside it so UiAutomator's By.res(...) selectors can find
             // Modifier.testTag-ed Compose nodes (see BenchmarkSemantics.kt).

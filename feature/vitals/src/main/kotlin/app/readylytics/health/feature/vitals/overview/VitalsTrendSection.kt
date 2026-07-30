@@ -37,6 +37,7 @@ internal fun VitalsTrendSection(
     val presentation = chartInputs.presentation
 
     Column(modifier = modifier) {
+        // Note: graphicsLayer{} intentionally omitted for performance (F19)
         // Chart 1: HRV Trend
         CardLoader(
             isLoading = chartInputs.isLoading,
