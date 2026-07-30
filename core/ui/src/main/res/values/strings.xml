@@ -184,4 +184,16 @@
     <string name="tab_vitals">Vitals</string>
     <string name="card_title_insights">Insights</string>
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
+    <!-- Dashboard Typed Cards -->
+    <string name="metric_status_optimal">Optimal</string>
+    <string name="metric_status_neutral">Neutral</string>
+    <string name="metric_status_warning">Warning</string>
+    <string name="metric_status_poor">Poor</string>
+    <string name="metric_status_calibrating">Calibrating</string>
+    <string name="metric_unavailable_missing_value">No data available</string>
+    <string name="metric_unavailable_missing_target">Target not set</string>
+    <string name="metric_unavailable_baseline_not_ready">Baseline not ready</string>
+    <string name="metric_unavailable_missing_bmi">Missing height for BMI</string>
+    <string name="bmi_secondary_text">BMI: %1$s</string>
+
 </resources>
