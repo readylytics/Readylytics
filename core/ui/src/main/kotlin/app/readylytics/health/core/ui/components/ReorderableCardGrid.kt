@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -71,7 +73,7 @@ data class CardConfigurationsList(
 
 @Immutable
 data class CardDataMap(
-    val map: Map<CardId, @Composable () -> Unit>,
+    val map: Map<CardId, @Composable (CardConfiguration) -> Unit>,
 )
 
 @Composable
@@ -130,7 +132,6 @@ fun ReorderableCardGrid(
     var deleteZoneTopPx by remember { mutableStateOf<Float?>(null) }
 
     val draggedId = dragController.draggedCardId
-    val hapticFeedback = LocalHapticFeedback.current
 
     val performDragEnd = {
         val result = dragController.onDragEnd()
@@ -151,36 +152,7 @@ fun ReorderableCardGrid(
     Column(
         modifier =
             modifier
-                .onGloballyPositioned { rootCoords = it }
-                .then(
-                    if (isEditing) {
-                        Modifier.pointerInput(Unit) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { offset ->
-                                    val targetCardId =
-                                        dragController.slotBounds.entries
-                                            .firstOrNull { (_, rect) ->
-                                                rect.contains(offset)
-                                            }?.key
-                                    if (targetCardId != null) {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        dragController.onDragStart(targetCardId)
-                                    }
-                                },
-                                onDragEnd = { performDragEnd() },
-                                onDragCancel = { performDragEnd() },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    if (dragController.draggedCardId != null) {
-                                        dragController.onDrag(dragAmount, deleteZoneTopPx)
-                                    }
-                                },
-                            )
-                        }
-                    } else {
-                        Modifier
-                    },
-                ),
+                .onGloballyPositioned { rootCoords = it },
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         var cardIndex = 0
@@ -204,6 +176,8 @@ fun ReorderableCardGrid(
                         cardDataMap = dataMap,
                         isEditing = isEditing,
                         controller = dragController,
+                        deleteZoneTopPx = deleteZoneTopPx,
+                        performDragEnd = performDragEnd,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -234,6 +208,8 @@ fun ReorderableCardGrid(
                             cardDataMap = dataMap,
                             isEditing = isEditing,
                             controller = dragController,
+                            deleteZoneTopPx = deleteZoneTopPx,
+                            performDragEnd = performDragEnd,
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                         )
                     }
@@ -264,6 +240,8 @@ fun ReorderableCardGrid(
                                 cardDataMap = dataMap,
                                 isEditing = isEditing,
                                 controller = dragController,
+                                deleteZoneTopPx = deleteZoneTopPx,
+                                performDragEnd = performDragEnd,
                                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                             )
                         }
@@ -332,34 +310,43 @@ fun ReorderableCardGrid(
 @Composable
 private fun RenderCardItem(
     card: CardConfiguration,
-    cardDataMap: Map<CardId, @Composable () -> Unit>,
+    cardDataMap: Map<CardId, @Composable (CardConfiguration) -> Unit>,
     isEditing: Boolean,
     controller: DragController,
+    deleteZoneTopPx: Float?,
+    performDragEnd: () -> Unit,
     modifier: Modifier,
 ) {
-    val isDragged = controller.draggedCardId == card.cardId
-    val cardContent = cardDataMap[card.cardId]!!
+    // Keying the whole slot by cardId (rather than by loop position) keeps composition
+    // identity stable across reorders and mode-only edits, so per-card local state (e.g. the
+    // display-mode menu's expanded flag) does not leak between sibling cards.
+    key(card.cardId) {
+        val isDragged = controller.draggedCardId == card.cardId
+        val cardContent = cardDataMap[card.cardId]!!
 
-    val wrappedContent: @Composable () -> Unit =
-        if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
-            @Composable {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.cardHeight),
-                    contentAlignment = Alignment.Center,
-                ) { cardContent() }
+        val wrappedContent: @Composable () -> Unit =
+            if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
+                @Composable {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.cardHeight),
+                        contentAlignment = Alignment.Center,
+                    ) { cardContent(card) }
+                }
+            } else {
+                { cardContent(card) }
             }
-        } else {
-            cardContent
-        }
 
-    ReorderableCardItem(
-        card = card,
-        content = wrappedContent,
-        isEditing = isEditing,
-        isDragged = isDragged,
-        controller = controller,
-        modifier = modifier,
-    )
+        ReorderableCardItem(
+            card = card,
+            content = wrappedContent,
+            isEditing = isEditing,
+            isDragged = isDragged,
+            controller = controller,
+            deleteZoneTopPx = deleteZoneTopPx,
+            performDragEnd = performDragEnd,
+            modifier = modifier,
+        )
+    }
 }
 
 @Composable
@@ -369,8 +356,12 @@ private fun ReorderableCardItem(
     isEditing: Boolean,
     isDragged: Boolean,
     controller: DragController,
+    deleteZoneTopPx: Float?,
+    performDragEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
+
     Box(
         modifier =
             modifier
@@ -411,12 +402,36 @@ private fun ReorderableCardItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isEditing) {
-                Icon(
-                    imageVector = Icons.Outlined.DragIndicator,
-                    contentDescription = stringResource(R.string.accessibility_drag_to_reorder),
-                    modifier = Modifier.padding(end = MaterialTheme.spacing.small),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // Drag gesture detection lives on this handle only (not the card body), so
+                // taps/menus elsewhere on the card (e.g. the display-mode selector) never start
+                // a drag. Because the handle already identifies its own card, no bounds hit-test
+                // is needed on drag start.
+                Box(
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .pointerInput(card.cardId) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        controller.onDragStart(card.cardId)
+                                    },
+                                    onDragEnd = { performDragEnd() },
+                                    onDragCancel = { performDragEnd() },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        controller.onDrag(dragAmount, deleteZoneTopPx)
+                                    },
+                                )
+                            },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.DragIndicator,
+                        contentDescription = stringResource(R.string.accessibility_drag_to_reorder),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {

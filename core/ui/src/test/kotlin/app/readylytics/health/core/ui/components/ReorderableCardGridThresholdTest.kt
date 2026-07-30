@@ -1,22 +1,51 @@
 package app.readylytics.health.core.ui.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.components.reorder.DragController
+import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Integration tests verifying that ReorderableCardGrid wires bounds → DragController
- * → center-cross detection correctly.
+ * → center-cross detection correctly, and that drag-gesture detection is isolated to the
+ * per-card drag handle (Task 8) rather than the whole card body.
  *
  * Detailed algorithm unit tests live in DragControllerTest. These tests focus on
  * the integration contract: correct bounds registration leads to correct detection.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class ReorderableCardGridThresholdTest {
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
     private lateinit var controller: DragController
 
     @Before
@@ -81,5 +110,95 @@ class ReorderableCardGridThresholdTest {
         val order = ctrl.pendingOrder
         assertEquals(CardId.HRV, order[0])
         assertEquals(CardId.SLEEP_SCORE, order[1])
+    }
+
+    // -------------------------------------------------------------------------
+    // Drag-handle isolation (Task 8): the long-press-drag gesture detector lives only on the
+    // per-card drag handle icon now, not on the whole card body/root grid. A long press+drag
+    // starting elsewhere on the card (e.g. the upper-right display-mode selector) must never
+    // reach the DragController; the same gesture starting on the handle must.
+    // -------------------------------------------------------------------------
+
+    private fun fakeCardDataMap(): CardDataMap =
+        CardDataMap(
+            mapOf<CardId, @Composable (CardConfiguration) -> Unit>(
+                CardId.SLEEP_SCORE to { _ ->
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Stand-in for the upper-right display-mode selector on a real metric card.
+                        IconButton(
+                            onClick = {},
+                            modifier =
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(48.dp)
+                                    .testTag("fake_selector"),
+                        ) {
+                            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "selector")
+                        }
+                    }
+                },
+                CardId.HRV to { _ -> Box(modifier = Modifier.fillMaxSize()) { Text("HRV") } },
+            ),
+        )
+
+    private fun fakeCardConfigurations(): CardConfigurationsList =
+        CardConfigurationsList(
+            listOf(
+                CardConfiguration(cardId = CardId.SLEEP_SCORE, isVisible = true, position = 0),
+                CardConfiguration(cardId = CardId.HRV, isVisible = true, position = 1),
+            ),
+        )
+
+    @Test
+    fun longPressDragOnSelectorArea_doesNotStartControllerDrag() {
+        val gridController = DragController(listOf(CardId.SLEEP_SCORE, CardId.HRV))
+
+        composeTestRule.setContent {
+            ReorderableCardGrid(
+                cardConfigurations = fakeCardConfigurations(),
+                cardDataMap = fakeCardDataMap(),
+                isEditing = true,
+                onCardRemove = {},
+                onCardReorder = {},
+                controller = gridController,
+            )
+        }
+
+        composeTestRule.onNodeWithTag("fake_selector").performTouchInput {
+            down(center)
+            advanceEventTime(600)
+            moveBy(Offset(0f, 100f))
+            up()
+        }
+        composeTestRule.waitForIdle()
+
+        assertNull(gridController.draggedCardId)
+    }
+
+    @Test
+    fun longPressDragOnHandle_startsControllerDragForThatCard() {
+        val gridController = DragController(listOf(CardId.SLEEP_SCORE, CardId.HRV))
+
+        composeTestRule.setContent {
+            ReorderableCardGrid(
+                cardConfigurations = fakeCardConfigurations(),
+                cardDataMap = fakeCardDataMap(),
+                isEditing = true,
+                onCardRemove = {},
+                onCardReorder = {},
+                controller = gridController,
+            )
+        }
+
+        // Both displayable cards render their own handle with the same content description;
+        // the first in composition/display order belongs to SLEEP_SCORE (position 0).
+        composeTestRule.onAllNodesWithContentDescription("Drag to reorder")[0].performTouchInput {
+            down(center)
+            advanceEventTime(600)
+            moveBy(Offset(0f, 100f))
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(CardId.SLEEP_SCORE, gridController.draggedCardId)
     }
 }

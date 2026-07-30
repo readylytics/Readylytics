@@ -41,6 +41,7 @@ import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.model.InsightType
 import kotlinx.coroutines.launch
@@ -104,6 +105,7 @@ fun DashboardRoute(
         onCardVisibilityChanged = viewModel::onToggleCardVisibility,
         onReorderCards = viewModel::onReorderCards,
         onResetToDefaults = viewModel::onResetToDefaults,
+        onCardDisplayModeChanged = viewModel::onCardDisplayModeChanged,
         onDismissInsight = { viewModel.onEvent(DashboardEvent.DismissInsight(it)) },
         onRestoreInsights = { viewModel.onEvent(DashboardEvent.RestoreInsights) },
         onOpenInsight = onOpenInsight,
@@ -136,6 +138,7 @@ fun DashboardScreen(
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
     onDismissInsight: (InsightType) -> Unit = {},
@@ -260,6 +263,7 @@ fun DashboardScreen(
                                     onDismissInsight = onDismissInsight,
                                     onRestoreInsights = onRestoreInsights,
                                     onOpenInsight = onOpenInsight,
+                                    onCardDisplayModeChanged = onCardDisplayModeChanged,
                                     insightsCard = insightsCard,
                                 ),
                             )
