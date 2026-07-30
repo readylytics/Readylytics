@@ -47,7 +47,6 @@ import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
 import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
-import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
@@ -66,6 +65,7 @@ import app.readylytics.health.feature.settings.data.SyncSettingsSection
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private fun openOssLicenses(
     context: Context,

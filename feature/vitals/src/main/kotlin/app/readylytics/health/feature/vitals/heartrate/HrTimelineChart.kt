@@ -52,7 +52,6 @@ import app.readylytics.health.core.ui.components.DayTimelineScale
 import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
 import app.readylytics.health.core.ui.components.hrZoneColors
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.feature.vitals.R
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

@@ -38,7 +38,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.data.preferences.Gender
@@ -49,6 +48,7 @@ import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SettingsExpandState
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun HeartRateZoneSection(

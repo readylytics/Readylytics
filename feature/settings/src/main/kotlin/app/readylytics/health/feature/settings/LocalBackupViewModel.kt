@@ -3,7 +3,6 @@ package app.readylytics.health.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupService
@@ -35,6 +34,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel

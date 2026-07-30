@@ -46,7 +46,6 @@ import androidx.core.net.toUri
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
-import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.domain.backup.BackupFileInfo
@@ -55,6 +54,7 @@ import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import java.text.DateFormat
 import java.util.Date
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun LocalBackupSection(

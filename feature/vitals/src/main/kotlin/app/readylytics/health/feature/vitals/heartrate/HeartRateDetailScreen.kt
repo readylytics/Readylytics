@@ -92,7 +92,10 @@ fun HeartRateDetailScreen(
                 title = { Text(stringResource(app.readylytics.health.core.ui.R.string.heart_rate_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreUiR.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiR.string.back),
+                        )
                     }
                 },
             )

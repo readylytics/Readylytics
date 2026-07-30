@@ -6,7 +6,6 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.WeightHistoryItem
-import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
@@ -16,7 +15,6 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
-import app.readylytics.health.feature.vitals.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +27,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 data class WeightDetailUiState(
     val latestWeight: Float? = null,

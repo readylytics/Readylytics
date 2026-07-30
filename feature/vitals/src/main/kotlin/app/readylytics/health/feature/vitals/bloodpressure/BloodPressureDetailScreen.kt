@@ -35,12 +35,12 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun BloodPressureDetailRoute(
@@ -79,7 +79,10 @@ fun BloodPressureDetailScreen(
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreUiR.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiR.string.back),
+                        )
                     }
                 },
             )

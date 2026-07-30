@@ -6,7 +6,6 @@ import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
@@ -31,6 +30,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 data class BodyFatDetailUiState(
     val latestBodyFat: Float? = null,
