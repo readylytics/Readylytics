@@ -141,6 +141,8 @@ class DashboardViewModel
                     date = selectedDate,
                     lastSleepSession = sessionSummary,
                     rasSummaries = basicInputs.rasSummaries,
+                    circadianResult = basicInputs.circadianResult,
+                    heartRateSummary = hrSummary,
                 )
 
             val cards = cardsResult.getOrNull()

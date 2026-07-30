@@ -31,6 +31,7 @@ class DashboardMetricPresentationFactoryTest {
         factory = DashboardMetricPresentationFactory(resourceProvider, getWorkoutMetricsUseCase)
         every { resourceProvider.getString(any()) } returns "mock_string"
         every { resourceProvider.getString(any(), any()) } returns "BMI mock_string"
+every { resourceProvider.getString(any(), any(), any()) } returns "BMI mock_string"
     }
 
     private fun summary(weightKg: Float? = null, bodyFatPercent: Float? = null) = DailySummary(

@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard
 
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
@@ -84,7 +85,7 @@ fun buildCardDataMap(
                     status = sleepScoreCard?.status,
                     deltaText =
                         formatRoundedScoreDelta(
-                            currentRounded = sleepScoreCard?.valueText?.toIntOrNull(),
+                            currentRounded = (sleepScoreCard?.visual as? app.readylytics.health.feature.dashboard.DashboardMetricVisual.Score)?.rawValue?.roundToInt(),
                             previousRounded = uiState.yesterdaySleepScoreRounded,
                         ).resolveOrNull(),
                     onClick = if (isEditing) ({}) else onNavigateToSleep,
@@ -100,7 +101,7 @@ fun buildCardDataMap(
             skeleton = { ScoreDialSkeleton() },
             content = {
                 val readinessCard = uiState.cardDataMap[CardId.READINESS]
-                val readinessVal = readinessCard?.valueText?.toFloatOrNull()
+                val readinessVal = (readinessCard?.visual as? app.readylytics.health.feature.dashboard.DashboardMetricVisual.Score)?.rawValue
                 val readinessDelta =
                     formatRoundedScoreDelta(
                         currentRounded = readinessVal?.toInt(),

@@ -92,11 +92,26 @@ class DashboardMetricPresentationFactory @Inject constructor(
             scaleAvailable = isHeightValid,
             unavailableReason = if (!isHeightValid) DashboardMetricUnavailableReason.MISSING_BMI else null
         )
+        val bmiStatus = bmi?.let { app.readylytics.health.domain.model.BodyCompositionAssessment.assessBmi(it).status }
+        val categoryStr = bmiStatus?.let { status ->
+            resourceProvider.getString(
+                when (status) {
+                    app.readylytics.health.domain.model.BmiStatus.Optimal -> app.readylytics.health.feature.dashboard.R.string.bmi_optimal
+                    app.readylytics.health.domain.model.BmiStatus.Neutral -> app.readylytics.health.feature.dashboard.R.string.bmi_neutral
+                    app.readylytics.health.domain.model.BmiStatus.Warning -> app.readylytics.health.feature.dashboard.R.string.bmi_warning
+                    app.readylytics.health.domain.model.BmiStatus.Poor -> app.readylytics.health.feature.dashboard.R.string.bmi_poor
+                }
+            )
+        }
+        val bmiSecondary = if (bmi != null && categoryStr != null) {
+            resourceProvider.getString(app.readylytics.health.core.ui.R.string.bmi_secondary_text, String.format(java.util.Locale.getDefault(), "%.1f", bmi), categoryStr)
+        } else null
+        
         map[CardId.WEIGHT] = DashboardMetricPresentation(
             title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_weight),
             valueText = m?.weightKgDisplay?.replace(" kg", "")?.replace(" lbs", "") ?: "—",
             unitText = if (preferences.unitSystem == app.readylytics.health.domain.preferences.UnitSystem.METRIC) "kg" else "lbs",
-            secondaryText = bmi?.let { resourceProvider.getString(app.readylytics.health.core.ui.R.string.bmi_secondary_text, String.format("%.1f", it)) },
+            secondaryText = bmiSecondary,
             status = weightVisual.getResolvedStatus(),
             tooltip = "",
             accessibilityDescription = "",
@@ -111,11 +126,12 @@ class DashboardMetricPresentationFactory @Inject constructor(
         } else {
             MetricStatus.NEUTRAL
         }
+        val bodyFatAssessment = bodyFatPercent?.let { app.readylytics.health.domain.model.BodyCompositionAssessment.assessBodyFat(it, preferences.physiologyProfile, preferences.gender) }
         val bodyFatVisual = DashboardMetricScalePreparer.referenceRange(
             value = bodyFatPercent,
-            minimum = 0f,
-            midpoint = bodyFatMidpoint,
-            maximum = 40f,
+            minimum = bodyFatAssessment?.reference?.axisMinimum ?: 0f,
+            midpoint = bodyFatAssessment?.reference?.referenceMidpoint ?: 20f,
+            maximum = bodyFatAssessment?.reference?.axisMaximum ?: 40f,
             bands = emptyList(),
             scaleAvailable = true,
             unavailableReason = null
@@ -156,14 +172,20 @@ class DashboardMetricPresentationFactory @Inject constructor(
         )
         
         // 6. HRV
+        val hrvBaseline = m?.hrvBaselineMeanRaw
         val hrvStatus = if (summary?.nocturnalHrv != null) MetricStatus.OPTIMAL else MetricStatus.NEUTRAL
+        val hrvPoorRatio = preferences.hrvWarningThreshold - (1f - preferences.hrvWarningThreshold)
         val hrvVisual = DashboardMetricScalePreparer.personalBaseline(
             value = summary?.nocturnalHrv?.toFloat(),
             baseline = m?.hrvBaselineMeanRaw,
-            axisMinimumRatio = 0.5f,
-            axisMaximumRatio = 1.5f,
-            bands = emptyList(),
-            baselineReady = true
+            axisMinimumRatio = hrvPoorRatio,
+            axisMaximumRatio = 1f + (1f - hrvPoorRatio),
+            bands = if (hrvBaseline != null) listOf(
+                RawMetricBand(hrvBaseline * hrvPoorRatio, hrvBaseline * preferences.hrvWarningThreshold, MetricStatus.WARNING),
+                RawMetricBand(hrvBaseline * preferences.hrvWarningThreshold, hrvBaseline * preferences.hrvOptimalThreshold, MetricStatus.NEUTRAL),
+                RawMetricBand(hrvBaseline * preferences.hrvOptimalThreshold, hrvBaseline * (1f + (1f - hrvPoorRatio)), MetricStatus.OPTIMAL)
+            ) else emptyList(),
+            baselineReady = summary?.isCalibrating == false && hrvBaseline != null && hrvBaseline > 0f
         )
         map[CardId.HRV] = DashboardMetricPresentation(
             title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_hrv),
@@ -177,14 +199,20 @@ class DashboardMetricPresentationFactory @Inject constructor(
         )
         
         // 7. SLEEP RHR
+        val rhrBaseline = m?.rhrBaselineRaw
         val sleepRhrStatus = if (summary?.restingHeartRate != null) MetricStatus.OPTIMAL else MetricStatus.NEUTRAL
+        val rhrPoorRatio = preferences.rhrWarningThreshold + (preferences.rhrWarningThreshold - 1f)
         val sleepRhrVisual = DashboardMetricScalePreparer.personalBaseline(
             value = summary?.restingHeartRate?.toFloat(),
             baseline = m?.rhrBaselineRaw,
-            axisMinimumRatio = 0.5f,
-            axisMaximumRatio = 1.5f,
-            bands = emptyList(),
-            baselineReady = true
+            axisMinimumRatio = 1f - (rhrPoorRatio - 1f),
+            axisMaximumRatio = rhrPoorRatio,
+            bands = if (rhrBaseline != null) listOf(
+                RawMetricBand(rhrBaseline * (1f - (rhrPoorRatio - 1f)), rhrBaseline * preferences.rhrOptimalThreshold, MetricStatus.OPTIMAL),
+                RawMetricBand(rhrBaseline * preferences.rhrOptimalThreshold, rhrBaseline * preferences.rhrWarningThreshold, MetricStatus.NEUTRAL),
+                RawMetricBand(rhrBaseline * preferences.rhrWarningThreshold, rhrBaseline * rhrPoorRatio, MetricStatus.WARNING)
+            ) else emptyList(),
+            baselineReady = summary?.isCalibrating == false && rhrBaseline != null && rhrBaseline > 0f
         )
         map[CardId.SLEEP_RHR] = DashboardMetricPresentation(
             title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_sleep_rhr),
@@ -202,10 +230,14 @@ class DashboardMetricPresentationFactory @Inject constructor(
         val rhrVisual = DashboardMetricScalePreparer.personalBaseline(
             value = summary?.restingHeartRate?.toFloat(),
             baseline = m?.rhrBaselineRaw,
-            axisMinimumRatio = 0.5f,
-            axisMaximumRatio = 1.5f,
-            bands = emptyList(),
-            baselineReady = true
+            axisMinimumRatio = 1f - (rhrPoorRatio - 1f),
+            axisMaximumRatio = rhrPoorRatio,
+            bands = if (rhrBaseline != null) listOf(
+                RawMetricBand(rhrBaseline * (1f - (rhrPoorRatio - 1f)), rhrBaseline * preferences.rhrOptimalThreshold, MetricStatus.OPTIMAL),
+                RawMetricBand(rhrBaseline * preferences.rhrOptimalThreshold, rhrBaseline * preferences.rhrWarningThreshold, MetricStatus.NEUTRAL),
+                RawMetricBand(rhrBaseline * preferences.rhrWarningThreshold, rhrBaseline * rhrPoorRatio, MetricStatus.WARNING)
+            ) else emptyList(),
+            baselineReady = summary?.isCalibrating == false && rhrBaseline != null && rhrBaseline > 0f
         )
         map[CardId.RESTING_HR] = DashboardMetricPresentation(
             title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_resting_hr),
@@ -223,7 +255,7 @@ class DashboardMetricPresentationFactory @Inject constructor(
         val rasStatus = if (rasVal != null) {
             if (rasVal >= 10f) MetricStatus.OPTIMAL else MetricStatus.WARNING
         } else MetricStatus.NEUTRAL
-        val rasVisual = DashboardMetricScalePreparer.score(rasVal, 0f, 100f, emptyList())
+        val rasVisual = DashboardMetricScalePreparer.score(rasVal, 0f, 100f, listOf(RawMetricBand(0f, 50f, MetricStatus.POOR), RawMetricBand(50f, 75f, MetricStatus.WARNING), RawMetricBand(75f, 100f, MetricStatus.OPTIMAL)))
         map[CardId.RAS_DAILY] = DashboardMetricPresentation(
             title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_ras),
             valueText = m?.rasRounded?.toString() ?: "—",
@@ -247,7 +279,7 @@ class DashboardMetricPresentationFactory @Inject constructor(
         } else MetricStatus.NEUTRAL
         
         val effValText = if (efficiency == null) "—" else if (efficiency == 0f) "0" else String.format(Locale.getDefault(), "%.0f", efficiency * 100)
-        val effVisual = DashboardMetricScalePreparer.score((efficiency ?: 0f) * 100f, 0f, 100f, emptyList())
+        val effVisual = DashboardMetricScalePreparer.score((efficiency ?: 0f) * 100f, 0f, 100f, listOf(RawMetricBand(0f, 70f, MetricStatus.POOR), RawMetricBand(70f, 80f, MetricStatus.WARNING), RawMetricBand(80f, 85f, MetricStatus.NEUTRAL), RawMetricBand(85f, 100f, MetricStatus.OPTIMAL)))
         map[CardId.SLEEP_EFFICIENCY] = DashboardMetricPresentation(
             title = resourceProvider.getString(app.readylytics.health.core.ui.R.string.card_title_sleep_efficiency),
             valueText = effValText,
@@ -328,7 +360,7 @@ class DashboardMetricPresentationFactory @Inject constructor(
             status = MetricStatus.NEUTRAL,
             tooltip = "",
             accessibilityDescription = "",
-            visual = DashboardMetricScalePreparer.score(circReady?.score?.toFloat(), 0f, 100f, emptyList())
+            visual = DashboardMetricScalePreparer.score(circReady?.score?.toFloat(), 0f, 100f, listOf(RawMetricBand(0f, 40f, MetricStatus.POOR), RawMetricBand(40f, 60f, MetricStatus.WARNING), RawMetricBand(60f, 80f, MetricStatus.NEUTRAL), RawMetricBand(80f, 100f, MetricStatus.OPTIMAL)))
         )
         
         // 15. STRAIN RATIO
@@ -340,7 +372,7 @@ class DashboardMetricPresentationFactory @Inject constructor(
             status = MetricStatus.NEUTRAL,
             tooltip = "",
             accessibilityDescription = "",
-            visual = DashboardMetricScalePreparer.score(m?.strainRatioRaw, 0f, 2f, emptyList())
+            visual = DashboardMetricScalePreparer.score(m?.strainRatioRaw, 0f, 2f, listOf(RawMetricBand(0f, 0.5f, MetricStatus.POOR), RawMetricBand(0.5f, 0.8f, MetricStatus.WARNING), RawMetricBand(0.8f, 1.3f, MetricStatus.OPTIMAL), RawMetricBand(1.3f, 1.5f, MetricStatus.WARNING), RawMetricBand(1.5f, 2.0f, MetricStatus.POOR)))
         )
 
         return map
