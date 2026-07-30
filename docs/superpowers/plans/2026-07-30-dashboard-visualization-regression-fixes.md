@@ -869,9 +869,10 @@ the same long-value typography branch from `M3ScoreGaugeCard`. Add the
 20 dp centered footer and original M3 `Surface` delta chip when
 `secondaryText` is non-blank.
 
-Remove `metricStatusColor`, `LocalStatusColors`, all band mapping, all
-`M3GaugeSegment` references, and all manual reference/baseline behavior from
-the renderer.
+Remove all Gauge-specific band mapping, `M3GaugeSegment` references, and
+manual reference/baseline behavior. Retain `metricStatusColor` and
+`LocalStatusColors` until Task 5 removes the still-segmented Bar renderer;
+deleting them in this task would break that unfinished caller.
 
 - [ ] **Step 5: Run Gauge tests and confirm GREEN**
 
