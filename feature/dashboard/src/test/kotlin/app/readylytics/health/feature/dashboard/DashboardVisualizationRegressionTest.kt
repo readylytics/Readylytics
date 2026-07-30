@@ -15,6 +15,7 @@ import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,6 +95,83 @@ class DashboardVisualizationRegressionTest {
         composeRule.onNodeWithText("ms").assertIsDisplayed()
         composeRule.onNodeWithText("↓ 2").assertIsDisplayed()
         composeRule.onNodeWithText("Normal").assertDoesNotExist()
+    }
+
+    @Test
+    fun barMode_keepsValueUnitAndDeltaOutsideTrack_withoutStatusOrMarker() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.BAR,
+            presentation =
+                presentation.copy(
+                    valueText = "48",
+                    unitText = "bpm",
+                    secondaryText = "↓ 1",
+                    accessibilityDescription = "Resting heart rate 48 bpm, optimal.",
+                ),
+        )
+
+        composeRule.onNodeWithText("48").assertIsDisplayed()
+        composeRule.onNodeWithText("bpm").assertIsDisplayed()
+        composeRule.onNodeWithText("↓ 1").assertIsDisplayed()
+        composeRule.onNodeWithText("Optimal").assertDoesNotExist()
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+
+        assertTextIsAboveBar("48")
+        assertTextIsAboveBar("bpm")
+        assertTextIsBelowBar("↓ 1")
+    }
+
+    @Test
+    fun barMode_keepsSleepDurationOutsideTrack() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.BAR,
+            presentation =
+                presentation.copy(
+                    valueText = "6h 50m",
+                    unitText = "",
+                    accessibilityDescription = "Sleep duration 6 hours 50 minutes.",
+                ),
+        )
+
+        composeRule.onNodeWithText("6h 50m").assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTextIsAboveBar("6h 50m")
+    }
+
+    @Test
+    fun barMode_keepsHrvValueAndUnitOutsideTrack() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.BAR,
+            presentation =
+                presentation.copy(
+                    valueText = "41",
+                    unitText = "ms",
+                    accessibilityDescription = "HRV 41 milliseconds, normal.",
+                ),
+        )
+
+        composeRule.onNodeWithText("41").assertIsDisplayed()
+        composeRule.onNodeWithText("ms").assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTextIsAboveBar("41")
+        assertTextIsAboveBar("ms")
+    }
+
+    @Test
+    fun barMode_keepsScoreOutsideTrack() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.BAR,
+            presentation =
+                presentation.copy(
+                    valueText = "86",
+                    unitText = "",
+                    accessibilityDescription = "Sleep score 86, optimal.",
+                ),
+        )
+
+        composeRule.onNodeWithText("86").assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTextIsAboveBar("86")
     }
 
     @Test
@@ -181,6 +259,40 @@ class DashboardVisualizationRegressionTest {
                 )
             }
         }
+    }
+
+    private fun assertTextIsAboveBar(text: String) {
+        val textBounds =
+            composeRule
+                .onNodeWithText(text, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val barBounds =
+            composeRule
+                .onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        assertTrue(
+            "$text must not overlap the Bar track: text=$textBounds, bar=$barBounds",
+            textBounds.bottom <= barBounds.top,
+        )
+    }
+
+    private fun assertTextIsBelowBar(text: String) {
+        val textBounds =
+            composeRule
+                .onNodeWithText(text, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val barBounds =
+            composeRule
+                .onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        assertTrue(
+            "$text must stay below the Bar track: text=$textBounds, bar=$barBounds",
+            textBounds.top >= barBounds.bottom,
+        )
     }
 }
 

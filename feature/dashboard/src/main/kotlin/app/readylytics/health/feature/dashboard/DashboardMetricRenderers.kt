@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,12 +26,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.readylytics.health.core.designsystem.LocalStatusColors
-import app.readylytics.health.core.designsystem.StatusColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.M3MetricGauge
 import app.readylytics.health.core.ui.components.gaugeColor
-import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.core.ui.components.metricVisualizationTrackColor
 
 internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
 internal const val DASHBOARD_GAUGE_TAG = "dashboard_metric_gauge"
@@ -44,25 +43,6 @@ internal fun DashboardMetricVisual.progressFraction(): Float? =
         is DashboardMetricVisual.ReferenceRange -> markerFraction
         is DashboardMetricVisual.ValueOnly -> null
     }
-
-fun metricStatusColor(
-    status: MetricStatus,
-    statusColors: StatusColors,
-    surfaceVariant: Color,
-): Color =
-    when (status) {
-        MetricStatus.OPTIMAL -> statusColors.optimal
-        MetricStatus.NEUTRAL -> statusColors.neutral
-        MetricStatus.WARNING -> statusColors.warning
-        MetricStatus.POOR -> statusColors.poor
-        MetricStatus.NO_DATA, MetricStatus.CALIBRATING -> surfaceVariant
-    }
-
-@Composable
-fun metricStatusColor(
-    status: MetricStatus,
-    surfaceVariant: Color = MaterialTheme.colorScheme.surfaceVariant,
-): Color = metricStatusColor(status, LocalStatusColors.current, surfaceVariant)
 
 @Composable
 fun DashboardGaugeRenderer(
@@ -168,56 +148,51 @@ fun DashboardBarRenderer(
     presentation: DashboardMetricPresentation,
     modifier: Modifier = Modifier,
 ) {
-    val isUnavailable =
-        presentation.visual.let {
-            when (it) {
-                is DashboardMetricVisual.Score -> it.unavailableReason != null
-                is DashboardMetricVisual.Goal -> it.unavailableReason != null
-                is DashboardMetricVisual.PersonalBaseline -> it.unavailableReason != null
-                is DashboardMetricVisual.ReferenceRange -> it.unavailableReason != null
-                is DashboardMetricVisual.ValueOnly -> false
+    val progressFraction = presentation.visual.progressFraction()
+    val activeColor =
+        if (progressFraction == null) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            presentation.status.gaugeColor()
+        }
+    val trackColor = metricVisualizationTrackColor()
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+        ) {
+            Text(
+                text = presentation.valueText,
+                style = MaterialTheme.typography.headlineMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (presentation.unitText.isNotBlank()) {
+                Text(
+                    text = presentation.unitText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
 
-    val bands =
-        when (val v = presentation.visual) {
-            is DashboardMetricVisual.Score -> v.bands
-            is DashboardMetricVisual.Goal -> v.bands
-            is DashboardMetricVisual.PersonalBaseline -> v.bands
-            is DashboardMetricVisual.ReferenceRange -> v.bands
-            is DashboardMetricVisual.ValueOnly -> emptyList()
-        }
+        Spacer(modifier = Modifier.weight(1f))
 
-    val markerFraction =
-        when (val v = presentation.visual) {
-            is DashboardMetricVisual.Score -> v.markerFraction
-            is DashboardMetricVisual.Goal -> v.markerFraction
-            is DashboardMetricVisual.PersonalBaseline -> v.markerFraction
-            is DashboardMetricVisual.ReferenceRange -> v.markerFraction
-            is DashboardMetricVisual.ValueOnly -> null
-        }
-
-    val activeColor =
-        if (isUnavailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
-    val trackColor =
-        if (isUnavailable) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.outlineVariant
-
-    val statusColors = LocalStatusColors.current
-    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
-    val bandColorMap =
-        bands.associateWith { band ->
-            if (isUnavailable) trackColor else metricStatusColor(band.status, statusColors, surfaceVariantColor)
-        }
-
-    Box(
-        modifier = modifier.fillMaxWidth().height(100.dp).testTag(DASHBOARD_BAR_TAG),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(24.dp).padding(horizontal = 16.dp)) {
-            val strokeWidth = size.height
+        Canvas(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .padding(horizontal = MaterialTheme.spacing.extraSmall)
+                    .testTag(DASHBOARD_BAR_TAG),
+        ) {
+            val strokeWidth = 8.dp.toPx()
             val startY = size.height / 2
 
-            // Base track
             drawLine(
                 color = trackColor,
                 start = Offset(0f, startY),
@@ -226,48 +201,28 @@ fun DashboardBarRenderer(
                 cap = StrokeCap.Round,
             )
 
-            // Bands
-            bands.forEach { band ->
-                val bandColor = bandColorMap[band] ?: trackColor
-                drawLine(
-                    color = bandColor,
-                    start = Offset(size.width * band.startFraction, startY),
-                    end = Offset(size.width * band.endFraction, startY),
-                    strokeWidth = strokeWidth,
-                    cap = StrokeCap.Round,
-                )
-            }
-
-            // Progress (for Score/Goal)
-            val shouldDrawProgress =
-                presentation.visual is DashboardMetricVisual.Score || presentation.visual is DashboardMetricVisual.Goal
-            if (shouldDrawProgress && markerFraction != null) {
+            progressFraction?.coerceIn(0f, 1f)?.takeIf { it > 0f }?.let { activeFraction ->
                 drawLine(
                     color = activeColor,
                     start = Offset(0f, startY),
-                    end = Offset(size.width * markerFraction, startY),
+                    end = Offset(size.width * activeFraction, startY),
                     strokeWidth = strokeWidth,
                     cap = StrokeCap.Round,
-                )
-            }
-
-            // Marker dot
-            if (markerFraction != null) {
-                drawCircle(
-                    color = activeColor,
-                    radius = strokeWidth / 2 + 4.dp.toPx(),
-                    center = Offset(size.width * markerFraction, startY),
                 )
             }
         }
 
-        val textColor =
-            if (isUnavailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-        Text(
-            text = presentation.valueText,
-            style = MaterialTheme.typography.headlineLarge,
-            color = textColor,
-        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
+
+        presentation.secondaryText?.let { secondary ->
+            Text(
+                text = secondary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
