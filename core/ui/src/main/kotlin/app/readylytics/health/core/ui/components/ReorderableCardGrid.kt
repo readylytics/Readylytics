@@ -38,6 +38,8 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -406,10 +408,21 @@ private fun ReorderableCardItem(
                 // taps/menus elsewhere on the card (e.g. the display-mode selector) never start
                 // a drag. Because the handle already identifies its own card, no bounds hit-test
                 // is needed on drag start.
+                //
+                // The contentDescription lives on this 48dp Box (not the inner Icon): there is no
+                // mergeDescendants/clickable/toggleable anywhere in this handle, so a description
+                // on the Icon alone would resolve, in the a11y tree, to the Icon's own leaf node —
+                // which lays out at the vector's intrinsic size (~24dp), not this enclosing 48dp
+                // touch target. Putting it here means onNodeWithContentDescription (and TalkBack)
+                // resolve directly to the actual 48dp target. The Icon itself is decorative under
+                // a described parent, so its own contentDescription stays null to avoid a
+                // double announcement.
+                val dragHandleDescription = stringResource(R.string.accessibility_drag_to_reorder)
                 Box(
                     modifier =
                         Modifier
                             .size(48.dp)
+                            .semantics { contentDescription = dragHandleDescription }
                             .pointerInput(card.cardId) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = {
@@ -428,7 +441,7 @@ private fun ReorderableCardItem(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.DragIndicator,
-                        contentDescription = stringResource(R.string.accessibility_drag_to_reorder),
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
