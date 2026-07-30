@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.dashboard
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,8 +20,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.StatusColors
 import app.readylytics.health.core.designsystem.spacing
@@ -29,6 +35,15 @@ import app.readylytics.health.domain.model.MetricStatus
 internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
 internal const val DASHBOARD_GAUGE_TAG = "dashboard_metric_gauge"
 internal const val DASHBOARD_BAR_TAG = "dashboard_metric_bar"
+
+internal fun DashboardMetricVisual.progressFraction(): Float? =
+    when (this) {
+        is DashboardMetricVisual.Score -> markerFraction
+        is DashboardMetricVisual.Goal -> markerFraction
+        is DashboardMetricVisual.PersonalBaseline -> markerFraction
+        is DashboardMetricVisual.ReferenceRange -> markerFraction
+        is DashboardMetricVisual.ValueOnly -> null
+    }
 
 fun metricStatusColor(
     status: MetricStatus,
@@ -55,47 +70,96 @@ fun DashboardGaugeRenderer(
     animateMarker: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val isUnavailable =
-        presentation.visual.let {
-            when (it) {
-                is DashboardMetricVisual.Score -> it.unavailableReason != null
-                is DashboardMetricVisual.Goal -> it.unavailableReason != null
-                is DashboardMetricVisual.PersonalBaseline -> it.unavailableReason != null
-                is DashboardMetricVisual.ReferenceRange -> it.unavailableReason != null
-                is DashboardMetricVisual.ValueOnly -> false
+    val markerFraction = presentation.visual.progressFraction()
+    val activeColor =
+        if (markerFraction == null) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            presentation.status.gaugeColor()
+        }
+
+    Column(
+        modifier = modifier.fillMaxWidth().testTag(DASHBOARD_GAUGE_TAG),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            M3MetricGauge(
+                markerFraction = markerFraction,
+                activeColor = activeColor,
+                animateMarker = animateMarker,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                val textStyle =
+                    if (presentation.valueText.length >= 6) {
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.3).sp,
+                        )
+                    } else {
+                        MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp,
+                        )
+                    }
+                Text(
+                    text = presentation.valueText,
+                    style = textStyle,
+                    color = activeColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+                Text(
+                    text = presentation.unitText.ifBlank { " " },
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+                    color =
+                        if (presentation.unitText.isNotBlank()) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        } else {
+                            Color.Transparent
+                        },
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
             }
         }
 
-    val activeColor =
-        if (isUnavailable) MaterialTheme.colorScheme.onSurfaceVariant else presentation.status.gaugeColor()
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.hairline))
 
-    val markerFraction =
-        when (val visual = presentation.visual) {
-            is DashboardMetricVisual.Score -> visual.markerFraction
-            is DashboardMetricVisual.Goal -> visual.markerFraction
-            is DashboardMetricVisual.PersonalBaseline -> visual.markerFraction
-            is DashboardMetricVisual.ReferenceRange -> visual.markerFraction
-            is DashboardMetricVisual.ValueOnly -> null
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
+                    Text(
+                        text = deltaText,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        modifier =
+                            Modifier.padding(
+                                horizontal = MaterialTheme.spacing.small,
+                                vertical = MaterialTheme.spacing.hairline,
+                            ),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
-
-    Box(
-        modifier = modifier.fillMaxWidth().testTag(DASHBOARD_GAUGE_TAG),
-        contentAlignment = Alignment.Center,
-    ) {
-        M3MetricGauge(
-            markerFraction = markerFraction,
-            activeColor = activeColor,
-            animateMarker = animateMarker,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        val textColor =
-            if (isUnavailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-        Text(
-            text = presentation.valueText,
-            style = MaterialTheme.typography.headlineLarge,
-            color = textColor,
-        )
     }
 }
 
