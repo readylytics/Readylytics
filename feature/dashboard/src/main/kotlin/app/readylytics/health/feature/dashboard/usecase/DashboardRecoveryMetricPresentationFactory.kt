@@ -197,13 +197,14 @@ internal class DashboardRecoveryMetricPresentationFactory(
             )
         val title = resourceProvider.getString(DashboardR.string.card_title_ras_daily)
         val valueText = metrics?.rasRounded?.toString() ?: "—"
+        val status = value.rasStatus()
 
         return DashboardMetricPresentation(
             title = title,
             valueText = valueText,
             unitText = "",
             secondaryText = null,
-            status = value.rasStatus(),
+            status = status,
             tooltip = resourceProvider.getString(CoreUiR.string.tooltip_ras),
             accessibilityDescription =
                 visual.unavailableReason?.let { unavailableDescription(title, it) }
@@ -212,7 +213,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
                         title,
                         valueText,
                         "100",
-                        classificationText(visual.getResolvedStatus()),
+                        classificationText(status),
                     ),
             visual = visual,
         )

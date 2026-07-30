@@ -85,7 +85,10 @@ class DashboardRecoveryMetricPresentationFactoryTest {
             resourceProvider.getString(DashboardR.string.tooltip_resting_hr_no_baseline)
         } returns "resting-hr-no-baseline"
         every { resourceProvider.getString(CoreUiR.string.tooltip_ras) } returns "ras-tooltip"
-        every { resourceProvider.getString(any(), any(), any()) } returns "22:51 → 06:02"
+        every { resourceProvider.getString(DashboardR.string.card_title_ras_daily) } returns "RAS"
+        every { resourceProvider.getString(CoreUiR.string.metric_status_warning) } returns "Warning"
+        every { resourceProvider.getString(CoreUiR.string.metric_status_neutral) } returns "Neutral"
+        every { resourceProvider.getString(CoreUiR.string.metric_status_optimal) } returns "Optimal"
     }
 
     @Test
@@ -124,20 +127,68 @@ class DashboardRecoveryMetricPresentationFactoryTest {
                 .toInstant()
                 .toEpochMilli()
         val session = SleepSessionSummary(0.9f, start, end)
+        every {
+            resourceProvider.getString(
+                DashboardR.string.sleep_session_time_range_format,
+                "22:51",
+                "06:02",
+            )
+        } returns "22:51 → 06:02"
 
         val cards = buildCards(baseSummary.copy(sleepDurationMinutes = 431), preferences, session)
 
-        assertTrue(
-            cards
-                .getValue(CardId.SLEEP_DURATION)
-                .secondaryText
-                .orEmpty()
-                .contains("→"),
+        assertEquals(
+            "22:51 → 06:02",
+            cards.getValue(CardId.SLEEP_DURATION).secondaryText,
         )
         assertTrue(cards.getValue(CardId.SLEEP_DURATION).tooltip.isNotBlank())
         assertTrue(cards.getValue(CardId.HRV).tooltip.isNotBlank())
         assertTrue(cards.getValue(CardId.RESTING_HR).tooltip.isNotBlank())
         assertTrue(cards.getValue(CardId.RAS_DAILY).tooltip.isNotBlank())
+    }
+
+    @Test
+    fun `RAS accessibility classification matches rendering status at boundaries`() {
+        data class Case(
+            val value: Int,
+            val expectedStatus: MetricStatus,
+            val expectedClassification: String,
+            val expectedDescription: String,
+        )
+
+        val cases =
+            listOf(
+                Case(50, MetricStatus.WARNING, "Warning", "RAS, 50 of 100, Warning"),
+                Case(75, MetricStatus.NEUTRAL, "Neutral", "RAS, 75 of 100, Neutral"),
+                Case(80, MetricStatus.NEUTRAL, "Neutral", "RAS, 80 of 100, Neutral"),
+                Case(100, MetricStatus.OPTIMAL, "Optimal", "RAS, 100 of 100, Optimal"),
+            )
+
+        cases.forEach { case ->
+            every {
+                resourceProvider.getString(
+                    DashboardR.string.semantics_score_format,
+                    "RAS",
+                    case.value.toString(),
+                    "100",
+                    case.expectedClassification,
+                )
+            } returns case.expectedDescription
+
+            val card =
+                buildCards(
+                    baseSummary.copy(totalRasWorkoutOnly = case.value.toFloat()),
+                    preferences,
+                    null,
+                ).getValue(CardId.RAS_DAILY)
+
+            assertEquals("RAS ${case.value} rendering status", case.expectedStatus, card.status)
+            assertEquals(
+                "RAS ${case.value} accessibility classification",
+                case.expectedDescription,
+                card.accessibilityDescription,
+            )
+        }
     }
 
     private fun buildCards(
