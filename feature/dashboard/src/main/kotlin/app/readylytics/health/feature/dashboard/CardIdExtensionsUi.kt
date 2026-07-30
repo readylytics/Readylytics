@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard
 
 import androidx.annotation.StringRes
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @get:StringRes
 val CardId.displayNameResId: Int
@@ -26,5 +27,5 @@ val CardId.displayNameResId: Int
             CardId.BODY_FAT -> R.string.card_title_body_fat
             CardId.BLOOD_PRESSURE -> R.string.card_title_blood_pressure
             CardId.OXYGEN_SATURATION -> R.string.card_title_oxygen_saturation
-            CardId.INSIGHTS -> R.string.card_title_insights
+            CardId.INSIGHTS -> CoreUiR.string.card_title_insights
         }

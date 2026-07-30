@@ -35,7 +35,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import app.readylytics.health.R
 import app.readylytics.health.core.ui.sync.SyncProgressScreen
 import app.readylytics.health.crashreport.CrashReportFileExport
 import app.readylytics.health.crashreport.GithubIssueIntentResult
@@ -326,10 +325,10 @@ fun MainNavHost(
                             InsightRerunCard(
                                 text =
                                     if (isEditing) {
-                                        stringResource(R.string.card_title_insights)
+                                        stringResource(CoreUiR.string.card_title_insights)
                                     } else {
                                         stringResource(
-                                            R.string.insight_restore_dismissed,
+                                            CoreUiR.string.insight_restore_dismissed,
                                             uiState.dismissedInsightCount,
                                         )
                                     },

@@ -11,7 +11,6 @@
     <string name="card_title_circadian_consistency">Circadian consistency</string>
     <string name="card_title_heart_rate">Heart Rate</string>
     <string name="card_title_hrv">HRV</string>
-    <string name="card_title_insights">Insights</string>
     <string name="card_title_oxygen_saturation">Oxygen saturation</string>
     <string name="card_title_ras">RAS</string>
     <string name="card_title_ras_daily">RAS daily</string>
@@ -26,8 +25,6 @@
     <string name="card_title_steps">Steps</string>
     
     <string name="card_title_weight">Weight</string>
-
-    <string name="error_sync_failed">Sync failed</string>
 
     <string name="manage_cards">Manage Cards</string>
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
