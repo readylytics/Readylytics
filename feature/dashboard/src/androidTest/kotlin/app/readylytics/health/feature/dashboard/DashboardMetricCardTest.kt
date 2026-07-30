@@ -291,7 +291,7 @@ class DashboardMetricCardTest {
     fun sleepScoreSemanticsCommunicateValueDenominatorAndClassification() {
         val classification = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
         val title = string(R.string.card_title_sleep_score)
-        val expectedDescription = "$title: 85 of 100, $classification"
+        val expectedDescription = string(R.string.semantics_score_format, title, "85", "100", classification)
 
         val presentation = defaultPresentation.copy(
             title = title,
@@ -317,7 +317,7 @@ class DashboardMetricCardTest {
     @Test
     fun sleepDurationSemanticsCommunicateValueAndTarget() {
         val title = string(R.string.card_title_sleep_duration)
-        val expectedDescription = "$title: 7h 30m, target 8h 0m"
+        val expectedDescription = string(R.string.semantics_goal_format, title, "7h 30m", "8h 0m")
 
         val presentation = defaultPresentation.copy(
             title = title,
@@ -344,7 +344,7 @@ class DashboardMetricCardTest {
     fun hrvSemanticsCommunicateValueAndPersonalRangeRelationship() {
         val title = string(R.string.card_title_hrv)
         val relation = string(R.string.personal_baseline_within_range_description)
-        val expectedDescription = "$title: 55 ms, $relation"
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "55 ms", relation)
 
         val presentation = defaultPresentation.copy(
             title = title,
@@ -380,7 +380,8 @@ class DashboardMetricCardTest {
         val title = string(R.string.card_title_weight)
         val bmiCategory = string(R.string.bmi_optimal)
         val bmiSecondary = string(app.readylytics.health.core.ui.R.string.bmi_secondary_text, "21.7")
-        val expectedDescription = "$title: 70 kg, $bmiSecondary, $bmiCategory"
+        val expectedDescription =
+            string(R.string.semantics_weight_bmi_format, title, "70 kg", bmiSecondary, bmiCategory)
 
         val presentation = defaultPresentation.copy(
             title = title,
@@ -417,7 +418,7 @@ class DashboardMetricCardTest {
     fun bodyFatSemanticsCommunicateValueAndCategory() {
         val title = string(R.string.card_title_body_fat)
         val category = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
-        val expectedDescription = "$title: 20%, $category"
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "20%", category)
 
         val presentation = defaultPresentation.copy(
             title = title,
@@ -453,7 +454,7 @@ class DashboardMetricCardTest {
     fun goalAboveTargetSemanticsCommunicateAboveTargetState() {
         val title = string(R.string.card_title_sleep_duration)
         val aboveTarget = string(R.string.goal_above_target_description)
-        val expectedDescription = "$title: 520, $aboveTarget"
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "520", aboveTarget)
 
         val goalVisual = DashboardMetricScalePreparer.goal(520f, 480f, emptyList())
         check(goalVisual.isAboveTarget) { "Fixture must exercise the above-target branch" }
@@ -483,7 +484,7 @@ class DashboardMetricCardTest {
     fun goalMissingTargetSemanticsCommunicateUnavailable() {
         val title = string(R.string.card_title_sleep_duration)
         val reason = string(app.readylytics.health.core.ui.R.string.metric_unavailable_missing_target)
-        val expectedDescription = "$title: $reason"
+        val expectedDescription = string(R.string.semantics_unavailable_format, title, reason)
 
         val presentation = defaultPresentation.copy(
             title = title,
@@ -510,7 +511,7 @@ class DashboardMetricCardTest {
     fun personalBaselineNotReadySemanticsCommunicateUnavailable() {
         val title = string(R.string.card_title_hrv)
         val reason = string(app.readylytics.health.core.ui.R.string.metric_unavailable_baseline_not_ready)
-        val expectedDescription = "$title: $reason"
+        val expectedDescription = string(R.string.semantics_unavailable_format, title, reason)
 
         val presentation = defaultPresentation.copy(
             title = title,
