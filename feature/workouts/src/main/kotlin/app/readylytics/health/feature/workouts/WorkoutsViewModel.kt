@@ -14,6 +14,7 @@ import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
@@ -25,7 +26,6 @@ import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.calculateDailyStrainIncrease
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,11 +45,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 data class WorkoutDisplayItem(
@@ -137,26 +135,36 @@ class WorkoutsViewModel
                     }
                 }.filterNotNull()
                 .distinctUntilChanged()
-                .flatMapLatest { params ->
+                .combine(settingsRepo.userPreferences) { params, prefs -> params to prefs }
+                .flatMapLatest { (params, prefs) ->
                     val range = params.range
                     val date = params.date
                     val page = params.page
-                    val earliestWorkoutMs = workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
-                    val zoneId = ZoneId.systemDefault()
-                    val earliestLocalDate =
-                        if (earliestWorkoutMs > 0) {
-                            Instant.ofEpochMilli(earliestWorkoutMs).atZone(zoneId).toLocalDate()
-                        } else {
-                            null
-                        }
+                    val zoneId = prefs.scoringZone()
 
-                    val displayFromMs = range.fromMs(date)
-                    val displayStartDayMs = displayFromMs.truncateToDayMs()
+                    val displayStartDayDate = date.minusDays(range.days.toLong() - 1)
+                    val displayStartDayMs =
+                        displayStartDayDate
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    val displayFromMs = displayStartDayMs
                     // Fetch extra history so chronic (42-day) window is valid from day 1 of the range.
-                    val fetchFromMs = displayStartDayMs - TimeUnit.DAYS.toMillis(ScoringConstants.CHRONIC_DAYS)
+                    val fetchFromMs =
+                        displayStartDayDate
+                            .minusDays(ScoringConstants.CHRONIC_DAYS)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
 
                     val selectedMidnightMs =
                         date
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    val selectedDayEndMs =
+                        date
+                            .plusDays(1)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
@@ -183,19 +191,28 @@ class WorkoutsViewModel
                             workoutRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(rasFromMs),
-                            settingsRepo.userPreferences,
-                        ) { latest, allWorkouts, trimpSummaries, rasSummaries, prefs ->
+                        ) { latest, allWorkouts, trimpSummaries, rasSummaries ->
                             WorkoutFlowData(latest, allWorkouts, trimpSummaries, rasSummaries, prefs)
                         }
 
                     dataFlow.flatMapLatest { data ->
                         flow {
+                            val earliestWorkoutMs =
+                                workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
+                            val earliestLocalDate =
+                                if (earliestWorkoutMs > 0) {
+                                    Instant
+                                        .ofEpochMilli(earliestWorkoutMs)
+                                        .atZone(zoneId)
+                                        .toLocalDate()
+                                } else {
+                                    null
+                                }
                             val (latest, allWorkouts, trimpSummaries, rasSummaries, prefs) = data
 
                             val filteredWorkouts =
                                 allWorkouts.filter {
-                                    it.startTime <
-                                        selectedMidnightMs + TimeUnit.DAYS.toMillis(1)
+                                    it.startTime < selectedDayEndMs
                                 }
                             val trimpByDate: Map<LocalDate, Float> =
                                 trimpSummaries.associate { summary ->
@@ -215,7 +232,7 @@ class WorkoutsViewModel
 
                             val displayDayMidnights =
                                 buildList<Long> {
-                                    var current = Instant.ofEpochMilli(displayStartDayMs).atZone(zoneId).toLocalDate()
+                                    var current = displayStartDayDate
                                     val end = date
                                     while (!current.isAfter(end)) {
                                         add(current.atStartOfDay(zoneId).toInstant().toEpochMilli())
@@ -223,12 +240,6 @@ class WorkoutsViewModel
                                     }
                                 }
 
-                            val displayStartDayDate =
-                                Instant
-                                    .ofEpochMilli(
-                                        displayStartDayMs,
-                                    ).atZone(zoneId)
-                                    .toLocalDate()
                             val ctlSeries =
                                 scoringCalculator.computeCtlEmaSeries(
                                     trimpByDate,
@@ -299,6 +310,7 @@ class WorkoutsViewModel
                                             getWorkoutDisplayMetricsUseCase.execute(
                                                 workout = workout,
                                                 samples = samples,
+                                                preferences = prefs,
                                             )
 
                                         WorkoutDisplayItem(
@@ -340,13 +352,6 @@ class WorkoutsViewModel
                                         LoadSourceMode.WORKOUT_ONLY -> {
                                             // Sum the already-rounded per-workout gains shown in History so the
                                             // card total always exactly matches the rows below it.
-                                            val selectedDayEndMs =
-                                                date
-                                                    .plusDays(
-                                                        1,
-                                                    ).atStartOfDay(zoneId)
-                                                    .toInstant()
-                                                    .toEpochMilli()
                                             val workoutOnlyGains =
                                                 recentItems
                                                     .filter {

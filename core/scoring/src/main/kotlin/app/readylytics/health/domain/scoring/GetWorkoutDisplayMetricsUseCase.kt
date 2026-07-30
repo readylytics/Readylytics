@@ -3,13 +3,14 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
 import kotlinx.coroutines.flow.first
 import java.time.Instant
-import java.time.ZoneId
 import javax.inject.Inject
 
 class GetWorkoutDisplayMetricsUseCase
@@ -23,8 +24,10 @@ class GetWorkoutDisplayMetricsUseCase
         suspend fun execute(
             workout: WorkoutData,
             samples: List<HeartRateSample>? = null,
+            preferences: UserPreferences? = null,
         ): WorkoutDisplayMetrics {
-            val zoneId = ZoneId.systemDefault()
+            val prefs = preferences ?: settingsRepo.userPreferences.first()
+            val zoneId = prefs.scoringZone()
             val workoutDate = Instant.ofEpochMilli(workout.startTime).atZone(zoneId).toLocalDate()
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = dailySummaryRepository.getByDate(midnight)
@@ -37,7 +40,6 @@ class GetWorkoutDisplayMetricsUseCase
                     .toEpochMilli()
 
             val historicalSummaries = dailySummaryRepository.getSince(fortyTwoDaysAgo)
-            val prefs = settingsRepo.userPreferences.first()
             val trimpByDate =
                 historicalSummaries.associate {
                     it.date to (LoadSourceSelector.selectTrimp(it, prefs.strainLoadSourceMode) ?: 0f)

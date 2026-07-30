@@ -37,10 +37,14 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.util.TimeZone
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutsViewModelTest {
@@ -110,6 +114,7 @@ class WorkoutsViewModelTest {
                     execute(
                         workout = any(),
                         samples = any(),
+                        preferences = any(),
                     )
                 } returns
                     WorkoutDisplayMetrics(
@@ -341,6 +346,7 @@ class WorkoutsViewModelTest {
                 getWorkoutDisplayMetricsUseCase.execute(
                     workout = workout,
                     samples = emptyList(),
+                    preferences = any(),
                 )
             } returns
                 WorkoutDisplayMetrics(
@@ -471,7 +477,11 @@ class WorkoutsViewModelTest {
                     .toEpochMilli()
 
             coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(workout = workout1, samples = emptyList())
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout1,
+                    samples = emptyList(),
+                    preferences = any(),
+                )
             } returns
                 WorkoutDisplayMetrics(
                     preciseTrimp = 20f,
@@ -490,7 +500,11 @@ class WorkoutsViewModelTest {
                         ),
                 )
             coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(workout = workout2, samples = emptyList())
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout2,
+                    samples = emptyList(),
+                    preferences = any(),
+                )
             } returns
                 WorkoutDisplayMetrics(
                     preciseTrimp = 25f,
@@ -556,6 +570,116 @@ class WorkoutsViewModelTest {
 
             // 1.5f - 1.2f = 0.3f
             assertEquals(0.3f, state.todayStrainIncrease!!, 0.001f)
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `scoring zone determines selected-day workout membership`() =
+        runTest(testDispatcher) {
+            val selectedDate = LocalDate.of(2026, 6, 9)
+            val zoneId = ZoneId.of("Pacific/Honolulu")
+            val originalDeviceZone = TimeZone.getDefault()
+            TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+            try {
+                selectedDateFlow.value = selectedDate
+                every { settingsRepo.userPreferences } returns
+                    MutableStateFlow(UserPreferences(scoringZoneId = "Pacific/Honolulu"))
+                val startTime = Instant.parse("2026-06-10T05:00:00Z").toEpochMilli()
+                val workout =
+                    WorkoutData(
+                        id = "zone-edge",
+                        startTime = startTime,
+                        endTime = startTime + 30 * 60_000L,
+                        exerciseType = "running",
+                        durationMinutes = 30,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 30f,
+                        avgHr = 120f,
+                    )
+                workoutsFlow.value = listOf(workout)
+                coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
+                    selectedDate
+                        .minusDays(10)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli()
+
+                viewModel = createViewModel()
+                val collectJob = launch { viewModel.uiState.collect {} }
+                testScheduler.advanceUntilIdle()
+
+                assertEquals(
+                    listOf("zone-edge"),
+                    viewModel.uiState.value.recentWorkouts
+                        .map { it.workout.id },
+                )
+
+                collectJob.cancelAndJoin()
+            } finally {
+                TimeZone.setDefault(originalDeviceZone)
+            }
+        }
+
+    @Test
+    fun `new workout history can cross seven-day tenure without resubscribing`() =
+        runTest(testDispatcher) {
+            val selectedDate = selectedDateFlow.value
+            val zoneId = ZoneId.systemDefault()
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returnsMany
+                listOf(
+                    selectedDate
+                        .minusDays(5)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                    selectedDate
+                        .minusDays(6)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                )
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+            assertNull(viewModel.uiState.value.todayStrainIncrease)
+
+            workoutsFlow.value =
+                listOf(
+                    WorkoutData(
+                        id = "prior-day",
+                        startTime =
+                            selectedDate
+                                .minusDays(1)
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli(),
+                        endTime =
+                            selectedDate
+                                .minusDays(1)
+                                .atStartOfDay(zoneId)
+                                .plusMinutes(30)
+                                .toInstant()
+                                .toEpochMilli(),
+                        exerciseType = "running",
+                        durationMinutes = 30,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 0f,
+                        avgHr = 0f,
+                    ),
+                )
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(0f, viewModel.uiState.value.todayStrainIncrease!!, 0.001f)
 
             collectJob.cancelAndJoin()
         }

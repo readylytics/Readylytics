@@ -35,6 +35,7 @@ class GetDashboardDataUseCase
             rasSummaries: List<DailySummary>,
             circadianResult: CircadianConsistencyResult? = null,
             heartRateSummary: HeartRateDaySummary? = null,
+            todayStrainIncrease: Float? = null,
         ): Result<DashboardCards> =
             try {
                 val cardDataMap =

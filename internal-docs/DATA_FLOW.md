@@ -395,8 +395,16 @@ out of `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/**`.
 | `RasCalculator`                    | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/RasCalculator.kt`                    | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyRas()` converts TRIMP → RAS via a profile scaling factor (capped at 75). |
 | `ComputeWorkoutTrimpUseCase`       | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ComputeWorkoutTrimpUseCase.kt`       | Per-workout integration over HR samples; reads the user-selected model from `prefs.trimpModel`.                                                                                                                                              |
 | `ComputeWorkoutLoadMetricsUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt` | Single per-workout load source for workout history/detail UI: resolves precise TRIMP + gained strain from DB-backed workout samples, then derives `WorkoutLoadClassification` from unrounded workout TRIMP and elapsed `durationMinutes`. **Base load** comes from total TRIMP, **intensity** comes from TRIMP/min, and intensity may promote load by at most one step; numeric TRIMP itself remains unchanged. |
-| `GetWorkoutDisplayMetricsUseCase`  | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/GetWorkoutDisplayMetricsUseCase.kt`  | Unified display metrics provider for workouts. Orchestrates 42-day history fetching and delegates calculations to `ComputeWorkoutLoadMetricsUseCase` to return UI-ready TRIMP/strain values plus derived overall-load and intensity labels. |
+| `GetWorkoutDisplayMetricsUseCase`  | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/GetWorkoutDisplayMetricsUseCase.kt`  | Unified display metrics provider for workouts. Orchestrates 42-day history fetching in the stored scoring timezone and delegates calculations to `ComputeWorkoutLoadMetricsUseCase` to return UI-ready TRIMP/strain values plus derived overall-load and intensity labels. Callers that already hold a preferences snapshot pass it through so history boundaries and calculation inputs cannot drift within one emission. |
 | `ScoringConfigFactory`             | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ScoringConfigFactory.kt`             | Threads `userPreferences.trimpModel` into the scoring config.                                                                                                                                                                                |
+
+Workout history and dashboard strain-increase observers use the same stored scoring-zone
+snapshot for selected-day boundaries, tenure guards, history fetches, workout date attribution,
+and per-workout display metrics. Their Room-backed flows remain subscribed while tenure is below
+the seven-day minimum, so newly ingested history can unlock a result without a screen restart.
+The dashboard observer fetches the selected day plus the preceding six days and the 42-day
+ATL/CTL lookback, then delegates the final delta to the pure scoring helper; it does not persist
+or independently render that value.
 
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart

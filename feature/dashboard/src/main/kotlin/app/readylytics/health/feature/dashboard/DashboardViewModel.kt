@@ -37,6 +37,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
+import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +70,7 @@ class DashboardViewModel
         private val dailyMetricCache: DailyMetricCache,
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
+        private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
@@ -104,8 +106,17 @@ class DashboardViewModel
                     dailySummaryRepository,
                 ),
                 createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
-            ) { basicInputs, cardState, hrSummary ->
-                transformToUiState(basicInputs, cardState, hrSummary)
+                observeDashboardStrainIncreaseUseCase(
+                    selectedDateRepository.selectedDate,
+                    settingsRepo.userPreferences,
+                ),
+            ) { basicInputs, cardState, hrSummary, todayStrainIncrease ->
+                transformToUiState(
+                    basicInputs,
+                    cardState,
+                    hrSummary,
+                    todayStrainIncrease,
+                )
             }.distinctUntilChanged()
                 .combine(createDashboardRealtimeStateFlow(foregroundSyncController)) { coreState, realtimeState ->
                     coreState.copy(
@@ -127,6 +138,7 @@ class DashboardViewModel
             basicInputs: DashboardBasicInputs,
             cardState: DashboardCardState,
             hrSummary: HeartRateDaySummary? = null,
+            todayStrainIncrease: Float? = null,
         ): DashboardUiState {
             val selectedDate = basicInputs.selectedDate
             val sessionSummary =
@@ -143,6 +155,7 @@ class DashboardViewModel
                     rasSummaries = basicInputs.rasSummaries,
                     circadianResult = basicInputs.circadianResult,
                     heartRateSummary = hrSummary,
+                    todayStrainIncrease = todayStrainIncrease,
                 )
 
             val cards = cardsResult.getOrNull()

@@ -66,6 +66,23 @@ class GetDashboardDataUseCaseTest {
     }
 
     @Test
+    fun `invoke accepts observer-supplied strain increase without changing card generation`() {
+        val prefs = mockk<UserPreferences>(relaxed = true)
+
+        val result =
+            useCase(
+                summary = null,
+                prefs = prefs,
+                date = LocalDate.of(2026, 7, 30),
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+                todayStrainIncrease = 0.23f,
+            )
+
+        assert(result.isSuccess)
+    }
+
+    @Test
     fun `invoke logs the throwable before returning CARD_GENERATION_ERROR`() {
         // HC-008: the failure path must not silently drop the exception that caused it.
         val loggedThrowables = mutableListOf<Throwable?>()

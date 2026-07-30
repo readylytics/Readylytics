@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRecordData
@@ -11,10 +11,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -33,16 +33,11 @@ class GetWorkoutDisplayMetricsUseCaseTest {
         )
 
     @Test
-    fun `executes calculations and fetches history correctly`() =
+    fun `executes calculations and fetches history in the scoring zone`() =
         runTest {
-            val zoneId = ZoneId.systemDefault()
+            val zoneId = ZoneId.of("Pacific/Honolulu")
             val workoutDate = LocalDate.of(2026, 6, 9)
-            val startMs =
-                workoutDate
-                    .atStartOfDay(zoneId)
-                    .plusHours(10)
-                    .toInstant()
-                    .toEpochMilli()
+            val startMs = Instant.parse("2026-06-10T05:00:00Z").toEpochMilli()
 
             val workout =
                 WorkoutData(
@@ -60,9 +55,7 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                     avgHr = 130f,
                 )
 
-            val prefs = UserPreferences()
-            every { settingsRepo.userPreferences } returns MutableStateFlow(prefs)
-
+            val prefs = UserPreferences(scoringZoneId = "Pacific/Honolulu")
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = mockk<DailySummary>()
             every { summary.rhrBpm } returns 55f
@@ -115,7 +108,11 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 )
             } returns loadMetrics
 
-            val result = useCase.execute(workout = workout)
+            val result =
+                useCase.execute(
+                    workout = workout,
+                    preferences = prefs,
+                )
 
             assertEquals(50f, result.preciseTrimp)
             assertEquals(50, result.computedTrimp)
