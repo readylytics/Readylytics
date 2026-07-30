@@ -165,8 +165,8 @@ if (markerFraction != null && progressToDraw > 0f) {
 }
 ```
 
-Retain `main`’s subtle same-color endpoint cap/dot; do not introduce any
-classification, reference, baseline, or target marker.
+Use the rounded stroke cap as the active arc endpoint; do not draw an endpoint
+dot or any classification, reference, baseline, or target marker.
 
 - [ ] **Step 4: Update `M3ScoreGaugeCard` without changing its layout**
 
