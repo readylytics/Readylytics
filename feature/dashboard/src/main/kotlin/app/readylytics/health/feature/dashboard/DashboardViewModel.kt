@@ -220,7 +220,6 @@ class DashboardViewModel
                 1439
             }
 
-        fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 
         val earliestDate: StateFlow<LocalDate?> =
             selectedDateRepository.earliestDate
@@ -349,9 +348,9 @@ data class DashboardUiState(
     val summary: DailySummary? = null,
     val selectedDate: LocalDate = LocalDate.now(),
     val today: LocalDate = LocalDate.now(),
-    val cardDataMap: Map<CardId, CardData> = emptyMap(),
+    val cardDataMap: Map<CardId, DashboardMetricPresentation> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
-    val restingHrCard: CardData? = null,
+    val restingHrCard: DashboardMetricPresentation? = null,
     val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
@@ -388,7 +387,7 @@ data class DashboardUiState(
  */
 @Immutable
 data class DashboardCardInputs(
-    val cardDataMap: Map<CardId, CardData>,
+    val cardDataMap: Map<CardId, DashboardMetricPresentation>,
     val summary: DailySummary?,
     val circadianConsistency: CircadianConsistencyResult?,
     val heartRateDaySummary: HeartRateDaySummary?,

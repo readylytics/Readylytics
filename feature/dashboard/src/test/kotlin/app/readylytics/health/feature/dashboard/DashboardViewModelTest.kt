@@ -122,19 +122,6 @@ class DashboardViewModelTest {
         assert(result.isFailure) { "Future date should be invalid" }
     }
 
-    @Test
-    fun formatSleepDuration_150minutes_formatsCorrectly() {
-        io.mockk.every { getDashboardDataUseCase.formatSleepDuration(150) } returns "2h 30m"
-        val formatted = viewModel.formatSleepDuration(150)
-        assert(formatted.isNotEmpty()) { "Should format duration" }
-        assert(formatted == "2h 30m") { "Should format 150 minutes as 2h 30m" }
-    }
-
-    @Test
-    fun formatSleepDuration_null_returnsEmpty() {
-        val formatted = viewModel.formatSleepDuration(null)
-        assert(formatted.isEmpty()) { "Should handle null" }
-    }
 
     @Test
     fun toggleCardManagement_togglesState() {

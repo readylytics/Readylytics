@@ -79,12 +79,12 @@ fun buildCardDataMap(
                 M3ScoreGaugeCard(
                     title = sleepScoreCard?.title ?: "Sleep Score",
                     score = summary?.sleepScore,
-                    displayText = sleepScoreCard?.value ?: "—",
-                    unitText = sleepScoreCard?.unit ?: "",
+                    displayText = sleepScoreCard?.valueText ?: "—",
+                    unitText = sleepScoreCard?.unitText ?: "",
                     status = sleepScoreCard?.status,
                     deltaText =
                         formatRoundedScoreDelta(
-                            currentRounded = sleepScoreCard?.value?.toIntOrNull(),
+                            currentRounded = sleepScoreCard?.valueText?.toIntOrNull(),
                             previousRounded = uiState.yesterdaySleepScoreRounded,
                         ).resolveOrNull(),
                     onClick = if (isEditing) ({}) else onNavigateToSleep,
@@ -100,7 +100,7 @@ fun buildCardDataMap(
             skeleton = { ScoreDialSkeleton() },
             content = {
                 val readinessCard = uiState.cardDataMap[CardId.READINESS]
-                val readinessVal = readinessCard?.value?.toFloatOrNull()
+                val readinessVal = readinessCard?.valueText?.toFloatOrNull()
                 val readinessDelta =
                     formatRoundedScoreDelta(
                         currentRounded = readinessVal?.toInt(),
@@ -109,8 +109,8 @@ fun buildCardDataMap(
                 M3ScoreGaugeCard(
                     title = readinessCard?.title ?: "Readiness",
                     score = readinessVal,
-                    displayText = readinessCard?.value ?: "—",
-                    unitText = readinessCard?.unit ?: "",
+                    displayText = readinessCard?.valueText ?: "—",
+                    unitText = readinessCard?.unitText ?: "",
                     status = readinessCard?.status,
                     deltaText = readinessDelta,
                     onClick = if (isEditing) ({}) else onNavigateToWorkouts,
@@ -150,8 +150,8 @@ fun buildCardDataMap(
                 if (hrvCard != null) {
                     MetricCard(
                         title = hrvCard.title,
-                        value = hrvCard.value,
-                        secondaryText = hrvCard.unit,
+                        value = hrvCard.valueText,
+                        secondaryText = hrvCard.unitText,
                         status = hrvCard.status,
                         onClick = if (isEditing) null else onNavigateToHrv,
                         tooltip = hrvCard.tooltip,
@@ -170,8 +170,8 @@ fun buildCardDataMap(
                 if (sleepRhrCard != null) {
                     MetricCard(
                         title = sleepRhrCard.title,
-                        value = sleepRhrCard.value,
-                        secondaryText = sleepRhrCard.unit,
+                        value = sleepRhrCard.valueText,
+                        secondaryText = sleepRhrCard.unitText,
                         status = sleepRhrCard.status,
                         onClick = if (isEditing) null else onNavigateToSleep,
                         tooltip = sleepRhrCard.tooltip,
@@ -190,8 +190,8 @@ fun buildCardDataMap(
                 if (strainCard != null) {
                     MetricCard(
                         title = strainCard.title,
-                        value = strainCard.value,
-                        secondaryText = strainCard.unit,
+                        value = strainCard.valueText,
+                        secondaryText = strainCard.unitText,
                         status = strainCard.status,
                         onClick = if (isEditing) null else onNavigateToWorkouts,
                         tooltip = strainCard.tooltip,
@@ -210,8 +210,8 @@ fun buildCardDataMap(
                 if (durationCard != null) {
                     MetricCard(
                         title = durationCard.title,
-                        value = durationCard.value,
-                        secondaryText = durationCard.secondaryText ?: durationCard.unit,
+                        value = durationCard.valueText,
+                        secondaryText = durationCard.secondaryText ?: durationCard.unitText,
                         status = durationCard.status,
                         onClick = if (isEditing) null else onNavigateToSleep,
                         tooltip = durationCard.tooltip,
@@ -230,8 +230,8 @@ fun buildCardDataMap(
                 if (efficiencyCard != null) {
                     MetricCard(
                         title = efficiencyCard.title,
-                        value = efficiencyCard.value,
-                        secondaryText = efficiencyCard.secondaryText ?: efficiencyCard.unit,
+                        value = efficiencyCard.valueText,
+                        secondaryText = efficiencyCard.secondaryText ?: efficiencyCard.unitText,
                         status = efficiencyCard.status,
                         onClick = if (isEditing) null else onNavigateToSleep,
                         tooltip = efficiencyCard.tooltip,
@@ -250,8 +250,8 @@ fun buildCardDataMap(
                 if (rasCard != null) {
                     MetricCard(
                         title = rasCard.title,
-                        value = rasCard.value,
-                        secondaryText = rasCard.unit,
+                        value = rasCard.valueText,
+                        secondaryText = rasCard.unitText,
                         status = rasCard.status,
                         onClick = if (isEditing) null else onNavigateToWorkouts,
                         tooltip = rasCard.tooltip,
@@ -270,8 +270,8 @@ fun buildCardDataMap(
                     val card = uiState.restingHrCard
                     MetricCard(
                         title = card.title,
-                        value = card.value,
-                        secondaryText = card.unit,
+                        value = card.valueText,
+                        secondaryText = card.unitText,
                         status = card.status,
                         onClick = if (isEditing) null else onNavigateToRhr,
                         tooltip = card.tooltip,
@@ -356,8 +356,8 @@ fun buildCardDataMap(
                 if (weightCard != null) {
                     MetricCard(
                         title = weightCard.title,
-                        value = weightCard.value,
-                        secondaryText = weightCard.secondaryText ?: weightCard.unit,
+                        value = weightCard.valueText,
+                        secondaryText = weightCard.secondaryText ?: weightCard.unitText,
                         status = weightCard.status,
                         onClick = if (isEditing) null else onNavigateToWeight,
                         tooltip = weightCard.tooltip,
@@ -376,8 +376,8 @@ fun buildCardDataMap(
                 if (bodyFatCard != null) {
                     MetricCard(
                         title = bodyFatCard.title,
-                        value = bodyFatCard.value,
-                        secondaryText = bodyFatCard.unit,
+                        value = bodyFatCard.valueText,
+                        secondaryText = bodyFatCard.unitText,
                         status = bodyFatCard.status,
                         onClick = if (isEditing) null else onNavigateToBodyFat,
                         tooltip = bodyFatCard.tooltip,
@@ -396,8 +396,8 @@ fun buildCardDataMap(
                 if (bpCard != null) {
                     MetricCard(
                         title = bpCard.title,
-                        value = bpCard.value,
-                        secondaryText = bpCard.unit,
+                        value = bpCard.valueText,
+                        secondaryText = bpCard.unitText,
                         status = bpCard.status,
                         onClick = if (isEditing) null else onNavigateToBloodPressure,
                         tooltip = bpCard.tooltip,
@@ -415,11 +415,11 @@ fun buildCardDataMap(
                 val spo2Card = uiState.cardDataMap[CardId.OXYGEN_SATURATION]
                 if (spo2Card != null) {
                     val spo2Value =
-                        if (spo2Card.value == "—") spo2Card.value else "${spo2Card.value}%"
+                        if (spo2Card.valueText == "—") spo2Card.valueText else "${spo2Card.valueText}%"
                     MetricCard(
                         title = spo2Card.title,
                         value = spo2Value,
-                        secondaryText = spo2Card.secondaryText ?: spo2Card.unit,
+                        secondaryText = spo2Card.secondaryText ?: spo2Card.unitText,
                         status = spo2Card.status,
                         onClick = if (isEditing) null else onNavigateToVitals,
                         tooltip = spo2Card.tooltip,
