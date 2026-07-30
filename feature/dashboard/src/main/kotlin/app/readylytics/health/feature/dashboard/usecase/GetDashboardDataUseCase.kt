@@ -17,43 +17,54 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GetDashboardDataUseCase @Inject constructor(
-    private val factory: DashboardMetricPresentationFactory
-) {
-    data class DashboardCards(
-        val cardDataMap: Map<CardId, DashboardMetricPresentation>,
-        val rasDailyBreakdown: List<Pair<String, Float>>
-    )
+class GetDashboardDataUseCase
+    @Inject
+    constructor(
+        private val factory: DashboardMetricPresentationFactory,
+    ) {
+        data class DashboardCards(
+            val cardDataMap: Map<CardId, DashboardMetricPresentation>,
+            val rasDailyBreakdown: List<Pair<String, Float>>,
+        )
 
-    operator fun invoke(
-        summary: DailySummary?,
-        prefs: UserPreferences,
-        date: LocalDate,
-        lastSleepSession: SleepSessionSummary?,
-        rasSummaries: List<DailySummary>,
-        circadianResult: CircadianConsistencyResult? = null,
-        heartRateSummary: HeartRateDaySummary? = null
-    ): Result<DashboardCards> = try {
-        val cardDataMap = factory.build(summary, prefs, date, lastSleepSession, circadianResult, heartRateSummary)
-        val rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs)
-        
-        Result.success(DashboardCards(cardDataMap, rasDailyBreakdown))
-    } catch (e: Exception) {
-        logE("GetDashboardDataUseCase", e) { "Failed to build dashboard data" }
-        Result.failure("Failed to build dashboard data", "CARD_GENERATION_ERROR")
-    }
+        operator fun invoke(
+            summary: DailySummary?,
+            prefs: UserPreferences,
+            date: LocalDate,
+            lastSleepSession: SleepSessionSummary?,
+            rasSummaries: List<DailySummary>,
+            circadianResult: CircadianConsistencyResult? = null,
+            heartRateSummary: HeartRateDaySummary? = null,
+        ): Result<DashboardCards> =
+            try {
+                val cardDataMap =
+                    factory.build(
+                        summary,
+                        prefs,
+                        date,
+                        lastSleepSession,
+                        circadianResult,
+                        heartRateSummary,
+                    )
+                val rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs)
 
-    private fun buildRasBreakdown(
-        endDate: LocalDate,
-        summaries: List<DailySummary>,
-        prefs: UserPreferences,
-    ): List<Pair<String, Float>> {
-        val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
-        return (6 downTo 0).map { daysBack ->
-            val day = endDate.minusDays(daysBack.toLong())
-            val entry = summaries.firstOrNull { it.date == day }
-            val ras = entry?.let { LoadSourceSelector.selectDailyRas(it, prefs.rasSourceMode) }
-            day.format(fmt) to (ras ?: 0f)
+                Result.success(DashboardCards(cardDataMap, rasDailyBreakdown))
+            } catch (e: Exception) {
+                logE("GetDashboardDataUseCase", e) { "Failed to build dashboard data" }
+                Result.failure("Failed to build dashboard data", "CARD_GENERATION_ERROR")
+            }
+
+        private fun buildRasBreakdown(
+            endDate: LocalDate,
+            summaries: List<DailySummary>,
+            prefs: UserPreferences,
+        ): List<Pair<String, Float>> {
+            val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+            return (6 downTo 0).map { daysBack ->
+                val day = endDate.minusDays(daysBack.toLong())
+                val entry = summaries.firstOrNull { it.date == day }
+                val ras = entry?.let { LoadSourceSelector.selectDailyRas(it, prefs.rasSourceMode) }
+                day.format(fmt) to (ras ?: 0f)
+            }
         }
     }
-}

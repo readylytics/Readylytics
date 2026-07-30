@@ -222,7 +222,6 @@ class DashboardViewModel
                 1439
             }
 
-
         val earliestDate: StateFlow<LocalDate?> =
             selectedDateRepository.earliestDate
                 .stateIn(

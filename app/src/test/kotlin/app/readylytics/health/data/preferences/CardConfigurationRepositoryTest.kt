@@ -255,11 +255,12 @@ class CardConfigurationRepositoryTest {
     fun dashboardCardConfigurations_reloadRetainsIndependentExplicitModesPerCard() =
         runTest {
             val hrvBar = cardProto(CardId.HRV.name, requestedDisplayMode = DashboardCardDisplayMode.BAR.name)
-            val restingHrGauge = cardProto(
-                CardId.RESTING_HR.name,
-                position = 1,
-                requestedDisplayMode = DashboardCardDisplayMode.GAUGE.name,
-            )
+            val restingHrGauge =
+                cardProto(
+                    CardId.RESTING_HR.name,
+                    position = 1,
+                    requestedDisplayMode = DashboardCardDisplayMode.GAUGE.name,
+                )
             val firstProto =
                 CardConfigurationsProto
                     .newBuilder()

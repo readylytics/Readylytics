@@ -41,10 +41,18 @@ fun M3MetricGauge(
     animateMarker: Boolean = true,
 ) {
     val clampedFraction = markerFraction?.coerceIn(0f, 1f)
-    
+
     val animatedProgress by animateFloatAsState(
         targetValue = clampedFraction ?: 0f,
-        animationSpec = if (animateMarker) tween(durationMillis = 800, easing = FastOutSlowInEasing) else tween(durationMillis = 0),
+        animationSpec =
+            if (animateMarker) {
+                tween(
+                    durationMillis = 800,
+                    easing = FastOutSlowInEasing,
+                )
+            } else {
+                tween(durationMillis = 0)
+            },
         label = "gauge_progress",
     )
 
@@ -55,10 +63,11 @@ fun M3MetricGauge(
         contentAlignment = Alignment.BottomCenter,
     ) {
         Canvas(
-            modifier = Modifier
-                .width(120.dp)
-                .height(60.dp)
-                .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
+            modifier =
+                Modifier
+                    .width(120.dp)
+                    .height(60.dp)
+                    .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
         ) {
             val strokeWidthPx = 8.dp.toPx()
             val dotRadiusPx = 5.dp.toPx()
@@ -89,7 +98,8 @@ fun M3MetricGauge(
             } else {
                 segments.forEach { segment ->
                     val startAngle = 180f + (180f * segment.startFraction.coerceIn(0f, 1f))
-                    val sweepAngle = 180f * (segment.endFraction.coerceIn(0f, 1f) - segment.startFraction.coerceIn(0f, 1f))
+                    val sweepAngle =
+                        180f * (segment.endFraction.coerceIn(0f, 1f) - segment.startFraction.coerceIn(0f, 1f))
                     if (sweepAngle > 0f) {
                         drawArc(
                             color = segment.color,

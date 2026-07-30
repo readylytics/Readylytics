@@ -122,7 +122,6 @@ class DashboardViewModelTest {
         assert(result.isFailure) { "Future date should be invalid" }
     }
 
-
     @Test
     fun toggleCardManagement_togglesState() {
         val initialState = viewModel.isManagingCards.value

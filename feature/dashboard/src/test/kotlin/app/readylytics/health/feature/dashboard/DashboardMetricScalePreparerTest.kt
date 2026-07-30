@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DashboardMetricScalePreparerTest {
-
     @Test
     fun `piecewise scale maps anchors and clamps only geometry`() {
         assertEquals(0f, DashboardMetricScalePreparer.piecewiseFraction(10f, 10f, 21.7f, 40f), 0.001f)
@@ -26,14 +25,15 @@ class DashboardMetricScalePreparerTest {
 
     @Test
     fun `missing baseline disables selection but retains current value`() {
-        val visual = DashboardMetricScalePreparer.personalBaseline(
-            value = 41f,
-            baseline = null,
-            axisMinimumRatio = 0.8f,
-            axisMaximumRatio = 1.2f,
-            bands = emptyList(),
-            baselineReady = false,
-        )
+        val visual =
+            DashboardMetricScalePreparer.personalBaseline(
+                value = 41f,
+                baseline = null,
+                axisMinimumRatio = 0.8f,
+                axisMaximumRatio = 1.2f,
+                bands = emptyList(),
+                baselineReady = false,
+            )
         assertEquals(41f, visual.rawValue)
         assertFalse(visual.selectionAvailable)
         assertEquals(DashboardMetricUnavailableReason.BASELINE_NOT_READY, visual.unavailableReason)
@@ -93,14 +93,15 @@ class DashboardMetricScalePreparerTest {
 
     @Test
     fun `baseline present but not yet mature still disables selection and retains value`() {
-        val visual = DashboardMetricScalePreparer.personalBaseline(
-            value = 41f,
-            baseline = 50f,
-            axisMinimumRatio = 0.8f,
-            axisMaximumRatio = 1.2f,
-            bands = emptyList(),
-            baselineReady = false,
-        )
+        val visual =
+            DashboardMetricScalePreparer.personalBaseline(
+                value = 41f,
+                baseline = 50f,
+                axisMinimumRatio = 0.8f,
+                axisMaximumRatio = 1.2f,
+                bands = emptyList(),
+                baselineReady = false,
+            )
         assertEquals(41f, visual.rawValue)
         assertFalse(visual.selectionAvailable)
         assertEquals(DashboardMetricUnavailableReason.BASELINE_NOT_READY, visual.unavailableReason)
@@ -109,15 +110,16 @@ class DashboardMetricScalePreparerTest {
 
     @Test
     fun `reference range with an unavailable scale retains the raw value and requires a reason`() {
-        val visual = DashboardMetricScalePreparer.referenceRange(
-            value = 24.3f,
-            minimum = 15f,
-            midpoint = 21.7f,
-            maximum = 35f,
-            bands = emptyList(),
-            scaleAvailable = false,
-            unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
-        )
+        val visual =
+            DashboardMetricScalePreparer.referenceRange(
+                value = 24.3f,
+                minimum = 15f,
+                midpoint = 21.7f,
+                maximum = 35f,
+                bands = emptyList(),
+                scaleAvailable = false,
+                unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
+            )
         assertEquals(24.3f, visual.rawValue)
         assertFalse(visual.selectionAvailable)
         assertEquals(DashboardMetricUnavailableReason.MISSING_BMI, visual.unavailableReason)
@@ -126,14 +128,26 @@ class DashboardMetricScalePreparerTest {
 
     @Test
     fun `baseline handles ratios on both sides of 1`() {
-        val belowRatio = DashboardMetricScalePreparer.personalBaseline(
-            value = 40f, baseline = 50f, axisMinimumRatio = 0.5f, axisMaximumRatio = 1.5f, bands = emptyList(), baselineReady = true
-        )
+        val belowRatio =
+            DashboardMetricScalePreparer.personalBaseline(
+                value = 40f,
+                baseline = 50f,
+                axisMinimumRatio = 0.5f,
+                axisMaximumRatio = 1.5f,
+                bands = emptyList(),
+                baselineReady = true,
+            )
         assertEquals(0.8f, belowRatio.ratio!!, 0.001f)
 
-        val aboveRatio = DashboardMetricScalePreparer.personalBaseline(
-            value = 60f, baseline = 50f, axisMinimumRatio = 0.5f, axisMaximumRatio = 1.5f, bands = emptyList(), baselineReady = true
-        )
+        val aboveRatio =
+            DashboardMetricScalePreparer.personalBaseline(
+                value = 60f,
+                baseline = 50f,
+                axisMinimumRatio = 0.5f,
+                axisMaximumRatio = 1.5f,
+                bands = emptyList(),
+                baselineReady = true,
+            )
         assertEquals(1.2f, aboveRatio.ratio!!, 0.001f)
     }
 
@@ -144,10 +158,11 @@ class DashboardMetricScalePreparerTest {
 
     @Test
     fun `normalized band ordering preserves statuses`() {
-        val bands = listOf(
-            RawMetricBand(10f, 15f, app.readylytics.health.domain.model.MetricStatus.OPTIMAL),
-            RawMetricBand(15f, 20f, app.readylytics.health.domain.model.MetricStatus.NEUTRAL)
-        )
+        val bands =
+            listOf(
+                RawMetricBand(10f, 15f, app.readylytics.health.domain.model.MetricStatus.OPTIMAL),
+                RawMetricBand(15f, 20f, app.readylytics.health.domain.model.MetricStatus.NEUTRAL),
+            )
         val score = DashboardMetricScalePreparer.score(15f, 10f, 20f, bands)
         assertEquals(0f, score.bands[0].startFraction, 0.001f)
         assertEquals(0.5f, score.bands[0].endFraction, 0.001f)

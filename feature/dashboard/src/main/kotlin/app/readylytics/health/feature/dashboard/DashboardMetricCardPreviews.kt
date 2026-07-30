@@ -35,24 +35,26 @@ private val sleepDurationSpec = DashboardCardCatalog.spec(CardId.SLEEP_DURATION)
 private val hrvSpec = DashboardCardCatalog.spec(CardId.HRV)!!
 private val weightSpec = DashboardCardCatalog.spec(CardId.WEIGHT)!!
 
-private val scoreBands = listOf(
-    RawMetricBand(0f, 40f, MetricStatus.POOR),
-    RawMetricBand(40f, 60f, MetricStatus.WARNING),
-    RawMetricBand(60f, 85f, MetricStatus.NEUTRAL),
-    RawMetricBand(85f, 100f, MetricStatus.OPTIMAL),
-)
+private val scoreBands =
+    listOf(
+        RawMetricBand(0f, 40f, MetricStatus.POOR),
+        RawMetricBand(40f, 60f, MetricStatus.WARNING),
+        RawMetricBand(60f, 85f, MetricStatus.NEUTRAL),
+        RawMetricBand(85f, 100f, MetricStatus.OPTIMAL),
+    )
 
 @Composable
-private fun sleepScorePresentation(): DashboardMetricPresentation = DashboardMetricPresentation(
-    title = stringResource(R.string.card_title_sleep_score),
-    valueText = "82",
-    unitText = "",
-    secondaryText = "Optimal",
-    status = MetricStatus.OPTIMAL,
-    tooltip = "Total quality of rest based on duration and cycles.",
-    accessibilityDescription = "Sleep score: 82 of 100, Optimal",
-    visual = DashboardMetricScalePreparer.score(82f, 0f, 100f, scoreBands),
-)
+private fun sleepScorePresentation(): DashboardMetricPresentation =
+    DashboardMetricPresentation(
+        title = stringResource(R.string.card_title_sleep_score),
+        valueText = "82",
+        unitText = "",
+        secondaryText = "Optimal",
+        status = MetricStatus.OPTIMAL,
+        tooltip = "Total quality of rest based on duration and cycles.",
+        accessibilityDescription = "Sleep score: 82 of 100, Optimal",
+        visual = DashboardMetricScalePreparer.score(82f, 0f, 100f, scoreBands),
+    )
 
 @Composable
 private fun goalAboveTargetPresentation(): DashboardMetricPresentation {
@@ -64,26 +66,29 @@ private fun goalAboveTargetPresentation(): DashboardMetricPresentation {
         secondaryText = null,
         status = MetricStatus.OPTIMAL,
         tooltip = "Total time asleep last night.",
-        accessibilityDescription = "${stringResource(R.string.card_title_sleep_duration)}: 8h 40m, " +
-            stringResource(R.string.goal_above_target_description),
+        accessibilityDescription =
+            "${stringResource(R.string.card_title_sleep_duration)}: 8h 40m, " +
+                stringResource(R.string.goal_above_target_description),
         visual = visual,
     )
 }
 
 @Composable
 private fun baselineWithinRangePresentation(): DashboardMetricPresentation {
-    val visual = DashboardMetricScalePreparer.personalBaseline(
-        value = 62f,
-        baseline = 60f,
-        axisMinimumRatio = 0.5f,
-        axisMaximumRatio = 1.5f,
-        bands = listOf(
-            RawMetricBand(30f, 54f, MetricStatus.WARNING),
-            RawMetricBand(54f, 66f, MetricStatus.NEUTRAL),
-            RawMetricBand(66f, 90f, MetricStatus.OPTIMAL),
-        ),
-        baselineReady = true,
-    )
+    val visual =
+        DashboardMetricScalePreparer.personalBaseline(
+            value = 62f,
+            baseline = 60f,
+            axisMinimumRatio = 0.5f,
+            axisMaximumRatio = 1.5f,
+            bands =
+                listOf(
+                    RawMetricBand(30f, 54f, MetricStatus.WARNING),
+                    RawMetricBand(54f, 66f, MetricStatus.NEUTRAL),
+                    RawMetricBand(66f, 90f, MetricStatus.OPTIMAL),
+                ),
+            baselineReady = true,
+        )
     return DashboardMetricPresentation(
         title = stringResource(R.string.card_title_hrv),
         valueText = "62",
@@ -91,28 +96,31 @@ private fun baselineWithinRangePresentation(): DashboardMetricPresentation {
         secondaryText = null,
         status = MetricStatus.OPTIMAL,
         tooltip = "Variation between heartbeats in milliseconds.",
-        accessibilityDescription = "${stringResource(R.string.card_title_hrv)}: 62 ms, " +
-            stringResource(R.string.personal_baseline_within_range_description),
+        accessibilityDescription =
+            "${stringResource(R.string.card_title_hrv)}: 62 ms, " +
+                stringResource(R.string.personal_baseline_within_range_description),
         visual = visual,
     )
 }
 
 @Composable
 private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
-    val visual = DashboardMetricScalePreparer.referenceRange(
-        value = 21.7f,
-        minimum = 15f,
-        midpoint = 21.7f,
-        maximum = 35f,
-        bands = listOf(
-            RawMetricBand(0f, 18.5f, MetricStatus.WARNING),
-            RawMetricBand(18.5f, 25f, MetricStatus.OPTIMAL),
-            RawMetricBand(25f, 30f, MetricStatus.WARNING),
-            RawMetricBand(30f, 100f, MetricStatus.POOR),
-        ),
-        scaleAvailable = true,
-        unavailableReason = null,
-    )
+    val visual =
+        DashboardMetricScalePreparer.referenceRange(
+            value = 21.7f,
+            minimum = 15f,
+            midpoint = 21.7f,
+            maximum = 35f,
+            bands =
+                listOf(
+                    RawMetricBand(0f, 18.5f, MetricStatus.WARNING),
+                    RawMetricBand(18.5f, 25f, MetricStatus.OPTIMAL),
+                    RawMetricBand(25f, 30f, MetricStatus.WARNING),
+                    RawMetricBand(30f, 100f, MetricStatus.POOR),
+                ),
+            scaleAvailable = true,
+            unavailableReason = null,
+        )
     val bmiSecondary = stringResource(app.readylytics.health.core.ui.R.string.bmi_secondary_text, "21.7")
     return DashboardMetricPresentation(
         title = stringResource(R.string.card_title_weight),
@@ -121,8 +129,9 @@ private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
         secondaryText = bmiSecondary,
         status = MetricStatus.OPTIMAL,
         tooltip = "Latest weight measurement.",
-        accessibilityDescription = "${stringResource(R.string.card_title_weight)}: 70 kg, $bmiSecondary, " +
-            stringResource(R.string.bmi_optimal),
+        accessibilityDescription =
+            "${stringResource(R.string.card_title_weight)}: 70 kg, $bmiSecondary, " +
+                stringResource(R.string.bmi_optimal),
         visual = visual,
     )
 }

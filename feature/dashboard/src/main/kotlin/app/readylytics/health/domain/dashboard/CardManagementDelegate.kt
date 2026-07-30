@@ -132,16 +132,18 @@ class CardManagementDelegate(
                 _pendingConfigs.value = reorderCards(base, event.newOrder)
             }
             is CardManagementEvent.DisplayModeChanged -> {
-                val base = _pendingConfigs.value
-                    ?: error("Display mode can only change while editing")
+                val base =
+                    _pendingConfigs.value
+                        ?: error("Display mode can only change while editing")
                 require(base.any { it.cardId == event.cardId })
-                _pendingConfigs.value = base.map { configuration ->
-                    if (configuration.cardId == event.cardId) {
-                        configuration.copy(requestedDisplayMode = event.mode)
-                    } else {
-                        configuration
+                _pendingConfigs.value =
+                    base.map { configuration ->
+                        if (configuration.cardId == event.cardId) {
+                            configuration.copy(requestedDisplayMode = event.mode)
+                        } else {
+                            configuration
+                        }
                     }
-                }
             }
         }
     }

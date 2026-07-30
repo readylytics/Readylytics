@@ -36,35 +36,42 @@ class DashboardMetricCardTest {
 
     private fun string(id: Int): String = context.getString(id)
 
-    private fun string(id: Int, vararg args: Any): String = context.getString(id, *args)
+    private fun string(
+        id: Int,
+        vararg args: Any,
+    ): String = context.getString(id, *args)
 
-    private val testSpec = DashboardCardSpec(
-        cardId = CardId.SLEEP_SCORE,
-        legacyDefaultMode = DashboardCardDisplayMode.GAUGE,
-        supportedModes = listOf(
-            DashboardCardDisplayMode.GAUGE,
-            DashboardCardDisplayMode.BAR,
-            DashboardCardDisplayMode.VALUE
+    private val testSpec =
+        DashboardCardSpec(
+            cardId = CardId.SLEEP_SCORE,
+            legacyDefaultMode = DashboardCardDisplayMode.GAUGE,
+            supportedModes =
+                listOf(
+                    DashboardCardDisplayMode.GAUGE,
+                    DashboardCardDisplayMode.BAR,
+                    DashboardCardDisplayMode.VALUE,
+                ),
         )
-    )
 
-    private val defaultPresentation = DashboardMetricPresentation(
-        title = "Test Metric",
-        valueText = "85",
-        unitText = "pts",
-        secondaryText = "Good",
-        status = MetricStatus.OPTIMAL,
-        tooltip = "Tooltip text",
-        accessibilityDescription = "Card description",
-        visual = DashboardMetricVisual.Score(
-            rawValue = 85f,
-            minValue = 0f,
-            maxValue = 100f,
-            markerFraction = 0.85f,
-            bands = emptyList(),
-            unavailableReason = null,
+    private val defaultPresentation =
+        DashboardMetricPresentation(
+            title = "Test Metric",
+            valueText = "85",
+            unitText = "pts",
+            secondaryText = "Good",
+            status = MetricStatus.OPTIMAL,
+            tooltip = "Tooltip text",
+            accessibilityDescription = "Card description",
+            visual =
+                DashboardMetricVisual.Score(
+                    rawValue = 85f,
+                    minValue = 0f,
+                    maxValue = 100f,
+                    markerFraction = 0.85f,
+                    bands = emptyList(),
+                    unavailableReason = null,
+                ),
         )
-    )
 
     @Test
     fun menuVisibilityInModes() {
@@ -75,30 +82,33 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
-        
-        composeRule.onNodeWithContentDescription("Change visualization style")
+
+        composeRule
+            .onNodeWithContentDescription("Change visualization style")
             .assertDoesNotExist()
     }
 
     @Test
     fun menuItemsAndDisabledStateForMissingTarget() {
         var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
-        
-        val missingTargetPresentation = defaultPresentation.copy(
-            visual = DashboardMetricVisual.Goal(
-                rawValue = 50f,
-                targetValue = null,
-                markerFraction = 0.5f,
-                targetMarkerFraction = null,
-                isAboveTarget = false,
-                bands = emptyList(),
-                selectionAvailable = false,
-                unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET
+
+        val missingTargetPresentation =
+            defaultPresentation.copy(
+                visual =
+                    DashboardMetricVisual.Goal(
+                        rawValue = 50f,
+                        targetValue = null,
+                        markerFraction = 0.5f,
+                        targetMarkerFraction = null,
+                        isAboveTarget = false,
+                        bands = emptyList(),
+                        selectionAvailable = false,
+                        unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -107,32 +117,38 @@ class DashboardMetricCardTest {
                 requestedMode = selectedMode,
                 renderMode = selectedMode,
                 isEditing = true,
-                onModeSelected = { selectedMode = it }
+                onModeSelected = { selectedMode = it },
             )
         }
-        
+
         composeRule.onNodeWithContentDescription("Change visualization style").performClick()
-        
+
         // Assert only catalog-supported localized labels appear
-        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsNotEnabled().assertIsSelected()
+        composeRule
+            .onNodeWithText("Gauge")
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+            .assertIsSelected()
         composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsNotEnabled()
         composeRule.onNodeWithText("Value").assertIsDisplayed()
     }
 
     @Test
     fun unavailableRendererRetainsValueText() {
-        val missingTargetPresentation = defaultPresentation.copy(
-            visual = DashboardMetricVisual.Goal(
-                rawValue = 50f,
-                targetValue = null,
-                markerFraction = 0.5f,
-                targetMarkerFraction = null,
-                isAboveTarget = false,
-                bands = emptyList(),
-                selectionAvailable = false,
-                unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET
+        val missingTargetPresentation =
+            defaultPresentation.copy(
+                visual =
+                    DashboardMetricVisual.Goal(
+                        rawValue = 50f,
+                        targetValue = null,
+                        markerFraction = 0.5f,
+                        targetMarkerFraction = null,
+                        isAboveTarget = false,
+                        bands = emptyList(),
+                        selectionAvailable = false,
+                        unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -141,10 +157,10 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
-        
+
         composeRule.onNodeWithText("85").assertIsDisplayed()
     }
 
@@ -157,10 +173,10 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.VALUE,
                 renderMode = DashboardCardDisplayMode.VALUE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
-        
+
         composeRule.onNodeWithText("85").assertIsDisplayed()
         composeRule.onNodeWithText("pts").assertIsDisplayed()
         composeRule.onNodeWithText("Good").assertIsDisplayed()
@@ -173,17 +189,19 @@ class DashboardMetricCardTest {
         // selectable, even when its unavailableReason is set for a missing value.
         var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
 
-        val missingScorePresentation = defaultPresentation.copy(
-            valueText = "—",
-            visual = DashboardMetricVisual.Score(
-                rawValue = null,
-                minValue = 0f,
-                maxValue = 100f,
-                markerFraction = null,
-                bands = emptyList(),
-                unavailableReason = DashboardMetricUnavailableReason.MISSING_VALUE,
+        val missingScorePresentation =
+            defaultPresentation.copy(
+                valueText = "—",
+                visual =
+                    DashboardMetricVisual.Score(
+                        rawValue = null,
+                        minValue = 0f,
+                        maxValue = 100f,
+                        markerFraction = null,
+                        bands = emptyList(),
+                        unavailableReason = DashboardMetricUnavailableReason.MISSING_VALUE,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -192,7 +210,7 @@ class DashboardMetricCardTest {
                 requestedMode = selectedMode,
                 renderMode = selectedMode,
                 isEditing = true,
-                onModeSelected = { selectedMode = it }
+                onModeSelected = { selectedMode = it },
             )
         }
 
@@ -201,7 +219,11 @@ class DashboardMetricCardTest {
 
         composeRule.onNodeWithContentDescription("Change visualization style").performClick()
 
-        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsEnabled().assertIsSelected()
+        composeRule
+            .onNodeWithText("Gauge")
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .assertIsSelected()
         composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsEnabled()
         composeRule.onNodeWithText("Value").assertIsDisplayed().assertIsEnabled()
     }
@@ -210,18 +232,20 @@ class DashboardMetricCardTest {
     fun personalBaselineNotReadyDisablesGaugeAndBarButPreservesSelection() {
         var selectedMode by mutableStateOf(DashboardCardDisplayMode.VALUE)
 
-        val notReadyPresentation = defaultPresentation.copy(
-            visual = DashboardMetricVisual.PersonalBaseline(
-                rawValue = 45f,
-                baselineValue = null,
-                ratio = null,
-                markerFraction = null,
-                baselineMarkerFraction = 0f,
-                bands = emptyList(),
-                selectionAvailable = false,
-                unavailableReason = DashboardMetricUnavailableReason.BASELINE_NOT_READY,
+        val notReadyPresentation =
+            defaultPresentation.copy(
+                visual =
+                    DashboardMetricVisual.PersonalBaseline(
+                        rawValue = 45f,
+                        baselineValue = null,
+                        ratio = null,
+                        markerFraction = null,
+                        baselineMarkerFraction = 0f,
+                        bands = emptyList(),
+                        selectionAvailable = false,
+                        unavailableReason = DashboardMetricUnavailableReason.BASELINE_NOT_READY,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -230,7 +254,7 @@ class DashboardMetricCardTest {
                 requestedMode = selectedMode,
                 renderMode = selectedMode,
                 isEditing = true,
-                onModeSelected = { selectedMode = it }
+                onModeSelected = { selectedMode = it },
             )
         }
 
@@ -238,24 +262,30 @@ class DashboardMetricCardTest {
 
         composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsNotEnabled()
         composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsNotEnabled()
-        composeRule.onNodeWithText("Value").assertIsDisplayed().assertIsEnabled().assertIsSelected()
+        composeRule
+            .onNodeWithText("Value")
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .assertIsSelected()
     }
 
     @Test
     fun referenceRangeUnavailableDisablesGaugeAndBarButKeepsRealValueVisible() {
         var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
 
-        val missingBmiPresentation = defaultPresentation.copy(
-            valueText = "70",
-            visual = DashboardMetricVisual.ReferenceRange(
-                rawValue = null,
-                markerFraction = null,
-                referenceMarkerFraction = null,
-                bands = emptyList(),
-                selectionAvailable = false,
-                unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
+        val missingBmiPresentation =
+            defaultPresentation.copy(
+                valueText = "70",
+                visual =
+                    DashboardMetricVisual.ReferenceRange(
+                        rawValue = null,
+                        markerFraction = null,
+                        referenceMarkerFraction = null,
+                        bands = emptyList(),
+                        selectionAvailable = false,
+                        unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -264,7 +294,7 @@ class DashboardMetricCardTest {
                 requestedMode = selectedMode,
                 renderMode = selectedMode,
                 isEditing = true,
-                onModeSelected = { selectedMode = it }
+                onModeSelected = { selectedMode = it },
             )
         }
 
@@ -272,7 +302,11 @@ class DashboardMetricCardTest {
 
         composeRule.onNodeWithContentDescription("Change visualization style").performClick()
 
-        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsNotEnabled().assertIsSelected()
+        composeRule
+            .onNodeWithText("Gauge")
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+            .assertIsSelected()
         composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsNotEnabled()
         composeRule.onNodeWithText("Value").assertIsDisplayed().assertIsEnabled()
     }
@@ -293,12 +327,13 @@ class DashboardMetricCardTest {
         val title = string(R.string.card_title_sleep_score)
         val expectedDescription = string(R.string.semantics_score_format, title, "85", "100", classification)
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "85",
-            accessibilityDescription = expectedDescription,
-            visual = DashboardMetricScalePreparer.score(85f, 0f, 100f, emptyList())
-        )
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "85",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f, emptyList()),
+            )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -307,7 +342,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 
@@ -319,12 +354,13 @@ class DashboardMetricCardTest {
         val title = string(R.string.card_title_sleep_duration)
         val expectedDescription = string(R.string.semantics_goal_format, title, "7h 30m", "8h 0m")
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "7h 30m",
-            accessibilityDescription = expectedDescription,
-            visual = DashboardMetricScalePreparer.goal(450f, 480f, emptyList())
-        )
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "7h 30m",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.goal(450f, 480f, emptyList()),
+            )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -333,7 +369,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 
@@ -346,20 +382,22 @@ class DashboardMetricCardTest {
         val relation = string(R.string.personal_baseline_within_range_description)
         val expectedDescription = string(R.string.semantics_value_note_format, title, "55 ms", relation)
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "55",
-            unitText = string(app.readylytics.health.core.ui.R.string.unit_ms),
-            accessibilityDescription = expectedDescription,
-            visual = DashboardMetricScalePreparer.personalBaseline(
-                value = 55f,
-                baseline = 50f,
-                axisMinimumRatio = 0.5f,
-                axisMaximumRatio = 1.5f,
-                bands = emptyList(),
-                baselineReady = true
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "55",
+                unitText = string(app.readylytics.health.core.ui.R.string.unit_ms),
+                accessibilityDescription = expectedDescription,
+                visual =
+                    DashboardMetricScalePreparer.personalBaseline(
+                        value = 55f,
+                        baseline = 50f,
+                        axisMinimumRatio = 0.5f,
+                        axisMaximumRatio = 1.5f,
+                        bands = emptyList(),
+                        baselineReady = true,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -368,7 +406,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 
@@ -383,22 +421,24 @@ class DashboardMetricCardTest {
         val expectedDescription =
             string(R.string.semantics_weight_bmi_format, title, "70 kg", bmiSecondary, bmiCategory)
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "70",
-            unitText = "kg",
-            secondaryText = bmiSecondary,
-            accessibilityDescription = expectedDescription,
-            visual = DashboardMetricScalePreparer.referenceRange(
-                value = 21.7f,
-                minimum = 15f,
-                midpoint = 21.7f,
-                maximum = 35f,
-                bands = emptyList(),
-                scaleAvailable = true,
-                unavailableReason = null
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "70",
+                unitText = "kg",
+                secondaryText = bmiSecondary,
+                accessibilityDescription = expectedDescription,
+                visual =
+                    DashboardMetricScalePreparer.referenceRange(
+                        value = 21.7f,
+                        minimum = 15f,
+                        midpoint = 21.7f,
+                        maximum = 35f,
+                        bands = emptyList(),
+                        scaleAvailable = true,
+                        unavailableReason = null,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -407,7 +447,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 
@@ -420,21 +460,23 @@ class DashboardMetricCardTest {
         val category = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
         val expectedDescription = string(R.string.semantics_value_note_format, title, "20%", category)
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "20",
-            unitText = "%",
-            accessibilityDescription = expectedDescription,
-            visual = DashboardMetricScalePreparer.referenceRange(
-                value = 20f,
-                minimum = 10f,
-                midpoint = 20f,
-                maximum = 30f,
-                bands = emptyList(),
-                scaleAvailable = true,
-                unavailableReason = null
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "20",
+                unitText = "%",
+                accessibilityDescription = expectedDescription,
+                visual =
+                    DashboardMetricScalePreparer.referenceRange(
+                        value = 20f,
+                        minimum = 10f,
+                        midpoint = 20f,
+                        maximum = 30f,
+                        bands = emptyList(),
+                        scaleAvailable = true,
+                        unavailableReason = null,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -443,7 +485,309 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun readinessSemanticsCommunicateValueDenominatorAndClassification() {
+        val classification = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
+        val title = string(app.readylytics.health.core.ui.R.string.card_title_readiness)
+        val expectedDescription = string(R.string.semantics_score_format, title, "80", "100", classification)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "80",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.score(80f, 0f, 100f, emptyList()),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun sleepRhrSemanticsCommunicateValueAndPersonalRangeRelationship() {
+        val title = string(R.string.card_title_sleep_rhr)
+        val relation = string(R.string.personal_baseline_within_range_description)
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "55 bpm", relation)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "55",
+                unitText = string(app.readylytics.health.core.ui.R.string.unit_bpm),
+                accessibilityDescription = expectedDescription,
+                visual =
+                    DashboardMetricScalePreparer.personalBaseline(
+                        value = 55f,
+                        baseline = 55f,
+                        axisMinimumRatio = 0.5f,
+                        axisMaximumRatio = 1.5f,
+                        bands = emptyList(),
+                        baselineReady = true,
+                    ),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun restingHrSemanticsCommunicateValueAndPersonalRangeRelationship() {
+        val title = string(R.string.card_title_resting_hr)
+        val relation = string(R.string.personal_baseline_within_range_description)
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "60 bpm", relation)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "60",
+                unitText = string(app.readylytics.health.core.ui.R.string.unit_bpm),
+                accessibilityDescription = expectedDescription,
+                visual =
+                    DashboardMetricScalePreparer.personalBaseline(
+                        value = 60f,
+                        baseline = 60f,
+                        axisMinimumRatio = 0.5f,
+                        axisMaximumRatio = 1.5f,
+                        bands = emptyList(),
+                        baselineReady = true,
+                    ),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun rasSemanticsCommunicateValueDenominatorAndClassification() {
+        val classification = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
+        val title = string(R.string.card_title_ras_daily)
+        val expectedDescription = string(R.string.semantics_score_format, title, "85", "100", classification)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "85",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f, emptyList()),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun sleepEfficiencySemanticsCommunicateValueAndCategory() {
+        val category = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
+        val title = string(app.readylytics.health.core.ui.R.string.card_title_sleep_efficiency)
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "88%", category)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "88",
+                unitText = "%",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.score(88f, 0f, 100f, emptyList()),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun spo2SemanticsCommunicateValueAndCategory() {
+        val category = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
+        val title = string(R.string.card_title_oxygen_saturation)
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "98%", category)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "98",
+                unitText = "%",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.score(98f, 80f, 100f, emptyList()),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun bloodPressureSemanticsCommunicateValueAndCategory() {
+        val category = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
+        val title = string(R.string.card_title_blood_pressure)
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "120/80 mmHg", category)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "120/80",
+                unitText = "mmHg",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricVisual.ValueOnly,
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.VALUE,
+                renderMode = DashboardCardDisplayMode.VALUE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun heartRateSemanticsCommunicateValueAndCategory() {
+        val category = string(app.readylytics.health.core.ui.R.string.metric_status_neutral)
+        val title = string(R.string.card_title_heart_rate)
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "72 bpm", category)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "72",
+                unitText = "bpm",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricVisual.ValueOnly,
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.VALUE,
+                renderMode = DashboardCardDisplayMode.VALUE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun circadianSemanticsCommunicateValueDenominatorAndClassification() {
+        val classification = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
+        val title = string(R.string.card_title_circadian_consistency)
+        val expectedDescription = string(R.string.semantics_score_format, title, "85", "100", classification)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "85",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f, emptyList()),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun strainRatioSemanticsCommunicateValueAndCategory() {
+        val category = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
+        val title = string(app.readylytics.health.core.ui.R.string.card_title_strain_ratio)
+        val expectedDescription = string(R.string.semantics_value_note_format, title, "1.10", category)
+
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "1.10",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.score(1.1f, 0f, 2f, emptyList()),
+            )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = presentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
             )
         }
 
@@ -459,12 +803,13 @@ class DashboardMetricCardTest {
         val goalVisual = DashboardMetricScalePreparer.goal(520f, 480f, emptyList())
         check(goalVisual.isAboveTarget) { "Fixture must exercise the above-target branch" }
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "520",
-            accessibilityDescription = expectedDescription,
-            visual = goalVisual
-        )
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "520",
+                accessibilityDescription = expectedDescription,
+                visual = goalVisual,
+            )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -473,7 +818,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 
@@ -486,12 +831,13 @@ class DashboardMetricCardTest {
         val reason = string(app.readylytics.health.core.ui.R.string.metric_unavailable_missing_target)
         val expectedDescription = string(R.string.semantics_unavailable_format, title, reason)
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "—",
-            accessibilityDescription = expectedDescription,
-            visual = DashboardMetricScalePreparer.goal(null, null, emptyList())
-        )
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "—",
+                accessibilityDescription = expectedDescription,
+                visual = DashboardMetricScalePreparer.goal(null, null, emptyList()),
+            )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -500,7 +846,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.VALUE,
                 renderMode = DashboardCardDisplayMode.VALUE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 
@@ -513,19 +859,21 @@ class DashboardMetricCardTest {
         val reason = string(app.readylytics.health.core.ui.R.string.metric_unavailable_baseline_not_ready)
         val expectedDescription = string(R.string.semantics_unavailable_format, title, reason)
 
-        val presentation = defaultPresentation.copy(
-            title = title,
-            valueText = "—",
-            accessibilityDescription = expectedDescription,
-            visual = DashboardMetricScalePreparer.personalBaseline(
-                value = null,
-                baseline = null,
-                axisMinimumRatio = 0.5f,
-                axisMaximumRatio = 1.5f,
-                bands = emptyList(),
-                baselineReady = false
+        val presentation =
+            defaultPresentation.copy(
+                title = title,
+                valueText = "—",
+                accessibilityDescription = expectedDescription,
+                visual =
+                    DashboardMetricScalePreparer.personalBaseline(
+                        value = null,
+                        baseline = null,
+                        axisMinimumRatio = 0.5f,
+                        axisMaximumRatio = 1.5f,
+                        bands = emptyList(),
+                        baselineReady = false,
+                    ),
             )
-        )
 
         composeRule.setContent {
             DashboardMetricCard(
@@ -534,7 +882,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.VALUE,
                 renderMode = DashboardCardDisplayMode.VALUE,
                 isEditing = false,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 
@@ -552,7 +900,7 @@ class DashboardMetricCardTest {
                 requestedMode = selectedMode,
                 renderMode = selectedMode,
                 isEditing = true,
-                onModeSelected = { selectedMode = it }
+                onModeSelected = { selectedMode = it },
             )
         }
 
@@ -576,7 +924,7 @@ class DashboardMetricCardTest {
                 requestedMode = DashboardCardDisplayMode.GAUGE,
                 renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = true,
-                onModeSelected = {}
+                onModeSelected = {},
             )
         }
 

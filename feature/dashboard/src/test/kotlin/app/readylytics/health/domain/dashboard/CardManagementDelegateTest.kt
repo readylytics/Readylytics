@@ -400,36 +400,39 @@ class CardManagementDelegateTest {
     }
 
     @Test
-    fun `save changes persists the updated display mode`() = testScope.runTest {
-        delegate.enterEditMode(sampleConfigs)
-        delegate.onEvent(
-            CardManagementEvent.DisplayModeChanged(
-                CardId.HRV,
-                DashboardCardDisplayMode.BAR,
-            ),
-        )
-        delegate.saveChanges()
-        advanceUntilIdle()
+    fun `save changes persists the updated display mode`() =
+        testScope.runTest {
+            delegate.enterEditMode(sampleConfigs)
+            delegate.onEvent(
+                CardManagementEvent.DisplayModeChanged(
+                    CardId.HRV,
+                    DashboardCardDisplayMode.BAR,
+                ),
+            )
+            delegate.saveChanges()
+            advanceUntilIdle()
 
-        val expected = sampleConfigs.map {
-            if (it.cardId == CardId.HRV) it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR) else it
+            val expected =
+                sampleConfigs.map {
+                    if (it.cardId == CardId.HRV) it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR) else it
+                }
+            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expected) }
         }
-        coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expected) }
-    }
 
     @Test
-    fun `cancel changes drops display mode updates without persisting`() = testScope.runTest {
-        delegate.enterEditMode(sampleConfigs)
-        delegate.onEvent(
-            CardManagementEvent.DisplayModeChanged(
-                CardId.HRV,
-                DashboardCardDisplayMode.BAR,
-            ),
-        )
-        delegate.cancelChanges()
-        advanceUntilIdle()
+    fun `cancel changes drops display mode updates without persisting`() =
+        testScope.runTest {
+            delegate.enterEditMode(sampleConfigs)
+            delegate.onEvent(
+                CardManagementEvent.DisplayModeChanged(
+                    CardId.HRV,
+                    DashboardCardDisplayMode.BAR,
+                ),
+            )
+            delegate.cancelChanges()
+            advanceUntilIdle()
 
-        coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
-        assertNull(delegate.pendingConfigs.value)
-    }
+            coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
+            assertNull(delegate.pendingConfigs.value)
+        }
 }
