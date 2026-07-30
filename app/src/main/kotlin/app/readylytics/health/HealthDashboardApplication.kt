@@ -10,22 +10,29 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import app.readylytics.health.BuildConfig
+import app.readylytics.health.benchmark.BenchmarkDataSeeder
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController
+import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
+import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.util.SecureFileLogSink
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -67,11 +74,32 @@ class HealthDashboardApplication :
                 .setWorkerFactory(workerFactory)
                 .build()
 
+    @Inject
+    lateinit var sqlCipherKeyManager: Lazy<SqlCipherKeyManager>
+
     override fun onCreate() {
         super.onCreate()
-        Thread.setDefaultUncaughtExceptionHandler(
-            CrashReportHandler(applicationContext, Thread.getDefaultUncaughtExceptionHandler()),
-        )
+        val crashReportHandler = CrashReportHandler(applicationContext, Thread.getDefaultUncaughtExceptionHandler())
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            if (sqlCipherKeyManager.get().isKeyCorrupted.value) {
+                // If the key is corrupted, Room's DB open fails and propagates an exception.
+                // Since this exception is generally uncaught in ViewModels, we catch it globally.
+                // Restarting the activity ensures the UI renders the recovery screen (via the
+                // isKeyCorrupted observer) instead of crashing the process.
+                val intent = packageManager.getLaunchIntentForPackage(packageName)
+                if (intent != null) {
+                    intent.addFlags(
+                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                            android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK,
+                    )
+                    startActivity(intent)
+                }
+                android.os.Process.killProcess(android.os.Process.myPid())
+                System.exit(0)
+            } else {
+                crashReportHandler.uncaughtException(thread, throwable)
+            }
+        }
         installAndroidLogSink()
         if (BuildConfig.DEBUG) {
             setupPerformanceMonitoring()
@@ -91,8 +119,25 @@ class HealthDashboardApplication :
                 workerScheduler = workerScheduler,
             )
         val startupCoordinator = DatabaseReadyStartupCoordinator(startupInitializer)
+        val preferencesPrewarmer = PreferencesPrewarmer(settingsRepo)
+        appScope.launch { preferencesPrewarmer.prewarm() }
         appScope.launch {
             startupCoordinator.observe(databaseMigrationController.state)
+        }
+        appScope.launch {
+            // Wait for the same DB-migration readiness gate the startup coordinator above
+            // observes -- seeding before the DB is ready would race the migration and
+            // silently no-op (BenchmarkDataSeeder no-ops outside the "benchmark" build type
+            // anyway, but on that build type this ordering matters).
+            databaseMigrationController.state.first { it.readiness == DatabaseReadiness.Ready }
+            try {
+                BenchmarkDataSeeder.seedIfNeeded(this@HealthDashboardApplication)
+                logD(BENCHMARK_SEED_LOG_TAG) { "Benchmark data seeding completed" }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logE(BENCHMARK_SEED_LOG_TAG, e) { "Benchmark data seeding failed" }
+            }
         }
     }
 
@@ -135,7 +180,8 @@ class HealthDashboardApplication :
                     ) {
                         val formatted = "[Session:${context.sessionId ?: "none"}] $message"
                         when (level) {
-                            LogLevel.INFO -> Log.d(tag, formatted)
+                            LogLevel.DEBUG -> Log.d(tag, formatted)
+                            LogLevel.INFO -> Log.i(tag, formatted)
                             LogLevel.WARN -> Log.w(tag, formatted, throwable)
                             LogLevel.ERROR -> Log.e(tag, formatted, throwable)
                         }
@@ -146,5 +192,9 @@ class HealthDashboardApplication :
             // Release build secure log file sink (includes sanitized logcat mirroring)
             DomainLogger.installSink(secureLogSink)
         }
+    }
+
+    private companion object {
+        const val BENCHMARK_SEED_LOG_TAG = "BenchmarkDataSeeder"
     }
 }

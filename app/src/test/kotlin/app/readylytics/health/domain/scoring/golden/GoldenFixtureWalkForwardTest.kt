@@ -25,6 +25,7 @@ import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.ListSerializer
@@ -77,8 +78,10 @@ import kotlin.test.assertTrue
  * produces, and commit the refreshed JSON separately per the remediation plan's migration-risk
  * requirement.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 class GoldenFixtureWalkForwardTest {
+    private val json = Json { prettyPrint = true }
     private val zoneId: ZoneId = ZoneId.of("Europe/Berlin")
     private val startDate: LocalDate = LocalDate.of(2024, 6, 1)
     private val endDate: LocalDate = LocalDate.of(2026, 5, 31)
@@ -210,7 +213,7 @@ class GoldenFixtureWalkForwardTest {
 
             val summaries = db.dailySummaryDao().getAllSummaries().sortedBy { it.dateMidnightMs }
             val actualJson =
-                Json { prettyPrint = true }.encodeToString(ListSerializer(DailySummaryEntity.serializer()), summaries)
+                json.encodeToString(ListSerializer(DailySummaryEntity.serializer()), summaries)
 
             if (System.getProperty("update.golden") == "true") {
                 val target = goldenWriteTarget()
@@ -242,7 +245,7 @@ class GoldenFixtureWalkForwardTest {
         )
 
     private fun loadGoldenJsonOrNull(): String? {
-        javaClass.classLoader.getResourceAsStream(goldenResourceRelativePath())?.use {
+        javaClass.classLoader?.getResourceAsStream(goldenResourceRelativePath())?.use {
             return it.bufferedReader().readText()
         }
         return goldenFileCandidates().firstOrNull { it.exists() }?.readText()

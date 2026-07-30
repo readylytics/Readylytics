@@ -40,6 +40,7 @@ import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun BloodPressureDetailRoute(
@@ -78,7 +79,10 @@ fun BloodPressureDetailScreen(
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiR.string.back),
+                        )
                     }
                 },
             )
@@ -128,12 +132,12 @@ fun BloodPressureDetailScreen(
                             val diff = (uiState.latestSystolic - 120)
                             when {
                                 diff > 0 ->
-                                    stringResource(R.string.delta_up) + " $diff " +
+                                    stringResource(CoreUiR.string.delta_up) + " $diff " +
                                         stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
                                 diff < 0 ->
-                                    stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
+                                    stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
                                         stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
-                                else -> stringResource(R.string.delta_no_change)
+                                else -> stringResource(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null
@@ -156,12 +160,12 @@ fun BloodPressureDetailScreen(
                             val diff = (uiState.latestDiastolic - 80)
                             when {
                                 diff > 0 ->
-                                    stringResource(R.string.delta_up) + " $diff " +
+                                    stringResource(CoreUiR.string.delta_up) + " $diff " +
                                         stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
                                 diff < 0 ->
-                                    stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
+                                    stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
                                         stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
-                                else -> stringResource(R.string.delta_no_change)
+                                else -> stringResource(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null
@@ -181,7 +185,7 @@ fun BloodPressureDetailScreen(
                 }
             }
 
-            SectionHeader(title = stringResource(R.string.label_trends))
+            SectionHeader(title = stringResource(CoreUiR.string.label_trends))
             Spacer(Modifier.height(MaterialTheme.spacing.small))
             SingleChoiceSegmentedButtonRow(
                 modifier =

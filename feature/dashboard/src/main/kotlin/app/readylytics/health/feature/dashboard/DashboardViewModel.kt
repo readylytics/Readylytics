@@ -51,6 +51,7 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @HiltViewModel
 class DashboardViewModel
@@ -317,7 +318,7 @@ class DashboardViewModel
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util
                         .logE(TAG, e) { "Refresh failed" }
-                    _errorMessage.value = UiText.StringRes(R.string.error_sync_failed)
+                    _errorMessage.value = UiText.StringRes(CoreUiR.string.error_sync_failed)
                 } finally {
                     // Always clear cached derived metrics, even if the sync failed partway, so the
                     // dashboard never serves stale sleep/load scores from a previous recalculation.

@@ -5,11 +5,17 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
 object ChartUtils {
-    private fun getDateFormatter(): DateTimeFormatter =
-        DateTimeFormatter.ofPattern(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault())
+    private val tooltipDateFormatters = ConcurrentHashMap<Locale, DateTimeFormatter>()
+
+    // DateTimeFormatter is immutable; the locale set is small and reused across tooltip taps.
+    internal fun getTooltipDateFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+        tooltipDateFormatters.getOrPut(locale) {
+            DateTimeFormatter.ofPattern(DateFormatUtils.DATE_FORMAT_SHORT, locale)
+        }
 
     fun dayOffsetToLocalDate(
         dayOffset: Int,
@@ -21,7 +27,7 @@ object ChartUtils {
             .toLocalDate()
             .plusDays(dayOffset.toLong())
 
-    fun formatTooltipDate(localDate: LocalDate): String = localDate.format(getDateFormatter())
+    fun formatTooltipDate(localDate: LocalDate): String = localDate.format(getTooltipDateFormatter())
 
     fun formatTooltipValue(
         value: Float,

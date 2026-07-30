@@ -12,6 +12,7 @@ import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.domain.sync.ResyncPhase
 import app.readylytics.health.domain.sync.fraction
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as CoreUiR
 
 /**
  * Notification channel + builder for the foreground historical-resync worker
@@ -133,11 +134,11 @@ object SyncNotifications {
 
         val text =
             when (phase) {
-                null -> context.getString(R.string.resync_notification_preparing)
-                ResyncPhase.INGEST -> context.getString(R.string.resync_phase_ingest, current, total)
-                ResyncPhase.PRUNE -> context.getString(R.string.resync_phase_prune)
-                ResyncPhase.RECONCILE -> context.getString(R.string.resync_phase_reconcile)
-                ResyncPhase.RECOMPUTE -> context.getString(R.string.recalculating_progress, current, total)
+                null -> context.getString(CoreUiR.string.resync_notification_preparing)
+                ResyncPhase.INGEST -> context.getString(CoreUiR.string.resync_phase_ingest, current, total)
+                ResyncPhase.PRUNE -> context.getString(CoreUiR.string.resync_phase_prune)
+                ResyncPhase.RECONCILE -> context.getString(CoreUiR.string.resync_phase_reconcile)
+                ResyncPhase.RECOMPUTE -> context.getString(CoreUiR.string.recalculating_progress, current, total)
             }
         val fraction = phase?.let { RecalcProgress(it, current, total).fraction() } ?: 0f
         builder

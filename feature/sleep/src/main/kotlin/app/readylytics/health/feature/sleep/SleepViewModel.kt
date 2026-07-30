@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.sleep
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -42,6 +44,7 @@ import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
+@Immutable
 data class SleepUiState(
     val latestSummary: DailySummary? = null,
     val latestMetrics: DailyMetrics? = null,
@@ -49,6 +52,7 @@ data class SleepUiState(
     val stageTimeline: List<SleepStageData> = emptyList(),
     val selectedDate: LocalDate = LocalDate.now(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val selectedTrendRange: TimeRange = TimeRange.SEVEN_DAYS,
     val trendStartOffsetPoints: List<DailyDataPoint> = emptyList(),
     val trendDurationSpanPoints: List<DailyDataPoint> = emptyList(),
@@ -217,7 +221,6 @@ class SleepViewModel
                         summaryFlow,
                         sessionFlow,
                         stagesFlow,
-                        foregroundSyncController.isSyncing,
                         metricsFlow,
                         trendSessionsFlow,
                         settingsRepo.userPreferences,
@@ -228,18 +231,17 @@ class SleepViewModel
 
                         @Suppress("UNCHECKED_CAST")
                         val stages = array[2] as List<SleepStageData>
-                        val isSyncing = array[3] as Boolean
-                        val latestMetrics = array[4] as DailyMetrics?
+                        val latestMetrics = array[3] as DailyMetrics?
 
                         @Suppress("UNCHECKED_CAST")
                         val trendData =
-                            array[5] as Triple<
+                            array[4] as Triple<
                                 List<DailyDataPoint>,
                                 List<DailyDataPoint>,
                                 List<DailyDataPoint>,
                             >
-                        val prefs = array[6] as UserPreferences
-                        val yesterdaySummary = array[7] as DailySummary?
+                        val prefs = array[5] as UserPreferences
+                        val yesterdaySummary = array[6] as DailySummary?
 
                         SleepUiState(
                             latestSummary = latestSummary,
@@ -247,7 +249,6 @@ class SleepViewModel
                             latestSession = latestSession,
                             stageTimeline = stages,
                             selectedDate = date,
-                            isLoading = isSyncing,
                             selectedTrendRange = range,
                             trendStartOffsetPoints = trendData.first,
                             trendDurationSpanPoints = trendData.second,
@@ -262,7 +263,30 @@ class SleepViewModel
                                 ),
                             yesterdaySleepScoreRounded = yesterdaySummary?.sleepScore?.roundToInt(),
                         )
-                    }
+                    }.distinctUntilChanged()
+                        // isSyncing is merged in after the heavy pipeline instead of inside it
+                        // (mirrors DashboardViewModel.kt:104-113) so a sync toggle only triggers a
+                        // cheap copy, not a full re-run of the trend-day-loop unpacking above.
+                        // isLoading means "true first-load, no data yet" (skeleton); isRefreshing
+                        // tracks every sync regardless of data presence. The "no data yet" signal
+                        // is based on whether the trend chart has any real historical point loaded,
+                        // not on whether the *selected day's* summary/session exists --
+                        // latestSummary/latestSession are scoped to the selected date, so on the
+                        // first sync of a new day (before today's session/summary is computed) they
+                        // are null even though the trend already has unchanged history loaded.
+                        // Checking the trend list instead avoids flashing the skeleton and tearing
+                        // down/rebuilding the Vico chart once per day. The trend point lists are
+                        // always padded to range.days entries (null-valued, never actually empty),
+                        // so this must be an any-non-null check, not a trend-list emptiness check.
+                        .combine(
+                            foregroundSyncController.isSyncing,
+                        ) { state, syncing ->
+                            val hasHistoricalData = state.trendStartOffsetPoints.any { it.value != null }
+                            state.copy(
+                                isLoading = syncing && !hasHistoricalData,
+                                isRefreshing = syncing,
+                            )
+                        }
                 }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,

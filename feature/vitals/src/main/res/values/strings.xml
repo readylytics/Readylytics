@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Vitals Overview / Tab -->
-    <string name="tab_vitals">Vitals</string>
-
     <!-- General Labels -->
     <string name="label_physiological_trends">Physiological trends</string>
     <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>

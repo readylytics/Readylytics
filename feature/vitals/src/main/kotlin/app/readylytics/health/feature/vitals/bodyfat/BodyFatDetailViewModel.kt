@@ -30,6 +30,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 data class BodyFatDetailUiState(
     val latestBodyFat: Float? = null,
@@ -85,7 +86,7 @@ class BodyFatDetailViewModel
                                 diff > 0 ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.StringRes(CoreUiR.string.delta_up),
                                             UiText.RawString(" $formattedDiff"),
                                             UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
@@ -93,12 +94,12 @@ class BodyFatDetailViewModel
                                 diff < 0 ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.StringRes(CoreUiR.string.delta_down),
                                             UiText.RawString(" $formattedDiff"),
                                             UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
                                     )
-                                else -> UiText.StringRes(R.string.delta_no_change)
+                                else -> UiText.StringRes(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null

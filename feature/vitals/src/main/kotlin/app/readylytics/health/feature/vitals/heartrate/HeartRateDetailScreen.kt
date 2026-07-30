@@ -92,7 +92,10 @@ fun HeartRateDetailScreen(
                 title = { Text(stringResource(app.readylytics.health.core.ui.R.string.heart_rate_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiR.string.back),
+                        )
                     }
                 },
             )
@@ -185,12 +188,12 @@ fun HeartRateDetailScreen(
                         listOf(
                             Triple(
                                 0,
-                                stringResource(R.string.hr_zone_n, 0),
+                                stringResource(CoreUiR.string.hr_zone_n, 0),
                                 stringResource(R.string.hr_zone_0_range, uiState.zone1MinBpm),
                             ),
                             Triple(
                                 1,
-                                stringResource(R.string.hr_zone_n, 1),
+                                stringResource(CoreUiR.string.hr_zone_n, 1),
                                 stringResource(
                                     R.string.hr_zone_inner_range,
                                     uiState.zone1MinBpm,
@@ -199,7 +202,7 @@ fun HeartRateDetailScreen(
                             ),
                             Triple(
                                 2,
-                                stringResource(R.string.hr_zone_n, 2),
+                                stringResource(CoreUiR.string.hr_zone_n, 2),
                                 stringResource(
                                     R.string.hr_zone_inner_range,
                                     uiState.zone1MaxBpm + 1,
@@ -208,7 +211,7 @@ fun HeartRateDetailScreen(
                             ),
                             Triple(
                                 3,
-                                stringResource(R.string.hr_zone_n, 3),
+                                stringResource(CoreUiR.string.hr_zone_n, 3),
                                 stringResource(
                                     R.string.hr_zone_inner_range,
                                     uiState.zone2MaxBpm + 1,
@@ -217,7 +220,7 @@ fun HeartRateDetailScreen(
                             ),
                             Triple(
                                 4,
-                                stringResource(R.string.hr_zone_n, 4),
+                                stringResource(CoreUiR.string.hr_zone_n, 4),
                                 stringResource(
                                     R.string.hr_zone_inner_range,
                                     uiState.zone3MaxBpm + 1,
@@ -226,7 +229,7 @@ fun HeartRateDetailScreen(
                             ),
                             Triple(
                                 5,
-                                stringResource(R.string.hr_zone_n, 5),
+                                stringResource(CoreUiR.string.hr_zone_n, 5),
                                 stringResource(R.string.hr_zone_above_range, uiState.zone4MaxBpm),
                             ),
                         )

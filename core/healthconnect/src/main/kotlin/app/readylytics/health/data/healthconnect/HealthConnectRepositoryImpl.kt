@@ -129,7 +129,7 @@ class HealthConnectRepositoryImpl
                 } else {
                     val missing = requiredPermissions - granted
                     if (app.readylytics.health.core.healthconnect.BuildConfig.DEBUG) {
-                        app.readylytics.health.domain.util.logD(
+                        app.readylytics.health.domain.util.logI(
                             "HealthConnectRepository",
                         ) { "Missing permissions: $missing" }
                     } else {

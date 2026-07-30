@@ -93,6 +93,8 @@ private fun guidanceText(readiness: DatabaseReadiness): String =
         }
 
         is DatabaseReadiness.Failed -> stringResource(R.string.database_migration_failed)
+
+        DatabaseReadiness.KeyCorrupted -> stringResource(R.string.database_migration_failed)
     }
 
 @Composable

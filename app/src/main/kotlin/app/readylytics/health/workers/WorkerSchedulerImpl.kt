@@ -133,8 +133,15 @@ class WorkerSchedulerImpl
          * preserving the unique work identity.
          */
         override fun schedulePeriodicSync(intervalMinutes: Long) {
+            val constraints =
+                Constraints
+                    .Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+
             val request =
                 PeriodicWorkRequestBuilder<PeriodicHealthSyncWorker>(intervalMinutes, TimeUnit.MINUTES)
+                    .setConstraints(constraints)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
                     .build()
 

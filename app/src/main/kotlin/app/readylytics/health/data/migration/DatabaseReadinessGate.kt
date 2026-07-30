@@ -63,6 +63,8 @@ class DatabaseReadinessGate
                             "Unsupported database version: ${state.userVersion}",
                         )
                 }
+            } catch (_: SqlCipherKeyManager.KeyDecryptionException) {
+                DatabaseReadiness.KeyCorrupted
             } catch (e: Exception) {
                 DatabaseReadiness.Failed(e.message ?: "Database readiness inspection failed")
             }

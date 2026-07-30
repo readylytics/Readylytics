@@ -47,6 +47,7 @@ import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.ui.sync.SyncEvent
 import app.readylytics.health.ui.sync.SyncViewModel
 import kotlinx.coroutines.flow.collectLatest
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -197,11 +198,12 @@ private fun RecalcProgressBanner(
         ) {
             val text =
                 when (progress.phase) {
-                    ResyncPhase.INGEST -> stringResource(R.string.resync_phase_ingest, progress.current, progress.total)
-                    ResyncPhase.PRUNE -> stringResource(R.string.resync_phase_prune)
-                    ResyncPhase.RECONCILE -> stringResource(R.string.resync_phase_reconcile)
+                    ResyncPhase.INGEST ->
+                        stringResource(CoreUiR.string.resync_phase_ingest, progress.current, progress.total)
+                    ResyncPhase.PRUNE -> stringResource(CoreUiR.string.resync_phase_prune)
+                    ResyncPhase.RECONCILE -> stringResource(CoreUiR.string.resync_phase_reconcile)
                     ResyncPhase.RECOMPUTE ->
-                        stringResource(R.string.recalculating_progress, progress.current, progress.total)
+                        stringResource(CoreUiR.string.recalculating_progress, progress.current, progress.total)
                 }
             Text(text = text)
             LinearProgressIndicator(

@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,7 +18,6 @@ import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringCalculator
@@ -59,6 +59,7 @@ data class WorkoutDisplayItem(
     val classification: WorkoutLoadClassification?,
 )
 
+@Immutable
 data class WorkoutsUiState(
     val latestSummary: DailySummary? = null,
     val latestMetrics: DailyMetrics? = null,
@@ -71,6 +72,7 @@ data class WorkoutsUiState(
     val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayRasScore: Float? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val currentPage: Int = 1,
     val totalPages: Int = 1,
     val yesterdayStrainRatio: Float? = null,
@@ -89,7 +91,6 @@ private data class WorkoutFlowData(
 private data class CombinedParams(
     val range: TimeRange,
     val date: LocalDate,
-    val isSyncing: Boolean,
     val page: Int,
 )
 
@@ -124,9 +125,8 @@ class WorkoutsViewModel
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
-                foregroundSyncController.isSyncing,
                 _currentPage,
-            ) { range, date, isSyncing, page -> CombinedParams(range, date, isSyncing, page) }
+            ) { range, date, page -> CombinedParams(range, date, page) }
                 .scan(null as CombinedParams?) { prev, current ->
                     if (prev != null && (prev.range != current.range || prev.date != current.date)) {
                         _currentPage.value = 1
@@ -139,7 +139,6 @@ class WorkoutsViewModel
                 .flatMapLatest { params ->
                     val range = params.range
                     val date = params.date
-                    val isSyncing = params.isSyncing
                     val page = params.page
                     val earliestWorkoutMs = workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
                     val zoneId = ZoneId.systemDefault()
@@ -285,23 +284,10 @@ class WorkoutsViewModel
 
                             val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
 
-                            // Batch load HR samples for all recent workouts
+                            // Batch load HR samples for all recent workouts: one getByTimeRange
+                            // per span-bounded cluster instead of one per workout (F10).
                             val samplesByWorkoutId =
-                                mutableMapOf<
-                                    String,
-                                    List<ComputeWorkoutTrimpUseCase.HeartRateSample>,
-                                >()
-                            for (workout in recentWorkouts) {
-                                val samples = heartRateRepository.getByTimeRange(workout.startTime, workout.endTime)
-                                samplesByWorkoutId[workout.id] =
-                                    samples.map {
-                                        app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-                                            .HeartRateSample(
-                                                timestamp = java.time.Instant.ofEpochMilli(it.timestampMs),
-                                                bpm = it.beatsPerMinute,
-                                            )
-                                    }
-                            }
+                                fetchHeartRateSamplesByWorkout(recentWorkouts, heartRateRepository)
 
                             val recentItems =
                                 recentWorkouts
@@ -399,7 +385,6 @@ class WorkoutsViewModel
                                             prefs.rasSourceMode,
                                         )
                                     },
-                                isLoading = isSyncing,
                                 currentPage = clampedPage,
                                 totalPages = totalPages,
                                 yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
@@ -408,6 +393,19 @@ class WorkoutsViewModel
                             ).also { emit(it) }
                         }
                     }
+                }.distinctUntilChanged()
+                // isSyncing is merged in after the heavy pipeline instead of inside it (mirrors
+                // DashboardViewModel.kt:104-113) so a sync toggle only triggers a cheap copy, not a
+                // full pipeline restart (Room re-subscriptions, EMA series, N+1 HR-sample loop).
+                // isLoading means "true first-load, no data yet" (skeleton); isRefreshing tracks
+                // every sync regardless of data presence. dailyTrimp/dailyStrainRatio are always
+                // padded to displayDayMidnights.size entries (null-valued, never actually empty),
+                // so latestSummary/recentWorkouts are the correct "no data yet" signal here.
+                .combine(foregroundSyncController.isSyncing) { state, syncing ->
+                    state.copy(
+                        isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
+                        isRefreshing = syncing,
+                    )
                 }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,

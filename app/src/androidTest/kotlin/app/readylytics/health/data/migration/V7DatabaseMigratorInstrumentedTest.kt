@@ -5,6 +5,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.V7MigrationPhase
 import app.readylytics.health.domain.migration.V7MigrationResult
@@ -317,7 +318,7 @@ class V7DatabaseMigratorInstrumentedTest {
         helper.createDatabase(name, version).close()
 
         val file = context.getDatabasePath(name)
-        val keyManager = SqlCipherKeyManager(context)
+        val keyManager = SqlCipherKeyManager(context, AndroidKeystoreKeyProvider())
         keyManager.migrateIfNeeded(file)
         keyManager.withWritableDatabase(file) { database ->
             database.version = version

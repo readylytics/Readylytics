@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -66,6 +67,7 @@ import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun SleepTrendCard(
@@ -136,7 +138,7 @@ fun SleepTrendChart(
 
     val durationFormat = stringResource(R.string.sleep_trend_tooltip_duration_format)
     val bedtimeFormat = stringResource(R.string.sleep_trend_tooltip_bedtime_format)
-    val hoursOnlyFormat = stringResource(app.readylytics.health.core.ui.R.string.sleep_duration_hours_only)
+    val hoursOnlyFormat = stringResource(CoreUiR.string.sleep_duration_hours_only)
 
     var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker =
@@ -435,13 +437,18 @@ fun SleepTrendChart(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = stringResource(R.string.message_no_data_available),
+                text = stringResource(CoreUiR.string.message_no_data_available),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     } else {
-        Box(modifier = modifier.fillMaxWidth()) {
+        Box(
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .testTag("SleepTrendChart"),
+        ) {
             CartesianChartHost(
                 chart =
                     rememberCartesianChart(

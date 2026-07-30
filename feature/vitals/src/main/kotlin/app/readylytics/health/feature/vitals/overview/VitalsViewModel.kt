@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.vitals.overview
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -34,6 +35,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
+@Immutable
 data class VitalsUiState(
     val latestSummary: DailySummary? = null,
     val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList()),
@@ -42,6 +44,7 @@ data class VitalsUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val rangeStartMs: Long = System.currentTimeMillis(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
 )
 
 private data class VitalsSelection(
@@ -143,11 +146,24 @@ class VitalsViewModel
                 .flowOn(ioDispatcher)
 
         val uiState: StateFlow<VitalsUiState> =
+            // isLoading now means "true first-load, no data yet" (skeleton). isRefreshing tracks
+            // every sync regardless of data presence, and only gates the date-switcher (see
+            // VitalsScreen). Mirrors DashboardViewModel's isComputingMetrics/isRefreshing split.
+            // The "no data yet" signal is based on whether the trend charts have any real
+            // historical point loaded, not on whether the *selected day's* summary exists --
+            // latestSummary is scoped to the selected date, so on the first sync of a new day
+            // (before today's summary is computed) it is null even though 7-90 days of unchanged
+            // chart history are already loaded. Checking chart history instead avoids flashing the
+            // skeleton and tearing down/rebuilding the Vico charts once per day.
             combine(
                 contentFlow,
                 presentationFlow,
                 foregroundSyncController.isSyncing,
             ) { content, presentation, isSyncing ->
+                val hasHistoricalData =
+                    content.chartSeries.hrv.any { it.value != null } ||
+                        content.chartSeries.rhr.any { it.value != null } ||
+                        content.chartSeries.spo2.any { it.value != null }
                 VitalsUiState(
                     latestSummary = content.latestSummary,
                     chartSeries = content.chartSeries,
@@ -155,7 +171,8 @@ class VitalsViewModel
                     selectedRange = content.selection.range,
                     selectedDate = content.selection.date,
                     rangeStartMs = content.rangeStartMs,
-                    isLoading = isSyncing,
+                    isLoading = isSyncing && !hasHistoricalData,
+                    isRefreshing = isSyncing,
                 )
             }.stateIn(
                 scope = viewModelScope,

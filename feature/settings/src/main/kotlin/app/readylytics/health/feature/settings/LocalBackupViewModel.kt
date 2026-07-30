@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -132,7 +133,7 @@ class LocalBackupViewModel
                                         isRestoring = false,
                                         backupError =
                                             e.toBackupError(
-                                                defaultRes = R.string.error_backup_restore_validation,
+                                                defaultRes = CoreUiR.string.error_backup_restore_validation,
                                             ),
                                     )
                                 }
@@ -151,7 +152,7 @@ class LocalBackupViewModel
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
-                                        backupError = UiText.StringRes(R.string.restore_partial_success_message),
+                                        backupError = UiText.StringRes(CoreUiR.string.restore_partial_success_message),
                                     )
                                 }
                                 _sideEffect.emit(SideEffect.RestartApp)
@@ -279,7 +280,7 @@ class LocalBackupViewModel
 
         private fun Throwable.toBackupError(defaultRes: Int): UiText =
             if (this is WrongBackupPasswordException) {
-                UiText.StringRes(R.string.error_backup_wrong_password)
+                UiText.StringRes(CoreUiR.string.error_backup_wrong_password)
             } else {
                 UiText.StringRes(defaultRes)
             }

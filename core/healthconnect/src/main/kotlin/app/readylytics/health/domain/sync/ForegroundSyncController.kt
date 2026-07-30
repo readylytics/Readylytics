@@ -54,7 +54,7 @@ class ForegroundSyncController
             val prefs = settingsRepo.userPreferences.first()
             when (prefs.syncPreference) {
                 SyncPreference.NEVER -> {
-                    app.readylytics.health.domain.util.logD(
+                    app.readylytics.health.domain.util.logI(
                         "ForegroundSyncController",
                     ) { "Sync disabled by user preference" }
                     return
@@ -102,7 +102,7 @@ class ForegroundSyncController
             val windowDays = uncappedWindowDays.coerceAtMost(MAX_INLINE_RECOMPUTE_DAYS)
             executeSync(isFirstSync = false, windowDays = windowDays)
             if (uncappedWindowDays > MAX_INLINE_RECOMPUTE_DAYS) {
-                app.readylytics.health.domain.util.logD("ForegroundSyncController") {
+                app.readylytics.health.domain.util.logI("ForegroundSyncController") {
                     "Catch-up window ($uncappedWindowDays days) exceeds the inline cap " +
                         "($MAX_INLINE_RECOMPUTE_DAYS); ran the capped window and enqueued the resync worker"
                 }
@@ -194,14 +194,14 @@ class ForegroundSyncController
                 if (result is app.readylytics.health.domain.model.Result.Failure &&
                     result.code == "REQUIRES_HISTORICAL_RESYNC"
                 ) {
-                    app.readylytics.health.domain.util.logD("ForegroundSyncController") {
+                    app.readylytics.health.domain.util.logI("ForegroundSyncController") {
                         "Sync requires historical resync, enqueuing worker"
                     }
                     workerScheduler.get().scheduleResyncWorker()
                 } else {
                     result.getOrThrow()
                     app.readylytics.health.domain.util
-                        .logD("ForegroundSyncController") { "Sync success" }
+                        .logI("ForegroundSyncController") { "Sync success" }
                     _syncCompletedEvent.emit(Unit)
                 }
             } catch (e: CancellationException) {

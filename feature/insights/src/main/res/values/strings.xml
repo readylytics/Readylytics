@@ -9,8 +9,6 @@
     <string name="insight_load_spike_recovery_strain_title">Training Load May Be Affecting Recovery</string>
     <string name="insight_load_spike_recovery_strain_body">Your recent training load is high, and your recovery markers show signs of strain.</string>
     <string name="insight_load_spike_recovery_strain_body_everyday">Your recent daily physiological load is high, and your recovery markers show signs of strain.</string>
-    <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
-
     <string name="insight_workout_impact_title">Workout Impact</string>
     <string name="insight_workout_impact_body">Yesterday\'s high strain workout appears to be carrying into today because both HRV and RHR are outside their optimal ranges.</string>
     <string name="insight_rest_day_success_title">Rest Day Success</string>

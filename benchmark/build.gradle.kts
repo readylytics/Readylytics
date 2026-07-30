@@ -1,7 +1,14 @@
 plugins {
     id("com.android.test")
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.ktlint)
 }
+
+val useConnectedProfileDevice =
+    providers
+        .gradleProperty("readylytics.baselineprofile.connected")
+        .map(String::toBoolean)
+        .orElse(false)
 
 android {
     namespace = "app.readylytics.health.benchmark"
@@ -11,7 +18,8 @@ android {
     defaultConfig {
         minSdk = 26
         targetSdk = 37
-        testInstrumentationRunner = "androidx.benchmark.junit4.AndroidBenchmarkRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "DEBUGGABLE"
     }
 
     buildTypes {
@@ -19,6 +27,18 @@ android {
             isDebuggable = false
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
+        }
+    }
+
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("pixel9Api36") {
+                    device = "Pixel 9"
+                    apiLevel = 36
+                    systemImageSource = "aosp"
+                }
+            }
         }
     }
 
@@ -30,6 +50,15 @@ android {
     experimentalProperties["android.experimental.self-instrumenting"] = true
 }
 
+baselineProfile {
+    if (useConnectedProfileDevice.get()) {
+        useConnectedDevices = true
+    } else {
+        managedDevices += "pixel9Api36"
+        useConnectedDevices = false
+    }
+}
+
 ktlint {
     version.set("1.5.0")
 }
@@ -37,5 +66,6 @@ ktlint {
 dependencies {
     implementation(libs.androidx.benchmark.macro)
     implementation(libs.androidx.junit)
+    implementation(libs.androidx.test.runner)
     implementation(libs.androidx.test.uiautomator)
 }

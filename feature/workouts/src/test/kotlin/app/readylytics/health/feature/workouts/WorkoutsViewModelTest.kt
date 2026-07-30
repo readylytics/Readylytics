@@ -20,6 +20,7 @@ import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -556,5 +558,105 @@ class WorkoutsViewModelTest {
             assertEquals(0.3f, state.todayStrainIncrease!!, 0.001f)
 
             collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `isSyncing toggle does not restart the heavy pipeline`() =
+        runTest(testDispatcher) {
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = System.currentTimeMillis() - 1000 * 60 * 30,
+                    endTime = System.currentTimeMillis(),
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 0f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 130f,
+                )
+            workoutsFlow.value = listOf(workout)
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            val stateBeforeToggle = viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+            assertEquals(false, stateBeforeToggle.isLoading)
+            assertEquals(false, stateBeforeToggle.isRefreshing)
+
+            isSyncingFlow.value = true
+            testScheduler.advanceUntilIdle()
+            // Workouts are already present, so this is a routine refresh, not a first load:
+            // isLoading must stay false (no skeleton/chart rebuild) and only isRefreshing flips.
+            assertEquals(false, viewModel.uiState.value.isLoading)
+            assertEquals(true, viewModel.uiState.value.isRefreshing)
+
+            isSyncingFlow.value = false
+            testScheduler.advanceUntilIdle()
+            val stateAfterToggle = viewModel.uiState.value
+            assertEquals(false, stateAfterToggle.isLoading)
+            assertEquals(false, stateAfterToggle.isRefreshing)
+
+            // The heavy pipeline (Room subscriptions, earliest-workout lookup, EMA series) must
+            // not restart on a sync toggle -- only the cheap isLoading/isRefreshing merge should run.
+            coVerify(exactly = 1) { workoutRepository.getEarliestWorkoutTimestamp() }
+            assertSame(stateBeforeToggle.recentWorkouts, stateAfterToggle.recentWorkouts)
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `isLoading stays true while syncing when no workouts or summary exist yet`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            isSyncingFlow.value = true
+            testScheduler.advanceUntilIdle()
+            val state = viewModel.uiState.value
+            assertEquals(true, state.isLoading)
+            assertEquals(true, state.isRefreshing)
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `heart-rate samples are batched, not fetched once per workout`() =
+        runTest(testDispatcher) {
+            // 5 close-together workouts must collapse into a single getByTimeRange call
+            // (F10) instead of one query per workout.
+            val dummyWorkouts =
+                (1..5).map { id ->
+                    WorkoutData(
+                        id = id.toString(),
+                        startTime = System.currentTimeMillis() - (id * 1000 * 60),
+                        endTime = System.currentTimeMillis() - (id * 1000 * 60) + 1000 * 30,
+                        exerciseType = "running",
+                        durationMinutes = 30,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 50f,
+                        avgHr = 130f,
+                    )
+                }
+            workoutsFlow.value = dummyWorkouts
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            viewModel.uiState.first { it.recentWorkouts.size == 5 }
+
+            coVerify(exactly = 1) { heartRateRepository.getByTimeRange(any(), any()) }
+
+            collectJob.cancel()
         }
 }

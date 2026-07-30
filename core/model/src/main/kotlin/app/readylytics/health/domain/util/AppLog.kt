@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.util
 
-enum class LogLevel { INFO, WARN, ERROR }
+enum class LogLevel { DEBUG, INFO, WARN, ERROR }
 
 data class LogContext(val sessionId: String? = null)
 
@@ -64,6 +64,13 @@ inline fun DomainLogger.scoped(
 }
 
 inline fun logD(
+    tag: String,
+    msg: () -> String,
+) {
+    DomainLogger.log(LogLevel.DEBUG, tag, throwable = null, context = LogContext(), msg = msg)
+}
+
+inline fun logI(
     tag: String,
     msg: () -> String,
 ) {
