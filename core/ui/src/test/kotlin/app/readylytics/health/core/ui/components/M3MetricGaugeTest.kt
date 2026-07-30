@@ -35,7 +35,7 @@ class M3MetricGaugeTest {
             )
         }
         val unmergedRoot = composeTestRule.onRoot(useUnmergedTree = true)
-        // Parent owns semantics.
+        assert(unmergedRoot.fetchSemanticsNode().children.isEmpty()) { "Expected no semantic children" }
     }
 
     @Test
