@@ -3,6 +3,8 @@ package app.readylytics.health.feature.dashboard
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -14,12 +16,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.StatusColors
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.M3MetricGauge
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
+
+internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
+internal const val DASHBOARD_GAUGE_TAG = "dashboard_metric_gauge"
+internal const val DASHBOARD_BAR_TAG = "dashboard_metric_bar"
 
 fun metricStatusColor(
     status: MetricStatus,
@@ -69,7 +78,10 @@ fun DashboardGaugeRenderer(
             is DashboardMetricVisual.ValueOnly -> null
         }
 
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = modifier.fillMaxWidth().testTag(DASHBOARD_GAUGE_TAG),
+        contentAlignment = Alignment.Center,
+    ) {
         M3MetricGauge(
             markerFraction = markerFraction,
             activeColor = activeColor,
@@ -133,7 +145,10 @@ fun DashboardBarRenderer(
             if (isUnavailable) trackColor else metricStatusColor(band.status, statusColors, surfaceVariantColor)
         }
 
-    Box(modifier = modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = modifier.fillMaxWidth().height(100.dp).testTag(DASHBOARD_BAR_TAG),
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(24.dp).padding(horizontal = 16.dp)) {
             val strokeWidth = size.height
             val startY = size.height / 2
@@ -195,13 +210,34 @@ fun DashboardBarRenderer(
 @Composable
 fun DashboardValueRenderer(
     presentation: DashboardMetricPresentation,
+    contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = presentation.valueText)
-        Text(text = presentation.unitText)
-        if (presentation.secondaryText != null) {
-            Text(text = presentation.secondaryText)
+    Column(modifier = modifier.fillMaxSize()) {
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+        Text(
+            text = presentation.valueText,
+            style = MaterialTheme.typography.displaySmall,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        presentation.unitText.takeIf(String::isNotBlank)?.let { unit ->
+            Text(
+                text = unit,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
+            )
+        }
+        presentation.secondaryText?.let { secondary ->
+            Text(
+                text = secondary,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
