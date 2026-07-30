@@ -65,6 +65,7 @@ import app.readylytics.health.feature.settings.data.SyncSettingsSection
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private fun openOssLicenses(
     context: Context,
@@ -402,8 +403,8 @@ fun SettingsScreen(
                         Column {
                             AppThemeItem(uiState = uiState, onEvent = onUIEvent)
                             SettingsToggleItem(
-                                label = stringResource(R.string.onboarding_dynamic_color_label),
-                                description = stringResource(R.string.onboarding_dynamic_color_desc),
+                                label = stringResource(CoreUiR.string.onboarding_dynamic_color_label),
+                                description = stringResource(CoreUiR.string.onboarding_dynamic_color_desc),
                                 checked = uiState.dynamicColorEnabled,
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )

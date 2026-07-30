@@ -20,6 +20,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun BodyFatHistorySection(
@@ -27,7 +28,7 @@ fun BodyFatHistorySection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        SectionHeader(title = stringResource(R.string.label_history))
+        SectionHeader(title = stringResource(CoreUiR.string.label_history))
         items.forEach { item ->
             BodyFatHistoryCard(
                 item = item,

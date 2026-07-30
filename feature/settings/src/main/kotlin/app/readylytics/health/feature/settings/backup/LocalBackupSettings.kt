@@ -54,6 +54,7 @@ import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import java.text.DateFormat
 import java.util.Date
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun LocalBackupSection(
@@ -194,7 +195,7 @@ fun LocalBackupSection(
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { onEvent(SettingsEvent.DismissBackupError) }) {
-                    Text(stringResource(R.string.action_dismiss))
+                    Text(stringResource(CoreUiR.string.action_dismiss))
                 }
             }
         }
@@ -269,9 +270,9 @@ private fun BackupPasswordSection(
                         contentDescription =
                             stringResource(
                                 if (showTestPassword) {
-                                    R.string.accessibility_password_hide
+                                    CoreUiR.string.accessibility_password_hide
                                 } else {
-                                    R.string.accessibility_password_show
+                                    CoreUiR.string.accessibility_password_show
                                 },
                             ),
                     )
@@ -347,9 +348,9 @@ private fun SetPasswordDialog(
                                 contentDescription =
                                     stringResource(
                                         if (showPassword) {
-                                            R.string.accessibility_password_hide
+                                            CoreUiR.string.accessibility_password_hide
                                         } else {
-                                            R.string.accessibility_password_show
+                                            CoreUiR.string.accessibility_password_show
                                         },
                                     ),
                             )

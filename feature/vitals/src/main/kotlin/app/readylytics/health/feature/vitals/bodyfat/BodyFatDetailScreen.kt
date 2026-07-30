@@ -91,7 +91,10 @@ fun BodyFatDetailScreen(
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiR.string.back),
+                        )
                     }
                 },
             )
@@ -122,11 +125,11 @@ fun BodyFatDetailScreen(
             } else if (uiState.optimalRangeMax > 0f) {
                 val genderStringRes =
                     when (Gender.entries.find { it.name == uiState.gender }) {
-                        Gender.MALE -> R.string.gender_male
-                        Gender.FEMALE -> R.string.gender_female
-                        Gender.OTHER -> R.string.gender_other
-                        Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
-                        else -> R.string.gender_other
+                        Gender.MALE -> CoreUiR.string.gender_male
+                        Gender.FEMALE -> CoreUiR.string.gender_female
+                        Gender.OTHER -> CoreUiR.string.gender_other
+                        Gender.PREFER_NOT_TO_SAY -> CoreUiR.string.gender_prefer_not_to_say
+                        else -> CoreUiR.string.gender_other
                     }
                 M3ScoreGaugeCard(
                     modifier =
@@ -154,7 +157,7 @@ fun BodyFatDetailScreen(
                 )
             }
 
-            SectionHeader(title = stringResource(R.string.label_trends))
+            SectionHeader(title = stringResource(CoreUiR.string.label_trends))
             Spacer(Modifier.height(MaterialTheme.spacing.small))
             SingleChoiceSegmentedButtonRow(
                 modifier =
@@ -196,7 +199,7 @@ fun BodyFatDetailScreen(
                         metricName = "Body Fat",
                         baselineUnit = stringResource(CoreUiR.string.unit_percent),
                         baseline = uiState.averageBodyFat,
-                        baselineLabel = stringResource(R.string.label_average),
+                        baselineLabel = stringResource(CoreUiR.string.label_average),
                         baselineDecimalPlaces = 1,
                         axisDecimalPlaces = 1,
                         scrollState = chartScrollState,

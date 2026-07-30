@@ -175,4 +175,13 @@
     <string name="sync_progress_download_logs">Download Logs</string>
     <string name="sync_progress_logs_empty">No logs available yet</string>
     <string name="sync_progress_continue_in_background">Continue in background</string>
+    <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
+    <string name="resync_notification_preparing">Preparing…</string>
+    <string name="resync_phase_ingest">Fetching Health Connect data (batch %1$d of %2$d)…</string>
+    <string name="resync_phase_prune">Cleaning up local data…</string>
+    <string name="resync_phase_reconcile">Linking sleep and workout sessions…</string>
+    <string name="error_sync_failed">Sync failed</string>
+    <string name="tab_vitals">Vitals</string>
+    <string name="card_title_insights">Insights</string>
+    <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
 </resources>
