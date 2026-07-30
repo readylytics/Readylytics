@@ -1,16 +1,22 @@
 package app.readylytics.health.feature.dashboard
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.FitDashboardTheme
+import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 import app.readylytics.health.domain.model.MetricStatus
@@ -54,6 +60,148 @@ class DashboardVisualizationRegressionTest {
                     unavailableReason = null,
                 ),
         )
+
+    @Test
+    fun representativeMetrics_renderPrimaryValueInEverySupportedMode() {
+        val representatives =
+            listOf(
+                CardId.SLEEP_SCORE to "86",
+                CardId.READINESS to "79",
+                CardId.HRV to "41",
+                CardId.SLEEP_DURATION to "6h 50m",
+                CardId.RAS_DAILY to "74",
+                CardId.RESTING_HR to "48",
+            )
+        var cardId by mutableStateOf(representatives.first().first)
+        var cardPresentation by mutableStateOf(presentationFor(cardId, representatives.first().second))
+        var mode by mutableStateOf(DashboardCardDisplayMode.VALUE)
+
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation = cardPresentation,
+                    specification = requireNotNull(DashboardCardCatalog.spec(cardId)),
+                    requestedMode = mode,
+                    renderMode = mode,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        representatives.forEach { (newCardId, primaryValue) ->
+            val supportedModes = requireNotNull(DashboardCardCatalog.spec(newCardId)).supportedModes
+            supportedModes.forEach { newMode ->
+                composeRule.runOnIdle {
+                    cardId = newCardId
+                    cardPresentation = presentationFor(newCardId, primaryValue)
+                    mode = newMode
+                }
+                composeRule.onNodeWithText(primaryValue).assertIsDisplayed()
+                when (newCardId) {
+                    CardId.HRV -> composeRule.onNodeWithText("ms").assertIsDisplayed()
+                    CardId.RESTING_HR -> composeRule.onNodeWithText("bpm").assertIsDisplayed()
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    @Test
+    fun steps_remainsBarOnlyAndOutsideDashboardMetricCard() {
+        assertEquals(
+            listOf(DashboardCardDisplayMode.BAR),
+            requireNotNull(DashboardCardCatalog.spec(CardId.STEPS)).supportedModes,
+        )
+
+        composeRule.setContent {
+            TestTheme {
+                StepsCard(
+                    stepCount = 4_321,
+                    stepGoal = 10_000,
+                    onClick = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("4321").assertIsDisplayed()
+        composeRule.onNodeWithText("/ 10000").assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_METRIC_CARD_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun status_isAccessibilityOnly_inEverySupportedMode() {
+        val sleepSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_SCORE))
+        var mode by mutableStateOf(sleepSpecification.supportedModes.first())
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation =
+                        presentationFor(CardId.SLEEP_SCORE, "86").copy(
+                            secondaryText = null,
+                            accessibilityDescription = "Sleep score 86, excellent.",
+                        ),
+                    specification = sleepSpecification,
+                    requestedMode = mode,
+                    renderMode = mode,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        sleepSpecification.supportedModes.forEach { newMode ->
+            composeRule.runOnIdle { mode = newMode }
+            composeRule
+                .onNodeWithContentDescription("Sleep score 86, excellent.")
+                .assertExists()
+            composeRule
+                .onNodeWithText("excellent", substring = true, ignoreCase = true)
+                .assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun supportedModes_keepFixedBoundsAndVisibleText_atLargeFontScaleInLightAndDarkThemes() {
+        val hrvSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.HRV))
+        val hrvPresentation = presentationFor(CardId.HRV, "41")
+        var appTheme by mutableStateOf(AppTheme.LIGHT)
+        var mode by mutableStateOf(hrvSpecification.supportedModes.first())
+
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 1.5f),
+            ) {
+                FitDashboardTheme(appTheme = appTheme, dynamicColor = false) {
+                    DashboardMetricCard(
+                        presentation = hrvPresentation,
+                        specification = hrvSpecification,
+                        requestedMode = mode,
+                        renderMode = mode,
+                        isEditing = false,
+                        onModeSelected = {},
+                    )
+                }
+            }
+        }
+
+        listOf(AppTheme.LIGHT, AppTheme.DARK).forEach { newTheme ->
+            hrvSpecification.supportedModes.forEach { newMode ->
+                composeRule.runOnIdle {
+                    appTheme = newTheme
+                    mode = newMode
+                }
+                composeRule.onNodeWithTag(DASHBOARD_METRIC_CARD_TAG).assertHeightIsEqualTo(156.dp)
+                composeRule.onNodeWithText("41").assertIsDisplayed()
+                composeRule.onNodeWithText("ms").assertIsDisplayed()
+                when (newMode) {
+                    DashboardCardDisplayMode.GAUGE -> assertVisualizationIsInsideCard(DASHBOARD_GAUGE_TAG)
+                    DashboardCardDisplayMode.BAR -> assertVisualizationIsInsideCard(DASHBOARD_BAR_TAG)
+                    DashboardCardDisplayMode.VALUE -> Unit
+                }
+            }
+        }
+    }
 
     @Test
     fun valueMode_showsLargeValueUnitAndSecondary_withoutVisualizationOrVisibleStatus() {
@@ -259,6 +407,57 @@ class DashboardVisualizationRegressionTest {
                 )
             }
         }
+    }
+
+    private fun presentationFor(
+        cardId: CardId,
+        valueText: String,
+    ): DashboardMetricPresentation {
+        val (title, unitText) =
+            when (cardId) {
+                CardId.SLEEP_SCORE -> "Sleep score" to ""
+                CardId.READINESS -> "Readiness" to ""
+                CardId.HRV -> "HRV" to "ms"
+                CardId.SLEEP_DURATION -> "Sleep duration" to ""
+                CardId.RAS_DAILY -> "RAS" to ""
+                CardId.RESTING_HR -> "Resting heart rate" to "bpm"
+                else -> error("No representative presentation for $cardId")
+            }
+        return presentation.copy(
+            title = title,
+            valueText = valueText,
+            unitText = unitText,
+            accessibilityDescription = "$title $valueText $unitText, normal.",
+            visual =
+                DashboardMetricVisual.Score(
+                    rawValue = 74f,
+                    minValue = 0f,
+                    maxValue = 100f,
+                    markerFraction = 0.74f,
+                    bands = emptyList(),
+                    unavailableReason = null,
+                ),
+        )
+    }
+
+    private fun assertVisualizationIsInsideCard(tag: String) {
+        val cardBounds =
+            composeRule
+                .onNodeWithTag(DASHBOARD_METRIC_CARD_TAG)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val visualizationBounds =
+            composeRule
+                .onNodeWithTag(tag, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        assertTrue(
+            "$tag must remain inside the card: visualization=$visualizationBounds, card=$cardBounds",
+            visualizationBounds.left >= cardBounds.left &&
+                visualizationBounds.top >= cardBounds.top &&
+                visualizationBounds.right <= cardBounds.right &&
+                visualizationBounds.bottom <= cardBounds.bottom,
+        )
     }
 
     private fun assertTextIsAboveBar(text: String) {
