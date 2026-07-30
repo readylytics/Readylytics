@@ -279,12 +279,16 @@ class DashboardMetricPresentationFactory
 
             // 10. SLEEP EFFICIENCY
             val efficiency = lastSleepSession?.efficiency
+            val efficiencyPercent =
+                efficiency?.let { value ->
+                    if (value in 0f..1f) value * 100f else value
+                }
             val effStatus =
-                if (efficiency != null) {
+                if (efficiencyPercent != null) {
                     when {
-                        efficiency >= 85f -> MetricStatus.OPTIMAL
-                        efficiency >= 75f -> MetricStatus.NEUTRAL
-                        efficiency >= 65f -> MetricStatus.WARNING
+                        efficiencyPercent >= 85f -> MetricStatus.OPTIMAL
+                        efficiencyPercent >= 75f -> MetricStatus.NEUTRAL
+                        efficiencyPercent >= 65f -> MetricStatus.WARNING
                         else -> MetricStatus.POOR
                     }
                 } else {
@@ -292,16 +296,16 @@ class DashboardMetricPresentationFactory
                 }
 
             val effValText =
-                if (efficiency == null) {
+                if (efficiencyPercent == null) {
                     "—"
-                } else if (efficiency == 0f) {
+                } else if (efficiencyPercent == 0f) {
                     "0"
                 } else {
-                    efficiency.roundToInt().toString()
+                    efficiencyPercent.roundToInt().toString()
                 }
             val effVisual =
                 DashboardMetricScalePreparer.score(
-                    efficiency,
+                    efficiencyPercent,
                     0f,
                     100f,
                     listOf(

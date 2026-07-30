@@ -6,6 +6,7 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
@@ -189,6 +190,20 @@ class DashboardMetricPresentationFactoryTest {
         assertEquals("95", presentation.valueText)
         assertEquals("%", presentation.unitText)
         assertEquals(95.13f, visual.rawValue)
+    }
+
+    @Test
+    fun `sleep efficiency accepts legacy fractional values as percentages`() {
+        val lastSleepSession = SleepSessionSummary(efficiency = 0.9f, startTime = 0L, endTime = 0L)
+
+        val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
+        val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
+        val visual = presentation.visual as DashboardMetricVisual.Score
+
+        assertEquals("90", presentation.valueText)
+        assertEquals("%", presentation.unitText)
+        assertEquals(MetricStatus.OPTIMAL, presentation.status)
+        assertEquals(90f, visual.rawValue)
     }
 
     @Test
