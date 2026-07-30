@@ -150,14 +150,15 @@ coexisting in one process — a real gap found in final review, since test/bench
 hand-constructs extra instances; now closed structurally by moving the in-process `ReentrantLock`
 into the companion object (JVM-wide) so correctness no longer depends on `@Singleton` DI scoping;
 (b) `resetKeyAndDatabase()` under concurrency — now also inside the same lock with a durable
-`commit = true` removal, but not exercised concurrently by a test; or (c) the actual production
-trigger path (`Application.onCreate()` on a genuinely fresh install), which remains
-manual-repro-only because it requires a truly fresh install rather than a test fixture. Also note
-no CI job in this repo runs `connectedAndroidTest`, so Task 2's instrumented test is currently a
-manual regression guard a developer must run locally, not an automated gate — a worthwhile future
+`commit = true` removal, but not exercised concurrently by a test; or (c) the complete
+`Application.onCreate()` fresh-install orchestration, which remains manual-repro-only. This is not
+a gap in the Room-helper race coverage: the factory-path instrumentation fixture exercises the
+same lazy `SupportSQLiteOpenHelper` first-open path used by the production database. Also note no
+CI job in this repo runs `connectedAndroidTest`, so the factory-path instrumented test is currently
+a manual regression guard a developer must run locally, not an automated gate — a worthwhile future
 improvement.
 
-**2026-07-30 update — CI's first run found a residual gap, closed after two attempts.** Once
+**2026-07-30 direct-helper history — superseded by the factory-path resolution below.** Once
 `.github/workflows/instrumented-tests.yml` actually ran `connectedDebugAndroidTest` for the first
 time, `SqlCipherKeyManagerCrossProcessRaceTest` failed with the exact
 `SQLiteNotADatabaseException: file is not a database (code 26)` signature this doc describes
@@ -187,8 +188,9 @@ being needlessly serialized across processes for their full duration.
 hold the lock can fetch the key without triggering `OverlappingFileLockException` from a nested
 lock attempt.
 
-Verified: `SqlCipherKeyManagerCrossProcessRaceTest` passes on the same physical device
-(`SM-A576B`) after this fix.
+Verified: the direct `withWritableDatabase()` race scenario passed on the same physical device
+(`SM-A576B`) after this fix. This historical pass does **not** verify the lazy factory-helper path;
+that production-equivalent path is resolved and covered separately below.
 
 **Resolution:** `SupportOpenHelperFactory.create()` is lazy: its returned
 `SupportSQLiteOpenHelper` performs the physical open only when Room first calls
