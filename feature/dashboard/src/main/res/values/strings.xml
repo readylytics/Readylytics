@@ -31,6 +31,8 @@
     <string name="mode_value">Value</string>
     <string name="menu_item_description_mode">Visualization style: %1$s</string>
     <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
+    <string name="personal_baseline_within_range_description">within your baseline range</string>
+    <string name="goal_above_target_description">above target</string>
 
     <string name="manage_cards">Manage Cards</string>
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>

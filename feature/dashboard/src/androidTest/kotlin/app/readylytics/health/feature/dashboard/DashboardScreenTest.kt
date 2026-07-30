@@ -7,14 +7,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
@@ -30,6 +35,12 @@ import java.time.LocalDate
 class DashboardScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // Resource-backed lookup (rather than a hardcoded literal) for the shared core/ui drag-handle
+    // description, matching the pattern used by core/ui's DateSwitcherTest.
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    private fun string(id: Int): String = context.getString(id)
 
     private fun createTestUiState(
         isManagingCards: Boolean = false,
@@ -485,5 +496,45 @@ class DashboardScreenTest {
             .performClick()
 
         composeRule.onNodeWithText("detail:RECOVERY_HRV_MISSING").assertIsDisplayed()
+    }
+
+    // -------------------------------------------------------------------------
+    // Task 10: drag-handle touch-target regression coverage (ReorderableCardGrid,
+    // core:ui). Only in edit mode does the grid render a handle at all.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun dragHandleMeetsMinimumTouchTargetSize() {
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = createConfigurableTestUiState(isManagingCards = true),
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+                onToggleCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
+                insightsCard = { _, _, _, _, _ -> Text("insights-content") },
+            )
+        }
+
+        // Compose UI test in this project's Compose BOM does not expose
+        // assertTouchWidthIsAtLeast/assertTouchHeightIsAtLeast (only *IsEqualTo variants exist for
+        // touch bounds); assertWidthIsAtLeast/assertHeightIsAtLeast are the closest available
+        // equivalents and are exact here since the drag handle is a fixed 48.dp Box with no extra
+        // touch-target padding (see ReorderableCardGrid.kt), so layout bounds equal touch bounds.
+        val dragHandleDescription = string(app.readylytics.health.core.ui.R.string.accessibility_drag_to_reorder)
+        composeRule
+            .onAllNodesWithContentDescription(dragHandleDescription)
+            .onFirst()
+            .assertWidthIsAtLeast(48.dp)
+            .assertHeightIsAtLeast(48.dp)
     }
 }
