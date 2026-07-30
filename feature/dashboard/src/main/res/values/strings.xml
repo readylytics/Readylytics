@@ -25,6 +25,10 @@
     <string name="card_title_steps">Steps</string>
     
     <string name="card_title_weight">Weight</string>
+    <string name="menu_content_description_visualization_style">Change visualization style</string>
+    <string name="mode_gauge">Gauge</string>
+    <string name="mode_bar">Bar</string>
+    <string name="mode_value">Value</string>
 
     <string name="manage_cards">Manage Cards</string>
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
