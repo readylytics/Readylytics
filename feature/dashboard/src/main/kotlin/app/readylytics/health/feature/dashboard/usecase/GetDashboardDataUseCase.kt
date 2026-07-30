@@ -5,7 +5,6 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
-import app.readylytics.health.domain.model.BodyFatStatus
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
@@ -20,6 +19,7 @@ import app.readylytics.health.domain.model.rasStatus
 import app.readylytics.health.domain.model.restingHrStatus
 import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
+import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.ResourceProvider
@@ -462,16 +462,10 @@ class GetDashboardDataUseCase
             val bodyFatStatus =
                 HealthMetricsCalculator.assessBodyFatPercent(
                     bodyFatPercent,
-                    prefs.age,
+                    prefs.physiologyProfile,
                     prefs.gender,
                 )
-            val status =
-                when (bodyFatStatus) {
-                    BodyFatStatus.Optimal -> MetricStatus.OPTIMAL
-                    BodyFatStatus.Neutral -> MetricStatus.NEUTRAL
-                    BodyFatStatus.Poor -> MetricStatus.POOR
-                    BodyFatStatus.Calibrating -> MetricStatus.CALIBRATING
-                }
+            val status = bodyFatStatus.toMetricStatus()
 
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_body_fat),

@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.service
 
 import app.readylytics.health.domain.model.BmiStatus
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.UnitSystem
 import javax.inject.Inject
@@ -56,14 +57,8 @@ class BmiService
             return Result.Success(BmiData(bmi = bmi, status = classify(bmi)))
         }
 
-        /** Classify a BMI value into a [BmiStatus] band. */
-        fun classify(bmi: Float): BmiStatus =
-            when {
-                bmi < OVERWEIGHT_THRESHOLD -> BmiStatus.Optimal
-                bmi < OBESE_CLASS_1_THRESHOLD -> BmiStatus.Neutral
-                bmi < OBESE_CLASS_2_THRESHOLD -> BmiStatus.Warning
-                else -> BmiStatus.Poor
-            }
+        /** Classify a BMI value into a [BmiStatus] band. Delegates to [BodyCompositionAssessment]. */
+        fun classify(bmi: Float): BmiStatus = BodyCompositionAssessment.assessBmi(bmi).status
 
         /** Stable [Result.Failure.code] values produced by [calculateBmi]. */
         object Codes {
@@ -74,10 +69,6 @@ class BmiService
         }
 
         companion object {
-            const val OVERWEIGHT_THRESHOLD: Float = 25f
-            const val OBESE_CLASS_1_THRESHOLD: Float = 30f
-            const val OBESE_CLASS_2_THRESHOLD: Float = 35f
-
             // Sanity limits (no humans outside these ranges).
             private const val MAX_WEIGHT: Float = 1_000f
             private const val MAX_HEIGHT: Float = 300f

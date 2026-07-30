@@ -184,7 +184,7 @@ class WeightDetailViewModelTest {
             assertEquals(2_000L, newest.timestampMs)
             assertEquals(79.6f, newest.weightDisplay, 0.01f)
             assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
-            assertEquals(BmiStatus.Neutral, newest.bmiStatus)
+            assertEquals(BmiStatus.Warning, newest.bmiStatus)
 
             val oldest = state.historyItems[1]
             assertEquals(1_000L, oldest.timestampMs)

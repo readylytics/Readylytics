@@ -26,8 +26,8 @@
     <string name="label_weight_unit_format">Weight (%1$s)</string>
     <string name="tooltip_weight_current">Latest weight: %1$s\nHeight: %2$s</string>
     <string name="label_bmi">BMI</string>
-    <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30:
-        Overweight\n30+: Obese</string>
+    <string name="tooltip_bmi">Body Mass Index\n\nUnder 18.5: Underweight\n18.5-24.9: Healthy
+        weight\n25-29.9: Overweight\n30+: Obesity</string>
     <string name="label_weight_trend">Weight Trend</string>
     <string name="weight_history_title_format">Weight (%1$s)</string>
     <string name="weight_history_subtitle_with_delta">%1$s %2$s · %3$s %2$s</string>

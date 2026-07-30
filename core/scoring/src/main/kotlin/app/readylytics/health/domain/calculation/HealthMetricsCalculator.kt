@@ -2,8 +2,10 @@ package app.readylytics.health.domain.calculation
 
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.BodyFatStatus
 import app.readylytics.health.domain.preferences.Gender
+import app.readylytics.health.domain.preferences.PhysiologyProfile
 
 object HealthMetricsCalculator {
     fun calculateBmi(
@@ -14,13 +16,8 @@ object HealthMetricsCalculator {
         return weightKg / (heightM * heightM)
     }
 
-    fun assessBmi(bmi: Float): BmiStatus =
-        when {
-            bmi < 25f -> BmiStatus.Optimal
-            bmi < 30f -> BmiStatus.Neutral
-            bmi < 35f -> BmiStatus.Warning
-            else -> BmiStatus.Poor
-        }
+    /** Classify a BMI value into a [BmiStatus]. Delegates to [BodyCompositionAssessment]. */
+    fun assessBmi(bmi: Float): BmiStatus = BodyCompositionAssessment.assessBmi(bmi).status
 
     fun assessBloodPressure(
         systolic: Int,
@@ -33,37 +30,15 @@ object HealthMetricsCalculator {
             else -> BloodPressureStatus.HypertensionStage2
         }
 
+    /**
+     * Classify body-fat percentage by physiology profile and gender.
+     * Delegates to [BodyCompositionAssessment]. `null` gender uses the fixed reference band.
+     */
     fun assessBodyFatPercent(
         bodyFatPercent: Float,
-        ageYears: Int,
+        physiologyProfile: PhysiologyProfile,
         gender: Gender?,
-    ): BodyFatStatus {
-        if (gender == null) return BodyFatStatus.Calibrating
-
-        val age = ageYears.coerceIn(1, 120)
-        val (optimalMax, neutralMax) =
-            when (gender) {
-                Gender.MALE ->
-                    when {
-                        age in 20..40 -> Pair(19f, 24f)
-                        age in 41..60 -> Pair(22f, 28f)
-                        else -> Pair(24f, 30f)
-                    }
-                Gender.FEMALE ->
-                    when {
-                        age in 20..40 -> Pair(32f, 38f)
-                        age in 41..60 -> Pair(34f, 40f)
-                        else -> Pair(36f, 42f)
-                    }
-                Gender.OTHER, Gender.PREFER_NOT_TO_SAY -> Pair(25f, 35f)
-            }
-
-        return when {
-            bodyFatPercent <= optimalMax -> BodyFatStatus.Optimal
-            bodyFatPercent <= neutralMax -> BodyFatStatus.Neutral
-            else -> BodyFatStatus.Poor
-        }
-    }
+    ): BodyFatStatus = BodyCompositionAssessment.assessBodyFat(bodyFatPercent, physiologyProfile, gender).status
 
     fun calculateDailyBpAverage(
         systolics: List<Int>,

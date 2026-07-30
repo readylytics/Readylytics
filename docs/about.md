@@ -206,6 +206,44 @@ _Implemented in: `EverydayHeartRateLoadCalculator.kt`, `LoadSourceSelector.kt`, 
 
 ---
 
+## BMI and Body Fat
+
+**BMI (Body Mass Index)** classifies your weight relative to height using WHO-aligned bands:
+
+- **Underweight** — BMI below 18.5
+- **Healthy weight** — 18.5 to 24.9
+- **Overweight** — 25 to 29.9
+- **Obesity** — 30 and above
+
+**Body Fat Percentage** uses continuous, gender-specific bands when your profile records a
+biological sex:
+
+- **Male** — Below essential <2%, Essential 2–5.9%, Athletic 6–13.9%, Fitness 14–17.9%,
+  Acceptable 18–24.9%, Obese 25%+
+- **Female** — Below essential <10%, Essential 10–13.9%, Athletic 14–20.9%, Fitness
+  21–24.9%, Acceptable 25–31.9%, Obese 32%+
+
+If gender is set to **Other**, **Prefer not to say**, or is unset, we show a fixed
+10–30% reference band centered on 20% instead of a gendered scale — values inside the
+band are Optimal, at or below 10% is Neutral, and above 30% is Poor.
+
+The Body Fat card also shows a **reference midpoint** — a target value for your
+physiology profile, used only to position the marker on the gauge, not to change your
+status:
+
+- **Male** — Athlete 9.5%, Active 15.5%, Sedentary 19.5%
+- **Female** — Athlete 17%, Active 22.5%, Sedentary 26.5%
+- **Other / Prefer not to say / unset** — fixed at 20%, independent of profile
+
+**Reading the status.** Optimal (green) and Neutral (informational) describe healthy or
+expected ranges; Warning flags dangerously low essential-fat levels or an overweight BMI;
+Poor flags the obesity range for BMI or body fat.
+
+_Implemented in: `BodyCompositionAssessment.kt`, `BmiService.kt`, `HealthMetricsService.kt`,
+`HealthMetricsCalculator.kt`_
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:

@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.service
 
 import app.readylytics.health.data.preferences.Gender
+import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus
@@ -84,34 +85,40 @@ class HealthMetricsServiceTest {
 
     // ─── assessBmi ───────────────────────────────────────────────────────────
     @Test
+    fun assessBmi_boundary18_49_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(18.49f))
+
+    @Test
+    fun assessBmi_boundary18_5_isOptimal() = assertEquals(BmiStatus.Optimal, service.assessBmi(18.5f))
+
+    @Test
     fun assessBmi_below25_isOptimal() = assertEquals(BmiStatus.Optimal, service.assessBmi(24.9f))
 
     @Test
-    fun assessBmi_at25_isNeutral() = assertEquals(BmiStatus.Neutral, service.assessBmi(25f))
+    fun assessBmi_at25_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(25f))
 
     @Test
-    fun assessBmi_27_isNeutral() = assertEquals(BmiStatus.Neutral, service.assessBmi(27f))
+    fun assessBmi_27_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(27f))
 
     @Test
-    fun assessBmi_at30_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(30f))
+    fun assessBmi_at30_isPoor() = assertEquals(BmiStatus.Poor, service.assessBmi(30f))
 
     @Test
-    fun assessBmi_32_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(32f))
+    fun assessBmi_32_isPoor() = assertEquals(BmiStatus.Poor, service.assessBmi(32f))
 
     @Test
     fun assessBmi_at35_isPoor() = assertEquals(BmiStatus.Poor, service.assessBmi(35f))
 
     @Test
-    fun assessBmi_zero_isOptimal() = assertEquals(BmiStatus.Optimal, service.assessBmi(0f))
+    fun assessBmi_zero_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(0f))
 
     @Test
-    fun assessBmi_negative_isOptimal() = assertEquals(BmiStatus.Optimal, service.assessBmi(-5f))
+    fun assessBmi_negative_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(-5f))
 
     @Test
-    fun assessBmi_boundary29_9_isNeutral() = assertEquals(BmiStatus.Neutral, service.assessBmi(29.9f))
+    fun assessBmi_boundary29_9_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(29.9f))
 
     @Test
-    fun assessBmi_boundary34_9_isWarning() = assertEquals(BmiStatus.Warning, service.assessBmi(34.9f))
+    fun assessBmi_boundary34_9_isPoor() = assertEquals(BmiStatus.Poor, service.assessBmi(34.9f))
 
     // ─── assessBloodPressure ─────────────────────────────────────────────────
     @Test
@@ -155,122 +162,135 @@ class HealthMetricsServiceTest {
         assertEquals(BloodPressureStatus.HypertensionStage2, service.assessBloodPressure(180, 110))
 
     // ─── assessBodyFatPercent ────────────────────────────────────────────────
+    // Canonical, continuous bands via BodyCompositionAssessment; independent of profile for
+    // status (profile only shifts the gauge reference midpoint, covered by
+    // BodyCompositionAssessmentTest).
     @Test
-    fun bf_nullGender_isCalibrating() =
-        assertEquals(BodyFatStatus.Calibrating, service.assessBodyFatPercent(20f, 30, null))
+    fun bf_nullGender_usesFixedReferenceBand() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            service.assessBodyFatPercent(20f, PhysiologyProfile.ACTIVE, null),
+        )
 
     @Test
-    fun bf_male25_15_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(15f, 25, Gender.MALE))
+    fun bf_male_belowEssential_isWarning() =
+        assertEquals(
+            BodyFatStatus.Warning,
+            service.assessBodyFatPercent(1.99f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun bf_male25_boundary19_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(19f, 25, Gender.MALE))
+    fun bf_male_boundary2_isNeutral() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            service.assessBodyFatPercent(2f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun bf_male25_at20_isNeutral() =
-        assertEquals(BodyFatStatus.Neutral, service.assessBodyFatPercent(20f, 25, Gender.MALE))
+    fun bf_male_athletic_isOptimal() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            service.assessBodyFatPercent(6f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun bf_male25_boundary24_isNeutral() =
-        assertEquals(BodyFatStatus.Neutral, service.assessBodyFatPercent(24f, 25, Gender.MALE))
+    fun bf_male_acceptable_isNeutral() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            service.assessBodyFatPercent(18f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun bf_male25_at25_isPoor() = assertEquals(BodyFatStatus.Poor, service.assessBodyFatPercent(25f, 25, Gender.MALE))
+    fun bf_male_obese_isPoor() =
+        assertEquals(
+            BodyFatStatus.Poor,
+            service.assessBodyFatPercent(25f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun bf_male50_22_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(22f, 50, Gender.MALE))
+    fun bf_female_belowEssential_isWarning() =
+        assertEquals(
+            BodyFatStatus.Warning,
+            service.assessBodyFatPercent(9.99f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
 
     @Test
-    fun bf_male50_25_isNeutral() =
-        assertEquals(BodyFatStatus.Neutral, service.assessBodyFatPercent(25f, 50, Gender.MALE))
+    fun bf_female_boundary10_isNeutral() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            service.assessBodyFatPercent(10f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
 
     @Test
-    fun bf_male50_29_isPoor() = assertEquals(BodyFatStatus.Poor, service.assessBodyFatPercent(29f, 50, Gender.MALE))
+    fun bf_female_athletic_isOptimal() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            service.assessBodyFatPercent(14f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
 
     @Test
-    fun bf_male70_24_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(24f, 70, Gender.MALE))
+    fun bf_female_acceptable_isNeutral() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            service.assessBodyFatPercent(25f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
 
     @Test
-    fun bf_male70_27_isNeutral() =
-        assertEquals(BodyFatStatus.Neutral, service.assessBodyFatPercent(27f, 70, Gender.MALE))
+    fun bf_female_obese_isPoor() =
+        assertEquals(
+            BodyFatStatus.Poor,
+            service.assessBodyFatPercent(32f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
 
     @Test
-    fun bf_male70_31_isPoor() = assertEquals(BodyFatStatus.Poor, service.assessBodyFatPercent(31f, 70, Gender.MALE))
+    fun bf_other_withinFixedBand_isOptimal() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            service.assessBodyFatPercent(20f, PhysiologyProfile.SEDENTARY, Gender.OTHER),
+        )
 
     @Test
-    fun bf_female25_28_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(28f, 25, Gender.FEMALE))
+    fun bf_other_atFixedMinimum_isNeutral() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            service.assessBodyFatPercent(10f, PhysiologyProfile.SEDENTARY, Gender.OTHER),
+        )
 
     @Test
-    fun bf_female25_boundary32_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(32f, 25, Gender.FEMALE))
+    fun bf_other_aboveFixedMaximum_isPoor() =
+        assertEquals(
+            BodyFatStatus.Poor,
+            service.assessBodyFatPercent(30.01f, PhysiologyProfile.SEDENTARY, Gender.OTHER),
+        )
 
     @Test
-    fun bf_female25_33_isNeutral() =
-        assertEquals(BodyFatStatus.Neutral, service.assessBodyFatPercent(33f, 25, Gender.FEMALE))
+    fun bf_preferNotToSay_withinFixedBand_isOptimal() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            service.assessBodyFatPercent(20f, PhysiologyProfile.ATHLETE, Gender.PREFER_NOT_TO_SAY),
+        )
 
     @Test
-    fun bf_female25_39_isPoor() = assertEquals(BodyFatStatus.Poor, service.assessBodyFatPercent(39f, 25, Gender.FEMALE))
+    fun bf_zero_isBelowEssentialWarning() =
+        assertEquals(
+            BodyFatStatus.Warning,
+            service.assessBodyFatPercent(0f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun bf_female50_34_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(34f, 50, Gender.FEMALE))
+    fun bf_extreme_isPoor() =
+        assertEquals(
+            BodyFatStatus.Poor,
+            service.assessBodyFatPercent(60f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun bf_female70_36_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(36f, 70, Gender.FEMALE))
-
-    @Test
-    fun bf_other_20_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(20f, 30, Gender.OTHER))
-
-    @Test
-    fun bf_other_boundary25_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(25f, 30, Gender.OTHER))
-
-    @Test
-    fun bf_other_26_isNeutral() =
-        assertEquals(BodyFatStatus.Neutral, service.assessBodyFatPercent(26f, 30, Gender.OTHER))
-
-    @Test
-    fun bf_other_36_isPoor() = assertEquals(BodyFatStatus.Poor, service.assessBodyFatPercent(36f, 30, Gender.OTHER))
-
-    @Test
-    fun bf_preferNotToSay_20_isOptimal() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(20f, 30, Gender.PREFER_NOT_TO_SAY))
-
-    @Test
-    fun bf_preferNotToSay_30_isNeutral() =
-        assertEquals(BodyFatStatus.Neutral, service.assessBodyFatPercent(30f, 30, Gender.PREFER_NOT_TO_SAY))
-
-    @Test
-    fun bf_preferNotToSay_36_isPoor() =
-        assertEquals(BodyFatStatus.Poor, service.assessBodyFatPercent(36f, 30, Gender.PREFER_NOT_TO_SAY))
-
-    @Test
-    fun bf_ageBelow20_coercesAndUsesSenior() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(24f, 1, Gender.MALE))
-
-    @Test
-    fun bf_ageAbove120_coercesAndUsesSenior() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(24f, 200, Gender.MALE))
-
-    @Test
-    fun bf_zero_isOptimal() = assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(0f, 25, Gender.MALE))
-
-    @Test
-    fun bf_extreme_isPoor() = assertEquals(BodyFatStatus.Poor, service.assessBodyFatPercent(60f, 25, Gender.MALE))
-
-    @Test
-    fun bf_male40_uses20To40_thresholds() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(19f, 40, Gender.MALE))
-
-    @Test
-    fun bf_male41_uses41To60_thresholds() =
-        assertEquals(BodyFatStatus.Optimal, service.assessBodyFatPercent(22f, 41, Gender.MALE))
+    fun bf_male_statusIndependentOfProfile() {
+        assertEquals(
+            service.assessBodyFatPercent(19f, PhysiologyProfile.ATHLETE, Gender.MALE),
+            service.assessBodyFatPercent(19f, PhysiologyProfile.SEDENTARY, Gender.MALE),
+        )
+    }
 
     // ─── calculateDailyBpAverage ─────────────────────────────────────────────
     @Test
@@ -359,12 +379,7 @@ class HealthMetricsServiceTest {
     // ─── constants ───────────────────────────────────────────────────────────
     @Test
     fun constants_thresholds_areCorrect() {
-        assertEquals(25f, HealthMetricsService.OVERWEIGHT_THRESHOLD, 0f)
-        assertEquals(30f, HealthMetricsService.OBESE_CLASS_1_THRESHOLD, 0f)
-        assertEquals(35f, HealthMetricsService.OBESE_CLASS_2_THRESHOLD, 0f)
         assertEquals(120, HealthMetricsService.BP_NORMAL_SYS)
         assertEquals(80, HealthMetricsService.BP_NORMAL_DIA)
-        assertEquals(1, HealthMetricsService.MIN_AGE)
-        assertEquals(120, HealthMetricsService.MAX_AGE)
     }
 }
