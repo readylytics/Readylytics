@@ -8,6 +8,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
@@ -52,6 +54,7 @@ open class KeyRaceTestService : Service() {
         const val MSG_ERROR = 3
         const val EXTRA_DB_PATH = "db_path"
         const val EXTRA_WRITER_ID = "writer_id"
+        const val EXTRA_OPEN_WITH_FACTORY = "open_with_factory"
     }
 
     /**
@@ -83,11 +86,16 @@ open class KeyRaceTestService : Service() {
         val data = message.data
         val dbPath = requireNotNull(data.getString(EXTRA_DB_PATH))
         val writerId = requireNotNull(data.getString(EXTRA_WRITER_ID))
+        val openWithFactory = data.getBoolean(EXTRA_OPEN_WITH_FACTORY)
         Thread {
             try {
-                keyManager.withWritableDatabase(File(dbPath)) { database ->
-                    database.execSQL("CREATE TABLE IF NOT EXISTS race_marker (writer TEXT)")
-                    database.execSQL("INSERT INTO race_marker (writer) VALUES ('$writerId')")
+                if (openWithFactory) {
+                    runFactoryOpen(dbPath, writerId)
+                } else {
+                    keyManager.withWritableDatabase(File(dbPath)) { database ->
+                        database.execSQL("CREATE TABLE IF NOT EXISTS race_marker (writer TEXT)")
+                        database.execSQL("INSERT INTO race_marker (writer) VALUES ('$writerId')")
+                    }
                 }
                 replyTo.send(Message.obtain(null, MSG_DONE))
             } catch (t: Throwable) {
@@ -96,6 +104,38 @@ open class KeyRaceTestService : Service() {
                 replyTo.send(reply)
             }
         }.start()
+    }
+
+    private fun runFactoryOpen(
+        dbPath: String,
+        writerId: String,
+    ) {
+        val helper =
+            keyManager
+                .getOrCreateFactory(File(dbPath))
+                .create(
+                    SupportSQLiteOpenHelper.Configuration
+                        .builder(this)
+                        .name(dbPath)
+                        .callback(
+                            object : SupportSQLiteOpenHelper.Callback(1) {
+                                override fun onCreate(db: SupportSQLiteDatabase) {
+                                    db.execSQL("CREATE TABLE race_marker (writer TEXT)")
+                                }
+
+                                override fun onUpgrade(
+                                    db: SupportSQLiteDatabase,
+                                    oldVersion: Int,
+                                    newVersion: Int,
+                                ) = Unit
+                            },
+                        ).build(),
+                )
+        try {
+            helper.writableDatabase.execSQL("INSERT INTO race_marker (writer) VALUES ('$writerId')")
+        } finally {
+            helper.close()
+        }
     }
 
     override fun onBind(intent: Intent): IBinder = incomingMessenger.binder

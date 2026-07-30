@@ -81,63 +81,154 @@ class SqlCipherKeyManager
          * Returns a SupportSQLiteOpenHelper.Factory configured with the database encryption key.
          * The key is passed as a raw hex string (x'...') to skip SQLCipher's default KDF and
          * use the 256-bit AES key directly.
+         *
+         * Key retrieval and SQLCipher delegate construction run inside [withCrossProcessKeyLock].
+         * `delegate.create()` only constructs SQLCipher's lazy helper; its first readable or
+         * writable accessor performs the physical open. The returned decorator therefore takes
+         * the same lock around that first accessor too, which serializes Room's initial schema
+         * write across processes. A database file's existence is not proof that this write has
+         * completed (see KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md).
          */
         fun getOrCreateFactory(dbFile: File): SupportSQLiteOpenHelper.Factory =
             SupportSQLiteOpenHelper.Factory { configuration ->
-                val decryptedKey =
-                    try {
-                        getOrCreateDbKey(dbFile)
-                    } catch (e: KeyDecryptionException) {
-                        // Key is corrupted. isKeyCorrupted StateFlow is already set to true
-                        // by getOrCreateDbKey. Re-throw from within create() so Room's open
-                        // fails visibly rather than proceeding with a bad key. The exception
-                        // will propagate up through Room's infrastructure.
-                        throw e
-                    }
+                val delegateHelper =
+                    withCrossProcessKeyLock {
+                        val decryptedKey =
+                            try {
+                                getOrCreateDbKeyLocked(dbFile)
+                            } catch (e: KeyDecryptionException) {
+                                // Key is corrupted. isKeyCorrupted StateFlow is already set to true
+                                // by getOrCreateDbKeyLocked. Re-throw from within create() so Room's
+                                // open fails visibly rather than proceeding with a bad key. The
+                                // exception will propagate up through Room's infrastructure.
+                                throw e
+                            }
 
-                try {
-                    val keyHex = decryptedKey.toHex()
-                    val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
-                    // We must NOT fill rawKeyBytes with zeros here, because SupportOpenHelperFactory
-                    // holds a reference to the array and uses it when Room actually opens the database.
-                    // The factory clears the array automatically after the database is opened.
-                    val delegate =
-                        net.zetetic.database.sqlcipher
-                            .SupportOpenHelperFactory(rawKeyBytes)
-                    delegate.create(configuration)
-                } finally {
-                    decryptedKey.fill(0)
-                }
+                        try {
+                            val keyHex = decryptedKey.toHex()
+                            val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
+                            // We must NOT fill rawKeyBytes with zeros here, because SupportOpenHelperFactory
+                            // holds a reference to the array and uses it when Room actually opens the database.
+                            // The factory clears the array automatically after the database is opened.
+                            val delegate =
+                                net.zetetic.database.sqlcipher
+                                    .SupportOpenHelperFactory(rawKeyBytes)
+                            delegate.create(configuration)
+                        } finally {
+                            decryptedKey.fill(0)
+                        }
+                    }
+                LockedFirstOpenHelper(delegateHelper)
             }
 
+        private inner class LockedFirstOpenHelper(
+            private val delegate: SupportSQLiteOpenHelper,
+        ) : SupportSQLiteOpenHelper {
+            private val openMonitor = Any()
+            private var hasOpened = false
+
+            override val databaseName: String?
+                get() = delegate.databaseName
+
+            override val writableDatabase: androidx.sqlite.db.SupportSQLiteDatabase
+                get() = openOnce { delegate.writableDatabase }
+
+            override val readableDatabase: androidx.sqlite.db.SupportSQLiteDatabase
+                get() = openOnce { delegate.readableDatabase }
+
+            override fun close() = delegate.close()
+
+            override fun setWriteAheadLoggingEnabled(enabled: Boolean) {
+                delegate.setWriteAheadLoggingEnabled(enabled)
+            }
+
+            private fun <T> openOnce(open: () -> T): T =
+                synchronized(openMonitor) {
+                    if (hasOpened) return@synchronized open()
+                    val database = withCrossProcessKeyLock(open)
+                    hasOpened = true
+                    database
+                }
+        }
+
+        /**
+         * Opens (creating if necessary) the SQLCipher database at [dbFile] and runs [block]
+         * against it.
+         *
+         * Whether [block] itself runs inside [withCrossProcessKeyLock] depends on whether
+         * [dbFile] already existed before this call:
+         * - **File didn't exist yet:** key retrieval, `openDatabase(..., CREATE_IF_NECESSARY, ...)`,
+         *   AND [block] all run inside the lock. SQLite/SQLCipher does not write page 1 (the
+         *   salt/HMAC header) at open time -- it's written lazily on the *first write transaction*.
+         *   So on a genuinely fresh file, releasing the lock right after `openDatabase()` and
+         *   letting the caller's first write (e.g. `CREATE TABLE`) run unlocked would let two
+         *   processes race that first write and tear page 1 -- the exact corruption this lock
+         *   exists to prevent (see KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md). This is the
+         *   fresh-install `Application.onCreate()` scenario.
+         * - **File already existed:** only key retrieval + `openDatabase()` run inside the lock;
+         *   [block] runs after it's released. SQLite/SQLCipher's own WAL-mode cross-process
+         *   locking is sufficient for an already-initialized file, so holding this lock through
+         *   arbitrary caller work (e.g. `V7DatabaseMigrator`'s multi-thousand-row batch copies)
+         *   would only add unnecessary cross-process contention.
+         *
+         * The existence check happens once, before the lock is acquired, so it reflects this
+         * call's own view of the race: if another process wins the race to create the file while
+         * this one is waiting on the lock, this call still (harmlessly) takes the safer
+         * lock-through-[block] path it already committed to.
+         */
         fun <T> withWritableDatabase(
             dbFile: File,
             block: (net.zetetic.database.sqlcipher.SQLiteDatabase) -> T,
         ): T {
-            val rawKey = getOrCreateDbKey(dbFile)
-            return try {
-                // Raw key must be passed as bytes, not a String: the String-password overload
-                // derives a PBKDF2 key from the literal "x'hex'" text instead of recognizing it
-                // as a raw-hex key, silently opening with the wrong key (see getOrCreateFactory).
-                val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
-                // The convenience openOrCreateDatabase() overloads hardcode CREATE_IF_NECESSARY
-                // only, so every open runs setWalModeFromConfiguration() without the WAL flag and
-                // forcibly resets journal_mode back to the default (delete) -- even if a previous
-                // session had explicitly set WAL. Passing ENABLE_WRITE_AHEAD_LOGGING here makes
-                // WAL mode stick across every reopen, matching Room's own WRITE_AHEAD_LOGGING config.
-                net.zetetic.database.sqlcipher.SQLiteDatabase
-                    .openDatabase(
-                        dbFile.absolutePath,
-                        rawKeyBytes,
-                        null,
-                        net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY or
-                            net.zetetic.database.sqlcipher.SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
-                        null,
-                        CIPHER_COMPATIBILITY_HOOK,
-                    ).use(block)
-            } finally {
-                rawKey.fill(0)
+            val fileExistedBeforeOpen = dbFile.exists()
+            return if (fileExistedBeforeOpen) {
+                val db =
+                    withCrossProcessKeyLock {
+                        val rawKey = getOrCreateDbKeyLocked(dbFile)
+                        try {
+                            openWritableDatabase(dbFile, rawKey)
+                        } finally {
+                            rawKey.fill(0)
+                        }
+                    }
+                db.use(block)
+            } else {
+                withCrossProcessKeyLock {
+                    val rawKey = getOrCreateDbKeyLocked(dbFile)
+                    val db =
+                        try {
+                            openWritableDatabase(dbFile, rawKey)
+                        } finally {
+                            rawKey.fill(0)
+                        }
+                    db.use(block)
+                }
             }
+        }
+
+        private fun openWritableDatabase(
+            dbFile: File,
+            rawKey: ByteArray,
+        ): net.zetetic.database.sqlcipher.SQLiteDatabase {
+            // Raw key must be passed as bytes, not a String: the String-password overload
+            // derives a PBKDF2 key from the literal "x'hex'" text instead of recognizing it
+            // as a raw-hex key, silently opening with the wrong key (see getOrCreateFactory).
+            val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
+            // The convenience openOrCreateDatabase() overloads hardcode CREATE_IF_NECESSARY
+            // only, so every open runs setWalModeFromConfiguration() without the WAL flag and
+            // forcibly resets journal_mode back to the default (delete) -- even if a previous
+            // session had explicitly set WAL. Passing ENABLE_WRITE_AHEAD_LOGGING here makes
+            // WAL mode stick across every reopen, matching Room's own WRITE_AHEAD_LOGGING config.
+            return net.zetetic.database.sqlcipher.SQLiteDatabase
+                .openDatabase(
+                    dbFile.absolutePath,
+                    rawKeyBytes,
+                    null,
+                    net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY or
+                        net.zetetic.database.sqlcipher.SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
+                    null,
+                    CIPHER_COMPATIBILITY_HOOK,
+                )
         }
 
         /**
@@ -280,20 +371,29 @@ class SqlCipherKeyManager
         }
 
         private fun getOrCreateDbKey(dbFile: File? = null): ByteArray =
-            withCrossProcessKeyLock {
-                if (prefs.contains(PREF_ENCRYPTED_KEY)) {
-                    try {
-                        decryptKey()
-                    } catch (e: Exception) {
-                        _isKeyCorrupted.value = true
-                        logE("SqlCipherKeyManager", e) {
-                            "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
-                        }
-                        throw KeyDecryptionException("Database key decryption failed", e)
+            withCrossProcessKeyLock { getOrCreateDbKeyLocked(dbFile) }
+
+        /**
+         * Unlocked core of [getOrCreateDbKey]. Callable only from inside a block already holding
+         * [withCrossProcessKeyLock] (e.g. from [withWritableDatabase] or [getOrCreateFactory],
+         * which need the key fetch and the subsequent physical file open covered by one single
+         * lock acquisition) -- [withCrossProcessKeyLock] is documented non-reentrant, so calling
+         * the locked [getOrCreateDbKey] from within an already-held lock would throw
+         * [java.nio.channels.OverlappingFileLockException].
+         */
+        private fun getOrCreateDbKeyLocked(dbFile: File? = null): ByteArray =
+            if (prefs.contains(PREF_ENCRYPTED_KEY)) {
+                try {
+                    decryptKey()
+                } catch (e: Exception) {
+                    _isKeyCorrupted.value = true
+                    logE("SqlCipherKeyManager", e) {
+                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
                     }
-                } else {
-                    generateAndStoreNewKey()
+                    throw KeyDecryptionException("Database key decryption failed", e)
                 }
+            } else {
+                generateAndStoreNewKey()
             }
 
         private fun generateAndStoreNewKey(): ByteArray {

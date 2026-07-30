@@ -96,6 +96,15 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
 
     @Test
     fun twoProcesses_raceOnFreshKey_bothSucceedAndConverge() {
+        runRace(openWithFactory = false)
+    }
+
+    @Test
+    fun twoProcesses_raceOnFreshFactoryOpen_bothSucceedAndConverge() {
+        runRace(openWithFactory = true)
+    }
+
+    private fun runRace(openWithFactory: Boolean) {
         val process1Messenger = bindRaceService(KeyRaceTestServiceProcess1::class.java, "service 1")
         val process2Messenger = bindRaceService(KeyRaceTestServiceProcess2::class.java, "service 2")
 
@@ -117,8 +126,8 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
                 },
             )
 
-        sendRun(process1Messenger, replyMessenger, writerId = "process1")
-        sendRun(process2Messenger, replyMessenger, writerId = "process2")
+        sendRun(process1Messenger, replyMessenger, writerId = "process1", openWithFactory = openWithFactory)
+        sendRun(process2Messenger, replyMessenger, writerId = "process2", openWithFactory = openWithFactory)
 
         assertTrue("processes did not finish in time", doneLatch.await(15, TimeUnit.SECONDS))
         assertTrue("one or both processes failed: $errors", errors.isEmpty())
@@ -182,6 +191,7 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
         target: Messenger,
         replyTo: Messenger,
         writerId: String,
+        openWithFactory: Boolean,
     ) {
         val message = Message.obtain(null, KeyRaceTestService.MSG_RUN)
         message.replyTo = replyTo
@@ -189,6 +199,7 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
             Bundle().apply {
                 putString(KeyRaceTestService.EXTRA_DB_PATH, dbFile.absolutePath)
                 putString(KeyRaceTestService.EXTRA_WRITER_ID, writerId)
+                putBoolean(KeyRaceTestService.EXTRA_OPEN_WITH_FACTORY, openWithFactory)
             }
         target.send(message)
     }
