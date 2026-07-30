@@ -139,6 +139,7 @@ class DashboardVisualizationRegressionTest {
                     presentation =
                         presentationFor(CardId.SLEEP_SCORE, "86").copy(
                             secondaryText = null,
+                            status = MetricStatus.OPTIMAL,
                             accessibilityDescription = "Sleep score 86, excellent.",
                         ),
                     specification = sleepSpecification,
