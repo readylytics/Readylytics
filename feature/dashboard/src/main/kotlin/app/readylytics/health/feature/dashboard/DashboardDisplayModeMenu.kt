@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
@@ -62,9 +63,18 @@ fun DashboardDisplayModeMenu(
                 }
 
                 val isSelected = mode == requestedMode
+                val modeName = stringResource(id = textRes)
+                // A dedicated contentDescription (rather than relying on the visible text plus
+                // the `selected` boolean alone) gives TalkBack a single, unambiguous announcement
+                // that names the category ("Visualization style") and the selection state.
+                val itemDescription = if (isSelected) {
+                    stringResource(R.string.menu_item_description_mode_selected, modeName)
+                } else {
+                    stringResource(R.string.menu_item_description_mode, modeName)
+                }
 
                 DropdownMenuItem(
-                    text = { Text(stringResource(id = textRes)) },
+                    text = { Text(modeName) },
                     onClick = {
                         onModeSelected(mode)
                         expanded = false
@@ -72,6 +82,7 @@ fun DashboardDisplayModeMenu(
                     enabled = enabled,
                     modifier = Modifier.semantics {
                         selected = isSelected
+                        contentDescription = itemDescription
                     }
                 )
             }
