@@ -13,6 +13,8 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /**
@@ -52,6 +54,8 @@ open class KeyRaceTestService : Service() {
         const val MSG_RUN = 1
         const val MSG_DONE = 2
         const val MSG_ERROR = 3
+        const val MSG_READY = 4
+        const val MSG_GO = 5
         const val EXTRA_DB_PATH = "db_path"
         const val EXTRA_WRITER_ID = "writer_id"
         const val EXTRA_OPEN_WITH_FACTORY = "open_with_factory"
@@ -65,17 +69,23 @@ open class KeyRaceTestService : Service() {
     lateinit var keyManager: SqlCipherKeyManager
 
     private lateinit var incomingMessenger: Messenger
+    private var startGate: CountDownLatch? = null
 
     override fun onCreate() {
         super.onCreate()
         incomingMessenger =
             Messenger(
                 Handler(Looper.getMainLooper()) { message ->
-                    if (message.what == MSG_RUN) {
-                        handleRun(message)
-                        true
-                    } else {
-                        false
+                    when (message.what) {
+                        MSG_RUN -> {
+                            handleRun(message)
+                            true
+                        }
+                        MSG_GO -> {
+                            startGate?.countDown()
+                            true
+                        }
+                        else -> false
                     }
                 },
             )
@@ -87,11 +97,15 @@ open class KeyRaceTestService : Service() {
         val dbPath = requireNotNull(data.getString(EXTRA_DB_PATH))
         val writerId = requireNotNull(data.getString(EXTRA_WRITER_ID))
         val openWithFactory = data.getBoolean(EXTRA_OPEN_WITH_FACTORY)
+        val gate = CountDownLatch(1)
+        startGate = gate
         Thread {
             try {
                 if (openWithFactory) {
-                    runFactoryOpen(dbPath, writerId)
+                    runFactoryOpen(dbPath, writerId, replyTo, gate)
                 } else {
+                    replyTo.send(Message.obtain(null, MSG_READY))
+                    awaitStart(gate)
                     keyManager.withWritableDatabase(File(dbPath)) { database ->
                         database.execSQL("CREATE TABLE IF NOT EXISTS race_marker (writer TEXT)")
                         database.execSQL("INSERT INTO race_marker (writer) VALUES ('$writerId')")
@@ -106,9 +120,15 @@ open class KeyRaceTestService : Service() {
         }.start()
     }
 
+    private fun awaitStart(gate: CountDownLatch) {
+        check(gate.await(10, TimeUnit.SECONDS)) { "Did not receive race start signal" }
+    }
+
     private fun runFactoryOpen(
         dbPath: String,
         writerId: String,
+        replyTo: Messenger,
+        gate: CountDownLatch,
     ) {
         val helper =
             keyManager
@@ -132,6 +152,11 @@ open class KeyRaceTestService : Service() {
                         ).build(),
                 )
         try {
+            // Both services build their lazy helper first. Waiting here makes their first
+            // writableDatabase accesses contend, so an unlocked lazy open cannot pass merely
+            // because one service happened to run to completion before the other was sent.
+            replyTo.send(Message.obtain(null, MSG_READY))
+            awaitStart(gate)
             helper.writableDatabase.execSQL("INSERT INTO race_marker (writer) VALUES ('$writerId')")
         } finally {
             helper.close()

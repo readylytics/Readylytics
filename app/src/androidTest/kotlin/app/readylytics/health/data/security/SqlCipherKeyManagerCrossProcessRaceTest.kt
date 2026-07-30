@@ -16,6 +16,7 @@ import app.readylytics.health.data.security.racetest.KeyRaceTestService
 import app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess1
 import app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess2
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -32,8 +33,8 @@ import java.util.concurrent.atomic.AtomicReference
  * proves the in-process ReentrantLock works within a single JVM, this drives two real Android
  * Service processes (`:racetest1` / `:racetest2`, declared in app/src/debug/AndroidManifest.xml
  * and compiled into the real debug app APK -- see KeyRaceTestService's doc comment for why they
- * live there rather than in this androidTest module) that both race to call
- * SqlCipherKeyManager.withWritableDatabase() on the same fresh DB file. Because the services are
+ * live there rather than in this androidTest module) that both race to open the same fresh DB
+ * file. Because the services are
  * part of the app-under-test's own package/UID, this test uses a single targetContext throughout:
  * these test-only processes share the app's UID/files-dir/Keystore with the app under test, so
  * they genuinely contend on the same lock file, SharedPreferences file, and Keystore alias
@@ -43,6 +44,28 @@ import java.util.concurrent.atomic.AtomicReference
 class SqlCipherKeyManagerCrossProcessRaceTest {
     private companion object {
         const val BIND_TIMEOUT_SECONDS = 10L
+        private val keyStateLock = Any()
+        private var hasCapturedOriginalKey = false
+        private var originalEncryptedKey: String? = null
+        private var originalIv: String? = null
+
+        @JvmStatic
+        @AfterClass
+        fun restoreOriginalKey() {
+            synchronized(keyStateLock) {
+                if (!hasCapturedOriginalKey) return
+
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                val prefs =
+                    context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
+                prefs.edit().apply {
+                    clear()
+                    originalEncryptedKey?.let { putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, it) }
+                    originalIv?.let { putString(SqlCipherKeyManager.PREF_IV, it) }
+                    commit()
+                }
+            }
+        }
     }
 
     private val context: Context
@@ -50,13 +73,6 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
 
     private lateinit var dbFile: File
     private val connections = mutableListOf<ServiceConnection>()
-
-    // Snapshot of the REAL app's stored key, taken before this test clears it. These prefs are
-    // the installed app's actual SQLCipher key storage (this test runs in the app's own UID), so
-    // clearing them without restoring would leave the app's real health_dashboard.db permanently
-    // undecryptable and strand the next launch on DatabaseRecoveryScreen.
-    private var savedEncryptedKey: String? = null
-    private var savedIv: String? = null
 
     private val keyPrefs
         get() = context.getSharedPreferences(SqlCipherKeyManager.PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -70,9 +86,7 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
         // mid-run can leave two "holders" locking different inodes with no mutual exclusion,
         // silently defeating the very lock under test (a false pass). The marker is a reusable
         // zero-byte file; there is nothing to clean up.
-        savedEncryptedKey = keyPrefs.getString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, null)
-        savedIv = keyPrefs.getString(SqlCipherKeyManager.PREF_IV, null)
-        keyPrefs.edit().clear().commit()
+        ensureFixtureKey()
     }
 
     @After
@@ -85,17 +99,10 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
         dbFile.delete()
         File("${dbFile.absolutePath}-wal").delete()
         File("${dbFile.absolutePath}-shm").delete()
-        // Restore the real app's key (commit, not apply, so it is durably on disk before the
-        // instrumentation process can be torn down).
-        val editor = keyPrefs.edit()
-        editor.clear()
-        savedEncryptedKey?.let { editor.putString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, it) }
-        savedIv?.let { editor.putString(SqlCipherKeyManager.PREF_IV, it) }
-        editor.commit()
     }
 
     @Test
-    fun twoProcesses_raceOnFreshKey_bothSucceedAndConverge() {
+    fun twoProcesses_raceOnFreshDatabase_bothSucceedAndConverge() {
         runRace(openWithFactory = false)
     }
 
@@ -109,11 +116,13 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
         val process2Messenger = bindRaceService(KeyRaceTestServiceProcess2::class.java, "service 2")
 
         val doneLatch = CountDownLatch(2)
+        val readyLatch = CountDownLatch(2)
         val errors = java.util.concurrent.ConcurrentLinkedQueue<String>()
         val replyMessenger =
             Messenger(
                 Handler(Looper.getMainLooper()) { message ->
                     when (message.what) {
+                        KeyRaceTestService.MSG_READY -> readyLatch.countDown()
                         KeyRaceTestService.MSG_DONE -> doneLatch.countDown()
                         KeyRaceTestService.MSG_ERROR -> {
                             // getString is platform-typed: a null here would NPE inside this
@@ -128,6 +137,12 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
 
         sendRun(process1Messenger, replyMessenger, writerId = "process1", openWithFactory = openWithFactory)
         sendRun(process2Messenger, replyMessenger, writerId = "process2", openWithFactory = openWithFactory)
+        assertTrue(
+            "processes did not both reach their first database-open rendezvous",
+            readyLatch.await(15, TimeUnit.SECONDS),
+        )
+        sendGo(process1Messenger)
+        sendGo(process2Messenger)
 
         assertTrue("processes did not finish in time", doneLatch.await(15, TimeUnit.SECONDS))
         assertTrue("one or both processes failed: $errors", errors.isEmpty())
@@ -202,5 +217,34 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
                 putBoolean(KeyRaceTestService.EXTRA_OPEN_WITH_FACTORY, openWithFactory)
             }
         target.send(message)
+    }
+
+    private fun sendGo(target: Messenger) {
+        target.send(Message.obtain(null, KeyRaceTestService.MSG_GO))
+    }
+
+    private fun ensureFixtureKey() {
+        synchronized(keyStateLock) {
+            if (!hasCapturedOriginalKey) {
+                originalEncryptedKey = keyPrefs.getString(SqlCipherKeyManager.PREF_ENCRYPTED_KEY, null)
+                originalIv = keyPrefs.getString(SqlCipherKeyManager.PREF_IV, null)
+                hasCapturedOriginalKey = true
+            }
+            if (
+                keyPrefs.contains(SqlCipherKeyManager.PREF_ENCRYPTED_KEY) &&
+                keyPrefs.contains(SqlCipherKeyManager.PREF_IV)
+            ) {
+                return
+            }
+
+            // Generate and persist one key before either service process starts. SharedPreferences
+            // caches per process, so asking the target process to rediscover a key generated later by
+            // a service can leave this process with an old in-memory view when it verifies the rows.
+            // The DB file remains fresh; only its key is deliberately pre-seeded and retained for
+            // this entire test class so the already-running service processes see the same value.
+            SqlCipherKeyManager(context, AndroidKeystoreKeyProvider())
+                .getOrCreateDbKeyForTest(dbFile)
+                .fill(0)
+        }
     }
 }
