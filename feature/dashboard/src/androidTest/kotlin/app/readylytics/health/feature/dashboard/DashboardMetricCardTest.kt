@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -150,5 +151,116 @@ class DashboardMetricCardTest {
         composeRule.onNodeWithText("85").assertIsDisplayed()
         composeRule.onNodeWithText("pts").assertIsDisplayed()
         composeRule.onNodeWithText("Good").assertIsDisplayed()
+    }
+
+    @Test
+    fun scoreVisualKeepsAllModesSelectableEvenWhenValueIsMissing() {
+        // Unlike Goal/PersonalBaseline/ReferenceRange, a Score visual has no
+        // selectionAvailable field: DashboardMetricCard treats it as always
+        // selectable, even when its unavailableReason is set for a missing value.
+        var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
+
+        val missingScorePresentation = defaultPresentation.copy(
+            valueText = "—",
+            visual = DashboardMetricVisual.Score(
+                rawValue = null,
+                minValue = 0f,
+                maxValue = 100f,
+                markerFraction = null,
+                bands = emptyList(),
+                unavailableReason = DashboardMetricUnavailableReason.MISSING_VALUE,
+            )
+        )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = missingScorePresentation,
+                specification = testSpec,
+                requestedMode = selectedMode,
+                renderMode = selectedMode,
+                isEditing = true,
+                onModeSelected = { selectedMode = it }
+            )
+        }
+
+        composeRule.onNodeWithText("—").assertIsDisplayed()
+        composeRule.onNodeWithText("0").assertDoesNotExist()
+
+        composeRule.onNodeWithContentDescription("Change visualization style").performClick()
+
+        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsEnabled().assertIsSelected()
+        composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsEnabled()
+        composeRule.onNodeWithText("Value").assertIsDisplayed().assertIsEnabled()
+    }
+
+    @Test
+    fun personalBaselineNotReadyDisablesGaugeAndBarButPreservesSelection() {
+        var selectedMode by mutableStateOf(DashboardCardDisplayMode.VALUE)
+
+        val notReadyPresentation = defaultPresentation.copy(
+            visual = DashboardMetricVisual.PersonalBaseline(
+                rawValue = 45f,
+                baselineValue = null,
+                ratio = null,
+                markerFraction = null,
+                baselineMarkerFraction = 0f,
+                bands = emptyList(),
+                selectionAvailable = false,
+                unavailableReason = DashboardMetricUnavailableReason.BASELINE_NOT_READY,
+            )
+        )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = notReadyPresentation,
+                specification = testSpec,
+                requestedMode = selectedMode,
+                renderMode = selectedMode,
+                isEditing = true,
+                onModeSelected = { selectedMode = it }
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("Change visualization style").performClick()
+
+        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsNotEnabled()
+        composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsNotEnabled()
+        composeRule.onNodeWithText("Value").assertIsDisplayed().assertIsEnabled().assertIsSelected()
+    }
+
+    @Test
+    fun referenceRangeUnavailableDisablesGaugeAndBarButKeepsRealValueVisible() {
+        var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
+
+        val missingBmiPresentation = defaultPresentation.copy(
+            valueText = "70",
+            visual = DashboardMetricVisual.ReferenceRange(
+                rawValue = null,
+                markerFraction = null,
+                referenceMarkerFraction = null,
+                bands = emptyList(),
+                selectionAvailable = false,
+                unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
+            )
+        )
+
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = missingBmiPresentation,
+                specification = testSpec,
+                requestedMode = selectedMode,
+                renderMode = selectedMode,
+                isEditing = true,
+                onModeSelected = { selectedMode = it }
+            )
+        }
+
+        composeRule.onNodeWithText("70").assertIsDisplayed()
+
+        composeRule.onNodeWithContentDescription("Change visualization style").performClick()
+
+        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsNotEnabled().assertIsSelected()
+        composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsNotEnabled()
+        composeRule.onNodeWithText("Value").assertIsDisplayed().assertIsEnabled()
     }
 }

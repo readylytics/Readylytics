@@ -8,10 +8,14 @@ import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.model.SleepSessionSummary
+import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
 import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -162,5 +166,78 @@ every { resourceProvider.getString(any(), any(), any()) } returns "BMI mock_stri
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         assertTrue(cards.getValue(CardId.HEART_RATE).visual is DashboardMetricVisual.ValueOnly)
         assertTrue(cards.getValue(CardId.BLOOD_PRESSURE).visual is DashboardMetricVisual.ValueOnly)
+    }
+
+    @Test
+    fun `missing summary reports em dash and missing value for score based cards`() {
+        val cards = factory.build(null, preferences(), date, null, null, null)
+
+        val sleep = cards.getValue(CardId.SLEEP_SCORE)
+        val sleepVisual = sleep.visual as DashboardMetricVisual.Score
+        assertEquals("—", sleep.valueText)
+        assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, sleepVisual.unavailableReason)
+        assertNull(sleepVisual.markerFraction)
+
+        val readiness = cards.getValue(CardId.READINESS)
+        val readinessVisual = readiness.visual as DashboardMetricVisual.Score
+        assertEquals("—", readiness.valueText)
+        assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, readinessVisual.unavailableReason)
+    }
+
+    @Test
+    fun `invalid height disables weight selection but keeps the real weight value`() {
+        val zeroHeightCards = factory.build(
+            summary(weightKg = 70f),
+            preferences().copy(heightCm = 0f),
+            date, null, null, null,
+        )
+        val zeroHeightVisual = zeroHeightCards.getValue(CardId.WEIGHT).visual as DashboardMetricVisual.ReferenceRange
+        assertFalse(zeroHeightVisual.selectionAvailable)
+        assertEquals(DashboardMetricUnavailableReason.MISSING_BMI, zeroHeightVisual.unavailableReason)
+        assertNull(zeroHeightVisual.markerFraction)
+        assertNotEquals("—", zeroHeightCards.getValue(CardId.WEIGHT).valueText)
+
+        val nullHeightCards = factory.build(
+            summary(weightKg = 70f),
+            preferences().copy(heightCm = null),
+            date, null, null, null,
+        )
+        val nullHeightVisual = nullHeightCards.getValue(CardId.WEIGHT).visual as DashboardMetricVisual.ReferenceRange
+        assertFalse(nullHeightVisual.selectionAvailable)
+        assertEquals(DashboardMetricUnavailableReason.MISSING_BMI, nullHeightVisual.unavailableReason)
+    }
+
+    @Test
+    fun `sleep duration above goal clamps the marker but keeps the real minute count`() {
+        val cards = factory.build(
+            summary().copy(sleepDurationMinutes = 600),
+            preferences().copy(goalSleepHours = 8f),
+            date, null, null, null,
+        )
+        val visual = cards.getValue(CardId.SLEEP_DURATION).visual as DashboardMetricVisual.Goal
+        assertEquals(600f, visual.rawValue)
+        assertEquals(1f, visual.markerFraction)
+        assertTrue(visual.isAboveTarget)
+    }
+
+    @Test
+    fun `missing sleep session reports missing value for sleep efficiency instead of a zero reading`() {
+        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
+        val visual = presentation.visual as DashboardMetricVisual.Score
+        assertEquals("—", presentation.valueText)
+        assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
+        assertNull(visual.markerFraction)
+    }
+
+    @Test
+    fun `a genuine zero efficiency reading is treated as real data not missing`() {
+        val lastSleepSession = SleepSessionSummary(efficiency = 0f, startTime = 0L, endTime = 0L)
+        val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
+        val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
+        val visual = presentation.visual as DashboardMetricVisual.Score
+        assertEquals("0", presentation.valueText)
+        assertNull(visual.unavailableReason)
+        assertEquals(0f, visual.markerFraction)
     }
 }
