@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -67,6 +68,41 @@ class LegacyCardConfigurationSerializerTest {
 
         assertEquals(1, result.size)
         assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
+    }
+
+    @Test
+    fun `deserialize_unknownRequestedDisplayMode_decodesToNullWithoutRejecting`() {
+        val json = """[{"cardId":"HRV","isVisible":true,"position":0,"requestedDisplayMode":"TREND"}]"""
+
+        val result = LegacyCardConfigurationSerializer.deserialize(json)
+
+        assertEquals(1, result.size)
+        assertEquals(CardId.HRV, result[0].cardId)
+        assertEquals(null, result[0].requestedDisplayMode)
+    }
+
+    @Test
+    fun `deserialize_missingRequestedDisplayMode_decodesToNull`() {
+        val json = """[{"cardId":"HRV","isVisible":true,"position":0}]"""
+
+        val result = LegacyCardConfigurationSerializer.deserialize(json)
+
+        assertEquals(1, result.size)
+        assertEquals(null, result[0].requestedDisplayMode)
+    }
+
+    @Test
+    fun roundTrip_serializeAndDeserialize_preservesRequestedDisplayMode() {
+        val original =
+            listOf(
+                CardConfiguration(CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                CardConfiguration(CardId.HRV, requestedDisplayMode = null),
+            )
+
+        val json = LegacyCardConfigurationSerializer.serialize(original)
+        val deserialized = LegacyCardConfigurationSerializer.deserialize(json)
+
+        assertEquals(original, deserialized)
     }
 
     @Test

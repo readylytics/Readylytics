@@ -17,6 +17,7 @@ import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -424,6 +425,123 @@ class LocalRestoreManagerTest {
                         cardId = app.readylytics.health.domain.dashboard.CardId.READINESS,
                         isVisible = true,
                         position = 2,
+                        requestedDisplayMode = null,
+                    ),
+                )
+            coVerify(exactly = 1) {
+                cardConfigRepo.updateDashboardCardConfigurations(expectedCards)
+            }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_unknownRequestedDisplayModeRestoresNullWithoutRejectingBackup() =
+        runTest {
+            val json = createValidBackupJson()
+            val cardsJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("cardId", "READINESS")
+                            put("isVisible", true)
+                            put("position", 2)
+                            put("requestedDisplayMode", "TREND")
+                        },
+                    )
+                }
+            json.getJSONObject("preferences").put("dashboardCards", cardsJson)
+            val zipFile = createBackupZipFile("cards_unknown_mode_backup.zip", json)
+
+            coEvery { cardConfigRepo.updateDashboardCardConfigurations(any()) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val expectedCards =
+                listOf(
+                    CardConfiguration(
+                        cardId = app.readylytics.health.domain.dashboard.CardId.READINESS,
+                        isVisible = true,
+                        position = 2,
+                        requestedDisplayMode = null,
+                    ),
+                )
+            coVerify(exactly = 1) {
+                cardConfigRepo.updateDashboardCardConfigurations(expectedCards)
+            }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_restoresKnownRequestedDisplayMode() =
+        runTest {
+            val json = createValidBackupJson()
+            val cardsJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("cardId", "HRV")
+                            put("isVisible", true)
+                            put("position", 3)
+                            put("requestedDisplayMode", "BAR")
+                        },
+                    )
+                }
+            json.getJSONObject("preferences").put("dashboardCards", cardsJson)
+            val zipFile = createBackupZipFile("cards_known_mode_backup.zip", json)
+
+            coEvery { cardConfigRepo.updateDashboardCardConfigurations(any()) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val expectedCards =
+                listOf(
+                    CardConfiguration(
+                        cardId = app.readylytics.health.domain.dashboard.CardId.HRV,
+                        isVisible = true,
+                        position = 3,
+                        requestedDisplayMode = DashboardCardDisplayMode.BAR,
+                    ),
+                )
+            coVerify(exactly = 1) {
+                cardConfigRepo.updateDashboardCardConfigurations(expectedCards)
+            }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_backupMissingRequestedDisplayModeFieldRestoresNull() =
+        runTest {
+            val json = createValidBackupJson()
+            val cardsJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("cardId", "STEPS")
+                            put("isVisible", true)
+                            put("position", 5)
+                        },
+                    )
+                }
+            json.getJSONObject("preferences").put("dashboardCards", cardsJson)
+            val zipFile = createBackupZipFile("cards_missing_mode_backup.zip", json)
+
+            coEvery { cardConfigRepo.updateDashboardCardConfigurations(any()) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val expectedCards =
+                listOf(
+                    CardConfiguration(
+                        cardId = app.readylytics.health.domain.dashboard.CardId.STEPS,
+                        isVisible = true,
+                        position = 5,
+                        requestedDisplayMode = null,
                     ),
                 )
             coVerify(exactly = 1) {

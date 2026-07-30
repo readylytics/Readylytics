@@ -15,6 +15,7 @@ import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -199,6 +200,7 @@ class LocalBackupManagerTest {
                         cardId = CardId.HRV,
                         isVisible = false,
                         position = 4,
+                        requestedDisplayMode = DashboardCardDisplayMode.BAR,
                     ),
                 )
             coEvery { cardConfigRepo.dashboardCardConfigurations() } returns flowOf(cards)
@@ -227,6 +229,7 @@ class LocalBackupManagerTest {
             assertEquals("HRV", dashboardCards.getJSONObject(1).getString("cardId"))
             assertTrue(!dashboardCards.getJSONObject(1).getBoolean("isVisible"))
             assertEquals(4, dashboardCards.getJSONObject(1).getInt("position"))
+            assertTrue(backupJson.contains("\"requestedDisplayMode\":\"BAR\""))
         }
 
     @Test

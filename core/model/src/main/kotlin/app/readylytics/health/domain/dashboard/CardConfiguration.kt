@@ -31,4 +31,6 @@ data class CardConfiguration(
     val cardId: CardId,
     val isVisible: Boolean = true,
     val position: Int = 0,
+    @Serializable(with = NullableDashboardCardDisplayModeSerializer::class)
+    val requestedDisplayMode: DashboardCardDisplayMode? = null,
 )

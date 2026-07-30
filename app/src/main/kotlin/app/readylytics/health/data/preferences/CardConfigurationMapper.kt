@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 
 object CardConfigurationMapper {
     fun toDomain(proto: CardConfigurationProto): CardConfiguration? {
@@ -16,6 +17,7 @@ object CardConfigurationMapper {
             cardId = cardId,
             isVisible = proto.isVisible,
             position = proto.position,
+            requestedDisplayMode = parseDisplayMode(proto.requestedDisplayMode),
         )
     }
 
@@ -25,5 +27,14 @@ object CardConfigurationMapper {
             .setCardId(domain.cardId.name)
             .setIsVisible(domain.isVisible)
             .setPosition(domain.position)
+            .setRequestedDisplayMode(domain.requestedDisplayMode?.name.orEmpty())
             .build()
+
+    // Additive, tolerant parsing: blank (missing proto field) and unknown mode
+    // names (e.g. from a future app version) both decode to null instead of
+    // throwing, so old and new persisted proto data both remain loadable.
+    private fun parseDisplayMode(value: String): DashboardCardDisplayMode? =
+        value.takeIf(String::isNotBlank)?.let { stored ->
+            runCatching { DashboardCardDisplayMode.valueOf(stored) }.getOrNull()
+        }
 }

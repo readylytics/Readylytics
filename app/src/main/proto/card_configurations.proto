@@ -10,6 +10,7 @@ message CardConfigurationProto {
     string card_id = 1;
     bool is_visible = 2;
     int32 position = 3;
+    string requested_display_mode = 4;
 }
 
 message CardConfigurationsProto {

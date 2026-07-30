@@ -3,6 +3,7 @@ package app.readylytics.health.data.preferences
 import androidx.datastore.core.DataStore
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -52,6 +53,55 @@ class CardConfigurationRepositoryTest {
             assertEquals(CardId.SLEEP_SCORE, sleepScoreCard.cardId)
             assertTrue(sleepScoreCard.isVisible)
             assertEquals(0, sleepScoreCard.position)
+        }
+
+    @Test
+    fun dashboardCardConfigurations_mapsRequestedDisplayModeWhenPresent() =
+        runTest {
+            val proto =
+                CardConfigurationsProto
+                    .newBuilder()
+                    .addDashboardCards(
+                        CardConfigurationProto
+                            .newBuilder()
+                            .setCardId(CardId.HRV.name)
+                            .setIsVisible(true)
+                            .setPosition(0)
+                            .setRequestedDisplayMode(DashboardCardDisplayMode.BAR.name)
+                            .build(),
+                    ).build()
+
+            every { dataStore.data } returns flowOf(proto)
+
+            val result = repository.dashboardCardConfigurations().first()
+
+            val hrvCard = result.find { it.cardId == CardId.HRV }
+            assertNotNull(hrvCard)
+            assertEquals(DashboardCardDisplayMode.BAR, hrvCard.requestedDisplayMode)
+        }
+
+    @Test
+    fun dashboardCardConfigurations_mapsMissingRequestedDisplayModeToNull() =
+        runTest {
+            val proto =
+                CardConfigurationsProto
+                    .newBuilder()
+                    .addDashboardCards(
+                        CardConfigurationProto
+                            .newBuilder()
+                            .setCardId(CardId.HRV.name)
+                            .setIsVisible(true)
+                            .setPosition(0)
+                            .build(),
+                    ).build()
+
+            every { dataStore.data } returns flowOf(proto)
+
+            val result = repository.dashboardCardConfigurations().first()
+
+            val hrvCard = result.find { it.cardId == CardId.HRV }
+            assertNotNull(hrvCard)
+            assertEquals(null, hrvCard.requestedDisplayMode)
         }
 
     @Test
