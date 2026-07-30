@@ -156,3 +156,57 @@ manual-repro-only because it requires a truly fresh install rather than a test f
 no CI job in this repo runs `connectedAndroidTest`, so Task 2's instrumented test is currently a
 manual regression guard a developer must run locally, not an automated gate — a worthwhile future
 improvement.
+
+**2026-07-30 update — CI's first run found a residual gap, closed after two attempts.** Once
+`.github/workflows/instrumented-tests.yml` actually ran `connectedDebugAndroidTest` for the first
+time, `SqlCipherKeyManagerCrossProcessRaceTest` failed with the exact
+`SQLiteNotADatabaseException: file is not a database (code 26)` signature this doc describes
+above. Root cause: `withCrossProcessKeyLock` covered key generation/retrieval only —
+`withWritableDatabase()` released the lock before calling
+`SQLiteDatabase.openDatabase(dbFile, ..., CREATE_IF_NECESSARY, ...)`.
+
+First fix attempt widened the lock to cover key retrieval + the `openDatabase()` call, releasing
+it before running the caller's block. This was insufficient and the test still failed identically
+on a physical device (`SM-A576B`) after rebuilding: SQLite/SQLCipher does not write page 1 (the
+salt/HMAC header) at `openDatabase()` time — it's written lazily on the database's *first write
+transaction*. `withWritableDatabase()`'s callers pass a `block` that does that first write (e.g.
+`CREATE TABLE`/`INSERT`), and that block was still running **outside** the lock, so two processes
+could still race each other's first write and tear page 1 — just one step later than the original
+gap.
+
+Fixed by making the lock scope conditional on whether `dbFile` existed before the call: if it
+didn't (fresh file — the actual race scenario, e.g. app startup on a fresh install), key
+retrieval, `openDatabase()`, **and** the caller's `block` all run inside
+`withCrossProcessKeyLock`, so the first write transaction is fully serialized across processes. If
+the file already existed, only key retrieval + `openDatabase()` are locked and `block` runs after
+release, since SQLite/SQLCipher's own WAL-mode cross-process locking is sufficient for an
+already-initialized file — this keeps `V7DatabaseMigrator`'s long-running, multi-thousand-row
+batch-copy calls (which always operate on an existing file mid-migration, never a fresh one) from
+being needlessly serialized across processes for their full duration.
+`getOrCreateDbKey()`'s body moved to an unlocked `getOrCreateDbKeyLocked()` so callers that already
+hold the lock can fetch the key without triggering `OverlappingFileLockException` from a nested
+lock attempt.
+
+Verified: `SqlCipherKeyManagerCrossProcessRaceTest` passes on the same physical device
+(`SM-A576B`) after this fix.
+
+**Resolution:** `SupportOpenHelperFactory.create()` is lazy: its returned
+`SupportSQLiteOpenHelper` performs the physical open only when Room first calls
+`readableDatabase` or `writableDatabase`. The factory now decorates that helper. When the database
+file was observed as fresh, the decorator keeps the existing cross-process key lock through that
+first accessor call, including Room's callback and schema write. This serializes the first
+SQLCipher page write on the production `HealthDatabase`/`health_dashboard.db` path. Existing files
+continue to use the short lock scope because their initialization is already complete.
+
+`SqlCipherKeyManagerCrossProcessRaceTest#twoProcesses_raceOnFreshFactoryOpen_bothSucceedAndConverge`
+now exercises this production-equivalent lazy-helper path across two OS processes. The targeted
+verification command is:
+
+```bash
+./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.readylytics.health.data.security.SqlCipherKeyManagerCrossProcessRaceTest#twoProcesses_raceOnFreshFactoryOpen_bothSucceedAndConverge --console=plain --quiet
+```
+
+At the final verification attempt, no physical device or emulator was connected; Gradle reached
+`:app:connectedDebugAndroidTest` and reported `DeviceException: No connected devices!`. Therefore
+the updated production-equivalent instrumentation case has no current device/emulator result to
+record; it remains the targeted regression command for the next connected-device run.
