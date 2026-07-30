@@ -22,6 +22,10 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 
+import app.readylytics.health.core.designsystem.dimens
+import androidx.compose.ui.res.stringResource
+import app.readylytics.health.feature.dashboard.R
+
 @Composable
 fun DashboardMetricCard(
     presentation: DashboardMetricPresentation,
@@ -33,11 +37,19 @@ fun DashboardMetricCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
+    val modeStringRes = when (renderMode) {
+        DashboardCardDisplayMode.GAUGE -> R.string.mode_gauge
+        DashboardCardDisplayMode.BAR -> R.string.mode_bar
+        DashboardCardDisplayMode.VALUE -> R.string.mode_value
+    }
+    val modeContext = stringResource(id = modeStringRes)
+    val contentDesc = presentation.accessibilityDescription + if (isEditing) ", $modeContext" else ""
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(160.dp) // Fixed cardHeight
-            .semantics(mergeDescendants = true) { contentDescription = presentation.accessibilityDescription }
+            .height(MaterialTheme.dimens.cardHeight)
+            .semantics(mergeDescendants = true) { contentDescription = contentDesc }
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(

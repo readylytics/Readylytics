@@ -100,9 +100,9 @@ class DashboardMetricCardTest {
         composeRule.onNodeWithContentDescription("Change visualization style").performClick()
         
         // Assert only catalog-supported localized labels appear
-        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsNotEnabled()
+        composeRule.onNodeWithText("Gauge").assertIsDisplayed().assertIsNotEnabled().assertIsSelected()
         composeRule.onNodeWithText("Bar").assertIsDisplayed().assertIsNotEnabled()
-        composeRule.onNodeWithText("Value").assertIsDisplayed().assertIsSelected() // wait, requested was Gauge
+        composeRule.onNodeWithText("Value").assertIsDisplayed()
     }
 
     @Test
