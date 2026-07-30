@@ -231,8 +231,10 @@ status:
 - **Other / Prefer not to say / unset** — fixed at 20%, independent of profile
 
 **Reading the status.** Optimal (green) and Neutral (informational) describe healthy or
-expected ranges; Warning flags dangerously low essential-fat levels or an overweight BMI;
-Poor flags the obesity range for BMI or body fat.
+expected ranges; Warning flags dangerously low essential-fat levels, or a BMI that is either
+underweight or overweight — the same status covers both directions, so check the category
+label (not just the color) to see which one applies; Poor flags the obesity range for BMI or
+body fat.
 
 _Implemented in: `BodyCompositionAssessment.kt`, `BmiService.kt`, `HealthMetricsService.kt`,
 `HealthMetricsCalculator.kt`_

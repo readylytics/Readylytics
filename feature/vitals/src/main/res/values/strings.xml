@@ -32,10 +32,10 @@
     <string name="weight_history_title_format">Weight (%1$s)</string>
     <string name="weight_history_subtitle_with_delta">%1$s %2$s · %3$s %2$s</string>
     <string name="weight_history_subtitle_no_delta">%1$s %2$s</string>
-    <string name="weight_status_normal">Normal</string>
+    <string name="weight_status_underweight">Underweight</string>
+    <string name="weight_status_healthy_weight">Healthy Weight</string>
     <string name="weight_status_overweight">Overweight</string>
-    <string name="weight_status_obese_1">Obese Class I</string>
-    <string name="weight_status_obese_2">Obese Class II+</string>
+    <string name="weight_status_obesity">Obesity</string>
     <string name="weight_status_calibrating">Calibrating</string>
 
     <!-- Body Fat Details -->

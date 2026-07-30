@@ -176,8 +176,9 @@
         20%, independent of profile</string>
     <string name="about_bmi_body_fat_status_meaning">**Reading the status.** Optimal (green) and
         Neutral (informational) describe healthy or expected ranges; Warning flags dangerously
-        low essential-fat levels or an overweight BMI; Poor flags the obesity range for BMI or
-        body fat.</string>
+        low essential-fat levels, or a BMI that is either underweight or overweight — the same
+        status covers both directions, so check the category label (not just the color) to see
+        which one applies; Poor flags the obesity range for BMI or body fat.</string>
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
     <string name="about_bullet_sleep_sessions">**Sleep sessions** (with stages if your device

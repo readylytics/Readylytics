@@ -12,6 +12,7 @@ import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
@@ -167,17 +168,19 @@ class WeightDetailViewModel
                                         kg * UnitConverter.KG_TO_LBS
                                     }
                                 }
-                                val bmiStatus =
+                                val bmiAssessment =
                                     userPrefs.heightCm?.let { heightCm ->
-                                        HealthMetricsCalculator
-                                            .assessBmi(HealthMetricsCalculator.calculateBmi(record.weightKg, heightCm))
+                                        BodyCompositionAssessment.assessBmi(
+                                            HealthMetricsCalculator.calculateBmi(record.weightKg, heightCm),
+                                        )
                                     }
                                 WeightHistoryItem(
                                     timestampMs = record.time.toEpochMilli(),
                                     weightDisplay = toDisplayUnit(record.weightKg),
                                     deltaDisplay = deltaKg?.let(toDisplayUnit),
                                     unitSystem = userPrefs.unitSystem,
-                                    bmiStatus = bmiStatus,
+                                    bmiStatus = bmiAssessment?.status,
+                                    bmiCategory = bmiAssessment?.category,
                                 )
                             }.reversed()
 

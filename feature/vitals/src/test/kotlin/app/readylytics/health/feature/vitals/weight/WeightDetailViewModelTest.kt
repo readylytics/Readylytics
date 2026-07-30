@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.BmiCategory
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.WeightRecord
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -185,6 +186,7 @@ class WeightDetailViewModelTest {
             assertEquals(79.6f, newest.weightDisplay, 0.01f)
             assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
             assertEquals(BmiStatus.Warning, newest.bmiStatus)
+            assertEquals(BmiCategory.OVERWEIGHT, newest.bmiCategory)
 
             val oldest = state.historyItems[1]
             assertEquals(1_000L, oldest.timestampMs)
@@ -223,5 +225,6 @@ class WeightDetailViewModelTest {
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             assertEquals(null, state.historyItems[0].bmiStatus)
+            assertEquals(null, state.historyItems[0].bmiCategory)
         }
 }
