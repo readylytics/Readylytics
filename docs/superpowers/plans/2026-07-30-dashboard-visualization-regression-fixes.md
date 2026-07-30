@@ -66,6 +66,7 @@
 - Modify: `core/ui/src/test/kotlin/app/readylytics/health/core/ui/components/M3MetricGaugeTest.kt:17-58`
 - Modify: `core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/M3MetricGauge.kt:28-143`
 - Modify: `core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/M3ScoreGaugeCard.kt:196-208`
+- Modify: `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardMetricRenderers.kt:43-111`
 
 **Interfaces:**
 
@@ -168,7 +169,7 @@ if (markerFraction != null && progressToDraw > 0f) {
 Use the rounded stroke cap as the active arc endpoint; do not draw an endpoint
 dot or any classification, reference, baseline, or target marker.
 
-- [ ] **Step 4: Update `M3ScoreGaugeCard` without changing its layout**
+- [ ] **Step 4: Migrate every shared-Gauge caller without changing layouts**
 
 Replace its segment list with:
 
@@ -182,6 +183,28 @@ M3MetricGauge(
 
 Do not change its title, centered value/unit, delta chip, card role, padding,
 typography, or `MetricStatus.gaugeColor()` call.
+
+In `DashboardGaugeRenderer`, remove the `M3GaugeSegment` import and all
+`bands`/`segments` construction. Keep the existing unavailability handling,
+but obtain every visual type's normalized position directly:
+
+```kotlin
+val markerFraction =
+    when (val visual = presentation.visual) {
+        is DashboardMetricVisual.Score -> visual.markerFraction
+        is DashboardMetricVisual.Goal -> visual.markerFraction
+        is DashboardMetricVisual.PersonalBaseline -> visual.markerFraction
+        is DashboardMetricVisual.ReferenceRange -> visual.markerFraction
+        is DashboardMetricVisual.ValueOnly -> null
+    }
+```
+
+Invoke `M3MetricGauge(markerFraction, activeColor, modifier, animateMarker)`
+with no segments. Resolve a non-null metric's active color via
+`presentation.status.gaugeColor()`. Do not otherwise alter the dashboard Gauge
+value/unit/footer layout; Task 4 owns that restoration. Do not touch
+`DashboardBarRenderer`, which continues to use its existing temporary helper
+until Task 5.
 
 - [ ] **Step 5: Run shared Gauge tests and confirm GREEN**
 
