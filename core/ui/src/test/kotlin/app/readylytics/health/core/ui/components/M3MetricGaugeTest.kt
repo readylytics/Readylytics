@@ -19,23 +19,23 @@ class M3MetricGaugeTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun metricGauge_acceptsNullMarker_andClampsOutsideRange() {
+    fun metricGauge_acceptsNullMarker_andClampsOutsideRange_withSingleTrackContract() {
         composeTestRule.setContent {
             M3MetricGauge(
                 markerFraction = null,
                 activeColor = Color.Red,
-                segments = emptyList(),
                 animateMarker = false,
             )
             M3MetricGauge(
                 markerFraction = 1.5f,
                 activeColor = Color.Red,
-                segments = listOf(M3GaugeSegment(0f, 1f, Color.Gray)),
                 animateMarker = false,
             )
         }
         val unmergedRoot = composeTestRule.onRoot(useUnmergedTree = true)
-        assert(unmergedRoot.fetchSemanticsNode().children.isEmpty()) { "Expected no semantic children" }
+        assert(unmergedRoot.fetchSemanticsNode().children.isEmpty()) {
+            "Expected gauge Canvas to add no semantic children"
+        }
     }
 
     @Test

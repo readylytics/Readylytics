@@ -65,7 +65,6 @@ fun M3ScoreGaugeCard(
         }
 
     val progressColor = effectiveStatus.gaugeColor()
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant
 
     val markerFraction = ((score ?: 0f) / maxScore).coerceIn(0f, 1f)
 
@@ -106,7 +105,6 @@ fun M3ScoreGaugeCard(
                 unitText = unitText,
                 markerFraction = markerFraction,
                 progressColor = progressColor,
-                trackColor = trackColor,
                 deltaText = deltaText,
                 tooltipDescription = tooltipDescription,
                 score = score,
@@ -128,7 +126,6 @@ fun M3ScoreGaugeCard(
                 unitText = unitText,
                 markerFraction = markerFraction,
                 progressColor = progressColor,
-                trackColor = trackColor,
                 deltaText = deltaText,
                 tooltipDescription = tooltipDescription,
                 score = score,
@@ -144,7 +141,6 @@ private fun GaugeCardContent(
     unitText: String,
     markerFraction: Float,
     progressColor: androidx.compose.ui.graphics.Color,
-    trackColor: androidx.compose.ui.graphics.Color,
     deltaText: String?,
     tooltipDescription: String?,
     score: Float?,
@@ -196,14 +192,6 @@ private fun GaugeCardContent(
             M3MetricGauge(
                 markerFraction = markerFraction,
                 activeColor = progressColor,
-                segments =
-                    listOf(
-                        M3GaugeSegment(
-                            startFraction = 0f,
-                            endFraction = 1f,
-                            color = trackColor,
-                        ),
-                    ),
                 animateMarker = true,
             )
 
