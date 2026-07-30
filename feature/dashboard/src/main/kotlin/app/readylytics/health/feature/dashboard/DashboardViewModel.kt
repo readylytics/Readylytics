@@ -12,6 +12,8 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.domain.dashboard.CardManagementEvent
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.insights.InsightContext
@@ -276,11 +278,9 @@ class DashboardViewModel
 
         fun onCardDisplayModeChanged(
             cardId: CardId,
-            mode: app.readylytics.health.domain.dashboard.DashboardCardDisplayMode,
+            mode: DashboardCardDisplayMode,
         ) {
-            cardManagementDelegate.onEvent(
-                app.readylytics.health.domain.dashboard.CardManagementEvent.DisplayModeChanged(cardId, mode)
-            )
+            cardManagementDelegate.onEvent(CardManagementEvent.DisplayModeChanged(cardId, mode))
         }
 
         fun onEvent(event: DashboardEvent) {
