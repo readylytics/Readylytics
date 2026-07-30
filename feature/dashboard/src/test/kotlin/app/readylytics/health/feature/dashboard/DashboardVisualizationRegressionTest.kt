@@ -140,7 +140,7 @@ class DashboardVisualizationRegressionTest {
                         presentationFor(CardId.SLEEP_SCORE, "86").copy(
                             secondaryText = null,
                             status = MetricStatus.OPTIMAL,
-                            accessibilityDescription = "Sleep score 86, excellent.",
+                            accessibilityDescription = "Sleep score 86, optimal.",
                         ),
                     specification = sleepSpecification,
                     requestedMode = mode,
@@ -154,10 +154,10 @@ class DashboardVisualizationRegressionTest {
         sleepSpecification.supportedModes.forEach { newMode ->
             composeRule.runOnIdle { mode = newMode }
             composeRule
-                .onNodeWithContentDescription("Sleep score 86, excellent.")
+                .onNodeWithContentDescription("Sleep score 86, optimal.")
                 .assertExists()
             composeRule
-                .onNodeWithText("excellent", substring = true, ignoreCase = true)
+                .onNodeWithText("optimal", substring = true, ignoreCase = true)
                 .assertDoesNotExist()
         }
     }
