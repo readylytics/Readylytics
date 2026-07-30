@@ -17,8 +17,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.StatusColors
-import app.readylytics.health.core.ui.components.M3GaugeSegment
 import app.readylytics.health.core.ui.components.M3MetricGauge
+import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 
 fun metricStatusColor(
@@ -58,44 +58,21 @@ fun DashboardGaugeRenderer(
         }
 
     val activeColor =
-        if (isUnavailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
-    val trackColor =
-        if (isUnavailable) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.outlineVariant
-
-    val bands =
-        when (val v = presentation.visual) {
-            is DashboardMetricVisual.Score -> v.bands
-            is DashboardMetricVisual.Goal -> v.bands
-            is DashboardMetricVisual.PersonalBaseline -> v.bands
-            is DashboardMetricVisual.ReferenceRange -> v.bands
-            is DashboardMetricVisual.ValueOnly -> emptyList()
-        }
+        if (isUnavailable) MaterialTheme.colorScheme.onSurfaceVariant else presentation.status.gaugeColor()
 
     val markerFraction =
-        when (val v = presentation.visual) {
-            is DashboardMetricVisual.Score -> v.markerFraction
-            is DashboardMetricVisual.Goal -> v.markerFraction
-            is DashboardMetricVisual.PersonalBaseline -> null // Draw manually
-            is DashboardMetricVisual.ReferenceRange -> null // Draw manually
+        when (val visual = presentation.visual) {
+            is DashboardMetricVisual.Score -> visual.markerFraction
+            is DashboardMetricVisual.Goal -> visual.markerFraction
+            is DashboardMetricVisual.PersonalBaseline -> visual.markerFraction
+            is DashboardMetricVisual.ReferenceRange -> visual.markerFraction
             is DashboardMetricVisual.ValueOnly -> null
-        }
-
-    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
-    val statusColors = LocalStatusColors.current
-    val segments =
-        bands.map {
-            M3GaugeSegment(
-                it.startFraction,
-                it.endFraction,
-                if (isUnavailable) trackColor else metricStatusColor(it.status, statusColors, surfaceVariantColor),
-            )
         }
 
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         M3MetricGauge(
             markerFraction = markerFraction,
             activeColor = activeColor,
-            segments = segments,
             animateMarker = animateMarker,
             modifier = Modifier.fillMaxWidth(),
         )
