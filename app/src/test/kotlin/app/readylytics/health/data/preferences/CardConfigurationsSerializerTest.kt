@@ -32,6 +32,19 @@ class CardConfigurationsSerializerTest {
     }
 
     @Test
+    fun `unknown proto mode string maps to null`() {
+        val proto =
+            CardConfigurationProto
+                .newBuilder()
+                .setCardId(CardId.HRV.name)
+                .setIsVisible(true)
+                .setPosition(2)
+                .setRequestedDisplayMode("TREND")
+                .build()
+        assertNull(requireNotNull(CardConfigurationMapper.toDomain(proto)).requestedDisplayMode)
+    }
+
+    @Test
     fun `different cards round trip different modes`() {
         val cards =
             listOf(

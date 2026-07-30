@@ -42,7 +42,6 @@ class DashboardCardDisplayModeSerializerTest {
         val decoded = Json.decodeFromString<CardConfiguration>(json)
 
         assertEquals(original, decoded)
-        assertEquals("BAR", DashboardCardDisplayMode.BAR.name)
         assertEquals(json.contains("\"requestedDisplayMode\":\"BAR\""), true)
     }
 }
