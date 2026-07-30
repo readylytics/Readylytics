@@ -19,6 +19,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import app.readylytics.health.core.ui.R as CoreUiR
 
 class GetDashboardDataUseCaseTest {
     private lateinit var getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase
@@ -66,8 +67,10 @@ class GetDashboardDataUseCaseTest {
     }
 
     @Test
-    fun `invoke accepts observer-supplied strain increase without changing card generation`() {
+    fun `invoke forwards a positive strain increase to the Strain presentation`() {
         val prefs = mockk<UserPreferences>(relaxed = true)
+        every { resourceProvider.getString(CoreUiR.string.delta_up) } returns "↑"
+        every { resourceProvider.getString(CoreUiR.string.delta_up_format, "↑", "0.23") } returns "↑ 0.23"
 
         val result =
             useCase(
@@ -79,7 +82,14 @@ class GetDashboardDataUseCaseTest {
                 todayStrainIncrease = 0.23f,
             )
 
-        assert(result.isSuccess)
+        assertEquals(
+            "↑ 0.23",
+            result
+                .getOrNull()
+                ?.cardDataMap
+                ?.get(CardId.STRAIN_RATIO)
+                ?.secondaryText,
+        )
     }
 
     @Test

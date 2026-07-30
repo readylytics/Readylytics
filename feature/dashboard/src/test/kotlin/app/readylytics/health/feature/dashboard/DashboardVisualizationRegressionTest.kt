@@ -324,6 +324,24 @@ class DashboardVisualizationRegressionTest {
     }
 
     @Test
+    fun barMode_showsPositiveStrainDeltaInTheSharedPillOutsideTheTrack() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.BAR,
+            presentation =
+                presentation.copy(
+                    title = "Strain",
+                    valueText = "1.14",
+                    secondaryText = "↑ 0.23",
+                    accessibilityDescription = "Strain ratio 1.14, normal.",
+                ),
+        )
+
+        composeRule.onNodeWithText("↑ 0.23").assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTextIsBelowBar("↑ 0.23")
+    }
+
+    @Test
     fun progressFraction_returnsEachNormalizedVisualMarkerFraction() {
         val visuals =
             listOf(

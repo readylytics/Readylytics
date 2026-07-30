@@ -20,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import app.readylytics.health.core.ui.R as CoreUiR
 
 class DashboardMetricPresentationFactoryTest {
     private lateinit var factory: DashboardMetricPresentationFactory
@@ -178,6 +179,32 @@ class DashboardMetricPresentationFactoryTest {
         val visual = cards.getValue(CardId.STRAIN_RATIO).visual as DashboardMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(2f, visual.maxValue)
+    }
+
+    @Test
+    fun `positive strain increase is formatted as an upward delta`() {
+        every { resourceProvider.getString(CoreUiR.string.delta_up) } returns "↑"
+        every { resourceProvider.getString(CoreUiR.string.delta_up_format, "↑", "0.23") } returns "↑ 0.23"
+
+        val cards = factory.build(summary(), preferences(), date, null, null, null, 0.234f)
+
+        assertEquals("↑ 0.23", cards.getValue(CardId.STRAIN_RATIO).secondaryText)
+    }
+
+    @Test
+    fun `strain increase at the no-change threshold uses the no-change glyph`() {
+        every { resourceProvider.getString(CoreUiR.string.delta_no_change) } returns "—"
+
+        val cards = factory.build(summary(), preferences(), date, null, null, null, 0.005f)
+
+        assertEquals("—", cards.getValue(CardId.STRAIN_RATIO).secondaryText)
+    }
+
+    @Test
+    fun `unavailable strain increase has no secondary text`() {
+        val cards = factory.build(summary(), preferences(), date, null, null, null, null)
+
+        assertNull(cards.getValue(CardId.STRAIN_RATIO).secondaryText)
     }
 
     @Test

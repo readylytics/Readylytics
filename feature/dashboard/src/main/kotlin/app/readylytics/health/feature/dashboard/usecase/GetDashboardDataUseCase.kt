@@ -46,6 +46,7 @@ class GetDashboardDataUseCase
                         lastSleepSession,
                         circadianResult,
                         heartRateSummary,
+                        todayStrainIncrease,
                     )
                 val rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs)
 

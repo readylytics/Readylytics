@@ -4,6 +4,7 @@ import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
+import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.DailyMetricsMapper
@@ -81,6 +82,7 @@ class DashboardMetricPresentationFactory
             lastSleepSession: SleepSessionSummary?,
             circadianResult: CircadianConsistencyResult?,
             heartRateSummary: HeartRateDaySummary?,
+            todayStrainIncrease: Float? = null,
         ): Map<CardId, DashboardMetricPresentation> {
             val map = mutableMapOf<CardId, DashboardMetricPresentation>()
 
@@ -530,6 +532,18 @@ class DashboardMetricPresentationFactory
                     app.readylytics.health.core.ui.R.string.card_title_strain_ratio,
                 )
             val strainValueText = m?.strainRatioDisplay ?: "—"
+            val strainIncreaseText =
+                todayStrainIncrease?.let { increase ->
+                    if (increase > 0.005f) {
+                        resourceProvider.getString(
+                            CoreUiR.string.delta_up_format,
+                            resourceProvider.getString(CoreUiR.string.delta_up),
+                            MetricFormatter.formatStrain(increase),
+                        )
+                    } else {
+                        resourceProvider.getString(CoreUiR.string.delta_no_change)
+                    }
+                }
             val strainVisual =
                 DashboardMetricScalePreparer.score(
                     m?.strainRatioRaw,
@@ -557,7 +571,7 @@ class DashboardMetricPresentationFactory
                     title = strainTitle,
                     valueText = strainValueText,
                     unitText = "",
-                    secondaryText = null,
+                    secondaryText = strainIncreaseText,
                     status = MetricStatus.NEUTRAL,
                     tooltip = "",
                     accessibilityDescription = strainDescription,
