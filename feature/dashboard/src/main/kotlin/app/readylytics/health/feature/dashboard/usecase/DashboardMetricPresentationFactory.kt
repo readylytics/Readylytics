@@ -28,6 +28,44 @@ class DashboardMetricPresentationFactory @Inject constructor(
     private val resourceProvider: ResourceProvider,
     private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
 ) {
+    // Task 10: real accessibilityDescription wiring for the card types the accessibility
+    // regression tests in DashboardMetricCardTest.kt cover (Sleep Score, Sleep Duration, HRV,
+    // Weight, Body Fat, plus their Goal-unavailable/PersonalBaseline-not-ready branches). Every
+    // other card below still passes an empty accessibilityDescription — see the Task 10 report
+    // for that follow-up scope.
+
+    private fun classificationText(status: MetricStatus): String = resourceProvider.getString(
+        when (status) {
+            MetricStatus.OPTIMAL -> app.readylytics.health.core.ui.R.string.metric_status_optimal
+            MetricStatus.NEUTRAL -> app.readylytics.health.core.ui.R.string.metric_status_neutral
+            MetricStatus.WARNING -> app.readylytics.health.core.ui.R.string.metric_status_warning
+            MetricStatus.POOR -> app.readylytics.health.core.ui.R.string.metric_status_poor
+            MetricStatus.NO_DATA,
+            MetricStatus.CALIBRATING,
+            -> app.readylytics.health.core.ui.R.string.metric_status_calibrating
+        }
+    )
+
+    private fun unavailableReasonText(reason: DashboardMetricUnavailableReason): String = resourceProvider.getString(
+        when (reason) {
+            DashboardMetricUnavailableReason.MISSING_VALUE ->
+                app.readylytics.health.core.ui.R.string.metric_unavailable_missing_value
+            DashboardMetricUnavailableReason.MISSING_TARGET ->
+                app.readylytics.health.core.ui.R.string.metric_unavailable_missing_target
+            DashboardMetricUnavailableReason.BASELINE_NOT_READY ->
+                app.readylytics.health.core.ui.R.string.metric_unavailable_baseline_not_ready
+            DashboardMetricUnavailableReason.MISSING_BMI ->
+                app.readylytics.health.core.ui.R.string.metric_unavailable_missing_bmi
+        }
+    )
+
+    private fun unavailableDescription(title: String, reason: DashboardMetricUnavailableReason): String =
+        resourceProvider.getString(
+            app.readylytics.health.feature.dashboard.R.string.semantics_unavailable_format,
+            title,
+            unavailableReasonText(reason),
+        )
+
     fun build(
         summary: DailySummary?,
         preferences: UserPreferences,
@@ -49,14 +87,26 @@ class DashboardMetricPresentationFactory @Inject constructor(
         
         // 1. SLEEP SCORE
         val sleepScoreVisual = DashboardMetricScalePreparer.score(summary?.sleepScore?.toFloat(), 0f, 100f, scoreBands)
+        val sleepScoreTitle =
+            resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_sleep_score)
+        val sleepScoreValueText = m?.sleepScoreRounded?.toString() ?: "—"
+        val sleepScoreDescription = sleepScoreVisual.unavailableReason?.let { reason ->
+            unavailableDescription(sleepScoreTitle, reason)
+        } ?: resourceProvider.getString(
+            app.readylytics.health.feature.dashboard.R.string.semantics_score_format,
+            sleepScoreTitle,
+            sleepScoreValueText,
+            "100",
+            classificationText(sleepScoreVisual.getResolvedStatus()),
+        )
         map[CardId.SLEEP_SCORE] = DashboardMetricPresentation(
-            title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_sleep_score),
-            valueText = m?.sleepScoreRounded?.toString() ?: "—",
+            title = sleepScoreTitle,
+            valueText = sleepScoreValueText,
             unitText = "",
             secondaryText = null,
             status = sleepScoreVisual.getResolvedStatus(),
             tooltip = "",
-            accessibilityDescription = "",
+            accessibilityDescription = sleepScoreDescription,
             visual = sleepScoreVisual
         )
         
@@ -107,14 +157,28 @@ class DashboardMetricPresentationFactory @Inject constructor(
             resourceProvider.getString(app.readylytics.health.core.ui.R.string.bmi_secondary_text, String.format(java.util.Locale.getDefault(), "%.1f", bmi), categoryStr)
         } else null
         
+        val weightTitle =
+            resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_weight)
+        val weightValueText = m?.weightKgDisplay?.replace(" kg", "")?.replace(" lbs", "") ?: "—"
+        val weightUnitText =
+            if (preferences.unitSystem == app.readylytics.health.domain.preferences.UnitSystem.METRIC) "kg" else "lbs"
+        val weightDescription = weightVisual.unavailableReason?.let { reason ->
+            unavailableDescription(weightTitle, reason)
+        } ?: resourceProvider.getString(
+            app.readylytics.health.feature.dashboard.R.string.semantics_weight_bmi_format,
+            weightTitle,
+            "$weightValueText $weightUnitText",
+            bmiSecondary ?: "",
+            categoryStr ?: "",
+        )
         map[CardId.WEIGHT] = DashboardMetricPresentation(
-            title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_weight),
-            valueText = m?.weightKgDisplay?.replace(" kg", "")?.replace(" lbs", "") ?: "—",
-            unitText = if (preferences.unitSystem == app.readylytics.health.domain.preferences.UnitSystem.METRIC) "kg" else "lbs",
+            title = weightTitle,
+            valueText = weightValueText,
+            unitText = weightUnitText,
             secondaryText = bmiSecondary,
             status = weightVisual.getResolvedStatus(),
             tooltip = "",
-            accessibilityDescription = "",
+            accessibilityDescription = weightDescription,
             visual = weightVisual
         )
         
@@ -136,14 +200,25 @@ class DashboardMetricPresentationFactory @Inject constructor(
             scaleAvailable = true,
             unavailableReason = null
         )
+        val bodyFatTitle =
+            resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_body_fat)
+        val bodyFatValueText = bodyFatPercent?.toString() ?: "—"
+        val bodyFatDescription = bodyFatVisual.unavailableReason?.let { reason ->
+            unavailableDescription(bodyFatTitle, reason)
+        } ?: resourceProvider.getString(
+            app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
+            bodyFatTitle,
+            "$bodyFatValueText%",
+            classificationText(bodyFatStatusVal),
+        )
         map[CardId.BODY_FAT] = DashboardMetricPresentation(
-            title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_body_fat),
-            valueText = bodyFatPercent?.toString() ?: "—",
+            title = bodyFatTitle,
+            valueText = bodyFatValueText,
             unitText = "%",
             secondaryText = null,
             status = bodyFatStatusVal,
             tooltip = "",
-            accessibilityDescription = "",
+            accessibilityDescription = bodyFatDescription,
             visual = bodyFatVisual
         )
         
@@ -160,14 +235,35 @@ class DashboardMetricPresentationFactory @Inject constructor(
             bands = emptyList()
         )
         
+        val sleepDurationTitle =
+            resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_sleep_duration)
+        val sleepDurationValueText = m?.sleepDurationDisplay ?: "—"
+        val sleepDurationDescription = when {
+            durationVisual.unavailableReason != null ->
+                unavailableDescription(sleepDurationTitle, durationVisual.unavailableReason)
+            durationVisual.isAboveTarget -> resourceProvider.getString(
+                app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
+                sleepDurationTitle,
+                sleepDurationValueText,
+                resourceProvider.getString(
+                    app.readylytics.health.feature.dashboard.R.string.goal_above_target_description,
+                ),
+            )
+            else -> resourceProvider.getString(
+                app.readylytics.health.feature.dashboard.R.string.semantics_goal_format,
+                sleepDurationTitle,
+                sleepDurationValueText,
+                DailyMetricsMapper.formatSleepDuration(goalMins) ?: "—",
+            )
+        }
         map[CardId.SLEEP_DURATION] = DashboardMetricPresentation(
-            title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_sleep_duration),
-            valueText = m?.sleepDurationDisplay ?: "—",
+            title = sleepDurationTitle,
+            valueText = sleepDurationValueText,
             unitText = "",
             secondaryText = null,
             status = durationStatus,
             tooltip = "",
-            accessibilityDescription = "",
+            accessibilityDescription = sleepDurationDescription,
             visual = durationVisual
         )
         
@@ -187,14 +283,35 @@ class DashboardMetricPresentationFactory @Inject constructor(
             ) else emptyList(),
             baselineReady = summary?.isCalibrating == false && hrvBaseline != null && hrvBaseline > 0f
         )
+        val hrvTitle = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_hrv)
+        val hrvValueText = summary?.nocturnalHrv?.toString() ?: "—"
+        val hrvUnitText = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_ms)
+        val hrvDescription = hrvVisual.unavailableReason?.let { reason ->
+            unavailableDescription(hrvTitle, reason)
+        } ?: run {
+            val ratio = hrvVisual.ratio
+            val relationRes = when {
+                ratio != null && ratio >= preferences.hrvOptimalThreshold ->
+                    app.readylytics.health.feature.dashboard.R.string.personal_baseline_above_range_description
+                ratio != null && ratio <= preferences.hrvWarningThreshold ->
+                    app.readylytics.health.feature.dashboard.R.string.personal_baseline_below_range_description
+                else -> app.readylytics.health.feature.dashboard.R.string.personal_baseline_within_range_description
+            }
+            resourceProvider.getString(
+                app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
+                hrvTitle,
+                "$hrvValueText $hrvUnitText",
+                resourceProvider.getString(relationRes),
+            )
+        }
         map[CardId.HRV] = DashboardMetricPresentation(
-            title = resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_hrv),
-            valueText = summary?.nocturnalHrv?.toString() ?: "—",
-            unitText = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_ms),
+            title = hrvTitle,
+            valueText = hrvValueText,
+            unitText = hrvUnitText,
             secondaryText = null,
             status = hrvStatus,
             tooltip = "",
-            accessibilityDescription = "",
+            accessibilityDescription = hrvDescription,
             visual = hrvVisual
         )
         

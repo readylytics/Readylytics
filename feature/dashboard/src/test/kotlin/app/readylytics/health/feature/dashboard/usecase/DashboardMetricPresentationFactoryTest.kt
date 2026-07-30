@@ -36,6 +36,12 @@ class DashboardMetricPresentationFactoryTest {
         every { resourceProvider.getString(any()) } returns "mock_string"
         every { resourceProvider.getString(any(), any()) } returns "BMI mock_string"
 every { resourceProvider.getString(any(), any(), any()) } returns "BMI mock_string"
+        // Task 10: DashboardMetricPresentationFactory now also calls getString with 3 and 4
+        // vararg format args (e.g. semantics_score_format, semantics_weight_bmi_format) to build
+        // real accessibilityDescription text; stub those arities too so the relaxed mock doesn't
+        // fall through to an empty-string default for them.
+        every { resourceProvider.getString(any(), any(), any(), any()) } returns "mock_string"
+        every { resourceProvider.getString(any(), any(), any(), any(), any()) } returns "mock_string"
     }
 
     private fun summary(weightKg: Float? = null, bodyFatPercent: Float? = null) = DailySummary(
@@ -239,5 +245,48 @@ every { resourceProvider.getString(any(), any(), any()) } returns "BMI mock_stri
         assertEquals("0", presentation.valueText)
         assertNull(visual.unavailableReason)
         assertEquals(0f, visual.markerFraction)
+    }
+
+    // -------------------------------------------------------------------------
+    // Task 10 (post-review): DashboardMetricPresentationFactory previously set
+    // accessibilityDescription = "" unconditionally for every card. These regression-guard the
+    // wiring for the card types DashboardMetricCardTest.kt's shell-level semantics fixtures cover
+    // (Sleep Score, Sleep Duration, HRV, Weight, Body Fat) across both the unavailable branch
+    // (all fields missing) and an available branch (real data), for both of which the description
+    // must no longer be blank. Exact string content isn't asserted here — resourceProvider is a
+    // relaxed mock returning fixed placeholders regardless of resId, so it can't distinguish real
+    // resource wording; that would need either real resources (Robolectric, not currently a test
+    // dependency of this module) or per-resId stubbing that re-derives the production format
+    // strings in the test. See the Task 10 report for that as noted follow-up.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `wired cards produce a non-blank accessibility description when data is missing`() {
+        val cards = factory.build(null, preferences(), date, null, null, null)
+
+        assertTrue(cards.getValue(CardId.SLEEP_SCORE).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.SLEEP_DURATION).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.HRV).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.BODY_FAT).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.WEIGHT).accessibilityDescription.isNotBlank())
+    }
+
+    @Test
+    fun `wired cards produce a non-blank accessibility description when data is available`() {
+        val cards = factory.build(
+            summary(weightKg = 70f, bodyFatPercent = 20f).copy(
+                sleepScore = 85f,
+                sleepDurationMinutes = 450,
+                nocturnalHrv = 55,
+            ),
+            preferences(heightCm = 180f),
+            date, null, null, null,
+        )
+
+        assertTrue(cards.getValue(CardId.SLEEP_SCORE).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.SLEEP_DURATION).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.HRV).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.BODY_FAT).accessibilityDescription.isNotBlank())
+        assertTrue(cards.getValue(CardId.WEIGHT).accessibilityDescription.isNotBlank())
     }
 }
