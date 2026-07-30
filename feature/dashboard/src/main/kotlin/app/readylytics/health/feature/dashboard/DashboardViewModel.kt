@@ -274,6 +274,15 @@ class DashboardViewModel
             cardManagementDelegate.onResetToDefaults()
         }
 
+        fun onCardDisplayModeChanged(
+            cardId: CardId,
+            mode: app.readylytics.health.domain.dashboard.DashboardCardDisplayMode,
+        ) {
+            cardManagementDelegate.onEvent(
+                app.readylytics.health.domain.dashboard.CardManagementEvent.DisplayModeChanged(cardId, mode)
+            )
+        }
+
         fun onEvent(event: DashboardEvent) {
             when (event) {
                 is DashboardEvent.DateSelected ->

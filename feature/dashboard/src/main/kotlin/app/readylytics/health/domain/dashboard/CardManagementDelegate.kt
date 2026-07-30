@@ -45,6 +45,11 @@ sealed interface CardManagementEvent {
         val currentConfigs: List<CardConfiguration>,
         val newOrder: List<CardConfiguration>,
     ) : CardManagementEvent
+
+    data class DisplayModeChanged(
+        val cardId: CardId,
+        val mode: DashboardCardDisplayMode,
+    ) : CardManagementEvent
 }
 
 /**
@@ -125,6 +130,18 @@ class CardManagementDelegate(
             is CardManagementEvent.ReorderCards -> {
                 val base = _pendingConfigs.value ?: event.currentConfigs
                 _pendingConfigs.value = reorderCards(base, event.newOrder)
+            }
+            is CardManagementEvent.DisplayModeChanged -> {
+                val base = _pendingConfigs.value
+                    ?: error("Display mode can only change while editing")
+                require(base.any { it.cardId == event.cardId })
+                _pendingConfigs.value = base.map { configuration ->
+                    if (configuration.cardId == event.cardId) {
+                        configuration.copy(requestedDisplayMode = event.mode)
+                    } else {
+                        configuration
+                    }
+                }
             }
         }
     }

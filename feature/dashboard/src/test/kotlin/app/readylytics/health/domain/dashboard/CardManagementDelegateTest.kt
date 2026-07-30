@@ -382,4 +382,54 @@ class CardManagementDelegateTest {
             coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(sampleConfigs) }
             coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(secondSet) }
         }
+
+    // --- 12. DisplayModeChanged ---
+
+    @Test
+    fun `changing one mode updates only matching pending card`() {
+        delegate.enterEditMode(sampleConfigs)
+        delegate.onEvent(
+            CardManagementEvent.DisplayModeChanged(
+                CardId.HRV,
+                DashboardCardDisplayMode.BAR,
+            ),
+        )
+        val updated = requireNotNull(delegate.pendingConfigs.value)
+        assertEquals(DashboardCardDisplayMode.BAR, updated.single { it.cardId == CardId.HRV }.requestedDisplayMode)
+        assertNull(updated.single { it.cardId == CardId.READINESS }.requestedDisplayMode)
+    }
+
+    @Test
+    fun `save changes persists the updated display mode`() = testScope.runTest {
+        delegate.enterEditMode(sampleConfigs)
+        delegate.onEvent(
+            CardManagementEvent.DisplayModeChanged(
+                CardId.HRV,
+                DashboardCardDisplayMode.BAR,
+            ),
+        )
+        delegate.saveChanges()
+        advanceUntilIdle()
+
+        val expected = sampleConfigs.map {
+            if (it.cardId == CardId.HRV) it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR) else it
+        }
+        coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expected) }
+    }
+
+    @Test
+    fun `cancel changes drops display mode updates without persisting`() = testScope.runTest {
+        delegate.enterEditMode(sampleConfigs)
+        delegate.onEvent(
+            CardManagementEvent.DisplayModeChanged(
+                CardId.HRV,
+                DashboardCardDisplayMode.BAR,
+            ),
+        )
+        delegate.cancelChanges()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
+        assertNull(delegate.pendingConfigs.value)
+    }
 }
