@@ -32,9 +32,10 @@ while [ "${attempt}" -le "${max_attempts}" ]; do
     # ScoringWalkForwardBenchmark (androidx.benchmark-junit4, in-process) hard-fails on CI's
     # debuggable/emulator runner unless these known-inapplicable environment checks are
     # suppressed; the benchmark still executes and asserts correctness, just without
-    # trustworthy timing numbers on this runner.
+    # trustworthy timing numbers on this runner. NOT-AOT-COMPILED is included because the
+    # CI emulator has no profile-installer/root support to AOT-compile the app under test.
     timeout --signal=TERM --kill-after=30s 15m ./gradlew connectedDebugAndroidTest \
-        -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=ACTIVITY-MISSING,DEBUGGABLE,EMULATOR \
+        -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=ACTIVITY-MISSING,DEBUGGABLE,EMULATOR,NOT-AOT-COMPILED \
         --stacktrace --console=plain || test_status=$?
 
     echo "==> Attempt ${attempt} finished with exit code: ${test_status}"
