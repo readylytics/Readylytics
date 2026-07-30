@@ -279,7 +279,7 @@ class DashboardMetricPresentationFactory @Inject constructor(
         } else MetricStatus.NEUTRAL
         
         val effValText = if (efficiency == null) "—" else if (efficiency == 0f) "0" else String.format(Locale.getDefault(), "%.0f", efficiency * 100)
-        val effVisual = DashboardMetricScalePreparer.score((efficiency ?: 0f) * 100f, 0f, 100f, listOf(RawMetricBand(0f, 70f, MetricStatus.POOR), RawMetricBand(70f, 80f, MetricStatus.WARNING), RawMetricBand(80f, 85f, MetricStatus.NEUTRAL), RawMetricBand(85f, 100f, MetricStatus.OPTIMAL)))
+        val effVisual = DashboardMetricScalePreparer.score(efficiency?.let { it * 100f }, 0f, 100f, listOf(RawMetricBand(0f, 70f, MetricStatus.POOR), RawMetricBand(70f, 80f, MetricStatus.WARNING), RawMetricBand(80f, 85f, MetricStatus.NEUTRAL), RawMetricBand(85f, 100f, MetricStatus.OPTIMAL)))
         map[CardId.SLEEP_EFFICIENCY] = DashboardMetricPresentation(
             title = resourceProvider.getString(app.readylytics.health.core.ui.R.string.card_title_sleep_efficiency),
             valueText = effValText,
