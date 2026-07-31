@@ -152,23 +152,38 @@ fun DashboardBarRenderer(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
         ) {
+            val valueTextStyle =
+                if (presentation.valueText.length >= 6) {
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.3).sp,
+                    )
+                } else {
+                    MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp,
+                    )
+                }
             Text(
                 text = presentation.valueText,
-                style = MaterialTheme.typography.headlineMedium,
+                style = valueTextStyle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (presentation.unitText.isNotBlank()) {
                 Text(
                     text = presentation.unitText,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         Canvas(
             modifier =
@@ -200,7 +215,7 @@ fun DashboardBarRenderer(
             }
         }
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         Box(
             modifier = Modifier.fillMaxWidth().height(20.dp),

@@ -461,6 +461,126 @@ class DashboardVisualizationRegressionTest {
     }
 
     @Test
+    fun barMode_keepsValueAndUnitOutsideCanvasElement() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.BAR,
+            presentation =
+                presentation.copy(
+                    valueText = "48",
+                    unitText = "bpm",
+                    secondaryText = "↓ 1",
+                    accessibilityDescription = "Resting heart rate 48 bpm, optimal.",
+                ),
+        )
+
+        // Value and unit text should be displayed
+        composeRule.onNodeWithText("48").assertIsDisplayed()
+        composeRule.onNodeWithText("bpm").assertIsDisplayed()
+
+        // Bar canvas should be displayed
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+
+        // Value and unit should not be contained within the bar canvas element
+        val barBounds =
+            composeRule
+                .onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val valueBounds =
+            composeRule
+                .onNodeWithText("48", useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val unitBounds =
+            composeRule
+                .onNodeWithText("bpm", useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+
+        // Text should not overlap with the canvas (value above, unit above)
+        assertTrue(
+            "Value must be outside (above) the Bar canvas",
+            valueBounds.bottom <= barBounds.top,
+        )
+        assertTrue(
+            "Unit must be outside (above) the Bar canvas",
+            unitBounds.bottom <= barBounds.top,
+        )
+    }
+
+    @Test
+    fun barMode_secondaryContentFollowsTheTrack() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.BAR,
+            presentation =
+                presentation.copy(
+                    valueText = "1.14",
+                    unitText = "",
+                    secondaryText = "↑ 0.23",
+                    accessibilityDescription = "Strain ratio 1.14, normal.",
+                ),
+        )
+
+        // Secondary content should be displayed
+        composeRule.onNodeWithText("↑ 0.23").assertIsDisplayed()
+
+        // Bar canvas should be displayed
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+
+        // Secondary content should be after (below) the bar
+        val barBounds =
+            composeRule
+                .onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val secondaryBounds =
+            composeRule
+                .onNodeWithText("↑ 0.23", useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+
+        assertTrue(
+            "Secondary content must follow (be below) the Bar track",
+            secondaryBounds.top >= barBounds.bottom,
+        )
+    }
+
+    @Test
+    fun gaugeMode_keepValueAndUnitReadableForLongTitle() {
+        val longTitle = "Resting heart\nrate"
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 1.5f),
+            ) {
+                TestTheme {
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = longTitle,
+                                valueText = "48",
+                                unitText = "bpm",
+                                accessibilityDescription = "Resting heart rate 48 bpm, optimal.",
+                            ),
+                        specification = specification,
+                        requestedMode = DashboardCardDisplayMode.GAUGE,
+                        renderMode = DashboardCardDisplayMode.GAUGE,
+                        isEditing = false,
+                        onModeSelected = {},
+                    )
+                }
+            }
+        }
+
+        // Both value and unit should remain visible and readable
+        composeRule.onNodeWithText("48").assertIsDisplayed()
+        composeRule.onNodeWithText("bpm").assertIsDisplayed()
+
+        // Gauge visualization should remain inside the card
+        composeRule.onNodeWithTag(DASHBOARD_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertVisualizationIsInsideCard(DASHBOARD_GAUGE_TAG)
+    }
+
+    @Test
     fun progressFraction_returnsEachNormalizedVisualMarkerFraction() {
         val visuals =
             listOf(
