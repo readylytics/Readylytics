@@ -27,9 +27,9 @@ Severity as assessed in review. IDs are referenced by the tasks below.
 | --- | --- | --- | --- |
 | F1 | High | Band-boundary values classify one status too low; Readiness hits it deterministically | `DashboardMetricVisualHelper.kt:10` |
 | F2 | High | Sleep Efficiency card tint and TalkBack description use two disagreeing ladders | `DashboardMetricPresentationFactory.kt:304`, `:347` |
-| F3 | Med | Dead `spo2Status` hides a silent change to SpO2 classification | `DashboardMetricPresentationFactory.kt:364` |
+| F3 | Med | Dead `spo2Status` hides a silent change to SpO2 classification — *resolution decided, see Decisions* | `DashboardMetricPresentationFactory.kt:364` |
 | F4 | Med | Weight card re-inlines the BMI thresholds this branch centralised | `DashboardMetricPresentationFactory.kt:176-182` |
-| F5 | Med | `BodyFatStatus.Calibrating` is now unreachable | `BodyCompositionAssessment.kt:104`, `BodyFatStatus.kt:12` |
+| F5 | Med | `BodyFatStatus.Calibrating` is now unreachable — *resolution decided, see Decisions* | `BodyCompositionAssessment.kt:104`, `BodyFatStatus.kt:12` |
 | F6 | Med | Strain-delta observer refetches 42 days of summaries per workout, per emission | `ObserveDashboardStrainIncreaseUseCase.kt:63-100` |
 | F7 | Med | Everyday-HR users with no workouts never see a strain delta | `ObserveDashboardStrainIncreaseUseCase.kt:64-79` |
 | F8 | Med | Drag handle captures `deleteZoneTopPx`/`performDragEnd` stalely | `ReorderableCardGrid.kt:420-438` |
@@ -46,6 +46,15 @@ Severity as assessed in review. IDs are referenced by the tasks below.
 
 F1, F2, F3 and F12 are one defect wearing four hats: **each metric's status is derived twice, from two different ladders, and the two disagree.** Task 1 and Task 7 exist to make it derived once. Fix Task 1 before anything else — it is the only finding that changes what a user is told about their health today.
 
+## Decisions
+
+The review left two behavioural questions open. Both are now settled; the tasks below are written against these answers, not against the alternatives.
+
+| Date | Question | Decision |
+| --- | --- | --- |
+| 2026-07-31 | F3 — which SpO2 ladder is authoritative, the dead `spo2Status` (`>= 95 OPTIMAL`) or the live bands (`95–98 NEUTRAL`, `98–100 OPTIMAL`)? | **The live bands.** Delete `spo2Status`. A normal 96 % overnight reading therefore classifies as Neutral, so the bands must be documented (Task 1). |
+| 2026-07-31 | F5 — should the body-fat `Calibrating` state be restored for unset gender, or dropped now that unset gender falls into the fixed 10–30 reference band? | **Dropped.** Delete `BodyFatStatus.Calibrating` and its `toMetricStatus()` arm. `ABOUT.md` already documents the fixed-band behaviour, so no doc change is required (Task 3). |
+
 ---
 
 ### Task 1: Make status classification single-source and boundary-correct
@@ -57,7 +66,7 @@ Resolves **F1, F2, F3**.
 - Modify: `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/usecase/DashboardMetricPresentationFactory.kt`
 - Modify: `feature/dashboard/src/test/kotlin/app/readylytics/health/feature/dashboard/DashboardMetricScalePreparerTest.kt`
 - Modify: `feature/dashboard/src/test/kotlin/app/readylytics/health/feature/dashboard/usecase/DashboardMetricPresentationFactoryTest.kt`
-- Modify: `ABOUT.md`, `docs/about.md`, `internal-docs/DATA_FLOW.md` (only if the SpO2 ladder is the one kept)
+- Modify: `ABOUT.md`, `docs/about.md`, `internal-docs/DATA_FLOW.md` (required — the SpO2 bands become the documented ladder, see Decisions)
 
 **Interfaces:**
 - `DashboardMetricVisual.getResolvedStatus()` matches bands half-open (`start <= f < end`), with the final band closed at its top so `f == 1.0` resolves.
@@ -75,7 +84,9 @@ Resolves **F1, F2, F3**.
   ```
   Collapse the four identical `is …Score/Goal/PersonalBaseline/ReferenceRange` arms onto one shared helper while there.
 - [ ] Delete `effStatus` (`:304`); wire `status` and the description to `effVisual.getResolvedStatus()`, matching the STRAIN_RATIO card whose comment at `:579` already states this rule.
-- [ ] Decide the intended SpO2 ladder: dead `spo2Status` says `>= 95 OPTIMAL`, the live bands say `95–98 NEUTRAL`. Keep one, delete the other. If the bands win, a normal 96 % reading now reads Neutral — document the SpO2 bands in `ABOUT.md`/`docs/about.md` alongside the BMI/body-fat section this branch added.
+- [ ] Delete the dead `spo2Status` (`:364`). **Decided: the live bands are authoritative** — `80–90 POOR`, `90–95 WARNING`, `95–98 NEUTRAL`, `98–100 OPTIMAL`. The card already reads them via `spo2Visual.getResolvedStatus()` at `:405`, so this is a deletion, not a rewire.
+- [ ] Because a normal 96 % overnight reading now classifies as Neutral rather than Optimal, add the SpO2 bands to `ABOUT.md` and `docs/about.md` alongside the BMI/body-fat section this branch added, and add the `internal-docs/DATA_FLOW.md` row. Required by the Documentation Synchronization Rule — this is a user-visible threshold change, not an internal cleanup.
+- [ ] Write a test pinning the four SpO2 bands so the ladder cannot silently drift back.
 - [ ] Add a suite-wide test that iterates every card and asserts `classificationText(presentation.status)` appears in `presentation.accessibilityDescription`. This is the regression guard for the whole finding family.
 - [ ] `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
 
@@ -104,14 +115,15 @@ Resolves **F4, F5, F14**.
 - Modify: `core/model/src/main/kotlin/app/readylytics/health/domain/model/BodyFatStatus.kt`
 - Modify: `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/usecase/DashboardMetricPresentationFactory.kt`
 - Modify: `core/model/src/test/kotlin/app/readylytics/health/domain/model/BodyCompositionAssessmentTest.kt`
-- Modify: `ABOUT.md`, `docs/about.md`, `internal-docs/DATA_FLOW.md` if the `Calibrating` decision changes behaviour
+- Modify: `ABOUT.md`, `docs/about.md` only if the fixed-band wording is found to be inaccurate (dropping `Calibrating` is not itself a behaviour change — see Decisions)
 
 **Interfaces:**
 - `BodyCompositionAssessment` exposes its BMI bands (mirroring the existing `BodyFatReference` pattern) so callers build `RawMetricBand`s from them instead of restating `18.5 / 25 / 30`.
 
 - [ ] Write a failing test asserting the weight card's bands match `BodyCompositionAssessment.assessBmi` at 18.4, 18.5, 24.9, 25, 29.9 and 30.
 - [ ] Expose the BMI bands from `BodyCompositionAssessment` and consume them at `DashboardMetricPresentationFactory.kt:176-182`. The axis anchors `15 / 21.7 / 35` are currently magic numbers absent from `ABOUT.md` — name them as constants and document them.
-- [ ] Decide `BodyFatStatus.Calibrating`. Nothing constructs it since unset gender began falling into the fixed 10–30 band; the only surviving reference is the `toMetricStatus()` arm at `BodyCompositionAssessment.kt:196`. Either delete the subclass and that arm, or restore the state for unset gender specifically. `ABOUT.md` documents the current behaviour, so deletion is the likely intent — confirm before removing.
+- [ ] **Decided: drop `BodyFatStatus.Calibrating`.** Unset gender stays in the fixed 10–30 reference band; the state is not restored. Delete the subclass at `BodyFatStatus.kt:12` and the `toMetricStatus()` arm at `BodyCompositionAssessment.kt:196`. Verified clean — those two lines are the only references in the codebase; no test, ViewModel, or composable mentions it, and `MetricStatus.CALIBRATING` stays in use by other metrics. Sealed-class exhaustiveness means the compiler will surface anything missed.
+- [ ] No `ABOUT.md` / `docs/about.md` change needed: both already describe the fixed-band behaviour for Other / Prefer not to say / unset. Confirm this while editing rather than assuming it.
 - [ ] Delete dead `bodyFatMidpoint` (`:228`). It is computed by passing a dummy `20f` into `assessBodyFat`, correct only because the midpoint happens to be value-independent — a coupling that will break silently. Call `assessBodyFat` once at `:248` and read `.reference.referenceMidpoint` from that single result.
 - [ ] Replace the inline `app.readylytics.health.domain.model.BodyCompositionAssessment.…` at `:248` with the alias already imported at the top of the file.
 - [ ] `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
