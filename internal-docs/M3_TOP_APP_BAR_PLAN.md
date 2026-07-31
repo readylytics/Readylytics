@@ -96,7 +96,47 @@ Three options considered:
 
 **(C) App bar on Settings only**, where there is no `DateSwitcher`. Rejected — inconsistent siblings are worse than a uniform cost.
 
-Under (A), **the pin-vs-scroll inconsistency documented in §2 should be resolved in the same change**: standardize all five on "header scrolls with content, app bar handles pinning". That means Vitals and Workouts stop pinning their `DateSwitcher` and move it into their scroll region, matching Dashboard and Sleep, with `ScreenHeaderSection` either absorbed into the scroll body or retired.
+Under (A), **the pin-vs-scroll inconsistency documented in §2 should be resolved in the same change**: standardize all five on "header scrolls with content, app bar handles pinning". That means Vitals and Workouts stop pinning their `DateSwitcher` and move it into their scroll region, matching Dashboard and Sleep, with `ScreenHeaderSection` either absorbed into the scroll body or retired. §4.3.1 establishes why this direction is safe.
+
+### 4.3.1 Is the Vitals/Workouts pinning deliberate? — investigated
+
+**Finding: the pinning is incidental, not designed.** Confidence: high. Standardizing on scroll-away is therefore the correct direction, and the cheaper one.
+
+Git history cannot corroborate anything here — `git log` on `VitalsScreen.kt`, `WorkoutsScreen.kt`, and `ScreenHeaderSection.kt` returns exactly one commit each, `fb349a7`, which is the repository's **root commit: 1080 files, 273,433 insertions**. All five primary screens "arrived" in the same bulk import, so relative authorship order is unrecoverable. The evidence below is from the code.
+
+**1. `ScreenHeaderSection` has no layout opinion.** Its entire body (`core/ui/common/ScreenHeaderSection.kt`, 17 lines) is a `Column` with `fillMaxWidth()` that invokes `headerContent(isLoading)`. It does not pin, does not measure, does not interact with scroll. Its only real parameter is `isLoading`, forwarded to the content lambda as `isDisabled`. **The component is a loading-gate seam, not a header-pinning mechanism.** Had pinning been the intent, this is where it would live.
+
+**2. The pinning is a side effect of call-site placement.** Vitals and Workouts both structure as `Column { ScreenHeaderSection { … }; Column(Modifier.weight(1f).verticalScroll(…)) { … } }`. The header is pinned purely because the call sits *outside* the `weight(1f)` scroll region. Move the same call inside and the pinning vanishes with no change to `ScreenHeaderSection` itself.
+
+**3. The correlation is exact, and explained by something else.** The two screens that pin (Vitals, Workouts) are precisely the two that adopted `ScreenHeaderSection`, and they adopted it for **gating**, not layout — see point 4. The three that scroll away (Dashboard, Sleep, Settings) never adopted it. Pinning rode along with the gating adoption.
+
+**4. The only comment on this code explains gating, and says nothing about pinning.** `VitalsScreen.kt:76-77`:
+
+> `// isRefreshing (not isLoading) gates the date-switcher: date navigation stays disabled for`
+> `// the full sync duration, not just on true first-load (F1).`
+
+The `(F1)` tag is a numbered review-finding marker; the same convention appears at `SecureFileLogSink.kt:152` as `(F2)`. So a reviewer found that gating on `isLoading` was wrong, and the fix was to gate on `isRefreshing`. **That fix is about when the date control is disabled — not about where it sits.**
+
+**5. No test asserts pinned behavior.** `DateSwitcherTest` (`core/ui/androidTest`) exercises the component in isolation — today/yesterday/selected labels, enablement. Nothing anywhere asserts that the header survives a scroll.
+
+### 4.3.2 The inconsistency that actually matters — a partially applied fix
+
+Chasing the pinning question surfaced a real defect that is **independent of the app bar decision** and should be fixed regardless of whether this plan is approved.
+
+The F1 fix — gate date navigation on `isRefreshing` so it stays disabled for the whole sync — **was applied to only two of the four screens that have a `DateSwitcher`**:
+
+| Screen | `DateSwitcher` gating | State available? |
+|---|---|---|
+| Vitals | `enabled = !isDisabled`, driven by `isRefreshing` ✅ F1-correct | yes |
+| Workouts | `enabled = !isDisabled`, driven by `isRefreshing` ✅ F1-correct | yes |
+| Sleep | **no `enabled` argument at all** — defaults to `true` | `isRefreshing` present in `SleepUiState` (`SleepViewModel.kt:55, 287`) |
+| Dashboard | **no `enabled` argument at all** — defaults to `true` | `isRefreshing` present in `DashboardUiState` (`DashboardViewModel.kt:123, 374`) |
+
+Both un-gated screens **already carry `isRefreshing` in their UI state and never use it for this**. Sleep is the clearest case: it gates its other controls at `SleepScreen.kt:217,231` with `enabled = !uiState.isLoading` — the *pre-F1* signal — and leaves the date switcher ungated entirely. `SleepViewModel.kt:270-277` even carries a long comment distinguishing `isLoading` ("true first-load, no data yet") from `isRefreshing` ("tracks every sync"), so the distinction was understood; it just was not wired to the date control.
+
+**User-visible consequence:** during a sync, paging the date is blocked on Vitals and Workouts but allowed on Dashboard and Sleep — the exact behavior F1 identified as wrong, still live on half the surface.
+
+**Recommendation:** propagate the F1 gating to `DashboardScreen` and `SleepScreen` (pass `enabled = !uiState.isRefreshing`). This is a ~4-line change, needs no app bar, and should ship independently — it is listed as step 0 in §5 so it can go first or separately.
 
 ### 4.4 Interaction with `PullToRefreshBox` — the main integration risk
 
@@ -125,6 +165,10 @@ Every primary screen's top padding must be re-checked: `SleepScreen.kt:99` (`pad
 
 ## 5. Implementation steps
 
+### Step 0 — Propagate the F1 date-switcher gating (independent; ship first or separately)
+
+Pass `enabled = !uiState.isRefreshing` to the `DateSwitcher` in `DashboardScreen.kt:191` and `SleepScreen.kt:107`, matching Vitals and Workouts. Both `uiState` objects already expose the field. See §4.3.2 — this is a live behavioral defect, not an app bar prerequisite, and carries none of this plan's risk.
+
 ### Step 1 — App bar infrastructure in `MainScaffold`
 
 1. Resolve the current tab: `TabDestination.all.find { tab -> currentDestination?.hierarchy?.any { it.hasRoute(tab::class) } == true }`. Reuse the `hierarchy` walk already present at lines 105-108 rather than writing a second one.
@@ -148,7 +192,9 @@ Remove now-duplicated `pageTop` from `SleepScreen`, `DashboardScreen`, `Workouts
 
 ### Step 4 — Standardize header pinning
 
-Move the `DateSwitcher` in `VitalsScreen` and `WorkoutsScreen` from the fixed header into the scroll region so all five destinations behave identically. Retire `ScreenHeaderSection` if nothing else uses it after this change, or reduce it to the loading-state seam it was meant to be.
+Move the `DateSwitcher` in `VitalsScreen` and `WorkoutsScreen` from the fixed header into the scroll region so all five destinations behave identically. §4.3.1 establishes this is safe: the pinning is an artifact of call-site placement, not a design decision.
+
+**Preserve the gating while moving the call.** `ScreenHeaderSection`'s only real function is the `isLoading → isDisabled` seam, and that must survive relocation — the simplest form is to drop the wrapper and pass `enabled = !uiState.isRefreshing` directly, which is what step 0 does on the other two screens anyway. After that, all four `DateSwitcher` call sites are identical, and `ScreenHeaderSection` has no remaining users and can be deleted (`codegraph sync` after removal, per `.claude/CLAUDE.md`).
 
 ### Step 5 — Accessibility
 
@@ -175,10 +221,11 @@ The parent audit's Phase 5 retrofits `pinnedScrollBehavior` to the six detail sc
 
 | Step | Effort | Risk |
 |---|---|---|
+| 0 — F1 gating propagation | 0.1 d | Low — 2 call sites, state already present; independent of everything else |
 | 1 — App bar infrastructure | 0.5 d | Low |
 | 2 — `PullToRefreshBox` relocation | 0.5 d | **Medium–High** — touches the gesture path for every screen; instrumented tests are the safety net |
 | 3 — Padding reconciliation | 0.5 d | Low–Medium — visual-only, but touches all five screens |
-| 4 — Header pinning standardization | 0.5 d | Medium — changes established behavior on Vitals and Workouts |
+| 4 — Header pinning standardization | 0.4 d | Low–Medium — downgraded from Medium; §4.3.1 establishes the pinning is incidental |
 | 5 — Accessibility verification | 0.25 d | Low |
 | 6 — Detail-screen `scrollBehavior` | 0.25 d | Low |
 
@@ -186,7 +233,7 @@ The parent audit's Phase 5 retrofits `pinnedScrollBehavior` to the six detail sc
 
 **Highest risk:** step 2. `PullToRefreshBox` currently wraps everything including the navigation scaffold; moving it inside changes which region owns the gesture. Land it as its own commit so it can be reverted independently of the app bar itself.
 
-**Second:** step 4 changes behavior users may be relying on — Vitals and Workouts currently keep the date control on screen while scrolling. If that pinning is deliberate rather than incidental, the alternative is to standardize the *other* way (pin on all five), which is more work but preserves it. Worth confirming before implementation.
+Step 4's risk was **downgraded after investigation**. The concern was that Vitals/Workouts pinning might be deliberate behavior users rely on, which would have forced standardizing the other way — pinning all five, materially more work. §4.3.1 rules that out: `ScreenHeaderSection` contains no pinning logic, the only comment on the code addresses gating rather than layout, no test asserts pinned behavior, and git history is uninformative because every screen landed in the same root commit. The one thing that must survive step 4 is the loading gate, which step 0 generalizes anyway.
 
 ---
 
@@ -203,6 +250,6 @@ If only part of this is wanted, **steps 1 and 3 alone deliver most of the value*
 ## 9. Open questions
 
 1. **Small vs. large app bar for Settings.** Small everywhere is recommended for sibling consistency; Settings is the one screen where `LargeTopAppBar` would be idiomatic.
-2. **Is the Vitals/Workouts `DateSwitcher` pinning deliberate?** It determines whether step 4 standardizes on scroll-away (less work, matches Dashboard/Sleep) or on pinned (more work, preserves current behavior).
+2. ~~**Is the Vitals/Workouts `DateSwitcher` pinning deliberate?**~~ **Answered — see §4.3.1.** It is incidental: an artifact of where the `ScreenHeaderSection` call sits relative to the scroll region, adopted for loading-gate reasons that have nothing to do with layout. Step 4 standardizes on scroll-away. The investigation also surfaced §4.3.2, a partially applied fix now scheduled as step 0.
 3. **Should Settings' search field become an M3 `SearchBar`?** It is currently an `OutlinedTextField` inside the scroll region. Related, and it interacts with app bar placement, but it is a separate component migration and is **not** in this plan's scope.
 4. **Any app bar actions?** The design above adds title-only bars. Overflow candidates exist (Dashboard's "Customize" is currently a `FilledTonalButton` at the bottom of the list; Settings could surface "Resync"), but moving them is a separate interaction change and is excluded here.
