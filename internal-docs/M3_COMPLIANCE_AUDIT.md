@@ -4,6 +4,9 @@
 **Audit date:** 2026-07-31
 **Branch:** `claude/readylytics-m3-audit-plan-i6mx57`
 **Scope:** all Compose UI in `core/designsystem`, `core/ui`, `feature/*`, `app/src/main/kotlin/**/ui`, and every `res/values/strings.xml`.
+**Companion plan:** [`M3_TOP_APP_BAR_PLAN.md`](./M3_TOP_APP_BAR_PLAN.md) — finding L-4 (top app bars on primary destinations) is planned there, because it changes app structure rather than correcting a token or a defect.
+
+**Agreed scope:** all seven phases (0–6) are in scope, including the Phase 3b editorial rewrites. Wording is corrected wherever M3 content design calls for it, not only where sentence case is mechanically wrong.
 
 **Reference standards**
 
@@ -216,11 +219,15 @@ Consequences: (a) a sync-completion snackbar and a dashboard-error snackbar can 
 **L-3 — Snackbar styled with the error palette. [P2]**
 `DashboardScreen.kt:332-336` overrides `containerColor = errorContainer`, `contentColor = onErrorContainer`. The M3 snackbar spec fixes the container to `inverseSurface` with `inverseOnSurface` content and `inversePrimary` actions — deliberately, so snackbars read as a consistent system surface regardless of message sentiment. M3 does not define an "error snackbar" variant; error emphasis belongs in the message text or in an inline error surface.
 
-**L-4 — No top app bar on any primary destination. [P2]**
+**L-4 — No top app bar on any primary destination. [P2] → tracked separately**
 Only the six *detail* screens declare a `topBar`. Dashboard, Sleep, Workouts, Vitals, and Settings have none — `MainScaffold`'s `Scaffold` (line 133) passes only `snackbarHost`. M3 navigation guidance expects primary destinations to carry a top app bar for title, context, and overflow actions. Today the Dashboard's only title-equivalent is the `DateSwitcher`, and Settings has no screen title at all.
+
+This is a genuine M3 finding, but remediating it changes the app's visual structure rather than correcting a token or a defect. **It is therefore planned separately in [`M3_TOP_APP_BAR_PLAN.md`](./M3_TOP_APP_BAR_PLAN.md)** and is explicitly out of scope for this document.
 
 **L-5 — No `scrollBehavior` anywhere. [P2]**
 Zero occurrences of `scrollBehavior` or `nestedScroll` in the codebase. Every `TopAppBar` (6 detail screens) is static. M3 top app bars are specified to change container color on scroll (`TopAppBarDefaults.enterAlwaysScrollBehavior` / `pinnedScrollBehavior`) so content is visually separated as it passes beneath. Without it, scrolled content slides under a flat, same-colored bar with no boundary.
+
+Scope split: retrofitting `scrollBehavior` to the **six existing detail-screen app bars** is in scope here (Phase 5). Scroll behavior for any *new* primary-destination app bar belongs to the separate top-app-bar plan.
 
 **L-6 — Hand-rolled interactive containers instead of `Surface`/`Card`. [P1 for the settings section, P2 for the legend]**
 `M3CollapsibleSection.kt:36-48` and `StatusLegend.kt:71-76` build clickable containers from `Modifier.background(...)` + `Modifier.clickable {}`.
@@ -308,12 +315,33 @@ Split into two independently-reviewable commits so the mechanical change and the
 
 **3a — Sentence case sweep (mechanical).** Convert all 102 Title Case values across the 10 `strings.xml` files, preserving the proper-noun allowlist (Health Connect, Google Fit, Garmin Connect, Readylytics, Readylytics Activity Score, GitHub, Play Store, Android Keystore, SpO2, HRV, RHR, ACWR, TRIMP, BMI). Keys are unchanged, so no Kotlin edits are required.
 
-**3b — Editorial rewrite (judgement).**
-- **T-6** — "Grant Access & Continue" → "Grant access and continue"; "Reset database & start fresh" → "Delete all data"; "Training Load & Strain Ratio (ACWR)" → "Training load and strain ratio (ACWR)"; "Download/Share logs" → "Share logs".
-- **T-7** — Drop "Please" from `github_issue_report_saved_to_file`. `recovery_danger_title` "Danger zone" → "Delete all data"; rewrite `recovery_danger_body` to lead with the consequence.
-- **T-8** — `insight_rest_day_perfect_sleep` → "Your sleep was fully restorative last night" (removes both the exclamation mark and the absolute claim).
-- **T-9** — `sync_completed` → "Health data updated".
-- Sweep the `insight_detail_*` section headers for question-form headings ("What This Might Mean" → "What this might mean"), already covered by 3a but worth a content read-through for register consistency.
+**3b — Editorial rewrite (judgement). In scope.** Every item below is a change M3 content design calls for, not a discretionary tone preference. Each row cites the specific guideline it satisfies.
+
+| Key | Current | Proposed | M3 rule |
+|---|---|---|---|
+| `onboarding_grant_access` | Grant Access & Continue | Grant access and continue | Spell out "and"; sentence case |
+| `recovery_reset_button` | Reset database & start fresh | Delete all data | Spell out "and"; name the action, not the mechanism; avoid marketing tone in a destructive control |
+| `recovery_danger_title` | Danger zone | Delete all data | User-focused, action-oriented; not developer jargon naming a UI region |
+| `recovery_danger_body` | If you don't have a backup, you can reset the database. This will permanently delete all existing local health dashboards and records. | Deleting removes all your health data from this device permanently. This can't be undone. | Lead with the consequence; second person; avoid "database" as user-facing vocabulary |
+| `workout_stats_acwr_title` | Training Load & Strain Ratio (ACWR) | Training load and strain ratio (ACWR) | Spell out "and"; sentence case |
+| `log_share_chooser_title` | Download/Share logs | Share logs | Avoid slash constructions that stack two options into one label |
+| `github_issue_report_saved_to_file` | …has been saved to %1$s. Please attach that file to this issue. | …was saved to %1$s. Attach that file to this issue. | Drop "please"; prefer active past over present perfect |
+| `insight_rest_day_perfect_sleep` | Your night's rest was perfect! | Your sleep was fully restorative last night | No exclamation marks in system messages; avoid absolute claims for a probabilistic estimate |
+| `sync_completed` | Sync and recalculation completed | Health data updated | Snackbars are short and lead with the outcome, not the internal process |
+| `error_sync_failed` | Sync failed | Couldn't sync health data | State what failed from the user's perspective; "couldn't" over bare failure nouns |
+| `recovery_title` | Database access problem | Can't open your health data | User-facing vocabulary; describe the effect, not the subsystem |
+| `recovery_success` | Database restored. Restart the app. | Your data was restored. Restart Readylytics to continue. | Second person; give the reason for the required action |
+| `crash_report_dialog_send_github` | GitHub Issue (public) | GitHub issue (public) | Sentence case (GitHub is a proper noun; "issue" is not) |
+| `github_issue_bug_title` / `github_issue_feature_title` | Bug Report / Feature Request | Bug report / Feature request | Sentence case |
+| `accessibility_security_alert` | Security Alert | Security alert | Sentence case |
+| `database_migration_failed` | Your existing data is unchanged. Retry the update or export diagnostics before continuing. | Your data is unchanged. Try the update again, or export diagnostics first. | Concise; plain verbs over nominalizations |
+| `sync_progress_download_logs` | Download Logs | Save logs | Sentence case; "save" matches what actually happens on-device |
+| `insight_sick_indicator_title` | Potential Illness Detected | Possible illness detected | Sentence case; "possible" is honest about a signal the app cannot diagnose, consistent with the measurement caveat in `AppInfoSection` |
+
+Additional sweeps in this commit:
+- Read through the `insight_detail_*` section headers as a set for register consistency once 3a has lowercased them ("What This Might Mean" → "What this might mean") — the mechanical pass fixes the case; this pass confirms the whole sequence still reads as one voice.
+- Confirm no remaining exclamation marks or "please" in any `strings.xml` (currently one of each).
+- Confirm every string ≤ 60 chars used as a button/label has no terminal period, and every multi-sentence body string does — M3 punctuates full sentences, not labels.
 
 **3c — Documentation sync (mandatory per `.claude/CLAUDE.md`).** Score-explanation copy is load-bearing. Any wording change to score explanations, tooltips, or onboarding text in 3b requires a same-PR update to `ABOUT.md`, `docs/about.md`, and the relevant `internal-docs/DATA_FLOW.md` sections, and must keep `domain/scoring/**DocumentationDriftTest*` green. `.github/ISSUE_TEMPLATE/*.md` must stay mirrored with `report_email_bug_template` / `report_email_feature_template`.
 
@@ -334,7 +362,7 @@ Split into two independently-reviewable commits so the mechanical change and the
 ### Phase 5 — Components & layout (P1/P2)
 
 1. **L-1 / L-2 / L-3 — Unify snackbars.** Delete the `SnackbarHostState` and `SnackbarHost` from `DashboardScreen`; hoist a single host into `MainScaffold`'s `Scaffold` slot and pass either the state or an `onShowMessage: (String) -> Unit` down to `DashboardRoute`. Move `EditModeFab` into the `Scaffold`'s `floatingActionButton` slot so the framework computes FAB avoidance — this deletes the `88.dp` magic constant. Drop the `errorContainer` override and use the default M3 `inverseSurface` snackbar.
-2. **L-4 / L-5 — Top app bars.** Add a `TopAppBar` to each primary destination (Dashboard, Sleep, Workouts, Vitals, Settings) with the screen title and a `TopAppBarDefaults.enterAlwaysScrollBehavior()`, wired through `Modifier.nestedScroll`. Retrofit `pinnedScrollBehavior` to the six detail screens. Keep `contentWindowInsets = WindowInsets(0)` on the nested detail `Scaffold`s — that is correct today, since the outer `Scaffold` already consumes system bars, and removing it would double-inset.
+2. **L-5 — Scroll behavior on existing app bars.** Retrofit `TopAppBarDefaults.pinnedScrollBehavior()` to the six detail screens (`HeartRateDetailScreen`, `WeightDetailScreen`, `BodyFatDetailScreen`, `BloodPressureDetailScreen`, `StepDetailScreen`, `WorkoutDetailScreen`), wiring each through `Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)` on the `Scaffold` and passing `scrollBehavior` to the `TopAppBar`. Keep `contentWindowInsets = WindowInsets(0)` on the nested detail `Scaffold`s — that is correct today, since the outer `Scaffold` already consumes system bars, and removing it would double-inset. *(L-4, adding app bars to primary destinations, is planned in `M3_TOP_APP_BAR_PLAN.md`.)*
 3. **L-6 — Native M3 containers.** `M3CollapsibleSection` → `Surface(onClick = …, shape = MaterialTheme.shapes.large, color = surfaceContainerLow)` with the expanded region as a nested `Surface(color = surfaceContainer)` inside `Modifier.clip(MaterialTheme.shapes.large)` — this also fixes **S-4**. Animate the chevron with `animateFloatAsState` per M3 motion. `StatusLegend` header → `Surface(onClick = …)` or the `ListItem` + `Modifier.clickable` pattern already used correctly in `SettingsScreen`.
 4. **L-7 — `RecalcProgressBanner`.** Give it `shape = MaterialTheme.shapes.large` and page-horizontal padding so it floats as a card rather than a full-bleed rectangle, matching `CalibrationBanner`.
 5. **S-3** — Standardize `DatabaseRecoveryScreen` on `MaterialTheme.shapes.large` for all four cards.
@@ -370,21 +398,27 @@ Phase 1 before Phase 5 — several component fixes pick new container roles, and
 | 0 — Guardrails | 0.5 d | Low | New tests only; two fail by design |
 | 1 — Color | 1 d | **Medium** | C-1 changes every surface in the fallback theme; needs light/dark × dynamic/fallback screenshot review |
 | 2 — Typography | 0.5 d | Low–Medium | `titleSmall` 12→14sp may reflow tight layouts |
-| 3 — Content | 1.5 d | Low | High volume, mechanical; 3b needs an editorial pass + doc sync |
+| 3 — Content | 2 d | Low–Medium | 3a is high-volume but mechanical; 3b is an 18-row editorial rewrite carrying the doc-sync obligation |
 | 4 — Strings/a11y | 1 d | Low | Mostly extraction; plurals need care |
-| 5 — Components | 2 d | **Medium–High** | Snackbar unification and FAB relocation touch `MainScaffold` + `DashboardScreen`; androidTests exist and must stay green |
-| 6 — Token hygiene | 1 d | Low | Cosmetic; can be deferred without blocking |
+| 5 — Components | 1.5 d | **Medium–High** | Snackbar unification and FAB relocation touch `MainScaffold` + `DashboardScreen`; androidTests exist and must stay green |
+| 6 — Token hygiene | 1 d | Low | Cosmetic, but in scope — closes the last token gap |
 
-**Total: ~7.5 days.** Phases 0–5 reach full M3 compliance; Phase 6 is polish.
+**Total: ~7.5 days**, all seven phases. Phases 0–6 together bring the audited surface to full M3 compliance; the remaining L-4 structural work is scoped in the companion plan.
 
 **Highest-risk change:** C-1. It shifts `surface`/`background` for every non-dynamic-color user. Recommend landing it alone, behind a screenshot-diff review, before anything else in Phase 1.
+
+**Second-highest:** Phase 3b. It changes user-facing product voice on destructive controls (`recovery_danger_*`) and on health-signal copy (`insight_sick_indicator_title`). Both deserve a read-through by someone with product context before merge, and both trigger the documentation-sync rule in `.claude/CLAUDE.md`.
 
 ---
 
 ## 5. Approval gate
 
-This document is a plan. **No implementation code will be written until it is explicitly approved.** On approval, please confirm:
+This document is a plan. **No implementation code will be written until it is explicitly approved.**
 
-1. Whether all six phases proceed, or Phases 0–5 only (deferring token hygiene).
-2. Whether the Phase-3 editorial rewrites (T-6 through T-9) are in scope, or sentence case only (3a) — 3b changes user-facing product voice and carries the documentation-sync obligation.
-3. Whether adding top app bars to primary destinations (L-4) is wanted, since it changes the app's visual structure beyond a pure compliance fix.
+**Scope is settled:** all seven phases (0–6) proceed, and wording is corrected wherever M3 content design calls for it — both the mechanical sentence-case pass (3a) and the editorial rewrites (3b). The one structural finding, L-4, is planned separately in [`M3_TOP_APP_BAR_PLAN.md`](./M3_TOP_APP_BAR_PLAN.md) and approved or declined on its own.
+
+Open points that do **not** block approval but should be settled before Phase 3b merges:
+
+1. The proposed replacement strings in the 3b table are recommendations, not fixed text. Any row can be re-worded as long as it still satisfies the cited M3 rule.
+2. `recovery_danger_title` and `recovery_reset_button` both resolve to "Delete all data" under the proposal. That is intentional — the section heading and its button state the same action — but if the section needs a distinct heading, "Delete all data" (heading) with "Delete" (button) is the M3-conformant alternative.
+3. `insight_sick_indicator_title` sits closest to medical-claim territory. "Possible illness detected" is the more defensible phrasing, but the final wording should be confirmed against `ABOUT.md`'s measurement caveat during the 3c doc sync.
