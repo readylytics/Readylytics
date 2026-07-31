@@ -4,13 +4,17 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.FitDashboardTheme
@@ -200,6 +204,115 @@ class DashboardVisualizationRegressionTest {
                     DashboardCardDisplayMode.BAR -> assertVisualizationIsInsideCard(DASHBOARD_BAR_TAG)
                     DashboardCardDisplayMode.VALUE -> Unit
                 }
+            }
+        }
+    }
+
+    @Test
+    fun gaugeMode_allowsTwoLineTitleAndKeepsInfoActionVisible() {
+        val twoLineTitle = "Resting heart\nrate"
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 1f),
+            ) {
+                TestTheme {
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = twoLineTitle,
+                                valueText = "48",
+                                unitText = "bpm",
+                                accessibilityDescription = "Resting heart rate 48 bpm, optimal.",
+                            ),
+                        specification = specification,
+                        requestedMode = DashboardCardDisplayMode.GAUGE,
+                        renderMode = DashboardCardDisplayMode.GAUGE,
+                        isEditing = false,
+                        onModeSelected = {},
+                    )
+                }
+            }
+        }
+
+        composeRule
+            .onNodeWithText(twoLineTitle, useUnmergedTree = true)
+            .assertHeightIsEqualTo(48.dp)
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription("More information", useUnmergedTree = true)
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun valueMode_keepsDeltaPillInsideCardBounds() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.VALUE,
+            specification = requireNotNull(DashboardCardCatalog.spec(CardId.STRAIN_RATIO)),
+            presentation =
+                presentation.copy(
+                    title = "Strain",
+                    valueText = "1.14",
+                    secondaryText = "↑ 0.23",
+                    accessibilityDescription = "Strain ratio 1.14, normal.",
+                ),
+        )
+
+        composeRule.onNodeWithText("↑ 0.23").assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTagIsInsideCard(DASHBOARD_DELTA_PILL_TAG)
+    }
+
+    @Test
+    fun strainAndRas_keepTheirStatusContainerContentAcrossModes() {
+        val representatives =
+            listOf(
+                Triple(CardId.STRAIN_RATIO, "Strain", MetricStatus.WARNING),
+                Triple(CardId.RAS_DAILY, "RAS", MetricStatus.OPTIMAL),
+            )
+        var cardId by mutableStateOf(representatives.first().first)
+        var cardPresentation by
+            mutableStateOf(
+                presentation.copy(
+                    title = representatives.first().second,
+                    status = representatives.first().third,
+                ),
+            )
+        var mode by mutableStateOf(DashboardCardDisplayMode.VALUE)
+
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation = cardPresentation,
+                    specification = requireNotNull(DashboardCardCatalog.spec(cardId)),
+                    requestedMode = mode,
+                    renderMode = mode,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        representatives.forEach { (newCardId, title, status) ->
+            composeRule.runOnIdle {
+                cardId = newCardId
+                cardPresentation =
+                    presentation.copy(
+                        title = title,
+                        status = status,
+                    )
+                mode = DashboardCardDisplayMode.VALUE
+            }
+            val expectedContentColor = titleContentColorArgb(title)
+
+            DashboardCardDisplayMode.entries.forEach { newMode ->
+                composeRule.runOnIdle { mode = newMode }
+                assertEquals(
+                    "$newCardId must retain its status container content in $newMode",
+                    expectedContentColor,
+                    titleContentColorArgb(title),
+                )
             }
         }
     }
@@ -484,6 +597,39 @@ class DashboardVisualizationRegressionTest {
                 visualizationBounds.right <= cardBounds.right &&
                 visualizationBounds.bottom <= cardBounds.bottom,
         )
+    }
+
+    private fun assertTagIsInsideCard(tag: String) {
+        val cardBounds =
+            composeRule
+                .onNodeWithTag(DASHBOARD_METRIC_CARD_TAG)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val taggedBounds =
+            composeRule
+                .onNodeWithTag(tag, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        assertTrue(
+            "$tag must remain inside the card: tagged=$taggedBounds, card=$cardBounds",
+            taggedBounds.left >= cardBounds.left &&
+                taggedBounds.top >= cardBounds.top &&
+                taggedBounds.right <= cardBounds.right &&
+                taggedBounds.bottom <= cardBounds.bottom,
+        )
+    }
+
+    private fun titleContentColorArgb(title: String): Int {
+        val textLayouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        composeRule
+            .onNodeWithText(title, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action ->
+                action(textLayouts)
+            }
+        return textLayouts
+            .single()
+            .layoutInput.style.color
+            .toArgb()
     }
 
     private fun assertTextIsAboveBar(text: String) {

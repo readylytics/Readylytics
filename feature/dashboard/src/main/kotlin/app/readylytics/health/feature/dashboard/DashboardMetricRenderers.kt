@@ -30,6 +30,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.M3MetricGauge
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.core.ui.components.metricVisualizationTrackColor
+import app.readylytics.health.domain.dashboard.CardId
 
 internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
 internal const val DASHBOARD_GAUGE_TAG = "dashboard_metric_gauge"
@@ -245,12 +246,40 @@ private fun DashboardMetricDeltaPill(deltaText: String) {
     }
 }
 
+// Value-mode secondary-text treatment, keyed by card identity rather than by inspecting the
+// text itself: only cards whose secondary text is an actual delta (a change since baseline/
+// yesterday) get the pill; range/duration and averaged text stay as plain bounded text.
+internal enum class DashboardValueLayout {
+    STANDARD,
+    RANGE_OR_DURATION,
+    DELTA,
+}
+
+internal fun CardId.valueLayout(): DashboardValueLayout =
+    when (this) {
+        CardId.SLEEP_DURATION,
+        CardId.CIRCADIAN_CONSISTENCY,
+        CardId.HEART_RATE,
+        -> DashboardValueLayout.RANGE_OR_DURATION
+        CardId.SLEEP_SCORE,
+        CardId.READINESS,
+        CardId.HRV,
+        CardId.SLEEP_RHR,
+        CardId.RESTING_HR,
+        CardId.STRAIN_RATIO,
+        -> DashboardValueLayout.DELTA
+        else -> DashboardValueLayout.STANDARD
+    }
+
 @Composable
 fun DashboardValueRenderer(
     presentation: DashboardMetricPresentation,
     contentColor: Color,
+    cardId: CardId,
     modifier: Modifier = Modifier,
 ) {
+    val layout = cardId.valueLayout()
+
     Column(modifier = modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
         Text(
@@ -269,13 +298,17 @@ fun DashboardValueRenderer(
             )
         }
         presentation.secondaryText?.let { secondary ->
-            Text(
-                text = secondary,
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (layout == DashboardValueLayout.DELTA) {
+                DashboardMetricDeltaPill(secondary)
+            } else {
+                Text(
+                    text = secondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

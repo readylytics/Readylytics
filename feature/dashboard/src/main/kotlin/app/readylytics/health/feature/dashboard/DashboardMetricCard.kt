@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.dashboard
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,11 +9,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,7 +32,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.containerColor
@@ -29,6 +46,7 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 import app.readylytics.health.feature.dashboard.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun DashboardMetricCard(
@@ -49,18 +67,10 @@ fun DashboardMetricCard(
         }
     val modeContext = stringResource(id = modeStringRes)
     val contentDesc = presentation.accessibilityDescription + if (isEditing) ", $modeContext" else ""
-    val containerColor =
-        if (renderMode == DashboardCardDisplayMode.VALUE) {
-            presentation.status.containerColor()
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        }
-    val contentColor =
-        if (renderMode == DashboardCardDisplayMode.VALUE) {
-            presentation.status.onContainerColor()
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        }
+    // Every mode resolves the same status-derived container/content pair so the card's
+    // background and title/tooltip tinting stay consistent when switching visualization modes.
+    val containerColor = presentation.status.containerColor()
+    val contentColor = presentation.status.onContainerColor()
     val cardModifier =
         modifier
             .fillMaxWidth()
@@ -109,6 +119,7 @@ fun DashboardMetricCard(
     }
 }
 
+@OptIn(ExperimentalTextApi::class)
 @Composable
 private fun DashboardMetricCardContent(
     presentation: DashboardMetricPresentation,
@@ -134,11 +145,29 @@ private fun DashboardMetricCardContent(
         ) {
             Text(
                 text = presentation.title,
-                style = MaterialTheme.typography.titleMedium,
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        // Trim the platform's half-leading above/below the block, and disable
+                        // legacy font padding, so a two-line title's declared 24sp lineHeight
+                        // drives its layout height rather than per-typeface ascent/descent.
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        lineHeightStyle =
+                            LineHeightStyle(
+                                alignment = LineHeightStyle.Alignment.Center,
+                                trim = LineHeightStyle.Trim.Both,
+                            ),
+                    ),
                 color = contentColor,
-                modifier = Modifier.weight(1f),
-                minLines = if (renderMode == DashboardCardDisplayMode.VALUE) 2 else 1,
-                maxLines = if (renderMode == DashboardCardDisplayMode.VALUE) 2 else 1,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        // Two lines at the shared 24sp titleMedium lineHeight: a fixed 48dp
+                        // reservation so the row (and its adjacent tooltip/menu target) never
+                        // reflows between a one-line and a two-line title.
+                        .height(48.dp),
+                // Shared across every mode so the title row allows a two-line title.
+                minLines = 2,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
 
@@ -157,7 +186,7 @@ private fun DashboardMetricCardContent(
                     onModeSelected = onModeSelected,
                 )
             } else if (!isEditing) {
-                app.readylytics.health.core.ui.components.MetricTooltip(
+                DashboardTitleInfoAction(
                     description = presentation.tooltip,
                     iconTint = contentColor,
                 )
@@ -180,7 +209,66 @@ private fun DashboardMetricCardContent(
                     DashboardValueRenderer(
                         presentation = presentation,
                         contentColor = contentColor,
+                        cardId = specification.cardId,
                     )
+            }
+        }
+    }
+}
+
+// Local, purpose-built replacement for the shared MetricTooltip: it reserves the same 48dp
+// interactive footprint as DashboardDisplayModeMenu's mode-selection IconButton so the title
+// row's trailing action slot never reflows between editing and viewing states, and it attaches
+// the "More information" contentDescription directly to that 48dp node (rather than to a
+// smaller nested icon) so the accessible/interactive target matches the visible touch target.
+@Composable
+private fun DashboardTitleInfoAction(
+    description: String,
+    iconTint: Color,
+    modifier: Modifier = Modifier,
+) {
+    var showPopup by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val infoContentDescription = stringResource(id = CoreUiR.string.accessibility_more_information)
+
+    Box(
+        modifier =
+            modifier
+                .size(48.dp)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = { showPopup = true },
+                ).semantics { contentDescription = infoContentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+        )
+
+        if (showPopup) {
+            Popup(
+                onDismissRequest = { showPopup = false },
+                alignment = Alignment.TopStart,
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.inverseSurface,
+                    modifier =
+                        Modifier
+                            .widthIn(max = 260.dp)
+                            .padding(horizontal = MaterialTheme.spacing.extraSmall),
+                ) {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                        modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
+                    )
+                }
             }
         }
     }
