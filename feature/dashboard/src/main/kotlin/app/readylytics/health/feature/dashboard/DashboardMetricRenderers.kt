@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.dashboard
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.LinearProgressIndicator
@@ -21,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
@@ -30,7 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.ui.components.M3MetricGauge
+import app.readylytics.health.core.ui.components.M3MetricGaugeWithValue
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.core.ui.components.metricVisualizationTrackColor
 import app.readylytics.health.domain.dashboard.CardId
@@ -68,54 +65,16 @@ fun DashboardGaugeRenderer(
     Column(
         modifier = modifier.fillMaxWidth().testTag(DASHBOARD_GAUGE_TAG),
     ) {
-        Box(
-            // Elastic: with room to spare the arc plus its centred value keep their natural
-            // height, but the block yields before the fixed secondary slot below it once a
-            // two-line title at a large font scale eats into the card.
+        M3MetricGaugeWithValue(
+            markerFraction = markerFraction,
+            activeColor = activeColor,
+            valueText = presentation.valueText,
+            unitText = presentation.unitText,
+            valueColor = activeColor,
+            unitColor = contentColor.copy(alpha = 0.8f),
+            animateMarker = animateMarker,
             modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            M3MetricGauge(
-                markerFraction = markerFraction,
-                activeColor = activeColor,
-                animateMarker = animateMarker,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Column(
-                // M3MetricGauge's canvas reserves 6dp of bottom padding and the arc's own centre
-                // line sits half a stroke (4dp) above that, so the drawn arc bottoms out ~10dp
-                // above this Box's bottom edge while the bottom-aligned value block does not.
-                // Nudging the block down by that padding drops the number onto the arc's bottom
-                // instead of leaving it floating in the upper half of the semicircle.
-                modifier = Modifier.offset(y = MaterialTheme.spacing.extraSmallMedium),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = presentation.valueText,
-                    // Same plain typography token as Value mode: no bold, no custom
-                    // letter-spacing, no length-based branching.
-                    style = MaterialTheme.typography.displaySmall,
-                    color = activeColor,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = presentation.unitText.ifBlank { " " },
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
-                    color =
-                        if (presentation.unitText.isNotBlank()) {
-                            contentColor.copy(alpha = 0.8f)
-                        } else {
-                            Color.Transparent
-                        },
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                )
-            }
-        }
+        )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.hairline))
 

@@ -24,7 +24,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -182,59 +181,16 @@ private fun GaugeCardContent(
         Spacer(modifier = Modifier.height(10.dp))
 
         // Center Area: Gauge and Value
-        Box(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            M3MetricGauge(
-                markerFraction = markerFraction,
-                activeColor = progressColor,
-                animateMarker = true,
-            )
-
-            // Centered Value & Unit
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                val textStyle =
-                    if (displayText.length >= 6) {
-                        MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.3).sp,
-                        )
-                    } else {
-                        MaterialTheme.typography.headlineSmall.copy(
-                            fontSize = 25.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.5).sp,
-                        )
-                    }
-                Text(
-                    text = displayText,
-                    style = textStyle,
-                    color = if (score != null) progressColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                )
-                Text(
-                    text = if (!unitText.isNullOrEmpty()) unitText else " ",
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
-                    color =
-                        if (!unitText.isNullOrEmpty()) {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                        } else {
-                            androidx.compose.ui.graphics.Color.Transparent
-                        },
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                )
-            }
-        }
+        M3MetricGaugeWithValue(
+            markerFraction = markerFraction,
+            activeColor = progressColor,
+            valueText = displayText,
+            unitText = unitText,
+            valueColor = if (score != null) progressColor else MaterialTheme.colorScheme.onSurfaceVariant,
+            unitColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            animateMarker = true,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.hairline))
 
