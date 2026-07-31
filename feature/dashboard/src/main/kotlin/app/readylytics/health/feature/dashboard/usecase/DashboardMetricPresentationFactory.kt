@@ -299,9 +299,9 @@ class DashboardMetricPresentationFactory
                 if (efficiencyPercent == null) {
                     "—"
                 } else if (efficiencyPercent == 0f) {
-                    "0"
+                    "0%"
                 } else {
-                    efficiencyPercent.roundToInt().toString()
+                    "${efficiencyPercent.roundToInt()}%"
                 }
             val effVisual =
                 DashboardMetricScalePreparer.score(
@@ -325,14 +325,14 @@ class DashboardMetricPresentationFactory
                 } ?: resourceProvider.getString(
                     DashboardR.string.semantics_value_note_format,
                     sleepEffTitle,
-                    "$effValText%",
+                    effValText,
                     classificationText(effVisual.getResolvedStatus()),
                 )
             map[CardId.SLEEP_EFFICIENCY] =
                 DashboardMetricPresentation(
                     title = sleepEffTitle,
                     valueText = effValText,
-                    unitText = "%",
+                    unitText = "",
                     secondaryText = null,
                     status = effStatus,
                     tooltip = "",
@@ -433,8 +433,11 @@ class DashboardMetricPresentationFactory
                 resourceProvider.getString(
                     app.readylytics.health.feature.dashboard.R.string.card_title_heart_rate,
                 )
-            val hrValueText = heartRateSummary?.avgBpm?.toString() ?: "—"
-            val hrUnitText = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_bpm)
+            val hrValueText = heartRateSummary?.let { "${it.minBpm}–${it.maxBpm}" } ?: "—"
+            val hrSecondaryText =
+                heartRateSummary?.let {
+                    resourceProvider.getString(CoreUiR.string.hr_avg_display, it.avgBpm)
+                }
             val hrDescription =
                 if (heartRateSummary?.avgBpm == null) {
                     unavailableDescription(hrTitle, DashboardMetricUnavailableReason.MISSING_VALUE)
@@ -442,7 +445,7 @@ class DashboardMetricPresentationFactory
                     resourceProvider.getString(
                         DashboardR.string.semantics_value_note_format,
                         hrTitle,
-                        "$hrValueText $hrUnitText",
+                        "$hrValueText $hrSecondaryText",
                         classificationText(MetricStatus.NEUTRAL),
                     )
                 }
@@ -450,8 +453,8 @@ class DashboardMetricPresentationFactory
                 DashboardMetricPresentation(
                     title = hrTitle,
                     valueText = hrValueText,
-                    unitText = hrUnitText,
-                    secondaryText = null,
+                    unitText = "",
+                    secondaryText = hrSecondaryText,
                     status = MetricStatus.NEUTRAL,
                     tooltip = "",
                     accessibilityDescription = hrDescription,
@@ -464,7 +467,8 @@ class DashboardMetricPresentationFactory
                 resourceProvider.getString(
                     app.readylytics.health.feature.dashboard.R.string.card_title_circadian_consistency,
                 )
-            val circValueText = circReady?.score?.roundToInt()?.toString() ?: "—"
+            val circSemanticsValueText = circReady?.score?.roundToInt()?.toString() ?: "—"
+            val circValueText = circReady?.score?.roundToInt()?.let { "$it%" } ?: "—"
             val circVisual =
                 DashboardMetricScalePreparer.score(
                     circReady?.score,
@@ -483,7 +487,7 @@ class DashboardMetricPresentationFactory
                 } ?: resourceProvider.getString(
                     DashboardR.string.semantics_score_format,
                     circTitle,
-                    circValueText,
+                    circSemanticsValueText,
                     "100",
                     classificationText(circVisual.getResolvedStatus()),
                 )

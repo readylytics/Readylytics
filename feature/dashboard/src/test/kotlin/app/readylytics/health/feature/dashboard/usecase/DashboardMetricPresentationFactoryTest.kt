@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UserPreferences
@@ -22,6 +23,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreUiR
+import app.readylytics.health.feature.dashboard.R as DashboardR
 
 class DashboardMetricPresentationFactoryTest {
     private lateinit var factory: DashboardMetricPresentationFactory
@@ -161,14 +163,28 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `circadian consistency rounds its displayed score to a whole number`() {
+    fun `circadian consistency displays its rounded score as a percentage`() {
         val circResult =
             app.readylytics.health.domain.scoring.CircadianConsistencyResult
-                .Ready(86.66666f, 0, 0, 0, 0)
+                .Ready(95.4f, 0, 0, 0, 0)
+        every {
+            resourceProvider.getString(
+                DashboardR.string.semantics_score_format,
+                "mock_string",
+                "95",
+                "100",
+                "mock_string",
+            )
+        } returns "Circadian: 95 of 100, mock_string"
 
         val cards = factory.build(summary(), preferences(), date, null, circResult, null)
+        val presentation = cards.getValue(CardId.CIRCADIAN_CONSISTENCY)
+        val visual = presentation.visual as DashboardMetricVisual.Score
 
-        assertEquals("87", cards.getValue(CardId.CIRCADIAN_CONSISTENCY).valueText)
+        assertEquals("95%", presentation.valueText)
+        assertEquals(MetricStatus.NEUTRAL, presentation.status)
+        assertEquals(95.4f, visual.rawValue)
+        assertEquals("Circadian: 95 of 100, mock_string", presentation.accessibilityDescription)
     }
 
     @Test
@@ -182,14 +198,23 @@ class DashboardMetricPresentationFactoryTest {
     @Test
     fun `sleep efficiency displays its stored percentage without scaling it again`() {
         val lastSleepSession = SleepSessionSummary(efficiency = 95.13f, startTime = 0L, endTime = 0L)
+        every {
+            resourceProvider.getString(
+                DashboardR.string.semantics_value_note_format,
+                "mock_string",
+                "95%",
+                "mock_string",
+            )
+        } returns "Sleep Efficiency: 95%, mock_string"
 
         val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
         val visual = presentation.visual as DashboardMetricVisual.Score
 
-        assertEquals("95", presentation.valueText)
-        assertEquals("%", presentation.unitText)
+        assertEquals("95%", presentation.valueText)
+        assertEquals("", presentation.unitText)
         assertEquals(95.13f, visual.rawValue)
+        assertEquals("Sleep Efficiency: 95%, mock_string", presentation.accessibilityDescription)
     }
 
     @Test
@@ -200,8 +225,8 @@ class DashboardMetricPresentationFactoryTest {
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
         val visual = presentation.visual as DashboardMetricVisual.Score
 
-        assertEquals("90", presentation.valueText)
-        assertEquals("%", presentation.unitText)
+        assertEquals("90%", presentation.valueText)
+        assertEquals("", presentation.unitText)
         assertEquals(MetricStatus.OPTIMAL, presentation.status)
         assertEquals(90f, visual.rawValue)
     }
@@ -267,6 +292,19 @@ class DashboardMetricPresentationFactoryTest {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         assertTrue(cards.getValue(CardId.HEART_RATE).visual is DashboardMetricVisual.ValueOnly)
         assertTrue(cards.getValue(CardId.BLOOD_PRESSURE).visual is DashboardMetricVisual.ValueOnly)
+    }
+
+    @Test
+    fun `heart rate displays its daily range and average`() {
+        val heartRateSummary = HeartRateDaySummary(minBpm = 45, maxBpm = 147, avgBpm = 84)
+        every { resourceProvider.getString(CoreUiR.string.hr_avg_display, 84) } returns "pulses · average 84"
+
+        val cards = factory.build(summary(), preferences(), date, null, null, heartRateSummary)
+        val presentation = cards.getValue(CardId.HEART_RATE)
+
+        assertEquals("45–147", presentation.valueText)
+        assertEquals("", presentation.unitText)
+        assertEquals("pulses · average 84", presentation.secondaryText)
     }
 
     @Test
@@ -349,7 +387,8 @@ class DashboardMetricPresentationFactoryTest {
         val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
         val visual = presentation.visual as DashboardMetricVisual.Score
-        assertEquals("0", presentation.valueText)
+        assertEquals("0%", presentation.valueText)
+        assertEquals("", presentation.unitText)
         assertNull(visual.unavailableReason)
         assertEquals(0f, visual.markerFraction)
     }
