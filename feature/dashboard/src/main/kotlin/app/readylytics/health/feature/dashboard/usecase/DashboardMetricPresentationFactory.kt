@@ -549,7 +549,9 @@ class DashboardMetricPresentationFactory
                     valueText = strainValueText,
                     unitText = "",
                     secondaryText = strainIncreaseText,
-                    status = MetricStatus.NEUTRAL,
+                    // The band-resolved status drives both the card container tint and the
+                    // Gauge/Bar active fill, so it must be the computed one, not a constant.
+                    status = strainVisual.getResolvedStatus(),
                     tooltip = "",
                     accessibilityDescription = strainDescription,
                     visual = strainVisual,

@@ -42,7 +42,6 @@ import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 import app.readylytics.health.feature.dashboard.R
@@ -158,13 +157,10 @@ private fun DashboardMetricCardContent(
                             ),
                     ),
                 color = contentColor,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        // Two lines at the shared 24sp titleMedium lineHeight: a fixed 48dp
-                        // reservation so the row (and its adjacent tooltip/menu target) never
-                        // reflows between a one-line and a two-line title.
-                        .height(48.dp),
+                // No fixed height: trimmed line-height plus minLines/maxLines = 2 already makes
+                // the intrinsic height exactly two lines, so the row never reflows between a
+                // one-line and a two-line title while still growing with the user's font scale.
+                modifier = Modifier.weight(1f),
                 // Shared across every mode so the title row allows a two-line title.
                 minLines = 2,
                 maxLines = 2,
@@ -199,11 +195,13 @@ private fun DashboardMetricCardContent(
                     DashboardGaugeRenderer(
                         presentation = presentation,
                         animateMarker = !isEditing,
+                        contentColor = contentColor,
                     )
                 DashboardCardDisplayMode.BAR ->
                     DashboardBarRenderer(
                         presentation = presentation,
-                        secondaryUsesPill = specification.cardId != CardId.SLEEP_DURATION,
+                        secondaryUsesPill = specification.cardId.usesDeltaPill(),
+                        contentColor = contentColor,
                     )
                 DashboardCardDisplayMode.VALUE ->
                     DashboardValueRenderer(
@@ -221,6 +219,9 @@ private fun DashboardMetricCardContent(
 // row's trailing action slot never reflows between editing and viewing states, and it attaches
 // the "More information" contentDescription directly to that 48dp node (rather than to a
 // smaller nested icon) so the accessible/interactive target matches the visible touch target.
+// The glyph itself is aligned to the box's top-end corner (not centred) so the icon stays
+// pinned to the card's upper-right corner, matching the shared MetricTooltip's placement; the
+// remaining 48dp box only grows the touch target downwards/inwards.
 @Composable
 private fun DashboardTitleInfoAction(
     description: String,
@@ -240,13 +241,16 @@ private fun DashboardTitleInfoAction(
                     indication = null,
                     onClick = { showPopup = true },
                 ).semantics { contentDescription = infoContentDescription },
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.TopEnd,
     ) {
         Icon(
             imageVector = Icons.Outlined.Info,
             contentDescription = null,
             tint = iconTint,
-            modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+            modifier =
+                Modifier
+                    .size(MaterialTheme.dimens.iconMedium)
+                    .testTag(DASHBOARD_TITLE_INFO_ICON_TAG),
         )
 
         if (showPopup) {

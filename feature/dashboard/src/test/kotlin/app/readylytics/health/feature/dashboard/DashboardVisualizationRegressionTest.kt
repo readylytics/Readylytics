@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
@@ -18,6 +19,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.FitDashboardTheme
+import app.readylytics.health.core.ui.components.onContainerColor
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
@@ -25,6 +27,7 @@ import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -210,7 +213,11 @@ class DashboardVisualizationRegressionTest {
 
     @Test
     fun gaugeMode_allowsTwoLineTitleAndKeepsInfoActionVisible() {
-        val twoLineTitle = "Resting heart\nrate"
+        // A natural-language title without an embedded newline: the two-line reservation must
+        // come from the trimmed line-height plus minLines/maxLines = 2, not from a manual break.
+        val twoLineTitle = "Resting heart rate"
+        val shortTitle = "HRV"
+        var title by mutableStateOf(twoLineTitle)
         composeRule.setContent {
             CompositionLocalProvider(
                 LocalDensity provides Density(density = 1f, fontScale = 1f),
@@ -219,7 +226,7 @@ class DashboardVisualizationRegressionTest {
                     DashboardMetricCard(
                         presentation =
                             presentation.copy(
-                                title = twoLineTitle,
+                                title = title,
                                 valueText = "48",
                                 unitText = "bpm",
                                 accessibilityDescription = "Resting heart rate 48 bpm, optimal.",
@@ -234,9 +241,20 @@ class DashboardVisualizationRegressionTest {
             }
         }
 
+        // The title reserves two lines regardless of how much text it holds: with minLines and
+        // maxLines both 2 plus a trimmed line height, its measured height is the same for a
+        // short and a long title, so the trailing action slot never reflows.
+        val twoLineHeight = titleHeightPx(twoLineTitle)
+        composeRule.runOnIdle { title = shortTitle }
+        assertEquals(
+            "A one-word title must reserve the same two-line height as a wrapping one",
+            twoLineHeight,
+            titleHeightPx(shortTitle),
+            0.5f,
+        )
+        composeRule.runOnIdle { title = twoLineTitle }
         composeRule
             .onNodeWithText(twoLineTitle, useUnmergedTree = true)
-            .assertHeightIsEqualTo(48.dp)
             .assertIsDisplayed()
         composeRule
             .onNodeWithContentDescription("More information", useUnmergedTree = true)
@@ -304,14 +322,14 @@ class DashboardVisualizationRegressionTest {
                     )
                 mode = DashboardCardDisplayMode.VALUE
             }
-            val expectedContentColor = titleContentColorArgb(title)
+            val expectedContentColor = textColorArgb(title)
 
             DashboardCardDisplayMode.entries.forEach { newMode ->
                 composeRule.runOnIdle { mode = newMode }
                 assertEquals(
                     "$newCardId must retain its status container content in $newMode",
                     expectedContentColor,
-                    titleContentColorArgb(title),
+                    textColorArgb(title),
                 )
             }
         }
@@ -463,7 +481,7 @@ class DashboardVisualizationRegressionTest {
     @Test
     fun gaugeMode_keepHrvValueAndUnitReadableWithLongTitle() {
         val hrvSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.HRV))
-        val longTitle = "Heart rate\nvariability"
+        val longTitle = "Heart rate variability"
         composeRule.setContent {
             CompositionLocalProvider(
                 LocalDensity provides Density(density = 1f, fontScale = 1.5f),
@@ -565,6 +583,186 @@ class DashboardVisualizationRegressionTest {
         }
     }
 
+    @Test
+    fun barMode_keepsBarAndDeltaPillInsideCardBounds_atLargeFontScale() {
+        val strainSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.STRAIN_RATIO))
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 1.5f),
+            ) {
+                TestTheme {
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = "Strain ratio",
+                                valueText = "1.14",
+                                secondaryText = "↑ 0.23",
+                                accessibilityDescription = "Strain ratio 1.14, normal.",
+                            ),
+                        specification = strainSpecification,
+                        requestedMode = DashboardCardDisplayMode.BAR,
+                        renderMode = DashboardCardDisplayMode.BAR,
+                        isEditing = false,
+                        onModeSelected = {},
+                    )
+                }
+            }
+        }
+
+        // Both must still be laid out (not squeezed to zero) *and* inside the card.
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTagIsInsideCard(DASHBOARD_BAR_TAG)
+        assertTagIsInsideCard(DASHBOARD_DELTA_PILL_TAG)
+    }
+
+    @Test
+    fun gaugeUnitAndDeltaPillFollowTheStatusContentColor_forNonNeutralStatus() {
+        var expectedContentColor = Color.Unspecified
+        composeRule.setContent {
+            TestTheme {
+                expectedContentColor = MetricStatus.WARNING.onContainerColor()
+                DashboardMetricCard(
+                    presentation =
+                        presentation.copy(
+                            title = "HRV",
+                            valueText = "41",
+                            unitText = "ms",
+                            secondaryText = "↓ 2",
+                            status = MetricStatus.WARNING,
+                            accessibilityDescription = "HRV 41 milliseconds, warning.",
+                        ),
+                    specification = specification,
+                    requestedMode = DashboardCardDisplayMode.GAUGE,
+                    renderMode = DashboardCardDisplayMode.GAUGE,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        assertEquals(
+            "Gauge unit text must follow the card's status content color",
+            expectedContentColor.copy(alpha = 0.8f).toArgb(),
+            textColorArgb("ms"),
+        )
+        assertEquals(
+            "Delta pill text must follow the card's status content color",
+            expectedContentColor.toArgb(),
+            textColorArgb("↓ 2"),
+        )
+    }
+
+    @Test
+    fun barPlainSecondaryFollowsTheStatusContentColor_forNonNeutralStatus() {
+        var expectedContentColor = Color.Unspecified
+        composeRule.setContent {
+            TestTheme {
+                expectedContentColor = MetricStatus.POOR.onContainerColor()
+                DashboardMetricCard(
+                    presentation =
+                        presentation.copy(
+                            title = "Sleep duration",
+                            valueText = "6h 50m",
+                            secondaryText = "22:51 → 06:02",
+                            status = MetricStatus.POOR,
+                            accessibilityDescription = "Sleep duration 6 hours 50 minutes, poor.",
+                        ),
+                    specification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_DURATION)),
+                    requestedMode = DashboardCardDisplayMode.BAR,
+                    renderMode = DashboardCardDisplayMode.BAR,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        assertEquals(
+            "Bar plain secondary text must follow the card's status content color",
+            expectedContentColor.copy(alpha = 0.8f).toArgb(),
+            textColorArgb("22:51 → 06:02"),
+        )
+    }
+
+    @Test
+    fun titleInfoIcon_staysPinnedToTheCardTopRightCorner_forShortAndLongTitles() {
+        val titles = listOf("HRV", "Heart rate variability over the last night")
+        var title by mutableStateOf(titles.first())
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation = presentation.copy(title = title),
+                    specification = specification,
+                    requestedMode = DashboardCardDisplayMode.GAUGE,
+                    renderMode = DashboardCardDisplayMode.GAUGE,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        titles.forEach { newTitle ->
+            composeRule.runOnIdle { title = newTitle }
+            val cardBounds =
+                composeRule
+                    .onNodeWithTag(DASHBOARD_METRIC_CARD_TAG)
+                    .fetchSemanticsNode()
+                    .boundsInRoot
+            val titleBounds =
+                composeRule
+                    .onNodeWithText(newTitle, useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .boundsInRoot
+            val iconBounds =
+                composeRule
+                    .onNodeWithTag(DASHBOARD_TITLE_INFO_ICON_TAG, useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .boundsInRoot
+            val actionBounds =
+                composeRule
+                    .onNodeWithContentDescription("More information", useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .boundsInRoot
+
+            assertTrue(
+                "Info action must start at the title row's top for '$newTitle': " +
+                    "action=$actionBounds, title=$titleBounds",
+                kotlin.math.abs(actionBounds.top - titleBounds.top) <= 1f,
+            )
+            assertTrue(
+                "Info icon must sit at the card's top edge for '$newTitle': " +
+                    "icon=$iconBounds, title=$titleBounds",
+                kotlin.math.abs(iconBounds.top - titleBounds.top) <= 1f,
+            )
+            assertTrue(
+                "Info icon must sit at the card's trailing content edge for '$newTitle': " +
+                    "icon=$iconBounds, card=$cardBounds",
+                kotlin.math.abs(iconBounds.right - (cardBounds.right - 16f)) <= 1f,
+            )
+        }
+    }
+
+    @Test
+    fun deltaPillTreatment_isLimitedToCardsWhoseSecondaryTextIsARealDelta() {
+        listOf(
+            CardId.SLEEP_SCORE,
+            CardId.READINESS,
+            CardId.HRV,
+            CardId.SLEEP_RHR,
+            CardId.RESTING_HR,
+            CardId.STRAIN_RATIO,
+        ).forEach { cardId ->
+            assertTrue("$cardId must use the delta pill", cardId.usesDeltaPill())
+        }
+        listOf(
+            CardId.SLEEP_DURATION,
+            CardId.CIRCADIAN_CONSISTENCY,
+            CardId.HEART_RATE,
+        ).forEach { cardId ->
+            assertFalse("$cardId must keep plain secondary text", cardId.usesDeltaPill())
+        }
+    }
+
     private fun setMetricCard(
         mode: DashboardCardDisplayMode,
         presentation: DashboardMetricPresentation,
@@ -655,10 +853,17 @@ class DashboardVisualizationRegressionTest {
         )
     }
 
-    private fun titleContentColorArgb(title: String): Int {
-        val textLayouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+    private fun titleHeightPx(title: String): Float =
         composeRule
             .onNodeWithText(title, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .height
+
+    private fun textColorArgb(text: String): Int {
+        val textLayouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        composeRule
+            .onNodeWithText(text, useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action ->
                 action(textLayouts)
             }

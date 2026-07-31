@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -21,7 +22,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +36,7 @@ internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
 internal const val DASHBOARD_GAUGE_TAG = "dashboard_metric_gauge"
 internal const val DASHBOARD_BAR_TAG = "dashboard_metric_bar"
 internal const val DASHBOARD_DELTA_PILL_TAG = "dashboard_metric_delta_pill"
+internal const val DASHBOARD_TITLE_INFO_ICON_TAG = "dashboard_metric_title_info_icon"
 
 internal fun DashboardMetricVisual.progressFraction(): Float? =
     when (this) {
@@ -50,6 +51,7 @@ internal fun DashboardMetricVisual.progressFraction(): Float? =
 fun DashboardGaugeRenderer(
     presentation: DashboardMetricPresentation,
     animateMarker: Boolean,
+    contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val markerFraction = presentation.visual.progressFraction()
@@ -64,7 +66,10 @@ fun DashboardGaugeRenderer(
         modifier = modifier.fillMaxWidth().testTag(DASHBOARD_GAUGE_TAG),
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth(),
+            // Elastic: with room to spare the arc plus its centred value keep their natural
+            // height, but the block yields before the fixed secondary slot below it once a
+            // two-line title at a large font scale eats into the card.
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
             contentAlignment = Alignment.BottomCenter,
         ) {
             M3MetricGauge(
@@ -78,33 +83,22 @@ fun DashboardGaugeRenderer(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                val textStyle =
-                    if (presentation.valueText.length >= 6) {
-                        MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.3).sp,
-                        )
-                    } else {
-                        MaterialTheme.typography.headlineSmall.copy(
-                            fontSize = 25.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.5).sp,
-                        )
-                    }
                 Text(
                     text = presentation.valueText,
-                    style = textStyle,
+                    // Same plain typography token as Value mode: no bold, no custom
+                    // letter-spacing, no length-based branching.
+                    style = MaterialTheme.typography.displaySmall,
                     color = activeColor,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = presentation.unitText.ifBlank { " " },
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
                     color =
                         if (presentation.unitText.isNotBlank()) {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            contentColor.copy(alpha = 0.8f)
                         } else {
                             Color.Transparent
                         },
@@ -134,6 +128,7 @@ fun DashboardGaugeRenderer(
 fun DashboardBarRenderer(
     presentation: DashboardMetricPresentation,
     secondaryUsesPill: Boolean,
+    contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val progressFraction = presentation.visual.progressFraction()
@@ -149,28 +144,22 @@ fun DashboardBarRenderer(
         modifier = modifier.fillMaxSize(),
     ) {
         Row(
-            verticalAlignment = Alignment.Bottom,
+            // Elastic: the value/unit line keeps its natural height while the card has room and
+            // gives way first under font-scale pressure, so the fixed-height track and the
+            // secondary slot below it are never pushed out of the card.
+            modifier = Modifier.weight(1f, fill = false),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
         ) {
-            val valueTextStyle =
-                if (presentation.valueText.length >= 6) {
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.3).sp,
-                    )
-                } else {
-                    MaterialTheme.typography.headlineSmall.copy(
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.5).sp,
-                    )
-                }
             Text(
                 text = presentation.valueText,
-                style = valueTextStyle,
+                // Same plain typography token as Value mode: no bold, no custom
+                // letter-spacing, no length-based branching.
+                style = MaterialTheme.typography.displaySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                // Baseline (not bounding-box bottom) alignment so the small unit label sits on
+                // the same baseline as the much larger value, the way "56 bpm" is normally set.
+                modifier = Modifier.alignByBaseline(),
             )
             if (presentation.unitText.isNotBlank()) {
                 Text(
@@ -178,6 +167,7 @@ fun DashboardBarRenderer(
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.alignByBaseline(),
                 )
             }
         }
@@ -214,7 +204,10 @@ fun DashboardBarRenderer(
             }
         }
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+        // Tighter than the gap above the track: with the larger displaySmall value the column's
+        // fixed elements have to fit the value line's full height at font scale 1.0, and the
+        // weighted value row above is the single element that yields under further pressure.
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
 
         Box(
             modifier = Modifier.fillMaxWidth().height(20.dp),
@@ -227,7 +220,7 @@ fun DashboardBarRenderer(
                     Text(
                         text = deltaText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        color = contentColor.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -237,12 +230,16 @@ fun DashboardBarRenderer(
     }
 }
 
+// The pill inherits the card's status-derived content colour (LocalContentColor is set by the
+// Card's contentColor) instead of a fixed neutral grey, so it stays legible on a WARNING/POOR/
+// OPTIMAL tinted container.
 @Composable
 private fun DashboardMetricDeltaPill(deltaText: String) {
+    val pillContentColor = LocalContentColor.current
     Surface(
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = pillContentColor.copy(alpha = 0.12f),
+        contentColor = pillContentColor,
     ) {
         Text(
             text = deltaText,
@@ -260,29 +257,20 @@ private fun DashboardMetricDeltaPill(deltaText: String) {
     }
 }
 
-// Value-mode secondary-text treatment, keyed by card identity rather than by inspecting the
-// text itself: only cards whose secondary text is an actual delta (a change since baseline/
-// yesterday) get the pill; range/duration and averaged text stay as plain bounded text.
-internal enum class DashboardValueLayout {
-    STANDARD,
-    RANGE_OR_DURATION,
-    DELTA,
-}
-
-internal fun CardId.valueLayout(): DashboardValueLayout =
+// Secondary-text treatment, keyed by card identity rather than by inspecting the text itself:
+// only cards whose secondary text is an actual delta (a change since baseline/yesterday) get
+// the pill; range/duration and averaged text (Sleep Duration, Circadian, Heart Rate) stay as
+// plain bounded text.
+internal fun CardId.usesDeltaPill(): Boolean =
     when (this) {
-        CardId.SLEEP_DURATION,
-        CardId.CIRCADIAN_CONSISTENCY,
-        CardId.HEART_RATE,
-        -> DashboardValueLayout.RANGE_OR_DURATION
         CardId.SLEEP_SCORE,
         CardId.READINESS,
         CardId.HRV,
         CardId.SLEEP_RHR,
         CardId.RESTING_HR,
         CardId.STRAIN_RATIO,
-        -> DashboardValueLayout.DELTA
-        else -> DashboardValueLayout.STANDARD
+        -> true
+        else -> false
     }
 
 @Composable
@@ -292,8 +280,6 @@ fun DashboardValueRenderer(
     cardId: CardId,
     modifier: Modifier = Modifier,
 ) {
-    val layout = cardId.valueLayout()
-
     Column(modifier = modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
         Text(
@@ -312,7 +298,7 @@ fun DashboardValueRenderer(
             )
         }
         presentation.secondaryText?.let { secondary ->
-            if (layout == DashboardValueLayout.DELTA) {
+            if (cardId.usesDeltaPill()) {
                 DashboardMetricDeltaPill(secondary)
             } else {
                 Text(

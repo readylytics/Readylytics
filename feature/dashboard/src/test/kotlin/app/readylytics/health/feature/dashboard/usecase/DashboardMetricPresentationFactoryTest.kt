@@ -49,10 +49,13 @@ class DashboardMetricPresentationFactoryTest {
     private fun summary(
         weightKg: Float? = null,
         bodyFatPercent: Float? = null,
+        strainRatio: Float? = null,
     ) = DailySummary(
         date = date,
         weightKg = weightKg,
         bodyFatPercent = bodyFatPercent,
+        strainRatioWorkoutOnly = strainRatio,
+        strainRatioEverydayHr = strainRatio,
     )
 
     private fun preferences(
@@ -259,6 +262,23 @@ class DashboardMetricPresentationFactoryTest {
         val visual = cards.getValue(CardId.STRAIN_RATIO).visual as DashboardMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(2f, visual.maxValue)
+    }
+
+    @Test
+    fun `strain ratio exposes its band-resolved status rather than a constant neutral`() {
+        val expectations =
+            listOf(
+                1.7f to MetricStatus.POOR,
+                0.6f to MetricStatus.WARNING,
+                1.0f to MetricStatus.OPTIMAL,
+            )
+
+        expectations.forEach { (rawStrainRatio, expectedStatus) ->
+            val cards = factory.build(summary(strainRatio = rawStrainRatio), preferences(), date, null, null, null)
+
+            assertEquals(expectedStatus, cards.getValue(CardId.STRAIN_RATIO).status)
+            assertNotEquals(MetricStatus.NEUTRAL, cards.getValue(CardId.STRAIN_RATIO).status)
+        }
     }
 
     @Test
