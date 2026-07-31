@@ -176,7 +176,6 @@ fun DashboardBarRenderer(
                 Text(
                     text = presentation.unitText,
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
