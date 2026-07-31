@@ -255,21 +255,25 @@ class DashboardMetricPresentationFactory
                 )
             val bodyFatTitle =
                 resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_body_fat)
-            val bodyFatValueText = bodyFatPercent?.toString() ?: "—"
+            // Percent baked into the main value text (like Sleep Efficiency) so the "%" renders
+            // at the value's size instead of as a small separate unit. Unlike Sleep Efficiency,
+            // body fat keeps its one decimal place, via the shared formatter the vitals feature
+            // already uses.
+            val bodyFatValueText = bodyFatPercent?.let { MetricFormatter.formatBodyFat(it) } ?: "—"
             val bodyFatDescription =
                 bodyFatVisual.unavailableReason?.let { reason ->
                     unavailableDescription(bodyFatTitle, reason)
                 } ?: resourceProvider.getString(
                     app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
                     bodyFatTitle,
-                    "$bodyFatValueText%",
+                    bodyFatValueText,
                     classificationText(bodyFatStatusVal),
                 )
             map[CardId.BODY_FAT] =
                 DashboardMetricPresentation(
                     title = bodyFatTitle,
                     valueText = bodyFatValueText,
-                    unitText = "%",
+                    unitText = "",
                     secondaryText = null,
                     status = bodyFatStatusVal,
                     tooltip = "",
@@ -366,22 +370,23 @@ class DashboardMetricPresentationFactory
                 resourceProvider.getString(
                     app.readylytics.health.feature.dashboard.R.string.card_title_oxygen_saturation,
                 )
-            val spo2ValueText = roundedSpo2?.toString() ?: "—"
-            val spo2UnitText = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_percent)
+            // Percent baked into the main value text (like Sleep Efficiency) so the "%" renders
+            // at the value's size instead of as a small separate unit.
+            val spo2ValueText = roundedSpo2?.let { "$it%" } ?: "—"
             val spo2Description =
                 spo2Visual.unavailableReason?.let { reason ->
                     unavailableDescription(spo2Title, reason)
                 } ?: resourceProvider.getString(
                     DashboardR.string.semantics_value_note_format,
                     spo2Title,
-                    "$spo2ValueText$spo2UnitText",
+                    spo2ValueText,
                     classificationText(spo2Visual.getResolvedStatus()),
                 )
             map[CardId.OXYGEN_SATURATION] =
                 DashboardMetricPresentation(
                     title = spo2Title,
                     valueText = spo2ValueText,
-                    unitText = spo2UnitText,
+                    unitText = "",
                     secondaryText = null,
                     status = spo2Visual.getResolvedStatus(),
                     tooltip = "",

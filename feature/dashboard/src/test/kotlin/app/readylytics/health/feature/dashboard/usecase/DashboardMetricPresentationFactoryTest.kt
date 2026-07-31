@@ -235,6 +235,50 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
+    fun `body fat bakes a one decimal percent into its value text`() {
+        val cards =
+            factory.build(
+                summary(bodyFatPercent = 13.64f),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+        val presentation = cards.getValue(CardId.BODY_FAT)
+
+        // Sleep Efficiency's baked-in "%" pattern, but body fat keeps its decimal place.
+        assertEquals("13.6%", presentation.valueText)
+        assertEquals("", presentation.unitText)
+    }
+
+    @Test
+    fun `missing body fat keeps the em dash without a stray percent sign`() {
+        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val presentation = cards.getValue(CardId.BODY_FAT)
+
+        assertEquals("\u2014", presentation.valueText)
+        assertEquals("", presentation.unitText)
+    }
+
+    @Test
+    fun `spo2 bakes its percent into the value text like sleep efficiency`() {
+        val cards =
+            factory.build(
+                summary().copy(avgSleepingSpo2 = 96.4f),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+        val presentation = cards.getValue(CardId.OXYGEN_SATURATION)
+
+        assertEquals("96%", presentation.valueText)
+        assertEquals("", presentation.unitText)
+    }
+
+    @Test
     fun `spo2 uses 80 to 100 bounds`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         val visual = cards.getValue(CardId.OXYGEN_SATURATION).visual as DashboardMetricVisual.Score

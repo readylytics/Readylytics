@@ -617,6 +617,84 @@ class DashboardVisualizationRegressionTest {
     }
 
     @Test
+    fun valueMode_keepsDeltaPillInsideCardBounds_atEveryFontScale() {
+        val strainSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.STRAIN_RATIO))
+        var fontScale by mutableStateOf(1f)
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = fontScale),
+            ) {
+                TestTheme {
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = "Strain ratio",
+                                valueText = "1.14",
+                                secondaryText = "\u2191 0.23",
+                                accessibilityDescription = "Strain ratio 1.14, normal.",
+                            ),
+                        specification = strainSpecification,
+                        requestedMode = DashboardCardDisplayMode.VALUE,
+                        renderMode = DashboardCardDisplayMode.VALUE,
+                        isEditing = false,
+                        onModeSelected = {},
+                    )
+                }
+            }
+        }
+
+        listOf(1f, 1.5f).forEach { newFontScale ->
+            composeRule.runOnIdle { fontScale = newFontScale }
+            composeRule
+                .onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true)
+                .assertIsDisplayed()
+            assertTagIsInsideCard(DASHBOARD_DELTA_PILL_TAG)
+        }
+    }
+
+    @Test
+    fun valueAndBarModes_shareTheirValueUnitAndSecondaryGeometry() {
+        val hrvSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.HRV))
+        var mode by mutableStateOf(DashboardCardDisplayMode.BAR)
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation =
+                        presentation.copy(
+                            title = "HRV",
+                            valueText = "41",
+                            unitText = "ms",
+                            secondaryText = "\u2193 2",
+                            accessibilityDescription = "HRV 41 milliseconds, normal.",
+                        ),
+                    specification = hrvSpecification,
+                    requestedMode = mode,
+                    renderMode = mode,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        val barValue = boundsOfText("41")
+        val barUnit = boundsOfText("ms")
+        val barPill = boundsOfTag(DASHBOARD_DELTA_PILL_TAG)
+        composeRule.runOnIdle { mode = DashboardCardDisplayMode.VALUE }
+
+        // Value mode is Bar mode without the painted track: the value/unit row and the
+        // secondary slot must land in exactly the same place, and the unit must sit beside
+        // the value rather than on its own line below it.
+        assertEquals("Value row must not move between Bar and Value", barValue, boundsOfText("41"))
+        assertEquals("Unit must not move between Bar and Value", barUnit, boundsOfText("ms"))
+        assertEquals("Delta pill must not move between Bar and Value", barPill, boundsOfTag(DASHBOARD_DELTA_PILL_TAG))
+        assertTrue(
+            "Unit must sit beside the value, not below it: value=$barValue, unit=$barUnit",
+            barUnit.left >= barValue.right,
+        )
+        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
     fun gaugeUnitAndDeltaPillFollowTheStatusContentColor_forNonNeutralStatus() {
         var expectedContentColor = Color.Unspecified
         composeRule.setContent {
@@ -852,6 +930,18 @@ class DashboardVisualizationRegressionTest {
                 taggedBounds.bottom <= cardBounds.bottom,
         )
     }
+
+    private fun boundsOfText(text: String) =
+        composeRule
+            .onNodeWithText(text, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+    private fun boundsOfTag(tag: String) =
+        composeRule
+            .onNodeWithTag(tag, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
 
     private fun titleHeightPx(title: String): Float =
         composeRule

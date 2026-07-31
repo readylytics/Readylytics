@@ -4,11 +4,13 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.LocalContentColor
@@ -80,6 +82,12 @@ fun DashboardGaugeRenderer(
             )
 
             Column(
+                // M3MetricGauge's canvas reserves 6dp of bottom padding and the arc's own centre
+                // line sits half a stroke (4dp) above that, so the drawn arc bottoms out ~10dp
+                // above this Box's bottom edge while the bottom-aligned value block does not.
+                // Nudging the block down by that padding drops the number onto the arc's bottom
+                // instead of leaving it floating in the upper half of the semicircle.
+                modifier = Modifier.offset(y = MaterialTheme.spacing.extraSmallMedium),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -124,6 +132,14 @@ fun DashboardGaugeRenderer(
     }
 }
 
+// Track thickness shared by the drawn Bar track and by the equally tall empty slot Value mode
+// leaves in its place, so switching between the two modes only adds or removes the track itself.
+private val DASHBOARD_TRACK_HEIGHT = 10.dp
+
+// Fixed slot for the delta pill / plain secondary text, kept out of the weighted value row so it
+// cannot be squeezed away at large font scales.
+private val DASHBOARD_SECONDARY_SLOT_HEIGHT = 20.dp
+
 @Composable
 fun DashboardBarRenderer(
     presentation: DashboardMetricPresentation,
@@ -140,49 +156,21 @@ fun DashboardBarRenderer(
         }
     val trackColor = metricVisualizationTrackColor()
 
-    Column(
-        modifier = modifier.fillMaxSize(),
+    DashboardValueUnitColumn(
+        presentation = presentation,
+        contentColor = contentColor,
+        secondaryUsesPill = secondaryUsesPill,
+        modifier = modifier,
     ) {
-        Row(
-            // Elastic: the value/unit line keeps its natural height while the card has room and
-            // gives way first under font-scale pressure, so the fixed-height track and the
-            // secondary slot below it are never pushed out of the card.
-            modifier = Modifier.weight(1f, fill = false),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
-        ) {
-            Text(
-                text = presentation.valueText,
-                // Same plain typography token as Value mode: no bold, no custom
-                // letter-spacing, no length-based branching.
-                style = MaterialTheme.typography.displaySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                // Baseline (not bounding-box bottom) alignment so the small unit label sits on
-                // the same baseline as the much larger value, the way "56 bpm" is normally set.
-                modifier = Modifier.alignByBaseline(),
-            )
-            if (presentation.unitText.isNotBlank()) {
-                Text(
-                    text = presentation.unitText,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.alignByBaseline(),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
         Canvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
+                    .height(DASHBOARD_TRACK_HEIGHT)
                     .padding(horizontal = MaterialTheme.spacing.extraSmall)
                     .testTag(DASHBOARD_BAR_TAG),
         ) {
-            val strokeWidth = 8.dp.toPx()
+            val strokeWidth = DASHBOARD_TRACK_HEIGHT.toPx()
             val startY = size.height / 2
 
             drawLine(
@@ -203,14 +191,66 @@ fun DashboardBarRenderer(
                 )
             }
         }
+    }
+}
 
-        // Tighter than the gap above the track: with the larger displaySmall value the column's
-        // fixed elements have to fit the value line's full height at font scale 1.0, and the
-        // weighted value row above is the single element that yields under further pressure.
+// Shared vertical structure for Bar and Value mode: a baseline-aligned value/unit row on top, the
+// track slot in the middle, and the secondary/delta slot at the bottom. Bar mode draws its Canvas
+// into the track slot, Value mode leaves the same slot empty, so the two modes differ only in
+// whether the track is painted and everything else stays put when switching between them.
+@Composable
+private fun DashboardValueUnitColumn(
+    presentation: DashboardMetricPresentation,
+    contentColor: Color,
+    secondaryUsesPill: Boolean,
+    modifier: Modifier = Modifier,
+    track: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        Row(
+            // Elastic: the value/unit line keeps its natural height while the card has room and
+            // gives way first under font-scale pressure, so the fixed-height track and the
+            // secondary slot below it are never pushed out of the card.
+            modifier = Modifier.weight(1f, fill = false),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+        ) {
+            Text(
+                text = presentation.valueText,
+                // Same plain typography token as Value mode: no bold, no custom
+                // letter-spacing, no length-based branching.
+                style = MaterialTheme.typography.displaySmall,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                // Baseline (not bounding-box bottom) alignment so the small unit label sits on
+                // the same baseline as the much larger value, the way "56 bpm" is normally set.
+                modifier = Modifier.alignByBaseline(),
+            )
+            if (presentation.unitText.isNotBlank()) {
+                Text(
+                    text = presentation.unitText,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+                    color = contentColor.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.alignByBaseline(),
+                )
+            }
+        }
+
+        // Tight gaps around the track: with the larger displaySmall value and the thicker track,
+        // the column's fixed elements still have to fit the value line's full height at font
+        // scale 1.0, and the weighted value row above is the single element that yields further.
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
+
+        track()
+
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
 
         Box(
-            modifier = Modifier.fillMaxWidth().height(20.dp),
+            modifier = Modifier.fillMaxWidth().height(DASHBOARD_SECONDARY_SLOT_HEIGHT),
             contentAlignment = Alignment.CenterStart,
         ) {
             presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
@@ -280,35 +320,14 @@ fun DashboardValueRenderer(
     cardId: CardId,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-        Text(
-            text = presentation.valueText,
-            style = MaterialTheme.typography.displaySmall,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        presentation.unitText.takeIf(String::isNotBlank)?.let { unit ->
-            Text(
-                text = unit,
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-            )
-        }
-        presentation.secondaryText?.let { secondary ->
-            if (cardId.usesDeltaPill()) {
-                DashboardMetricDeltaPill(secondary)
-            } else {
-                Text(
-                    text = secondary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+    DashboardValueUnitColumn(
+        presentation = presentation,
+        contentColor = contentColor,
+        secondaryUsesPill = cardId.usesDeltaPill(),
+        modifier = modifier,
+    ) {
+        // Value mode is Bar mode without the painted track: the slot is still reserved so the
+        // value row and the secondary/delta row keep their position when the mode is switched.
+        Spacer(modifier = Modifier.fillMaxWidth().height(DASHBOARD_TRACK_HEIGHT))
     }
 }
