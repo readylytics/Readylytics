@@ -131,7 +131,7 @@ class DashboardMetricPresentationFactory
                     unitText = "",
                     secondaryText = null,
                     status = sleepScoreVisual.getResolvedStatus(),
-                    tooltip = "",
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_sleep_score),
                     accessibilityDescription = sleepScoreDescription,
                     visual = sleepScoreVisual,
                 )
@@ -158,7 +158,7 @@ class DashboardMetricPresentationFactory
                     unitText = "",
                     secondaryText = null,
                     status = readinessVisual.getResolvedStatus(),
-                    tooltip = "",
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_readiness),
                     accessibilityDescription = readinessDescription,
                     visual = readinessVisual,
                 )
@@ -194,6 +194,14 @@ class DashboardMetricPresentationFactory
                 } else {
                     "lbs"
                 }
+            // Same data-presence branching as DashboardRecoveryMetricPresentationFactory's
+            // hrvTooltip/rhrTooltip: point at Health Connect when there is nothing to explain yet.
+            val weightTooltip =
+                if (summary?.weightKg == null) {
+                    resourceProvider.getString(CoreUiR.string.card_tooltip_weight_no_data)
+                } else {
+                    resourceProvider.getString(CoreUiR.string.card_tooltip_weight_latest)
+                }
             val weightDescription =
                 weightVisual.unavailableReason?.let { reason ->
                     unavailableDescription(weightTitle, reason)
@@ -210,7 +218,7 @@ class DashboardMetricPresentationFactory
                     unitText = weightUnitText,
                     secondaryText = null,
                     status = weightVisual.getResolvedStatus(),
-                    tooltip = "",
+                    tooltip = weightTooltip,
                     accessibilityDescription = weightDescription,
                     visual = weightVisual,
                 )
@@ -260,6 +268,12 @@ class DashboardMetricPresentationFactory
             // body fat keeps its one decimal place, via the shared formatter the vitals feature
             // already uses.
             val bodyFatValueText = bodyFatPercent?.let { MetricFormatter.formatBodyFat(it) } ?: "—"
+            val bodyFatTooltip =
+                if (bodyFatPercent == null) {
+                    resourceProvider.getString(CoreUiR.string.card_tooltip_body_fat_no_data)
+                } else {
+                    resourceProvider.getString(CoreUiR.string.card_tooltip_body_fat_latest)
+                }
             val bodyFatDescription =
                 bodyFatVisual.unavailableReason?.let { reason ->
                     unavailableDescription(bodyFatTitle, reason)
@@ -276,7 +290,7 @@ class DashboardMetricPresentationFactory
                     unitText = "",
                     secondaryText = null,
                     status = bodyFatStatusVal,
-                    tooltip = "",
+                    tooltip = bodyFatTooltip,
                     accessibilityDescription = bodyFatDescription,
                     visual = bodyFatVisual,
                 )
@@ -339,7 +353,7 @@ class DashboardMetricPresentationFactory
                     unitText = "",
                     secondaryText = null,
                     status = effStatus,
-                    tooltip = "",
+                    tooltip = resourceProvider.getString(CoreUiR.string.card_tooltip_sleep_efficiency),
                     accessibilityDescription = sleepEffDescription,
                     visual = effVisual,
                 )
@@ -389,7 +403,7 @@ class DashboardMetricPresentationFactory
                     unitText = "",
                     secondaryText = null,
                     status = spo2Visual.getResolvedStatus(),
-                    tooltip = "",
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_vitals_spo2),
                     accessibilityDescription = spo2Description,
                     visual = spo2Visual,
                 )
@@ -410,6 +424,12 @@ class DashboardMetricPresentationFactory
             val bpValueText =
                 m?.bloodPressureDisplay ?: if (systolic > 0 && diastolic > 0) "$systolic/$diastolic" else "—"
             val bpUnitText = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_mmHg)
+            val bpTooltip =
+                if (systolic <= 0 || diastolic <= 0) {
+                    resourceProvider.getString(CoreUiR.string.card_tooltip_bp_no_data)
+                } else {
+                    resourceProvider.getString(CoreUiR.string.card_tooltip_bp_latest)
+                }
             val bpDescription =
                 if (systolic <= 0 || diastolic <= 0) {
                     unavailableDescription(bpTitle, DashboardMetricUnavailableReason.MISSING_VALUE)
@@ -428,7 +448,7 @@ class DashboardMetricPresentationFactory
                     unitText = bpUnitText,
                     secondaryText = null,
                     status = bpStatus,
-                    tooltip = "",
+                    tooltip = bpTooltip,
                     accessibilityDescription = bpDescription,
                     visual = DashboardMetricVisual.ValueOnly,
                 )
@@ -461,7 +481,7 @@ class DashboardMetricPresentationFactory
                     unitText = "",
                     secondaryText = hrSecondaryText,
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "",
+                    tooltip = resourceProvider.getString(DashboardR.string.tooltip_heart_rate_card),
                     accessibilityDescription = hrDescription,
                     visual = DashboardMetricVisual.ValueOnly,
                 )
@@ -503,7 +523,7 @@ class DashboardMetricPresentationFactory
                     unitText = "",
                     secondaryText = null,
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "",
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_circadian_score),
                     accessibilityDescription = circadianDescription,
                     visual = circVisual,
                 )
@@ -557,7 +577,7 @@ class DashboardMetricPresentationFactory
                     // The band-resolved status drives both the card container tint and the
                     // Gauge/Bar active fill, so it must be the computed one, not a constant.
                     status = strainVisual.getResolvedStatus(),
-                    tooltip = "",
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_strain_ratio),
                     accessibilityDescription = strainDescription,
                     visual = strainVisual,
                 )

@@ -70,6 +70,76 @@ class DashboardMetricPresentationFactoryTest {
 
     private val date = LocalDate.now()
 
+    private val tooltipStubs =
+        mapOf(
+            CoreUiR.string.tooltip_sleep_score to "tooltip sleep score",
+            CoreUiR.string.tooltip_readiness to "tooltip readiness",
+            CoreUiR.string.card_tooltip_weight_no_data to "tooltip weight no data",
+            CoreUiR.string.card_tooltip_weight_latest to "tooltip weight latest",
+            CoreUiR.string.card_tooltip_body_fat_no_data to "tooltip body fat no data",
+            CoreUiR.string.card_tooltip_body_fat_latest to "tooltip body fat latest",
+            CoreUiR.string.card_tooltip_sleep_efficiency to "tooltip sleep efficiency",
+            CoreUiR.string.tooltip_vitals_spo2 to "tooltip spo2",
+            CoreUiR.string.card_tooltip_bp_no_data to "tooltip bp no data",
+            CoreUiR.string.card_tooltip_bp_latest to "tooltip bp latest",
+            DashboardR.string.tooltip_heart_rate_card to "tooltip heart rate",
+            CoreUiR.string.tooltip_circadian_score to "tooltip circadian",
+            CoreUiR.string.tooltip_strain_ratio to "tooltip strain ratio",
+        )
+
+    private fun stubTooltips() {
+        tooltipStubs.forEach { (resourceId, text) ->
+            every { resourceProvider.getString(resourceId) } returns text
+        }
+    }
+
+    @Test
+    fun `every card wires a real tooltip resource instead of an empty string`() {
+        stubTooltips()
+
+        val cards = factory.build(summary(), preferences(), date, null, null, null)
+
+        val expected =
+            mapOf(
+                CardId.SLEEP_SCORE to "tooltip sleep score",
+                CardId.READINESS to "tooltip readiness",
+                CardId.WEIGHT to "tooltip weight no data",
+                CardId.BODY_FAT to "tooltip body fat no data",
+                CardId.SLEEP_EFFICIENCY to "tooltip sleep efficiency",
+                CardId.OXYGEN_SATURATION to "tooltip spo2",
+                CardId.BLOOD_PRESSURE to "tooltip bp no data",
+                CardId.HEART_RATE to "tooltip heart rate",
+                CardId.CIRCADIAN_CONSISTENCY to "tooltip circadian",
+                CardId.STRAIN_RATIO to "tooltip strain ratio",
+            )
+
+        expected.forEach { (cardId, tooltip) ->
+            val actual = cards.getValue(cardId).tooltip
+            assertTrue("Expected a non-blank tooltip for $cardId", actual.isNotBlank())
+            assertEquals("Unexpected tooltip for $cardId", tooltip, actual)
+        }
+    }
+
+    @Test
+    fun `weight body fat and blood pressure use their latest-reading tooltips once data exists`() {
+        stubTooltips()
+
+        val cards =
+            factory.build(
+                summary(weightKg = 70f, bodyFatPercent = 18f)
+                    .copy(bloodPressureSystolic = 120, bloodPressureDiastolic = 80),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        assertEquals("tooltip weight latest", cards.getValue(CardId.WEIGHT).tooltip)
+        assertEquals("tooltip body fat latest", cards.getValue(CardId.BODY_FAT).tooltip)
+        assertEquals("tooltip bp latest", cards.getValue(CardId.BLOOD_PRESSURE).tooltip)
+    }
+
     @Test
     fun `sleep score and readiness share score thresholds`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
