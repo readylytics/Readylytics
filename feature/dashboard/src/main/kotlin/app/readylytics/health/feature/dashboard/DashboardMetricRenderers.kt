@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -162,35 +163,19 @@ fun DashboardBarRenderer(
         secondaryUsesPill = secondaryUsesPill,
         modifier = modifier,
     ) {
-        Canvas(
+        val progress = progressFraction?.coerceIn(0f, 1f) ?: 0f
+        LinearProgressIndicator(
+            progress = { progress },
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .height(DASHBOARD_TRACK_HEIGHT)
                     .padding(horizontal = MaterialTheme.spacing.extraSmall)
                     .testTag(DASHBOARD_BAR_TAG),
-        ) {
-            val strokeWidth = DASHBOARD_TRACK_HEIGHT.toPx()
-            val startY = size.height / 2
-
-            drawLine(
-                color = trackColor,
-                start = Offset(0f, startY),
-                end = Offset(size.width, startY),
-                strokeWidth = strokeWidth,
-                cap = StrokeCap.Round,
-            )
-
-            progressFraction?.coerceIn(0f, 1f)?.takeIf { it > 0f }?.let { activeFraction ->
-                drawLine(
-                    color = activeColor,
-                    start = Offset(0f, startY),
-                    end = Offset(size.width * activeFraction, startY),
-                    strokeWidth = strokeWidth,
-                    cap = StrokeCap.Round,
-                )
-            }
-        }
+            color = activeColor,
+            trackColor = trackColor,
+            strokeCap = StrokeCap.Round,
+        )
     }
 }
 
