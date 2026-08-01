@@ -715,6 +715,26 @@ class DashboardMetricPresentationFactoryTest {
             }
     }
 
+    @Test
+    fun `above-target sleep duration retains relation and announces its status`() {
+        stubAccessibilityStatusText()
+
+        val presentation =
+            factory
+                .build(
+                    summary().copy(sleepDurationMinutes = 600),
+                    preferences().copy(goalSleepHours = 8f),
+                    date,
+                    null,
+                    null,
+                    null,
+                ).getValue(CardId.SLEEP_DURATION)
+
+        assertEquals(MetricStatus.OPTIMAL, presentation.status)
+        assertTrue(presentation.accessibilityDescription.contains("above target"))
+        assertTrue(presentation.accessibilityDescription.contains(statusText(presentation.status)))
+    }
+
     private fun stubAccessibilityStatusText() {
         clearMocks(resourceProvider, answers = true)
         every { resourceProvider.getString(CoreUiR.string.metric_status_optimal) } returns "Optimal"
@@ -729,6 +749,9 @@ class DashboardMetricPresentationFactoryTest {
         every {
             resourceProvider.getString(DashboardR.string.semantics_goal_status_format, *anyVararg())
         } answers { invocation.formattedArguments() }
+        every {
+            resourceProvider.getString(DashboardR.string.semantics_goal_above_target_format, *anyVararg())
+        } answers { "${invocation.formattedArguments()}|above target" }
         every {
             resourceProvider.getString(DashboardR.string.semantics_value_note_format, *anyVararg())
         } answers { invocation.formattedArguments() }
