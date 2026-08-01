@@ -4,7 +4,9 @@
 **Audit date:** 2026-07-31
 **Branch:** `claude/readylytics-m3-audit-plan-i6mx57`
 **Scope:** all Compose UI in `core/designsystem`, `core/ui`, `feature/*`, `app/src/main/kotlin/**/ui`, and every `res/values/strings.xml`.
-**Companion plan:** [`M3_TOP_APP_BAR_PLAN.md`](./M3_TOP_APP_BAR_PLAN.md) — finding L-4 (top app bars on primary destinations) is planned there, because it changes app structure rather than correcting a token or a defect.
+**Companion plans:**
+- [`M3_TOP_APP_BAR_PLAN.md`](./M3_TOP_APP_BAR_PLAN.md) — finding L-4 (top app bars on primary destinations) is planned there, because it changes app structure rather than correcting a token or a defect.
+- [`M3_GAUGE_RESTYLE_PLAN.md`](./M3_GAUGE_RESTYLE_PLAN.md) — a requested visual redesign of the metric gauge (horseshoe arc matching the bar style). It rewrites the same lines as findings **T-2, L-9, L-10 and C-4**, which are folded into that plan rather than fixed twice. If both are approved, sequence the gauge restyle before this document's Phase 2 and Phase 6 to avoid re-editing `M3MetricGauge.kt` and `M3ScoreGaugeCard.kt`.
 
 **Agreed scope:** all seven phases (0–6) are in scope, including the Phase 3b editorial rewrites. Wording is corrected wherever M3 content design calls for it, not only where sentence case is mechanically wrong.
 
