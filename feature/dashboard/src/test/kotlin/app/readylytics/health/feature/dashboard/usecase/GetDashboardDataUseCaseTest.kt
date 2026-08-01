@@ -208,7 +208,7 @@ class GetDashboardDataUseCaseTest {
     }
 
     @Test
-    fun invoke_withRoundedOptimalSpo2_returnsOptimalSpo2Card() {
+    fun invoke_withNeutralSpo2_returnsNeutralSpo2Card() {
         val summary =
             mockk<DailySummary>(relaxed = true) {
                 every { avgSleepingSpo2 } returns 95.2f
@@ -225,7 +225,7 @@ class GetDashboardDataUseCaseTest {
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
         assertEquals("95%", card?.valueText)
-        assertEquals(MetricStatus.OPTIMAL, card?.status)
+        assertEquals(MetricStatus.NEUTRAL, card?.status)
     }
 
     @Test

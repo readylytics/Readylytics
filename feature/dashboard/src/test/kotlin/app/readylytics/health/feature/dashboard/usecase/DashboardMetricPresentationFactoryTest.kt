@@ -12,6 +12,7 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
 import app.readylytics.health.feature.dashboard.DashboardMetricVisual
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -152,19 +153,19 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `score statuses preserve the legacy first-match boundaries and fallback`() {
+    fun `score boundaries classify the upper band`() {
         val expectations =
             listOf(
-                40f to MetricStatus.POOR,
-                60f to MetricStatus.WARNING,
-                85f to MetricStatus.NEUTRAL,
-                101f to MetricStatus.NEUTRAL,
+                40f to MetricStatus.WARNING,
+                60f to MetricStatus.NEUTRAL,
+                85f to MetricStatus.OPTIMAL,
+                100f to MetricStatus.OPTIMAL,
             )
 
-        expectations.forEach { (score, expectedStatus) ->
+        expectations.forEach { (score, expected) ->
             val cards =
                 factory.build(
-                    summary().copy(sleepScore = score),
+                    summary().copy(sleepScore = score, readinessWorkoutOnly = score),
                     preferences(),
                     date,
                     null,
@@ -172,7 +173,47 @@ class DashboardMetricPresentationFactoryTest {
                     null,
                 )
 
-            assertEquals(expectedStatus, cards.getValue(CardId.SLEEP_SCORE).status)
+            assertEquals(expected, cards.getValue(CardId.SLEEP_SCORE).status)
+            assertEquals(expected, cards.getValue(CardId.READINESS).status)
+        }
+    }
+
+    @Test
+    fun `sleep efficiency and spo2 use raw lower-inclusive status ladders`() {
+        listOf(
+            68f to MetricStatus.POOR,
+            78f to MetricStatus.WARNING,
+        ).forEach { (efficiency, expected) ->
+            val cards =
+                factory.build(
+                    summary(),
+                    preferences(),
+                    date,
+                    SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
+                    null,
+                    null,
+                )
+
+            assertEquals(expected, cards.getValue(CardId.SLEEP_EFFICIENCY).status)
+        }
+
+        listOf(
+            89f to MetricStatus.POOR,
+            90f to MetricStatus.WARNING,
+            95f to MetricStatus.NEUTRAL,
+            98f to MetricStatus.OPTIMAL,
+        ).forEach { (spo2, expected) ->
+            val cards =
+                factory.build(
+                    summary().copy(avgSleepingSpo2 = spo2),
+                    preferences(),
+                    date,
+                    null,
+                    null,
+                    null,
+                )
+
+            assertEquals(expected, cards.getValue(CardId.OXYGEN_SATURATION).status)
         }
     }
 
@@ -300,7 +341,7 @@ class DashboardMetricPresentationFactoryTest {
         val visual = presentation.visual as DashboardMetricVisual.Score
 
         assertEquals("95%", presentation.valueText)
-        assertEquals(MetricStatus.NEUTRAL, presentation.status)
+        assertEquals(MetricStatus.OPTIMAL, presentation.status)
         assertEquals(95.4f, visual.rawValue)
         assertEquals("Circadian: 95 of 100, mock_string", presentation.accessibilityDescription)
     }
@@ -394,7 +435,7 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `spo2 status uses the rounded legacy classification`() {
+    fun `spo2 status uses the continuous raw value rather than its rounded display value`() {
         val cards =
             factory.build(
                 summary().copy(avgSleepingSpo2 = 94.6f),
@@ -405,7 +446,7 @@ class DashboardMetricPresentationFactoryTest {
                 null,
             )
 
-        assertEquals(MetricStatus.OPTIMAL, cards.getValue(CardId.OXYGEN_SATURATION).status)
+        assertEquals(MetricStatus.WARNING, cards.getValue(CardId.OXYGEN_SATURATION).status)
     }
 
     @Test
@@ -439,13 +480,13 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `strain ratio preserves the legacy first-match boundaries`() {
+    fun `strain ratio uses lower-inclusive raw boundaries`() {
         val expectations =
             listOf(
-                0.5f to MetricStatus.POOR,
-                0.8f to MetricStatus.WARNING,
-                1.3f to MetricStatus.OPTIMAL,
-                1.5f to MetricStatus.WARNING,
+                0.5f to MetricStatus.WARNING,
+                0.8f to MetricStatus.OPTIMAL,
+                1.3f to MetricStatus.WARNING,
+                1.5f to MetricStatus.POOR,
                 1.7f to MetricStatus.POOR,
             )
 
@@ -635,7 +676,8 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `all 15 cards produce a non-blank accessibility description when data is available`() {
+    fun `available cards announce the status used for their tint`() {
+        stubAccessibilityStatusText()
         val lastSleepSession = SleepSessionSummary(efficiency = 0.88f, startTime = 0L, endTime = 0L)
         val circadianResult =
             app.readylytics.health.domain.scoring.CircadianConsistencyResult
@@ -663,31 +705,64 @@ class DashboardMetricPresentationFactoryTest {
                 heartRateSummary,
             )
 
-        val allCardIds =
-            listOf(
-                CardId.SLEEP_SCORE,
-                CardId.READINESS,
-                CardId.WEIGHT,
-                CardId.BODY_FAT,
-                CardId.SLEEP_DURATION,
-                CardId.HRV,
-                CardId.SLEEP_RHR,
-                CardId.RESTING_HR,
-                CardId.RAS_DAILY,
-                CardId.SLEEP_EFFICIENCY,
-                CardId.OXYGEN_SATURATION,
-                CardId.BLOOD_PRESSURE,
-                CardId.HEART_RATE,
-                CardId.CIRCADIAN_CONSISTENCY,
-                CardId.STRAIN_RATIO,
-            )
-
-        allCardIds.forEach { id ->
-            val description = cards.getValue(id).accessibilityDescription
-            assertTrue(
-                "Expected non-blank accessibilityDescription for $id when data is available",
-                description.isNotBlank(),
-            )
-        }
+        cards.values
+            .filter { it.visual.unavailableReasonOrNull() == null }
+            .forEach { presentation ->
+                assertTrue(
+                    "Expected ${presentation.status} in ${presentation.title}",
+                    presentation.accessibilityDescription.contains(statusText(presentation.status)),
+                )
+            }
     }
+
+    private fun stubAccessibilityStatusText() {
+        clearMocks(resourceProvider, answers = true)
+        every { resourceProvider.getString(CoreUiR.string.metric_status_optimal) } returns "Optimal"
+        every { resourceProvider.getString(CoreUiR.string.metric_status_neutral) } returns "Neutral"
+        every { resourceProvider.getString(CoreUiR.string.metric_status_warning) } returns "Warning"
+        every { resourceProvider.getString(CoreUiR.string.metric_status_poor) } returns "Poor"
+        every { resourceProvider.getString(CoreUiR.string.metric_status_calibrating) } returns "Calibrating"
+
+        every {
+            resourceProvider.getString(DashboardR.string.semantics_score_format, *anyVararg())
+        } answers { invocation.formattedArguments() }
+        every {
+            resourceProvider.getString(DashboardR.string.semantics_goal_status_format, *anyVararg())
+        } answers { invocation.formattedArguments() }
+        every {
+            resourceProvider.getString(DashboardR.string.semantics_value_note_format, *anyVararg())
+        } answers { invocation.formattedArguments() }
+        every {
+            resourceProvider.getString(DashboardR.string.semantics_value_note_status_format, *anyVararg())
+        } answers { invocation.formattedArguments() }
+        every {
+            resourceProvider.getString(DashboardR.string.semantics_weight_bmi_format, *anyVararg())
+        } answers { invocation.formattedArguments() }
+    }
+
+    private fun statusText(status: MetricStatus): String =
+        when (status) {
+            MetricStatus.OPTIMAL -> "Optimal"
+            MetricStatus.NEUTRAL -> "Neutral"
+            MetricStatus.WARNING -> "Warning"
+            MetricStatus.POOR -> "Poor"
+            MetricStatus.NO_DATA,
+            MetricStatus.CALIBRATING,
+            -> "Calibrating"
+        }
 }
+
+private fun DashboardMetricVisual.unavailableReasonOrNull(): DashboardMetricUnavailableReason? =
+    when (this) {
+        is DashboardMetricVisual.Score -> unavailableReason
+        is DashboardMetricVisual.Goal -> unavailableReason
+        is DashboardMetricVisual.PersonalBaseline -> unavailableReason
+        is DashboardMetricVisual.ReferenceRange -> unavailableReason
+        DashboardMetricVisual.ValueOnly -> null
+    }
+
+private fun io.mockk.Invocation.formattedArguments(): String =
+    args
+        .drop(1)
+        .flatMap { argument -> if (argument is Array<*>) argument.asList() else listOf(argument) }
+        .joinToString("|")
