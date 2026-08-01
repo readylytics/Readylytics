@@ -119,15 +119,6 @@ class DashboardMetricPresentationFactory
                 else -> MetricStatus.POOR
             }
 
-        private fun bmiStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 18.5f -> MetricStatus.POOR
-                value < 25f -> MetricStatus.OPTIMAL
-                value < 30f -> MetricStatus.WARNING
-                else -> MetricStatus.POOR
-            }
-
         fun build(
             summary: DailySummary?,
             preferences: UserPreferences,
@@ -218,16 +209,18 @@ class DashboardMetricPresentationFactory
             val heightM = (preferences.heightCm ?: 0f) / 100f
             val isHeightValid = heightM > 0f
             val bmi = if (isHeightValid) summary?.weightKg?.let { it / (heightM * heightM) } else null
+            val bmiAssessment = bmi?.let(BodyCompositionAssessment::assessBmi)
+            val bmiReference = BodyCompositionAssessment.bmiReference
             val weightVisual =
                 DashboardMetricScalePreparer.referenceRange(
                     value = bmi,
-                    minimum = 15f,
-                    midpoint = 21.7f,
-                    maximum = 35f,
+                    minimum = bmiReference.axisMinimum,
+                    midpoint = bmiReference.referenceMidpoint,
+                    maximum = bmiReference.axisMaximum,
                     scaleAvailable = isHeightValid,
                     unavailableReason = if (!isHeightValid) DashboardMetricUnavailableReason.MISSING_BMI else null,
                 )
-            val weightStatus = bmiStatus(bmi)
+            val weightStatus = bmiAssessment?.status?.toMetricStatus() ?: MetricStatus.CALIBRATING
             val weightTitle =
                 resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_weight)
             val weightValueText = m?.weightKgDisplay?.replace(" kg", "")?.replace(" lbs", "") ?: "—"
@@ -270,32 +263,15 @@ class DashboardMetricPresentationFactory
 
             // 4. BODY FAT
             val bodyFatPercent = summary?.bodyFatPercent
-            val bodyFatMidpoint =
-                BodyCompositionAssessment
-                    .assessBodyFat(
-                        bodyFatPercent ?: 20f,
-                        preferences.physiologyProfile,
-                        preferences.gender,
-                    ).reference.referenceMidpoint
-            val bodyFatStatusVal =
-                if (bodyFatPercent != null) {
-                    HealthMetricsCalculator
-                        .assessBodyFatPercent(
-                            bodyFatPercent,
-                            preferences.physiologyProfile,
-                            preferences.gender,
-                        ).toMetricStatus()
-                } else {
-                    MetricStatus.NEUTRAL
-                }
             val bodyFatAssessment =
                 bodyFatPercent?.let {
-                    app.readylytics.health.domain.model.BodyCompositionAssessment.assessBodyFat(
-                        it,
-                        preferences.physiologyProfile,
-                        preferences.gender,
+                    BodyCompositionAssessment.assessBodyFat(
+                        bodyFatPercent = it,
+                        physiologyProfile = preferences.physiologyProfile,
+                        gender = preferences.gender,
                     )
                 }
+            val bodyFatStatusVal = bodyFatAssessment?.status?.toMetricStatus() ?: MetricStatus.NEUTRAL
             val bodyFatVisual =
                 DashboardMetricScalePreparer.referenceRange(
                     value = bodyFatPercent,

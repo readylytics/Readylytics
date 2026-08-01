@@ -240,7 +240,7 @@ class DashboardMetricPresentationFactoryTest {
     fun `weight keeps real value and positions its reference midpoint`() {
         val cards =
             factory.build(
-                summary(weightKg = 66.44f),
+                summary(weightKg = 66.45625f),
                 preferences(heightCm = 175f),
                 date,
                 null,
@@ -250,6 +250,35 @@ class DashboardMetricPresentationFactoryTest {
         val card = cards.getValue(CardId.WEIGHT)
         val visual = card.visual as DashboardMetricVisual.ReferenceRange
         assertEquals(0.5f, visual.referenceMarkerFraction)
+        assertEquals(0.5f, visual.markerFraction)
+    }
+
+    @Test
+    fun `weight card status matches canonical bmi assessment boundaries`() {
+        val expected =
+            listOf(
+                18.4f to MetricStatus.WARNING,
+                18.5f to MetricStatus.OPTIMAL,
+                24.9f to MetricStatus.OPTIMAL,
+                25f to MetricStatus.WARNING,
+                29.9f to MetricStatus.WARNING,
+                30f to MetricStatus.POOR,
+            )
+
+        expected.forEach { (bmi, status) ->
+            val card =
+                factory
+                    .build(
+                        summary(weightKg = bmi),
+                        preferences(heightCm = 100f),
+                        date,
+                        null,
+                        null,
+                        null,
+                    ).getValue(CardId.WEIGHT)
+
+            assertEquals("BMI $bmi", status, card.status)
+        }
     }
 
     @Test
