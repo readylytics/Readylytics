@@ -63,7 +63,6 @@ class DashboardVisualizationRegressionTest {
                     minValue = 0f,
                     maxValue = 100f,
                     markerFraction = 0f,
-                    bands = emptyList(),
                     unavailableReason = null,
                 ),
         )
@@ -523,7 +522,6 @@ class DashboardVisualizationRegressionTest {
                     minValue = 0f,
                     maxValue = 100f,
                     markerFraction = 0.12f,
-                    bands = emptyList(),
                     unavailableReason = null,
                 ) to 0.12f,
                 DashboardMetricVisual.Goal(
@@ -532,7 +530,6 @@ class DashboardVisualizationRegressionTest {
                     markerFraction = 0.34f,
                     targetMarkerFraction = 1f,
                     isAboveTarget = false,
-                    bands = emptyList(),
                     selectionAvailable = true,
                     unavailableReason = null,
                 ) to 0.34f,
@@ -542,7 +539,6 @@ class DashboardVisualizationRegressionTest {
                     ratio = 1.12f,
                     markerFraction = 0.56f,
                     baselineMarkerFraction = 0.5f,
-                    bands = emptyList(),
                     selectionAvailable = true,
                     unavailableReason = null,
                 ) to 0.56f,
@@ -550,7 +546,6 @@ class DashboardVisualizationRegressionTest {
                     rawValue = 78f,
                     markerFraction = 0.78f,
                     referenceMarkerFraction = 0.5f,
-                    bands = emptyList(),
                     selectionAvailable = true,
                     unavailableReason = null,
                 ) to 0.78f,
@@ -885,7 +880,6 @@ class DashboardVisualizationRegressionTest {
                     minValue = 0f,
                     maxValue = 100f,
                     markerFraction = 0.74f,
-                    bands = emptyList(),
                     unavailableReason = null,
                 ),
         )

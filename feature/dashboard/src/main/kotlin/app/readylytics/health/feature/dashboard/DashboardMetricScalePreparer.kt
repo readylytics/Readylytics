@@ -1,13 +1,5 @@
 package app.readylytics.health.feature.dashboard
 
-import app.readylytics.health.domain.model.MetricStatus
-
-data class RawMetricBand(
-    val startValue: Float,
-    val endValue: Float,
-    val status: MetricStatus,
-)
-
 object DashboardMetricScalePreparer {
     private fun linearFraction(
         value: Float,
@@ -38,24 +30,14 @@ object DashboardMetricScalePreparer {
         value: Float?,
         minimum: Float,
         maximum: Float,
-        bands: List<RawMetricBand>,
     ): DashboardMetricVisual.Score {
         val markerFraction = if (value != null) linearFraction(value, minimum, maximum) else null
-        val mappedBands =
-            bands.map {
-                DashboardMetricBand(
-                    startFraction = linearFraction(it.startValue, minimum, maximum),
-                    endFraction = linearFraction(it.endValue, minimum, maximum),
-                    status = it.status,
-                )
-            }
 
         return DashboardMetricVisual.Score(
             rawValue = value,
             minValue = minimum,
             maxValue = maximum,
             markerFraction = markerFraction,
-            bands = mappedBands,
             unavailableReason = if (value == null) DashboardMetricUnavailableReason.MISSING_VALUE else null,
         )
     }
@@ -63,7 +45,6 @@ object DashboardMetricScalePreparer {
     fun goal(
         value: Float?,
         target: Float?,
-        bands: List<RawMetricBand>,
     ): DashboardMetricVisual.Goal {
         val isValidTarget = target != null && target > 0f
 
@@ -72,19 +53,6 @@ object DashboardMetricScalePreparer {
                 linearFraction(value, 0f, target!!)
             } else {
                 null
-            }
-
-        val mappedBands =
-            if (isValidTarget) {
-                bands.map {
-                    DashboardMetricBand(
-                        startFraction = linearFraction(it.startValue, 0f, target!!),
-                        endFraction = linearFraction(it.endValue, 0f, target!!),
-                        status = it.status,
-                    )
-                }
-            } else {
-                emptyList()
             }
 
         val unavailableReason =
@@ -100,7 +68,6 @@ object DashboardMetricScalePreparer {
             markerFraction = markerFraction,
             targetMarkerFraction = if (isValidTarget) 1f else null,
             isAboveTarget = if (isValidTarget && value != null) value > target!! else false,
-            bands = mappedBands,
             selectionAvailable = isValidTarget,
             unavailableReason = unavailableReason,
         )
@@ -111,7 +78,6 @@ object DashboardMetricScalePreparer {
         baseline: Float?,
         axisMinimumRatio: Float,
         axisMaximumRatio: Float,
-        bands: List<RawMetricBand>,
         baselineReady: Boolean,
     ): DashboardMetricVisual.PersonalBaseline {
         val isValidBaseline = baseline != null && baseline > 0f && baselineReady
@@ -133,19 +99,6 @@ object DashboardMetricScalePreparer {
                 0f
             }
 
-        val mappedBands =
-            if (isValidBaseline) {
-                bands.map {
-                    DashboardMetricBand(
-                        startFraction = linearFraction(it.startValue, minVal, maxVal),
-                        endFraction = linearFraction(it.endValue, minVal, maxVal),
-                        status = it.status,
-                    )
-                }
-            } else {
-                emptyList()
-            }
-
         val unavailableReason =
             when {
                 !isValidBaseline -> DashboardMetricUnavailableReason.BASELINE_NOT_READY
@@ -159,7 +112,6 @@ object DashboardMetricScalePreparer {
             ratio = if (isValidBaseline && value != null) value / baseline!! else null,
             markerFraction = markerFraction,
             baselineMarkerFraction = baselineMarkerFraction,
-            bands = mappedBands,
             selectionAvailable = isValidBaseline,
             unavailableReason = unavailableReason,
         )
@@ -170,7 +122,6 @@ object DashboardMetricScalePreparer {
         minimum: Float,
         midpoint: Float,
         maximum: Float,
-        bands: List<RawMetricBand>,
         scaleAvailable: Boolean,
         unavailableReason: DashboardMetricUnavailableReason?,
     ): DashboardMetricVisual.ReferenceRange {
@@ -192,19 +143,6 @@ object DashboardMetricScalePreparer {
                 null
             }
 
-        val mappedBands =
-            if (scaleAvailable) {
-                bands.map {
-                    DashboardMetricBand(
-                        startFraction = piecewiseFraction(it.startValue, minimum, midpoint, maximum),
-                        endFraction = piecewiseFraction(it.endValue, minimum, midpoint, maximum),
-                        status = it.status,
-                    )
-                }
-            } else {
-                emptyList()
-            }
-
         val finalUnavailableReason =
             if (scaleAvailable && value == null) {
                 DashboardMetricUnavailableReason.MISSING_VALUE
@@ -216,7 +154,6 @@ object DashboardMetricScalePreparer {
             rawValue = value,
             markerFraction = markerFraction,
             referenceMarkerFraction = referenceMarkerFraction,
-            bands = mappedBands,
             selectionAvailable = scaleAvailable,
             unavailableReason = finalUnavailableReason,
         )

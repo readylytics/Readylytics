@@ -145,9 +145,10 @@ class DashboardMetricPresentationFactoryTest {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         val sleep = cards.getValue(CardId.SLEEP_SCORE).visual as DashboardMetricVisual.Score
         val readiness = cards.getValue(CardId.READINESS).visual as DashboardMetricVisual.Score
-        assertEquals(sleep.bands, readiness.bands)
         assertEquals(0f, sleep.minValue)
         assertEquals(100f, sleep.maxValue)
+        assertEquals(0f, readiness.minValue)
+        assertEquals(100f, readiness.maxValue)
     }
 
     @Test
@@ -255,7 +256,7 @@ class DashboardMetricPresentationFactoryTest {
         val visual = presentation.visual as DashboardMetricVisual.Score
 
         assertEquals("95%", presentation.valueText)
-        assertEquals(MetricStatus.NEUTRAL, presentation.status)
+        assertEquals(MetricStatus.OPTIMAL, presentation.status)
         assertEquals(95.4f, visual.rawValue)
         assertEquals("Circadian: 95 of 100, mock_string", presentation.accessibilityDescription)
     }
@@ -379,10 +380,10 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `strain ratio exposes its band-resolved status rather than a constant neutral`() {
+    fun `strain ratio resolves its status from the raw value rather than a constant neutral`() {
         val expectations =
             listOf(
-                1.7f to MetricStatus.POOR,
+                1.7f to MetricStatus.WARNING,
                 0.6f to MetricStatus.WARNING,
                 1.0f to MetricStatus.OPTIMAL,
             )

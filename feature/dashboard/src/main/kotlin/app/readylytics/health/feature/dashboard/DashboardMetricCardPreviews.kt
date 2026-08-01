@@ -23,7 +23,7 @@ import app.readylytics.health.domain.model.MetricStatus
 // the Task 10 brief calls out for visual accessibility review in Android Studio. These carry no
 // assertions of their own (see DashboardMetricCardTest for the automated semantics coverage) and
 // build on the same DashboardMetricScalePreparer helpers production code uses, so the fractions
-// and bands drawn here match how the real renderers would compute them.
+// drawn here match how the real renderers would compute them.
 //
 // Titles below are pulled from real string resources (via stringResource) so previews reflect
 // actual localized labels; body copy that only exists for this fixture (tooltip/accessibility
@@ -35,14 +35,6 @@ private val sleepDurationSpec = DashboardCardCatalog.spec(CardId.SLEEP_DURATION)
 private val hrvSpec = DashboardCardCatalog.spec(CardId.HRV)!!
 private val weightSpec = DashboardCardCatalog.spec(CardId.WEIGHT)!!
 
-private val scoreBands =
-    listOf(
-        RawMetricBand(0f, 40f, MetricStatus.POOR),
-        RawMetricBand(40f, 60f, MetricStatus.WARNING),
-        RawMetricBand(60f, 85f, MetricStatus.NEUTRAL),
-        RawMetricBand(85f, 100f, MetricStatus.OPTIMAL),
-    )
-
 @Composable
 private fun sleepScorePresentation(): DashboardMetricPresentation =
     DashboardMetricPresentation(
@@ -53,12 +45,12 @@ private fun sleepScorePresentation(): DashboardMetricPresentation =
         status = MetricStatus.OPTIMAL,
         tooltip = "Total quality of rest based on duration and cycles.",
         accessibilityDescription = "Sleep score: 82 of 100, Optimal",
-        visual = DashboardMetricScalePreparer.score(82f, 0f, 100f, scoreBands),
+        visual = DashboardMetricScalePreparer.score(82f, 0f, 100f),
     )
 
 @Composable
 private fun goalAboveTargetPresentation(): DashboardMetricPresentation {
-    val visual = DashboardMetricScalePreparer.goal(520f, 480f, emptyList())
+    val visual = DashboardMetricScalePreparer.goal(520f, 480f)
     return DashboardMetricPresentation(
         title = stringResource(R.string.card_title_sleep_duration),
         valueText = "8h 40m",
@@ -81,12 +73,6 @@ private fun baselineWithinRangePresentation(): DashboardMetricPresentation {
             baseline = 60f,
             axisMinimumRatio = 0.5f,
             axisMaximumRatio = 1.5f,
-            bands =
-                listOf(
-                    RawMetricBand(30f, 54f, MetricStatus.WARNING),
-                    RawMetricBand(54f, 66f, MetricStatus.NEUTRAL),
-                    RawMetricBand(66f, 90f, MetricStatus.OPTIMAL),
-                ),
             baselineReady = true,
         )
     return DashboardMetricPresentation(
@@ -111,13 +97,6 @@ private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
             minimum = 15f,
             midpoint = 21.7f,
             maximum = 35f,
-            bands =
-                listOf(
-                    RawMetricBand(0f, 18.5f, MetricStatus.WARNING),
-                    RawMetricBand(18.5f, 25f, MetricStatus.OPTIMAL),
-                    RawMetricBand(25f, 30f, MetricStatus.WARNING),
-                    RawMetricBand(30f, 100f, MetricStatus.POOR),
-                ),
             scaleAvailable = true,
             unavailableReason = null,
         )
@@ -138,7 +117,7 @@ private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
 
 @Composable
 private fun goalUnavailablePresentation(): DashboardMetricPresentation {
-    val visual = DashboardMetricScalePreparer.goal(null, null, emptyList())
+    val visual = DashboardMetricScalePreparer.goal(null, null)
     val reason = stringResource(app.readylytics.health.core.ui.R.string.metric_unavailable_missing_target)
     return DashboardMetricPresentation(
         title = stringResource(R.string.card_title_sleep_duration),
