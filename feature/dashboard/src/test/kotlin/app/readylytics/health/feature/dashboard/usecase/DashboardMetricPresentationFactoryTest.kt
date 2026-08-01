@@ -152,6 +152,25 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
+    fun `readiness status uses the selected continuous score rather than its rounded display value`() {
+        val cards =
+            factory.build(
+                summary().copy(readinessWorkoutOnly = 84.6f),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val readiness = cards.getValue(CardId.READINESS)
+        val visual = readiness.visual as DashboardMetricVisual.Score
+        assertEquals(84.6f, visual.rawValue)
+        assertEquals("85", readiness.valueText)
+        assertEquals(MetricStatus.NEUTRAL, readiness.status)
+    }
+
+    @Test
     fun `weight keeps real value and positions its reference midpoint`() {
         val cards =
             factory.build(
@@ -380,12 +399,12 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `strain ratio resolves its status from the raw value rather than a constant neutral`() {
+    fun `strain ratio uses the dashboard raw-status boundaries`() {
         val expectations =
             listOf(
-                1.7f to MetricStatus.WARNING,
-                0.6f to MetricStatus.WARNING,
-                1.0f to MetricStatus.OPTIMAL,
+                1.3f to MetricStatus.WARNING,
+                1.5f to MetricStatus.POOR,
+                1.7f to MetricStatus.POOR,
             )
 
         expectations.forEach { (rawStrainRatio, expectedStatus) ->

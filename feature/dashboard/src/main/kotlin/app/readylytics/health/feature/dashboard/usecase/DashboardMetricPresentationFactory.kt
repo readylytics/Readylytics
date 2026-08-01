@@ -8,9 +8,9 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
@@ -83,6 +83,16 @@ class DashboardMetricPresentationFactory
                 else -> MetricStatus.POOR
             }
 
+        private fun strainStatus(value: Float?): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                value < 0.5f -> MetricStatus.POOR
+                value < 0.8f -> MetricStatus.WARNING
+                value < 1.3f -> MetricStatus.OPTIMAL
+                value < 1.5f -> MetricStatus.WARNING
+                else -> MetricStatus.POOR
+            }
+
         fun build(
             summary: DailySummary?,
             preferences: UserPreferences,
@@ -139,7 +149,10 @@ class DashboardMetricPresentationFactory
                 )
 
             // 2. READINESS
-            val readinessScore = m?.readinessRounded?.toFloat()
+            val readinessScore =
+                summary?.let {
+                    LoadSourceSelector.selectReadiness(it, preferences.strainLoadSourceMode)
+                }
             val readinessVisual = DashboardMetricScalePreparer.score(readinessScore, 0f, 100f)
             val readinessStatus = scoreStatus(readinessScore)
             val readinessTitle = resourceProvider.getString(CoreUiR.string.card_title_readiness)
@@ -534,7 +547,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     2f,
                 )
-            val strainStatus = m?.strainRatioRaw?.strainRatioStatus() ?: MetricStatus.CALIBRATING
+            val strainStatus = strainStatus(m?.strainRatioRaw)
             val strainDescription =
                 strainVisual.unavailableReason?.let { reason ->
                     unavailableDescription(strainTitle, reason)

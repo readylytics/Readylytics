@@ -6,6 +6,7 @@ import app.readylytics.health.domain.model.BaselineArrow
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.hrvStatus
@@ -37,7 +38,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
             CardId.HRV to hrvPresentation(summary, metrics, preferences),
             CardId.SLEEP_RHR to rhrPresentation(summary, metrics, preferences, isSleep = true),
             CardId.RESTING_HR to rhrPresentation(summary, metrics, preferences, isSleep = false),
-            CardId.RAS_DAILY to rasPresentation(metrics),
+            CardId.RAS_DAILY to rasPresentation(summary, metrics, preferences),
         )
 
     private fun sleepDurationPresentation(
@@ -196,8 +197,15 @@ internal class DashboardRecoveryMetricPresentationFactory(
         )
     }
 
-    private fun rasPresentation(metrics: DailyMetrics?): DashboardMetricPresentation {
-        val value = metrics?.rasRounded?.toFloat()
+    private fun rasPresentation(
+        summary: DailySummary?,
+        metrics: DailyMetrics?,
+        preferences: UserPreferences,
+    ): DashboardMetricPresentation {
+        val value =
+            summary?.let {
+                LoadSourceSelector.selectTotalRas(it, preferences.rasSourceMode)
+            }
         val visual =
             DashboardMetricScalePreparer.score(
                 value,
