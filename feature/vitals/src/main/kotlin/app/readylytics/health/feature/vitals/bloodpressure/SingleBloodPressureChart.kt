@@ -142,7 +142,7 @@ fun SingleBloodPressureChart(
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val lineColor = if (isDiastolic) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primary
-    val bands =
+    val zoneBands =
         if (isDiastolic) {
             diastolicZoneBands()
         } else {
@@ -151,13 +151,16 @@ fun SingleBloodPressureChart(
         }
     val colors =
         rememberZoneBandColors(
-            bands = bands,
+            zoneBands = zoneBands,
             extendedColors = extendedColors,
             primaryContainer = primaryContainer,
             errorContainer = errorContainer,
             optimalAlpha = 0.45f,
         )
-    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
+    val zoneBandDecoration =
+        remember(zoneBands, colors, minY, maxY) {
+            ZoneBandDecoration(zoneBands, colors, minY, maxY)
+        }
 
     val modelProducer = remember { CartesianChartModelProducer() }
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)

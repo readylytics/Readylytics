@@ -210,11 +210,11 @@ Resolves **F12**. Do this after Task 1, which depends on the bands staying in pl
 
 Every `DashboardMetricVisual` carries `List<DashboardMetricBand>` mapped into fraction space with ~190 lines of dedicated tests, but neither renderer reads `bands` — they draw only `markerFraction` and one `activeColor`. The sole consumer is `getResolvedStatus()`. This indirection is also what caused F1: classification happens after `coerceIn(0f, 1f)` and two float divisions rather than against the thresholds themselves. `bands = emptyList()` on the BODY_FAT visual (`:260`) makes that card's `getResolvedStatus()` structurally meaningless — harmless today only because BODY_FAT uses `bodyFatStatusVal` instead.
 
-Pick one:
+Decision: **Option B — remove them** is selected and is intentionally executed together with Task 1 by `docs/superpowers/plans/2026-08-01-dashboard-raw-status-classification.md`. Status is now classified from raw presentation values, `DashboardMetricVisual` / `RawMetricBand` band transport is removed, and geometry remains in `DashboardMetricScalePreparer`. Task 7 is not complete until its implementation and verification steps have passed.
 
-- [ ] **Option A (recommended) — render them.** Draw the bands as coloured track segments in `M3MetricGauge` and the Bar track. This is presumably why they were built, makes the gauges considerably more informative, and gives the model a reason to exist. Fill in the BODY_FAT bands so that card stops being a special case.
-- [ ] **Option B — remove them.** Classify on raw values in the presentation factories and delete `bands` from `DashboardMetricVisual`, `RawMetricBand`, and the band-mapping half of `DashboardMetricScalePreparer`. Simpler, and removes the clamping artifact permanently.
-- [ ] `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
+- [ ] **Option A (unselected) — render them.** Draw the bands as coloured track segments in `M3MetricGauge` and the Bar track. This is presumably why they were built, makes the gauges considerably more informative, and gives the model a reason to exist. Fill in the BODY_FAT bands so that card stops being a special case.
+- [x] **Option B (selected) — remove them.** Classify on raw values in the presentation factories and delete `bands` from `DashboardMetricVisual`, `RawMetricBand`, and the band-mapping half of `DashboardMetricScalePreparer`. Simpler, and removes the clamping artifact permanently.
+- [x] `./gradlew ktlintFormat && ./gradlew testDebugUnitTest` (completed 2026-08-01)
 
 ---
 
