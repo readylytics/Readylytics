@@ -41,6 +41,7 @@
     <string name="semantics_goal_format">%1$s: %2$s, target %3$s, %4$s</string>
     <string name="semantics_goal_status_format">%1$s: %2$s, target %3$s, %4$s</string>
     <string name="semantics_goal_above_target_format">%1$s: %2$s, above target, %3$s</string>
+    <string name="semantics_goal_above_target_status_format">%1$s: %2$s, above target, %3$s</string>
     <string name="semantics_personal_baseline_format">%1$s: %2$s, %3$s, %4$s</string>
     <string name="semantics_value_note_format">%1$s: %2$s, %3$s</string>
     <string name="semantics_value_note_status_format">%1$s: %2$s, %3$s, %4$s</string>

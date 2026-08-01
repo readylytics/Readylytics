@@ -750,8 +750,12 @@ class DashboardMetricPresentationFactoryTest {
             resourceProvider.getString(DashboardR.string.semantics_goal_status_format, *anyVararg())
         } answers { invocation.formattedArguments() }
         every {
-            resourceProvider.getString(DashboardR.string.semantics_goal_above_target_format, *anyVararg())
-        } answers { "${invocation.formattedArguments()}|above target" }
+            resourceProvider.getString(DashboardR.string.semantics_goal_above_target_status_format, *anyVararg())
+        } answers {
+            val formatArgs = invocation.formatArguments()
+            assertEquals(3, formatArgs.size)
+            "above target, ${formatArgs[2]}"
+        }
         every {
             resourceProvider.getString(DashboardR.string.semantics_value_note_format, *anyVararg())
         } answers { invocation.formattedArguments() }
@@ -784,8 +788,9 @@ private fun DashboardMetricVisual.unavailableReasonOrNull(): DashboardMetricUnav
         DashboardMetricVisual.ValueOnly -> null
     }
 
-private fun io.mockk.Invocation.formattedArguments(): String =
+private fun io.mockk.Invocation.formattedArguments(): String = formatArguments().joinToString("|")
+
+private fun io.mockk.Invocation.formatArguments(): List<Any?> =
     args
         .drop(1)
         .flatMap { argument -> if (argument is Array<*>) argument.asList() else listOf(argument) }
-        .joinToString("|")

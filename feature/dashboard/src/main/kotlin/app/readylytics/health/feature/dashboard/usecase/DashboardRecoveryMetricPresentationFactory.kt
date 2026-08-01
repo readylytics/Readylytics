@@ -63,7 +63,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
                     unavailableDescription(title, durationVisual.unavailableReason)
                 durationVisual.isAboveTarget ->
                     resourceProvider.getString(
-                        DashboardR.string.semantics_goal_above_target_format,
+                        DashboardR.string.semantics_goal_above_target_status_format,
                         title,
                         valueText,
                         classificationText(status),
