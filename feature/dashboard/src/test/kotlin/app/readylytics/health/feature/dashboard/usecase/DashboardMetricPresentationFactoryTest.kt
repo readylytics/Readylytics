@@ -731,8 +731,10 @@ class DashboardMetricPresentationFactoryTest {
                 ).getValue(CardId.SLEEP_DURATION)
 
         assertEquals(MetricStatus.OPTIMAL, presentation.status)
-        assertTrue(presentation.accessibilityDescription.contains("above target"))
-        assertTrue(presentation.accessibilityDescription.contains(statusText(presentation.status)))
+        assertEquals(
+            "${presentation.title}: ${presentation.valueText}, above target, ${statusText(presentation.status)}",
+            presentation.accessibilityDescription,
+        )
     }
 
     private fun stubAccessibilityStatusText() {
@@ -754,7 +756,7 @@ class DashboardMetricPresentationFactoryTest {
         } answers {
             val formatArgs = invocation.formatArguments()
             assertEquals(3, formatArgs.size)
-            "above target, ${formatArgs[2]}"
+            "${formatArgs[0]}: ${formatArgs[1]}, above target, ${formatArgs[2]}"
         }
         every {
             resourceProvider.getString(DashboardR.string.semantics_value_note_format, *anyVararg())
