@@ -8,6 +8,7 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.toMetricStatus
@@ -18,7 +19,6 @@ import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
 import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
 import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
 import app.readylytics.health.feature.dashboard.DashboardMetricVisual
-import app.readylytics.health.feature.dashboard.RawMetricBand
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -73,6 +73,61 @@ class DashboardMetricPresentationFactory
                 unavailableReasonText(reason),
             )
 
+        private fun scoreStatus(value: Float?): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                value < 40f -> MetricStatus.POOR
+                value < 60f -> MetricStatus.WARNING
+                value < 85f -> MetricStatus.NEUTRAL
+                else -> MetricStatus.OPTIMAL
+            }
+
+        private fun sleepEfficiencyStatus(value: Float?): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                value < 70f -> MetricStatus.POOR
+                value < 80f -> MetricStatus.WARNING
+                value < 85f -> MetricStatus.NEUTRAL
+                else -> MetricStatus.OPTIMAL
+            }
+
+        private fun spo2Status(value: Float?): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                value < 90f -> MetricStatus.POOR
+                value < 95f -> MetricStatus.WARNING
+                value < 98f -> MetricStatus.NEUTRAL
+                else -> MetricStatus.OPTIMAL
+            }
+
+        private fun circadianStatus(value: Float?): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                value < 40f -> MetricStatus.POOR
+                value < 60f -> MetricStatus.WARNING
+                value < 80f -> MetricStatus.NEUTRAL
+                else -> MetricStatus.OPTIMAL
+            }
+
+        private fun strainStatus(value: Float?): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                value < 0.5f -> MetricStatus.POOR
+                value < 0.8f -> MetricStatus.WARNING
+                value < 1.3f -> MetricStatus.OPTIMAL
+                value < 1.5f -> MetricStatus.WARNING
+                else -> MetricStatus.POOR
+            }
+
+        private fun bmiStatus(value: Float?): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                value < 18.5f -> MetricStatus.POOR
+                value < 25f -> MetricStatus.OPTIMAL
+                value < 30f -> MetricStatus.WARNING
+                else -> MetricStatus.POOR
+            }
+
         fun build(
             summary: DailySummary?,
             preferences: UserPreferences,
@@ -83,14 +138,6 @@ class DashboardMetricPresentationFactory
             todayStrainIncrease: Float? = null,
         ): Map<CardId, DashboardMetricPresentation> {
             val map = mutableMapOf<CardId, DashboardMetricPresentation>()
-
-            val scoreBands =
-                listOf(
-                    RawMetricBand(0f, 40f, MetricStatus.POOR),
-                    RawMetricBand(40f, 60f, MetricStatus.WARNING),
-                    RawMetricBand(60f, 85f, MetricStatus.NEUTRAL),
-                    RawMetricBand(85f, 100f, MetricStatus.OPTIMAL),
-                )
 
             val m = if (summary != null) DailyMetricsMapper.toMetrics(summary, preferences) else null
 
@@ -109,8 +156,8 @@ class DashboardMetricPresentationFactory
                     summary?.sleepScore,
                     0f,
                     100f,
-                    scoreBands,
                 )
+            val sleepScoreStatus = scoreStatus(summary?.sleepScore)
             val sleepScoreTitle =
                 resourceProvider.getString(DashboardR.string.card_title_sleep_score)
             val sleepScoreValueText = m?.sleepScoreRounded?.toString() ?: "—"
@@ -122,7 +169,7 @@ class DashboardMetricPresentationFactory
                     sleepScoreTitle,
                     sleepScoreValueText,
                     "100",
-                    classificationText(sleepScoreVisual.getResolvedStatus()),
+                    classificationText(sleepScoreStatus),
                 )
             map[CardId.SLEEP_SCORE] =
                 DashboardMetricPresentation(
@@ -130,15 +177,19 @@ class DashboardMetricPresentationFactory
                     valueText = sleepScoreValueText,
                     unitText = "",
                     secondaryText = null,
-                    status = sleepScoreVisual.getResolvedStatus(),
+                    status = sleepScoreStatus,
                     tooltip = resourceProvider.getString(CoreUiR.string.tooltip_sleep_score),
                     accessibilityDescription = sleepScoreDescription,
                     visual = sleepScoreVisual,
                 )
 
             // 2. READINESS
-            val readinessScore = m?.readinessRounded?.toFloat()
-            val readinessVisual = DashboardMetricScalePreparer.score(readinessScore, 0f, 100f, scoreBands)
+            val readinessScore =
+                summary?.let {
+                    LoadSourceSelector.selectReadiness(it, preferences.strainLoadSourceMode)
+                }
+            val readinessVisual = DashboardMetricScalePreparer.score(readinessScore, 0f, 100f)
+            val readinessStatus = scoreStatus(readinessScore)
             val readinessTitle = resourceProvider.getString(CoreUiR.string.card_title_readiness)
             val readinessValueText = m?.readinessRounded?.toString() ?: "—"
             val readinessDescription =
@@ -149,7 +200,7 @@ class DashboardMetricPresentationFactory
                     readinessTitle,
                     readinessValueText,
                     "100",
-                    classificationText(readinessVisual.getResolvedStatus()),
+                    classificationText(readinessStatus),
                 )
             map[CardId.READINESS] =
                 DashboardMetricPresentation(
@@ -157,7 +208,7 @@ class DashboardMetricPresentationFactory
                     valueText = readinessValueText,
                     unitText = "",
                     secondaryText = null,
-                    status = readinessVisual.getResolvedStatus(),
+                    status = readinessStatus,
                     tooltip = resourceProvider.getString(CoreUiR.string.tooltip_readiness),
                     accessibilityDescription = readinessDescription,
                     visual = readinessVisual,
@@ -173,16 +224,10 @@ class DashboardMetricPresentationFactory
                     minimum = 15f,
                     midpoint = 21.7f,
                     maximum = 35f,
-                    bands =
-                        listOf(
-                            RawMetricBand(0f, 18.5f, MetricStatus.WARNING),
-                            RawMetricBand(18.5f, 25f, MetricStatus.OPTIMAL),
-                            RawMetricBand(25f, 30f, MetricStatus.WARNING),
-                            RawMetricBand(30f, 100f, MetricStatus.POOR),
-                        ),
                     scaleAvailable = isHeightValid,
                     unavailableReason = if (!isHeightValid) DashboardMetricUnavailableReason.MISSING_BMI else null,
                 )
+            val weightStatus = bmiStatus(bmi)
             val weightTitle =
                 resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_weight)
             val weightValueText = m?.weightKgDisplay?.replace(" kg", "")?.replace(" lbs", "") ?: "—"
@@ -209,7 +254,7 @@ class DashboardMetricPresentationFactory
                     app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
                     weightTitle,
                     "$weightValueText $weightUnitText",
-                    classificationText(weightVisual.getResolvedStatus()),
+                    classificationText(weightStatus),
                 )
             map[CardId.WEIGHT] =
                 DashboardMetricPresentation(
@@ -217,7 +262,7 @@ class DashboardMetricPresentationFactory
                     valueText = weightValueText,
                     unitText = weightUnitText,
                     secondaryText = null,
-                    status = weightVisual.getResolvedStatus(),
+                    status = weightStatus,
                     tooltip = weightTooltip,
                     accessibilityDescription = weightDescription,
                     visual = weightVisual,
@@ -257,7 +302,6 @@ class DashboardMetricPresentationFactory
                     minimum = bodyFatAssessment?.reference?.axisMinimum ?: 0f,
                     midpoint = bodyFatAssessment?.reference?.referenceMidpoint ?: 20f,
                     maximum = bodyFatAssessment?.reference?.axisMaximum ?: 40f,
-                    bands = emptyList(),
                     scaleAvailable = true,
                     unavailableReason = null,
                 )
@@ -301,17 +345,7 @@ class DashboardMetricPresentationFactory
                 efficiency?.let { value ->
                     if (value in 0f..1f) value * 100f else value
                 }
-            val effStatus =
-                if (efficiencyPercent != null) {
-                    when {
-                        efficiencyPercent >= 85f -> MetricStatus.OPTIMAL
-                        efficiencyPercent >= 75f -> MetricStatus.NEUTRAL
-                        efficiencyPercent >= 65f -> MetricStatus.WARNING
-                        else -> MetricStatus.POOR
-                    }
-                } else {
-                    MetricStatus.NEUTRAL
-                }
+            val effStatus = sleepEfficiencyStatus(efficiencyPercent)
 
             val effValText =
                 if (efficiencyPercent == null) {
@@ -326,12 +360,6 @@ class DashboardMetricPresentationFactory
                     efficiencyPercent,
                     0f,
                     100f,
-                    listOf(
-                        RawMetricBand(0f, 70f, MetricStatus.POOR),
-                        RawMetricBand(70f, 80f, MetricStatus.WARNING),
-                        RawMetricBand(80f, 85f, MetricStatus.NEUTRAL),
-                        RawMetricBand(85f, 100f, MetricStatus.OPTIMAL),
-                    ),
                 )
             val sleepEffTitle =
                 resourceProvider.getString(
@@ -344,7 +372,7 @@ class DashboardMetricPresentationFactory
                     DashboardR.string.semantics_value_note_format,
                     sleepEffTitle,
                     effValText,
-                    classificationText(effVisual.getResolvedStatus()),
+                    classificationText(effStatus),
                 )
             map[CardId.SLEEP_EFFICIENCY] =
                 DashboardMetricPresentation(
@@ -361,24 +389,12 @@ class DashboardMetricPresentationFactory
             // 11. OXYGEN SATURATION
             val spo2 = summary?.avgSleepingSpo2
             val roundedSpo2 = spo2?.roundToInt()
-            val spo2Status =
-                when {
-                    roundedSpo2 == null -> MetricStatus.CALIBRATING
-                    roundedSpo2 >= 95 -> MetricStatus.OPTIMAL
-                    roundedSpo2 >= 90 -> MetricStatus.WARNING
-                    else -> MetricStatus.POOR
-                }
+            val oxygenStatus = spo2Status(spo2)
             val spo2Visual =
                 DashboardMetricScalePreparer.score(
                     spo2,
                     80f,
                     100f,
-                    listOf(
-                        RawMetricBand(80f, 90f, MetricStatus.POOR),
-                        RawMetricBand(90f, 95f, MetricStatus.WARNING),
-                        RawMetricBand(95f, 98f, MetricStatus.NEUTRAL),
-                        RawMetricBand(98f, 100f, MetricStatus.OPTIMAL),
-                    ),
                 )
             val spo2Title =
                 resourceProvider.getString(
@@ -394,7 +410,7 @@ class DashboardMetricPresentationFactory
                     DashboardR.string.semantics_value_note_format,
                     spo2Title,
                     spo2ValueText,
-                    classificationText(spo2Visual.getResolvedStatus()),
+                    classificationText(oxygenStatus),
                 )
             map[CardId.OXYGEN_SATURATION] =
                 DashboardMetricPresentation(
@@ -402,7 +418,7 @@ class DashboardMetricPresentationFactory
                     valueText = spo2ValueText,
                     unitText = "",
                     secondaryText = null,
-                    status = spo2Visual.getResolvedStatus(),
+                    status = oxygenStatus,
                     tooltip = resourceProvider.getString(CoreUiR.string.tooltip_vitals_spo2),
                     accessibilityDescription = spo2Description,
                     visual = spo2Visual,
@@ -463,6 +479,7 @@ class DashboardMetricPresentationFactory
                 heartRateSummary?.let {
                     resourceProvider.getString(CoreUiR.string.hr_avg_display, it.avgBpm)
                 }
+            val hrStatus = MetricStatus.NEUTRAL
             val hrDescription =
                 if (heartRateSummary?.avgBpm == null) {
                     unavailableDescription(hrTitle, DashboardMetricUnavailableReason.MISSING_VALUE)
@@ -471,7 +488,7 @@ class DashboardMetricPresentationFactory
                         DashboardR.string.semantics_value_note_format,
                         hrTitle,
                         "$hrValueText $hrSecondaryText",
-                        classificationText(MetricStatus.NEUTRAL),
+                        classificationText(hrStatus),
                     )
                 }
             map[CardId.HEART_RATE] =
@@ -480,7 +497,7 @@ class DashboardMetricPresentationFactory
                     valueText = hrValueText,
                     unitText = "",
                     secondaryText = hrSecondaryText,
-                    status = MetricStatus.NEUTRAL,
+                    status = hrStatus,
                     tooltip = resourceProvider.getString(DashboardR.string.tooltip_heart_rate_card),
                     accessibilityDescription = hrDescription,
                     visual = DashboardMetricVisual.ValueOnly,
@@ -499,13 +516,8 @@ class DashboardMetricPresentationFactory
                     circReady?.score,
                     0f,
                     100f,
-                    listOf(
-                        RawMetricBand(0f, 40f, MetricStatus.POOR),
-                        RawMetricBand(40f, 60f, MetricStatus.WARNING),
-                        RawMetricBand(60f, 80f, MetricStatus.NEUTRAL),
-                        RawMetricBand(80f, 100f, MetricStatus.OPTIMAL),
-                    ),
                 )
+            val circStatus = circadianStatus(circReady?.score)
             val circadianDescription =
                 circVisual.unavailableReason?.let { reason ->
                     unavailableDescription(circTitle, reason)
@@ -514,7 +526,7 @@ class DashboardMetricPresentationFactory
                     circTitle,
                     circSemanticsValueText,
                     "100",
-                    classificationText(circVisual.getResolvedStatus()),
+                    classificationText(circStatus),
                 )
             map[CardId.CIRCADIAN_CONSISTENCY] =
                 DashboardMetricPresentation(
@@ -522,7 +534,7 @@ class DashboardMetricPresentationFactory
                     valueText = circValueText,
                     unitText = "",
                     secondaryText = null,
-                    status = MetricStatus.NEUTRAL,
+                    status = circStatus,
                     tooltip = resourceProvider.getString(CoreUiR.string.tooltip_circadian_score),
                     accessibilityDescription = circadianDescription,
                     visual = circVisual,
@@ -551,14 +563,8 @@ class DashboardMetricPresentationFactory
                     m?.strainRatioRaw,
                     0f,
                     2f,
-                    listOf(
-                        RawMetricBand(0f, 0.5f, MetricStatus.POOR),
-                        RawMetricBand(0.5f, 0.8f, MetricStatus.WARNING),
-                        RawMetricBand(0.8f, 1.3f, MetricStatus.OPTIMAL),
-                        RawMetricBand(1.3f, 1.5f, MetricStatus.WARNING),
-                        RawMetricBand(1.5f, 2.0f, MetricStatus.POOR),
-                    ),
                 )
+            val strainStatus = strainStatus(m?.strainRatioRaw)
             val strainDescription =
                 strainVisual.unavailableReason?.let { reason ->
                     unavailableDescription(strainTitle, reason)
@@ -566,7 +572,7 @@ class DashboardMetricPresentationFactory
                     DashboardR.string.semantics_value_note_format,
                     strainTitle,
                     strainValueText,
-                    classificationText(strainVisual.getResolvedStatus()),
+                    classificationText(strainStatus),
                 )
             map[CardId.STRAIN_RATIO] =
                 DashboardMetricPresentation(
@@ -574,9 +580,7 @@ class DashboardMetricPresentationFactory
                     valueText = strainValueText,
                     unitText = "",
                     secondaryText = strainIncreaseText,
-                    // The band-resolved status drives both the card container tint and the
-                    // Gauge/Bar active fill, so it must be the computed one, not a constant.
-                    status = strainVisual.getResolvedStatus(),
+                    status = strainStatus,
                     tooltip = resourceProvider.getString(CoreUiR.string.tooltip_strain_ratio),
                     accessibilityDescription = strainDescription,
                     visual = strainVisual,

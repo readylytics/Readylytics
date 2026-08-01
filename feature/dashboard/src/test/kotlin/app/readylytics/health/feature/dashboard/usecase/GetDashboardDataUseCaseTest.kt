@@ -208,7 +208,7 @@ class GetDashboardDataUseCaseTest {
     }
 
     @Test
-    fun invoke_withNormalSpo2_returnsNormalSpo2Card() {
+    fun invoke_withNeutralSpo2_returnsNeutralSpo2Card() {
         val summary =
             mockk<DailySummary>(relaxed = true) {
                 every { avgSleepingSpo2 } returns 95.2f

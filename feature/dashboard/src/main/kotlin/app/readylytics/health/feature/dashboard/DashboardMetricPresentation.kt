@@ -9,19 +9,12 @@ enum class DashboardMetricUnavailableReason {
     MISSING_BMI,
 }
 
-data class DashboardMetricBand(
-    val startFraction: Float,
-    val endFraction: Float,
-    val status: MetricStatus,
-)
-
 sealed interface DashboardMetricVisual {
     data class Score(
         val rawValue: Float?,
         val minValue: Float,
         val maxValue: Float,
         val markerFraction: Float?,
-        val bands: List<DashboardMetricBand>,
         val unavailableReason: DashboardMetricUnavailableReason?,
     ) : DashboardMetricVisual
 
@@ -31,7 +24,6 @@ sealed interface DashboardMetricVisual {
         val markerFraction: Float?,
         val targetMarkerFraction: Float?,
         val isAboveTarget: Boolean,
-        val bands: List<DashboardMetricBand>,
         val selectionAvailable: Boolean,
         val unavailableReason: DashboardMetricUnavailableReason?,
     ) : DashboardMetricVisual
@@ -42,7 +34,6 @@ sealed interface DashboardMetricVisual {
         val ratio: Float?,
         val markerFraction: Float?,
         val baselineMarkerFraction: Float,
-        val bands: List<DashboardMetricBand>,
         val selectionAvailable: Boolean,
         val unavailableReason: DashboardMetricUnavailableReason?,
     ) : DashboardMetricVisual
@@ -51,7 +42,6 @@ sealed interface DashboardMetricVisual {
         val rawValue: Float?,
         val markerFraction: Float?,
         val referenceMarkerFraction: Float?,
-        val bands: List<DashboardMetricBand>,
         val selectionAvailable: Boolean,
         val unavailableReason: DashboardMetricUnavailableReason?,
     ) : DashboardMetricVisual

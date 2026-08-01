@@ -6,6 +6,7 @@ import app.readylytics.health.domain.model.BaselineArrow
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.hrvStatus
@@ -18,7 +19,6 @@ import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
 import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
 import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
-import app.readylytics.health.feature.dashboard.RawMetricBand
 import kotlin.math.abs
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
@@ -38,7 +38,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
             CardId.HRV to hrvPresentation(summary, metrics, preferences),
             CardId.SLEEP_RHR to rhrPresentation(summary, metrics, preferences, isSleep = true),
             CardId.RESTING_HR to rhrPresentation(summary, metrics, preferences, isSleep = false),
-            CardId.RAS_DAILY to rasPresentation(metrics),
+            CardId.RAS_DAILY to rasPresentation(summary, metrics, preferences),
         )
 
     private fun sleepDurationPresentation(
@@ -52,28 +52,29 @@ internal class DashboardRecoveryMetricPresentationFactory(
             DashboardMetricScalePreparer.goal(
                 value = summary?.sleepDurationMinutes?.toFloat(),
                 target = goalMinutes.toFloat(),
-                bands = emptyList(),
             )
         val title = resourceProvider.getString(DashboardR.string.card_title_sleep_duration)
         val valueText = metrics?.sleepDurationDisplay ?: "—"
         val goalText = DailyMetricsMapper.formatSleepDuration(goalMinutes) ?: "—"
+        val status = summary?.sleepDurationStatus(goalMinutes) ?: MetricStatus.CALIBRATING
         val description =
             when {
                 durationVisual.unavailableReason != null ->
                     unavailableDescription(title, durationVisual.unavailableReason)
                 durationVisual.isAboveTarget ->
                     resourceProvider.getString(
-                        DashboardR.string.semantics_value_note_format,
+                        DashboardR.string.semantics_goal_above_target_status_format,
                         title,
                         valueText,
-                        resourceProvider.getString(DashboardR.string.goal_above_target_description),
+                        classificationText(status),
                     )
                 else ->
                     resourceProvider.getString(
-                        DashboardR.string.semantics_goal_format,
+                        DashboardR.string.semantics_goal_status_format,
                         title,
                         valueText,
                         goalText,
+                        classificationText(status),
                     )
             }
         val tooltip = resourceProvider.getString(CoreUiR.string.tooltip_sleep_duration, goalText)
@@ -90,7 +91,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
                         formatTime(session.endTime),
                     )
                 },
-            status = summary?.sleepDurationStatus(goalMinutes) ?: MetricStatus.CALIBRATING,
+            status = status,
             tooltip = tooltip,
             accessibilityDescription = description,
             visual = durationVisual,
@@ -110,7 +111,6 @@ internal class DashboardRecoveryMetricPresentationFactory(
                 baseline = baseline,
                 axisMinimumRatio = poorRatio,
                 axisMaximumRatio = 1f + (1f - poorRatio),
-                bands = hrvBands(baseline, poorRatio, prefs),
                 baselineReady = summary?.isCalibrating == false && baseline != null && baseline > 0f,
             )
         val status =
@@ -143,6 +143,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
                         prefs.hrvOptimalThreshold,
                         prefs.hrvWarningThreshold,
                         higherIsBetter = true,
+                        status = status,
                     ),
             visual = visual,
         )
@@ -190,23 +191,26 @@ internal class DashboardRecoveryMetricPresentationFactory(
                         prefs.rhrOptimalThreshold,
                         prefs.rhrWarningThreshold,
                         higherIsBetter = false,
+                        status = status,
                     ),
             visual = visual,
         )
     }
 
-    private fun rasPresentation(metrics: DailyMetrics?): DashboardMetricPresentation {
-        val value = metrics?.rasRounded?.toFloat()
+    private fun rasPresentation(
+        summary: DailySummary?,
+        metrics: DailyMetrics?,
+        preferences: UserPreferences,
+    ): DashboardMetricPresentation {
+        val value =
+            summary?.let {
+                LoadSourceSelector.selectTotalRas(it, preferences.rasSourceMode)
+            }
         val visual =
             DashboardMetricScalePreparer.score(
                 value,
                 0f,
                 100f,
-                listOf(
-                    RawMetricBand(0f, 50f, MetricStatus.POOR),
-                    RawMetricBand(50f, 75f, MetricStatus.WARNING),
-                    RawMetricBand(75f, 100f, MetricStatus.OPTIMAL),
-                ),
             )
         val title = resourceProvider.getString(DashboardR.string.card_title_ras_daily)
         val valueText = metrics?.rasRounded?.toString() ?: "—"
@@ -244,40 +248,9 @@ internal class DashboardRecoveryMetricPresentationFactory(
             baseline = baseline,
             axisMinimumRatio = 1f - (poorRatio - 1f),
             axisMaximumRatio = poorRatio,
-            bands = rhrBands(baseline, poorRatio, prefs),
             baselineReady = summary?.isCalibrating == false && baseline != null && baseline > 0f,
         )
     }
-
-    private fun hrvBands(
-        baseline: Float?,
-        poorRatio: Float,
-        prefs: UserPreferences,
-    ): List<RawMetricBand> =
-        baseline?.let {
-            val warning = prefs.hrvWarningThreshold
-            val optimal = prefs.hrvOptimalThreshold
-            listOf(
-                RawMetricBand(it * poorRatio, it * warning, MetricStatus.WARNING),
-                RawMetricBand(it * warning, it * optimal, MetricStatus.NEUTRAL),
-                RawMetricBand(it * optimal, it * (1f + (1f - poorRatio)), MetricStatus.OPTIMAL),
-            )
-        } ?: emptyList()
-
-    private fun rhrBands(
-        baseline: Float?,
-        poorRatio: Float,
-        prefs: UserPreferences,
-    ): List<RawMetricBand> =
-        baseline?.let {
-            val optimal = prefs.rhrOptimalThreshold
-            val warning = prefs.rhrWarningThreshold
-            listOf(
-                RawMetricBand(it * (1f - (poorRatio - 1f)), it * optimal, MetricStatus.OPTIMAL),
-                RawMetricBand(it * optimal, it * warning, MetricStatus.NEUTRAL),
-                RawMetricBand(it * warning, it * poorRatio, MetricStatus.WARNING),
-            )
-        } ?: emptyList()
 
     private fun personalBaselineDescription(
         title: String,
@@ -286,6 +259,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
         optimalThreshold: Float,
         warningThreshold: Float,
         higherIsBetter: Boolean,
+        status: MetricStatus,
     ): String {
         val lowerBound = 1f - (warningThreshold + (warningThreshold - 1f) - 1f)
         val relation =
@@ -301,10 +275,11 @@ internal class DashboardRecoveryMetricPresentationFactory(
                 else -> DashboardR.string.personal_baseline_within_range_description
             }
         return resourceProvider.getString(
-            DashboardR.string.semantics_value_note_format,
+            DashboardR.string.semantics_value_note_status_format,
             title,
             valueText,
             resourceProvider.getString(relation),
+            classificationText(status),
         )
     }
 

@@ -50,7 +50,7 @@ fun hrZoneColors(): HrZoneColors {
  * (RHR, HRV, Blood Pressure) while keeping the opacity values configurable.
  */
 fun zoneBandColors(
-    bands: List<ZoneBand>,
+    zoneBands: List<ZoneBand>,
     extendedColors: ExtendedColors,
     primaryContainer: Color,
     errorContainer: Color,
@@ -59,7 +59,7 @@ fun zoneBandColors(
     warningAlpha: Float = ChartZoneAlphas.HIGH,
     criticalAlpha: Float = ChartZoneAlphas.HIGH,
 ): List<Color> =
-    bands.map { band ->
+    zoneBands.map { band ->
         when (band.zone) {
             HealthZone.OPTIMAL -> primaryContainer.copy(alpha = optimalAlpha)
             HealthZone.NEUTRAL -> extendedColors.neutralContainer.copy(alpha = neutralAlpha)
@@ -70,7 +70,7 @@ fun zoneBandColors(
 
 @Composable
 fun rememberZoneBandColors(
-    bands: List<ZoneBand>,
+    zoneBands: List<ZoneBand>,
     extendedColors: ExtendedColors,
     primaryContainer: Color,
     errorContainer: Color,
@@ -80,7 +80,7 @@ fun rememberZoneBandColors(
     criticalAlpha: Float = ChartZoneAlphas.HIGH,
 ): List<Color> =
     remember(
-        bands,
+        zoneBands,
         extendedColors,
         primaryContainer,
         errorContainer,
@@ -90,7 +90,7 @@ fun rememberZoneBandColors(
         criticalAlpha,
     ) {
         zoneBandColors(
-            bands = bands,
+            zoneBands = zoneBands,
             extendedColors = extendedColors,
             primaryContainer = primaryContainer,
             errorContainer = errorContainer,

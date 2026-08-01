@@ -246,6 +246,16 @@ _Implemented in: `BodyCompositionAssessment.kt`, `BmiService.kt`, `HealthMetrics
 
 ---
 
+## Overnight Oxygen Saturation
+
+The dashboard card uses your overnight average oxygen saturation. Overnight oxygen
+saturation: below 90% Poor; 90–94% Warning; 95–97% Neutral; 98% and above Optimal.
+
+This means an overnight average of 96% is Neutral. The status describes the displayed
+overnight average rather than a scoring-engine calculation.
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:

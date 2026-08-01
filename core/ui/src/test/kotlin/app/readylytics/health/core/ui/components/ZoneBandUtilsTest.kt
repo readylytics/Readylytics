@@ -28,7 +28,7 @@ class ZoneBandUtilsTest {
 
     @Test
     fun `zoneBandColors maps health zones to correct colors and alphas`() {
-        val bands =
+        val zoneBands =
             listOf(
                 ZoneBand(80.0, 100.0, HealthZone.OPTIMAL),
                 ZoneBand(60.0, 80.0, HealthZone.NEUTRAL),
@@ -38,7 +38,7 @@ class ZoneBandUtilsTest {
 
         val colors =
             zoneBandColors(
-                bands = bands,
+                zoneBands = zoneBands,
                 extendedColors = dummyExtendedColors,
                 primaryContainer = primaryContainer,
                 errorContainer = errorContainer,
@@ -53,7 +53,7 @@ class ZoneBandUtilsTest {
 
     @Test
     fun `zoneBandColors respects custom alpha values`() {
-        val bands =
+        val zoneBands =
             listOf(
                 ZoneBand(80.0, 100.0, HealthZone.OPTIMAL),
                 ZoneBand(60.0, 80.0, HealthZone.NEUTRAL),
@@ -63,7 +63,7 @@ class ZoneBandUtilsTest {
 
         val colors =
             zoneBandColors(
-                bands = bands,
+                zoneBands = zoneBands,
                 extendedColors = dummyExtendedColors,
                 primaryContainer = primaryContainer,
                 errorContainer = errorContainer,

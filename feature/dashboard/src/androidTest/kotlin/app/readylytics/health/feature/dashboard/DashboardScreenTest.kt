@@ -215,7 +215,6 @@ class DashboardScreenTest {
                         minValue = 0f,
                         maxValue = 100f,
                         markerFraction = 0.55f,
-                        bands = emptyList(),
                         unavailableReason = null,
                     ),
             )

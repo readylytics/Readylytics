@@ -141,7 +141,7 @@ fun BloodPressureTrendChart(
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val systolicColor = MaterialTheme.colorScheme.primary
     val diastolicColor = MaterialTheme.colorScheme.tertiaryContainer
-    val bands =
+    val zoneBands =
         app.readylytics.health.domain.model
             .systolicZoneBands()
     // Define colors and containers for blood pressure chart
@@ -149,13 +149,16 @@ fun BloodPressureTrendChart(
     // Use generic utility for colors; increase optimal opacity for better distinction
     val colors =
         rememberZoneBandColors(
-            bands = bands,
+            zoneBands = zoneBands,
             extendedColors = extendedColors,
             primaryContainer = primaryContainer,
             errorContainer = errorContainer,
             optimalAlpha = 0.45f,
         )
-    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
+    val zoneBandDecoration =
+        remember(zoneBands, colors, minY, maxY) {
+            ZoneBandDecoration(zoneBands, colors, minY, maxY)
+        }
 
     val modelProducer = remember { CartesianChartModelProducer() }
 

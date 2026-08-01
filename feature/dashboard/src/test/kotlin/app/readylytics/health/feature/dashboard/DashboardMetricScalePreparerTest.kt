@@ -17,7 +17,7 @@ class DashboardMetricScalePreparerTest {
 
     @Test
     fun `goal retains above target value while marker clamps`() {
-        val visual = DashboardMetricScalePreparer.goal(600f, 480f, emptyList())
+        val visual = DashboardMetricScalePreparer.goal(600f, 480f)
         assertEquals(600f, visual.rawValue)
         assertEquals(1f, visual.markerFraction)
         assertTrue(visual.isAboveTarget)
@@ -31,7 +31,6 @@ class DashboardMetricScalePreparerTest {
                 baseline = null,
                 axisMinimumRatio = 0.8f,
                 axisMaximumRatio = 1.2f,
-                bands = emptyList(),
                 baselineReady = false,
             )
         assertEquals(41f, visual.rawValue)
@@ -41,52 +40,52 @@ class DashboardMetricScalePreparerTest {
 
     @Test
     fun `score handles values below, inside, and above range`() {
-        val visual = DashboardMetricScalePreparer.score(15f, 10f, 20f, emptyList())
+        val visual = DashboardMetricScalePreparer.score(15f, 10f, 20f)
         assertEquals(0.5f, visual.markerFraction!!, 0.001f)
 
-        val visualBelow = DashboardMetricScalePreparer.score(5f, 10f, 20f, emptyList())
+        val visualBelow = DashboardMetricScalePreparer.score(5f, 10f, 20f)
         assertEquals(0f, visualBelow.markerFraction!!, 0.001f)
 
-        val visualAbove = DashboardMetricScalePreparer.score(25f, 10f, 20f, emptyList())
+        val visualAbove = DashboardMetricScalePreparer.score(25f, 10f, 20f)
         assertEquals(1f, visualAbove.markerFraction!!, 0.001f)
     }
 
     @Test
     fun `goal unavailable states with target null, target 0, or missing value`() {
-        val nullTarget = DashboardMetricScalePreparer.goal(10f, null, emptyList())
+        val nullTarget = DashboardMetricScalePreparer.goal(10f, null)
         assertEquals(DashboardMetricUnavailableReason.MISSING_TARGET, nullTarget.unavailableReason)
         assertFalse(nullTarget.selectionAvailable)
         assertEquals(10f, nullTarget.rawValue)
 
-        val zeroTarget = DashboardMetricScalePreparer.goal(10f, 0f, emptyList())
+        val zeroTarget = DashboardMetricScalePreparer.goal(10f, 0f)
         assertEquals(DashboardMetricUnavailableReason.MISSING_TARGET, zeroTarget.unavailableReason)
         assertFalse(zeroTarget.selectionAvailable)
         assertEquals(10f, zeroTarget.rawValue)
 
-        val negativeTarget = DashboardMetricScalePreparer.goal(10f, -5f, emptyList())
+        val negativeTarget = DashboardMetricScalePreparer.goal(10f, -5f)
         assertEquals(DashboardMetricUnavailableReason.MISSING_TARGET, negativeTarget.unavailableReason)
         assertFalse(negativeTarget.selectionAvailable)
         assertEquals(10f, negativeTarget.rawValue)
 
-        val missingValue = DashboardMetricScalePreparer.goal(null, 10f, emptyList())
+        val missingValue = DashboardMetricScalePreparer.goal(null, 10f)
         assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, missingValue.unavailableReason)
         assertTrue(missingValue.selectionAvailable)
     }
 
     @Test
     fun `score with missing value remains selectable and reports em dash reason without a marker`() {
-        val visual = DashboardMetricScalePreparer.score(null, 0f, 100f, emptyList())
+        val visual = DashboardMetricScalePreparer.score(null, 0f, 100f)
         assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
         assertEquals(null, visual.markerFraction)
     }
 
     @Test
     fun `score treats an explicit zero reading as real data distinct from a missing value`() {
-        val realZero = DashboardMetricScalePreparer.score(0f, 0f, 100f, emptyList())
+        val realZero = DashboardMetricScalePreparer.score(0f, 0f, 100f)
         assertEquals(null, realZero.unavailableReason)
         assertEquals(0f, realZero.markerFraction)
 
-        val missing = DashboardMetricScalePreparer.score(null, 0f, 100f, emptyList())
+        val missing = DashboardMetricScalePreparer.score(null, 0f, 100f)
         assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, missing.unavailableReason)
         assertEquals(null, missing.markerFraction)
     }
@@ -99,7 +98,6 @@ class DashboardMetricScalePreparerTest {
                 baseline = 50f,
                 axisMinimumRatio = 0.8f,
                 axisMaximumRatio = 1.2f,
-                bands = emptyList(),
                 baselineReady = false,
             )
         assertEquals(41f, visual.rawValue)
@@ -116,7 +114,6 @@ class DashboardMetricScalePreparerTest {
                 minimum = 15f,
                 midpoint = 21.7f,
                 maximum = 35f,
-                bands = emptyList(),
                 scaleAvailable = false,
                 unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
             )
@@ -134,7 +131,6 @@ class DashboardMetricScalePreparerTest {
                 baseline = 50f,
                 axisMinimumRatio = 0.5f,
                 axisMaximumRatio = 1.5f,
-                bands = emptyList(),
                 baselineReady = true,
             )
         assertEquals(0.8f, belowRatio.ratio!!, 0.001f)
@@ -145,7 +141,6 @@ class DashboardMetricScalePreparerTest {
                 baseline = 50f,
                 axisMinimumRatio = 0.5f,
                 axisMaximumRatio = 1.5f,
-                bands = emptyList(),
                 baselineReady = true,
             )
         assertEquals(1.2f, aboveRatio.ratio!!, 0.001f)
@@ -159,7 +154,6 @@ class DashboardMetricScalePreparerTest {
                 baseline = 50f,
                 axisMinimumRatio = 0.8f,
                 axisMaximumRatio = 1.2f,
-                bands = emptyList(),
                 baselineReady = true,
             )
 
@@ -173,18 +167,15 @@ class DashboardMetricScalePreparerTest {
     }
 
     @Test
-    fun `normalized band ordering preserves statuses`() {
-        val bands =
-            listOf(
-                RawMetricBand(10f, 15f, app.readylytics.health.domain.model.MetricStatus.OPTIMAL),
-                RawMetricBand(15f, 20f, app.readylytics.health.domain.model.MetricStatus.NEUTRAL),
-            )
-        val score = DashboardMetricScalePreparer.score(15f, 10f, 20f, bands)
-        assertEquals(0f, score.bands[0].startFraction, 0.001f)
-        assertEquals(0.5f, score.bands[0].endFraction, 0.001f)
-        assertEquals(app.readylytics.health.domain.model.MetricStatus.OPTIMAL, score.bands[0].status)
-        assertEquals(0.5f, score.bands[1].startFraction, 0.001f)
-        assertEquals(1f, score.bands[1].endFraction, 0.001f)
-        assertEquals(app.readylytics.health.domain.model.MetricStatus.NEUTRAL, score.bands[1].status)
+    fun `scale preparers retain geometry without status bands`() {
+        val score = DashboardMetricScalePreparer.score(15f, 10f, 20f)
+        val goal = DashboardMetricScalePreparer.goal(600f, 480f)
+        val baseline = DashboardMetricScalePreparer.personalBaseline(50f, 50f, 0.8f, 1.2f, true)
+        val reference = DashboardMetricScalePreparer.referenceRange(21.7f, 15f, 21.7f, 35f, true, null)
+
+        assertEquals(0.5f, score.markerFraction!!, 0.001f)
+        assertEquals(1f, goal.markerFraction!!, 0.001f)
+        assertEquals(0.5f, baseline.markerFraction!!, 0.001f)
+        assertEquals(0.5f, reference.markerFraction!!, 0.001f)
     }
 }

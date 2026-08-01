@@ -221,9 +221,12 @@ fun TrendChart(
     val extendedColors = LocalExtendedColors.current
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
-    val bands = zoneBands ?: emptyList()
-    val colors = rememberZoneBandColors(bands, extendedColors, primaryContainer, errorContainer)
-    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
+    val chartZoneBands = zoneBands ?: emptyList()
+    val colors = rememberZoneBandColors(chartZoneBands, extendedColors, primaryContainer, errorContainer)
+    val zoneBandDecoration =
+        remember(chartZoneBands, colors, minY, maxY) {
+            ZoneBandDecoration(chartZoneBands, colors, minY, maxY)
+        }
 
     val markerVisibilityListener =
         rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->

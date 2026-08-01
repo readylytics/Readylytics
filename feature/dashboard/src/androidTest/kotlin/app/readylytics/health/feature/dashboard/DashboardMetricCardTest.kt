@@ -68,7 +68,6 @@ class DashboardMetricCardTest {
                     minValue = 0f,
                     maxValue = 100f,
                     markerFraction = 0.85f,
-                    bands = emptyList(),
                     unavailableReason = null,
                 ),
         )
@@ -104,7 +103,6 @@ class DashboardMetricCardTest {
                         markerFraction = 0.5f,
                         targetMarkerFraction = null,
                         isAboveTarget = false,
-                        bands = emptyList(),
                         selectionAvailable = false,
                         unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET,
                     ),
@@ -144,7 +142,6 @@ class DashboardMetricCardTest {
                         markerFraction = 0.5f,
                         targetMarkerFraction = null,
                         isAboveTarget = false,
-                        bands = emptyList(),
                         selectionAvailable = false,
                         unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET,
                     ),
@@ -198,7 +195,6 @@ class DashboardMetricCardTest {
                         minValue = 0f,
                         maxValue = 100f,
                         markerFraction = null,
-                        bands = emptyList(),
                         unavailableReason = DashboardMetricUnavailableReason.MISSING_VALUE,
                     ),
             )
@@ -241,7 +237,6 @@ class DashboardMetricCardTest {
                         ratio = null,
                         markerFraction = null,
                         baselineMarkerFraction = 0f,
-                        bands = emptyList(),
                         selectionAvailable = false,
                         unavailableReason = DashboardMetricUnavailableReason.BASELINE_NOT_READY,
                     ),
@@ -281,7 +276,6 @@ class DashboardMetricCardTest {
                         rawValue = null,
                         markerFraction = null,
                         referenceMarkerFraction = null,
-                        bands = emptyList(),
                         selectionAvailable = false,
                         unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
                     ),
@@ -332,7 +326,7 @@ class DashboardMetricCardTest {
                 title = title,
                 valueText = "85",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f, emptyList()),
+                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f),
             )
 
         composeRule.setContent {
@@ -351,15 +345,16 @@ class DashboardMetricCardTest {
 
     @Test
     fun sleepDurationSemanticsCommunicateValueAndTarget() {
+        val classification = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
         val title = string(R.string.card_title_sleep_duration)
-        val expectedDescription = string(R.string.semantics_goal_format, title, "7h 30m", "8h 0m")
+        val expectedDescription = string(R.string.semantics_goal_format, title, "7h 30m", "8h 0m", classification)
 
         val presentation =
             defaultPresentation.copy(
                 title = title,
                 valueText = "7h 30m",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.goal(450f, 480f, emptyList()),
+                visual = DashboardMetricScalePreparer.goal(450f, 480f),
             )
 
         composeRule.setContent {
@@ -394,7 +389,6 @@ class DashboardMetricCardTest {
                         baseline = 50f,
                         axisMinimumRatio = 0.5f,
                         axisMaximumRatio = 1.5f,
-                        bands = emptyList(),
                         baselineReady = true,
                     ),
             )
@@ -434,7 +428,6 @@ class DashboardMetricCardTest {
                         minimum = 15f,
                         midpoint = 21.7f,
                         maximum = 35f,
-                        bands = emptyList(),
                         scaleAvailable = true,
                         unavailableReason = null,
                     ),
@@ -472,7 +465,6 @@ class DashboardMetricCardTest {
                         minimum = 10f,
                         midpoint = 20f,
                         maximum = 30f,
-                        bands = emptyList(),
                         scaleAvailable = true,
                         unavailableReason = null,
                     ),
@@ -503,7 +495,7 @@ class DashboardMetricCardTest {
                 title = title,
                 valueText = "80",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(80f, 0f, 100f, emptyList()),
+                visual = DashboardMetricScalePreparer.score(80f, 0f, 100f),
             )
 
         composeRule.setContent {
@@ -538,7 +530,6 @@ class DashboardMetricCardTest {
                         baseline = 55f,
                         axisMinimumRatio = 0.5f,
                         axisMaximumRatio = 1.5f,
-                        bands = emptyList(),
                         baselineReady = true,
                     ),
             )
@@ -575,7 +566,6 @@ class DashboardMetricCardTest {
                         baseline = 60f,
                         axisMinimumRatio = 0.5f,
                         axisMaximumRatio = 1.5f,
-                        bands = emptyList(),
                         baselineReady = true,
                     ),
             )
@@ -605,7 +595,7 @@ class DashboardMetricCardTest {
                 title = title,
                 valueText = "85",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f, emptyList()),
+                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f),
             )
 
         composeRule.setContent {
@@ -634,7 +624,7 @@ class DashboardMetricCardTest {
                 valueText = "88",
                 unitText = "%",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(88f, 0f, 100f, emptyList()),
+                visual = DashboardMetricScalePreparer.score(88f, 0f, 100f),
             )
 
         composeRule.setContent {
@@ -663,7 +653,7 @@ class DashboardMetricCardTest {
                 valueText = "98",
                 unitText = "%",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(98f, 80f, 100f, emptyList()),
+                visual = DashboardMetricScalePreparer.score(98f, 80f, 100f),
             )
 
         composeRule.setContent {
@@ -749,7 +739,7 @@ class DashboardMetricCardTest {
                 title = title,
                 valueText = "85",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f, emptyList()),
+                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f),
             )
 
         composeRule.setContent {
@@ -777,7 +767,7 @@ class DashboardMetricCardTest {
                 title = title,
                 valueText = "1.10",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(1.1f, 0f, 2f, emptyList()),
+                visual = DashboardMetricScalePreparer.score(1.1f, 0f, 2f),
             )
 
         composeRule.setContent {
@@ -796,11 +786,11 @@ class DashboardMetricCardTest {
 
     @Test
     fun goalAboveTargetSemanticsCommunicateAboveTargetState() {
+        val classification = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
         val title = string(R.string.card_title_sleep_duration)
-        val aboveTarget = string(R.string.goal_above_target_description)
-        val expectedDescription = string(R.string.semantics_value_note_format, title, "520", aboveTarget)
+        val expectedDescription = string(R.string.semantics_goal_above_target_format, title, "520", classification)
 
-        val goalVisual = DashboardMetricScalePreparer.goal(520f, 480f, emptyList())
+        val goalVisual = DashboardMetricScalePreparer.goal(520f, 480f)
         check(goalVisual.isAboveTarget) { "Fixture must exercise the above-target branch" }
 
         val presentation =
@@ -836,7 +826,7 @@ class DashboardMetricCardTest {
                 title = title,
                 valueText = "—",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.goal(null, null, emptyList()),
+                visual = DashboardMetricScalePreparer.goal(null, null),
             )
 
         composeRule.setContent {
@@ -870,7 +860,6 @@ class DashboardMetricCardTest {
                         baseline = null,
                         axisMinimumRatio = 0.5f,
                         axisMaximumRatio = 1.5f,
-                        bands = emptyList(),
                         baselineReady = false,
                     ),
             )
