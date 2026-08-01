@@ -14,7 +14,6 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
 import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
@@ -77,19 +76,20 @@ class DashboardMetricPresentationFactory
         private fun scoreStatus(value: Float?): MetricStatus =
             when {
                 value == null -> MetricStatus.CALIBRATING
-                value >= 85f -> MetricStatus.OPTIMAL
-                value >= 60f -> MetricStatus.NEUTRAL
-                value >= 40f -> MetricStatus.WARNING
-                else -> MetricStatus.POOR
+                value <= 40f && value >= 0f -> MetricStatus.POOR
+                value <= 60f && value >= 40f -> MetricStatus.WARNING
+                value <= 85f && value >= 60f -> MetricStatus.NEUTRAL
+                value <= 100f && value >= 85f -> MetricStatus.OPTIMAL
+                else -> MetricStatus.NEUTRAL
             }
 
         private fun strainStatus(value: Float?): MetricStatus =
             when {
                 value == null -> MetricStatus.CALIBRATING
-                value < 0.5f -> MetricStatus.POOR
-                value < 0.8f -> MetricStatus.WARNING
-                value < 1.3f -> MetricStatus.OPTIMAL
-                value < 1.5f -> MetricStatus.WARNING
+                value <= 0.5f -> MetricStatus.POOR
+                value <= 0.8f -> MetricStatus.WARNING
+                value <= 1.3f -> MetricStatus.OPTIMAL
+                value <= 1.5f -> MetricStatus.WARNING
                 else -> MetricStatus.POOR
             }
 
@@ -368,10 +368,9 @@ class DashboardMetricPresentationFactory
             val roundedSpo2 = spo2?.roundToInt()
             val spo2Status =
                 when {
-                    spo2 == null -> MetricStatus.CALIBRATING
-                    spo2 >= 98f -> MetricStatus.OPTIMAL
-                    spo2 >= 95f -> MetricStatus.NEUTRAL
-                    spo2 >= 90f -> MetricStatus.WARNING
+                    roundedSpo2 == null -> MetricStatus.CALIBRATING
+                    roundedSpo2 >= 95 -> MetricStatus.OPTIMAL
+                    roundedSpo2 >= 90 -> MetricStatus.WARNING
                     else -> MetricStatus.POOR
                 }
             val spo2Visual =
@@ -500,7 +499,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     100f,
                 )
-            val circadianStatus = circadianResult?.toStatus() ?: MetricStatus.CALIBRATING
+            val circadianStatus = MetricStatus.NEUTRAL
             val circadianDescription =
                 circVisual.unavailableReason?.let { reason ->
                     unavailableDescription(circTitle, reason)

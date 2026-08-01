@@ -152,6 +152,31 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
+    fun `score statuses preserve the legacy first-match boundaries and fallback`() {
+        val expectations =
+            listOf(
+                40f to MetricStatus.POOR,
+                60f to MetricStatus.WARNING,
+                85f to MetricStatus.NEUTRAL,
+                101f to MetricStatus.NEUTRAL,
+            )
+
+        expectations.forEach { (score, expectedStatus) ->
+            val cards =
+                factory.build(
+                    summary().copy(sleepScore = score),
+                    preferences(),
+                    date,
+                    null,
+                    null,
+                    null,
+                )
+
+            assertEquals(expectedStatus, cards.getValue(CardId.SLEEP_SCORE).status)
+        }
+    }
+
+    @Test
     fun `readiness status uses the selected continuous score rather than its rounded display value`() {
         val cards =
             factory.build(
@@ -275,7 +300,7 @@ class DashboardMetricPresentationFactoryTest {
         val visual = presentation.visual as DashboardMetricVisual.Score
 
         assertEquals("95%", presentation.valueText)
-        assertEquals(MetricStatus.OPTIMAL, presentation.status)
+        assertEquals(MetricStatus.NEUTRAL, presentation.status)
         assertEquals(95.4f, visual.rawValue)
         assertEquals("Circadian: 95 of 100, mock_string", presentation.accessibilityDescription)
     }
@@ -369,6 +394,21 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
+    fun `spo2 status uses the rounded legacy classification`() {
+        val cards =
+            factory.build(
+                summary().copy(avgSleepingSpo2 = 94.6f),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        assertEquals(MetricStatus.OPTIMAL, cards.getValue(CardId.OXYGEN_SATURATION).status)
+    }
+
+    @Test
     fun `spo2 uses 80 to 100 bounds`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         val visual = cards.getValue(CardId.OXYGEN_SATURATION).visual as DashboardMetricVisual.Score
@@ -399,11 +439,13 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
-    fun `strain ratio uses the dashboard raw-status boundaries`() {
+    fun `strain ratio preserves the legacy first-match boundaries`() {
         val expectations =
             listOf(
-                1.3f to MetricStatus.WARNING,
-                1.5f to MetricStatus.POOR,
+                0.5f to MetricStatus.POOR,
+                0.8f to MetricStatus.WARNING,
+                1.3f to MetricStatus.OPTIMAL,
+                1.5f to MetricStatus.WARNING,
                 1.7f to MetricStatus.POOR,
             )
 
