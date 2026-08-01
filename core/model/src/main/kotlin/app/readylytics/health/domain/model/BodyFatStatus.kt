@@ -8,6 +8,4 @@ sealed class BodyFatStatus {
     object Warning : BodyFatStatus()
 
     object Poor : BodyFatStatus()
-
-    object Calibrating : BodyFatStatus()
 }

@@ -31,10 +31,27 @@ enum class BodyFatCategory {
     ABOVE_REFERENCE,
 }
 
+/** A canonical BMI classification band with an inclusive lower and exclusive upper boundary. */
+data class BmiBand(
+    val category: BmiCategory,
+    val status: BmiStatus,
+    val minimumInclusive: Float?,
+    val maximumExclusive: Float?,
+)
+
+/** Axis anchors and canonical classification bands for rendering a BMI reference visualization. */
+data class BmiReference(
+    val axisMinimum: Float,
+    val referenceMidpoint: Float,
+    val axisMaximum: Float,
+    val bands: List<BmiBand>,
+)
+
 /** Result of classifying a BMI value: its category plus the [BmiStatus] shown on cards. */
 data class BmiAssessment(
     val category: BmiCategory,
     val status: BmiStatus,
+    val reference: BmiReference,
 )
 
 /**
@@ -67,6 +84,12 @@ data class BodyFatAssessment(
  * visualization-modes plan; scoring formulas elsewhere are untouched.
  */
 object BodyCompositionAssessment {
+    private const val BMI_AXIS_MINIMUM = 15f
+    private const val BMI_REFERENCE_MIDPOINT = 21.7f
+    private const val BMI_AXIS_MAXIMUM = 35f
+    private const val BMI_HEALTHY_MINIMUM = 18.5f
+    private const val BMI_OVERWEIGHT_MINIMUM = 25f
+    private const val BMI_OBESITY_MINIMUM = 30f
     private const val MALE_ESSENTIAL_MIN = 2f
     private const val MALE_OBESE_MIN = 25f
     private const val FEMALE_ESSENTIAL_MIN = 10f
@@ -75,14 +98,40 @@ object BodyCompositionAssessment {
     private const val FIXED_REFERENCE_MAX = 30f
     private const val FIXED_MIDPOINT = 20f
 
-    /** Classify a BMI value using the WHO-aligned 18.5 / 25 / 30 thresholds. */
-    fun assessBmi(bmi: Float): BmiAssessment =
-        when {
-            bmi < 18.5f -> BmiAssessment(BmiCategory.UNDERWEIGHT, BmiStatus.Warning)
-            bmi < 25f -> BmiAssessment(BmiCategory.HEALTHY_WEIGHT, BmiStatus.Optimal)
-            bmi < 30f -> BmiAssessment(BmiCategory.OVERWEIGHT, BmiStatus.Warning)
-            else -> BmiAssessment(BmiCategory.OBESITY, BmiStatus.Poor)
-        }
+    /** Canonical BMI reference bands and visual-only axis anchors. */
+    val bmiReference =
+        BmiReference(
+            axisMinimum = BMI_AXIS_MINIMUM,
+            referenceMidpoint = BMI_REFERENCE_MIDPOINT,
+            axisMaximum = BMI_AXIS_MAXIMUM,
+            bands =
+                listOf(
+                    BmiBand(BmiCategory.UNDERWEIGHT, BmiStatus.Warning, null, BMI_HEALTHY_MINIMUM),
+                    BmiBand(
+                        BmiCategory.HEALTHY_WEIGHT,
+                        BmiStatus.Optimal,
+                        BMI_HEALTHY_MINIMUM,
+                        BMI_OVERWEIGHT_MINIMUM,
+                    ),
+                    BmiBand(
+                        BmiCategory.OVERWEIGHT,
+                        BmiStatus.Warning,
+                        BMI_OVERWEIGHT_MINIMUM,
+                        BMI_OBESITY_MINIMUM,
+                    ),
+                    BmiBand(BmiCategory.OBESITY, BmiStatus.Poor, BMI_OBESITY_MINIMUM, null),
+                ),
+        )
+
+    /** Classify a BMI value using the canonical WHO-aligned reference bands. */
+    fun assessBmi(bmi: Float): BmiAssessment {
+        val band =
+            bmiReference.bands.first { band ->
+                (band.minimumInclusive == null || bmi >= band.minimumInclusive) &&
+                    (band.maximumExclusive == null || bmi < band.maximumExclusive)
+            }
+        return BmiAssessment(band.category, band.status, bmiReference)
+    }
 
     /**
      * Classify a body-fat percentage.
@@ -193,5 +242,4 @@ fun BodyFatStatus.toMetricStatus(): MetricStatus =
         BodyFatStatus.Neutral -> MetricStatus.NEUTRAL
         BodyFatStatus.Warning -> MetricStatus.WARNING
         BodyFatStatus.Poor -> MetricStatus.POOR
-        BodyFatStatus.Calibrating -> MetricStatus.CALIBRATING
     }

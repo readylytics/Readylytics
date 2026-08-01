@@ -7,6 +7,42 @@ import kotlin.test.assertEquals
 
 class BodyCompositionAssessmentTest {
     @Test
+    fun `bmi reference exposes ordered canonical bands and visual-only axis anchors`() {
+        val reference = BodyCompositionAssessment.bmiReference
+
+        assertEquals(15f, reference.axisMinimum)
+        assertEquals(21.7f, reference.referenceMidpoint)
+        assertEquals(35f, reference.axisMaximum)
+        assertEquals(
+            listOf(
+                BmiBand(BmiCategory.UNDERWEIGHT, BmiStatus.Warning, null, 18.5f),
+                BmiBand(BmiCategory.HEALTHY_WEIGHT, BmiStatus.Optimal, 18.5f, 25f),
+                BmiBand(BmiCategory.OVERWEIGHT, BmiStatus.Warning, 25f, 30f),
+                BmiBand(BmiCategory.OBESITY, BmiStatus.Poor, 30f, null),
+            ),
+            reference.bands,
+        )
+    }
+
+    @Test
+    fun `bmi assessments select the matching canonical band at every boundary`() {
+        val expected = listOf(
+            18.4f to BmiStatus.Warning,
+            18.5f to BmiStatus.Optimal,
+            24.9f to BmiStatus.Optimal,
+            25f to BmiStatus.Warning,
+            29.9f to BmiStatus.Warning,
+            30f to BmiStatus.Poor,
+        )
+
+        expected.forEach { (bmi, status) ->
+            val assessment = BodyCompositionAssessment.assessBmi(bmi)
+            assertEquals(status, assessment.status, "BMI $bmi")
+            assertEquals(BodyCompositionAssessment.bmiReference, assessment.reference)
+        }
+    }
+
+    @Test
     fun `bmi boundaries map to approved categories and statuses`() {
         assertEquals(BmiCategory.UNDERWEIGHT, BodyCompositionAssessment.assessBmi(18.49f).category)
         assertEquals(BmiStatus.Warning, BodyCompositionAssessment.assessBmi(18.49f).status)
