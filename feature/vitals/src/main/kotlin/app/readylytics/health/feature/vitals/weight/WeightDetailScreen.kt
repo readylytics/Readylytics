@@ -67,6 +67,13 @@ fun WeightDetailRoute(
     )
 }
 
+internal fun bmiCardStatus(bmi: Float?): MetricStatus =
+    bmi
+        ?.let(BodyCompositionAssessment::assessBmi)
+        ?.status
+        ?.toMetricStatus()
+        ?: MetricStatus.CALIBRATING
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeightDetailScreen(
@@ -145,12 +152,7 @@ fun WeightDetailScreen(
                         bottom = MaterialTheme.spacing.pageBottom,
                     ),
         ) {
-            val bmiStatus =
-                uiState.bmi
-                    ?.let(BodyCompositionAssessment::assessBmi)
-                    ?.status
-                    ?.toMetricStatus()
-                    ?: MetricStatus.CALIBRATING
+            val bmiStatus = bmiCardStatus(uiState.bmi)
 
             if (uiState.isLoading) {
                 Row(

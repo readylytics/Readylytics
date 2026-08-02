@@ -268,6 +268,26 @@ class BodyFatDetailViewModelTest {
         }
 
     @Test
+    fun `historyItems use canonical male assessment at 2 percent`() =
+        runTest {
+            val record = BodyFatRecordEntity("male-essential", System.currentTimeMillis(), 2f)
+            coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(record)
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = Gender.MALE))
+            viewModel = createViewModel()
+
+            val item = viewModel.uiState.first { it.historyItems.isNotEmpty() }.historyItems.single()
+
+            assertEquals(
+                BodyCompositionAssessment
+                    .assessBodyFat(2f, PhysiologyProfile.ACTIVE, Gender.MALE)
+                    .status
+                    .toMetricStatus(),
+                item.status,
+            )
+        }
+
+    @Test
     fun `historyItems leanMass is null when no same-day weight record`() =
         runTest {
             val bodyFatRecord =
