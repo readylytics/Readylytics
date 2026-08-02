@@ -227,4 +227,31 @@ class WeightDetailViewModelTest {
             assertEquals(null, state.historyItems[0].bmiStatus)
             assertEquals(null, state.historyItems[0].bmiCategory)
         }
+
+    @Test
+    fun `historyItems use canonical BMI status boundaries`() =
+        runTest {
+            val records =
+                listOf(
+                    WeightRecordEntity("underweight", 1_000L, 18.4f),
+                    WeightRecordEntity("healthy", 2_000L, 18.5f),
+                    WeightRecordEntity("overweight", 3_000L, 25f),
+                    WeightRecordEntity("obesity", 4_000L, 30f),
+                )
+            coEvery { weightRepository.getByDateRange(any(), any()) } returns records
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = 100f))
+            viewModel = createViewModel()
+
+            val statuses =
+                viewModel.uiState
+                    .first { it.historyItems.size == records.size }
+                    .historyItems
+                    .associate { it.weightDisplay to it.bmiStatus }
+
+            assertEquals(BmiStatus.Warning, statuses[18.4f])
+            assertEquals(BmiStatus.Optimal, statuses[18.5f])
+            assertEquals(BmiStatus.Warning, statuses[25f])
+            assertEquals(BmiStatus.Poor, statuses[30f])
+        }
 }

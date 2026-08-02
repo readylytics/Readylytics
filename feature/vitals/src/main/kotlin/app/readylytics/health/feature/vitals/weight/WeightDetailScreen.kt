@@ -43,7 +43,9 @@ import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.model.weightZoneBands
 import app.readylytics.health.feature.vitals.R
 import java.util.Locale
@@ -144,14 +146,11 @@ fun WeightDetailScreen(
                     ),
         ) {
             val bmiStatus =
-                uiState.bmi?.let { bmi ->
-                    when {
-                        bmi < 25f -> MetricStatus.OPTIMAL
-                        bmi < 30f -> MetricStatus.NEUTRAL
-                        bmi < 35f -> MetricStatus.WARNING
-                        else -> MetricStatus.POOR
-                    }
-                } ?: MetricStatus.CALIBRATING
+                uiState.bmi
+                    ?.let(BodyCompositionAssessment::assessBmi)
+                    ?.status
+                    ?.toMetricStatus()
+                    ?: MetricStatus.CALIBRATING
 
             if (uiState.isLoading) {
                 Row(

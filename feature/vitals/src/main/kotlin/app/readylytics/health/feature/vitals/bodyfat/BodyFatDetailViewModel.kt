@@ -11,8 +11,9 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.bodyFatStatus
+import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.WeightRepository
@@ -122,12 +123,25 @@ class BodyFatDetailViewModel
                             }.sortedBy { it.dayOffset }
                             .padToRange(range.days)
 
-                    val (optimalMin, optimalMax) =
-                        calculateOptimalRange(
-                            userPrefs.age,
-                            userPrefs.gender?.name ?: "Unknown",
-                        )
-                    val status = latest?.bodyFatPercent?.let { bodyFatStatus(it, optimalMax) }
+                    val latestAssessment =
+                        latest?.let {
+                            BodyCompositionAssessment.assessBodyFat(
+                                bodyFatPercent = it.bodyFatPercent,
+                                physiologyProfile = userPrefs.physiologyProfile,
+                                gender = userPrefs.gender,
+                            )
+                        }
+                    val reference =
+                        latestAssessment?.reference
+                            ?: BodyCompositionAssessment
+                                .assessBodyFat(
+                                    bodyFatPercent = 0f,
+                                    physiologyProfile = userPrefs.physiologyProfile,
+                                    gender = userPrefs.gender,
+                                ).reference
+                    val optimalMin = reference.axisMinimum
+                    val optimalMax = reference.axisMaximum
+                    val status = latestAssessment?.status?.toMetricStatus()
 
                     val weightByDay =
                         weightRepository
@@ -150,12 +164,18 @@ class BodyFatDetailViewModel
                                             it * UnitConverter.KG_TO_LBS
                                         }
                                     }
+                                val assessment =
+                                    BodyCompositionAssessment.assessBodyFat(
+                                        bodyFatPercent = record.bodyFatPercent,
+                                        physiologyProfile = userPrefs.physiologyProfile,
+                                        gender = userPrefs.gender,
+                                    )
                                 BodyFatHistoryItem(
                                     timestampMs = record.time.toEpochMilli(),
                                     bodyFatPercent = record.bodyFatPercent,
                                     leanMassDisplay = leanMassDisplay,
                                     unitSystem = userPrefs.unitSystem,
-                                    status = bodyFatStatus(record.bodyFatPercent, optimalMax),
+                                    status = assessment.status.toMetricStatus(),
                                 )
                             }
                     val average =
@@ -200,27 +220,5 @@ class BodyFatDetailViewModel
 
         fun onRangeSelected(range: TimeRange) {
             selectedRangeFlow.value = range
-        }
-
-        private fun calculateOptimalRange(
-            age: Int,
-            genderName: String,
-        ): Pair<Float, Float> {
-            val ageCoerced = age.coerceIn(1, 120)
-            return when (genderName) {
-                "MALE" ->
-                    when {
-                        ageCoerced in 20..40 -> Pair(0f, 19f)
-                        ageCoerced in 41..60 -> Pair(0f, 22f)
-                        else -> Pair(0f, 24f)
-                    }
-                "FEMALE" ->
-                    when {
-                        ageCoerced in 20..40 -> Pair(0f, 32f)
-                        ageCoerced in 41..60 -> Pair(0f, 34f)
-                        else -> Pair(0f, 36f)
-                    }
-                else -> Pair(0f, 30f)
-            }
         }
     }
