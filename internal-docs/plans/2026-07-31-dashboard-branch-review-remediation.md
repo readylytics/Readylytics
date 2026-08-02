@@ -145,13 +145,15 @@ Resolves **F6, F7**, and the duplicated guard in **F15**.
 - Tenure source is selected by `strainLoadSourceMode`: `WorkoutRepository.getEarliestWorkoutTimestamp()` for `WORKOUT_ONLY`, `DailySummaryDao.getEarliestDateMs()` (already exists) for `EVERYDAY_HEART_RATE`.
 - `GetWorkoutDisplayMetricsUseCase.execute` gains an optional pre-fetched `historicalSummaries` parameter, following the `preferences` parameter this branch already added for the same reason.
 
-- [ ] Write a failing test: a user in `EVERYDAY_HEART_RATE` mode with 30 days of daily summaries and **zero** workouts must receive a non-null strain delta. Today `getEarliestWorkoutTimestamp()` returns null → `dataTenureDays = 0` → permanent null, so the delta silently never appears for that cohort.
-- [ ] Write a failing test asserting `dailySummaryRepository.getSince` is called once per emission, not once per workout.
-- [ ] Select the tenure source by load-source mode.
-- [ ] Hoist tenure out of `mapLatest` — it is a suspend DB query re-run on every emission of either observed flow, though it only changes on ingestion. Derive it from the already-observed workouts or give it its own flow.
-- [ ] Thread the already-combined `summaries` into `GetWorkoutDisplayMetricsUseCase` so N workouts stop triggering N full 42-day history reads. This is the N+1 and it re-runs on every Room invalidation during a sync.
-- [ ] Delete the `dataTenureDays < 7` pre-guards in both callers (`ObserveDashboardStrainIncreaseUseCase.kt:79`, `WorkoutsViewModel.kt:349`) — `calculateDailyStrainIncrease` already owns that rule, which is why it was extracted.
-- [ ] `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
+Decision (2026-08-02, see `docs/superpowers/plans/2026-08-02-strain-delta-observer-remediation.md`): tenure is derived from data **already being observed** rather than either DB method named above — `LoadSourceSelector.selectEarliestDataDate(workouts, summaries, mode, zoneId)` (new pure function, `core/model`) reads the earliest date out of the already-fetched `workouts`/`summaries` lists per mode. This fully eliminates the suspend call from the hot path (stronger than "hoist out of `mapLatest`") because `dataTenureDays` is only ever compared against the 7-day threshold and both callers already fetch a 48+-day window. `WorkoutRepository.getEarliestWorkoutTimestamp()` lost both its callers and was deleted (DAO/interface/impl). The same fix was also applied to `WorkoutsViewModel` (mirrored F6/F7/F15, not originally in this task's Findings-Index scope but present and real — see the sub-plan's Decisions table).
+
+- [x] Write a failing test: a user in `EVERYDAY_HEART_RATE` mode with 30 days of daily summaries and **zero** workouts must receive a non-null strain delta. Today `getEarliestWorkoutTimestamp()` returns null → `dataTenureDays = 0` → permanent null, so the delta silently never appears for that cohort. (Both `ObserveDashboardStrainIncreaseUseCaseTest` and `WorkoutsViewModelTest`.)
+- [x] Write a failing test asserting `dailySummaryRepository.getSince` is called once per emission, not once per workout. (`GetWorkoutDisplayMetricsUseCaseTest`: `coVerify(exactly = 0) { dailySummaryRepository.getSince(any()) }` when `historicalSummaries` is pre-fetched.)
+- [x] Select the tenure source by load-source mode. (Via `LoadSourceSelector.selectEarliestDataDate`, see Decision above.)
+- [x] Hoist tenure out of `mapLatest` — it is a suspend DB query re-run on every emission of either observed flow, though it only changes on ingestion. Derive it from the already-observed workouts or give it its own flow. (Derived from already-observed data; suspend call removed entirely, not just relocated.)
+- [x] Thread the already-combined `summaries` into `GetWorkoutDisplayMetricsUseCase` so N workouts stop triggering N full 42-day history reads. This is the N+1 and it re-runs on every Room invalidation during a sync. (Both `ObserveDashboardStrainIncreaseUseCase`'s `WORKOUT_ONLY` branch and `WorkoutsViewModel`'s `recentItems` mapping.)
+- [x] Delete the `dataTenureDays < 7` pre-guards in both callers (`ObserveDashboardStrainIncreaseUseCase.kt:79`, `WorkoutsViewModel.kt:349`) — `calculateDailyStrainIncrease` already owns that rule, which is why it was extracted.
+- [x] `./gradlew ktlintFormat && ./gradlew testDebugUnitTest` (completed 2026-08-02, `./gradlew lintRelease` also clean)
 
 ---
 
