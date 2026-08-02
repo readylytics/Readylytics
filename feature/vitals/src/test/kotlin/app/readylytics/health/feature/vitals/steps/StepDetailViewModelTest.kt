@@ -6,6 +6,7 @@ import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import io.mockk.coEvery
@@ -87,6 +88,17 @@ class StepDetailViewModelTest {
             assertEquals(TimeRange.SEVEN_DAYS, state.selectedRange)
             assertEquals(emptyList<DailyDataPoint>(), state.dailySteps)
         }
+
+    @Test
+    fun `steps presentation status is neutral at seventy five percent of the goal`() {
+        val state =
+            StepDetailUiState(
+                latestSummary = DailySummary(date = LocalDate.now(), stepCount = 7_500),
+                stepGoal = 10_000,
+            )
+
+        assertEquals(MetricStatus.NEUTRAL, state.currentStepsStatus)
+    }
 
     @Test
     fun `onRangeSelected updates range`() =

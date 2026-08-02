@@ -39,7 +39,6 @@ import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
-import app.readylytics.health.domain.model.StepsStatusClassifier
 import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -139,7 +138,7 @@ fun StepDetailScreen(
                     displayText = stepCount?.let { String.format(java.util.Locale.US, "%,d", it) } ?: "—",
                     unitText = stringResource(CoreUiR.string.unit_steps),
                     maxScore = (stepGoal * 1.5f),
-                    status = StepsStatusClassifier.classify(stepCount, stepGoal),
+                    status = uiState.currentStepsStatus,
                     deltaText = stepsDelta,
                     tooltipDescription = pluralStringResource(R.plurals.tooltip_steps_today, stepGoal, stepGoal),
                 )
