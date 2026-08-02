@@ -243,6 +243,9 @@ underweight or overweight — the same status covers both directions, so check t
 label (not just the color) to see which one applies; Poor flags the obesity range for BMI or
 body fat.
 
+The status colors on Weight and Body Fat trend charts use these same canonical bands. Visual
+reference anchors and profile markers never redefine a reading’s status.
+
 _Implemented in: `BodyCompositionAssessment.kt`, `BmiService.kt`, `HealthMetricsService.kt`,
 `HealthMetricsCalculator.kt`_
 
@@ -259,6 +262,8 @@ The dashboard classifies each blood-pressure reading with an inclusive, componen
 
 For example, 121/80, 120/81, and 129/89 are Neutral, while 130/90 is Warning. This is a
 dashboard status, not a diagnosis.
+
+Blood-pressure trend charts obtain their component reference bands from this same ladder.
 
 _Implemented in: `HealthMetricsService.kt`_
 

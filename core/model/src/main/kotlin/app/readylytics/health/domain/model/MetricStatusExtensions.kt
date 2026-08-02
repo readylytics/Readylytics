@@ -119,17 +119,6 @@ fun stepsStatus(
     stepGoal: Int,
 ): MetricStatus = StepsStatusClassifier.classify(stepCount, stepGoal)
 
-fun bodyFatStatus(
-    value: Float,
-    optimalMax: Float,
-): MetricStatus =
-    when {
-        value <= optimalMax -> MetricStatus.OPTIMAL
-        value <= optimalMax * 1.15f -> MetricStatus.NEUTRAL
-        value <= optimalMax * 1.30f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-
 fun Float.strainRatioStatus(): MetricStatus =
     when {
         this < 0.0f -> MetricStatus.CALIBRATING

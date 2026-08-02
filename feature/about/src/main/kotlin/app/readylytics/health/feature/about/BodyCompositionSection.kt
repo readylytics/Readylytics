@@ -42,5 +42,6 @@ fun BodyCompositionSection() {
         BulletItem(stringResource(R.string.about_blood_pressure_bullet_warning))
         BulletItem(stringResource(R.string.about_blood_pressure_bullet_poor))
         BodyText(stringResource(R.string.about_blood_pressure_example))
+        BodyText(stringResource(R.string.about_blood_pressure_chart_reference))
     }
 }

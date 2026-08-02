@@ -43,6 +43,35 @@ class BodyCompositionAssessmentTest {
     }
 
     @Test
+    fun `body fat reference exposes the canonical female category bands`() {
+        val reference =
+            BodyCompositionAssessment.bodyFatReference(
+                physiologyProfile = PhysiologyProfile.ACTIVE,
+                gender = Gender.FEMALE,
+            )
+
+        assertEquals(
+            listOf(
+                BodyFatBand(BodyFatCategory.BELOW_ESSENTIAL, BodyFatStatus.Warning, null, 10f),
+                BodyFatBand(BodyFatCategory.ESSENTIAL, BodyFatStatus.Neutral, 10f, 14f),
+                BodyFatBand(BodyFatCategory.ATHLETIC, BodyFatStatus.Optimal, 14f, 21f),
+                BodyFatBand(BodyFatCategory.FITNESS, BodyFatStatus.Optimal, 21f, 25f),
+                BodyFatBand(BodyFatCategory.ACCEPTABLE, BodyFatStatus.Neutral, 25f, 32f),
+                BodyFatBand(BodyFatCategory.OBESE, BodyFatStatus.Poor, 32f, null),
+            ),
+            reference.bands,
+        )
+        assertEquals(
+            BodyFatStatus.Neutral,
+            reference.bands
+                .first {
+                    (it.minimumInclusive == null || 10f >= it.minimumInclusive) &&
+                        (it.maximumExclusive == null || 10f < it.maximumExclusive)
+                }.status,
+        )
+    }
+
+    @Test
     fun `bmi boundaries map to approved categories and statuses`() {
         assertEquals(BmiCategory.UNDERWEIGHT, BodyCompositionAssessment.assessBmi(18.49f).category)
         assertEquals(BmiStatus.Warning, BodyCompositionAssessment.assessBmi(18.49f).status)

@@ -7,6 +7,7 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.BodyCompositionAssessment
+import app.readylytics.health.domain.model.BodyFatCategory
 import app.readylytics.health.domain.model.BodyFatRecord
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.WeightRecord
@@ -144,7 +145,7 @@ class BodyFatDetailViewModelTest {
         }
 
     @Test
-    fun `optimalRangeDisplay formats male reference correctly`() =
+    fun `male reference metadata is exposed without calling the scale optimal`() =
         runTest {
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(
@@ -153,12 +154,15 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
-            assertEquals("0–25.0%", state.optimalRangeDisplay)
+            val state = viewModel.uiState.first { it.referenceAxisMaximum > 0f }
+            assertEquals(2f, state.referenceAxisMinimum)
+            assertEquals(25f, state.referenceAxisMaximum)
+            assertEquals(15.5f, state.referenceMidpoint)
+            assertEquals(Gender.MALE, state.gender)
         }
 
     @Test
-    fun `optimalRangeDisplay formats female reference correctly`() =
+    fun `female reference metadata is age independent`() =
         runTest {
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(
@@ -167,8 +171,11 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
-            assertEquals("0–32.0%", state.optimalRangeDisplay)
+            val state = viewModel.uiState.first { it.referenceAxisMaximum > 0f }
+            assertEquals(10f, state.referenceAxisMinimum)
+            assertEquals(32f, state.referenceAxisMaximum)
+            assertEquals(22.5f, state.referenceMidpoint)
+            assertEquals(Gender.FEMALE, state.gender)
         }
 
     @Test
@@ -265,6 +272,7 @@ class BodyFatDetailViewModelTest {
             // 78.4 * (1 - 14.2/100) = 67.2752
             assertEquals(67.2752f, item.leanMassDisplay!!, 0.01f)
             assertEquals(MetricStatus.OPTIMAL, item.status)
+            assertEquals(BodyFatCategory.FITNESS, item.category)
         }
 
     @Test
@@ -289,6 +297,7 @@ class BodyFatDetailViewModelTest {
                     .toMetricStatus(),
                 item.status,
             )
+            assertEquals(BodyFatCategory.ESSENTIAL, item.category)
         }
 
     @Test

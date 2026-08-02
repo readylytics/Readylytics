@@ -6,6 +6,8 @@ import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.BodyFatStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.model.HealthZone
+import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.preferences.Gender
 import app.readylytics.health.domain.preferences.PhysiologyProfile
 
@@ -54,6 +56,14 @@ class HealthMetricsService {
     /** Classifies a diastolic component using the inclusive blood-pressure ladder. */
     fun assessDiastolic(diastolic: Int?): MetricStatus =
         assessBloodPressureComponent(diastolic, BP_NORMAL_DIA, BP_ELEVATED_DIA, BP_STAGE1_DIA_MAX)
+
+    /** Chart metadata for systolic pressure, derived from the same constants as classification. */
+    fun systolicReferenceBands(): List<ZoneBand> =
+        bloodPressureReferenceBands(BP_NORMAL_SYS, BP_ELEVATED_SYS, BP_STAGE1_SYS_MAX)
+
+    /** Chart metadata for diastolic pressure, derived from the same constants as classification. */
+    fun diastolicReferenceBands(): List<ZoneBand> =
+        bloodPressureReferenceBands(BP_NORMAL_DIA, BP_ELEVATED_DIA, BP_STAGE1_DIA_MAX)
 
     /**
      * Classify body-fat percentage by physiology profile and gender.
@@ -116,6 +126,18 @@ class HealthMetricsService {
             value <= warningMax -> MetricStatus.WARNING
             else -> MetricStatus.POOR
         }
+
+    private fun bloodPressureReferenceBands(
+        optimalMax: Int,
+        neutralMax: Int,
+        warningMax: Int,
+    ): List<ZoneBand> =
+        listOf(
+            ZoneBand(Double.NEGATIVE_INFINITY, optimalMax.toDouble(), HealthZone.OPTIMAL),
+            ZoneBand(optimalMax.toDouble(), (neutralMax + 1).toDouble(), HealthZone.NEUTRAL),
+            ZoneBand((neutralMax + 1).toDouble(), (warningMax + 1).toDouble(), HealthZone.WARNING),
+            ZoneBand((warningMax + 1).toDouble(), Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
+        )
 
     /** Stable [Result.Failure.code] values produced by this service. */
     object Codes {

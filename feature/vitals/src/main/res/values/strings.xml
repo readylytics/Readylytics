@@ -41,16 +41,21 @@
     <!-- Body Fat Details -->
     <string name="label_body_fat_percentage">Body Fat Percentage</string>
     <string name="label_body_fat">Body Fat</string>
-    <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
+    <string name="tooltip_body_fat_current">Current: %1$s%%\nReference anchors: %2$s%%–%3$s%%\nProfile reference marker: %4$s%%\nReference group: %5$s\n\nThese visual references do not define the health status. Status follows the canonical category bands and is independent of age.</string>
+    <string name="body_fat_reference_group_unset">Other / Prefer not to say / unset</string>
     <string name="label_body_fat_trend">Body Fat Trend</string>
     <string name="body_fat_history_title_format">Body Fat (%1$s)</string>
     <string name="body_fat_history_subtitle_with_lean_mass">%1$s%% · %2$s %3$s lean mass</string>
     <string name="body_fat_history_subtitle_no_lean_mass">%1$s%%</string>
-    <string name="body_fat_status_optimal">Athletic</string>
-    <string name="body_fat_status_fitness">Fitness</string>
-    <string name="body_fat_status_average">Average</string>
-    <string name="body_fat_status_above_range">Above Range</string>
-    <string name="body_fat_status_calibrating">Calibrating</string>
+    <string name="body_fat_category_below_essential">Below essential</string>
+    <string name="body_fat_category_essential">Essential</string>
+    <string name="body_fat_category_athletic">Athletic</string>
+    <string name="body_fat_category_fitness">Fitness</string>
+    <string name="body_fat_category_acceptable">Acceptable</string>
+    <string name="body_fat_category_obese">Obese</string>
+    <string name="body_fat_category_below_reference">Below reference</string>
+    <string name="body_fat_category_within_reference">Within reference</string>
+    <string name="body_fat_category_above_reference">Above reference</string>
 
     <!-- Blood Pressure Details -->
     <string name="label_blood_pressure">Blood Pressure</string>

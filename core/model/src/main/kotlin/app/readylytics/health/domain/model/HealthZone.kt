@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.data.preferences.Gender
+import app.readylytics.health.domain.preferences.Gender
+import app.readylytics.health.domain.preferences.PhysiologyProfile
 
 enum class HealthZone { OPTIMAL, NEUTRAL, WARNING, CRITICAL }
 
@@ -23,33 +24,15 @@ fun rhrZoneBands(
         ZoneBand(warningMax.toDouble(), Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
     )
 
-// AHA systolic thresholds (static)
-fun systolicZoneBands(): List<ZoneBand> =
-    listOf(
-        ZoneBand(Double.NEGATIVE_INFINITY, 120.0, HealthZone.OPTIMAL),
-        ZoneBand(120.0, 130.0, HealthZone.NEUTRAL),
-        ZoneBand(130.0, 140.0, HealthZone.WARNING),
-        ZoneBand(140.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
-    )
-
-// AHA diastolic thresholds (static)
-fun diastolicZoneBands(): List<ZoneBand> =
-    listOf(
-        ZoneBand(Double.NEGATIVE_INFINITY, 80.0, HealthZone.OPTIMAL),
-        ZoneBand(80.0, 90.0, HealthZone.NEUTRAL),
-        ZoneBand(90.0, 100.0, HealthZone.WARNING),
-        ZoneBand(100.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
-    )
-
-// WHO BMI thresholds (static)
+// BMI chart bands are presentation metadata derived from the canonical assessment seam.
 fun bmiZoneBands(): List<ZoneBand> =
-    listOf(
-        ZoneBand(Double.NEGATIVE_INFINITY, 18.5, HealthZone.CRITICAL),
-        ZoneBand(18.5, 25.0, HealthZone.OPTIMAL),
-        ZoneBand(25.0, 30.0, HealthZone.NEUTRAL),
-        ZoneBand(30.0, 35.0, HealthZone.WARNING),
-        ZoneBand(35.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
-    )
+    BodyCompositionAssessment.bmiReference.bands.map { band ->
+        ZoneBand(
+            lowerBound = band.minimumInclusive?.toDouble() ?: Double.NEGATIVE_INFINITY,
+            upperBound = band.maximumExclusive?.toDouble() ?: Double.POSITIVE_INFINITY,
+            zone = band.status.toHealthZone(),
+        )
+    }
 
 // Convert BMI zone bands to weight (kg) zone bands using height
 fun weightZoneBands(heightCm: Float): List<ZoneBand> {
@@ -79,62 +62,34 @@ fun weightZoneBands(heightCm: Float): List<ZoneBand> {
     }
 }
 
-// ACE body fat % thresholds — age/gender adjusted
+// Body-fat chart bands are presentation metadata derived from the canonical assessment seam.
 fun bodyFatZoneBands(
-    age: Int,
-    gender: Gender,
-): List<ZoneBand> {
-    val optMin: Double
-    val optMax: Double
-    val neutMax: Double
-    val warnMax: Double
-    when {
-        gender == Gender.MALE && age < 40 -> {
-            optMin = 8.0
-            optMax = 19.0
-            neutMax = 24.0
-            warnMax = 29.0
-        }
-        gender == Gender.MALE && age < 60 -> {
-            optMin = 11.0
-            optMax = 21.0
-            neutMax = 27.0
-            warnMax = 32.0
-        }
-        gender == Gender.MALE -> {
-            optMin = 13.0
-            optMax = 24.0
-            neutMax = 29.0
-            warnMax = 34.0
-        }
-        gender == Gender.FEMALE && age < 40 -> {
-            optMin = 20.0
-            optMax = 32.0
-            neutMax = 36.0
-            warnMax = 41.0
-        }
-        gender == Gender.FEMALE && age < 60 -> {
-            optMin = 23.0
-            optMax = 33.0
-            neutMax = 39.0
-            warnMax = 44.0
-        }
-        gender == Gender.FEMALE -> {
-            optMin = 24.0
-            optMax = 35.0
-            neutMax = 41.0
-            warnMax = 46.0
-        }
-        else -> return emptyList()
+    physiologyProfile: PhysiologyProfile,
+    gender: Gender?,
+): List<ZoneBand> =
+    BodyCompositionAssessment.bodyFatReference(physiologyProfile, gender).bands.map { band ->
+        ZoneBand(
+            lowerBound = band.minimumInclusive?.toDouble() ?: Double.NEGATIVE_INFINITY,
+            upperBound = band.maximumExclusive?.toDouble() ?: Double.POSITIVE_INFINITY,
+            zone = band.status.toHealthZone(),
+        )
     }
-    return listOf(
-        ZoneBand(Double.NEGATIVE_INFINITY, optMin, HealthZone.CRITICAL),
-        ZoneBand(optMin, optMax, HealthZone.OPTIMAL),
-        ZoneBand(optMax, neutMax, HealthZone.NEUTRAL),
-        ZoneBand(neutMax, warnMax, HealthZone.WARNING),
-        ZoneBand(warnMax, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
-    )
-}
+
+private fun BmiStatus.toHealthZone(): HealthZone =
+    when (this) {
+        BmiStatus.Optimal -> HealthZone.OPTIMAL
+        BmiStatus.Neutral -> HealthZone.NEUTRAL
+        BmiStatus.Warning -> HealthZone.WARNING
+        BmiStatus.Poor -> HealthZone.CRITICAL
+    }
+
+private fun BodyFatStatus.toHealthZone(): HealthZone =
+    when (this) {
+        BodyFatStatus.Optimal -> HealthZone.OPTIMAL
+        BodyFatStatus.Neutral -> HealthZone.NEUTRAL
+        BodyFatStatus.Warning -> HealthZone.WARNING
+        BodyFatStatus.Poor -> HealthZone.CRITICAL
+    }
 
 // HRV — higher is better: above optimalMin=OPTIMAL, down to neutralMin=NEUTRAL, down to warningMin=WARNING, below=CRITICAL
 fun hrvZoneBands(

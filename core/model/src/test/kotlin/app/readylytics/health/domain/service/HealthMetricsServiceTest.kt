@@ -7,6 +7,8 @@ import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.model.HealthZone
+import app.readylytics.health.domain.model.ZoneBand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -190,6 +192,28 @@ class HealthMetricsServiceTest {
         assertEquals(MetricStatus.WARNING, service.assessDiastolic(90))
         assertEquals(MetricStatus.WARNING, service.assessDiastolic(99))
         assertEquals(MetricStatus.POOR, service.assessDiastolic(100))
+    }
+
+    @Test
+    fun bloodPressureReferenceBands_areOwnedByTheCanonicalService() {
+        assertEquals(
+            listOf(
+                ZoneBand(Double.NEGATIVE_INFINITY, 120.0, HealthZone.OPTIMAL),
+                ZoneBand(120.0, 130.0, HealthZone.NEUTRAL),
+                ZoneBand(130.0, 140.0, HealthZone.WARNING),
+                ZoneBand(140.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
+            ),
+            service.systolicReferenceBands(),
+        )
+        assertEquals(
+            listOf(
+                ZoneBand(Double.NEGATIVE_INFINITY, 80.0, HealthZone.OPTIMAL),
+                ZoneBand(80.0, 90.0, HealthZone.NEUTRAL),
+                ZoneBand(90.0, 100.0, HealthZone.WARNING),
+                ZoneBand(100.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
+            ),
+            service.diastolicReferenceBands(),
+        )
     }
 
     // ─── assessBodyFatPercent ────────────────────────────────────────────────

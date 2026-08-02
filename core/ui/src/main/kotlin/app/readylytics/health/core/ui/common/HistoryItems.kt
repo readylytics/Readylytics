@@ -4,6 +4,7 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiCategory
 import app.readylytics.health.domain.model.BmiStatus
+import app.readylytics.health.domain.model.BodyFatCategory
 import app.readylytics.health.domain.model.MetricStatus
 
 data class BloodPressureHistoryItem(
@@ -31,4 +32,5 @@ data class BodyFatHistoryItem(
     val leanMassDisplay: Float?,
     val unitSystem: UnitSystem,
     val status: MetricStatus,
+    val category: BodyFatCategory,
 )

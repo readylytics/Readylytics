@@ -179,7 +179,9 @@
         Neutral (informational) describe healthy or expected ranges; Warning flags dangerously
         low essential-fat levels, or a BMI that is either underweight or overweight — the same
         status covers both directions, so check the category label (not just the color) to see
-        which one applies; Poor flags the obesity range for BMI or body fat.</string>
+        which one applies; Poor flags the obesity range for BMI or body fat. The status colors on
+        Weight and Body Fat trend charts use these same canonical bands. Visual reference anchors
+        and profile markers never redefine a reading’s status.</string>
     <string name="about_header_blood_pressure">## Blood Pressure</string>
     <string name="about_blood_pressure_intro">The dashboard classifies each blood-pressure reading with an inclusive, component-wise ladder:</string>
     <string name="about_blood_pressure_bullet_optimal">**Optimal** — systolic ≤120 and diastolic ≤80 mmHg</string>
@@ -187,6 +189,7 @@
     <string name="about_blood_pressure_bullet_warning">**Warning** — otherwise, systolic ≤139 and diastolic ≤99 mmHg</string>
     <string name="about_blood_pressure_bullet_poor">**Poor** — all other readings</string>
     <string name="about_blood_pressure_example">For example, 121/80, 120/81, and 129/89 are Neutral, while 130/90 is Warning. This is a dashboard status, not a diagnosis.</string>
+    <string name="about_blood_pressure_chart_reference">Blood-pressure trend charts obtain their component reference bands from this same ladder.</string>
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
     <string name="about_bullet_sleep_sessions">**Sleep sessions** (with stages if your device

@@ -65,7 +65,28 @@ data class BodyFatReference(
     val axisMinimum: Float,
     val referenceMidpoint: Float,
     val axisMaximum: Float,
+    val bands: List<BodyFatBand>,
 )
+
+/** A canonical body-fat category band with explicit boundary inclusion. */
+data class BodyFatBand(
+    val category: BodyFatCategory,
+    val status: BodyFatStatus,
+    val minimumInclusive: Float?,
+    val maximumExclusive: Float?,
+    val includesMinimum: Boolean = true,
+    val includesMaximum: Boolean = false,
+) {
+    internal fun contains(value: Float): Boolean {
+        val aboveMinimum =
+            minimumInclusive == null ||
+                if (includesMinimum) value >= minimumInclusive else value > minimumInclusive
+        val belowMaximum =
+            maximumExclusive == null ||
+                if (includesMaximum) value <= maximumExclusive else value < maximumExclusive
+        return aboveMinimum && belowMaximum
+    }
+}
 
 /** Result of classifying a body-fat percentage: category, [BodyFatStatus], and gauge reference. */
 data class BodyFatAssessment(
@@ -91,8 +112,14 @@ object BodyCompositionAssessment {
     private const val BMI_OVERWEIGHT_MINIMUM = 25f
     private const val BMI_OBESITY_MINIMUM = 30f
     private const val MALE_ESSENTIAL_MIN = 2f
+    private const val MALE_ATHLETIC_MIN = 6f
+    private const val MALE_FITNESS_MIN = 14f
+    private const val MALE_ACCEPTABLE_MIN = 18f
     private const val MALE_OBESE_MIN = 25f
     private const val FEMALE_ESSENTIAL_MIN = 10f
+    private const val FEMALE_ATHLETIC_MIN = 14f
+    private const val FEMALE_FITNESS_MIN = 21f
+    private const val FEMALE_ACCEPTABLE_MIN = 25f
     private const val FEMALE_OBESE_MIN = 32f
     private const val FIXED_REFERENCE_MIN = 10f
     private const val FIXED_REFERENCE_MAX = 30f
@@ -146,50 +173,59 @@ object BodyCompositionAssessment {
         physiologyProfile: PhysiologyProfile,
         gender: Gender?,
     ): BodyFatAssessment {
-        val (category, status) =
-            when (gender) {
-                Gender.MALE -> maleStatus(bodyFatPercent)
-                Gender.FEMALE -> femaleStatus(bodyFatPercent)
-                Gender.OTHER, Gender.PREFER_NOT_TO_SAY, null ->
-                    fixedGroupStatus(bodyFatPercent, FIXED_REFERENCE_MIN, FIXED_REFERENCE_MAX)
-            }
-        val (axisMinimum, axisMaximum) =
-            when (gender) {
-                Gender.MALE -> MALE_ESSENTIAL_MIN to MALE_OBESE_MIN
-                Gender.FEMALE -> FEMALE_ESSENTIAL_MIN to FEMALE_OBESE_MIN
-                Gender.OTHER, Gender.PREFER_NOT_TO_SAY, null -> FIXED_REFERENCE_MIN to FIXED_REFERENCE_MAX
-            }
+        val reference = bodyFatReference(physiologyProfile, gender)
+        val band = reference.bands.first { it.contains(bodyFatPercent) }
         return BodyFatAssessment(
-            category = category,
-            status = status,
-            reference =
-                BodyFatReference(
-                    axisMinimum = axisMinimum,
-                    referenceMidpoint = midpoint(physiologyProfile, gender),
-                    axisMaximum = axisMaximum,
-                ),
+            category = band.category,
+            status = band.status,
+            reference = reference,
         )
     }
 
-    private fun maleStatus(value: Float): Pair<BodyFatCategory, BodyFatStatus> =
-        when {
-            value < 2f -> BodyFatCategory.BELOW_ESSENTIAL to BodyFatStatus.Warning
-            value < 6f -> BodyFatCategory.ESSENTIAL to BodyFatStatus.Neutral
-            value < 14f -> BodyFatCategory.ATHLETIC to BodyFatStatus.Optimal
-            value < 18f -> BodyFatCategory.FITNESS to BodyFatStatus.Optimal
-            value < 25f -> BodyFatCategory.ACCEPTABLE to BodyFatStatus.Neutral
-            else -> BodyFatCategory.OBESE to BodyFatStatus.Poor
-        }
+    /** Canonical category bands plus visual-only axis and midpoint metadata. */
+    fun bodyFatReference(
+        physiologyProfile: PhysiologyProfile,
+        gender: Gender?,
+    ): BodyFatReference {
+        val (axisMinimum, axisMaximum, bands) =
+            when (gender) {
+                Gender.MALE -> Triple(MALE_ESSENTIAL_MIN, MALE_OBESE_MIN, maleBands)
+                Gender.FEMALE -> Triple(FEMALE_ESSENTIAL_MIN, FEMALE_OBESE_MIN, femaleBands)
+                Gender.OTHER, Gender.PREFER_NOT_TO_SAY, null ->
+                    Triple(FIXED_REFERENCE_MIN, FIXED_REFERENCE_MAX, fixedReferenceBands)
+            }
+        return BodyFatReference(
+            axisMinimum = axisMinimum,
+            referenceMidpoint = midpoint(physiologyProfile, gender),
+            axisMaximum = axisMaximum,
+            bands = bands,
+        )
+    }
 
-    private fun femaleStatus(value: Float): Pair<BodyFatCategory, BodyFatStatus> =
-        when {
-            value < 10f -> BodyFatCategory.BELOW_ESSENTIAL to BodyFatStatus.Warning
-            value < 14f -> BodyFatCategory.ESSENTIAL to BodyFatStatus.Neutral
-            value < 21f -> BodyFatCategory.ATHLETIC to BodyFatStatus.Optimal
-            value < 25f -> BodyFatCategory.FITNESS to BodyFatStatus.Optimal
-            value < 32f -> BodyFatCategory.ACCEPTABLE to BodyFatStatus.Neutral
-            else -> BodyFatCategory.OBESE to BodyFatStatus.Poor
-        }
+    private val maleBands =
+        listOf(
+            BodyFatBand(BodyFatCategory.BELOW_ESSENTIAL, BodyFatStatus.Warning, null, MALE_ESSENTIAL_MIN),
+            BodyFatBand(BodyFatCategory.ESSENTIAL, BodyFatStatus.Neutral, MALE_ESSENTIAL_MIN, MALE_ATHLETIC_MIN),
+            BodyFatBand(BodyFatCategory.ATHLETIC, BodyFatStatus.Optimal, MALE_ATHLETIC_MIN, MALE_FITNESS_MIN),
+            BodyFatBand(BodyFatCategory.FITNESS, BodyFatStatus.Optimal, MALE_FITNESS_MIN, MALE_ACCEPTABLE_MIN),
+            BodyFatBand(BodyFatCategory.ACCEPTABLE, BodyFatStatus.Neutral, MALE_ACCEPTABLE_MIN, MALE_OBESE_MIN),
+            BodyFatBand(BodyFatCategory.OBESE, BodyFatStatus.Poor, MALE_OBESE_MIN, null),
+        )
+
+    private val femaleBands =
+        listOf(
+            BodyFatBand(BodyFatCategory.BELOW_ESSENTIAL, BodyFatStatus.Warning, null, FEMALE_ESSENTIAL_MIN),
+            BodyFatBand(
+                BodyFatCategory.ESSENTIAL,
+                BodyFatStatus.Neutral,
+                FEMALE_ESSENTIAL_MIN,
+                FEMALE_ATHLETIC_MIN,
+            ),
+            BodyFatBand(BodyFatCategory.ATHLETIC, BodyFatStatus.Optimal, FEMALE_ATHLETIC_MIN, FEMALE_FITNESS_MIN),
+            BodyFatBand(BodyFatCategory.FITNESS, BodyFatStatus.Optimal, FEMALE_FITNESS_MIN, FEMALE_ACCEPTABLE_MIN),
+            BodyFatBand(BodyFatCategory.ACCEPTABLE, BodyFatStatus.Neutral, FEMALE_ACCEPTABLE_MIN, FEMALE_OBESE_MIN),
+            BodyFatBand(BodyFatCategory.OBESE, BodyFatStatus.Poor, FEMALE_OBESE_MIN, null),
+        )
 
     /**
      * Fixed reference band for [Gender.OTHER], [Gender.PREFER_NOT_TO_SAY], or unset gender.
@@ -198,16 +234,31 @@ object BodyCompositionAssessment {
      * [BodyFatCategory.ABOVE_REFERENCE]; the open interval between is
      * [BodyFatCategory.WITHIN_REFERENCE].
      */
-    private fun fixedGroupStatus(
-        value: Float,
-        minimum: Float,
-        maximum: Float,
-    ): Pair<BodyFatCategory, BodyFatStatus> =
-        when {
-            value <= minimum -> BodyFatCategory.BELOW_REFERENCE to BodyFatStatus.Neutral
-            value > maximum -> BodyFatCategory.ABOVE_REFERENCE to BodyFatStatus.Poor
-            else -> BodyFatCategory.WITHIN_REFERENCE to BodyFatStatus.Optimal
-        }
+    private val fixedReferenceBands =
+        listOf(
+            BodyFatBand(
+                BodyFatCategory.BELOW_REFERENCE,
+                BodyFatStatus.Neutral,
+                null,
+                FIXED_REFERENCE_MIN,
+                includesMaximum = true,
+            ),
+            BodyFatBand(
+                BodyFatCategory.WITHIN_REFERENCE,
+                BodyFatStatus.Optimal,
+                FIXED_REFERENCE_MIN,
+                FIXED_REFERENCE_MAX,
+                includesMinimum = false,
+                includesMaximum = true,
+            ),
+            BodyFatBand(
+                BodyFatCategory.ABOVE_REFERENCE,
+                BodyFatStatus.Poor,
+                FIXED_REFERENCE_MAX,
+                null,
+                includesMinimum = false,
+            ),
+        )
 
     /**
      * Target body-fat value shown as the gauge reference marker. For male/female this varies by

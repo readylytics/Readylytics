@@ -38,6 +38,7 @@ import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import app.readylytics.health.core.ui.components.rememberZoneBandColors
+import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.feature.vitals.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -141,9 +142,8 @@ fun BloodPressureTrendChart(
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val systolicColor = MaterialTheme.colorScheme.primary
     val diastolicColor = MaterialTheme.colorScheme.tertiaryContainer
-    val zoneBands =
-        app.readylytics.health.domain.model
-            .systolicZoneBands()
+    val healthMetricsService = remember { HealthMetricsService() }
+    val zoneBands = remember(healthMetricsService) { healthMetricsService.systolicReferenceBands() }
     // Define colors and containers for blood pressure chart
 
     // Use generic utility for colors; increase optimal opacity for better distinction

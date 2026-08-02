@@ -30,8 +30,7 @@ import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import app.readylytics.health.core.ui.components.rememberZoneBandColors
-import app.readylytics.health.domain.model.diastolicZoneBands
-import app.readylytics.health.domain.model.systolicZoneBands
+import app.readylytics.health.domain.service.HealthMetricsService
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -142,12 +141,14 @@ fun SingleBloodPressureChart(
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val lineColor = if (isDiastolic) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primary
+    val healthMetricsService = remember { HealthMetricsService() }
     val zoneBands =
-        if (isDiastolic) {
-            diastolicZoneBands()
-        } else {
-            app.readylytics.health.domain.model
-                .systolicZoneBands()
+        remember(isDiastolic) {
+            if (isDiastolic) {
+                healthMetricsService.diastolicReferenceBands()
+            } else {
+                healthMetricsService.systolicReferenceBands()
+            }
         }
     val colors =
         rememberZoneBandColors(
