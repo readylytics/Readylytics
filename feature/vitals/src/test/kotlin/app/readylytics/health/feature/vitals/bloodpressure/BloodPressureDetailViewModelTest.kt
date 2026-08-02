@@ -92,7 +92,7 @@ class BloodPressureDetailViewModelTest {
             assertEquals(MetricStatus.CALIBRATING, state.systolicStatus)
             assertEquals(MetricStatus.CALIBRATING, state.diastolicStatus)
             assertNull(state.bloodPressureDisplay)
-            assertNull(state.statusLabel)
+            assertNull(state.bloodPressureStatus)
         }
 
     // --- bloodPressureDisplay ---
@@ -119,164 +119,68 @@ class BloodPressureDetailViewModelTest {
             assertNull(state.bloodPressureDisplay)
         }
 
-    // --- systolicStatus boundaries ---
+    // --- canonical blood-pressure ladder ---
 
     @Test
-    fun `systolicStatus is OPTIMAL for systolic below 120`() =
+    fun `latest 120 over 80 is Normal with Optimal component gauges`() =
         runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 119, diastolic = 70)
+            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 120, diastolic = 80)
 
             viewModel = createViewModel()
             val state = viewModel.uiState.first { it.latestSystolic != null }
 
             assertEquals(MetricStatus.OPTIMAL, state.systolicStatus)
+            assertEquals(MetricStatus.OPTIMAL, state.diastolicStatus)
+            assertEquals(BloodPressureStatus.Optimal, state.bloodPressureStatus)
         }
 
     @Test
-    fun `systolicStatus is OPTIMAL for systolic exactly 120`() =
+    fun `latest 120 over 81 is Elevated with Neutral diastolic gauge`() =
         runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 120, diastolic = 70)
+            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 120, diastolic = 81)
 
             viewModel = createViewModel()
             val state = viewModel.uiState.first { it.latestSystolic != null }
 
-            assertEquals(MetricStatus.OPTIMAL, state.systolicStatus)
+            assertEquals(MetricStatus.NEUTRAL, state.diastolicStatus)
+            assertEquals(BloodPressureStatus.Neutral, state.bloodPressureStatus)
         }
 
     @Test
-    fun `systolicStatus is NEUTRAL for systolic 121 to 129`() =
+    fun `latest 129 over 89 is Elevated`() =
         runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 125, diastolic = 70)
+            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 129, diastolic = 89)
 
             viewModel = createViewModel()
             val state = viewModel.uiState.first { it.latestSystolic != null }
 
             assertEquals(MetricStatus.NEUTRAL, state.systolicStatus)
+            assertEquals(MetricStatus.NEUTRAL, state.diastolicStatus)
+            assertEquals(BloodPressureStatus.Neutral, state.bloodPressureStatus)
         }
 
     @Test
-    fun `systolicStatus is WARNING for systolic 130 to 139`() =
+    fun `latest 130 over 90 is High with Warning diastolic gauge`() =
         runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 135, diastolic = 70)
+            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 130, diastolic = 90)
 
             viewModel = createViewModel()
             val state = viewModel.uiState.first { it.latestSystolic != null }
 
             assertEquals(MetricStatus.WARNING, state.systolicStatus)
-        }
-
-    @Test
-    fun `systolicStatus is POOR for systolic 140 or above`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 140, diastolic = 70)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestSystolic != null }
-
-            assertEquals(MetricStatus.POOR, state.systolicStatus)
-        }
-
-    // --- diastolicStatus boundaries ---
-
-    @Test
-    fun `diastolicStatus is OPTIMAL for diastolic below 80`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 110, diastolic = 79)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestDiastolic != null }
-
-            assertEquals(MetricStatus.OPTIMAL, state.diastolicStatus)
-        }
-
-    @Test
-    fun `diastolicStatus is WARNING for diastolic 80 to 89`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 110, diastolic = 85)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestDiastolic != null }
-
             assertEquals(MetricStatus.WARNING, state.diastolicStatus)
+            assertEquals(BloodPressureStatus.HypertensionStage1, state.bloodPressureStatus)
         }
 
     @Test
-    fun `diastolicStatus is POOR for diastolic 90 or above`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 110, diastolic = 90)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestDiastolic != null }
-
-            assertEquals(MetricStatus.POOR, state.diastolicStatus)
-        }
-
-    // --- statusLabel ---
-
-    @Test
-    fun `statusLabel is Normal when systolic below 120 and diastolic below 80`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 115, diastolic = 75)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestSystolic != null }
-
-            assertEquals("Normal", state.statusLabel)
-        }
-
-    @Test
-    fun `statusLabel is Normal when systolic is exactly 120 and diastolic below 80`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 120, diastolic = 75)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestSystolic != null }
-
-            assertEquals("Normal", state.statusLabel)
-        }
-
-    @Test
-    fun `statusLabel is Elevated when systolic 121 to 129 and diastolic below 80`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 125, diastolic = 75)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestSystolic != null }
-
-            assertEquals("Elevated", state.statusLabel)
-        }
-
-    @Test
-    fun `statusLabel is High when systolic 130 or above`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 135, diastolic = 75)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestSystolic != null }
-
-            assertEquals("High", state.statusLabel)
-        }
-
-    @Test
-    fun `statusLabel is High when diastolic 80 or above`() =
-        runTest {
-            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 115, diastolic = 80)
-
-            viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.latestSystolic != null }
-
-            assertEquals("High", state.statusLabel)
-        }
-
-    @Test
-    fun `statusLabel is null when no latest record`() =
+    fun `bloodPressureStatus is null when no latest record`() =
         runTest {
             coEvery { repository.getLatest() } returns null
 
             viewModel = createViewModel()
             val state = viewModel.uiState.first { it.latestSystolic == null }
 
-            assertNull(state.statusLabel)
+            assertNull(state.bloodPressureStatus)
         }
 
     // --- historyItems ---
@@ -292,8 +196,8 @@ class BloodPressureDetailViewModelTest {
     @Test
     fun `historyItems are sorted newest first with correct status mapping`() =
         runTest {
-            val older = bloodPressureEntity(systolic = 115, diastolic = 75, timestampMs = 1_000L)
-            val newer = bloodPressureEntity(systolic = 135, diastolic = 88, timestampMs = 2_000L)
+            val older = bloodPressureEntity(systolic = 140, diastolic = 70, timestampMs = 1_000L)
+            val newer = bloodPressureEntity(systolic = 180, diastolic = 110, timestampMs = 2_000L)
             coEvery { repository.getByDateRange(any(), any()) } returns listOf(older, newer)
 
             viewModel = createViewModel()
@@ -301,9 +205,9 @@ class BloodPressureDetailViewModelTest {
 
             assertEquals(2, state.historyItems.size)
             assertEquals(2_000L, state.historyItems[0].timestampMs)
-            assertEquals(BloodPressureStatus.HypertensionStage1, state.historyItems[0].status)
+            assertEquals(BloodPressureStatus.HypertensionStage2, state.historyItems[0].status)
             assertEquals(1_000L, state.historyItems[1].timestampMs)
-            assertEquals(BloodPressureStatus.Optimal, state.historyItems[1].status)
+            assertEquals(BloodPressureStatus.HypertensionStage2, state.historyItems[1].status)
         }
 
     // --- onRangeSelected ---

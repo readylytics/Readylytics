@@ -56,10 +56,10 @@
     <string name="label_blood_pressure">Blood Pressure</string>
     <string name="label_systolic">Systolic</string>
     <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure
-        measurement.\n\nOptimal: &lt;120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140</string>
+        measurement.\n\nOptimal: ≤120\nNeutral: 121–129\nWarning: 130–139\nPoor: ≥140</string>
     <string name="label_diastolic">Diastolic</string>
     <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure
-        measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
+        measurement.\n\nOptimal: ≤80\nNeutral: 81–89\nWarning: 90–99\nPoor: ≥100</string>
     <string name="label_blood_pressure_trend">Blood Pressure Trend</string>
     <string name="bp_history_title_format">Blood Pressure (%1$s)</string>
     <string name="bp_history_subtitle_format">%1$d/%2$d mmHg</string>

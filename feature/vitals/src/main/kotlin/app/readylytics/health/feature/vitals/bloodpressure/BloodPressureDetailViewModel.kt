@@ -7,11 +7,12 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.di.IoDispatcher
-import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
+import app.readylytics.health.domain.service.HealthMetricsService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,7 @@ data class BloodPressureDetailUiState(
     val bloodPressureDisplay: String? = null,
     val systolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val diastolicStatus: MetricStatus = MetricStatus.CALIBRATING,
-    val statusLabel: String? = null,
+    val bloodPressureStatus: BloodPressureStatus? = null,
     val historyItems: List<BloodPressureHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
 )
@@ -50,6 +51,7 @@ class BloodPressureDetailViewModel
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        private val healthMetricsService = HealthMetricsService()
 
         val uiState: StateFlow<BloodPressureDetailUiState> =
             combine(
@@ -99,30 +101,13 @@ class BloodPressureDetailViewModel
                     val latestSystolic = latest?.systolicMmHg
                     val latestDiastolic = latest?.diastolicMmHg
 
-                    val systolicStatus =
-                        when (latestSystolic) {
-                            null -> MetricStatus.CALIBRATING
-                            in 0..120 -> MetricStatus.OPTIMAL
-                            in 121..129 -> MetricStatus.NEUTRAL
-                            in 130..139 -> MetricStatus.WARNING
-                            else -> MetricStatus.POOR
-                        }
-
-                    val diastolicStatus =
-                        when (latestDiastolic) {
-                            null -> MetricStatus.CALIBRATING
-                            in 0..79 -> MetricStatus.OPTIMAL
-                            in 80..89 -> MetricStatus.WARNING
-                            else -> MetricStatus.POOR
-                        }
-
-                    val statusLabel =
-                        when {
-                            latestSystolic == null || latestDiastolic == null -> null
-                            latestSystolic in 0..120 && latestDiastolic in 0..79 -> "Normal"
-                            latestSystolic in 121..129 && latestDiastolic in 0..79 -> "Elevated"
-                            latestSystolic >= 130 || latestDiastolic >= 80 -> "High"
-                            else -> null
+                    val systolicStatus = healthMetricsService.assessSystolic(latestSystolic)
+                    val diastolicStatus = healthMetricsService.assessDiastolic(latestDiastolic)
+                    val bloodPressureStatus =
+                        if (latestSystolic != null && latestDiastolic != null) {
+                            healthMetricsService.assessBloodPressure(latestSystolic, latestDiastolic)
+                        } else {
+                            null
                         }
 
                     val bloodPressureDisplay =
@@ -141,7 +126,7 @@ class BloodPressureDetailViewModel
                                     systolic = record.systolicMmHg,
                                     diastolic = record.diastolicMmHg,
                                     status =
-                                        HealthMetricsCalculator.assessBloodPressure(
+                                        healthMetricsService.assessBloodPressure(
                                             record.systolicMmHg,
                                             record.diastolicMmHg,
                                         ),
@@ -159,7 +144,7 @@ class BloodPressureDetailViewModel
                         bloodPressureDisplay = bloodPressureDisplay,
                         systolicStatus = systolicStatus,
                         diastolicStatus = diastolicStatus,
-                        statusLabel = statusLabel,
+                        bloodPressureStatus = bloodPressureStatus,
                         historyItems = historyItems,
                         isLoading = false,
                     )
