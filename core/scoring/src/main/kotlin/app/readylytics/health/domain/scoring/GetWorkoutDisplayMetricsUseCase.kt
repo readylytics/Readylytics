@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -25,6 +26,7 @@ class GetWorkoutDisplayMetricsUseCase
             workout: WorkoutData,
             samples: List<HeartRateSample>? = null,
             preferences: UserPreferences? = null,
+            historicalSummaries: List<DailySummary>? = null,
         ): WorkoutDisplayMetrics {
             val prefs = preferences ?: settingsRepo.userPreferences.first()
             val zoneId = prefs.scoringZone()
@@ -32,16 +34,18 @@ class GetWorkoutDisplayMetricsUseCase
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = dailySummaryRepository.getByDate(midnight)
 
-            val fortyTwoDaysAgo =
-                workoutDate
-                    .minusDays(ScoringConstants.CHRONIC_DAYS)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-
-            val historicalSummaries = dailySummaryRepository.getSince(fortyTwoDaysAgo)
+            val resolvedHistoricalSummaries =
+                historicalSummaries ?: run {
+                    val fortyTwoDaysAgo =
+                        workoutDate
+                            .minusDays(ScoringConstants.CHRONIC_DAYS)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    dailySummaryRepository.getSince(fortyTwoDaysAgo)
+                }
             val trimpByDate =
-                historicalSummaries.associate {
+                resolvedHistoricalSummaries.associate {
                     it.date to (LoadSourceSelector.selectTrimp(it, prefs.strainLoadSourceMode) ?: 0f)
                 }
 

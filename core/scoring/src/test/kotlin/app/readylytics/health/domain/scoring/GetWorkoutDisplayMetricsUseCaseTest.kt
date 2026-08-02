@@ -127,4 +127,77 @@ class GetWorkoutDisplayMetricsUseCaseTest {
                 heartRateRepository.getByTimeRange(workout.startTime, workout.endTime)
             }
         }
+
+    @Test
+    fun `uses pre-fetched historicalSummaries instead of querying the repository`() =
+        runTest {
+            val zoneId = ZoneId.of("Pacific/Honolulu")
+            val workoutDate = LocalDate.of(2026, 6, 9)
+            val startMs = Instant.parse("2026-06-10T05:00:00Z").toEpochMilli()
+
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "RUNNING",
+                    durationMinutes = 30,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 0f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 50f,
+                    avgHr = 130f,
+                )
+
+            val prefs = UserPreferences(scoringZoneId = "Pacific/Honolulu")
+            val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val summary = mockk<DailySummary>()
+            every { summary.rhrBpm } returns 55f
+            coEvery { dailySummaryRepository.getByDate(midnight) } returns summary
+
+            val dbSamples =
+                listOf(
+                    HeartRateRecordData(
+                        id = "hr-1",
+                        timestampMs = startMs + 1000L,
+                        beatsPerMinute = 130,
+                        recordType = "EXERCISE",
+                    ),
+                )
+            coEvery { heartRateRepository.getByTimeRange(workout.startTime, workout.endTime) } returns dbSamples
+
+            val loadMetrics =
+                ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(
+                    preciseTrimp = 50f,
+                    roundedTrimp = 50,
+                    preciseGainedStrain = 0.36f,
+                    roundedGainedStrain = 0.36f,
+                    gainedStrainDisplay = "0.36",
+                    classification = null,
+                )
+            every {
+                computeWorkoutLoadMetricsUseCase.execute(
+                    workout = workout,
+                    workoutDate = workoutDate,
+                    samples = any(),
+                    prefs = prefs,
+                    restingHrBaseline = 55f,
+                    trimpByDate = any(),
+                )
+            } returns loadMetrics
+
+            val preFetched = listOf(DailySummary(date = workoutDate, trimpWorkoutOnly = 10f))
+
+            val result =
+                useCase.execute(
+                    workout = workout,
+                    preferences = prefs,
+                    historicalSummaries = preFetched,
+                )
+
+            assertEquals(50f, result.preciseTrimp)
+            coVerify(exactly = 0) { dailySummaryRepository.getSince(any()) }
+        }
 }
