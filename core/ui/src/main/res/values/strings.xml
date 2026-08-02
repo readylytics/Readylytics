@@ -138,10 +138,10 @@
     <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
     <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
     <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
-    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
-    <string name="card_bp_status_neutral">Elevated: 120–129/&lt;80 mmHg</string>
-    <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
-    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
+    <string name="card_bp_status_optimal">Optimal: \u2264120/80 mmHg</string>
+    <string name="card_bp_status_neutral">Neutral: otherwise \u2264129/89 mmHg</string>
+    <string name="card_bp_status_warning">Warning: otherwise \u2264139/99 mmHg</string>
+    <string name="card_bp_status_poor">Poor: all other readings</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>
     <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>

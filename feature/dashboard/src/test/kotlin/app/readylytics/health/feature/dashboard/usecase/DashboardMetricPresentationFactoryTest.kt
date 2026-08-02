@@ -218,6 +218,36 @@ class DashboardMetricPresentationFactoryTest {
     }
 
     @Test
+    fun `blood pressure card uses canonical inclusive component-wise status ladder`() {
+        val expected =
+            listOf(
+                (120 to 80) to MetricStatus.OPTIMAL,
+                (121 to 80) to MetricStatus.NEUTRAL,
+                (120 to 81) to MetricStatus.NEUTRAL,
+                (129 to 89) to MetricStatus.NEUTRAL,
+                (130 to 90) to MetricStatus.WARNING,
+            )
+
+        expected.forEach { (reading, status) ->
+            val card =
+                factory
+                    .build(
+                        summary().copy(
+                            bloodPressureSystolic = reading.first,
+                            bloodPressureDiastolic = reading.second,
+                        ),
+                        preferences(),
+                        date,
+                        null,
+                        null,
+                        null,
+                    ).getValue(CardId.BLOOD_PRESSURE)
+
+            assertEquals("Blood pressure ${reading.first}/${reading.second}", status, card.status)
+        }
+    }
+
+    @Test
     fun `readiness status uses the selected continuous score rather than its rounded display value`() {
         val cards =
             factory.build(

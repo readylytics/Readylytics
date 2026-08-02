@@ -1,7 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.display.MetricFormatter
@@ -14,6 +13,7 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
 import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
@@ -405,7 +405,7 @@ class DashboardMetricPresentationFactory
             val diastolic = summary?.bloodPressureDiastolic ?: 0
             val bpStatus =
                 if (systolic > 0 && diastolic > 0) {
-                    HealthMetricsCalculator.assessBloodPressure(systolic, diastolic).toMetricStatus()
+                    HealthMetricsService().assessBloodPressure(systolic, diastolic).toMetricStatus()
                 } else {
                     MetricStatus.NEUTRAL
                 }

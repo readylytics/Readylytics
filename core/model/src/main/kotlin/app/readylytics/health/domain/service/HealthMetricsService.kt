@@ -31,15 +31,15 @@ class HealthMetricsService {
     /** Classify a BMI value into a [BmiStatus]. Delegates to [BodyCompositionAssessment]. */
     fun assessBmi(bmi: Float): BmiStatus = BodyCompositionAssessment.assessBmi(bmi).status
 
-    /** Classify a blood pressure reading using ACC/AHA 2017 stages. */
+    /** Classify a blood pressure reading using the app's inclusive component-wise status ladder. */
     fun assessBloodPressure(
         systolic: Int,
         diastolic: Int,
     ): BloodPressureStatus =
         when {
-            systolic < BP_NORMAL_SYS && diastolic < BP_NORMAL_DIA -> BloodPressureStatus.Optimal
-            systolic <= BP_ELEVATED_SYS && diastolic < BP_NORMAL_DIA -> BloodPressureStatus.Neutral
-            systolic in BP_STAGE1_SYS_RANGE || diastolic in BP_STAGE1_DIA_RANGE ->
+            systolic <= BP_NORMAL_SYS && diastolic <= BP_NORMAL_DIA -> BloodPressureStatus.Optimal
+            systolic <= BP_ELEVATED_SYS && diastolic <= BP_ELEVATED_DIA -> BloodPressureStatus.Neutral
+            systolic in BP_STAGE1_SYS_RANGE && diastolic in BP_STAGE1_DIA_RANGE ->
                 BloodPressureStatus.HypertensionStage1
             else -> BloodPressureStatus.HypertensionStage2
         }
@@ -103,8 +103,9 @@ class HealthMetricsService {
         const val BP_NORMAL_SYS: Int = 120
         const val BP_NORMAL_DIA: Int = 80
         const val BP_ELEVATED_SYS: Int = 129
-        val BP_STAGE1_SYS_RANGE: IntRange = 130..139
-        val BP_STAGE1_DIA_RANGE: IntRange = 80..89
+        const val BP_ELEVATED_DIA: Int = 89
+        val BP_STAGE1_SYS_RANGE: IntRange = Int.MIN_VALUE..139
+        val BP_STAGE1_DIA_RANGE: IntRange = Int.MIN_VALUE..99
 
         private const val CM_PER_M: Float = 100f
     }

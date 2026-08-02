@@ -6,6 +6,7 @@ import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.BodyFatStatus
 import app.readylytics.health.domain.preferences.Gender
 import app.readylytics.health.domain.preferences.PhysiologyProfile
+import app.readylytics.health.domain.service.HealthMetricsService
 
 object HealthMetricsCalculator {
     fun calculateBmi(
@@ -22,13 +23,7 @@ object HealthMetricsCalculator {
     fun assessBloodPressure(
         systolic: Int,
         diastolic: Int,
-    ): BloodPressureStatus =
-        when {
-            systolic <= 120 && diastolic < 80 -> BloodPressureStatus.Optimal
-            systolic <= 129 && diastolic < 80 -> BloodPressureStatus.Neutral
-            systolic in 130..139 || diastolic in 80..89 -> BloodPressureStatus.HypertensionStage1
-            else -> BloodPressureStatus.HypertensionStage2
-        }
+    ): BloodPressureStatus = HealthMetricsService().assessBloodPressure(systolic, diastolic)
 
     /**
      * Classify body-fat percentage by physiology profile and gender.

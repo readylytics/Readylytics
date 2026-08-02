@@ -128,10 +128,20 @@ class HealthMetricsServiceTest {
     fun bp_119_79_isOptimal() = assertEquals(BloodPressureStatus.Optimal, service.assessBloodPressure(119, 79))
 
     @Test
-    fun bp_120_75_isNeutral() = assertEquals(BloodPressureStatus.Neutral, service.assessBloodPressure(120, 75))
+    fun bp_120_80_isOptimal() = assertEquals(BloodPressureStatus.Optimal, service.assessBloodPressure(120, 80))
 
     @Test
-    fun bp_129_79_isNeutral() = assertEquals(BloodPressureStatus.Neutral, service.assessBloodPressure(129, 79))
+    fun bp_121_80_isNeutral() = assertEquals(BloodPressureStatus.Neutral, service.assessBloodPressure(121, 80))
+
+    @Test
+    fun bp_120_81_isNeutral() = assertEquals(BloodPressureStatus.Neutral, service.assessBloodPressure(120, 81))
+
+    @Test
+    fun bp_129_89_isNeutral() = assertEquals(BloodPressureStatus.Neutral, service.assessBloodPressure(129, 89))
+
+    @Test
+    fun bp_130_90_isStage1() =
+        assertEquals(BloodPressureStatus.HypertensionStage1, service.assessBloodPressure(130, 90))
 
     @Test
     fun bp_130_75_isStage1() =
@@ -142,20 +152,20 @@ class HealthMetricsServiceTest {
         assertEquals(BloodPressureStatus.HypertensionStage1, service.assessBloodPressure(139, 85))
 
     @Test
-    fun bp_115_80_isStage1() =
-        assertEquals(BloodPressureStatus.HypertensionStage1, service.assessBloodPressure(115, 80))
+    fun bp_115_80_isOptimal() =
+        assertEquals(BloodPressureStatus.Optimal, service.assessBloodPressure(115, 80))
 
     @Test
-    fun bp_115_89_isStage1() =
-        assertEquals(BloodPressureStatus.HypertensionStage1, service.assessBloodPressure(115, 89))
+    fun bp_115_89_isNeutral() =
+        assertEquals(BloodPressureStatus.Neutral, service.assessBloodPressure(115, 89))
 
     @Test
     fun bp_140_70_isStage2() =
         assertEquals(BloodPressureStatus.HypertensionStage2, service.assessBloodPressure(140, 70))
 
     @Test
-    fun bp_115_90_isStage2() =
-        assertEquals(BloodPressureStatus.HypertensionStage2, service.assessBloodPressure(115, 90))
+    fun bp_115_90_isStage1() =
+        assertEquals(BloodPressureStatus.HypertensionStage1, service.assessBloodPressure(115, 90))
 
     @Test
     fun bp_180_110_isStage2() =

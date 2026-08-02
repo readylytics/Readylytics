@@ -246,6 +246,17 @@ _Implemented in: `BodyCompositionAssessment.kt`, `BmiService.kt`, `HealthMetrics
 
 ---
 
+## Blood Pressure
+
+The dashboard classifies each blood-pressure reading with an inclusive, component-wise ladder:
+≤120/80 mmHg is Optimal; readings otherwise ≤129/89 are Neutral; readings otherwise ≤139/99
+are Warning; all other readings are Poor. For example, 121/80, 120/81, and 129/89 are Neutral,
+while 130/90 is Warning. This is a dashboard status, not a diagnosis.
+
+_Implemented in: `HealthMetricsService.kt`_
+
+---
+
 ## Overnight Oxygen Saturation
 
 The dashboard card uses your overnight average oxygen saturation. Overnight oxygen
