@@ -1,8 +1,12 @@
 package app.readylytics.health.domain.model
 
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Pure projection of the dual-variant (`*WorkoutOnly`/`*EverydayHr`) columns on [DailySummary]
@@ -82,6 +86,26 @@ object LoadSourceSelector {
         when (mode) {
             LoadSourceMode.WORKOUT_ONLY -> summary.totalRasWorkoutOnly
             LoadSourceMode.EVERYDAY_HEART_RATE -> summary.totalRasEverydayHr
+        }
+
+    /**
+     * Earliest date with data under [mode], derived from data already being observed by the
+     * caller rather than a separate DB round trip. Only ever compared against a fixed-day
+     * threshold, so callers must fetch at least that many days of [workouts]/[summaries] history
+     * for the result to be meaningful.
+     */
+    fun selectEarliestDataDate(
+        workouts: List<WorkoutData>,
+        summaries: List<DailySummary>,
+        mode: LoadSourceMode,
+        zoneId: ZoneId,
+    ): LocalDate? =
+        when (mode) {
+            LoadSourceMode.WORKOUT_ONLY ->
+                workouts.minOfOrNull { it.startTime }?.let {
+                    Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
+                }
+            LoadSourceMode.EVERYDAY_HEART_RATE -> summaries.minOfOrNull { it.date }
         }
 
     /**
