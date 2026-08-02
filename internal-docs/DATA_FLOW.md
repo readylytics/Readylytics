@@ -400,11 +400,18 @@ out of `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/**`.
 
 Workout history and dashboard strain-increase observers use the same stored scoring-zone
 snapshot for selected-day boundaries, tenure guards, history fetches, workout date attribution,
-and per-workout display metrics. Their Room-backed flows remain subscribed while tenure is below
-the seven-day minimum, so newly ingested history can unlock a result without a screen restart.
-The dashboard observer fetches the selected day plus the preceding six days and the 42-day
-ATL/CTL lookback, then delegates the final delta to the pure scoring helper; it does not persist
-or independently render that value.
+and per-workout display metrics. Data tenure (whether the user has at least seven days of
+history under the selected `strainLoadSourceMode`) is derived from the same workouts/daily-summary
+lists each observer already fetches for its 42-day ATL/CTL lookback
+(`LoadSourceSelector.selectEarliestDataDate`), not a separate DB query — `WORKOUT_ONLY` reads the
+earliest observed workout start time, `EVERYDAY_HEART_RATE` reads the earliest observed daily
+summary date. Their Room-backed flows remain subscribed while tenure is below the seven-day
+minimum, so newly ingested history can unlock a result without a screen restart. The dashboard
+observer fetches the selected day plus the preceding six days and the 42-day ATL/CTL lookback,
+then delegates the final delta to the pure scoring helper; it does not persist or independently
+render that value. Both observers pass their already-fetched daily-summary window into
+`GetWorkoutDisplayMetricsUseCase.execute(historicalSummaries = ...)` for per-workout display
+metrics, so N displayed workouts cost one 42-day history fetch, not N.
 
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
@@ -617,7 +624,7 @@ actually prevents `SleepDaySegment`'s `durationMinutes > 0` invariant from throw
 | `BuildLoadSeriesUseCase` | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/BuildLoadSeriesUseCase.kt` | PERF-002/WP-20/UI-002 extraction from `ScoringRepositoryImpl`. Pure; runs `ScoringCalculator.compute*EmaWithDecay`/`computeStrainRatio`/`computeLoadScore` for both the workout-only and everyday-HR series given the caller-resolved `dailyTrimpByDate`/`everydayTrimpByDate` maps. |
 | `WalkForwardTrimpContext` / `WalkForwardBaselineContext` | `core/model/src/main/kotlin/app/readylytics/health/domain/repository/` | PERF-002/WP-20/WP-22. Held by a multi-day walk-forward (`ResyncRangeUseCase`'s RECOMPUTE phase) across every recomputed day: the TRIMP series (two `TreeMap<LocalDate, Float>`, fetched once via `ScoringRepository.fetchWalkForwardTrimpContext`) and the RHR/HRV baseline sleep-session superset (fetched once via `fetchWalkForwardBaselineContext`, delegating to `BaselineComputer.prefetchWalkForwardSessions`). |
 | `ScoringRepositoryImpl.computeDailySummary` | `core/database/src/main/kotlin/app/readylytics/health/data/repository/ScoringRepositoryImpl.kt` | Fetches the day's SQL-bucketed HR rows (`HeartRateDao.getMinuteBuckets`) plus sleep/workout intervals, feeds them to `AssembleEverydayLoadInputUseCase`, then `BuildLoadSeriesUseCase` for the ATL/CTL/strain/load assembly, and persists both `*WorkoutOnly` and `*EverydayHr` variants (TRIMP, RAS, total RAS, ATL, CTL, Strain Ratio, Load Score, Readiness) plus `everydayCoverageMinutes`/`everydayLoadConfidence` on `DailySummaryEntity`. Accepts an optional `WalkForwardTrimpContext`/`WalkForwardBaselineContext` pair (5-arg `computeAndPersistDailySummary` overload) to slice shared in-memory data instead of re-querying per day. |
-| `LoadSourceSelector` | `core/model/src/main/kotlin/app/readylytics/health/domain/model/LoadSourceSelector.kt` | Pure projection. Picks `*WorkoutOnly` or `*EverydayHr` per field from `UserPreferences.strainLoadSourceMode` (TRIMP/ATL/CTL/Strain Ratio/Load Score/Readiness) and `rasSourceMode` (daily/total RAS); also derives `needsRecalc` and `readinessLowConfidence`. |
+| `LoadSourceSelector` | `core/model/src/main/kotlin/app/readylytics/health/domain/model/LoadSourceSelector.kt` | Pure mode-aware projection: `select*` functions pick the `*WorkoutOnly`/`*EverydayHr` variant column or derived value (TRIMP, ATL, CTL, strain ratio, RAS, earliest data date) matching `strainLoadSourceMode`/`rasSourceMode`. Zero Android dependencies. |
 | `DailyMetricsMapper` | `core/model/src/main/kotlin/app/readylytics/health/domain/model/DailyMetricsMapper.kt` | Builds `DailyMetrics` exclusively through `LoadSourceSelector` for all user-visible strain/load/RAS/readiness fields, so switching either source preference re-projects already-stored data instantly with no recompute. |
 
 The two source preferences (`strainLoadSourceMode`, `rasSourceMode`, both on `UserPreferences`)
