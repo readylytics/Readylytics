@@ -7,6 +7,7 @@ import app.readylytics.health.domain.model.BloodPressureRecord
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
+import app.readylytics.health.feature.vitals.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -182,6 +183,14 @@ class BloodPressureDetailViewModelTest {
 
             assertNull(state.bloodPressureStatus)
         }
+
+    @Test
+    fun `current blood pressure status maps to its rendered label resource`() {
+        assertEquals(R.string.bp_status_normal, bloodPressureStatusLabelRes(BloodPressureStatus.Optimal))
+        assertEquals(R.string.bp_status_elevated, bloodPressureStatusLabelRes(BloodPressureStatus.Neutral))
+        assertEquals(R.string.bp_status_stage1, bloodPressureStatusLabelRes(BloodPressureStatus.HypertensionStage1))
+        assertEquals(R.string.bp_status_stage2, bloodPressureStatusLabelRes(BloodPressureStatus.HypertensionStage2))
+    }
 
     // --- historyItems ---
 
