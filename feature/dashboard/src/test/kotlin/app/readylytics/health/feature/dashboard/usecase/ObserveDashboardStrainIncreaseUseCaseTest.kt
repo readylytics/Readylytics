@@ -12,6 +12,7 @@ import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,15 +49,18 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
         runTest(testDispatcher) {
             val selectedDate = LocalDate.of(2026, 7, 30)
             val zoneId = ZoneId.of("UTC")
-            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
-                selectedDate
-                    .minusDays(5)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
+            val recentWorkout =
+                workout(
+                    "recent",
+                    selectedDate
+                        .minusDays(5)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                )
             every {
                 workoutRepository.observeSince(expectedHistoryStartMs)
-            } returns flowOf(emptyList())
+            } returns flowOf(listOf(recentWorkout))
             every {
                 dailySummaryRepository.observeSince(expectedHistoryStartMs)
             } returns flowOf(emptyList())
@@ -77,19 +81,6 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
             val selectedDate = LocalDate.of(2026, 7, 30)
             val zoneId = ZoneId.of("UTC")
             val workouts = MutableStateFlow(emptyList<WorkoutData>())
-            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returnsMany
-                listOf(
-                    selectedDate
-                        .minusDays(5)
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli(),
-                    selectedDate
-                        .minusDays(6)
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli(),
-                )
             every { workoutRepository.observeSince(expectedHistoryStartMs) } returns workouts
             every {
                 dailySummaryRepository.observeSince(expectedHistoryStartMs)
@@ -110,10 +101,10 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
             workouts.value =
                 listOf(
                     workout(
-                        id = "prior-day",
+                        id = "seven-days-back",
                         startTime =
                             selectedDate
-                                .minusDays(1)
+                                .minusDays(6)
                                 .atStartOfDay(zoneId)
                                 .toInstant()
                                 .toEpochMilli(),
@@ -121,6 +112,7 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                 )
 
             assertEquals(listOf(null, 0f), values.await())
+            verify(exactly = 1) { workoutRepository.observeSince(expectedHistoryStartMs) }
         }
 
     @Test
@@ -140,14 +132,16 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                         .toInstant()
                         .toEpochMilli(),
                 )
-            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
-                selectedDate
-                    .minusDays(20)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
+            val oldWorkout =
+                workout(
+                    "old",
+                    dayStart
+                        .minusDays(10)
+                        .toInstant()
+                        .toEpochMilli(),
+                )
             every { workoutRepository.observeSince(expectedHistoryStartMs) } returns
-                flowOf(listOf(previousDayWorkout, firstWorkout, secondWorkout))
+                flowOf(listOf(oldWorkout, previousDayWorkout, firstWorkout, secondWorkout))
             every {
                 dailySummaryRepository.observeSince(expectedHistoryStartMs)
             } returns flowOf(emptyList())
@@ -155,12 +149,14 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                 getWorkoutDisplayMetricsUseCase.execute(
                     workout = firstWorkout,
                     preferences = any(),
+                    historicalSummaries = any(),
                 )
             } returns displayMetrics(0.09f)
             coEvery {
                 getWorkoutDisplayMetricsUseCase.execute(
                     workout = secondWorkout,
                     preferences = any(),
+                    historicalSummaries = any(),
                 )
             } returns displayMetrics(0.14f)
 
@@ -188,6 +184,10 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
             val summaries =
                 listOf(
                     DailySummary(
+                        date = selectedDate.minusDays(10),
+                        trimpEverydayHr = 5f,
+                    ),
+                    DailySummary(
                         date = selectedDate.minusDays(1),
                         trimpEverydayHr = 20f,
                     ),
@@ -196,12 +196,54 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                         trimpEverydayHr = 45f,
                     ),
                 )
-            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
-                selectedDate
-                    .minusDays(20)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
+            every {
+                workoutRepository.observeSince(expectedHistoryStartMs)
+            } returns flowOf(emptyList())
+            every { dailySummaryRepository.observeSince(expectedHistoryStartMs) } returns
+                flowOf(summaries)
+            every {
+                scoringCalculator.computeCtlEmaSeries(any(), selectedDate.minusDays(6), selectedDate)
+            } returns mapOf(selectedDate to 10f)
+            every {
+                scoringCalculator.computeAtlEmaSeries(any(), selectedDate.minusDays(6), selectedDate)
+            } returns mapOf(selectedDate to 15f)
+            every {
+                scoringCalculator.computeCtlEmaWithDecay(match { it[selectedDate] == 0f }, selectedDate)
+            } returns 10f
+            every {
+                scoringCalculator.computeAtlEmaWithDecay(match { it[selectedDate] == 0f }, selectedDate)
+            } returns 12f
+            every { scoringCalculator.computeStrainRatio(15f, 10f) } returns 1.5f
+            every { scoringCalculator.computeStrainRatio(12f, 10f) } returns 1.2f
+
+            val result =
+                createUseCase()
+                    .invoke(
+                        selectedDate = flowOf(selectedDate),
+                        preferences =
+                            flowOf(
+                                UserPreferences(
+                                    scoringZoneId = "UTC",
+                                    strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
+                                ),
+                            ),
+                    ).first()
+
+            assertEquals(0.3f, result!!, 0.001f)
+        }
+
+    @Test
+    fun `everyday-heart-rate mode reports a delta with thirty days of summaries and zero workouts`() =
+        runTest(testDispatcher) {
+            val selectedDate = LocalDate.of(2026, 7, 30)
+            val zoneId = ZoneId.of("UTC")
+            val summaries =
+                (0..29).map { daysAgo ->
+                    DailySummary(
+                        date = selectedDate.minusDays(daysAgo.toLong()),
+                        trimpEverydayHr = 20f,
+                    )
+                }
             every {
                 workoutRepository.observeSince(expectedHistoryStartMs)
             } returns flowOf(emptyList())
