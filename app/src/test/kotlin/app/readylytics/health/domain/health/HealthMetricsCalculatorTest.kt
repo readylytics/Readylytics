@@ -134,6 +134,10 @@ class AssessBloodPressureTest {
         assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(120, 75))
 
     @Test
+    fun `systolic 120 diastolic 80 is Optimal`() =
+        assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(120, 80))
+
+    @Test
     fun `systolic 121 diastolic 75 is Neutral`() =
         assertEquals(BloodPressureStatus.Neutral, HealthMetricsCalculator.assessBloodPressure(121, 75))
 
@@ -150,20 +154,20 @@ class AssessBloodPressureTest {
         assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(139, 85))
 
     @Test
-    fun `diastolic 80 with normal systolic is HypertensionStage1`() =
-        assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(115, 80))
+    fun `diastolic 80 with normal systolic is Optimal`() =
+        assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(115, 80))
 
     @Test
-    fun `diastolic 89 with normal systolic is HypertensionStage1`() =
-        assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(115, 89))
+    fun `diastolic 89 with normal systolic is Neutral`() =
+        assertEquals(BloodPressureStatus.Neutral, HealthMetricsCalculator.assessBloodPressure(115, 89))
 
     @Test
     fun `systolic 140 is HypertensionStage2`() =
         assertEquals(BloodPressureStatus.HypertensionStage2, HealthMetricsCalculator.assessBloodPressure(140, 70))
 
     @Test
-    fun `diastolic 90 is HypertensionStage2`() =
-        assertEquals(BloodPressureStatus.HypertensionStage2, HealthMetricsCalculator.assessBloodPressure(115, 90))
+    fun `diastolic 90 with normal systolic is HypertensionStage1`() =
+        assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(115, 90))
 
     @Test
     fun `severe hypertension is HypertensionStage2`() =
