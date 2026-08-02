@@ -276,7 +276,11 @@ class BodyFatDetailViewModelTest {
                 MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = Gender.MALE))
             viewModel = createViewModel()
 
-            val item = viewModel.uiState.first { it.historyItems.isNotEmpty() }.historyItems.single()
+            val item =
+                viewModel.uiState
+                    .first { it.historyItems.isNotEmpty() }
+                    .historyItems
+                    .single()
 
             assertEquals(
                 BodyCompositionAssessment
