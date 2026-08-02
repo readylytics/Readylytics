@@ -9,6 +9,8 @@ data class ZoneBand(
     val lowerBound: Double,
     val upperBound: Double,
     val zone: HealthZone,
+    val includesMinimum: Boolean = true,
+    val includesMaximum: Boolean = false,
 )
 
 // RHR — lower is better: below optimalMax=OPTIMAL, up to neutralMax=NEUTRAL, up to warningMax=WARNING, above=CRITICAL
@@ -72,6 +74,8 @@ fun bodyFatZoneBands(
             lowerBound = band.minimumInclusive?.toDouble() ?: Double.NEGATIVE_INFINITY,
             upperBound = band.maximumExclusive?.toDouble() ?: Double.POSITIVE_INFINITY,
             zone = band.status.toHealthZone(),
+            includesMinimum = band.includesMinimum,
+            includesMaximum = band.includesMaximum,
         )
     }
 

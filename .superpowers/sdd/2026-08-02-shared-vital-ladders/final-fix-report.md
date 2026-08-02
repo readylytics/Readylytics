@@ -75,3 +75,28 @@ One intermediate formatting run reported that shared test base class names did n
 - Dashboard instrumentation tests were compile-verified but not executed on a physical/emulated Android device in this wave.
 - Compilation reports the existing Compose test-rule v1 deprecation warning in the moved dashboard base fixture; there are no errors.
 - No functional blockers remain from the six review findings.
+
+## Residual final re-review follow-up
+
+The final re-review found that `bodyFatZoneBands` copied the fixed-group numeric boundaries but
+dropped `BodyFatBand.includesMinimum` and `includesMaximum`. That changed the chart metadata's
+fixed reference interval from the canonical `<=10` Neutral, `(10, 30]` Optimal, and `>30` Poor
+semantics to an implicit half-open interpretation.
+
+Resolution:
+
+- Added default half-open endpoint metadata to `ZoneBand`, preserving every existing caller's
+  behavior.
+- Copied the canonical endpoint-inclusion flags when mapping body-fat bands.
+- Added fixed-profile regressions for exactly 10%, immediately above 10%, exactly 30%, and
+  immediately above 30%.
+
+Test-first and verification evidence:
+
+- Red: the focused test failed to compile because `ZoneBand.includesMinimum` and
+  `includesMaximum` did not exist.
+- Green: `./gradlew :core:model:testDebugUnitTest --tests
+  app.readylytics.health.domain.model.BodyCompositionZoneBandsTest` — **BUILD SUCCESSFUL** in 8s.
+- `./gradlew ktlintFormat && ./gradlew testDebugUnitTest` — **BUILD SUCCESSFUL** in 2m23s, 502
+  actionable tasks, zero failures.
+- `./gradlew lintRelease` — **BUILD SUCCESSFUL** in 1m8s, 503 actionable tasks.

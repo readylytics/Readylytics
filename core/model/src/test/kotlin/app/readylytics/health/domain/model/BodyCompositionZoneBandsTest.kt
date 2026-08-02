@@ -33,4 +33,23 @@ class BodyCompositionZoneBandsTest {
             bodyFatZoneBands(PhysiologyProfile.ACTIVE, Gender.FEMALE),
         )
     }
+
+    @Test
+    fun `fixed profile body fat chart bands preserve endpoint inclusion`() {
+        val bands = bodyFatZoneBands(PhysiologyProfile.ACTIVE, null)
+
+        assertEquals(HealthZone.NEUTRAL, bands.zoneAt(10.0))
+        assertEquals(HealthZone.OPTIMAL, bands.zoneAt(Math.nextUp(10.0)))
+        assertEquals(HealthZone.OPTIMAL, bands.zoneAt(30.0))
+        assertEquals(HealthZone.CRITICAL, bands.zoneAt(Math.nextUp(30.0)))
+    }
+
+    private fun List<ZoneBand>.zoneAt(value: Double): HealthZone =
+        single { band ->
+            val aboveMinimum =
+                if (band.includesMinimum) value >= band.lowerBound else value > band.lowerBound
+            val belowMaximum =
+                if (band.includesMaximum) value <= band.upperBound else value < band.upperBound
+            aboveMinimum && belowMaximum
+        }.zone
 }
