@@ -23,6 +23,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -80,7 +81,6 @@ class WorkoutsViewModelTest {
             }
         workoutRepository =
             mockk {
-                coEvery { getEarliestWorkoutTimestamp() } returns null
                 every { observeSince(any()) } returns workoutsFlow
             }
         heartRateRepository =
@@ -115,6 +115,7 @@ class WorkoutsViewModelTest {
                         workout = any(),
                         samples = any(),
                         preferences = any(),
+                        historicalSummaries = any(),
                     )
                 } returns
                     WorkoutDisplayMetrics(
@@ -347,6 +348,7 @@ class WorkoutsViewModelTest {
                     workout = workout,
                     samples = emptyList(),
                     preferences = any(),
+                    historicalSummaries = any(),
                 )
             } returns
                 WorkoutDisplayMetrics(
@@ -458,7 +460,30 @@ class WorkoutsViewModelTest {
                     trimp = 25f,
                     avgHr = 116f,
                 )
-            workoutsFlow.value = listOf(workout1, workout2)
+            workoutsFlow.value =
+                listOf(
+                    workout1,
+                    workout2,
+                    WorkoutData(
+                        id = "history",
+                        startTime = todayMidnight.minusDays(8).toInstant().toEpochMilli(),
+                        endTime =
+                            todayMidnight
+                                .minusDays(8)
+                                .plusMinutes(30)
+                                .toInstant()
+                                .toEpochMilli(),
+                        exerciseType = "walking",
+                        durationMinutes = 30,
+                        zone1Minutes = 0f,
+                        zone2Minutes = 0f,
+                        zone3Minutes = 0f,
+                        zone4Minutes = 0f,
+                        zone5Minutes = 0f,
+                        trimp = 5f,
+                        avgHr = 90f,
+                    ),
+                )
             summariesFlow.value =
                 listOf(
                     DailySummary(
@@ -469,18 +494,13 @@ class WorkoutsViewModelTest {
                     ),
                 )
             every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
-            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
-                today
-                    .minusDays(10)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
 
             coEvery {
                 getWorkoutDisplayMetricsUseCase.execute(
                     workout = workout1,
                     samples = emptyList(),
                     preferences = any(),
+                    historicalSummaries = any(),
                 )
             } returns
                 WorkoutDisplayMetrics(
@@ -504,6 +524,7 @@ class WorkoutsViewModelTest {
                     workout = workout2,
                     samples = emptyList(),
                     preferences = any(),
+                    historicalSummaries = any(),
                 )
             } returns
                 WorkoutDisplayMetrics(
@@ -538,6 +559,7 @@ class WorkoutsViewModelTest {
             val today = LocalDate.now()
             summariesFlow.value =
                 listOf(
+                    DailySummary(date = today.minusDays(8), trimpWorkoutOnly = 5f),
                     DailySummary(
                         date = today,
                         readinessWorkoutOnly = 72.5f,
@@ -545,15 +567,10 @@ class WorkoutsViewModelTest {
                         trimpWorkoutOnly = 15f,
                     ),
                 )
-            every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
+            every { dailySummaryRepository.observeLatest() } returns
+                flowOf(summariesFlow.value.first { it.date == today })
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))
-            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
-                today
-                    .minusDays(10)
-                    .atStartOfDay(java.time.ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
 
             every { scoringCalculator.computeCtlEmaSeries(any(), any(), any()) } returns mapOf(today to 10f)
             every { scoringCalculator.computeAtlEmaSeries(any(), any(), any()) } returns mapOf(today to 15f)
@@ -569,6 +586,33 @@ class WorkoutsViewModelTest {
             val state = viewModel.uiState.first { it.todayStrainIncrease != null }
 
             // 1.5f - 1.2f = 0.3f
+            assertEquals(0.3f, state.todayStrainIncrease!!, 0.001f)
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `todayStrainIncrease is non-null in everyday-HR mode with thirty days of summaries and zero workouts`() =
+        runTest(testDispatcher) {
+            val today = LocalDate.now()
+            summariesFlow.value =
+                (0..29).map { daysAgo ->
+                    DailySummary(date = today.minusDays(daysAgo.toLong()), trimpEverydayHr = 20f)
+                }
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))
+
+            every { scoringCalculator.computeCtlEmaSeries(any(), any(), any()) } returns mapOf(today to 10f)
+            every { scoringCalculator.computeAtlEmaSeries(any(), any(), any()) } returns mapOf(today to 15f)
+            every { scoringCalculator.computeStrainRatio(15f, 10f) } returns 1.5f
+            every { scoringCalculator.computeStrainRatio(12f, 10f) } returns 1.2f
+            every { scoringCalculator.computeAtlEmaWithDecay(match { it[today] == 0f }, today) } returns 12f
+            every { scoringCalculator.computeCtlEmaWithDecay(match { it[today] == 0f }, today) } returns 10f
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val state = viewModel.uiState.first { it.todayStrainIncrease != null }
+
             assertEquals(0.3f, state.todayStrainIncrease!!, 0.001f)
 
             collectJob.cancelAndJoin()
@@ -602,12 +646,6 @@ class WorkoutsViewModelTest {
                         avgHr = 120f,
                     )
                 workoutsFlow.value = listOf(workout)
-                coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
-                    selectedDate
-                        .minusDays(10)
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli()
 
                 viewModel = createViewModel()
                 val collectJob = launch { viewModel.uiState.collect {} }
@@ -630,19 +668,6 @@ class WorkoutsViewModelTest {
         runTest(testDispatcher) {
             val selectedDate = selectedDateFlow.value
             val zoneId = ZoneId.systemDefault()
-            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returnsMany
-                listOf(
-                    selectedDate
-                        .minusDays(5)
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli(),
-                    selectedDate
-                        .minusDays(6)
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli(),
-                )
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -655,13 +680,13 @@ class WorkoutsViewModelTest {
                         id = "prior-day",
                         startTime =
                             selectedDate
-                                .minusDays(1)
+                                .minusDays(6)
                                 .atStartOfDay(zoneId)
                                 .toInstant()
                                 .toEpochMilli(),
                         endTime =
                             selectedDate
-                                .minusDays(1)
+                                .minusDays(6)
                                 .atStartOfDay(zoneId)
                                 .plusMinutes(30)
                                 .toInstant()
@@ -725,9 +750,14 @@ class WorkoutsViewModelTest {
             assertEquals(false, stateAfterToggle.isLoading)
             assertEquals(false, stateAfterToggle.isRefreshing)
 
-            // The heavy pipeline (Room subscriptions, earliest-workout lookup, EMA series) must
-            // not restart on a sync toggle -- only the cheap isLoading/isRefreshing merge should run.
-            coVerify(exactly = 1) { workoutRepository.getEarliestWorkoutTimestamp() }
+            // The heavy pipeline (Room subscriptions, tenure derivation, EMA series) must not restart
+            // on a sync toggle -- only the cheap isLoading/isRefreshing merge should run.
+            // dailySummaryRepository.observeSince is called twice per pipeline run with different
+            // fromMs arguments (fetchFromMs, rasFromMs), so verify(exactly = 1) { ...(any()) } would
+            // over-count against MockK's per-signature matching; workoutRepository.observeSince is
+            // called with a single fromMs, so it alone is a reliable "didn't restart" signal here,
+            // backed by assertSame proving the pipeline didn't recompute.
+            verify(exactly = 1) { workoutRepository.observeSince(any()) }
             assertSame(stateBeforeToggle.recentWorkouts, stateAfterToggle.recentWorkouts)
 
             collectJob.cancel()

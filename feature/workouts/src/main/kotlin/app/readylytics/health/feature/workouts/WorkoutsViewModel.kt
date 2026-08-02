@@ -197,18 +197,15 @@ class WorkoutsViewModel
 
                     dataFlow.flatMapLatest { data ->
                         flow {
-                            val earliestWorkoutMs =
-                                workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
-                            val earliestLocalDate =
-                                if (earliestWorkoutMs > 0) {
-                                    Instant
-                                        .ofEpochMilli(earliestWorkoutMs)
-                                        .atZone(zoneId)
-                                        .toLocalDate()
-                                } else {
-                                    null
-                                }
                             val (latest, allWorkouts, trimpSummaries, rasSummaries, prefs) = data
+
+                            val earliestLocalDate =
+                                LoadSourceSelector.selectEarliestDataDate(
+                                    workouts = allWorkouts,
+                                    summaries = trimpSummaries,
+                                    mode = prefs.strainLoadSourceMode,
+                                    zoneId = zoneId,
+                                )
 
                             val filteredWorkouts =
                                 allWorkouts.filter {
@@ -311,6 +308,7 @@ class WorkoutsViewModel
                                                 workout = workout,
                                                 samples = samples,
                                                 preferences = prefs,
+                                                historicalSummaries = trimpSummaries,
                                             )
 
                                         WorkoutDisplayItem(
@@ -347,58 +345,48 @@ class WorkoutsViewModel
                                 }
 
                             val todayStrainIncrease =
-                                if (dataTenureDaysForDate >= 7) {
-                                    when (prefs.strainLoadSourceMode) {
-                                        LoadSourceMode.WORKOUT_ONLY -> {
-                                            // Sum the already-rounded per-workout gains shown in History so the
-                                            // card total always exactly matches the rows below it.
-                                            val workoutOnlyGains =
-                                                recentItems
-                                                    .filter {
-                                                        it.workout.startTime in
-                                                            selectedMidnightMs until selectedDayEndMs
-                                                    }.map { it.gainedStrain }
-                                            calculateDailyStrainIncrease(
-                                                dataTenureDays = dataTenureDaysForDate,
-                                                loadSourceMode = prefs.strainLoadSourceMode,
-                                                workoutOnlyGains = workoutOnlyGains,
-                                                strainRatioWithDay = null,
-                                                strainRatioWithoutDay = null,
-                                            )
-                                        }
-
-                                        LoadSourceMode.EVERYDAY_HEART_RATE -> {
-                                            val trimpByDateWithout =
-                                                trimpByDate.toMutableMap().apply { put(date, 0f) }
-                                            val ctlWith =
-                                                ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-                                            val atlWith =
-                                                atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-                                            val strainRatioWithDay =
-                                                scoringCalculator.computeStrainRatio(atlWith, ctlWith)
-                                            val ctlWithout =
-                                                scoringCalculator.computeCtlEmaWithDecay(trimpByDateWithout, date)
-                                            val atlWithout =
-                                                scoringCalculator.computeAtlEmaWithDecay(trimpByDateWithout, date)
-                                            val strainRatioWithoutDay =
-                                                scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
-                                            calculateDailyStrainIncrease(
-                                                dataTenureDays = dataTenureDaysForDate,
-                                                loadSourceMode = prefs.strainLoadSourceMode,
-                                                workoutOnlyGains = emptyList(),
-                                                strainRatioWithDay = strainRatioWithDay,
-                                                strainRatioWithoutDay = strainRatioWithoutDay,
-                                            )
-                                        }
+                                when (prefs.strainLoadSourceMode) {
+                                    LoadSourceMode.WORKOUT_ONLY -> {
+                                        // Sum the already-rounded per-workout gains shown in History so the
+                                        // card total always exactly matches the rows below it.
+                                        val workoutOnlyGains =
+                                            recentItems
+                                                .filter {
+                                                    it.workout.startTime in
+                                                        selectedMidnightMs until selectedDayEndMs
+                                                }.map { it.gainedStrain }
+                                        calculateDailyStrainIncrease(
+                                            dataTenureDays = dataTenureDaysForDate,
+                                            loadSourceMode = prefs.strainLoadSourceMode,
+                                            workoutOnlyGains = workoutOnlyGains,
+                                            strainRatioWithDay = null,
+                                            strainRatioWithoutDay = null,
+                                        )
                                     }
-                                } else {
-                                    calculateDailyStrainIncrease(
-                                        dataTenureDays = dataTenureDaysForDate,
-                                        loadSourceMode = prefs.strainLoadSourceMode,
-                                        workoutOnlyGains = emptyList(),
-                                        strainRatioWithDay = null,
-                                        strainRatioWithoutDay = null,
-                                    )
+
+                                    LoadSourceMode.EVERYDAY_HEART_RATE -> {
+                                        val trimpByDateWithout =
+                                            trimpByDate.toMutableMap().apply { put(date, 0f) }
+                                        val ctlWith =
+                                            ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                        val atlWith =
+                                            atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                        val strainRatioWithDay =
+                                            scoringCalculator.computeStrainRatio(atlWith, ctlWith)
+                                        val ctlWithout =
+                                            scoringCalculator.computeCtlEmaWithDecay(trimpByDateWithout, date)
+                                        val atlWithout =
+                                            scoringCalculator.computeAtlEmaWithDecay(trimpByDateWithout, date)
+                                        val strainRatioWithoutDay =
+                                            scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
+                                        calculateDailyStrainIncrease(
+                                            dataTenureDays = dataTenureDaysForDate,
+                                            loadSourceMode = prefs.strainLoadSourceMode,
+                                            workoutOnlyGains = emptyList(),
+                                            strainRatioWithDay = strainRatioWithDay,
+                                            strainRatioWithoutDay = strainRatioWithoutDay,
+                                        )
+                                    }
                                 }
 
                             WorkoutsUiState(
