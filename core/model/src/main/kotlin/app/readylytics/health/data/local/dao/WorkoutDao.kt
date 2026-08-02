@@ -75,9 +75,6 @@ interface WorkoutDao {
         toMs: Long,
     ): List<WorkoutRecordEntity>
 
-    @Query("SELECT MIN(startTime) FROM workout_records")
-    suspend fun getEarliestWorkoutTimestamp(): Long?
-
     @Query("SELECT SUM(durationMinutes) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs")
     suspend fun getTotalDurationMinutes(
         fromMs: Long,

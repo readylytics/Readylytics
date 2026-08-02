@@ -17,8 +17,6 @@ class WorkoutRepositoryImpl
     ) : WorkoutRepository {
         override suspend fun getById(id: String): WorkoutData? = dao.getById(id)?.let { mapToDomain(it) }
 
-        override suspend fun getEarliestWorkoutTimestamp(): Long? = dao.getEarliestWorkoutTimestamp()
-
         override fun observeSince(fromMs: Long): Flow<List<WorkoutData>> =
             dao.observeSince(fromMs).map { list ->
                 list.map { mapToDomain(it) }
