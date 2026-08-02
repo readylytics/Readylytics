@@ -7,6 +7,7 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
@@ -455,7 +456,7 @@ class DashboardMetricPresentationFactory
                 heartRateSummary?.let {
                     resourceProvider.getString(CoreUiR.string.hr_avg_display, it.avgBpm)
                 }
-            val hrStatus = MetricStatus.NEUTRAL
+            val hrStatus = HeartRateStatusClassifier.classify(heartRateSummary?.avgBpm)
             val hrDescription =
                 if (heartRateSummary?.avgBpm == null) {
                     unavailableDescription(hrTitle, DashboardMetricUnavailableReason.MISSING_VALUE)

@@ -7,6 +7,7 @@ import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
+import app.readylytics.health.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -67,6 +68,7 @@ class HeartRateDetailViewModel
                                 zone2MaxBpm = prefs.zone2MaxBpm,
                                 zone3MaxBpm = prefs.zone3MaxBpm,
                                 zone4MaxBpm = prefs.zone4MaxBpm,
+                                averageStatus = HeartRateStatusClassifier.classify(null),
                             )
                         }
 
@@ -82,11 +84,14 @@ class HeartRateDetailViewModel
                         val bpms = samples.map { it.bpm }
                         val zoneTotals = computeZoneTotals(samples)
 
+                        val averageBpm = bpms.sum() / bpms.size
+
                         HeartRateDetailUiState(
                             samples = samples,
                             minBpm = bpms.min(),
                             maxBpm = bpms.max(),
-                            avgBpm = bpms.sum() / bpms.size,
+                            avgBpm = averageBpm,
+                            averageStatus = HeartRateStatusClassifier.classify(averageBpm),
                             zoneTotals = zoneTotals,
                             selectedDate = date,
                             today = LocalDate.now(clock),

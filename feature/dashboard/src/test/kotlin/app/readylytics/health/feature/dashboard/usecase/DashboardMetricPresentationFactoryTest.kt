@@ -601,6 +601,14 @@ class DashboardMetricPresentationFactoryTest {
         assertEquals("45–147", presentation.valueText)
         assertEquals("", presentation.unitText)
         assertEquals("pulses · average 84", presentation.secondaryText)
+        assertEquals(MetricStatus.NEUTRAL, presentation.status)
+    }
+
+    @Test
+    fun `missing heart rate summary is calibrating`() {
+        val cards = factory.build(summary(), preferences(), date, null, null, null)
+
+        assertEquals(MetricStatus.CALIBRATING, cards.getValue(CardId.HEART_RATE).status)
     }
 
     @Test

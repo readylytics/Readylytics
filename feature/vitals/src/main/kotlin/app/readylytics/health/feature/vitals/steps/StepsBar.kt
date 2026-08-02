@@ -44,8 +44,7 @@ import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.SegmentHitBox
 import app.readylytics.health.core.ui.components.detectCanvasTap
 import app.readylytics.health.core.ui.components.gaugeColor
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.stepsStatus
+import app.readylytics.health.domain.model.StepsStatusClassifier
 import app.readylytics.health.feature.vitals.R
 import java.text.NumberFormat
 import java.time.LocalDate
@@ -90,7 +89,7 @@ fun StepsBar(
         )
 
     val count = stepCount ?: 0
-    val status = if (stepCount != null) stepsStatus(count, stepGoal) else MetricStatus.CALIBRATING
+    val status = StepsStatusClassifier.classify(stepCount, stepGoal)
     val fillColor = status.gaugeColor()
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val outlineColor = MaterialTheme.colorScheme.outlineVariant

@@ -3,6 +3,7 @@ package app.readylytics.health.feature.vitals.heartrate
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -89,6 +90,38 @@ class HeartRateDetailViewModelTest {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertEquals(emptyMap<Int, ZoneTotal>(), state.zoneTotals)
+        }
+
+    @Test
+    fun `empty day exposes calibrating average status`() =
+        runTest {
+            viewModel = createViewModel()
+
+            val state = viewModel.uiState.first { !it.isLoading }
+
+            assertEquals(MetricStatus.CALIBRATING, state.averageStatus)
+        }
+
+    @Test
+    fun `populated day exposes neutral average status`() =
+        runTest {
+            every { heartRateRepository.observeByTimeRange(any(), any()) } returns
+                MutableStateFlow(
+                    listOf(
+                        HeartRateRecordData(
+                            id = "1",
+                            timestampMs = 0L,
+                            beatsPerMinute = 100,
+                            recordType = "instant",
+                        ),
+                    ),
+                )
+
+            viewModel = createViewModel()
+
+            val state = viewModel.uiState.first { !it.isLoading }
+
+            assertEquals(MetricStatus.NEUTRAL, state.averageStatus)
         }
 
     @Test
