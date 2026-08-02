@@ -215,6 +215,8 @@ _Implemented in: `EverydayHeartRateLoadCalculator.kt`, `LoadSourceSelector.kt`, 
 - **Overweight** — 25 to 29.9
 - **Obesity** — 30 and above
 
+The Weight card’s BMI reference gauge uses visual anchors of 15, 21.7, and 35 so its midpoint is shown at 21.7. These anchors position the gauge only; they do not change the BMI status bands above.
+
 **Body Fat Percentage** uses continuous, gender-specific bands when your profile records a
 biological sex:
 
