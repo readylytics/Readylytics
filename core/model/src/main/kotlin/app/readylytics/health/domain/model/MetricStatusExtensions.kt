@@ -110,16 +110,14 @@ fun Float?.rasStatus(): MetricStatus {
     }
 }
 
+@Deprecated(
+    message = "Use StepsStatusClassifier.classify(stepCount, stepGoal)",
+    replaceWith = ReplaceWith("StepsStatusClassifier.classify(stepCount, stepGoal)"),
+)
 fun stepsStatus(
     stepCount: Int,
     stepGoal: Int,
-): MetricStatus =
-    when {
-        stepCount >= stepGoal -> MetricStatus.OPTIMAL
-        stepCount >= stepGoal * 0.75f -> MetricStatus.NEUTRAL
-        stepCount >= stepGoal * 0.5f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
+): MetricStatus = StepsStatusClassifier.classify(stepCount, stepGoal)
 
 fun bodyFatStatus(
     value: Float,

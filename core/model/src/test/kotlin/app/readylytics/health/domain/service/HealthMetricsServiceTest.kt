@@ -5,6 +5,7 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -170,6 +171,26 @@ class HealthMetricsServiceTest {
     @Test
     fun bp_180_110_isStage2() =
         assertEquals(BloodPressureStatus.HypertensionStage2, service.assessBloodPressure(180, 110))
+
+    @Test
+    fun assessSystolic_classifiesInclusiveLadderBoundaries() {
+        assertEquals(MetricStatus.OPTIMAL, service.assessSystolic(120))
+        assertEquals(MetricStatus.NEUTRAL, service.assessSystolic(121))
+        assertEquals(MetricStatus.NEUTRAL, service.assessSystolic(129))
+        assertEquals(MetricStatus.WARNING, service.assessSystolic(130))
+        assertEquals(MetricStatus.WARNING, service.assessSystolic(139))
+        assertEquals(MetricStatus.POOR, service.assessSystolic(140))
+    }
+
+    @Test
+    fun assessDiastolic_classifiesInclusiveLadderBoundaries() {
+        assertEquals(MetricStatus.OPTIMAL, service.assessDiastolic(80))
+        assertEquals(MetricStatus.NEUTRAL, service.assessDiastolic(81))
+        assertEquals(MetricStatus.NEUTRAL, service.assessDiastolic(89))
+        assertEquals(MetricStatus.WARNING, service.assessDiastolic(90))
+        assertEquals(MetricStatus.WARNING, service.assessDiastolic(99))
+        assertEquals(MetricStatus.POOR, service.assessDiastolic(100))
+    }
 
     // ─── assessBodyFatPercent ────────────────────────────────────────────────
     // Canonical, continuous bands via BodyCompositionAssessment; independent of profile for

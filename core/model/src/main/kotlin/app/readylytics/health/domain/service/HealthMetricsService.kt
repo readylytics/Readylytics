@@ -4,6 +4,7 @@ import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.BodyFatStatus
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.Gender
 import app.readylytics.health.domain.preferences.PhysiologyProfile
@@ -37,12 +38,22 @@ class HealthMetricsService {
         diastolic: Int,
     ): BloodPressureStatus =
         when {
-            systolic <= BP_NORMAL_SYS && diastolic <= BP_NORMAL_DIA -> BloodPressureStatus.Optimal
-            systolic <= BP_ELEVATED_SYS && diastolic <= BP_ELEVATED_DIA -> BloodPressureStatus.Neutral
-            systolic in BP_STAGE1_SYS_RANGE && diastolic in BP_STAGE1_DIA_RANGE ->
+            assessSystolic(systolic) == MetricStatus.POOR || assessDiastolic(diastolic) == MetricStatus.POOR ->
+                BloodPressureStatus.HypertensionStage2
+            assessSystolic(systolic) == MetricStatus.WARNING || assessDiastolic(diastolic) == MetricStatus.WARNING ->
                 BloodPressureStatus.HypertensionStage1
-            else -> BloodPressureStatus.HypertensionStage2
+            assessSystolic(systolic) == MetricStatus.NEUTRAL || assessDiastolic(diastolic) == MetricStatus.NEUTRAL ->
+                BloodPressureStatus.Neutral
+            else -> BloodPressureStatus.Optimal
         }
+
+    /** Classifies a systolic component using the inclusive blood-pressure ladder. */
+    fun assessSystolic(systolic: Int?): MetricStatus =
+        assessBloodPressureComponent(systolic, BP_NORMAL_SYS, BP_ELEVATED_SYS, BP_STAGE1_SYS_MAX)
+
+    /** Classifies a diastolic component using the inclusive blood-pressure ladder. */
+    fun assessDiastolic(diastolic: Int?): MetricStatus =
+        assessBloodPressureComponent(diastolic, BP_NORMAL_DIA, BP_ELEVATED_DIA, BP_STAGE1_DIA_MAX)
 
     /**
      * Classify body-fat percentage by physiology profile and gender.
@@ -92,6 +103,20 @@ class HealthMetricsService {
         )
     }
 
+    private fun assessBloodPressureComponent(
+        value: Int?,
+        optimalMax: Int,
+        neutralMax: Int,
+        warningMax: Int,
+    ): MetricStatus =
+        when {
+            value == null -> MetricStatus.CALIBRATING
+            value <= optimalMax -> MetricStatus.OPTIMAL
+            value <= neutralMax -> MetricStatus.NEUTRAL
+            value <= warningMax -> MetricStatus.WARNING
+            else -> MetricStatus.POOR
+        }
+
     /** Stable [Result.Failure.code] values produced by this service. */
     object Codes {
         const val INVALID_WEIGHT: String = "INVALID_WEIGHT"
@@ -104,8 +129,8 @@ class HealthMetricsService {
         const val BP_NORMAL_DIA: Int = 80
         const val BP_ELEVATED_SYS: Int = 129
         const val BP_ELEVATED_DIA: Int = 89
-        val BP_STAGE1_SYS_RANGE: IntRange = Int.MIN_VALUE..139
-        val BP_STAGE1_DIA_RANGE: IntRange = Int.MIN_VALUE..99
+        const val BP_STAGE1_SYS_MAX: Int = 139
+        const val BP_STAGE1_DIA_MAX: Int = 99
 
         private const val CM_PER_M: Float = 100f
     }
