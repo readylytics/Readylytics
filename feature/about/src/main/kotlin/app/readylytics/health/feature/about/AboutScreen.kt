@@ -32,6 +32,8 @@ fun AboutScreen(
 
             item { ContributorsSection() }
 
+            item { BodyCompositionSection() }
+
             item { LicenseSection() }
 
             item { FeedbackSection(onDismiss = onDismiss) }

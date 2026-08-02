@@ -155,6 +155,7 @@
     <string name="about_bmi_bullet_healthy">**Healthy weight** — 18.5 to 24.9</string>
     <string name="about_bmi_bullet_overweight">**Overweight** — 25 to 29.9</string>
     <string name="about_bmi_bullet_obesity">**Obesity** — 30 and above</string>
+    <string name="about_bmi_reference_gauge">The Weight card’s BMI reference gauge uses visual anchors of 15, 21.7, and 35 so its midpoint is shown at 21.7. These anchors position the gauge only; they do not change the BMI status bands above.</string>
     <string name="about_body_fat_intro">**Body Fat Percentage** uses continuous,
         gender-specific bands when your profile records a biological sex:</string>
     <string name="about_body_fat_bullet_male" formatted="false">**Male** — Below essential &lt;2%, Essential
@@ -179,6 +180,13 @@
         low essential-fat levels, or a BMI that is either underweight or overweight — the same
         status covers both directions, so check the category label (not just the color) to see
         which one applies; Poor flags the obesity range for BMI or body fat.</string>
+    <string name="about_header_blood_pressure">## Blood Pressure</string>
+    <string name="about_blood_pressure_intro">The dashboard classifies each blood-pressure reading with an inclusive, component-wise ladder:</string>
+    <string name="about_blood_pressure_bullet_optimal">**Optimal** — systolic ≤120 and diastolic ≤80 mmHg</string>
+    <string name="about_blood_pressure_bullet_neutral">**Neutral** — otherwise, systolic ≤129 and diastolic ≤89 mmHg</string>
+    <string name="about_blood_pressure_bullet_warning">**Warning** — otherwise, systolic ≤139 and diastolic ≤99 mmHg</string>
+    <string name="about_blood_pressure_bullet_poor">**Poor** — all other readings</string>
+    <string name="about_blood_pressure_example">For example, 121/80, 120/81, and 129/89 are Neutral, while 130/90 is Warning. This is a dashboard status, not a diagnosis.</string>
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
     <string name="about_bullet_sleep_sessions">**Sleep sessions** (with stages if your device
