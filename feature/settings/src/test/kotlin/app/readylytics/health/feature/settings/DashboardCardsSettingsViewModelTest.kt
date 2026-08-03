@@ -252,7 +252,10 @@ class DashboardCardsSettingsViewModelTest {
                     currentGlobalMode = DashboardCardDisplayMode.GAUGE,
                     initialConfigs =
                         listOf(
-                            CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                            CardConfiguration(
+                                cardId = CardId.SLEEP_SCORE,
+                                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+                            ),
                         ),
                 )
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
@@ -274,7 +277,10 @@ class DashboardCardsSettingsViewModelTest {
                     noticeDismissed = false,
                     initialConfigs =
                         listOf(
-                            CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                            CardConfiguration(
+                                cardId = CardId.SLEEP_SCORE,
+                                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+                            ),
                         ),
                 )
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
@@ -300,7 +306,10 @@ class DashboardCardsSettingsViewModelTest {
                     noticeDismissed = false,
                     initialConfigs =
                         listOf(
-                            CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                            CardConfiguration(
+                                cardId = CardId.SLEEP_SCORE,
+                                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+                            ),
                         ),
                 )
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
