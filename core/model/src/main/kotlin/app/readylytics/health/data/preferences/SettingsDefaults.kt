@@ -92,6 +92,7 @@ object SettingsDefaults {
     const val BACKGROUND_SYNC_ENABLED = false
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
     const val DEVICE_CHANGE_NOTICE_DISMISSED = false
+    const val BULK_DISPLAY_MODE_NOTICE_DISMISSED = false
 
     const val IS_CUSTOM_PALETTE_ENABLED = false
     const val CUSTOM_SECONDARY_COLOR = 0xFFCCC2DCL

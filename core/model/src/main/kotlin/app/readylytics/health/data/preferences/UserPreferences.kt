@@ -91,6 +91,7 @@ data class UserPreferences(
      */
     val scoringZoneId: String = SettingsDefaults.SCORING_ZONE_ID,
     val deviceChangeNoticeDismissed: Boolean = SettingsDefaults.DEVICE_CHANGE_NOTICE_DISMISSED,
+    val bulkDisplayModeNoticeDismissed: Boolean = SettingsDefaults.BULK_DISPLAY_MODE_NOTICE_DISMISSED,
     val strainLoadSourceMode: LoadSourceMode = SettingsDefaults.STRAIN_LOAD_SOURCE_MODE,
     val rasSourceMode: LoadSourceMode = SettingsDefaults.RAS_SOURCE_MODE,
     val coreMergeGapMinutes: Int = SettingsDefaults.CORE_MERGE_GAP_MINUTES,

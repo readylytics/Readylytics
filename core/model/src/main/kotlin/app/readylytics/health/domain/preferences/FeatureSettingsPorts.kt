@@ -83,6 +83,7 @@ interface DisplaySettings {
     suspend fun updateBanisterMultiplier(value: Float)
     suspend fun updateChengBeta(value: Float)
     suspend fun updateItrimB(value: Float)
+    suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean)
 }
 
 interface SyncSettings {

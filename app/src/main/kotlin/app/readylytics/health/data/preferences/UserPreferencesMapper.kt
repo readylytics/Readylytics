@@ -167,6 +167,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             },
         scoringZoneId = scoringZoneId,
         deviceChangeNoticeDismissed = deviceChangeNoticeDismissed,
+        bulkDisplayModeNoticeDismissed = bulkDisplayModeNoticeDismissed,
         strainLoadSourceMode =
             when (strainLoadSourceMode) {
                 LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY

@@ -209,6 +209,10 @@ message UserPreferencesProto {
 
     // Required stage coverage for supplemental blocks to contribute architecture totals.
     optional int32 supplemental_architecture_coverage_percent = 79;
+
+    // Whether the user has permanently dismissed the "this overrides your custom
+    // card display settings" confirmation for the global dashboard display-mode setting.
+    bool bulk_display_mode_notice_dismissed = 80;
 }
 
 enum TrimpMethodProto {

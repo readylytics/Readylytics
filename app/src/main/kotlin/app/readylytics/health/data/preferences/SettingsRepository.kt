@@ -250,6 +250,9 @@ class SettingsRepository
         override suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) =
             ui.updateDeviceChangeNoticeDismissed(dismissed)
 
+        override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
+            ui.updateBulkDisplayModeNoticeDismissed(dismissed)
+
         override suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
 
         override suspend fun clearDeviceCache() = ui.clearDeviceCache()

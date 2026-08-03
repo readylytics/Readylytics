@@ -35,6 +35,10 @@ internal class UIPreferences
             dataStore.updateData { it.toBuilder().setDeviceChangeNoticeDismissed(dismissed).build() }
         }
 
+        suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) {
+            dataStore.updateData { it.toBuilder().setBulkDisplayModeNoticeDismissed(dismissed).build() }
+        }
+
         suspend fun updateAppTheme(theme: AppTheme) {
             dataStore.updateData {
                 it
