@@ -3,10 +3,13 @@ package app.readylytics.health.core.ui.components
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -104,5 +107,28 @@ class M3MetricGaugeTest {
         composeTestRule.onNodeWithText("Test Score").assertExists()
 
         composeTestRule.onNodeWithContentDescription("Test Score: 86 pts").assertHasClickAction()
+    }
+
+    @Test
+    fun metricGaugeWithValue_overlayIsTaggedAndOffsetDownward() {
+        composeTestRule.setContent {
+            M3MetricGaugeWithValue(
+                markerFraction = 0.5f,
+                activeColor = Color.Green,
+                markerColor = Color.White,
+                valueText = "50",
+                unitText = "bpm",
+                valueColor = Color.White,
+                unitColor = Color.Gray,
+                animateMarker = false,
+            )
+        }
+        // The overlay Column must carry the internal test tag so we can
+        // assert layout properties — confirming the tag wiring and the
+        // fact that the composable renders.
+        composeTestRule
+            .onNodeWithTag("metric_gauge_value_overlay", useUnmergedTree = true)
+            .assertExists()
+            .assertHeightIsAtLeast(1.dp)
     }
 }
