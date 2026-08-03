@@ -81,6 +81,7 @@ class WorkoutsViewModelTest {
             }
         workoutRepository =
             mockk {
+                coEvery { getEarliestWorkoutTimestamp() } returns null
                 every { observeSince(any()) } returns workoutsFlow
             }
         heartRateRepository =
@@ -460,30 +461,7 @@ class WorkoutsViewModelTest {
                     trimp = 25f,
                     avgHr = 116f,
                 )
-            workoutsFlow.value =
-                listOf(
-                    workout1,
-                    workout2,
-                    WorkoutData(
-                        id = "history",
-                        startTime = todayMidnight.minusDays(8).toInstant().toEpochMilli(),
-                        endTime =
-                            todayMidnight
-                                .minusDays(8)
-                                .plusMinutes(30)
-                                .toInstant()
-                                .toEpochMilli(),
-                        exerciseType = "walking",
-                        durationMinutes = 30,
-                        zone1Minutes = 0f,
-                        zone2Minutes = 0f,
-                        zone3Minutes = 0f,
-                        zone4Minutes = 0f,
-                        zone5Minutes = 0f,
-                        trimp = 5f,
-                        avgHr = 90f,
-                    ),
-                )
+            workoutsFlow.value = listOf(workout1, workout2)
             summariesFlow.value =
                 listOf(
                     DailySummary(
@@ -494,6 +472,12 @@ class WorkoutsViewModelTest {
                     ),
                 )
             every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
+                today
+                    .minusDays(10)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
 
             coEvery {
                 getWorkoutDisplayMetricsUseCase.execute(
@@ -559,12 +543,12 @@ class WorkoutsViewModelTest {
             val today = LocalDate.now()
             summariesFlow.value =
                 listOf(
-                    DailySummary(date = today.minusDays(8), trimpWorkoutOnly = 5f),
+                    DailySummary(date = today.minusDays(8), trimpEverydayHr = 5f),
                     DailySummary(
                         date = today,
                         readinessWorkoutOnly = 72.5f,
                         strainRatioWorkoutOnly = 0.365f,
-                        trimpWorkoutOnly = 15f,
+                        trimpEverydayHr = 15f,
                     ),
                 )
             every { dailySummaryRepository.observeLatest() } returns
@@ -668,6 +652,19 @@ class WorkoutsViewModelTest {
         runTest(testDispatcher) {
             val selectedDate = selectedDateFlow.value
             val zoneId = ZoneId.systemDefault()
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returnsMany
+                listOf(
+                    selectedDate
+                        .minusDays(5)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                    selectedDate
+                        .minusDays(6)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                )
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -755,9 +752,12 @@ class WorkoutsViewModelTest {
             // dailySummaryRepository.observeSince is called twice per pipeline run with different
             // fromMs arguments (fetchFromMs, rasFromMs), so verify(exactly = 1) { ...(any()) } would
             // over-count against MockK's per-signature matching; workoutRepository.observeSince is
-            // called with a single fromMs, so it alone is a reliable "didn't restart" signal here,
-            // backed by assertSame proving the pipeline didn't recompute.
+            // called with a single fromMs, so it alone is a reliable "didn't restart" signal for
+            // the Room re-subscription. getEarliestWorkoutTimestamp proves the pipeline *body*
+            // (WORKOUT_ONLY tenure derivation) did not re-run either, and assertSame proves the
+            // emitted items were not recomputed.
             verify(exactly = 1) { workoutRepository.observeSince(any()) }
+            coVerify(exactly = 1) { workoutRepository.getEarliestWorkoutTimestamp() }
             assertSame(stateBeforeToggle.recentWorkouts, stateAfterToggle.recentWorkouts)
 
             collectJob.cancel()

@@ -110,9 +110,6 @@ interface DailySummaryDao {
     )
 
     @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
-    suspend fun getEarliestDateMs(): Long?
-
-    @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
     fun _observeEarliestDateMs(): Flow<Long?>
 
     fun observeEarliestDateMs(): Flow<Long?> = _observeEarliestDateMs().distinctUntilChanged()

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
+import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -61,15 +62,21 @@ class ObserveDashboardStrainIncreaseUseCase
                     ) { workouts, summaries -> workouts to summaries }
                         .mapLatest { (workouts, summaries) ->
                             val earliestDate =
-                                LoadSourceSelector.selectEarliestDataDate(
-                                    workouts = workouts,
-                                    summaries = summaries,
-                                    mode = prefs.strainLoadSourceMode,
-                                    zoneId = zoneId,
-                                )
+                                when (prefs.strainLoadSourceMode) {
+                                    LoadSourceMode.WORKOUT_ONLY ->
+                                        workoutRepository.getEarliestWorkoutTimestamp()?.let {
+                                            Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
+                                        }
+                                    LoadSourceMode.EVERYDAY_HEART_RATE ->
+                                        LoadSourceSelector.selectEarliestDataDate(summaries)
+                                }
                             val dataTenureDays =
                                 earliestDate?.let { ChronoUnit.DAYS.between(it, date).toInt() + 1 } ?: 0
 
+                            // Runs unconditionally even below the 7-day tenure guard --
+                            // calculateDailyStrainIncrease owns that gate (F15); this branch only
+                            // processes the selected day's workouts, so the wasted work when
+                            // ungated is small and bounded.
                             when (prefs.strainLoadSourceMode) {
                                 LoadSourceMode.WORKOUT_ONLY -> {
                                     val workoutOnlyGains =

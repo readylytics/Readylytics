@@ -1,11 +1,9 @@
 package app.readylytics.health.domain.model
 
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import org.junit.Test
 import java.time.LocalDate
-import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -233,77 +231,29 @@ class LoadSourceSelectorTest {
     // --- selectEarliestDataDate ---
 
     @Test
-    fun `selectEarliestDataDate in WORKOUT_ONLY mode returns local date of earliest workout start`() {
-        val zoneId = ZoneId.of("Pacific/Honolulu")
-        val earlier = workoutAt(zoneId, LocalDate.of(2026, 5, 1))
-        val later = workoutAt(zoneId, LocalDate.of(2026, 5, 10))
-        val result =
-            LoadSourceSelector.selectEarliestDataDate(
-                workouts = listOf(later, earlier),
-                summaries = emptyList(),
-                mode = LoadSourceMode.WORKOUT_ONLY,
-                zoneId = zoneId,
-            )
-        assertEquals(LocalDate.of(2026, 5, 1), result)
-    }
-
-    @Test
-    fun `selectEarliestDataDate in WORKOUT_ONLY mode ignores summaries and returns null with no workouts`() {
-        val result =
-            LoadSourceSelector.selectEarliestDataDate(
-                workouts = emptyList(),
-                summaries = listOf(DailySummary(date = LocalDate.of(2026, 1, 1))),
-                mode = LoadSourceMode.WORKOUT_ONLY,
-                zoneId = ZoneId.of("UTC"),
-            )
-        assertEquals(null, result)
-    }
-
-    @Test
-    fun `selectEarliestDataDate in EVERYDAY_HEART_RATE mode returns earliest summary date`() {
+    fun `selectEarliestDataDate returns earliest summary date with a computed everyday-HR TRIMP`() {
         val summaries =
             listOf(
-                DailySummary(date = LocalDate.of(2026, 6, 10)),
-                DailySummary(date = LocalDate.of(2026, 6, 1)),
+                DailySummary(date = LocalDate.of(2026, 6, 10), trimpEverydayHr = 20f),
+                DailySummary(date = LocalDate.of(2026, 6, 1), trimpEverydayHr = 15f),
             )
-        val result =
-            LoadSourceSelector.selectEarliestDataDate(
-                workouts = emptyList(),
-                summaries = summaries,
-                mode = LoadSourceMode.EVERYDAY_HEART_RATE,
-                zoneId = ZoneId.of("UTC"),
-            )
-        assertEquals(LocalDate.of(2026, 6, 1), result)
+        assertEquals(LocalDate.of(2026, 6, 1), LoadSourceSelector.selectEarliestDataDate(summaries))
     }
 
     @Test
-    fun `selectEarliestDataDate in EVERYDAY_HEART_RATE mode ignores workouts and returns null with no summaries`() {
-        val zoneId = ZoneId.of("UTC")
-        val result =
-            LoadSourceSelector.selectEarliestDataDate(
-                workouts = listOf(workoutAt(zoneId, LocalDate.of(2026, 1, 1))),
-                summaries = emptyList(),
-                mode = LoadSourceMode.EVERYDAY_HEART_RATE,
-                zoneId = zoneId,
-            )
-        assertEquals(null, result)
+    fun `selectEarliestDataDate returns null with no summaries`() {
+        assertEquals(null, LoadSourceSelector.selectEarliestDataDate(emptyList()))
     }
 
-    private fun workoutAt(
-        zoneId: ZoneId,
-        date: LocalDate,
-    ) = WorkoutData(
-        id = date.toString(),
-        startTime = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-        endTime = date.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1_000L,
-        exerciseType = "running",
-        durationMinutes = 30,
-        zone1Minutes = 0f,
-        zone2Minutes = 0f,
-        zone3Minutes = 0f,
-        zone4Minutes = 0f,
-        zone5Minutes = 0f,
-        trimp = 0f,
-        avgHr = 0f,
-    )
+    @Test
+    fun `selectEarliestDataDate skips rows whose everyday-HR TRIMP has not been backfilled`() {
+        // The older row exists but its EVERYDAY_HEART_RATE variant column is still null (see
+        // needsRecalc) -- it is not usable data yet and must not count towards tenure.
+        val summaries =
+            listOf(
+                DailySummary(date = LocalDate.of(2026, 6, 1), trimpEverydayHr = null),
+                DailySummary(date = LocalDate.of(2026, 6, 10), trimpEverydayHr = 20f),
+            )
+        assertEquals(LocalDate.of(2026, 6, 10), LoadSourceSelector.selectEarliestDataDate(summaries))
+    }
 }

@@ -34,8 +34,15 @@ class GetWorkoutDisplayMetricsUseCase
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = dailySummaryRepository.getByDate(midnight)
 
+            // A caller-supplied window is clamped to the same 42-day span the self-fetch path
+            // would have used. Callers hold wider windows (48/71/131 days) than this workout
+            // needs, and the ATL/CTL EMA treats the earliest key in `trimpByDate` as an
+            // effective start-of-history anchor -- so an unclamped wider list would yield a
+            // different gainedStrain for the same workout depending on which screen asked.
             val resolvedHistoricalSummaries =
-                historicalSummaries ?: run {
+                historicalSummaries?.filter {
+                    !it.date.isBefore(workoutDate.minusDays(ScoringConstants.CHRONIC_DAYS))
+                } ?: run {
                     val fortyTwoDaysAgo =
                         workoutDate
                             .minusDays(ScoringConstants.CHRONIC_DAYS)

@@ -200,12 +200,14 @@ class WorkoutsViewModel
                             val (latest, allWorkouts, trimpSummaries, rasSummaries, prefs) = data
 
                             val earliestLocalDate =
-                                LoadSourceSelector.selectEarliestDataDate(
-                                    workouts = allWorkouts,
-                                    summaries = trimpSummaries,
-                                    mode = prefs.strainLoadSourceMode,
-                                    zoneId = zoneId,
-                                )
+                                when (prefs.strainLoadSourceMode) {
+                                    LoadSourceMode.WORKOUT_ONLY ->
+                                        workoutRepository.getEarliestWorkoutTimestamp()?.let {
+                                            Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
+                                        }
+                                    LoadSourceMode.EVERYDAY_HEART_RATE ->
+                                        LoadSourceSelector.selectEarliestDataDate(trimpSummaries)
+                                }
 
                             val filteredWorkouts =
                                 allWorkouts.filter {

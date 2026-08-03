@@ -58,6 +58,7 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                         .toInstant()
                         .toEpochMilli(),
                 )
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns recentWorkout.startTime
             every {
                 workoutRepository.observeSince(expectedHistoryStartMs)
             } returns flowOf(listOf(recentWorkout))
@@ -81,6 +82,19 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
             val selectedDate = LocalDate.of(2026, 7, 30)
             val zoneId = ZoneId.of("UTC")
             val workouts = MutableStateFlow(emptyList<WorkoutData>())
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returnsMany
+                listOf(
+                    selectedDate
+                        .minusDays(5)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                    selectedDate
+                        .minusDays(6)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                )
             every { workoutRepository.observeSince(expectedHistoryStartMs) } returns workouts
             every {
                 dailySummaryRepository.observeSince(expectedHistoryStartMs)
@@ -140,6 +154,7 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                         .toInstant()
                         .toEpochMilli(),
                 )
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns oldWorkout.startTime
             every { workoutRepository.observeSince(expectedHistoryStartMs) } returns
                 flowOf(listOf(oldWorkout, previousDayWorkout, firstWorkout, secondWorkout))
             every {
@@ -174,6 +189,58 @@ class ObserveDashboardStrainIncreaseUseCaseTest {
                     ).first()
 
             assertEquals(0.23f, result!!, 0.001f)
+        }
+
+    @Test
+    fun `workout-only tenure survives a long gap with no workout inside the fetch window`() =
+        runTest(testDispatcher) {
+            // A returning user: two years of history, then a break longer than the 48-day fetch
+            // window, then a workout today. Tenure must come from the unbounded DB query, not
+            // from the fetch-window-bounded workouts list (which would understate it).
+            val selectedDate = LocalDate.of(2026, 7, 30)
+            val zoneId = ZoneId.of("UTC")
+            val todaysWorkout =
+                workout(
+                    "resumed",
+                    selectedDate
+                        .atStartOfDay(zoneId)
+                        .plusHours(7)
+                        .toInstant()
+                        .toEpochMilli(),
+                )
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
+                selectedDate
+                    .minusYears(2)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            every { workoutRepository.observeSince(expectedHistoryStartMs) } returns
+                flowOf(listOf(todaysWorkout))
+            every {
+                dailySummaryRepository.observeSince(expectedHistoryStartMs)
+            } returns flowOf(emptyList())
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = todaysWorkout,
+                    preferences = any(),
+                    historicalSummaries = any(),
+                )
+            } returns displayMetrics(0.21f)
+
+            val result =
+                createUseCase()
+                    .invoke(
+                        selectedDate = flowOf(selectedDate),
+                        preferences =
+                            flowOf(
+                                UserPreferences(
+                                    scoringZoneId = "UTC",
+                                    strainLoadSourceMode = LoadSourceMode.WORKOUT_ONLY,
+                                ),
+                            ),
+                    ).first()
+
+            assertEquals(0.21f, result!!, 0.001f)
         }
 
     @Test

@@ -21,5 +21,7 @@ data class WorkoutData(
 interface WorkoutRepository {
     suspend fun getById(id: String): WorkoutData?
 
+    suspend fun getEarliestWorkoutTimestamp(): Long?
+
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>
 }

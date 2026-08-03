@@ -401,17 +401,25 @@ out of `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/**`.
 Workout history and dashboard strain-increase observers use the same stored scoring-zone
 snapshot for selected-day boundaries, tenure guards, history fetches, workout date attribution,
 and per-workout display metrics. Data tenure (whether the user has at least seven days of
-history under the selected `strainLoadSourceMode`) is derived from the same workouts/daily-summary
-lists each observer already fetches for its 42-day ATL/CTL lookback
-(`LoadSourceSelector.selectEarliestDataDate`), not a separate DB query — `WORKOUT_ONLY` reads the
-earliest observed workout start time, `EVERYDAY_HEART_RATE` reads the earliest observed daily
-summary date. Their Room-backed flows remain subscribed while tenure is below the seven-day
+history under the selected `strainLoadSourceMode`) is derived per mode. Under
+`EVERYDAY_HEART_RATE` it comes from the daily-summary window each observer already fetches for
+its 42-day ATL/CTL lookback (`LoadSourceSelector.selectEarliestDataDate(summaries)`, counting
+only rows whose everyday-HR TRIMP has actually been computed) — no extra DB query, and sound
+because daily summaries exist densely, one row per ingested calendar day, so a fetch-window
+slice is a safe proxy for true earliest history. Under `WORKOUT_ONLY` it comes from
+`WorkoutRepository.getEarliestWorkoutTimestamp()`, a small bounded `MIN(startTime)` suspend
+query: workout events are sparse, so a fetch-window-bounded derivation would understate tenure
+for a user resuming after a break longer than the fetch window and silently hide the strain
+delta. Their Room-backed flows remain subscribed while tenure is below the seven-day
 minimum, so newly ingested history can unlock a result without a screen restart. The dashboard
 observer fetches the selected day plus the preceding six days and the 42-day ATL/CTL lookback,
 then delegates the final delta to the pure scoring helper; it does not persist or independently
 render that value. Both observers pass their already-fetched daily-summary window into
 `GetWorkoutDisplayMetricsUseCase.execute(historicalSummaries = ...)` for per-workout display
-metrics, so N displayed workouts cost one 42-day history fetch, not N.
+metrics, so N displayed workouts cost one 42-day history fetch, not N. That use case re-clamps
+any caller-supplied window to the same 42-day span its own fetch would have used, so a wider
+pre-fetched list can never shift a workout's gained strain relative to the Workout Detail
+screen (which supplies no window and self-fetches).
 
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
