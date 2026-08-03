@@ -23,30 +23,41 @@ class M3MetricGaugeTest {
 
     @Test
     fun horseshoeGeometry_usesApprovedSweepAndStaysInsideItsCanvas() {
-        val strokeWidthPx = 10f
+        val activeStrokeWidthPx = 12f
         val geometry =
             resolveHorseshoeGaugeGeometry(
                 canvasSize = Size(width = 120f, height = 90f),
-                strokeWidthPx = strokeWidthPx,
+                maximumStrokeWidthPx = activeStrokeWidthPx,
             )
 
         assertEquals(150f, geometry.startAngle)
         assertEquals(240f, geometry.sweepAngle)
-        assertTrue(geometry.topLeft.x >= 0f)
-        assertTrue(geometry.topLeft.y >= 0f)
-        assertTrue(geometry.topLeft.x + geometry.arcSize.width <= 120f)
+        assertTrue(geometry.topLeft.x - activeStrokeWidthPx / 2f >= 0f)
+        assertTrue(geometry.topLeft.y - activeStrokeWidthPx / 2f >= 0f)
+        assertTrue(geometry.topLeft.x + geometry.arcSize.width + activeStrokeWidthPx / 2f <= 120f)
         // The 120° bottom opening means only 1.5 radii of the 2r circle are drawn vertically.
-        assertTrue(geometry.center.y + geometry.radius * 0.5f + strokeWidthPx / 2f <= 90f)
+        assertTrue(geometry.center.y + geometry.radius * 0.5f + activeStrokeWidthPx / 2f <= 90f)
     }
 
     @Test
     fun horseshoeGeometry_shrinksForHeightConstrainedGaugeSlot() {
-        val strokeWidthPx = 10f
-        val wide = resolveHorseshoeGaugeGeometry(Size(120f, 120f), strokeWidthPx = strokeWidthPx)
-        val short = resolveHorseshoeGaugeGeometry(Size(120f, 60f), strokeWidthPx = strokeWidthPx)
+        val activeStrokeWidthPx = 12f
+        val wide =
+            resolveHorseshoeGaugeGeometry(
+                Size(120f, 120f),
+                maximumStrokeWidthPx = activeStrokeWidthPx,
+            )
+        val short =
+            resolveHorseshoeGaugeGeometry(
+                Size(120f, 60f),
+                maximumStrokeWidthPx = activeStrokeWidthPx,
+            )
 
         assertTrue(short.radius < wide.radius)
-        assertTrue(short.center.y + short.radius * 0.5f + strokeWidthPx / 2f <= 60f)
+        assertTrue(short.topLeft.x - activeStrokeWidthPx / 2f >= 0f)
+        assertTrue(short.topLeft.x + short.arcSize.width + activeStrokeWidthPx / 2f <= 120f)
+        assertTrue(short.topLeft.y - activeStrokeWidthPx / 2f >= 0f)
+        assertTrue(short.center.y + short.radius * 0.5f + activeStrokeWidthPx / 2f <= 60f)
     }
 
     @Test

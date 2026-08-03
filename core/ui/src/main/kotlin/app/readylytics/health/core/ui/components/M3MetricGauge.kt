@@ -41,14 +41,14 @@ internal data class HorseshoeGaugeGeometry(
 
 internal fun resolveHorseshoeGaugeGeometry(
     canvasSize: Size,
-    strokeWidthPx: Float,
+    maximumStrokeWidthPx: Float,
 ): HorseshoeGaugeGeometry {
     val safeRadius =
         minOf(
-            (canvasSize.width - strokeWidthPx) / 2f,
-            (canvasSize.height - strokeWidthPx) / 1.5f,
+            (canvasSize.width - maximumStrokeWidthPx) / 2f,
+            (canvasSize.height - maximumStrokeWidthPx) / 1.5f,
         ).coerceAtLeast(0f)
-    val center = Offset(canvasSize.width / 2f, safeRadius + strokeWidthPx / 2f)
+    val center = Offset(canvasSize.width / 2f, safeRadius + maximumStrokeWidthPx / 2f)
     return HorseshoeGaugeGeometry(
         radius = safeRadius,
         center = center,
@@ -97,7 +97,7 @@ fun M3MetricGauge(
             val markerRadiusPx = markerDiameter.toPx() / 2f
             val tickRadiusPx = tickDiameter.toPx() / 2f
             val activeStrokeWidthPx = (trackThickness + 2.dp).toPx()
-            val geometry = resolveHorseshoeGaugeGeometry(size, strokeWidthPx)
+            val geometry = resolveHorseshoeGaugeGeometry(size, activeStrokeWidthPx)
 
             drawArc(
                 color = trackColor,
