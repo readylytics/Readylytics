@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -20,6 +21,7 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -225,20 +227,24 @@ private fun DashboardTitleInfoAction(
     iconTint: Color,
     modifier: Modifier = Modifier,
 ) {
-    val tooltipState = rememberTooltipState()
+    val tooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
     val infoContentDescription = stringResource(id = CoreUiR.string.accessibility_more_information)
 
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
         tooltip = { PlainTooltip { Text(description) } },
         state = tooltipState,
     ) {
         IconButton(
             onClick = { scope.launch { tooltipState.show() } },
-            modifier = modifier.size(48.dp).semantics { contentDescription = infoContentDescription },
+            modifier =
+                modifier
+                    .offset(x = 14.dp, y = (-14).dp)
+                    .size(48.dp)
+                    .semantics { contentDescription = infoContentDescription },
         ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Outlined.Info,
                     contentDescription = null,

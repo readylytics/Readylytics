@@ -386,11 +386,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                     .boundsInRoot
 
             assertTrue(
-                "Info action must start at the title row's top for '$newTitle': " +
-                    "action=$actionBounds, title=$titleBounds",
-                kotlin.math.abs(actionBounds.top - titleBounds.top) <= 1f,
-            )
-            assertTrue(
                 "Info icon must sit at the card's top edge for '$newTitle': " +
                     "icon=$iconBounds, title=$titleBounds",
                 kotlin.math.abs(iconBounds.top - titleBounds.top) <= 1f,
@@ -399,6 +394,12 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 "Info icon must sit at the card's trailing content edge for '$newTitle': " +
                     "icon=$iconBounds, card=$cardBounds",
                 kotlin.math.abs(iconBounds.right - (cardBounds.right - 16f)) <= 1f,
+            )
+            assertTrue(
+                "Info action must be centered on its glyph so the touch indicator originates " +
+                    "at the visible icon for '$newTitle': action=$actionBounds, icon=$iconBounds",
+                kotlin.math.abs(actionBounds.center.x - iconBounds.center.x) <= 1f &&
+                    kotlin.math.abs(actionBounds.center.y - iconBounds.center.y) <= 1f,
             )
         }
     }
