@@ -9,6 +9,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -22,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.components.reorder.DragController
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -200,5 +204,51 @@ class ReorderableCardGridThresholdTest {
         composeTestRule.waitForIdle()
 
         assertEquals(CardId.SLEEP_SCORE, gridController.draggedCardId)
+    }
+
+    @Test
+    fun handleDragAfterDisplayModeChange_reordersCurrentConfigurations() {
+        var configs by mutableStateOf(
+            CardConfigurationsList(
+                listOf(
+                    CardConfiguration(CardId.SLEEP_SCORE, position = 0),
+                    CardConfiguration(CardId.HRV, position = 1),
+                ),
+            ),
+        )
+        var reordered: List<CardConfiguration>? = null
+
+        composeTestRule.setContent {
+            ReorderableCardGrid(
+                cardConfigurations = configs,
+                cardDataMap = fakeCardDataMap(),
+                isEditing = true,
+                onCardRemove = {},
+                onCardReorder = { reordered = it },
+            )
+        }
+        composeTestRule.runOnIdle {
+            configs = CardConfigurationsList(
+                configs.items.map {
+                    if (it.cardId == CardId.HRV) {
+                        it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR)
+                    } else {
+                        it
+                    }
+                },
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithContentDescription("Drag to reorder")[0].performTouchInput {
+            down(center)
+            advanceEventTime(600)
+            moveBy(Offset(0f, 20f))
+            up()
+        }
+
+        assertEquals(
+            DashboardCardDisplayMode.BAR,
+            reordered!!.single { it.cardId == CardId.HRV }.requestedDisplayMode,
+        )
     }
 }

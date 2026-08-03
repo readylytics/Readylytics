@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -363,6 +364,8 @@ private fun ReorderableCardItem(
     modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    val currentDeleteZoneTopPx by rememberUpdatedState(deleteZoneTopPx)
+    val currentPerformDragEnd by rememberUpdatedState(performDragEnd)
 
     Box(
         modifier =
@@ -429,11 +432,11 @@ private fun ReorderableCardItem(
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                         controller.onDragStart(card.cardId)
                                     },
-                                    onDragEnd = { performDragEnd() },
-                                    onDragCancel = { performDragEnd() },
+                                    onDragEnd = { currentPerformDragEnd() },
+                                    onDragCancel = { currentPerformDragEnd() },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
-                                        controller.onDrag(dragAmount, deleteZoneTopPx)
+                                        controller.onDrag(dragAmount, currentDeleteZoneTopPx)
                                     },
                                 )
                             },
