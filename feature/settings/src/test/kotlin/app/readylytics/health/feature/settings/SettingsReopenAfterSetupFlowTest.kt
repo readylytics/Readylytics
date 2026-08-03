@@ -145,6 +145,9 @@ class SettingsReopenAfterSetupFlowTest {
                 override suspend fun updateChengBeta(value: Float) = error("Unexpected call: updateChengBeta")
 
                 override suspend fun updateItrimB(value: Float) = error("Unexpected call: updateItrimB")
+
+                override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
+                    error("Unexpected call: updateBulkDisplayModeNoticeDismissed")
             }
 
         private val userProfileActions =
