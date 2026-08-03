@@ -139,7 +139,8 @@ fun M3MetricGaugeWithValue(
                 style = MaterialTheme.typography.displaySmall,
                 color = valueColor,
                 maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
             Text(
                 text = unitText.ifBlank { " " },

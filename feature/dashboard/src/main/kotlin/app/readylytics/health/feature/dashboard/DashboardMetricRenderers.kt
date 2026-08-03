@@ -67,7 +67,8 @@ fun DashboardGaugeRenderer(
         }
 
     Column(
-        modifier = modifier.fillMaxWidth().testTag(DASHBOARD_GAUGE_TAG),
+        modifier = modifier.fillMaxSize().testTag(DASHBOARD_GAUGE_TAG),
+        verticalArrangement = Arrangement.Bottom,
     ) {
         M3MetricGaugeWithValue(
             markerFraction = markerFraction,

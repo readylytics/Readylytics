@@ -236,15 +236,16 @@ class ReorderableCardGridThresholdTest {
             moveBy(Offset(0f, 20f))
         }
         composeTestRule.runOnIdle {
-            configs = CardConfigurationsList(
-                configs.items.map {
-                    if (it.cardId == CardId.HRV) {
-                        it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR)
-                    } else {
-                        it
-                    }
-                },
-            )
+            configs =
+                CardConfigurationsList(
+                    configs.items.map {
+                        if (it.cardId == CardId.HRV) {
+                            it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR)
+                        } else {
+                            it
+                        }
+                    },
+                )
         }
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithContentDescription("Drag to reorder")[0].performTouchInput {
