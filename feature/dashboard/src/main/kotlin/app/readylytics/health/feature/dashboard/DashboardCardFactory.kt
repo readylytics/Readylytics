@@ -128,7 +128,7 @@ fun buildCardDataMap(
         val readinessVal = (readinessCard?.visual as? DashboardMetricVisual.Score)?.rawValue
         val readinessDelta =
             formatRoundedScoreDelta(
-                currentRounded = readinessVal?.toInt(),
+                currentRounded = readinessVal?.roundToInt(),
                 previousRounded = uiState.yesterdayReadiness?.toInt(),
             ).resolveOrNull()
         ConfigurableMetricCard(
