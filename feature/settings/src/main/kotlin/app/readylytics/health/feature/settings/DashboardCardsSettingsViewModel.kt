@@ -62,12 +62,13 @@ class DashboardCardsSettingsViewModel
                     }
                     if (mode != null) {
                         if (applyJob?.isActive == true) return
-                        applyJob = viewModelScope.launch {
-                            if (event.dontShowAgain) {
-                                displaySettings.updateBulkDisplayModeNoticeDismissed(true)
+                        applyJob =
+                            viewModelScope.launch {
+                                if (event.dontShowAgain) {
+                                    displaySettings.updateBulkDisplayModeNoticeDismissed(true)
+                                }
+                                applyGlobalMode(mode)
                             }
-                            applyGlobalMode(mode)
-                        }
                     }
                 }
                 SettingsEvent.DashboardGlobalDisplayModeDialogDismissed -> {

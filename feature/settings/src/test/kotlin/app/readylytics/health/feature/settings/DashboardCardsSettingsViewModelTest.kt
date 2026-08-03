@@ -171,12 +171,13 @@ class DashboardCardsSettingsViewModelTest {
                 mockk<UserPreferencesReader> {
                     every { userPreferences } returns prefsFlow
                 }
-            val configsFlow = MutableStateFlow(
-                listOf(
-                    CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = null),
-                    CardConfiguration(cardId = CardId.HEART_RATE, requestedDisplayMode = null),
+            val configsFlow =
+                MutableStateFlow(
+                    listOf(
+                        CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = null),
+                        CardConfiguration(cardId = CardId.HEART_RATE, requestedDisplayMode = null),
+                    ),
                 )
-            )
             val cardConfigurationRepository =
                 mockk<CardConfigurationRepository> {
                     every { dashboardCardConfigurations() } returns configsFlow
@@ -188,7 +189,8 @@ class DashboardCardsSettingsViewModelTest {
                 }
             val displaySettings = mockk<DisplaySettings>(relaxed = true)
 
-            val viewModel = DashboardCardsSettingsViewModel(settingsReader, displaySettings, cardConfigurationRepository)
+            val viewModel =
+                DashboardCardsSettingsViewModel(settingsReader, displaySettings, cardConfigurationRepository)
             viewModel.sharingStarted = SharingStarted.Lazily
 
             val job = backgroundScope.launch { viewModel.uiState.collect() }
