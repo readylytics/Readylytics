@@ -65,7 +65,13 @@ fun DashboardMetricCard(
             DashboardCardDisplayMode.VALUE -> R.string.mode_value
         }
     val modeContext = stringResource(id = modeStringRes)
-    val contentDesc = presentation.accessibilityDescription + if (isEditing) ", $modeContext" else ""
+    val contentDesc =
+        if (isEditing) {
+            stringResource(R.string.semantics_edit_mode_separator, modeContext)
+                .let(presentation.accessibilityDescription::plus)
+        } else {
+            presentation.accessibilityDescription
+        }
     // Every mode resolves the same status-derived container/content pair so the card's
     // background and title/tooltip tinting stay consistent when switching visualization modes.
     val containerColor = presentation.status.containerColor()

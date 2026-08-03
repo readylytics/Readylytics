@@ -12,6 +12,7 @@ import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.toMetricStatus
+import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.service.HealthMetricsService
@@ -131,6 +132,11 @@ class DashboardMetricPresentationFactory
         ): Map<CardId, DashboardMetricPresentation> {
             val map = mutableMapOf<CardId, DashboardMetricPresentation>()
 
+            val unavailableValueText =
+                resourceProvider.getString(CoreUiR.string.metric_value_unavailable)
+            val scoreMaximumText =
+                resourceProvider.getString(CoreUiR.string.score_maximum)
+
             val m = if (summary != null) DailyMetricsMapper.toMetrics(summary, preferences) else null
 
             map.putAll(
@@ -152,7 +158,7 @@ class DashboardMetricPresentationFactory
             val sleepScoreStatus = scoreStatus(summary?.sleepScore)
             val sleepScoreTitle =
                 resourceProvider.getString(DashboardR.string.card_title_sleep_score)
-            val sleepScoreValueText = m?.sleepScoreRounded?.toString() ?: "—"
+            val sleepScoreValueText = m?.sleepScoreRounded?.toString() ?: unavailableValueText
             val sleepScoreDescription =
                 sleepScoreVisual.unavailableReason?.let { reason ->
                     unavailableDescription(sleepScoreTitle, reason)
@@ -160,7 +166,7 @@ class DashboardMetricPresentationFactory
                     DashboardR.string.semantics_score_format,
                     sleepScoreTitle,
                     sleepScoreValueText,
-                    "100",
+                    scoreMaximumText,
                     classificationText(sleepScoreStatus),
                 )
             map[CardId.SLEEP_SCORE] =
@@ -183,7 +189,7 @@ class DashboardMetricPresentationFactory
             val readinessVisual = DashboardMetricScalePreparer.score(readinessScore, 0f, 100f)
             val readinessStatus = scoreStatus(readinessScore)
             val readinessTitle = resourceProvider.getString(CoreUiR.string.card_title_readiness)
-            val readinessValueText = m?.readinessRounded?.toString() ?: "—"
+            val readinessValueText = m?.readinessRounded?.toString() ?: unavailableValueText
             val readinessDescription =
                 readinessVisual.unavailableReason?.let { reason ->
                     unavailableDescription(readinessTitle, reason)
@@ -191,7 +197,7 @@ class DashboardMetricPresentationFactory
                     DashboardR.string.semantics_score_format,
                     readinessTitle,
                     readinessValueText,
-                    "100",
+                    scoreMaximumText,
                     classificationText(readinessStatus),
                 )
             map[CardId.READINESS] =
@@ -223,16 +229,19 @@ class DashboardMetricPresentationFactory
                 )
             val weightStatus = bmiAssessment?.status?.toMetricStatus() ?: MetricStatus.CALIBRATING
             val weightTitle =
-                resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_weight)
-            val weightValueText = m?.weightKgDisplay?.replace(" kg", "")?.replace(" lbs", "") ?: "—"
+                resourceProvider.getString(DashboardR.string.card_title_weight)
+            val weightValueText =
+                summary?.weightKg?.let {
+                    MetricFormatter.formatWeightNumericOnly(it, preferences.unitSystem)
+                } ?: unavailableValueText
             val weightUnitText =
-                if (preferences.unitSystem ==
-                    app.readylytics.health.domain.preferences.UnitSystem.METRIC
-                ) {
-                    "kg"
-                } else {
-                    "lbs"
-                }
+                resourceProvider.getString(
+                    if (preferences.unitSystem == UnitSystem.METRIC) {
+                        CoreUiR.string.unit_kg
+                    } else {
+                        CoreUiR.string.unit_lbs
+                    },
+                )
             // Same data-presence branching as DashboardRecoveryMetricPresentationFactory's
             // hrvTooltip/rhrTooltip: point at Health Connect when there is nothing to explain yet.
             val weightTooltip =
@@ -245,7 +254,7 @@ class DashboardMetricPresentationFactory
                 weightVisual.unavailableReason?.let { reason ->
                     unavailableDescription(weightTitle, reason)
                 } ?: resourceProvider.getString(
-                    app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
+                    DashboardR.string.semantics_value_note_format,
                     weightTitle,
                     "$weightValueText $weightUnitText",
                     classificationText(weightStatus),
@@ -283,12 +292,12 @@ class DashboardMetricPresentationFactory
                     unavailableReason = null,
                 )
             val bodyFatTitle =
-                resourceProvider.getString(app.readylytics.health.feature.dashboard.R.string.card_title_body_fat)
+                resourceProvider.getString(DashboardR.string.card_title_body_fat)
             // Percent baked into the main value text (like Sleep Efficiency) so the "%" renders
             // at the value's size instead of as a small separate unit. Unlike Sleep Efficiency,
             // body fat keeps its one decimal place, via the shared formatter the vitals feature
             // already uses.
-            val bodyFatValueText = bodyFatPercent?.let { MetricFormatter.formatBodyFat(it) } ?: "—"
+            val bodyFatValueText = bodyFatPercent?.let { MetricFormatter.formatBodyFat(it) } ?: unavailableValueText
             val bodyFatTooltip =
                 if (bodyFatPercent == null) {
                     resourceProvider.getString(CoreUiR.string.card_tooltip_body_fat_no_data)
@@ -299,7 +308,7 @@ class DashboardMetricPresentationFactory
                 bodyFatVisual.unavailableReason?.let { reason ->
                     unavailableDescription(bodyFatTitle, reason)
                 } ?: resourceProvider.getString(
-                    app.readylytics.health.feature.dashboard.R.string.semantics_value_note_format,
+                    DashboardR.string.semantics_value_note_format,
                     bodyFatTitle,
                     bodyFatValueText,
                     classificationText(bodyFatStatusVal),
@@ -326,7 +335,7 @@ class DashboardMetricPresentationFactory
 
             val effValText =
                 if (efficiencyPercent == null) {
-                    "—"
+                    unavailableValueText
                 } else if (efficiencyPercent == 0f) {
                     "0%"
                 } else {
@@ -340,7 +349,7 @@ class DashboardMetricPresentationFactory
                 )
             val sleepEffTitle =
                 resourceProvider.getString(
-                    app.readylytics.health.core.ui.R.string.card_title_sleep_efficiency,
+                    CoreUiR.string.card_title_sleep_efficiency,
                 )
             val sleepEffDescription =
                 effVisual.unavailableReason?.let { reason ->
@@ -375,11 +384,11 @@ class DashboardMetricPresentationFactory
                 )
             val spo2Title =
                 resourceProvider.getString(
-                    app.readylytics.health.feature.dashboard.R.string.card_title_oxygen_saturation,
+                    DashboardR.string.card_title_oxygen_saturation,
                 )
             // Percent baked into the main value text (like Sleep Efficiency) so the "%" renders
             // at the value's size instead of as a small separate unit.
-            val spo2ValueText = roundedSpo2?.let { "$it%" } ?: "—"
+            val spo2ValueText = roundedSpo2?.let { "$it%" } ?: unavailableValueText
             val spo2Description =
                 spo2Visual.unavailableReason?.let { reason ->
                     unavailableDescription(spo2Title, reason)
@@ -412,11 +421,12 @@ class DashboardMetricPresentationFactory
                 }
             val bpTitle =
                 resourceProvider.getString(
-                    app.readylytics.health.feature.dashboard.R.string.card_title_blood_pressure,
+                    DashboardR.string.card_title_blood_pressure,
                 )
             val bpValueText =
-                m?.bloodPressureDisplay ?: if (systolic > 0 && diastolic > 0) "$systolic/$diastolic" else "—"
-            val bpUnitText = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_mmHg)
+                m?.bloodPressureDisplay
+                    ?: if (systolic > 0 && diastolic > 0) "$systolic/$diastolic" else unavailableValueText
+            val bpUnitText = resourceProvider.getString(CoreUiR.string.unit_mmHg)
             val bpTooltip =
                 if (systolic <= 0 || diastolic <= 0) {
                     resourceProvider.getString(CoreUiR.string.card_tooltip_bp_no_data)
@@ -449,9 +459,9 @@ class DashboardMetricPresentationFactory
             // 13. HEART RATE
             val hrTitle =
                 resourceProvider.getString(
-                    app.readylytics.health.feature.dashboard.R.string.card_title_heart_rate,
+                    DashboardR.string.card_title_heart_rate,
                 )
-            val hrValueText = heartRateSummary?.let { "${it.minBpm}–${it.maxBpm}" } ?: "—"
+            val hrValueText = heartRateSummary?.let { "${it.minBpm}–${it.maxBpm}" } ?: unavailableValueText
             val hrSecondaryText =
                 heartRateSummary?.let {
                     resourceProvider.getString(CoreUiR.string.hr_avg_display, it.avgBpm)
@@ -484,10 +494,10 @@ class DashboardMetricPresentationFactory
             val circReady = circadianResult as? app.readylytics.health.domain.scoring.CircadianConsistencyResult.Ready
             val circTitle =
                 resourceProvider.getString(
-                    app.readylytics.health.feature.dashboard.R.string.card_title_circadian_consistency,
+                    DashboardR.string.card_title_circadian_consistency,
                 )
-            val circSemanticsValueText = circReady?.score?.roundToInt()?.toString() ?: "—"
-            val circValueText = circReady?.score?.roundToInt()?.let { "$it%" } ?: "—"
+            val circSemanticsValueText = circReady?.score?.roundToInt()?.toString() ?: unavailableValueText
+            val circValueText = circReady?.score?.roundToInt()?.let { "$it%" } ?: unavailableValueText
             val circVisual =
                 DashboardMetricScalePreparer.score(
                     circReady?.score,
@@ -502,7 +512,7 @@ class DashboardMetricPresentationFactory
                     DashboardR.string.semantics_score_format,
                     circTitle,
                     circSemanticsValueText,
-                    "100",
+                    scoreMaximumText,
                     classificationText(circStatus),
                 )
             map[CardId.CIRCADIAN_CONSISTENCY] =
@@ -520,9 +530,9 @@ class DashboardMetricPresentationFactory
             // 15. STRAIN RATIO
             val strainTitle =
                 resourceProvider.getString(
-                    app.readylytics.health.core.ui.R.string.card_title_strain_ratio,
+                    CoreUiR.string.card_title_strain_ratio,
                 )
-            val strainValueText = m?.strainRatioDisplay ?: "—"
+            val strainValueText = m?.strainRatioDisplay ?: unavailableValueText
             val strainIncreaseText =
                 todayStrainIncrease?.let { increase ->
                     if (increase > 0.005f) {

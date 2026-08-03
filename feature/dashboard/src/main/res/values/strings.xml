@@ -47,6 +47,7 @@
     <string name="semantics_value_note_status_format">%1$s: %2$s, %3$s, %4$s</string>
     <string name="semantics_weight_bmi_format">%1$s: %2$s, %3$s, %4$s</string>
     <string name="semantics_unavailable_format">%1$s: %2$s</string>
+    <string name="semantics_edit_mode_separator">, %1$s</string>
     <string name="sleep_session_time_range_format">%1$s → %2$s</string>
 
     <string name="manage_cards">Manage Cards</string>

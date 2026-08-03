@@ -190,6 +190,8 @@
     <string name="metric_status_warning">Warning</string>
     <string name="metric_status_poor">Poor</string>
     <string name="metric_status_calibrating">Calibrating</string>
+    <string name="metric_value_unavailable">—</string>
+    <string name="score_maximum">100</string>
     <string name="metric_unavailable_missing_value">No data available</string>
     <string name="metric_unavailable_missing_target">Target not set</string>
     <string name="metric_unavailable_baseline_not_ready">Baseline not ready</string>

@@ -29,6 +29,10 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         getWorkoutMetricsUseCase = mockk(relaxed = true)
         factory = DashboardMetricPresentationFactory(resourceProvider, getWorkoutMetricsUseCase)
         every { resourceProvider.getString(any()) } returns "mock_string"
+        every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
+        every { resourceProvider.getString(CoreUiR.string.score_maximum) } returns "100"
+        every { resourceProvider.getString(CoreUiR.string.unit_kg) } returns "kg"
+        every { resourceProvider.getString(CoreUiR.string.unit_lbs) } returns "lbs"
         every { resourceProvider.getString(any(), any()) } returns "BMI mock_string"
         every { resourceProvider.getString(any(), any(), any()) } returns "BMI mock_string"
         // Task 10: DashboardMetricPresentationFactory now also calls getString with 3 and 4

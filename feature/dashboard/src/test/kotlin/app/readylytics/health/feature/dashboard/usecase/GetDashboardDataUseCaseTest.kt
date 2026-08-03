@@ -30,6 +30,7 @@ class GetDashboardDataUseCaseTest {
     fun setUp() {
         getWorkoutMetricsUseCase = mockk(relaxed = true)
         resourceProvider = mockk(relaxed = true)
+        every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
         useCase =
             GetDashboardDataUseCase(
                 factory = DashboardMetricPresentationFactory(resourceProvider, getWorkoutMetricsUseCase),
