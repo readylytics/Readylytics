@@ -275,4 +275,6 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data object DashboardGlobalDisplayModeDialogDismissed : SettingsEvent
+
+    data object DashboardGlobalDisplayModeResetRequested : SettingsEvent
 }

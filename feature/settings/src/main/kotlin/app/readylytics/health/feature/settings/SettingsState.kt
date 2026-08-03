@@ -131,4 +131,6 @@ data class DataSourceSettingsState(
 data class DashboardCardsSettingsState(
     val showGlobalDisplayModeDialog: Boolean = false,
     val pendingGlobalDisplayMode: DashboardCardDisplayMode? = null,
+    val pendingIsReset: Boolean = false,
+    val currentGlobalMode: DashboardCardDisplayMode? = null,
 )

@@ -12,6 +12,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -39,9 +40,23 @@ class DashboardCardsSettingsViewModel
                 initialValue = false,
             )
 
+        private val currentGlobalMode =
+            settingsReader.userPreferences.map { it.lastGlobalDisplayMode }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = null,
+            )
+
         private val transientState = MutableStateFlow(DashboardCardsSettingsState())
 
-        val uiState: StateFlow<DashboardCardsSettingsState> = transientState
+        val uiState: StateFlow<DashboardCardsSettingsState> =
+            combine(transientState, currentGlobalMode) { transient, current ->
+                transient.copy(currentGlobalMode = current)
+            }.stateIn(
+                scope = viewModelScope,
+                started = sharingStarted,
+                initialValue = DashboardCardsSettingsState(),
+            )
 
         fun onEvent(event: SettingsEvent) {
             when (event) {
@@ -51,29 +66,57 @@ class DashboardCardsSettingsViewModel
                         applyJob = viewModelScope.launch { applyGlobalMode(event.mode) }
                     } else {
                         transientState.update {
-                            it.copy(showGlobalDisplayModeDialog = true, pendingGlobalDisplayMode = event.mode)
+                            it.copy(
+                                showGlobalDisplayModeDialog = true,
+                                pendingGlobalDisplayMode = event.mode,
+                                pendingIsReset = false,
+                            )
+                        }
+                    }
+                }
+                SettingsEvent.DashboardGlobalDisplayModeResetRequested -> {
+                    if (noticeDismissed.value) {
+                        if (applyJob?.isActive == true) return
+                        applyJob = viewModelScope.launch { resetAllModes() }
+                    } else {
+                        transientState.update {
+                            it.copy(
+                                showGlobalDisplayModeDialog = true,
+                                pendingGlobalDisplayMode = null,
+                                pendingIsReset = true,
+                            )
                         }
                     }
                 }
                 is SettingsEvent.DashboardGlobalDisplayModeConfirmed -> {
-                    val mode = transientState.value.pendingGlobalDisplayMode
+                    val pending = transientState.value
                     transientState.update {
-                        it.copy(showGlobalDisplayModeDialog = false, pendingGlobalDisplayMode = null)
+                        it.copy(
+                            showGlobalDisplayModeDialog = false,
+                            pendingGlobalDisplayMode = null,
+                            pendingIsReset = false,
+                        )
                     }
-                    if (mode != null) {
-                        if (applyJob?.isActive == true) return
-                        applyJob =
-                            viewModelScope.launch {
-                                if (event.dontShowAgain) {
-                                    displaySettings.updateBulkDisplayModeNoticeDismissed(true)
-                                }
-                                applyGlobalMode(mode)
+                    if (applyJob?.isActive == true) return
+                    applyJob =
+                        viewModelScope.launch {
+                            if (event.dontShowAgain) {
+                                displaySettings.updateBulkDisplayModeNoticeDismissed(true)
                             }
-                    }
+                            if (pending.pendingIsReset) {
+                                resetAllModes()
+                            } else {
+                                pending.pendingGlobalDisplayMode?.let { applyGlobalMode(it) }
+                            }
+                        }
                 }
                 SettingsEvent.DashboardGlobalDisplayModeDialogDismissed -> {
                     transientState.update {
-                        it.copy(showGlobalDisplayModeDialog = false, pendingGlobalDisplayMode = null)
+                        it.copy(
+                            showGlobalDisplayModeDialog = false,
+                            pendingGlobalDisplayMode = null,
+                            pendingIsReset = false,
+                        )
                     }
                 }
                 else -> {}
@@ -84,5 +127,13 @@ class DashboardCardsSettingsViewModel
             val current = cardConfigurationRepository.dashboardCardConfigurations().first()
             val updated = DashboardCardCatalog.applyGlobalDisplayMode(current, mode)
             cardConfigurationRepository.updateDashboardCardConfigurations(updated)
+            displaySettings.updateLastGlobalDisplayMode(mode)
+        }
+
+        private suspend fun resetAllModes() {
+            val current = cardConfigurationRepository.dashboardCardConfigurations().first()
+            val updated = DashboardCardCatalog.resetAllDisplayModes(current)
+            cardConfigurationRepository.updateDashboardCardConfigurations(updated)
+            displaySettings.updateLastGlobalDisplayMode(null)
         }
     }

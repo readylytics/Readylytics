@@ -48,13 +48,20 @@ class DashboardCardsSettingsViewModelTest {
 
     private fun buildViewModel(
         noticeDismissed: Boolean = false,
+        currentGlobalMode: DashboardCardDisplayMode? = null,
         initialConfigs: List<CardConfiguration> =
             listOf(
                 CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = null),
                 CardConfiguration(cardId = CardId.HEART_RATE, requestedDisplayMode = null),
             ),
     ): Triple<DashboardCardsSettingsViewModel, MutableStateFlow<List<CardConfiguration>>, DisplaySettings> {
-        val prefsFlow = MutableStateFlow(UserPreferences(bulkDisplayModeNoticeDismissed = noticeDismissed))
+        val prefsFlow =
+            MutableStateFlow(
+                UserPreferences(
+                    bulkDisplayModeNoticeDismissed = noticeDismissed,
+                    lastGlobalDisplayMode = currentGlobalMode,
+                ),
+            )
         val settingsReader =
             mockk<UserPreferencesReader> {
                 every { userPreferences } returns prefsFlow
@@ -208,4 +215,113 @@ class DashboardCardsSettingsViewModelTest {
             job.cancel()
         }
     }
+
+    @Test
+    fun `uiState reflects the persisted current global mode`() =
+        runTest(testDispatcher) {
+            val (viewModel, _, _) = buildViewModel(currentGlobalMode = DashboardCardDisplayMode.GAUGE)
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+            advanceUntilIdle()
+
+            assertEquals(DashboardCardDisplayMode.GAUGE, viewModel.uiState.value.currentGlobalMode)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `apply persists the applied mode as the new current global mode`() =
+        runTest(testDispatcher) {
+            val (viewModel, _, displaySettings) = buildViewModel(noticeDismissed = true)
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.BAR))
+            advanceUntilIdle()
+
+            coVerify { displaySettings.updateLastGlobalDisplayMode(DashboardCardDisplayMode.BAR) }
+
+            job.cancel()
+        }
+
+    @Test
+    fun `reset when notice already dismissed clears every card and the current mode`() =
+        runTest(testDispatcher) {
+            val (viewModel, configsFlow, displaySettings) =
+                buildViewModel(
+                    noticeDismissed = true,
+                    currentGlobalMode = DashboardCardDisplayMode.GAUGE,
+                    initialConfigs =
+                        listOf(
+                            CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                        ),
+                )
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
+            advanceUntilIdle()
+
+            assertNull(configsFlow.value.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode)
+            coVerify { displaySettings.updateLastGlobalDisplayMode(null) }
+
+            job.cancel()
+        }
+
+    @Test
+    fun `reset when notice not dismissed shows the confirm dialog flagged as a reset`() =
+        runTest(testDispatcher) {
+            val (viewModel, configsFlow, _) = buildViewModel(noticeDismissed = false)
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.showGlobalDisplayModeDialog)
+            assertTrue(viewModel.uiState.value.pendingIsReset)
+            assertNull(configsFlow.value.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `confirming a pending reset resets and clears the reset flag`() =
+        runTest(testDispatcher) {
+            val (viewModel, configsFlow, _) =
+                buildViewModel(
+                    noticeDismissed = false,
+                    initialConfigs =
+                        listOf(
+                            CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                        ),
+                )
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
+            advanceUntilIdle()
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeConfirmed(dontShowAgain = false))
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.pendingIsReset)
+            assertFalse(viewModel.uiState.value.showGlobalDisplayModeDialog)
+            assertNull(configsFlow.value.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `apply and reset share one in-flight guard`() =
+        runTest(testDispatcher) {
+            val (viewModel, _, _) = buildViewModel(noticeDismissed = true)
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.BAR))
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
+            advanceUntilIdle()
+
+            // The reset dispatched while the apply's coroutine was still in flight must be a no-op;
+            // it does not flip pendingIsReset or show the dialog once the apply completes.
+            assertFalse(viewModel.uiState.value.pendingIsReset)
+            assertFalse(viewModel.uiState.value.showGlobalDisplayModeDialog)
+
+            job.cancel()
+        }
 }
