@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.dashboard
 
+import app.readylytics.health.data.preferences.SettingsDefaults
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -69,5 +70,15 @@ class DashboardCardCatalogTest {
     @Test
     fun `Insights is not in catalog`() {
         assertNull(DashboardCardCatalog.spec(CardId.INSIGHTS))
+    }
+
+    @Test
+    fun `every default dashboard card except Insights has a catalog spec`() {
+        SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+            .map { it.cardId }
+            .filter { it != CardId.INSIGHTS }
+            .forEach { cardId ->
+                assertNotNull("Missing catalog spec for $cardId", DashboardCardCatalog.spec(cardId))
+            }
     }
 }

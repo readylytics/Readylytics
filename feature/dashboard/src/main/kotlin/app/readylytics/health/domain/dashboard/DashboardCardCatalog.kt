@@ -7,14 +7,7 @@ data class DashboardCardSpec(
 )
 
 object DashboardCardCatalog {
-    fun spec(cardId: CardId): DashboardCardSpec? {
-        val legacyDefault = legacyDefaults[cardId] ?: return null
-        return DashboardCardSpec(
-            cardId = cardId,
-            legacyDefaultMode = legacyDefault,
-            supportedModes = supportedModesMap[cardId] ?: listOf(legacyDefault),
-        )
-    }
+    fun spec(cardId: CardId): DashboardCardSpec? = specs[cardId]
 
     fun requestedMode(configuration: CardConfiguration): DashboardCardDisplayMode {
         val spec = spec(configuration.cardId) ?: return DashboardCardDisplayMode.VALUE
@@ -28,56 +21,42 @@ object DashboardCardCatalog {
 
     fun renderMode(configuration: CardConfiguration): DashboardCardDisplayMode = requestedMode(configuration)
 
-    private val legacyDefaults =
-        mapOf(
-            CardId.SLEEP_SCORE to DashboardCardDisplayMode.GAUGE,
-            CardId.READINESS to DashboardCardDisplayMode.GAUGE,
-            CardId.STEPS to DashboardCardDisplayMode.BAR,
-            CardId.HRV to DashboardCardDisplayMode.VALUE,
-            CardId.SLEEP_RHR to DashboardCardDisplayMode.VALUE,
-            CardId.SLEEP_DURATION to DashboardCardDisplayMode.VALUE,
-            CardId.STRAIN_RATIO to DashboardCardDisplayMode.VALUE,
-            CardId.RAS_DAILY to DashboardCardDisplayMode.VALUE,
-            CardId.CIRCADIAN_CONSISTENCY to DashboardCardDisplayMode.VALUE,
-            CardId.RESTING_HR to DashboardCardDisplayMode.VALUE,
-            CardId.SLEEP_EFFICIENCY to DashboardCardDisplayMode.VALUE,
-            CardId.HEART_RATE to DashboardCardDisplayMode.VALUE,
-            CardId.WEIGHT to DashboardCardDisplayMode.VALUE,
-            CardId.BODY_FAT to DashboardCardDisplayMode.VALUE,
-            CardId.BLOOD_PRESSURE to DashboardCardDisplayMode.VALUE,
-            CardId.OXYGEN_SATURATION to DashboardCardDisplayMode.VALUE,
-        )
+    private val ALL_MODES =
+        listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE)
+    private val ONLY_BAR = listOf(DashboardCardDisplayMode.BAR)
+    private val ONLY_VALUE = listOf(DashboardCardDisplayMode.VALUE)
 
-    private val supportedModesMap =
+    private val specs: Map<CardId, DashboardCardSpec> =
         mapOf(
-            CardId.SLEEP_SCORE to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.READINESS to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.STEPS to listOf(DashboardCardDisplayMode.BAR),
-            CardId.HRV to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.SLEEP_RHR to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
+            CardId.SLEEP_SCORE to DashboardCardSpec(CardId.SLEEP_SCORE, DashboardCardDisplayMode.GAUGE, ALL_MODES),
+            CardId.READINESS to DashboardCardSpec(CardId.READINESS, DashboardCardDisplayMode.GAUGE, ALL_MODES),
+            CardId.STEPS to DashboardCardSpec(CardId.STEPS, DashboardCardDisplayMode.BAR, ONLY_BAR),
+            CardId.HRV to DashboardCardSpec(CardId.HRV, DashboardCardDisplayMode.VALUE, ALL_MODES),
+            CardId.SLEEP_RHR to DashboardCardSpec(CardId.SLEEP_RHR, DashboardCardDisplayMode.VALUE, ALL_MODES),
             CardId.SLEEP_DURATION to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
+                DashboardCardSpec(
+                    CardId.SLEEP_DURATION,
+                    DashboardCardDisplayMode.VALUE,
+                    ALL_MODES,
+                ),
             CardId.STRAIN_RATIO to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.RAS_DAILY to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
+                DashboardCardSpec(
+                    CardId.STRAIN_RATIO,
+                    DashboardCardDisplayMode.VALUE,
+                    ALL_MODES,
+                ),
+            CardId.RAS_DAILY to DashboardCardSpec(CardId.RAS_DAILY, DashboardCardDisplayMode.VALUE, ALL_MODES),
             CardId.CIRCADIAN_CONSISTENCY to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.RESTING_HR to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
+                DashboardCardSpec(CardId.CIRCADIAN_CONSISTENCY, DashboardCardDisplayMode.VALUE, ALL_MODES),
+            CardId.RESTING_HR to DashboardCardSpec(CardId.RESTING_HR, DashboardCardDisplayMode.VALUE, ALL_MODES),
             CardId.SLEEP_EFFICIENCY to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.HEART_RATE to listOf(DashboardCardDisplayMode.VALUE),
-            CardId.WEIGHT to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.BODY_FAT to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
-            CardId.BLOOD_PRESSURE to listOf(DashboardCardDisplayMode.VALUE),
+                DashboardCardSpec(CardId.SLEEP_EFFICIENCY, DashboardCardDisplayMode.VALUE, ALL_MODES),
+            CardId.HEART_RATE to DashboardCardSpec(CardId.HEART_RATE, DashboardCardDisplayMode.VALUE, ONLY_VALUE),
+            CardId.WEIGHT to DashboardCardSpec(CardId.WEIGHT, DashboardCardDisplayMode.VALUE, ALL_MODES),
+            CardId.BODY_FAT to DashboardCardSpec(CardId.BODY_FAT, DashboardCardDisplayMode.VALUE, ALL_MODES),
+            CardId.BLOOD_PRESSURE to
+                DashboardCardSpec(CardId.BLOOD_PRESSURE, DashboardCardDisplayMode.VALUE, ONLY_VALUE),
             CardId.OXYGEN_SATURATION to
-                listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE),
+                DashboardCardSpec(CardId.OXYGEN_SATURATION, DashboardCardDisplayMode.VALUE, ALL_MODES),
         )
 }
