@@ -33,6 +33,7 @@ class DashboardCardCatalogTest {
             val spec = DashboardCardCatalog.spec(cardId)
             assertNotNull("Missing spec for $cardId", spec)
             assertEquals(defaultMode, spec!!.legacyDefaultMode)
+            assertEquals("Catalog key/spec cardId mismatch for $cardId", cardId, spec.cardId)
 
             when (cardId) {
                 CardId.HEART_RATE, CardId.BLOOD_PRESSURE -> {

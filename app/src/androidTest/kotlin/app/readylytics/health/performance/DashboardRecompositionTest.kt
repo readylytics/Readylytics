@@ -161,7 +161,6 @@ class DashboardRecompositionTest {
                             presentation = hrvPresentation,
                             specification = DashboardCardCatalog.spec(CardId.HRV)!!,
                             requestedMode = DashboardCardCatalog.requestedMode(configuration),
-                            renderMode = DashboardCardCatalog.renderMode(configuration),
                             isEditing = true,
                             onModeSelected = {},
                         )
@@ -172,7 +171,6 @@ class DashboardRecompositionTest {
                             presentation = readinessPresentation,
                             specification = DashboardCardCatalog.spec(CardId.READINESS)!!,
                             requestedMode = DashboardCardCatalog.requestedMode(configuration),
-                            renderMode = DashboardCardCatalog.renderMode(configuration),
                             isEditing = true,
                             onModeSelected = {},
                         )
