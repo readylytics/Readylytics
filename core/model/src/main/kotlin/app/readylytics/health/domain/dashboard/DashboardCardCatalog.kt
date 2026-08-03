@@ -19,6 +19,15 @@ object DashboardCardCatalog {
         }
     }
 
+    fun applyGlobalDisplayMode(
+        configurations: List<CardConfiguration>,
+        mode: DashboardCardDisplayMode,
+    ): List<CardConfiguration> =
+        configurations.map { config ->
+            val supported = spec(config.cardId)?.supportedModes.orEmpty()
+            if (mode in supported) config.copy(requestedDisplayMode = mode) else config
+        }
+
     private val ALL_MODES =
         listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE)
     private val ONLY_BAR = listOf(DashboardCardDisplayMode.BAR)

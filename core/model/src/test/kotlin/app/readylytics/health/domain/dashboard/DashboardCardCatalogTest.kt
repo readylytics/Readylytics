@@ -81,4 +81,47 @@ class DashboardCardCatalogTest {
                 assertNotNull("Missing catalog spec for $cardId", DashboardCardCatalog.spec(cardId))
             }
     }
+
+    @Test
+    fun `applyGlobalDisplayMode overrides cards that support the requested mode`() {
+        val configs =
+            listOf(
+                CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = null),
+                CardConfiguration(cardId = CardId.HRV, requestedDisplayMode = DashboardCardDisplayMode.BAR),
+            )
+
+        val result = DashboardCardCatalog.applyGlobalDisplayMode(configs, DashboardCardDisplayMode.GAUGE)
+
+        assertEquals(
+            DashboardCardDisplayMode.GAUGE,
+            result.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode,
+        )
+        assertEquals(
+            DashboardCardDisplayMode.GAUGE,
+            result.first { it.cardId == CardId.HRV }.requestedDisplayMode,
+        )
+    }
+
+    @Test
+    fun `applyGlobalDisplayMode leaves cards unchanged when the mode is unsupported`() {
+        val configs =
+            listOf(
+                CardConfiguration(cardId = CardId.HEART_RATE, requestedDisplayMode = null),
+                CardConfiguration(cardId = CardId.STEPS, requestedDisplayMode = null),
+            )
+
+        val result = DashboardCardCatalog.applyGlobalDisplayMode(configs, DashboardCardDisplayMode.GAUGE)
+
+        assertNull(result.first { it.cardId == CardId.HEART_RATE }.requestedDisplayMode)
+        assertNull(result.first { it.cardId == CardId.STEPS }.requestedDisplayMode)
+    }
+
+    @Test
+    fun `applyGlobalDisplayMode leaves cards with no catalog spec unchanged`() {
+        val configs = listOf(CardConfiguration(cardId = CardId.INSIGHTS, requestedDisplayMode = null))
+
+        val result = DashboardCardCatalog.applyGlobalDisplayMode(configs, DashboardCardDisplayMode.VALUE)
+
+        assertNull(result.first { it.cardId == CardId.INSIGHTS }.requestedDisplayMode)
+    }
 }
