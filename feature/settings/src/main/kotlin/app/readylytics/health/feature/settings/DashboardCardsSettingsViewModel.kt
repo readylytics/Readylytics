@@ -49,7 +49,7 @@ class DashboardCardsSettingsViewModel
 
         private val transientState = MutableStateFlow(DashboardCardsSettingsState())
 
-        val uiState: StateFlow<DashboardCardsSettingsState> =
+        val uiState: StateFlow<DashboardCardsSettingsState> by lazy {
             combine(transientState, currentGlobalMode) { transient, current ->
                 transient.copy(currentGlobalMode = current)
             }.stateIn(
@@ -57,6 +57,7 @@ class DashboardCardsSettingsViewModel
                 started = sharingStarted,
                 initialValue = DashboardCardsSettingsState(),
             )
+        }
 
         fun onEvent(event: SettingsEvent) {
             when (event) {

@@ -269,7 +269,14 @@ class DashboardCardsSettingsViewModelTest {
     @Test
     fun `reset when notice not dismissed shows the confirm dialog flagged as a reset`() =
         runTest(testDispatcher) {
-            val (viewModel, configsFlow, _) = buildViewModel(noticeDismissed = false)
+            val (viewModel, configsFlow, _) =
+                buildViewModel(
+                    noticeDismissed = false,
+                    initialConfigs =
+                        listOf(
+                            CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                        ),
+                )
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
@@ -277,7 +284,10 @@ class DashboardCardsSettingsViewModelTest {
 
             assertTrue(viewModel.uiState.value.showGlobalDisplayModeDialog)
             assertTrue(viewModel.uiState.value.pendingIsReset)
-            assertNull(configsFlow.value.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode)
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                configsFlow.value.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode,
+            )
 
             job.cancel()
         }
@@ -308,20 +318,57 @@ class DashboardCardsSettingsViewModelTest {
         }
 
     @Test
-    fun `apply and reset share one in-flight guard`() =
-        runTest(testDispatcher) {
-            val (viewModel, _, _) = buildViewModel(noticeDismissed = true)
-            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+    fun `apply and reset share one in-flight guard`() {
+        val standardDispatcher = StandardTestDispatcher()
+        runTest(standardDispatcher) {
+            val prefsFlow = MutableStateFlow(UserPreferences(bulkDisplayModeNoticeDismissed = true))
+            val settingsReader =
+                mockk<UserPreferencesReader> {
+                    every { userPreferences } returns prefsFlow
+                }
+            val configsFlow =
+                MutableStateFlow(
+                    listOf(
+                        CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = null),
+                        CardConfiguration(cardId = CardId.HEART_RATE, requestedDisplayMode = null),
+                    ),
+                )
+            val cardConfigurationRepository =
+                mockk<CardConfigurationRepository> {
+                    every { dashboardCardConfigurations() } returns configsFlow
+                    coEvery { updateDashboardCardConfigurations(any()) } coAnswers {
+                        delay(1) // Ensure the coroutine actually suspends, opening a race window
+                        @Suppress("UNCHECKED_CAST")
+                        configsFlow.value = it.invocation.args[0] as List<CardConfiguration>
+                    }
+                }
+            val displaySettings = mockk<DisplaySettings>(relaxed = true)
 
+            val viewModel =
+                DashboardCardsSettingsViewModel(settingsReader, displaySettings, cardConfigurationRepository)
+            viewModel.sharingStarted = SharingStarted.Lazily
+
+            val job = backgroundScope.launch { viewModel.uiState.collect() }
+
+            // Dispatch Apply, then Reset, before Apply's write has finished suspending on delay(1).
+            // If applyJob were NOT shared between the two event branches, Reset would launch its own
+            // coroutine and a second write would happen.
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.BAR))
             viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
+
             advanceUntilIdle()
 
-            // The reset dispatched while the apply's coroutine was still in flight must be a no-op;
-            // it does not flip pendingIsReset or show the dialog once the apply completes.
+            // Only Apply's write should have happened: Reset was blocked by the shared applyJob guard
+            // while Apply's coroutine was still in flight.
+            coVerify(exactly = 1) { cardConfigurationRepository.updateDashboardCardConfigurations(any()) }
+            assertEquals(
+                DashboardCardDisplayMode.BAR,
+                configsFlow.value.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode,
+            )
             assertFalse(viewModel.uiState.value.pendingIsReset)
             assertFalse(viewModel.uiState.value.showGlobalDisplayModeDialog)
 
             job.cancel()
         }
+    }
 }
