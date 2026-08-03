@@ -132,9 +132,7 @@ class CardManagementDelegate(
                 _pendingConfigs.value = reorderCards(base, event.newOrder)
             }
             is CardManagementEvent.DisplayModeChanged -> {
-                val base =
-                    _pendingConfigs.value
-                        ?: error("Display mode can only change while editing")
+                val base = _pendingConfigs.value ?: return
                 require(base.any { it.cardId == event.cardId })
                 _pendingConfigs.value =
                     base.map { configuration ->
@@ -156,14 +154,6 @@ class CardManagementDelegate(
     fun saveChanges() = onEvent(CardManagementEvent.SaveChanges)
 
     fun cancelChanges() = onEvent(CardManagementEvent.CancelChanges)
-
-    fun toggleCardManagement() {
-        if (_isManagingCards.value) {
-            onEvent(CardManagementEvent.CancelChanges)
-        } else {
-            _isManagingCards.value = true
-        }
-    }
 
     fun onToggleCardVisibility(
         currentConfigs: List<CardConfiguration>,

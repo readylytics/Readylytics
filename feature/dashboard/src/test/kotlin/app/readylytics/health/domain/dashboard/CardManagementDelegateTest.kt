@@ -229,22 +229,6 @@ class CardManagementDelegateTest {
         delegate.onReorderCards(sampleConfigs, invalid)
     }
 
-    // --- 8. toggleCardManagement legacy ---
-
-    @Test
-    fun `toggleCardManagement enters when not managing`() {
-        delegate.toggleCardManagement()
-        assertTrue(delegate.isManagingCards.value)
-    }
-
-    @Test
-    fun `toggleCardManagement cancels when already managing`() {
-        delegate.enterEditMode(sampleConfigs)
-        delegate.toggleCardManagement()
-        assertFalse(delegate.isManagingCards.value)
-        assertNull(delegate.pendingConfigs.value)
-    }
-
     // --- 9. State flow aggregation ---
 
     @Test
@@ -435,4 +419,11 @@ class CardManagementDelegateTest {
             coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
             assertNull(delegate.pendingConfigs.value)
         }
+
+    @Test
+    fun `DisplayModeChanged is a no-op when not editing`() {
+        delegate.onEvent(CardManagementEvent.DisplayModeChanged(CardId.HRV, DashboardCardDisplayMode.BAR))
+        assertFalse(delegate.isManagingCards.value)
+        assertNull(delegate.pendingConfigs.value)
+    }
 }
