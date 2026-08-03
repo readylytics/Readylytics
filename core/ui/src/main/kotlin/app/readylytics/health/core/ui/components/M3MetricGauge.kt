@@ -61,7 +61,7 @@ internal fun resolveHorseshoeGaugeGeometry(
 fun M3MetricGauge(
     markerFraction: Float?,
     activeColor: Color,
-    markerColor: Color = MaterialTheme.colorScheme.surface,
+    markerColor: Color,
     modifier: Modifier = Modifier,
     animateMarker: Boolean = true,
 ) {
@@ -157,7 +157,7 @@ fun M3MetricGauge(
 fun M3MetricGaugeWithValue(
     markerFraction: Float?,
     activeColor: Color,
-    markerColor: Color = MaterialTheme.colorScheme.surface,
+    markerColor: Color,
     valueText: String,
     unitText: String,
     valueColor: Color,
