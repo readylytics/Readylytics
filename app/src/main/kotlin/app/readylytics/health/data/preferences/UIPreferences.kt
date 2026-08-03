@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
 import app.readylytics.health.data.device.HealthDeviceRepository
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.model.HealthDataType
 import javax.inject.Inject
 
@@ -37,6 +38,24 @@ internal class UIPreferences
 
         suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) {
             dataStore.updateData { it.toBuilder().setBulkDisplayModeNoticeDismissed(dismissed).build() }
+        }
+
+        suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setLastGlobalDisplayMode(
+                        when (mode) {
+                            DashboardCardDisplayMode.VALUE ->
+                                DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_VALUE
+                            DashboardCardDisplayMode.GAUGE ->
+                                DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_GAUGE
+                            DashboardCardDisplayMode.BAR ->
+                                DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_BAR
+                            null -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_UNSET
+                        },
+                    ).build()
+            }
         }
 
         suspend fun updateAppTheme(theme: AppTheme) {

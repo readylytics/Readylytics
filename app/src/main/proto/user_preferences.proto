@@ -54,6 +54,13 @@ enum LoadSourceModeProto {
     LOAD_SOURCE_EVERYDAY_HEART_RATE = 2;
 }
 
+enum DashboardCardDisplayModeProto {
+    DASHBOARD_CARD_DISPLAY_MODE_UNSET = 0;
+    DASHBOARD_CARD_DISPLAY_MODE_VALUE = 1;
+    DASHBOARD_CARD_DISPLAY_MODE_GAUGE = 2;
+    DASHBOARD_CARD_DISPLAY_MODE_BAR = 3;
+}
+
 
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
@@ -213,6 +220,11 @@ message UserPreferencesProto {
     // Whether the user has permanently dismissed the "this overrides your custom
     // card display settings" confirmation for the global dashboard display-mode setting.
     bool bulk_display_mode_notice_dismissed = 80;
+
+    // The mode most recently applied (or reset) via the global dashboard display-mode
+    // setting. DASHBOARD_CARD_DISPLAY_MODE_UNSET (proto3 zero value) = never applied;
+    // resolves to null at the domain read boundary.
+    DashboardCardDisplayModeProto last_global_display_mode = 81;
 }
 
 enum TrimpMethodProto {

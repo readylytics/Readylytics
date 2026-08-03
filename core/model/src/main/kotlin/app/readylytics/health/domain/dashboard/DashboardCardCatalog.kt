@@ -28,6 +28,9 @@ object DashboardCardCatalog {
             if (mode in supported) config.copy(requestedDisplayMode = mode) else config
         }
 
+    fun resetAllDisplayModes(configurations: List<CardConfiguration>): List<CardConfiguration> =
+        configurations.map { it.copy(requestedDisplayMode = null) }
+
     private val ALL_MODES =
         listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE)
     private val ONLY_BAR = listOf(DashboardCardDisplayMode.BAR)

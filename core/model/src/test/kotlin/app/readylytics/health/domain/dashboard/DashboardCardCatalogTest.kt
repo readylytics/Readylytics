@@ -2,6 +2,7 @@ package app.readylytics.health.domain.dashboard
 
 import app.readylytics.health.data.preferences.SettingsDefaults
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -123,5 +124,38 @@ class DashboardCardCatalogTest {
         val result = DashboardCardCatalog.applyGlobalDisplayMode(configs, DashboardCardDisplayMode.VALUE)
 
         assertNull(result.first { it.cardId == CardId.INSIGHTS }.requestedDisplayMode)
+    }
+
+    @Test
+    fun `resetAllDisplayModes clears every card's requestedDisplayMode`() {
+        val configs =
+            listOf(
+                CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+                CardConfiguration(cardId = CardId.HRV, requestedDisplayMode = DashboardCardDisplayMode.BAR),
+                CardConfiguration(cardId = CardId.INSIGHTS, requestedDisplayMode = null),
+            )
+
+        val result = DashboardCardCatalog.resetAllDisplayModes(configs)
+
+        result.forEach { assertNull(it.requestedDisplayMode) }
+    }
+
+    @Test
+    fun `resetAllDisplayModes preserves card identity, visibility, and position`() {
+        val configs =
+            listOf(
+                CardConfiguration(
+                    cardId = CardId.STEPS,
+                    isVisible = false,
+                    position = 3,
+                    requestedDisplayMode = DashboardCardDisplayMode.BAR,
+                ),
+            )
+
+        val result = DashboardCardCatalog.resetAllDisplayModes(configs)
+
+        assertEquals(CardId.STEPS, result.single().cardId)
+        assertFalse(result.single().isVisible)
+        assertEquals(3, result.single().position)
     }
 }

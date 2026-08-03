@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.AboutPreferences
 import app.readylytics.health.domain.preferences.BackupSettings
 import app.readylytics.health.domain.preferences.DeviceSettings
@@ -252,6 +253,9 @@ class SettingsRepository
 
         override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
             ui.updateBulkDisplayModeNoticeDismissed(dismissed)
+
+        override suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?) =
+            ui.updateLastGlobalDisplayMode(mode)
 
         override suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
 
