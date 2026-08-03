@@ -80,7 +80,7 @@ val settingsSections =
         SettingsSectionMetadata(
             id = "display",
             name = "Display",
-            keywords = listOf("appearance", "theme"),
+            keywords = listOf("appearance", "theme", "dashboard", "card", "gauge", "bar", "value"),
         ),
         SettingsSectionMetadata(
             id = "advanced",
