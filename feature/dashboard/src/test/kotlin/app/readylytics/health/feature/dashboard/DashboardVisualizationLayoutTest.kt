@@ -101,6 +101,28 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
     }
 
     @Test
+    fun gaugeMode_fullSweep_staysInsideCardWithTwoLineTitle() {
+        setMetricCard(
+            mode = DashboardCardDisplayMode.GAUGE,
+            presentation =
+                presentation.copy(
+                    title = "Very long readiness title that uses two lines",
+                    visual =
+                        DashboardMetricVisual.Score(
+                            rawValue = 100f,
+                            minValue = 0f,
+                            maxValue = 100f,
+                            markerFraction = 1f,
+                            unavailableReason = null,
+                        ),
+                ),
+        )
+
+        composeRule.onNodeWithTag(DASHBOARD_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertVisualizationIsInsideCard(DASHBOARD_GAUGE_TAG)
+    }
+
+    @Test
     fun progressFraction_returnsEachNormalizedVisualMarkerFraction() {
         val visuals =
             listOf(
