@@ -8,6 +8,7 @@ import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,8 @@ class DashboardCardsSettingsViewModel
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 
+        private var applyJob: Job? = null
+
         private val noticeDismissed =
             settingsReader.userPreferences.map { it.bulkDisplayModeNoticeDismissed }.stateIn(
                 scope = viewModelScope,
@@ -44,7 +47,8 @@ class DashboardCardsSettingsViewModel
             when (event) {
                 is SettingsEvent.DashboardGlobalDisplayModeApplyRequested -> {
                     if (noticeDismissed.value) {
-                        viewModelScope.launch { applyGlobalMode(event.mode) }
+                        if (applyJob?.isActive == true) return
+                        applyJob = viewModelScope.launch { applyGlobalMode(event.mode) }
                     } else {
                         transientState.update {
                             it.copy(showGlobalDisplayModeDialog = true, pendingGlobalDisplayMode = event.mode)
@@ -57,7 +61,8 @@ class DashboardCardsSettingsViewModel
                         it.copy(showGlobalDisplayModeDialog = false, pendingGlobalDisplayMode = null)
                     }
                     if (mode != null) {
-                        viewModelScope.launch {
+                        if (applyJob?.isActive == true) return
+                        applyJob = viewModelScope.launch {
                             if (event.dontShowAgain) {
                                 displaySettings.updateBulkDisplayModeNoticeDismissed(true)
                             }

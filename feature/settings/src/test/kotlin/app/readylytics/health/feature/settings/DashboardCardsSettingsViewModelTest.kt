@@ -13,10 +13,12 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -159,4 +161,49 @@ class DashboardCardsSettingsViewModelTest {
 
             job.cancel()
         }
+
+    @Test
+    fun `rapid double-apply is guarded and only writes once`() {
+        val standardDispatcher = StandardTestDispatcher()
+        runTest(standardDispatcher) {
+            val prefsFlow = MutableStateFlow(UserPreferences(bulkDisplayModeNoticeDismissed = true))
+            val settingsReader =
+                mockk<UserPreferencesReader> {
+                    every { userPreferences } returns prefsFlow
+                }
+            val configsFlow = MutableStateFlow(
+                listOf(
+                    CardConfiguration(cardId = CardId.SLEEP_SCORE, requestedDisplayMode = null),
+                    CardConfiguration(cardId = CardId.HEART_RATE, requestedDisplayMode = null),
+                )
+            )
+            val cardConfigurationRepository =
+                mockk<CardConfigurationRepository> {
+                    every { dashboardCardConfigurations() } returns configsFlow
+                    coEvery { updateDashboardCardConfigurations(any()) } coAnswers {
+                        delay(1) // Ensure the coroutine actually suspends
+                        @Suppress("UNCHECKED_CAST")
+                        configsFlow.value = it.invocation.args[0] as List<CardConfiguration>
+                    }
+                }
+            val displaySettings = mockk<DisplaySettings>(relaxed = true)
+
+            val viewModel = DashboardCardsSettingsViewModel(settingsReader, displaySettings, cardConfigurationRepository)
+            viewModel.sharingStarted = SharingStarted.Lazily
+
+            val job = backgroundScope.launch { viewModel.uiState.collect() }
+
+            // Dispatch apply twice in rapid succession without advancing time between them
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.GAUGE))
+            viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.GAUGE))
+
+            // Now let pending coroutines finish
+            advanceUntilIdle()
+
+            // Only one write should have happened despite two event dispatches
+            coVerify(exactly = 1) { cardConfigurationRepository.updateDashboardCardConfigurations(any()) }
+
+            job.cancel()
+        }
+    }
 }
