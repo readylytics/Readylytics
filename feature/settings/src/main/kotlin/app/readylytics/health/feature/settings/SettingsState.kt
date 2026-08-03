@@ -10,6 +10,7 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
@@ -125,4 +126,9 @@ data class DataSourceSettingsState(
     val isResyncing: Boolean = false,
     val showDeviceChangeNotice: Boolean = false,
     val isLoadingDevices: Boolean = false,
+)
+
+data class DashboardCardsSettingsState(
+    val showGlobalDisplayModeDialog: Boolean = false,
+    val pendingGlobalDisplayMode: DashboardCardDisplayMode? = null,
 )
