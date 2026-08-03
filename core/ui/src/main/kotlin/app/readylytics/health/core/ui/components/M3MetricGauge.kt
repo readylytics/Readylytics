@@ -7,11 +7,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,20 +24,53 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
-import app.readylytics.health.core.designsystem.spacing
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun metricVisualizationTrackColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+
+internal data class HorseshoeGaugeGeometry(
+    val radius: Float,
+    val center: Offset,
+    val topLeft: Offset,
+    val arcSize: Size,
+    val startAngle: Float = 150f,
+    val sweepAngle: Float = 240f,
+)
+
+internal fun resolveHorseshoeGaugeGeometry(
+    canvasSize: Size,
+    strokeWidthPx: Float,
+): HorseshoeGaugeGeometry {
+    val safeRadius =
+        minOf(
+            (canvasSize.width - strokeWidthPx) / 2f,
+            (canvasSize.height - strokeWidthPx) / 1.5f,
+        ).coerceAtLeast(0f)
+    val center = Offset(canvasSize.width / 2f, safeRadius + strokeWidthPx / 2f)
+    return HorseshoeGaugeGeometry(
+        radius = safeRadius,
+        center = center,
+        topLeft = Offset(center.x - safeRadius, center.y - safeRadius),
+        arcSize = Size(safeRadius * 2f, safeRadius * 2f),
+    )
+}
 
 @Composable
 fun M3MetricGauge(
     markerFraction: Float?,
     activeColor: Color,
+    markerColor: Color = MaterialTheme.colorScheme.surface,
     modifier: Modifier = Modifier,
     animateMarker: Boolean = true,
 ) {
     val clampedFraction = markerFraction?.coerceIn(0f, 1f)
     val trackColor = metricVisualizationTrackColor()
+    val tickColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+    val trackThickness = MaterialTheme.dimens.metricTrackThickness
+    val markerDiameter = MaterialTheme.dimens.metricGaugeMarkerDiameter
+    val tickDiameter = MaterialTheme.dimens.metricGaugeTickDiameter
 
     val animatedProgress by animateFloatAsState(
         targetValue = clampedFraction ?: 0f,
@@ -60,47 +90,63 @@ fun M3MetricGauge(
 
     Box(
         modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.BottomCenter,
+        contentAlignment = Alignment.Center,
     ) {
-        Canvas(
-            modifier =
-                Modifier
-                    .width(MaterialTheme.dimens.metricGaugeWidth)
-                    .height(MaterialTheme.dimens.metricGaugeHeight)
-                    .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
-        ) {
-            val strokeWidthPx = 8.dp.toPx()
-
-            val horizontalPadding = strokeWidthPx / 2f
-            val verticalPadding = strokeWidthPx / 2f
-
-            val arcWidth = size.width - 2 * horizontalPadding
-            val radius = arcWidth / 2f
-            val centerX = size.width / 2f
-            val centerY = size.height - verticalPadding
-
-            val topLeft = Offset(centerX - radius, centerY - radius)
-            val arcSize = Size(radius * 2, radius * 2)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidthPx = trackThickness.toPx()
+            val markerRadiusPx = markerDiameter.toPx() / 2f
+            val tickRadiusPx = tickDiameter.toPx() / 2f
+            val activeStrokeWidthPx = (trackThickness + 2.dp).toPx()
+            val geometry = resolveHorseshoeGaugeGeometry(size, strokeWidthPx)
 
             drawArc(
                 color = trackColor,
-                startAngle = 180f,
-                sweepAngle = 180f,
+                startAngle = geometry.startAngle,
+                sweepAngle = geometry.sweepAngle,
                 useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
+                topLeft = geometry.topLeft,
+                size = geometry.arcSize,
                 style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
             )
+
+            val tickFractions = floatArrayOf(0.2f, 0.4f, 0.6f, 0.8f)
+            val activeSweep = geometry.sweepAngle * progressToDraw
+            val activeEndAngle = geometry.startAngle + activeSweep
+
+            tickFractions
+                .filter { it > progressToDraw }
+                .forEach { fraction ->
+                    val angle = Math.toRadians((geometry.startAngle + geometry.sweepAngle * fraction).toDouble())
+                    drawCircle(
+                        color = tickColor,
+                        radius = tickRadiusPx,
+                        center =
+                            Offset(
+                                geometry.center.x + geometry.radius * cos(angle).toFloat(),
+                                geometry.center.y + geometry.radius * sin(angle).toFloat(),
+                            ),
+                    )
+                }
 
             if (markerFraction != null && progressToDraw > 0f) {
                 drawArc(
                     color = activeColor,
-                    startAngle = 180f,
-                    sweepAngle = 180f * progressToDraw,
+                    startAngle = geometry.startAngle,
+                    sweepAngle = activeSweep,
                     useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
+                    topLeft = geometry.topLeft,
+                    size = geometry.arcSize,
+                    style = Stroke(width = activeStrokeWidthPx, cap = StrokeCap.Round),
+                )
+                val markerAngle = Math.toRadians(activeEndAngle.toDouble())
+                drawCircle(
+                    color = markerColor,
+                    radius = markerRadiusPx,
+                    center =
+                        Offset(
+                            geometry.center.x + geometry.radius * cos(markerAngle).toFloat(),
+                            geometry.center.y + geometry.radius * sin(markerAngle).toFloat(),
+                        ),
                 )
             }
         }
@@ -111,6 +157,7 @@ fun M3MetricGauge(
 fun M3MetricGaugeWithValue(
     markerFraction: Float?,
     activeColor: Color,
+    markerColor: Color = MaterialTheme.colorScheme.surface,
     valueText: String,
     unitText: String,
     valueColor: Color,
@@ -120,17 +167,17 @@ fun M3MetricGaugeWithValue(
 ) {
     Box(
         modifier = modifier,
-        contentAlignment = Alignment.BottomCenter,
+        contentAlignment = Alignment.Center,
     ) {
         M3MetricGauge(
             markerFraction = markerFraction,
             activeColor = activeColor,
+            markerColor = markerColor,
             animateMarker = animateMarker,
             modifier = Modifier.fillMaxWidth(),
         )
 
         Column(
-            modifier = Modifier.offset(y = MaterialTheme.spacing.extraSmallMedium),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -142,15 +189,16 @@ fun M3MetricGaugeWithValue(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
-            Text(
-                text = unitText.ifBlank { " " },
-                style = MaterialTheme.typography.labelSmall,
-                color = if (unitText.isNotBlank()) unitColor else Color.Transparent,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.offset(y = -MaterialTheme.dimens.metricGaugeUnitTextOffset),
-            )
+            if (unitText.isNotBlank()) {
+                Text(
+                    text = unitText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = unitColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
