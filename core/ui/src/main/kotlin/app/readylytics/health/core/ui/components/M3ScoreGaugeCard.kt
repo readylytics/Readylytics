@@ -28,10 +28,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.model.MetricStatus
+
+private val GAUGE_CARD_FOOTER_HEIGHT = 20.dp
 
 @Composable
 fun M3ScoreGaugeCard(
@@ -179,16 +180,17 @@ private fun GaugeCardContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         // Center Area: Gauge and Value
         M3MetricGaugeWithValue(
             markerFraction = markerFraction,
             activeColor = progressColor,
+            markerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             valueText = displayText,
             unitText = unitText,
             valueColor = if (score != null) progressColor else MaterialTheme.colorScheme.onSurfaceVariant,
-            unitColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            unitColor = MaterialTheme.colorScheme.onSurfaceVariant,
             animateMarker = true,
             modifier = Modifier.weight(1f).fillMaxWidth(),
         )
@@ -200,7 +202,7 @@ private fun GaugeCardContent(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(20.dp),
+                    .height(GAUGE_CARD_FOOTER_HEIGHT),
             contentAlignment = Alignment.Center,
         ) {
             if (!deltaText.isNullOrEmpty()) {
@@ -212,7 +214,7 @@ private fun GaugeCardContent(
                 ) {
                     Text(
                         text = deltaText,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        style = MaterialTheme.typography.labelSmall,
                         modifier =
                             Modifier.padding(
                                 horizontal = MaterialTheme.spacing.small,

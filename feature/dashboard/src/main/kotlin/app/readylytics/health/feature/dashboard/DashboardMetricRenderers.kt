@@ -25,8 +25,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.M3MetricGaugeWithValue
+import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.core.ui.components.metricVisualizationTrackColor
 import app.readylytics.health.domain.dashboard.CardId
@@ -73,6 +75,7 @@ fun DashboardGaugeRenderer(
         M3MetricGaugeWithValue(
             markerFraction = markerFraction,
             activeColor = activeColor,
+            markerColor = presentation.status.containerColor(),
             valueText = presentation.valueText,
             unitText = presentation.unitText,
             valueColor = activeColor,
@@ -107,10 +110,6 @@ fun DashboardGaugeRenderer(
     }
 }
 
-// Track thickness shared by the drawn Bar track and by the equally tall empty slot Value mode
-// leaves in its place, so switching between the two modes only adds or removes the track itself.
-private val DASHBOARD_TRACK_HEIGHT = 10.dp
-
 @Composable
 fun DashboardBarRenderer(
     presentation: DashboardMetricPresentation,
@@ -139,7 +138,7 @@ fun DashboardBarRenderer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(DASHBOARD_TRACK_HEIGHT)
+                    .height(MaterialTheme.dimens.metricTrackThickness)
                     .padding(horizontal = MaterialTheme.spacing.extraSmall)
                     .testTag(DASHBOARD_BAR_TAG),
             color = activeColor,
@@ -283,6 +282,6 @@ fun DashboardValueRenderer(
     ) {
         // Value mode is Bar mode without the painted track: the slot is still reserved so the
         // value row and the secondary/delta row keep their position when the mode is switched.
-        Spacer(modifier = Modifier.fillMaxWidth().height(DASHBOARD_TRACK_HEIGHT))
+        Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.metricTrackThickness))
     }
 }

@@ -66,11 +66,19 @@ class M3MetricGaugeTest {
             M3MetricGauge(
                 markerFraction = null,
                 activeColor = Color.Red,
+                markerColor = Color.White,
                 animateMarker = false,
             )
             M3MetricGauge(
                 markerFraction = 1.5f,
                 activeColor = Color.Red,
+                markerColor = Color.White,
+                animateMarker = false,
+            )
+            M3MetricGauge(
+                markerFraction = 1f,
+                activeColor = Color.Green,
+                markerColor = Color.White,
                 animateMarker = false,
             )
         }
