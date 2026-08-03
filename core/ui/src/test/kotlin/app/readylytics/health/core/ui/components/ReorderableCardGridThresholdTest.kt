@@ -227,6 +227,14 @@ class ReorderableCardGridThresholdTest {
                 onCardReorder = { reordered = it },
             )
         }
+        // Keep this gesture active across recomposition. The pointer-input handler has already
+        // captured its callbacks, so ending it after the mode mutation verifies that it reads the
+        // current callback rather than its stale closure.
+        composeTestRule.onAllNodesWithContentDescription("Drag to reorder")[0].performTouchInput {
+            down(center)
+            advanceEventTime(600)
+            moveBy(Offset(0f, 20f))
+        }
         composeTestRule.runOnIdle {
             configs = CardConfigurationsList(
                 configs.items.map {
@@ -240,9 +248,6 @@ class ReorderableCardGridThresholdTest {
         }
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithContentDescription("Drag to reorder")[0].performTouchInput {
-            down(center)
-            advanceEventTime(600)
-            moveBy(Offset(0f, 20f))
             up()
         }
 
