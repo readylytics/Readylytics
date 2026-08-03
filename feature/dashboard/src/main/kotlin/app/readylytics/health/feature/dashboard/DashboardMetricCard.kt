@@ -200,6 +200,7 @@ private fun DashboardMetricCardContent(
                 DashboardCardDisplayMode.GAUGE ->
                     DashboardGaugeRenderer(
                         presentation = presentation,
+                        secondaryUsesPill = specification.cardId.usesDeltaPill(),
                         animateMarker = !isEditing,
                         contentColor = contentColor,
                     )

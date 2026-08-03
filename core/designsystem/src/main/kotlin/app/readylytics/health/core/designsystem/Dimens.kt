@@ -42,6 +42,9 @@ data class Dimens(
     val progressStrokeWidth: Dp = 2.dp,
     val cardHeight: Dp = 156.dp,
     val miniBarHeight: Dp = 28.dp,
+    val metricGaugeWidth: Dp = 120.dp,
+    val metricGaugeHeight: Dp = 60.dp,
+    val metricGaugeUnitTextOffset: Dp = 8.dp,
 )
 
 val LocalDimens = staticCompositionLocalOf { Dimens() }

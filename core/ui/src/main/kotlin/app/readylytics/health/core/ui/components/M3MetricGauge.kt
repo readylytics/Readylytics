@@ -4,13 +4,16 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -23,7 +26,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 
 @Composable
@@ -62,8 +65,8 @@ fun M3MetricGauge(
         Canvas(
             modifier =
                 Modifier
-                    .width(120.dp)
-                    .height(60.dp)
+                    .width(MaterialTheme.dimens.metricGaugeWidth)
+                    .height(MaterialTheme.dimens.metricGaugeHeight)
                     .padding(bottom = MaterialTheme.spacing.extraSmallMedium),
         ) {
             val strokeWidthPx = 8.dp.toPx()
@@ -126,27 +129,26 @@ fun M3MetricGaugeWithValue(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        androidx.compose.foundation.layout.Column(
+        Column(
             modifier = Modifier.offset(y = MaterialTheme.spacing.extraSmallMedium),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+            verticalArrangement = Arrangement.Center,
         ) {
-            androidx.compose.material3.Text(
+            Text(
                 text = valueText,
                 style = MaterialTheme.typography.displaySmall,
                 color = valueColor,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            androidx.compose.material3.Text(
+            Text(
                 text = unitText.ifBlank { " " },
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+                style = MaterialTheme.typography.labelSmall,
                 color = if (unitText.isNotBlank()) unitColor else Color.Transparent,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.offset(y = (-8).dp),
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.offset(y = -MaterialTheme.dimens.metricGaugeUnitTextOffset),
             )
         }
     }

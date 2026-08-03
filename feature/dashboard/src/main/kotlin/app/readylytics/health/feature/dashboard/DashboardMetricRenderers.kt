@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.M3MetricGaugeWithValue
 import app.readylytics.health.core.ui.components.gaugeColor
@@ -47,9 +46,14 @@ internal fun DashboardMetricVisual.progressFraction(): Float? =
         is DashboardMetricVisual.ValueOnly -> null
     }
 
+// Fixed slot for the delta pill / plain secondary text, kept out of the weighted value row so it
+// cannot be squeezed away at large font scales.
+private val DASHBOARD_SECONDARY_SLOT_HEIGHT = 20.dp
+
 @Composable
 fun DashboardGaugeRenderer(
     presentation: DashboardMetricPresentation,
+    secondaryUsesPill: Boolean,
     animateMarker: Boolean,
     contentColor: Color,
     modifier: Modifier = Modifier,
@@ -82,11 +86,21 @@ fun DashboardGaugeRenderer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(20.dp),
+                    .height(DASHBOARD_SECONDARY_SLOT_HEIGHT),
             contentAlignment = Alignment.Center,
         ) {
             presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
-                DashboardMetricDeltaPill(deltaText)
+                if (secondaryUsesPill) {
+                    DashboardMetricDeltaPill(deltaText)
+                } else {
+                    Text(
+                        text = deltaText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -95,10 +109,6 @@ fun DashboardGaugeRenderer(
 // Track thickness shared by the drawn Bar track and by the equally tall empty slot Value mode
 // leaves in its place, so switching between the two modes only adds or removes the track itself.
 private val DASHBOARD_TRACK_HEIGHT = 10.dp
-
-// Fixed slot for the delta pill / plain secondary text, kept out of the weighted value row so it
-// cannot be squeezed away at large font scales.
-private val DASHBOARD_SECONDARY_SLOT_HEIGHT = 20.dp
 
 @Composable
 fun DashboardBarRenderer(
@@ -175,7 +185,7 @@ private fun DashboardValueUnitColumn(
             if (presentation.unitText.isNotBlank()) {
                 Text(
                     text = presentation.unitText,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+                    style = MaterialTheme.typography.labelSmall,
                     color = contentColor.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -227,7 +237,7 @@ private fun DashboardMetricDeltaPill(deltaText: String) {
     ) {
         Text(
             text = deltaText,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            style = MaterialTheme.typography.labelSmall,
             modifier =
                 Modifier
                     .padding(
