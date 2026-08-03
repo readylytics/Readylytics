@@ -110,7 +110,7 @@ private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
         tooltip = "Latest weight measurement.",
         accessibilityDescription =
             "${stringResource(R.string.card_title_weight)}: 70 kg, $bmiSecondary, " +
-                stringResource(R.string.bmi_optimal),
+                stringResource(app.readylytics.health.core.ui.R.string.metric_status_optimal),
         visual = visual,
     )
 }

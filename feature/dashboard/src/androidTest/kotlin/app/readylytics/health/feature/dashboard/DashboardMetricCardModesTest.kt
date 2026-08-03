@@ -345,7 +345,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
     @Test
     fun weightSemanticsCommunicateValueBmiAndCategory() {
         val title = string(R.string.card_title_weight)
-        val bmiCategory = string(R.string.bmi_optimal)
+        val bmiCategory = string(app.readylytics.health.core.ui.R.string.metric_status_optimal)
         val bmiSecondary = string(app.readylytics.health.core.ui.R.string.bmi_secondary_text, "21.7")
         val expectedDescription =
             string(R.string.semantics_weight_bmi_format, title, "70 kg", bmiSecondary, bmiCategory)

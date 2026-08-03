@@ -64,8 +64,4 @@ Baseline: %1$d bpm %2$s (%3$d bpm)</string>
     <string name="unit_metric_kg">kg</string>
 
 
-    <string name="bmi_warning">Warning</string>
-    <string name="bmi_optimal">Optimal</string>
-    <string name="bmi_neutral">Neutral</string>
-    <string name="bmi_poor">Poor</string>
 </resources>
