@@ -1,7 +1,5 @@
 package app.readylytics.health.feature.dashboard
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,20 +8,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,7 +36,6 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.containerColor
@@ -45,6 +43,7 @@ import app.readylytics.health.core.ui.components.onContainerColor
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
 import app.readylytics.health.feature.dashboard.R
+import kotlinx.coroutines.launch
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -74,7 +73,6 @@ fun DashboardMetricCard(
         modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.cardHeight)
-            .semantics(mergeDescendants = true) { contentDescription = contentDesc }
             .testTag(DASHBOARD_METRIC_CARD_TAG)
     val colors =
         CardDefaults.cardColors(
@@ -95,6 +93,7 @@ fun DashboardMetricCard(
                 requestedMode = requestedMode,
                 renderMode = renderMode,
                 isEditing = isEditing,
+                cardContentDescription = contentDesc,
                 contentColor = contentColor,
                 onModeSelected = onModeSelected,
             )
@@ -111,6 +110,7 @@ fun DashboardMetricCard(
                 requestedMode = requestedMode,
                 renderMode = renderMode,
                 isEditing = isEditing,
+                cardContentDescription = contentDesc,
                 contentColor = contentColor,
                 onModeSelected = onModeSelected,
             )
@@ -126,6 +126,7 @@ private fun DashboardMetricCardContent(
     requestedMode: DashboardCardDisplayMode,
     renderMode: DashboardCardDisplayMode,
     isEditing: Boolean,
+    cardContentDescription: String,
     contentColor: Color,
     onModeSelected: (DashboardCardDisplayMode) -> Unit,
 ) {
@@ -133,6 +134,7 @@ private fun DashboardMetricCardContent(
         modifier =
             Modifier
                 .fillMaxSize()
+                .semantics { contentDescription = cardContentDescription }
                 .padding(
                     horizontal = MaterialTheme.spacing.medium,
                     vertical = MaterialTheme.spacing.smallMedium,
@@ -214,65 +216,38 @@ private fun DashboardMetricCardContent(
     }
 }
 
-// Local, purpose-built replacement for the shared MetricTooltip: it reserves the same 48dp
-// interactive footprint as DashboardDisplayModeMenu's mode-selection IconButton so the title
-// row's trailing action slot never reflows between editing and viewing states, and it attaches
-// the "More information" contentDescription directly to that 48dp node (rather than to a
-// smaller nested icon) so the accessible/interactive target matches the visible touch target.
-// The glyph itself is aligned to the box's top-end corner (not centred) so the icon stays
-// pinned to the card's upper-right corner, matching the shared MetricTooltip's placement; the
-// remaining 48dp box only grows the touch target downwards/inwards.
+// The information action remains a dedicated 48dp semantics node so assistive technology can
+// reach it independently of the metric card's value and status description.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DashboardTitleInfoAction(
     description: String,
     iconTint: Color,
     modifier: Modifier = Modifier,
 ) {
-    var showPopup by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
+    val tooltipState = rememberTooltipState()
+    val scope = rememberCoroutineScope()
     val infoContentDescription = stringResource(id = CoreUiR.string.accessibility_more_information)
 
-    Box(
-        modifier =
-            modifier
-                .size(48.dp)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = { showPopup = true },
-                ).semantics { contentDescription = infoContentDescription },
-        contentAlignment = Alignment.TopEnd,
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(description) } },
+        state = tooltipState,
     ) {
-        Icon(
-            imageVector = Icons.Outlined.Info,
-            contentDescription = null,
-            tint = iconTint,
-            modifier =
-                Modifier
-                    .size(MaterialTheme.dimens.iconMedium)
-                    .testTag(DASHBOARD_TITLE_INFO_ICON_TAG),
-        )
-
-        if (showPopup) {
-            Popup(
-                onDismissRequest = { showPopup = false },
-                alignment = Alignment.TopStart,
-            ) {
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.inverseSurface,
+        IconButton(
+            onClick = { scope.launch { tooltipState.show() } },
+            modifier = modifier.size(48.dp).semantics { contentDescription = infoContentDescription },
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = iconTint,
                     modifier =
                         Modifier
-                            .widthIn(max = 260.dp)
-                            .padding(horizontal = MaterialTheme.spacing.extraSmall),
-                ) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.inverseOnSurface,
-                        modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
-                    )
-                }
+                            .size(MaterialTheme.dimens.iconMedium)
+                            .testTag(DASHBOARD_TITLE_INFO_ICON_TAG),
+                )
             }
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -345,6 +346,27 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
         }
 
         composeRule.onNodeWithContentDescription(expectedDescription).assertIsDisplayed()
+    }
+
+    @Test
+    fun informationAction_isSeparatelyReachableAndShowsTooltip() {
+        composeRule.setContent {
+            DashboardMetricCard(
+                presentation = defaultPresentation,
+                specification = testSpec,
+                requestedMode = DashboardCardDisplayMode.GAUGE,
+                renderMode = DashboardCardDisplayMode.GAUGE,
+                isEditing = false,
+                onModeSelected = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription(
+                string(app.readylytics.health.core.ui.R.string.accessibility_more_information),
+            ).assertIsDisplayed()
+            .performClick()
+        composeRule.onNodeWithText(defaultPresentation.tooltip).assertIsDisplayed()
     }
 
     @Test
