@@ -84,7 +84,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                             ),
                         specification = hrvSpecification,
                         requestedMode = DashboardCardDisplayMode.GAUGE,
-                        renderMode = DashboardCardDisplayMode.GAUGE,
                         isEditing = false,
                         onModeSelected = {},
                     )
@@ -153,7 +152,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                     presentation = presentation,
                     specification = specification,
                     requestedMode = mode,
-                    renderMode = mode,
                     isEditing = false,
                     onModeSelected = {},
                 )
@@ -184,7 +182,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                             ),
                         specification = strainSpecification,
                         requestedMode = DashboardCardDisplayMode.BAR,
-                        renderMode = DashboardCardDisplayMode.BAR,
                         isEditing = false,
                         onModeSelected = {},
                     )
@@ -218,7 +215,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                             ),
                         specification = strainSpecification,
                         requestedMode = DashboardCardDisplayMode.VALUE,
-                        renderMode = DashboardCardDisplayMode.VALUE,
                         isEditing = false,
                         onModeSelected = {},
                     )
@@ -252,7 +248,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         ),
                     specification = hrvSpecification,
                     requestedMode = mode,
-                    renderMode = mode,
                     isEditing = false,
                     onModeSelected = {},
                 )
@@ -295,7 +290,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         ),
                     specification = specification,
                     requestedMode = DashboardCardDisplayMode.GAUGE,
-                    renderMode = DashboardCardDisplayMode.GAUGE,
                     isEditing = false,
                     onModeSelected = {},
                 )
@@ -331,7 +325,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         ),
                     specification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_DURATION)),
                     requestedMode = DashboardCardDisplayMode.BAR,
-                    renderMode = DashboardCardDisplayMode.BAR,
                     isEditing = false,
                     onModeSelected = {},
                 )
@@ -355,7 +348,6 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                     presentation = presentation.copy(title = title),
                     specification = specification,
                     requestedMode = DashboardCardDisplayMode.GAUGE,
-                    renderMode = DashboardCardDisplayMode.GAUGE,
                     isEditing = false,
                     onModeSelected = {},
                 )

@@ -19,9 +19,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,14 +53,13 @@ fun DashboardMetricCard(
     presentation: DashboardMetricPresentation,
     specification: DashboardCardSpec,
     requestedMode: DashboardCardDisplayMode,
-    renderMode: DashboardCardDisplayMode,
     isEditing: Boolean,
     onModeSelected: (DashboardCardDisplayMode) -> Unit,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
     val modeStringRes =
-        when (renderMode) {
+        when (requestedMode) {
             DashboardCardDisplayMode.GAUGE -> R.string.mode_gauge
             DashboardCardDisplayMode.BAR -> R.string.mode_bar
             DashboardCardDisplayMode.VALUE -> R.string.mode_value
@@ -93,7 +92,6 @@ fun DashboardMetricCard(
                 presentation = presentation,
                 specification = specification,
                 requestedMode = requestedMode,
-                renderMode = renderMode,
                 isEditing = isEditing,
                 cardContentDescription = contentDesc,
                 contentColor = contentColor,
@@ -110,7 +108,6 @@ fun DashboardMetricCard(
                 presentation = presentation,
                 specification = specification,
                 requestedMode = requestedMode,
-                renderMode = renderMode,
                 isEditing = isEditing,
                 cardContentDescription = contentDesc,
                 contentColor = contentColor,
@@ -126,7 +123,6 @@ private fun DashboardMetricCardContent(
     presentation: DashboardMetricPresentation,
     specification: DashboardCardSpec,
     requestedMode: DashboardCardDisplayMode,
-    renderMode: DashboardCardDisplayMode,
     isEditing: Boolean,
     cardContentDescription: String,
     contentColor: Color,
@@ -194,7 +190,7 @@ private fun DashboardMetricCardContent(
         }
 
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            when (renderMode) {
+            when (requestedMode) {
                 DashboardCardDisplayMode.GAUGE ->
                     DashboardGaugeRenderer(
                         presentation = presentation,

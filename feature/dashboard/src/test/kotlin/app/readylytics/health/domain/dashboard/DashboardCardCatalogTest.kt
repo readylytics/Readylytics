@@ -64,7 +64,6 @@ class DashboardCardCatalogTest {
             )
 
         assertEquals(DashboardCardDisplayMode.VALUE, DashboardCardCatalog.requestedMode(config))
-        assertEquals(DashboardCardDisplayMode.VALUE, DashboardCardCatalog.renderMode(config))
     }
 
     @Test

@@ -62,7 +62,6 @@ abstract class DashboardVisualizationRegressionTestBase {
                     presentation = presentation,
                     specification = specification,
                     requestedMode = mode,
-                    renderMode = mode,
                     isEditing = false,
                     onModeSelected = {},
                 )

@@ -45,7 +45,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -73,7 +72,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -102,7 +100,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -131,7 +128,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -160,7 +156,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.VALUE,
-                renderMode = DashboardCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -189,7 +184,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.VALUE,
-                renderMode = DashboardCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -217,7 +211,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -245,7 +238,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -276,7 +268,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -304,7 +295,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.VALUE,
-                renderMode = DashboardCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -339,7 +329,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = presentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.VALUE,
-                renderMode = DashboardCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -355,7 +344,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = defaultPresentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -378,7 +366,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = defaultPresentation,
                 specification = testSpec,
                 requestedMode = selectedMode,
-                renderMode = selectedMode,
                 isEditing = true,
                 onModeSelected = { selectedMode = it },
             )
@@ -402,7 +389,6 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 presentation = defaultPresentation,
                 specification = testSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = true,
                 onModeSelected = {},
             )

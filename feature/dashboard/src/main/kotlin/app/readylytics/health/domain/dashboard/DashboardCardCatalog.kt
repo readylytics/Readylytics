@@ -19,8 +19,6 @@ object DashboardCardCatalog {
         }
     }
 
-    fun renderMode(configuration: CardConfiguration): DashboardCardDisplayMode = requestedMode(configuration)
-
     private val ALL_MODES =
         listOf(DashboardCardDisplayMode.GAUGE, DashboardCardDisplayMode.BAR, DashboardCardDisplayMode.VALUE)
     private val ONLY_BAR = listOf(DashboardCardDisplayMode.BAR)

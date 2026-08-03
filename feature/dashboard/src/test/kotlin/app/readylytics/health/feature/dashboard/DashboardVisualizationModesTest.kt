@@ -49,7 +49,6 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                     presentation = cardPresentation,
                     specification = requireNotNull(DashboardCardCatalog.spec(cardId)),
                     requestedMode = mode,
-                    renderMode = mode,
                     isEditing = false,
                     onModeSelected = {},
                 )
@@ -111,7 +110,6 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                         ),
                     specification = sleepSpecification,
                     requestedMode = mode,
-                    renderMode = mode,
                     isEditing = false,
                     onModeSelected = {},
                 )
@@ -145,7 +143,6 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                         presentation = hrvPresentation,
                         specification = hrvSpecification,
                         requestedMode = mode,
-                        renderMode = mode,
                         isEditing = false,
                         onModeSelected = {},
                     )
@@ -193,7 +190,6 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                             ),
                         specification = specification,
                         requestedMode = DashboardCardDisplayMode.GAUGE,
-                        renderMode = DashboardCardDisplayMode.GAUGE,
                         isEditing = false,
                         onModeSelected = {},
                     )
@@ -265,7 +261,6 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                     presentation = cardPresentation,
                     specification = requireNotNull(DashboardCardCatalog.spec(cardId)),
                     requestedMode = mode,
-                    renderMode = mode,
                     isEditing = false,
                     onModeSelected = {},
                 )

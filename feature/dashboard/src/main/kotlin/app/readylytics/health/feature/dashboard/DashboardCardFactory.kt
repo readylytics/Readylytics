@@ -63,7 +63,6 @@ private fun ConfigurableMetricCard(
                     presentation = presentation,
                     specification = spec,
                     requestedMode = DashboardCardCatalog.requestedMode(configuration),
-                    renderMode = DashboardCardCatalog.renderMode(configuration),
                     isEditing = isEditing,
                     onModeSelected = { mode -> onCardDisplayModeChanged(cardId, mode) },
                     onClick = if (isEditing) null else onClick,

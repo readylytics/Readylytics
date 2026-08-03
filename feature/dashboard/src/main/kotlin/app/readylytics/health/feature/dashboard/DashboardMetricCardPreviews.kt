@@ -139,7 +139,6 @@ private fun DashboardScoreGaugePreview() {
             presentation = sleepScorePresentation(),
             specification = sleepScoreSpec,
             requestedMode = DashboardCardDisplayMode.GAUGE,
-            renderMode = DashboardCardDisplayMode.GAUGE,
             isEditing = false,
             onModeSelected = {},
         )
@@ -154,7 +153,6 @@ private fun DashboardScoreBarPreview() {
             presentation = sleepScorePresentation(),
             specification = sleepScoreSpec,
             requestedMode = DashboardCardDisplayMode.BAR,
-            renderMode = DashboardCardDisplayMode.BAR,
             isEditing = false,
             onModeSelected = {},
         )
@@ -169,7 +167,6 @@ private fun DashboardScoreValuePreview() {
             presentation = sleepScorePresentation(),
             specification = sleepScoreSpec,
             requestedMode = DashboardCardDisplayMode.VALUE,
-            renderMode = DashboardCardDisplayMode.VALUE,
             isEditing = false,
             onModeSelected = {},
         )
@@ -184,7 +181,6 @@ private fun DashboardGoalAboveTargetBarPreview() {
             presentation = goalAboveTargetPresentation(),
             specification = sleepDurationSpec,
             requestedMode = DashboardCardDisplayMode.BAR,
-            renderMode = DashboardCardDisplayMode.BAR,
             isEditing = false,
             onModeSelected = {},
         )
@@ -199,7 +195,6 @@ private fun DashboardBaselineWithinRangeGaugePreview() {
             presentation = baselineWithinRangePresentation(),
             specification = hrvSpec,
             requestedMode = DashboardCardDisplayMode.GAUGE,
-            renderMode = DashboardCardDisplayMode.GAUGE,
             isEditing = false,
             onModeSelected = {},
         )
@@ -214,7 +209,6 @@ private fun DashboardWeightReferenceRangeBarPreview() {
             presentation = weightReferenceRangePresentation(),
             specification = weightSpec,
             requestedMode = DashboardCardDisplayMode.BAR,
-            renderMode = DashboardCardDisplayMode.BAR,
             isEditing = false,
             onModeSelected = {},
         )
@@ -229,7 +223,6 @@ private fun DashboardGoalUnavailableBarPreview() {
             presentation = goalUnavailablePresentation(),
             specification = sleepDurationSpec,
             requestedMode = DashboardCardDisplayMode.BAR,
-            renderMode = DashboardCardDisplayMode.BAR,
             isEditing = false,
             onModeSelected = {},
         )
@@ -245,7 +238,6 @@ private fun DashboardEditModeSelectorPreview() {
             presentation = sleepScorePresentation(),
             specification = sleepScoreSpec,
             requestedMode = mode,
-            renderMode = mode,
             isEditing = true,
             onModeSelected = { mode = it },
         )
@@ -264,7 +256,6 @@ private fun DashboardCardFontScaleDefaultPreview() {
                 presentation = sleepScorePresentation(),
                 specification = sleepScoreSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = true,
                 onModeSelected = {},
             )
@@ -284,7 +275,6 @@ private fun DashboardCardFontScaleLargePreview() {
                 presentation = sleepScorePresentation(),
                 specification = sleepScoreSpec,
                 requestedMode = DashboardCardDisplayMode.GAUGE,
-                renderMode = DashboardCardDisplayMode.GAUGE,
                 isEditing = true,
                 onModeSelected = {},
             )
