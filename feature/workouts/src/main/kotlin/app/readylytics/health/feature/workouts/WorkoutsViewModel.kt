@@ -119,6 +119,11 @@ class WorkoutsViewModel
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
 
+        private val boundaryPreferences =
+            settingsRepo.userPreferences
+                .map { it.scoringZone() to it.strainLoadSourceMode }
+                .distinctUntilChanged()
+
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
             combine(
@@ -135,12 +140,12 @@ class WorkoutsViewModel
                     }
                 }.filterNotNull()
                 .distinctUntilChanged()
-                .combine(settingsRepo.userPreferences) { params, prefs -> params to prefs }
-                .flatMapLatest { (params, prefs) ->
+                .combine(boundaryPreferences) { params, boundary -> params to boundary }
+                .flatMapLatest { (params, boundary) ->
                     val range = params.range
                     val date = params.date
                     val page = params.page
-                    val zoneId = prefs.scoringZone()
+                    val zoneId = boundary.first
 
                     val displayStartDayDate = date.minusDays(range.days.toLong() - 1)
                     val displayStartDayMs =
@@ -191,7 +196,8 @@ class WorkoutsViewModel
                             workoutRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(rasFromMs),
-                        ) { latest, allWorkouts, trimpSummaries, rasSummaries ->
+                            settingsRepo.userPreferences,
+                        ) { latest, allWorkouts, trimpSummaries, rasSummaries, prefs ->
                             WorkoutFlowData(latest, allWorkouts, trimpSummaries, rasSummaries, prefs)
                         }
 

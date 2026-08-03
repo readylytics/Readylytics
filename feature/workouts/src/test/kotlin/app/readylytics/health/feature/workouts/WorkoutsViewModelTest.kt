@@ -68,6 +68,7 @@ class WorkoutsViewModelTest {
     private val isSyncingFlow = MutableStateFlow(false)
     private val workoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
     private val summariesFlow = MutableStateFlow<List<DailySummary>>(emptyList())
+    private val preferencesFlow = MutableStateFlow(UserPreferences())
 
     @Before
     fun setUp() {
@@ -107,7 +108,7 @@ class WorkoutsViewModelTest {
         scoringCalculator = mockk(relaxed = true)
         settingsRepo =
             mockk {
-                every { userPreferences } returns MutableStateFlow(UserPreferences())
+                every { userPreferences } returns preferencesFlow
             }
         getWorkoutDisplayMetricsUseCase =
             mockk(relaxed = true) {
@@ -553,8 +554,8 @@ class WorkoutsViewModelTest {
                 )
             every { dailySummaryRepository.observeLatest() } returns
                 flowOf(summariesFlow.value.first { it.date == today })
-            every { settingsRepo.userPreferences } returns
-                MutableStateFlow(UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))
+            preferencesFlow.value =
+                UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE)
 
             every { scoringCalculator.computeCtlEmaSeries(any(), any(), any()) } returns mapOf(today to 10f)
             every { scoringCalculator.computeAtlEmaSeries(any(), any(), any()) } returns mapOf(today to 15f)
@@ -583,8 +584,8 @@ class WorkoutsViewModelTest {
                 (0..29).map { daysAgo ->
                     DailySummary(date = today.minusDays(daysAgo.toLong()), trimpEverydayHr = 20f)
                 }
-            every { settingsRepo.userPreferences } returns
-                MutableStateFlow(UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))
+            preferencesFlow.value =
+                UserPreferences(strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE)
 
             every { scoringCalculator.computeCtlEmaSeries(any(), any(), any()) } returns mapOf(today to 10f)
             every { scoringCalculator.computeAtlEmaSeries(any(), any(), any()) } returns mapOf(today to 15f)
@@ -611,8 +612,7 @@ class WorkoutsViewModelTest {
             TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
             try {
                 selectedDateFlow.value = selectedDate
-                every { settingsRepo.userPreferences } returns
-                    MutableStateFlow(UserPreferences(scoringZoneId = "Pacific/Honolulu"))
+                preferencesFlow.value = UserPreferences(scoringZoneId = "Pacific/Honolulu")
                 val startTime = Instant.parse("2026-06-10T05:00:00Z").toEpochMilli()
                 val workout =
                     WorkoutData(
@@ -761,6 +761,25 @@ class WorkoutsViewModelTest {
             assertSame(stateBeforeToggle.recentWorkouts, stateAfterToggle.recentWorkouts)
 
             collectJob.cancel()
+        }
+
+    @Test
+    fun unrelatedPreferenceChange_doesNotRestartWorkoutDatabaseFlows() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            preferencesFlow.value =
+                preferencesFlow.value.copy(
+                    dynamicColorEnabled = !preferencesFlow.value.dynamicColorEnabled,
+                )
+            testScheduler.advanceUntilIdle()
+
+            verify(exactly = 1) { dailySummaryRepository.observeLatest() }
+            verify(exactly = 2) { dailySummaryRepository.observeSince(any()) }
+            verify(exactly = 1) { workoutRepository.observeSince(any()) }
+            collectJob.cancelAndJoin()
         }
 
     @Test
