@@ -52,6 +52,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -172,8 +173,10 @@ fun SleepHrChart(
         fun zoomedX(timestampMs: Long): Float =
             leftLabelWidthPx + (timestampToX(timestampMs) - leftLabelWidthPx) * scaleX + offsetX
 
+        val bpmTemplate = stringResource(R.string.sleep_hr_tooltip_value)
+
         val tooltipState =
-            remember(selectedSample, scaleX, offsetX, plotW, scale, yMin, yMax) {
+            remember(selectedSample, scaleX, offsetX, plotW, scale, yMin, yMax, bpmTemplate) {
                 val sample = selectedSample ?: return@remember null
                 val bottomLabelHeightPx = with(density) { BOTTOM_LABEL_HEIGHT.toPx() }
                 val canvasHeightPx = with(density) { CHART_HEIGHT.toPx() }
@@ -188,7 +191,7 @@ fun SleepHrChart(
                 val timeStr = timeFormatter.format(Instant.ofEpochMilli(sample.timestampMs))
 
                 DataPointTooltipData(
-                    valueText = "${sample.beatsPerMinute} bpm",
+                    valueText = String.format(Locale.getDefault(), bpmTemplate, sample.beatsPerMinute),
                     dateText = timeStr,
                     offset = IntOffset(sampleX.roundToInt(), sampleY.roundToInt()),
                 )
