@@ -14,6 +14,7 @@ import app.readylytics.health.core.ui.common.WeightHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.domain.model.BmiCategory
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.toMetricStatus
@@ -67,12 +68,15 @@ fun WeightHistoryCard(
             stringResource(R.string.weight_history_subtitle_with_delta, weightStr, unitLabel, deltaStr)
         } ?: stringResource(R.string.weight_history_subtitle_no_delta, weightStr, unitLabel)
 
+    // BmiCategory (not BmiStatus) drives the label: BmiStatus.Warning is shared by both
+    // UNDERWEIGHT and OVERWEIGHT (see BodyCompositionAssessment), so status alone cannot tell
+    // them apart. bmiStatus still drives the pill's color via pillStatus below.
     val pillLabelRes =
-        when (item.bmiStatus) {
-            BmiStatus.Optimal -> R.string.weight_status_normal
-            BmiStatus.Neutral -> R.string.weight_status_overweight
-            BmiStatus.Warning -> R.string.weight_status_obese_1
-            BmiStatus.Poor -> R.string.weight_status_obese_2
+        when (item.bmiCategory) {
+            BmiCategory.UNDERWEIGHT -> R.string.weight_status_underweight
+            BmiCategory.HEALTHY_WEIGHT -> R.string.weight_status_healthy_weight
+            BmiCategory.OVERWEIGHT -> R.string.weight_status_overweight
+            BmiCategory.OBESITY -> R.string.weight_status_obesity
             null -> R.string.weight_status_calibrating
         }
     val pillStatus = item.bmiStatus?.toMetricStatus() ?: MetricStatus.CALIBRATING
@@ -99,6 +103,7 @@ private fun WeightHistoryCardPreview() {
                         deltaDisplay = -0.4f,
                         unitSystem = UnitSystem.METRIC,
                         bmiStatus = BmiStatus.Optimal,
+                        bmiCategory = BmiCategory.HEALTHY_WEIGHT,
                     ),
                 modifier =
                     Modifier.padding(
@@ -114,6 +119,7 @@ private fun WeightHistoryCardPreview() {
                         deltaDisplay = 0.6f,
                         unitSystem = UnitSystem.METRIC,
                         bmiStatus = BmiStatus.Warning,
+                        bmiCategory = BmiCategory.OVERWEIGHT,
                     ),
                 modifier =
                     Modifier.padding(

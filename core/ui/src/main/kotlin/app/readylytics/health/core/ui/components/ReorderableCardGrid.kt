@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
@@ -24,11 +25,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -36,6 +41,8 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -71,7 +78,7 @@ data class CardConfigurationsList(
 
 @Immutable
 data class CardDataMap(
-    val map: Map<CardId, @Composable () -> Unit>,
+    val map: Map<CardId, @Composable (CardConfiguration) -> Unit>,
 )
 
 @Composable
@@ -129,8 +136,16 @@ fun ReorderableCardGrid(
     var rootCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var deleteZoneTopPx by remember { mutableStateOf<Float?>(null) }
 
-    val draggedId = dragController.draggedCardId
+    // Bounds of each card's drag-handle, in root-local space. Used only to decide where a drag
+    // may START (so taps/gestures elsewhere on the card body never begin a drag). Gesture
+    // detection itself lives on the root Column below - not on the handle - so an in-progress
+    // drag survives pendingOrder swaps re-parenting the dragged card under a different
+    // leftCard/rightCard/full-width Box template mid-gesture (a per-handle pointerInput node
+    // gets torn down by that re-parenting, which cancels the gesture after a single swap).
+    val handleBounds = remember { mutableStateMapOf<CardId, Rect>() }
     val hapticFeedback = LocalHapticFeedback.current
+
+    val draggedId = dragController.draggedCardId
 
     val performDragEnd = {
         val result = dragController.onDragEnd()
@@ -148,6 +163,16 @@ fun ReorderableCardGrid(
         }
     }
 
+    val onHandlePositioned: (CardId, LayoutCoordinates) -> Unit = { cardId, coords ->
+        rootCoords?.let { root -> handleBounds[cardId] = root.localBoundingBoxOf(coords) }
+    }
+
+    // pointerInput(Unit) below never restarts across recomposition, so its closure would
+    // otherwise capture stale performDragEnd/deleteZoneTopPx from the composition it first ran
+    // in. rememberUpdatedState keeps it reading the current values (see commit 9d7faf1).
+    val currentDeleteZoneTopPx by rememberUpdatedState(deleteZoneTopPx)
+    val currentPerformDragEnd by rememberUpdatedState(performDragEnd)
+
     Column(
         modifier =
             modifier
@@ -158,21 +183,20 @@ fun ReorderableCardGrid(
                             detectDragGesturesAfterLongPress(
                                 onDragStart = { offset ->
                                     val targetCardId =
-                                        dragController.slotBounds.entries
-                                            .firstOrNull { (_, rect) ->
-                                                rect.contains(offset)
-                                            }?.key
+                                        handleBounds.entries
+                                            .firstOrNull { (_, rect) -> rect.contains(offset) }
+                                            ?.key
                                     if (targetCardId != null) {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                         dragController.onDragStart(targetCardId)
                                     }
                                 },
-                                onDragEnd = { performDragEnd() },
-                                onDragCancel = { performDragEnd() },
+                                onDragEnd = { currentPerformDragEnd() },
+                                onDragCancel = { currentPerformDragEnd() },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
                                     if (dragController.draggedCardId != null) {
-                                        dragController.onDrag(dragAmount, deleteZoneTopPx)
+                                        dragController.onDrag(dragAmount, currentDeleteZoneTopPx)
                                     }
                                 },
                             )
@@ -204,6 +228,7 @@ fun ReorderableCardGrid(
                         cardDataMap = dataMap,
                         isEditing = isEditing,
                         controller = dragController,
+                        onHandlePositioned = onHandlePositioned,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -234,6 +259,7 @@ fun ReorderableCardGrid(
                             cardDataMap = dataMap,
                             isEditing = isEditing,
                             controller = dragController,
+                            onHandlePositioned = onHandlePositioned,
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                         )
                     }
@@ -264,6 +290,7 @@ fun ReorderableCardGrid(
                                 cardDataMap = dataMap,
                                 isEditing = isEditing,
                                 controller = dragController,
+                                onHandlePositioned = onHandlePositioned,
                                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                             )
                         }
@@ -332,34 +359,41 @@ fun ReorderableCardGrid(
 @Composable
 private fun RenderCardItem(
     card: CardConfiguration,
-    cardDataMap: Map<CardId, @Composable () -> Unit>,
+    cardDataMap: Map<CardId, @Composable (CardConfiguration) -> Unit>,
     isEditing: Boolean,
     controller: DragController,
+    onHandlePositioned: (CardId, LayoutCoordinates) -> Unit,
     modifier: Modifier,
 ) {
-    val isDragged = controller.draggedCardId == card.cardId
-    val cardContent = cardDataMap[card.cardId]!!
+    // Keying the whole slot by cardId (rather than by loop position) keeps composition
+    // identity stable across reorders and mode-only edits, so per-card local state (e.g. the
+    // display-mode menu's expanded flag) does not leak between sibling cards.
+    key(card.cardId) {
+        val isDragged = controller.draggedCardId == card.cardId
+        val cardContent = cardDataMap[card.cardId]!!
 
-    val wrappedContent: @Composable () -> Unit =
-        if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
-            @Composable {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.cardHeight),
-                    contentAlignment = Alignment.Center,
-                ) { cardContent() }
+        val wrappedContent: @Composable () -> Unit =
+            if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
+                @Composable {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.cardHeight),
+                        contentAlignment = Alignment.Center,
+                    ) { cardContent(card) }
+                }
+            } else {
+                { cardContent(card) }
             }
-        } else {
-            cardContent
-        }
 
-    ReorderableCardItem(
-        card = card,
-        content = wrappedContent,
-        isEditing = isEditing,
-        isDragged = isDragged,
-        controller = controller,
-        modifier = modifier,
-    )
+        ReorderableCardItem(
+            card = card,
+            content = wrappedContent,
+            isEditing = isEditing,
+            isDragged = isDragged,
+            controller = controller,
+            onHandlePositioned = onHandlePositioned,
+            modifier = modifier,
+        )
+    }
 }
 
 @Composable
@@ -369,6 +403,7 @@ private fun ReorderableCardItem(
     isEditing: Boolean,
     isDragged: Boolean,
     controller: DragController,
+    onHandlePositioned: (CardId, LayoutCoordinates) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -411,12 +446,35 @@ private fun ReorderableCardItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isEditing) {
-                Icon(
-                    imageVector = Icons.Outlined.DragIndicator,
-                    contentDescription = stringResource(R.string.accessibility_drag_to_reorder),
-                    modifier = Modifier.padding(end = MaterialTheme.spacing.small),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // Drag gesture detection lives on the grid's root Column (survives pendingOrder
+                // swaps reparenting this card mid-drag - see handleBounds comment above). This
+                // Box only reports its own bounds so the root's hit test can restrict drag START
+                // to this 48dp handle, keeping taps/menus elsewhere on the card (e.g. the
+                // display-mode selector) from starting a drag.
+                //
+                // The contentDescription lives on this 48dp Box (not the inner Icon): there is no
+                // mergeDescendants/clickable/toggleable anywhere in this handle, so a description
+                // on the Icon alone would resolve, in the a11y tree, to the Icon's own leaf node —
+                // which lays out at the vector's intrinsic size (~24dp), not this enclosing 48dp
+                // touch target. Putting it here means onNodeWithContentDescription (and TalkBack)
+                // resolve directly to the actual 48dp target. The Icon itself is decorative under
+                // a described parent, so its own contentDescription stays null to avoid a
+                // double announcement.
+                val dragHandleDescription = stringResource(R.string.accessibility_drag_to_reorder)
+                Box(
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .semantics { contentDescription = dragHandleDescription }
+                            .onGloballyPositioned { coords -> onHandlePositioned(card.cardId, coords) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.DragIndicator,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {

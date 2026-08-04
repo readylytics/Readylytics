@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.vitals.bloodpressure
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,10 +38,11 @@ import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -143,16 +146,18 @@ fun BloodPressureDetailScreen(
                             null
                         }
 
-                    M3ScoreGaugeCard(
+                    UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_systolic),
-                        score = uiState.latestSystolic?.toFloat(),
-                        displayText = uiState.latestSystolic?.toString() ?: "—",
+                        rawValue = uiState.latestSystolic?.toFloat(),
+                        valueText =
+                            uiState.latestSystolic?.toString()
+                                ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
-                        maxScore = 200f,
+                        maxValue = 200f,
                         status = uiState.systolicStatus,
-                        deltaText = systolicDelta,
-                        tooltipDescription = stringResource(R.string.tooltip_blood_pressure_systolic),
+                        secondaryText = systolicDelta,
+                        tooltip = stringResource(R.string.tooltip_blood_pressure_systolic),
                     )
 
                     val diastolicDelta =
@@ -171,16 +176,33 @@ fun BloodPressureDetailScreen(
                             null
                         }
 
-                    M3ScoreGaugeCard(
+                    UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_diastolic),
-                        score = uiState.latestDiastolic?.toFloat(),
-                        displayText = uiState.latestDiastolic?.toString() ?: "—",
+                        rawValue = uiState.latestDiastolic?.toFloat(),
+                        valueText =
+                            uiState.latestDiastolic?.toString()
+                                ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
-                        maxScore = 120f,
+                        maxValue = 120f,
                         status = uiState.diastolicStatus,
-                        deltaText = diastolicDelta,
-                        tooltipDescription = stringResource(R.string.tooltip_blood_pressure_diastolic),
+                        secondaryText = diastolicDelta,
+                        tooltip = stringResource(R.string.tooltip_blood_pressure_diastolic),
+                    )
+                }
+
+                uiState.bloodPressureStatus?.let { status ->
+                    Text(
+                        text = stringResource(bloodPressureStatusLabelRes(status)),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                                    vertical = MaterialTheme.spacing.extraSmall,
+                                ),
+                        style = MaterialTheme.typography.labelLarge,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -240,3 +262,12 @@ fun BloodPressureDetailScreen(
         }
     }
 }
+
+@StringRes
+internal fun bloodPressureStatusLabelRes(status: BloodPressureStatus): Int =
+    when (status) {
+        BloodPressureStatus.Optimal -> R.string.bp_status_normal
+        BloodPressureStatus.Neutral -> R.string.bp_status_elevated
+        BloodPressureStatus.HypertensionStage1 -> R.string.bp_status_stage1
+        BloodPressureStatus.HypertensionStage2 -> R.string.bp_status_stage2
+    }

@@ -6,9 +6,13 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.BodyCompositionAssessment
+import app.readylytics.health.domain.model.BodyFatCategory
 import app.readylytics.health.domain.model.BodyFatRecord
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.WeightRecord
+import app.readylytics.health.domain.model.toMetricStatus
+import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.WeightRepository
@@ -141,7 +145,7 @@ class BodyFatDetailViewModelTest {
         }
 
     @Test
-    fun `optimalRangeDisplay formats male age 30 correctly`() =
+    fun `male reference metadata is exposed without calling the scale optimal`() =
         runTest {
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(
@@ -150,12 +154,15 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
-            assertEquals("0–19.0%", state.optimalRangeDisplay)
+            val state = viewModel.uiState.first { it.referenceAxisMaximum > 0f }
+            assertEquals(2f, state.referenceAxisMinimum)
+            assertEquals(25f, state.referenceAxisMaximum)
+            assertEquals(15.5f, state.referenceMidpoint)
+            assertEquals(Gender.MALE, state.gender)
         }
 
     @Test
-    fun `optimalRangeDisplay formats female age 50 correctly`() =
+    fun `female reference metadata is age independent`() =
         runTest {
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(
@@ -164,8 +171,83 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
-            assertEquals("0–34.0%", state.optimalRangeDisplay)
+            val state = viewModel.uiState.first { it.referenceAxisMaximum > 0f }
+            assertEquals(10f, state.referenceAxisMinimum)
+            assertEquals(32f, state.referenceAxisMaximum)
+            assertEquals(22.5f, state.referenceMidpoint)
+            assertEquals(Gender.FEMALE, state.gender)
+        }
+
+    @Test
+    fun `latest body fat status matches canonical male assessment at 2 percent`() =
+        runTest {
+            val record = BodyFatRecordEntity("male", System.currentTimeMillis(), 2f)
+            coEvery { bodyFatRepository.getLatest() } returns record
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = Gender.MALE))
+            viewModel = createViewModel()
+
+            assertEquals(
+                BodyCompositionAssessment
+                    .assessBodyFat(2f, PhysiologyProfile.ACTIVE, Gender.MALE)
+                    .status
+                    .toMetricStatus(),
+                viewModel.uiState.first { it.bodyFatStatus != null }.bodyFatStatus,
+            )
+        }
+
+    @Test
+    fun `latest body fat status matches canonical female assessment at 10 percent`() =
+        runTest {
+            val record = BodyFatRecordEntity("female", System.currentTimeMillis(), 10f)
+            coEvery { bodyFatRepository.getLatest() } returns record
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = Gender.FEMALE))
+            viewModel = createViewModel()
+
+            assertEquals(
+                BodyCompositionAssessment
+                    .assessBodyFat(10f, PhysiologyProfile.ACTIVE, Gender.FEMALE)
+                    .status
+                    .toMetricStatus(),
+                viewModel.uiState.first { it.bodyFatStatus != null }.bodyFatStatus,
+            )
+        }
+
+    @Test
+    fun `latest body fat status matches canonical unset-gender assessment at 10 percent`() =
+        runTest {
+            val record = BodyFatRecordEntity("unset-at-minimum", System.currentTimeMillis(), 10f)
+            coEvery { bodyFatRepository.getLatest() } returns record
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = null))
+            viewModel = createViewModel()
+
+            assertEquals(
+                BodyCompositionAssessment
+                    .assessBodyFat(10f, PhysiologyProfile.ACTIVE, null)
+                    .status
+                    .toMetricStatus(),
+                viewModel.uiState.first { it.bodyFatStatus != null }.bodyFatStatus,
+            )
+        }
+
+    @Test
+    fun `latest body fat status matches canonical unset-gender assessment above reference`() =
+        runTest {
+            val record = BodyFatRecordEntity("unset-above", System.currentTimeMillis(), 30.01f)
+            coEvery { bodyFatRepository.getLatest() } returns record
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = null))
+            viewModel = createViewModel()
+
+            assertEquals(
+                BodyCompositionAssessment
+                    .assessBodyFat(30.01f, PhysiologyProfile.ACTIVE, null)
+                    .status
+                    .toMetricStatus(),
+                viewModel.uiState.first { it.bodyFatStatus != null }.bodyFatStatus,
+            )
         }
 
     // --- historyItems ---
@@ -190,6 +272,32 @@ class BodyFatDetailViewModelTest {
             // 78.4 * (1 - 14.2/100) = 67.2752
             assertEquals(67.2752f, item.leanMassDisplay!!, 0.01f)
             assertEquals(MetricStatus.OPTIMAL, item.status)
+            assertEquals(BodyFatCategory.FITNESS, item.category)
+        }
+
+    @Test
+    fun `historyItems use canonical male assessment at 2 percent`() =
+        runTest {
+            val record = BodyFatRecordEntity("male-essential", System.currentTimeMillis(), 2f)
+            coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(record)
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = Gender.MALE))
+            viewModel = createViewModel()
+
+            val item =
+                viewModel.uiState
+                    .first { it.historyItems.isNotEmpty() }
+                    .historyItems
+                    .single()
+
+            assertEquals(
+                BodyCompositionAssessment
+                    .assessBodyFat(2f, PhysiologyProfile.ACTIVE, Gender.MALE)
+                    .status
+                    .toMetricStatus(),
+                item.status,
+            )
+            assertEquals(BodyFatCategory.ESSENTIAL, item.category)
         }
 
     @Test

@@ -2,9 +2,14 @@ package app.readylytics.health.domain.service
 
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.BodyFatStatus
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.model.HealthZone
+import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.preferences.Gender
+import app.readylytics.health.domain.preferences.PhysiologyProfile
 
 /**
  * Pure-Kotlin facade for cross-metric health calculations.
@@ -26,43 +31,49 @@ class HealthMetricsService {
         return Result.Success(weightKg / (heightM * heightM))
     }
 
-    /** Classify a BMI value into a [BmiStatus]. */
-    fun assessBmi(bmi: Float): BmiStatus =
-        when {
-            bmi < OVERWEIGHT_THRESHOLD -> BmiStatus.Optimal
-            bmi < OBESE_CLASS_1_THRESHOLD -> BmiStatus.Neutral
-            bmi < OBESE_CLASS_2_THRESHOLD -> BmiStatus.Warning
-            else -> BmiStatus.Poor
-        }
+    /** Classify a BMI value into a [BmiStatus]. Delegates to [BodyCompositionAssessment]. */
+    fun assessBmi(bmi: Float): BmiStatus = BodyCompositionAssessment.assessBmi(bmi).status
 
-    /** Classify a blood pressure reading using ACC/AHA 2017 stages. */
+    /** Classify a blood pressure reading using the app's inclusive component-wise status ladder. */
     fun assessBloodPressure(
         systolic: Int,
         diastolic: Int,
     ): BloodPressureStatus =
         when {
-            systolic < BP_NORMAL_SYS && diastolic < BP_NORMAL_DIA -> BloodPressureStatus.Optimal
-            systolic <= BP_ELEVATED_SYS && diastolic < BP_NORMAL_DIA -> BloodPressureStatus.Neutral
-            systolic in BP_STAGE1_SYS_RANGE || diastolic in BP_STAGE1_DIA_RANGE ->
+            assessSystolic(systolic) == MetricStatus.POOR || assessDiastolic(diastolic) == MetricStatus.POOR ->
+                BloodPressureStatus.HypertensionStage2
+            assessSystolic(systolic) == MetricStatus.WARNING || assessDiastolic(diastolic) == MetricStatus.WARNING ->
                 BloodPressureStatus.HypertensionStage1
-            else -> BloodPressureStatus.HypertensionStage2
+            assessSystolic(systolic) == MetricStatus.NEUTRAL || assessDiastolic(diastolic) == MetricStatus.NEUTRAL ->
+                BloodPressureStatus.Neutral
+            else -> BloodPressureStatus.Optimal
         }
 
-    /** Classify body-fat percentage by gender and age. */
+    /** Classifies a systolic component using the inclusive blood-pressure ladder. */
+    fun assessSystolic(systolic: Int?): MetricStatus =
+        assessBloodPressureComponent(systolic, BP_NORMAL_SYS, BP_ELEVATED_SYS, BP_STAGE1_SYS_MAX)
+
+    /** Classifies a diastolic component using the inclusive blood-pressure ladder. */
+    fun assessDiastolic(diastolic: Int?): MetricStatus =
+        assessBloodPressureComponent(diastolic, BP_NORMAL_DIA, BP_ELEVATED_DIA, BP_STAGE1_DIA_MAX)
+
+    /** Chart metadata for systolic pressure, derived from the same constants as classification. */
+    fun systolicReferenceBands(): List<ZoneBand> =
+        bloodPressureReferenceBands(BP_NORMAL_SYS, BP_ELEVATED_SYS, BP_STAGE1_SYS_MAX)
+
+    /** Chart metadata for diastolic pressure, derived from the same constants as classification. */
+    fun diastolicReferenceBands(): List<ZoneBand> =
+        bloodPressureReferenceBands(BP_NORMAL_DIA, BP_ELEVATED_DIA, BP_STAGE1_DIA_MAX)
+
+    /**
+     * Classify body-fat percentage by physiology profile and gender.
+     * Delegates to [BodyCompositionAssessment]. `null` gender uses the fixed reference band.
+     */
     fun assessBodyFatPercent(
         bodyFatPercent: Float,
-        ageYears: Int,
+        physiologyProfile: PhysiologyProfile,
         gender: Gender?,
-    ): BodyFatStatus {
-        if (gender == null) return BodyFatStatus.Calibrating
-        val age = ageYears.coerceIn(MIN_AGE, MAX_AGE)
-        val (optimalMax, neutralMax) = thresholdsFor(gender, age)
-        return when {
-            bodyFatPercent <= optimalMax -> BodyFatStatus.Optimal
-            bodyFatPercent <= neutralMax -> BodyFatStatus.Neutral
-            else -> BodyFatStatus.Poor
-        }
-    }
+    ): BodyFatStatus = BodyCompositionAssessment.assessBodyFat(bodyFatPercent, physiologyProfile, gender).status
 
     /**
      * Daily average of systolic / diastolic readings.
@@ -102,25 +113,31 @@ class HealthMetricsService {
         )
     }
 
-    private fun thresholdsFor(
-        gender: Gender,
-        age: Int,
-    ): Pair<Float, Float> =
-        when (gender) {
-            Gender.MALE ->
-                when (age) {
-                    in 20..40 -> Pair(19f, 24f)
-                    in 41..60 -> Pair(22f, 28f)
-                    else -> Pair(24f, 30f)
-                }
-            Gender.FEMALE ->
-                when (age) {
-                    in 20..40 -> Pair(32f, 38f)
-                    in 41..60 -> Pair(34f, 40f)
-                    else -> Pair(36f, 42f)
-                }
-            Gender.OTHER, Gender.PREFER_NOT_TO_SAY -> Pair(25f, 35f)
+    private fun assessBloodPressureComponent(
+        value: Int?,
+        optimalMax: Int,
+        neutralMax: Int,
+        warningMax: Int,
+    ): MetricStatus =
+        when {
+            value == null -> MetricStatus.CALIBRATING
+            value <= optimalMax -> MetricStatus.OPTIMAL
+            value <= neutralMax -> MetricStatus.NEUTRAL
+            value <= warningMax -> MetricStatus.WARNING
+            else -> MetricStatus.POOR
         }
+
+    private fun bloodPressureReferenceBands(
+        optimalMax: Int,
+        neutralMax: Int,
+        warningMax: Int,
+    ): List<ZoneBand> =
+        listOf(
+            ZoneBand(Double.NEGATIVE_INFINITY, optimalMax.toDouble(), HealthZone.OPTIMAL),
+            ZoneBand(optimalMax.toDouble(), (neutralMax + 1).toDouble(), HealthZone.NEUTRAL),
+            ZoneBand((neutralMax + 1).toDouble(), (warningMax + 1).toDouble(), HealthZone.WARNING),
+            ZoneBand((warningMax + 1).toDouble(), Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
+        )
 
     /** Stable [Result.Failure.code] values produced by this service. */
     object Codes {
@@ -130,18 +147,12 @@ class HealthMetricsService {
     }
 
     companion object {
-        const val OVERWEIGHT_THRESHOLD: Float = 25f
-        const val OBESE_CLASS_1_THRESHOLD: Float = 30f
-        const val OBESE_CLASS_2_THRESHOLD: Float = 35f
-
         const val BP_NORMAL_SYS: Int = 120
         const val BP_NORMAL_DIA: Int = 80
         const val BP_ELEVATED_SYS: Int = 129
-        val BP_STAGE1_SYS_RANGE: IntRange = 130..139
-        val BP_STAGE1_DIA_RANGE: IntRange = 80..89
-
-        const val MIN_AGE: Int = 1
-        const val MAX_AGE: Int = 120
+        const val BP_ELEVATED_DIA: Int = 89
+        const val BP_STAGE1_SYS_MAX: Int = 139
+        const val BP_STAGE1_DIA_MAX: Int = 99
 
         private const val CM_PER_M: Float = 100f
     }

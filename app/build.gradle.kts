@@ -427,7 +427,7 @@ dependencies {
 }
 
 tasks.withType<Test>().configureEach {
-    jvmArgs("-Xshare:off")
+    jvmArgs("-Xshare:off", "-Djdk.attach.allowAttachSelf=true")
     systemProperty("robolectric.coverage.enabled", "true")
     systemProperty("update.golden", providers.systemProperty("update.golden").getOrElse("false"))
     configure<JacocoTaskExtension> {

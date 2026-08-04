@@ -8,6 +8,8 @@ import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.StepsStatusClassifier
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
@@ -33,6 +35,8 @@ data class StepDetailUiState(
     val latestSummary: DailySummary? = null,
     val dailySteps: List<DailyDataPoint> = emptyList(),
     val stepGoal: Int = 10000,
+    val currentStepsStatus: MetricStatus =
+        StepsStatusClassifier.classify(latestSummary?.stepCount, stepGoal),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val rangeStartMs: Long = 0,
     val isLoading: Boolean = true,

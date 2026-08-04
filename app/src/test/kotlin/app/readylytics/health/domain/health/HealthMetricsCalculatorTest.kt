@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.health
 
 import app.readylytics.health.data.preferences.Gender
+import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
@@ -56,28 +57,38 @@ class CalculateBmiTest {
 // ─── assessBmi ────────────────────────────────────────────────────────────────
 class AssessBmiTest {
     @Test
+    fun `bmi boundary 18 point 49 is Warning (underweight)`() {
+        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(18.49f))
+    }
+
+    @Test
+    fun `bmi boundary 18 point 5 is Optimal`() {
+        assertEquals(BmiStatus.Optimal, HealthMetricsCalculator.assessBmi(18.5f))
+    }
+
+    @Test
     fun `bmi below 25 is Optimal`() {
         assertEquals(BmiStatus.Optimal, HealthMetricsCalculator.assessBmi(24.9f))
     }
 
     @Test
-    fun `bmi exactly 25 is Neutral`() {
-        assertEquals(BmiStatus.Neutral, HealthMetricsCalculator.assessBmi(25.0f))
+    fun `bmi exactly 25 is Warning`() {
+        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(25.0f))
     }
 
     @Test
-    fun `bmi 27 is Neutral`() {
-        assertEquals(BmiStatus.Neutral, HealthMetricsCalculator.assessBmi(27f))
+    fun `bmi 27 is Warning`() {
+        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(27f))
     }
 
     @Test
-    fun `bmi exactly 30 is Warning`() {
-        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(30.0f))
+    fun `bmi exactly 30 is Poor`() {
+        assertEquals(BmiStatus.Poor, HealthMetricsCalculator.assessBmi(30.0f))
     }
 
     @Test
-    fun `bmi 32 is Warning`() {
-        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(32f))
+    fun `bmi 32 is Poor`() {
+        assertEquals(BmiStatus.Poor, HealthMetricsCalculator.assessBmi(32f))
     }
 
     @Test
@@ -91,22 +102,21 @@ class AssessBmiTest {
     }
 
     @Test
-    fun `bmi zero is Optimal`() {
-        assertEquals(BmiStatus.Optimal, HealthMetricsCalculator.assessBmi(0f))
+    fun `bmi zero is Warning (underweight)`() {
+        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(0f))
     }
 
     @Test
-    fun `very low bmi is Optimal`() {
-        assertEquals(BmiStatus.Optimal, HealthMetricsCalculator.assessBmi(10f))
+    fun `very low bmi is Warning (underweight)`() {
+        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(10f))
     }
 
     @Test
-    fun `bmi boundary 29 point 9 is Neutral`() =
-        assertEquals(BmiStatus.Neutral, HealthMetricsCalculator.assessBmi(29.9f))
+    fun `bmi boundary 29 point 9 is Warning`() =
+        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(29.9f))
 
     @Test
-    fun `bmi boundary 34 point 9 is Warning`() =
-        assertEquals(BmiStatus.Warning, HealthMetricsCalculator.assessBmi(34.9f))
+    fun `bmi boundary 34 point 9 is Poor`() = assertEquals(BmiStatus.Poor, HealthMetricsCalculator.assessBmi(34.9f))
 }
 
 // ─── assessBloodPressure ──────────────────────────────────────────────────────
@@ -122,6 +132,10 @@ class AssessBloodPressureTest {
     @Test
     fun `systolic 120 diastolic 75 is Optimal`() =
         assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(120, 75))
+
+    @Test
+    fun `systolic 120 diastolic 80 is Optimal`() =
+        assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(120, 80))
 
     @Test
     fun `systolic 121 diastolic 75 is Neutral`() =
@@ -140,20 +154,20 @@ class AssessBloodPressureTest {
         assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(139, 85))
 
     @Test
-    fun `diastolic 80 with normal systolic is HypertensionStage1`() =
-        assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(115, 80))
+    fun `diastolic 80 with normal systolic is Optimal`() =
+        assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(115, 80))
 
     @Test
-    fun `diastolic 89 with normal systolic is HypertensionStage1`() =
-        assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(115, 89))
+    fun `diastolic 89 with normal systolic is Neutral`() =
+        assertEquals(BloodPressureStatus.Neutral, HealthMetricsCalculator.assessBloodPressure(115, 89))
 
     @Test
     fun `systolic 140 is HypertensionStage2`() =
         assertEquals(BloodPressureStatus.HypertensionStage2, HealthMetricsCalculator.assessBloodPressure(140, 70))
 
     @Test
-    fun `diastolic 90 is HypertensionStage2`() =
-        assertEquals(BloodPressureStatus.HypertensionStage2, HealthMetricsCalculator.assessBloodPressure(115, 90))
+    fun `diastolic 90 with normal systolic is HypertensionStage1`() =
+        assertEquals(BloodPressureStatus.HypertensionStage1, HealthMetricsCalculator.assessBloodPressure(115, 90))
 
     @Test
     fun `severe hypertension is HypertensionStage2`() =
@@ -161,153 +175,145 @@ class AssessBloodPressureTest {
 }
 
 // ─── assessBodyFatPercent ─────────────────────────────────────────────────────
+// Canonical, continuous bands via BodyCompositionAssessment; status is independent of
+// physiologyProfile (profile only shifts the gauge reference midpoint, covered by
+// BodyCompositionAssessmentTest).
 class AssessBodyFatPercentTest {
     @Test
-    fun `null gender returns Calibrating`() =
-        assertEquals(BodyFatStatus.Calibrating, HealthMetricsCalculator.assessBodyFatPercent(20f, 30, null))
-
-    @Test
-    fun `male age 25 low fat is Optimal`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(15f, 25, Gender.MALE))
-
-    @Test
-    fun `male age 25 at boundary 19 is Optimal`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(19f, 25, Gender.MALE))
-
-    @Test
-    fun `male age 25 at 20 is Neutral`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(20f, 25, Gender.MALE))
-
-    @Test
-    fun `male age 25 at boundary 24 is Neutral`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(24f, 25, Gender.MALE))
-
-    @Test
-    fun `male age 25 at 25 is Poor`() =
-        assertEquals(BodyFatStatus.Poor, HealthMetricsCalculator.assessBodyFatPercent(25f, 25, Gender.MALE))
-
-    @Test
-    fun `male age 50 uses 41-60 thresholds optimal`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(22f, 50, Gender.MALE))
-
-    @Test
-    fun `male age 50 neutral range`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(25f, 50, Gender.MALE))
-
-    @Test
-    fun `male age 50 above neutralMax is Poor`() =
-        assertEquals(BodyFatStatus.Poor, HealthMetricsCalculator.assessBodyFatPercent(29f, 50, Gender.MALE))
-
-    @Test
-    fun `male age 70 uses senior thresholds optimal`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(24f, 70, Gender.MALE))
-
-    @Test
-    fun `male age 70 neutral range`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(27f, 70, Gender.MALE))
-
-    @Test
-    fun `male age 70 above neutralMax is Poor`() =
-        assertEquals(BodyFatStatus.Poor, HealthMetricsCalculator.assessBodyFatPercent(31f, 70, Gender.MALE))
-
-    @Test
-    fun `female age 25 low fat is Optimal`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(28f, 25, Gender.FEMALE))
-
-    @Test
-    fun `female age 25 at boundary 32 is Optimal`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(32f, 25, Gender.FEMALE))
-
-    @Test
-    fun `female age 25 at 33 is Neutral`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(33f, 25, Gender.FEMALE))
-
-    @Test
-    fun `female age 25 at boundary 38 is Neutral`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(38f, 25, Gender.FEMALE))
-
-    @Test
-    fun `female age 25 at 39 is Poor`() =
-        assertEquals(BodyFatStatus.Poor, HealthMetricsCalculator.assessBodyFatPercent(39f, 25, Gender.FEMALE))
-
-    @Test
-    fun `female age 50 uses 41-60 thresholds`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(34f, 50, Gender.FEMALE))
-
-    @Test
-    fun `female age 70 uses senior thresholds`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(36f, 70, Gender.FEMALE))
-
-    @Test
-    fun `OTHER gender optimal range`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(20f, 30, Gender.OTHER))
-
-    @Test
-    fun `OTHER gender at boundary 25 is Optimal`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(25f, 30, Gender.OTHER))
-
-    @Test
-    fun `OTHER gender at 26 is Neutral`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(26f, 30, Gender.OTHER))
-
-    @Test
-    fun `OTHER gender at boundary 35 is Neutral`() =
-        assertEquals(BodyFatStatus.Neutral, HealthMetricsCalculator.assessBodyFatPercent(35f, 30, Gender.OTHER))
-
-    @Test
-    fun `OTHER gender at 36 is Poor`() =
-        assertEquals(BodyFatStatus.Poor, HealthMetricsCalculator.assessBodyFatPercent(36f, 30, Gender.OTHER))
-
-    @Test
-    fun `PREFER_NOT_TO_SAY gender optimal range`() {
+    fun `null gender uses fixed reference band`() =
         assertEquals(
             BodyFatStatus.Optimal,
-            HealthMetricsCalculator.assessBodyFatPercent(20f, 30, Gender.PREFER_NOT_TO_SAY),
+            HealthMetricsCalculator.assessBodyFatPercent(20f, PhysiologyProfile.ACTIVE, null),
         )
-    }
 
     @Test
-    fun `PREFER_NOT_TO_SAY gender Neutral range`() {
+    fun `male below essential is Warning`() =
+        assertEquals(
+            BodyFatStatus.Warning,
+            HealthMetricsCalculator.assessBodyFatPercent(1.99f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
+
+    @Test
+    fun `male at boundary 2 is Neutral`() =
         assertEquals(
             BodyFatStatus.Neutral,
-            HealthMetricsCalculator.assessBodyFatPercent(30f, 30, Gender.PREFER_NOT_TO_SAY),
+            HealthMetricsCalculator.assessBodyFatPercent(2f, PhysiologyProfile.ACTIVE, Gender.MALE),
         )
-    }
 
     @Test
-    fun `PREFER_NOT_TO_SAY gender Poor range`() {
+    fun `male athletic is Optimal`() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            HealthMetricsCalculator.assessBodyFatPercent(6f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
+
+    @Test
+    fun `male acceptable range is Neutral`() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            HealthMetricsCalculator.assessBodyFatPercent(18f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
+
+    @Test
+    fun `male obese is Poor`() =
         assertEquals(
             BodyFatStatus.Poor,
-            HealthMetricsCalculator.assessBodyFatPercent(36f, 30, Gender.PREFER_NOT_TO_SAY),
+            HealthMetricsCalculator.assessBodyFatPercent(25f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
+
+    @Test
+    fun `female below essential is Warning`() =
+        assertEquals(
+            BodyFatStatus.Warning,
+            HealthMetricsCalculator.assessBodyFatPercent(9.99f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
+
+    @Test
+    fun `female at boundary 10 is Neutral`() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            HealthMetricsCalculator.assessBodyFatPercent(10f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
+
+    @Test
+    fun `female athletic is Optimal`() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            HealthMetricsCalculator.assessBodyFatPercent(14f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
+
+    @Test
+    fun `female acceptable range is Neutral`() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            HealthMetricsCalculator.assessBodyFatPercent(25f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
+
+    @Test
+    fun `female obese is Poor`() =
+        assertEquals(
+            BodyFatStatus.Poor,
+            HealthMetricsCalculator.assessBodyFatPercent(32f, PhysiologyProfile.ACTIVE, Gender.FEMALE),
+        )
+
+    @Test
+    fun `OTHER gender within fixed band is Optimal`() =
+        assertEquals(
+            BodyFatStatus.Optimal,
+            HealthMetricsCalculator.assessBodyFatPercent(20f, PhysiologyProfile.SEDENTARY, Gender.OTHER),
+        )
+
+    @Test
+    fun `OTHER gender at fixed minimum is Neutral`() =
+        assertEquals(
+            BodyFatStatus.Neutral,
+            HealthMetricsCalculator.assessBodyFatPercent(10f, PhysiologyProfile.SEDENTARY, Gender.OTHER),
+        )
+
+    @Test
+    fun `OTHER gender above fixed maximum is Poor`() =
+        assertEquals(
+            BodyFatStatus.Poor,
+            HealthMetricsCalculator.assessBodyFatPercent(30.01f, PhysiologyProfile.SEDENTARY, Gender.OTHER),
+        )
+
+    @Test
+    fun `PREFER_NOT_TO_SAY gender within fixed band is Optimal`() {
+        assertEquals(
+            BodyFatStatus.Optimal,
+            HealthMetricsCalculator.assessBodyFatPercent(20f, PhysiologyProfile.ATHLETE, Gender.PREFER_NOT_TO_SAY),
         )
     }
 
     @Test
-    fun `age below 20 coerces to 1 which uses senior thresholds for male`() {
-        // age 1 not in 20..40 or 41..60, falls to senior thresholds (optimalMax=24, neutralMax=30)
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(24f, 1, Gender.MALE))
+    fun `PREFER_NOT_TO_SAY gender above fixed maximum is Poor`() {
+        assertEquals(
+            BodyFatStatus.Poor,
+            HealthMetricsCalculator.assessBodyFatPercent(30.5f, PhysiologyProfile.ATHLETE, Gender.PREFER_NOT_TO_SAY),
+        )
     }
 
     @Test
-    fun `age above 120 coerces to 120 which uses senior thresholds for male`() {
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(24f, 200, Gender.MALE))
-    }
-
-    @Test
-    fun `zero body fat is Optimal for male`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(0f, 25, Gender.MALE))
+    fun `zero body fat is below essential Warning for male`() =
+        assertEquals(
+            BodyFatStatus.Warning,
+            HealthMetricsCalculator.assessBodyFatPercent(0f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
     fun `extremely high body fat is Poor`() =
-        assertEquals(BodyFatStatus.Poor, HealthMetricsCalculator.assessBodyFatPercent(60f, 25, Gender.MALE))
+        assertEquals(
+            BodyFatStatus.Poor,
+            HealthMetricsCalculator.assessBodyFatPercent(60f, PhysiologyProfile.ACTIVE, Gender.MALE),
+        )
 
     @Test
-    fun `male age exactly 40 uses 20-40 thresholds`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(19f, 40, Gender.MALE))
-
-    @Test
-    fun `male age exactly 41 uses 41-60 thresholds`() =
-        assertEquals(BodyFatStatus.Optimal, HealthMetricsCalculator.assessBodyFatPercent(22f, 41, Gender.MALE))
+    fun `male status is independent of physiology profile`() {
+        assertEquals(
+            HealthMetricsCalculator.assessBodyFatPercent(19f, PhysiologyProfile.ATHLETE, Gender.MALE),
+            HealthMetricsCalculator.assessBodyFatPercent(19f, PhysiologyProfile.SEDENTARY, Gender.MALE),
+        )
+    }
 }
 
 // ─── calculateDailyBpAverage ──────────────────────────────────────────────────

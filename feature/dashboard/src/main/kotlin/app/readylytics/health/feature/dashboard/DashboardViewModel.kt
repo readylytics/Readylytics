@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.di.DefaultDispatcher
@@ -12,6 +13,8 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.domain.dashboard.CardManagementEvent
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.insights.InsightContext
@@ -35,6 +38,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
+import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +71,7 @@ class DashboardViewModel
         private val dailyMetricCache: DailyMetricCache,
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
+        private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
@@ -102,8 +107,17 @@ class DashboardViewModel
                     dailySummaryRepository,
                 ),
                 createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
-            ) { basicInputs, cardState, hrSummary ->
-                transformToUiState(basicInputs, cardState, hrSummary)
+                observeDashboardStrainIncreaseUseCase(
+                    selectedDateRepository.selectedDate,
+                    settingsRepo.userPreferences,
+                ),
+            ) { basicInputs, cardState, hrSummary, todayStrainIncrease ->
+                transformToUiState(
+                    basicInputs,
+                    cardState,
+                    hrSummary,
+                    todayStrainIncrease,
+                )
             }.distinctUntilChanged()
                 .combine(createDashboardRealtimeStateFlow(foregroundSyncController)) { coreState, realtimeState ->
                     coreState.copy(
@@ -125,6 +139,7 @@ class DashboardViewModel
             basicInputs: DashboardBasicInputs,
             cardState: DashboardCardState,
             hrSummary: HeartRateDaySummary? = null,
+            todayStrainIncrease: Float? = null,
         ): DashboardUiState {
             val selectedDate = basicInputs.selectedDate
             val sessionSummary =
@@ -139,6 +154,9 @@ class DashboardViewModel
                     date = selectedDate,
                     lastSleepSession = sessionSummary,
                     rasSummaries = basicInputs.rasSummaries,
+                    circadianResult = basicInputs.circadianResult,
+                    heartRateSummary = hrSummary,
+                    todayStrainIncrease = todayStrainIncrease,
                 )
 
             val cards = cardsResult.getOrNull()
@@ -218,8 +236,6 @@ class DashboardViewModel
                 1439
             }
 
-        fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
-
         val earliestDate: StateFlow<LocalDate?> =
             selectedDateRepository.earliestDate
                 .stateIn(
@@ -272,6 +288,13 @@ class DashboardViewModel
 
         fun onResetToDefaults() {
             cardManagementDelegate.onResetToDefaults()
+        }
+
+        fun onCardDisplayModeChanged(
+            cardId: CardId,
+            mode: DashboardCardDisplayMode,
+        ) {
+            cardManagementDelegate.onEvent(CardManagementEvent.DisplayModeChanged(cardId, mode))
         }
 
         fun onEvent(event: DashboardEvent) {
@@ -340,9 +363,9 @@ data class DashboardUiState(
     val summary: DailySummary? = null,
     val selectedDate: LocalDate = LocalDate.now(),
     val today: LocalDate = LocalDate.now(),
-    val cardDataMap: Map<CardId, CardData> = emptyMap(),
+    val cardDataMap: Map<CardId, UniversalMetricPresentation> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
-    val restingHrCard: CardData? = null,
+    val restingHrCard: UniversalMetricPresentation? = null,
     val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
@@ -379,7 +402,7 @@ data class DashboardUiState(
  */
 @Immutable
 data class DashboardCardInputs(
-    val cardDataMap: Map<CardId, CardData>,
+    val cardDataMap: Map<CardId, UniversalMetricPresentation>,
     val summary: DailySummary?,
     val circadianConsistency: CircadianConsistencyResult?,
     val heartRateDaySummary: HeartRateDaySummary?,

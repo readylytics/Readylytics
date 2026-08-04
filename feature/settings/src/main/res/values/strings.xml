@@ -84,6 +84,24 @@
 <string name="circadian_using_profile_default">Using profile default</string>
 <string name="color_picker_hex_code_label">Hex code</string>
 <string name="color_picker_hex_code_placeholder">#AABBCC</string>
+<string name="dashboard_cards_section_header">Dashboard Cards</string>
+<string name="dashboard_cards_global_mode_label">Display mode</string>
+<string name="dashboard_cards_global_mode_placeholder">Select mode</string>
+<string name="dashboard_cards_global_mode_apply">Apply</string>
+<string name="dashboard_cards_global_mode_reset">Reset</string>
+<string name="dashboard_cards_global_mode_desc">Sets the display mode for every dashboard card at once. Cards
+        that don\'t support the chosen mode keep their current mode.</string>
+<string name="dashboard_cards_mode_gauge">Gauge</string>
+<string name="dashboard_cards_mode_bar">Bar</string>
+<string name="dashboard_cards_mode_value">Value</string>
+<string name="dashboard_cards_override_dialog_title">Override custom card settings?</string>
+<string name="dashboard_cards_override_dialog_apply_body">This replaces any display mode you\'ve set for individual
+        dashboard cards.</string>
+<string name="dashboard_cards_override_dialog_reset_body">This clears every dashboard card back to its default
+        display mode, including any custom settings you\'ve made.</string>
+<string name="dashboard_cards_override_dialog_dont_show_again">Don\'t show this again</string>
+<string name="dashboard_cards_override_dialog_apply">Apply</string>
+<string name="dashboard_cards_override_dialog_reset_confirm">Reset</string>
 <string name="data_sources_all_devices">All devices</string>
 <string name="data_sources_apply_button">Apply</string>
 <string name="data_sources_apply_description">Save your device selection and resync your Health Connect

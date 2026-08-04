@@ -1,15 +1,17 @@
 package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
 import kotlinx.coroutines.flow.first
 import java.time.Instant
-import java.time.ZoneId
 import javax.inject.Inject
 
 class GetWorkoutDisplayMetricsUseCase
@@ -23,23 +25,34 @@ class GetWorkoutDisplayMetricsUseCase
         suspend fun execute(
             workout: WorkoutData,
             samples: List<HeartRateSample>? = null,
+            preferences: UserPreferences? = null,
+            historicalSummaries: List<DailySummary>? = null,
         ): WorkoutDisplayMetrics {
-            val zoneId = ZoneId.systemDefault()
+            val prefs = preferences ?: settingsRepo.userPreferences.first()
+            val zoneId = prefs.scoringZone()
             val workoutDate = Instant.ofEpochMilli(workout.startTime).atZone(zoneId).toLocalDate()
             val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val summary = dailySummaryRepository.getByDate(midnight)
 
-            val fortyTwoDaysAgo =
-                workoutDate
-                    .minusDays(ScoringConstants.CHRONIC_DAYS)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-
-            val historicalSummaries = dailySummaryRepository.getSince(fortyTwoDaysAgo)
-            val prefs = settingsRepo.userPreferences.first()
+            // A caller-supplied window is clamped to the same 42-day span the self-fetch path
+            // would have used. Callers hold wider windows (48/71/131 days) than this workout
+            // needs, and the ATL/CTL EMA treats the earliest key in `trimpByDate` as an
+            // effective start-of-history anchor -- so an unclamped wider list would yield a
+            // different gainedStrain for the same workout depending on which screen asked.
+            val resolvedHistoricalSummaries =
+                historicalSummaries?.filter {
+                    !it.date.isBefore(workoutDate.minusDays(ScoringConstants.CHRONIC_DAYS))
+                } ?: run {
+                    val fortyTwoDaysAgo =
+                        workoutDate
+                            .minusDays(ScoringConstants.CHRONIC_DAYS)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    dailySummaryRepository.getSince(fortyTwoDaysAgo)
+                }
             val trimpByDate =
-                historicalSummaries.associate {
+                resolvedHistoricalSummaries.associate {
                     it.date to (LoadSourceSelector.selectTrimp(it, prefs.strainLoadSourceMode) ?: 0f)
                 }
 

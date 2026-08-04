@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -35,13 +34,14 @@ import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.domain.model.bodyFatZoneBands
+import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -72,15 +72,7 @@ fun BodyFatDetailScreen(
             key = uiState.selectedRange,
         )
 
-    val bodyFatBands =
-        remember(uiState.age, uiState.gender) {
-            val genderEnum = Gender.entries.firstOrNull { it.name == uiState.gender }
-            if (genderEnum != null && genderEnum != Gender.OTHER && genderEnum != Gender.PREFER_NOT_TO_SAY) {
-                bodyFatZoneBands(uiState.age, genderEnum)
-            } else {
-                null
-            }
-        }
+    val bodyFatBands = uiState.chartZoneBands
 
     Scaffold(
         modifier = modifier,
@@ -122,16 +114,16 @@ fun BodyFatDetailScreen(
                                 vertical = MaterialTheme.spacing.pageSectionGapSmall,
                             ),
                 )
-            } else if (uiState.optimalRangeMax > 0f) {
+            } else if (uiState.referenceAxisMaximum > 0f) {
                 val genderStringRes =
-                    when (Gender.entries.find { it.name == uiState.gender }) {
+                    when (uiState.gender) {
                         Gender.MALE -> CoreUiR.string.gender_male
                         Gender.FEMALE -> CoreUiR.string.gender_female
                         Gender.OTHER -> CoreUiR.string.gender_other
                         Gender.PREFER_NOT_TO_SAY -> CoreUiR.string.gender_prefer_not_to_say
-                        else -> CoreUiR.string.gender_other
+                        null -> R.string.body_fat_reference_group_unset
                     }
-                M3ScoreGaugeCard(
+                UniversalVitalsMetricCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -140,19 +132,20 @@ fun BodyFatDetailScreen(
                                 vertical = MaterialTheme.spacing.pageSectionGapSmall,
                             ),
                     title = stringResource(R.string.label_body_fat),
-                    score = uiState.latestBodyFat,
-                    displayText = uiState.bodyFatDisplay ?: "—",
+                    rawValue = uiState.latestBodyFat,
+                    valueText = uiState.bodyFatDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = stringResource(CoreUiR.string.unit_percent),
-                    maxScore = uiState.optimalRangeMax * 2f,
-                    status = uiState.bodyFatStatus,
-                    deltaText = uiState.deltaBodyFatDisplay.resolveOrNull(),
-                    tooltipDescription =
+                    maxValue = uiState.referenceAxisMaximum * 2f,
+                    status = uiState.bodyFatStatus ?: MetricStatus.CALIBRATING,
+                    secondaryText = uiState.deltaBodyFatDisplay.resolveOrNull(),
+                    tooltip =
                         stringResource(
                             R.string.tooltip_body_fat_current,
                             uiState.bodyFatDisplay ?: "—",
-                            uiState.optimalRangeDisplay ?: "—",
+                            MetricFormatter.formatBodyFatNumericOnly(uiState.referenceAxisMinimum),
+                            MetricFormatter.formatBodyFatNumericOnly(uiState.referenceAxisMaximum),
+                            MetricFormatter.formatBodyFatNumericOnly(uiState.referenceMidpoint),
                             stringResource(genderStringRes),
-                            uiState.age,
                         ),
                 )
             }

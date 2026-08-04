@@ -148,6 +148,48 @@
         prior behaviour automatically: the first time the app runs after upgrade, the RAS source
         is set to Workout only as a one-time default if you already have workout history — you can
         change it in Settings at any time.</string>
+    <string name="about_header_bmi_body_fat">## BMI and Body Fat</string>
+    <string name="about_bmi_intro">**BMI (Body Mass Index)** classifies your weight relative to
+        height using WHO-aligned bands:</string>
+    <string name="about_bmi_bullet_underweight">**Underweight** — BMI below 18.5</string>
+    <string name="about_bmi_bullet_healthy">**Healthy weight** — 18.5 to 24.9</string>
+    <string name="about_bmi_bullet_overweight">**Overweight** — 25 to 29.9</string>
+    <string name="about_bmi_bullet_obesity">**Obesity** — 30 and above</string>
+    <string name="about_bmi_reference_gauge">The Weight card’s BMI reference gauge uses visual anchors of 15, 21.7, and 35 so its midpoint is shown at 21.7. These anchors position the gauge only; they do not change the BMI status bands above.</string>
+    <string name="about_body_fat_intro">**Body Fat Percentage** uses continuous,
+        gender-specific bands when your profile records a biological sex:</string>
+    <string name="about_body_fat_bullet_male" formatted="false">**Male** — Below essential &lt;2%, Essential
+        2–5.9%, Athletic 6–13.9%, Fitness 14–17.9%, Acceptable 18–24.9%, Obese 25%+</string>
+    <string name="about_body_fat_bullet_female" formatted="false">**Female** — Below essential &lt;10%, Essential
+        10–13.9%, Athletic 14–20.9%, Fitness 21–24.9%, Acceptable 25–31.9%, Obese 32%+</string>
+    <string name="about_body_fat_fixed_group" formatted="false">If gender is set to **Other**, **Prefer not to
+        say**, or is unset, we show a fixed 10–30% reference band centered on 20% instead of a
+        gendered scale — values inside the band are Optimal, at or below 10% is Neutral, and
+        above 30% is Poor.</string>
+    <string name="about_body_fat_midpoint_intro">The Body Fat card also shows a **reference
+        midpoint** — a target value for your physiology profile, used only to position the
+        marker on the gauge, not to change your status:</string>
+    <string name="about_body_fat_midpoint_male" formatted="false">**Male** — Athlete 9.5%, Active 15.5%, Sedentary
+        19.5%</string>
+    <string name="about_body_fat_midpoint_female" formatted="false">**Female** — Athlete 17%, Active 22.5%,
+        Sedentary 26.5%</string>
+    <string name="about_body_fat_midpoint_fixed" formatted="false">**Other / Prefer not to say / unset** — fixed at
+        20%, independent of profile</string>
+    <string name="about_bmi_body_fat_status_meaning">**Reading the status.** Optimal (green) and
+        Neutral (informational) describe healthy or expected ranges; Warning flags dangerously
+        low essential-fat levels, or a BMI that is either underweight or overweight — the same
+        status covers both directions, so check the category label (not just the color) to see
+        which one applies; Poor flags the obesity range for BMI or body fat. The status colors on
+        Weight and Body Fat trend charts use these same canonical bands. Visual reference anchors
+        and profile markers never redefine a reading’s status.</string>
+    <string name="about_header_blood_pressure">## Blood Pressure</string>
+    <string name="about_blood_pressure_intro">The dashboard classifies each blood-pressure reading with an inclusive, component-wise ladder:</string>
+    <string name="about_blood_pressure_bullet_optimal">**Optimal** — systolic ≤120 and diastolic ≤80 mmHg</string>
+    <string name="about_blood_pressure_bullet_neutral">**Neutral** — otherwise, systolic ≤129 and diastolic ≤89 mmHg</string>
+    <string name="about_blood_pressure_bullet_warning">**Warning** — otherwise, systolic ≤139 and diastolic ≤99 mmHg</string>
+    <string name="about_blood_pressure_bullet_poor">**Poor** — all other readings</string>
+    <string name="about_blood_pressure_example">For example, 121/80, 120/81, and 129/89 are Neutral, while 130/90 is Warning. This is a dashboard status, not a diagnosis.</string>
+    <string name="about_blood_pressure_chart_reference">Blood-pressure trend charts obtain their component reference bands from this same ladder.</string>
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
     <string name="about_bullet_sleep_sessions">**Sleep sessions** (with stages if your device

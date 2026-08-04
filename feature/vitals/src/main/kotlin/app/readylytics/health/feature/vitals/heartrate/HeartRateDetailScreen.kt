@@ -40,6 +40,8 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.MetricCardSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.StatusPill
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.vitals.R
 import java.time.ZoneId
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -132,7 +134,12 @@ fun HeartRateDetailScreen(
                 ) {
                     HrStatCard(stringResource(CoreUiR.string.label_min), "${uiState.minBpm} bpm", Modifier.weight(1f))
                     HrStatCard(stringResource(CoreUiR.string.label_max), "${uiState.maxBpm} bpm", Modifier.weight(1f))
-                    HrStatCard(stringResource(CoreUiR.string.label_avg), "${uiState.avgBpm} bpm", Modifier.weight(1f))
+                    HrStatCard(
+                        label = stringResource(CoreUiR.string.label_avg),
+                        value = "${uiState.avgBpm} bpm",
+                        modifier = Modifier.weight(1f),
+                        status = uiState.averageStatus,
+                    )
                 }
             }
 
@@ -266,6 +273,7 @@ private fun HrStatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    status: MetricStatus? = null,
 ) {
     Card(
         modifier = modifier,
@@ -286,9 +294,25 @@ private fun HrStatCard(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+            status?.let {
+                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+                StatusPill(
+                    label = stringResource(metricStatusLabelRes(it)),
+                    status = it,
+                )
+            }
         }
     }
 }
+
+internal fun metricStatusLabelRes(status: MetricStatus): Int =
+    when (status) {
+        MetricStatus.OPTIMAL -> CoreUiR.string.metric_status_optimal
+        MetricStatus.NEUTRAL -> CoreUiR.string.metric_status_neutral
+        MetricStatus.WARNING -> CoreUiR.string.metric_status_warning
+        MetricStatus.POOR -> CoreUiR.string.metric_status_poor
+        MetricStatus.NO_DATA, MetricStatus.CALIBRATING -> CoreUiR.string.metric_status_calibrating
+    }
 
 @Composable
 private fun ZoneRow(

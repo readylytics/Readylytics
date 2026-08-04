@@ -30,8 +30,7 @@ import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import app.readylytics.health.core.ui.components.rememberZoneBandColors
-import app.readylytics.health.domain.model.diastolicZoneBands
-import app.readylytics.health.domain.model.systolicZoneBands
+import app.readylytics.health.domain.service.HealthMetricsService
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -142,22 +141,27 @@ fun SingleBloodPressureChart(
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val lineColor = if (isDiastolic) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primary
-    val bands =
-        if (isDiastolic) {
-            diastolicZoneBands()
-        } else {
-            app.readylytics.health.domain.model
-                .systolicZoneBands()
+    val healthMetricsService = remember { HealthMetricsService() }
+    val zoneBands =
+        remember(isDiastolic) {
+            if (isDiastolic) {
+                healthMetricsService.diastolicReferenceBands()
+            } else {
+                healthMetricsService.systolicReferenceBands()
+            }
         }
     val colors =
         rememberZoneBandColors(
-            bands = bands,
+            zoneBands = zoneBands,
             extendedColors = extendedColors,
             primaryContainer = primaryContainer,
             errorContainer = errorContainer,
             optimalAlpha = 0.45f,
         )
-    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
+    val zoneBandDecoration =
+        remember(zoneBands, colors, minY, maxY) {
+            ZoneBandDecoration(zoneBands, colors, minY, maxY)
+        }
 
     val modelProducer = remember { CartesianChartModelProducer() }
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)

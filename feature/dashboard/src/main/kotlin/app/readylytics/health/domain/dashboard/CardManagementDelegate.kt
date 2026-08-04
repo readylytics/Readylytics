@@ -45,6 +45,11 @@ sealed interface CardManagementEvent {
         val currentConfigs: List<CardConfiguration>,
         val newOrder: List<CardConfiguration>,
     ) : CardManagementEvent
+
+    data class DisplayModeChanged(
+        val cardId: CardId,
+        val mode: DashboardCardDisplayMode,
+    ) : CardManagementEvent
 }
 
 /**
@@ -126,6 +131,18 @@ class CardManagementDelegate(
                 val base = _pendingConfigs.value ?: event.currentConfigs
                 _pendingConfigs.value = reorderCards(base, event.newOrder)
             }
+            is CardManagementEvent.DisplayModeChanged -> {
+                val base = _pendingConfigs.value ?: return
+                require(base.any { it.cardId == event.cardId })
+                _pendingConfigs.value =
+                    base.map { configuration ->
+                        if (configuration.cardId == event.cardId) {
+                            configuration.copy(requestedDisplayMode = event.mode)
+                        } else {
+                            configuration
+                        }
+                    }
+            }
         }
     }
 
@@ -137,14 +154,6 @@ class CardManagementDelegate(
     fun saveChanges() = onEvent(CardManagementEvent.SaveChanges)
 
     fun cancelChanges() = onEvent(CardManagementEvent.CancelChanges)
-
-    fun toggleCardManagement() {
-        if (_isManagingCards.value) {
-            onEvent(CardManagementEvent.CancelChanges)
-        } else {
-            _isManagingCards.value = true
-        }
-    }
 
     fun onToggleCardVisibility(
         currentConfigs: List<CardConfiguration>,

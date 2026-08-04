@@ -227,4 +227,33 @@ class LoadSourceSelectorTest {
             )
         assertFalse(LoadSourceSelector.needsRecalc(summary, workoutOnlyPrefs))
     }
+
+    // --- selectEarliestDataDate ---
+
+    @Test
+    fun `selectEarliestDataDate returns earliest summary date with a computed everyday-HR TRIMP`() {
+        val summaries =
+            listOf(
+                DailySummary(date = LocalDate.of(2026, 6, 10), trimpEverydayHr = 20f),
+                DailySummary(date = LocalDate.of(2026, 6, 1), trimpEverydayHr = 15f),
+            )
+        assertEquals(LocalDate.of(2026, 6, 1), LoadSourceSelector.selectEarliestDataDate(summaries))
+    }
+
+    @Test
+    fun `selectEarliestDataDate returns null with no summaries`() {
+        assertEquals(null, LoadSourceSelector.selectEarliestDataDate(emptyList()))
+    }
+
+    @Test
+    fun `selectEarliestDataDate skips rows whose everyday-HR TRIMP has not been backfilled`() {
+        // The older row exists but its EVERYDAY_HEART_RATE variant column is still null (see
+        // needsRecalc) -- it is not usable data yet and must not count towards tenure.
+        val summaries =
+            listOf(
+                DailySummary(date = LocalDate.of(2026, 6, 1), trimpEverydayHr = null),
+                DailySummary(date = LocalDate.of(2026, 6, 10), trimpEverydayHr = 20f),
+            )
+        assertEquals(LocalDate.of(2026, 6, 10), LoadSourceSelector.selectEarliestDataDate(summaries))
+    }
 }

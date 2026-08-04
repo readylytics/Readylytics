@@ -206,6 +206,79 @@ _Implemented in: `EverydayHeartRateLoadCalculator.kt`, `LoadSourceSelector.kt`, 
 
 ---
 
+## BMI and Body Fat
+
+**BMI (Body Mass Index)** classifies your weight relative to height using WHO-aligned bands:
+
+- **Underweight** — BMI below 18.5
+- **Healthy weight** — 18.5 to 24.9
+- **Overweight** — 25 to 29.9
+- **Obesity** — 30 and above
+
+The Weight card’s BMI reference gauge uses visual anchors of 15, 21.7, and 35 so its midpoint is shown at 21.7. These anchors position the gauge only; they do not change the BMI status bands above.
+
+**Body Fat Percentage** uses continuous, gender-specific bands when your profile records a
+biological sex:
+
+- **Male** — Below essential <2%, Essential 2–5.9%, Athletic 6–13.9%, Fitness 14–17.9%,
+  Acceptable 18–24.9%, Obese 25%+
+- **Female** — Below essential <10%, Essential 10–13.9%, Athletic 14–20.9%, Fitness
+  21–24.9%, Acceptable 25–31.9%, Obese 32%+
+
+If gender is set to **Other**, **Prefer not to say**, or is unset, we show a fixed
+10–30% reference band centered on 20% instead of a gendered scale — values inside the
+band are Optimal, at or below 10% is Neutral, and above 30% is Poor.
+
+The Body Fat card also shows a **reference midpoint** — a target value for your
+physiology profile, used only to position the marker on the gauge, not to change your
+status:
+
+- **Male** — Athlete 9.5%, Active 15.5%, Sedentary 19.5%
+- **Female** — Athlete 17%, Active 22.5%, Sedentary 26.5%
+- **Other / Prefer not to say / unset** — fixed at 20%, independent of profile
+
+**Reading the status.** Optimal (green) and Neutral (informational) describe healthy or
+expected ranges; Warning flags dangerously low essential-fat levels, or a BMI that is either
+underweight or overweight — the same status covers both directions, so check the category
+label (not just the color) to see which one applies; Poor flags the obesity range for BMI or
+body fat.
+
+The status colors on Weight and Body Fat trend charts use these same canonical bands. Visual
+reference anchors and profile markers never redefine a reading’s status.
+
+_Implemented in: `BodyCompositionAssessment.kt`, `BmiService.kt`, `HealthMetricsService.kt`,
+`HealthMetricsCalculator.kt`_
+
+---
+
+## Blood Pressure
+
+The dashboard classifies each blood-pressure reading with an inclusive, component-wise ladder:
+
+- **Optimal** — systolic ≤120 and diastolic ≤80 mmHg
+- **Neutral** — otherwise, systolic ≤129 and diastolic ≤89 mmHg
+- **Warning** — otherwise, systolic ≤139 and diastolic ≤99 mmHg
+- **Poor** — all other readings
+
+For example, 121/80, 120/81, and 129/89 are Neutral, while 130/90 is Warning. This is a
+dashboard status, not a diagnosis.
+
+Blood-pressure trend charts obtain their component reference bands from this same ladder.
+
+_Implemented in: `HealthMetricsService.kt`_
+
+---
+
+## Overnight Oxygen Saturation
+
+The dashboard card uses your overnight average oxygen saturation. Overnight oxygen
+saturation: below 90% Poor; 90–94% Warning; 95–97% Neutral; 98% and above Optimal.
+
+This means an overnight average of 96% is Neutral. The status describes the displayed
+overnight average rather than a scoring-engine calculation.
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:

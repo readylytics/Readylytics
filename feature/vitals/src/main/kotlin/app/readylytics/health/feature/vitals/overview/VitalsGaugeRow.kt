@@ -13,11 +13,11 @@ import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.hrvStatus
 import app.readylytics.health.domain.model.rhrStatus
+import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -111,16 +111,16 @@ internal fun VitalsGaugeRow(
                         }
                     }
 
-                M3ScoreGaugeCard(
+                UniversalVitalsMetricCard(
                     modifier = Modifier.weight(1f),
                     title = stringResource(CoreUiR.string.label_rhr),
-                    score = rhrFill,
-                    displayText = currentRhr?.toString() ?: "—",
+                    rawValue = rhrFill,
+                    valueText = currentRhr?.toString() ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = bpmUnit,
-                    maxScore = 1f,
+                    maxValue = 1f,
                     status = rhrStatus,
-                    deltaText = rhrDelta,
-                    tooltipDescription = rhrTooltip,
+                    secondaryText = rhrDelta,
+                    tooltip = rhrTooltip,
                     onClick = onNavigateToRhr,
                 )
 
@@ -146,16 +146,16 @@ internal fun VitalsGaugeRow(
                         }
                     }
 
-                M3ScoreGaugeCard(
+                UniversalVitalsMetricCard(
                     modifier = Modifier.weight(1f),
                     title = stringResource(CoreUiR.string.label_hrv),
-                    score = currentHrv?.toFloat(),
-                    displayText = currentHrv?.toString() ?: "—",
+                    rawValue = currentHrv?.toFloat(),
+                    valueText = currentHrv?.toString() ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = msUnit,
-                    maxScore = hrvMax,
+                    maxValue = hrvMax,
                     status = hrvStatus,
-                    deltaText = hrvDelta,
-                    tooltipDescription = hrvTooltip,
+                    secondaryText = hrvDelta,
+                    tooltip = hrvTooltip,
                     onClick = onNavigateToHrv,
                 )
             }

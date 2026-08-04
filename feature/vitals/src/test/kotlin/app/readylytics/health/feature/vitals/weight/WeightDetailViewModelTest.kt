@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.BmiCategory
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.WeightRecord
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -184,7 +185,8 @@ class WeightDetailViewModelTest {
             assertEquals(2_000L, newest.timestampMs)
             assertEquals(79.6f, newest.weightDisplay, 0.01f)
             assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
-            assertEquals(BmiStatus.Neutral, newest.bmiStatus)
+            assertEquals(BmiStatus.Warning, newest.bmiStatus)
+            assertEquals(BmiCategory.OVERWEIGHT, newest.bmiCategory)
 
             val oldest = state.historyItems[1]
             assertEquals(1_000L, oldest.timestampMs)
@@ -223,5 +225,33 @@ class WeightDetailViewModelTest {
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             assertEquals(null, state.historyItems[0].bmiStatus)
+            assertEquals(null, state.historyItems[0].bmiCategory)
+        }
+
+    @Test
+    fun `historyItems use canonical BMI status boundaries`() =
+        runTest {
+            val records =
+                listOf(
+                    WeightRecordEntity("underweight", 1_000L, 18.4f),
+                    WeightRecordEntity("healthy", 2_000L, 18.5f),
+                    WeightRecordEntity("overweight", 3_000L, 25f),
+                    WeightRecordEntity("obesity", 4_000L, 30f),
+                )
+            coEvery { weightRepository.getByDateRange(any(), any()) } returns records
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = 100f))
+            viewModel = createViewModel()
+
+            val statuses =
+                viewModel.uiState
+                    .first { it.historyItems.size == records.size }
+                    .historyItems
+                    .associate { it.weightDisplay to it.bmiStatus }
+
+            assertEquals(BmiStatus.Warning, statuses[18.4f])
+            assertEquals(BmiStatus.Optimal, statuses[18.5f])
+            assertEquals(BmiStatus.Warning, statuses[25f])
+            assertEquals(BmiStatus.Poor, statuses[30f])
         }
 }

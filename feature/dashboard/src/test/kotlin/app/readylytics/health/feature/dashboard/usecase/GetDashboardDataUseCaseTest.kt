@@ -1,5 +1,4 @@
 package app.readylytics.health.feature.dashboard.usecase
-
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
@@ -19,6 +18,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import app.readylytics.health.core.ui.R as CoreUiR
 
 class GetDashboardDataUseCaseTest {
     private lateinit var getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase
@@ -29,10 +29,10 @@ class GetDashboardDataUseCaseTest {
     fun setUp() {
         getWorkoutMetricsUseCase = mockk(relaxed = true)
         resourceProvider = mockk(relaxed = true)
+        every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
         useCase =
             GetDashboardDataUseCase(
-                resourceProvider = resourceProvider,
-                getWorkoutMetricsUseCase = getWorkoutMetricsUseCase,
+                factory = DashboardMetricPresentationFactory(resourceProvider, getWorkoutMetricsUseCase),
             )
     }
 
@@ -64,6 +64,32 @@ class GetDashboardDataUseCaseTest {
                 rasSummaries = emptyList(),
             )
         assert(result.isSuccess) { "Should succeed with valid inputs" }
+    }
+
+    @Test
+    fun `invoke forwards a positive strain increase to the Strain presentation`() {
+        val prefs = mockk<UserPreferences>(relaxed = true)
+        every { resourceProvider.getString(CoreUiR.string.delta_up) } returns "↑"
+        every { resourceProvider.getString(CoreUiR.string.delta_up_format, "↑", "0.23") } returns "↑ 0.23"
+
+        val result =
+            useCase(
+                summary = null,
+                prefs = prefs,
+                date = LocalDate.of(2026, 7, 30),
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+                todayStrainIncrease = 0.23f,
+            )
+
+        assertEquals(
+            "↑ 0.23",
+            result
+                .getOrNull()
+                ?.cardDataMap
+                ?.get(CardId.STRAIN_RATIO)
+                ?.secondaryText,
+        )
     }
 
     @Test
@@ -155,9 +181,9 @@ class GetDashboardDataUseCaseTest {
             )
 
         val cards = result.getOrNull()?.cardDataMap.orEmpty()
-        assertEquals("80", cards[CardId.SLEEP_SCORE]?.value)
-        assertEquals("73", cards[CardId.READINESS]?.value)
-        assertEquals("0.37", cards[CardId.STRAIN_RATIO]?.value)
+        assertEquals("80", cards[CardId.SLEEP_SCORE]?.valueText)
+        assertEquals("73", cards[CardId.READINESS]?.valueText)
+        assertEquals("0.37", cards[CardId.STRAIN_RATIO]?.valueText)
     }
 
     @Test
@@ -177,12 +203,12 @@ class GetDashboardDataUseCaseTest {
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
-        assertEquals("99", card?.value)
+        assertEquals("99%", card?.valueText)
         assertEquals(MetricStatus.OPTIMAL, card?.status)
     }
 
     @Test
-    fun invoke_withNormalSpo2_returnsNormalSpo2Card() {
+    fun invoke_withNeutralSpo2_returnsNeutralSpo2Card() {
         val summary =
             mockk<DailySummary>(relaxed = true) {
                 every { avgSleepingSpo2 } returns 95.2f
@@ -198,7 +224,7 @@ class GetDashboardDataUseCaseTest {
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
-        assertEquals("95", card?.value)
+        assertEquals("95%", card?.valueText)
         assertEquals(MetricStatus.NEUTRAL, card?.status)
     }
 
@@ -219,7 +245,7 @@ class GetDashboardDataUseCaseTest {
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
-        assertEquals("92", card?.value)
+        assertEquals("92%", card?.valueText)
         assertEquals(MetricStatus.WARNING, card?.status)
     }
 
@@ -240,7 +266,7 @@ class GetDashboardDataUseCaseTest {
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
-        assertEquals("88", card?.value)
+        assertEquals("88%", card?.valueText)
         assertEquals(MetricStatus.POOR, card?.status)
     }
 
@@ -261,7 +287,7 @@ class GetDashboardDataUseCaseTest {
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
-        assertEquals("—", card?.value)
+        assertEquals("—", card?.valueText)
         assertEquals(MetricStatus.CALIBRATING, card?.status)
     }
 }

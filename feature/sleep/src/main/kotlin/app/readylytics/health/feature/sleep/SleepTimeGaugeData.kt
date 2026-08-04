@@ -14,6 +14,8 @@ private const val SLEEP_TIME_GOAL_FILL_RATIO = 0.5f
 data class SleepTimeGaugeData(
     val progress: Float?,
     val displayText: String,
+    val gaugeValueText: String,
+    val gaugeUnitText: String,
     val status: MetricStatus,
     val deltaText: UiText? = null,
 )
@@ -51,9 +53,14 @@ internal fun buildSleepTimeGaugeData(
             null
         }
 
+    val fullText = formatSleepTimeGaugeDuration(actualMinutes)
+    val split = splitSleepDuration(actualMinutes)
+
     return SleepTimeGaugeData(
         progress = actualMinutes?.let { sleepTimeGaugeProgress(it, maxMinutes) },
-        displayText = formatSleepTimeGaugeDuration(actualMinutes),
+        displayText = fullText,
+        gaugeValueText = split.first,
+        gaugeUnitText = split.second,
         status =
             if (actualMinutes != null && goalMinutes > 0) {
                 summary?.sleepDurationStatus(goalMinutes) ?: MetricStatus.CALIBRATING
@@ -89,6 +96,14 @@ private fun formatSleepTimeGaugeDuration(minutes: Int?): String {
     } else {
         DateFormatUtils.formatSleepDuration(minutes)
     }
+}
+
+private fun splitSleepDuration(minutes: Int?): Pair<String, String> {
+    if (minutes == null) return DateFormatUtils.formatSleepDuration(null) to ""
+    if (minutes < 60) return "${minutes}m" to ""
+    val hours = minutes / 60
+    val mins = minutes % 60
+    return "${hours}h" to if (mins > 0) "${mins}m" else ""
 }
 
 private fun sleepGoalMinutes(goalSleepHours: Float): Int = (goalSleepHours * 60f).toInt().coerceAtLeast(0)

@@ -8,15 +8,6 @@ sealed class BmiStatus {
     object Warning : BmiStatus()
 
     object Poor : BmiStatus()
-
-    val displayName: String
-        get() =
-            when (this) {
-                Optimal -> "Normal"
-                Neutral -> "Overweight"
-                Warning -> "Obese Class I"
-                Poor -> "Obese Class II+"
-            }
 }
 
 fun BmiStatus.toMetricStatus(): MetricStatus =

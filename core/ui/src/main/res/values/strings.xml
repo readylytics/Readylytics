@@ -3,7 +3,7 @@
     <string name="heart_rate_title">Heart Rate</string>
     <string name="back">Back</string>
 
-    
+
     <string name="action_dismiss">Dismiss</string>
     <string name="accessibility_password_hide">Hide password</string>
     <string name="accessibility_password_show">Show password</string>
@@ -12,7 +12,7 @@
     <string name="gender_other">Other</string>
     <string name="gender_prefer_not_to_say">Prefer not to say</string>
 
-    
+
     <string name="label_gender">Gender</string>
     <string name="onboarding_dynamic_color_label">Dynamic color</string>
     <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android
@@ -27,10 +27,10 @@
     <string name="delta_down">↓</string>
     <string name="delta_no_change">—</string>
 
-    
+
     <string name="action_delete_drop_zone">Drop here to remove</string>
 
-    
+
     <string name="unit_metric_cm">cm</string>
     <string name="label_height">Height</string>
     <string name="label_feet">Feet</string>
@@ -44,7 +44,7 @@
     <string name="error_height_inches">Inches: 0–11</string>
     <string name="error_height_out_of_range">Height out of range (120–250 cm)</string>
 
-    
+
     <string name="label_baseline">Baseline</string>
     <string name="accessibility_drag_to_reorder">Drag to reorder</string>
     <string name="unit_system_label">Unit system</string>
@@ -63,7 +63,7 @@
         80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency
         Window: ±%1$d min grace period before score drops.</string>
     <string name="spo2_calibrating">Calibrating</string>
-    <string name="label_circadian_consistency">Circadian consistency</string>
+    <string name="label_circadian_consistency">Circadian</string>
     <string name="label_circadian_median">Median: %1$s→%2$s</string>
     <string name="chart_accessibility_no_selection">No point selected</string>
     <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
@@ -118,7 +118,7 @@
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="sleep_duration_minutes_only">%1$dm</string>
     <string name="sleep_duration_hours_only">%1$dh</string>
-    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_title_sleep_efficiency">Sleep Eff.</string>
     <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
     <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
     <string name="insight_rest_day_perfect_sleep">Your night\'s rest was perfect!</string>
@@ -137,11 +137,11 @@
     <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
     <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
     <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
-    <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
-    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
-    <string name="card_bp_status_neutral">Elevated: 120–129/&lt;80 mmHg</string>
-    <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
-    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
+    <string name="card_tooltip_bp_latest">Latest blood pressure reading.</string>
+    <string name="card_bp_status_optimal">Optimal: \u2264120/80 mmHg</string>
+    <string name="card_bp_status_neutral">Neutral: otherwise \u2264129/89 mmHg</string>
+    <string name="card_bp_status_warning">Warning: otherwise \u2264139/99 mmHg</string>
+    <string name="card_bp_status_poor">Poor: all other readings</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>
     <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>
@@ -184,4 +184,28 @@
     <string name="tab_vitals">Vitals</string>
     <string name="card_title_insights">Insights</string>
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
+    <!-- Dashboard Typed Cards -->
+    <string name="metric_status_optimal">Optimal</string>
+    <string name="metric_status_neutral">Neutral</string>
+    <string name="metric_status_warning">Warning</string>
+    <string name="metric_status_poor">Poor</string>
+    <string name="metric_status_calibrating">Calibrating</string>
+    <string name="metric_value_unavailable">—</string>
+    <string name="score_maximum">100</string>
+    <string name="metric_unavailable_missing_value">No data available</string>
+    <string name="metric_unavailable_missing_target">Target not set</string>
+    <string name="metric_unavailable_baseline_not_ready">Baseline not ready</string>
+    <string name="metric_unavailable_missing_bmi">Missing height for BMI</string>
+    <string name="bmi_secondary_text">BMI: %1$s</string>
+
+
+    <!-- Extracted from Dashboard for UniversalMetricCard -->
+    <string name="menu_content_description_visualization_style">Change visualization style</string>
+    <string name="mode_gauge">Gauge</string>
+    <string name="mode_bar">Bar</string>
+    <string name="mode_value">Value</string>
+    <string name="menu_item_description_mode">Visualization style: %1$s</string>
+    <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
+    <string name="semantics_edit_mode_separator">, %1$s</string>
+
 </resources>

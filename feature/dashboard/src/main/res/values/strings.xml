@@ -6,25 +6,42 @@
     <string name="action_reset_to_defaults">Reset to defaults</string>
 
     <string name="card_title_acute_chronic_ratio">Acute/Chronic Ratio</string>
-    <string name="card_title_blood_pressure">Blood Pressure</string>
+    <string name="card_title_blood_pressure">BP</string>
     <string name="card_title_body_fat">Body Fat</string>
-    <string name="card_title_circadian_consistency">Circadian consistency</string>
+    <string name="card_title_circadian_consistency">Circadian</string>
     <string name="card_title_heart_rate">Heart Rate</string>
     <string name="card_title_hrv">HRV</string>
-    <string name="card_title_oxygen_saturation">Oxygen saturation</string>
+    <string name="card_title_oxygen_saturation">SpO2</string>
     <string name="card_title_ras">RAS</string>
-    <string name="card_title_ras_daily">RAS daily</string>
-    
+    <string name="card_title_ras_daily">RAS</string>
+
     <string name="card_title_recovery_index">Recovery Index</string>
-    <string name="card_title_resting_hr">Resting heart rate</string>
+    <string name="card_title_resting_hr">Resting HR</string>
     <string name="card_title_sleep_architecture">Sleep architecture</string>
-    <string name="card_title_sleep_duration">Sleep duration</string>
-    
+    <string name="card_title_sleep_duration">Sleep Time</string>
+
     <string name="card_title_sleep_rhr">Sleep RHR</string>
     <string name="card_title_sleep_score">Sleep score</string>
     <string name="card_title_steps">Steps</string>
-    
+
     <string name="card_title_weight">Weight</string>
+    <string name="personal_baseline_within_range_description">within your baseline range</string>
+    <string name="personal_baseline_above_range_description">above your baseline range</string>
+    <string name="personal_baseline_below_range_description">below your baseline range</string>
+    <string name="goal_above_target_description">above target</string>
+
+    <!-- Card accessibilityDescription format templates (Task 10 production wiring). -->
+    <string name="semantics_score_format">%1$s: %2$s of %3$s, %4$s</string>
+    <string name="semantics_goal_format">%1$s: %2$s, target %3$s, %4$s</string>
+    <string name="semantics_goal_status_format">%1$s: %2$s, target %3$s, %4$s</string>
+    <string name="semantics_goal_above_target_format">%1$s: %2$s, above target, %3$s</string>
+    <string name="semantics_goal_above_target_status_format">%1$s: %2$s, above target, %3$s</string>
+    <string name="semantics_personal_baseline_format">%1$s: %2$s, %3$s, %4$s</string>
+    <string name="semantics_value_note_format">%1$s: %2$s, %3$s</string>
+    <string name="semantics_value_note_status_format">%1$s: %2$s, %3$s, %4$s</string>
+    <string name="semantics_weight_bmi_format">%1$s: %2$s, %3$s, %4$s</string>
+    <string name="semantics_unavailable_format">%1$s: %2$s</string>
+    <string name="sleep_session_time_range_format">%1$s → %2$s</string>
 
     <string name="manage_cards">Manage Cards</string>
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
@@ -38,5 +55,6 @@ Baseline: %1$d bpm %2$s (%3$d bpm)</string>
 
     <string name="unit_imperial_lbs">lbs</string>
     <string name="unit_metric_kg">kg</string>
+
 
 </resources>

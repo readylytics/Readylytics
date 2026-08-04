@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 
@@ -92,6 +93,8 @@ object SettingsDefaults {
     const val BACKGROUND_SYNC_ENABLED = false
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
     const val DEVICE_CHANGE_NOTICE_DISMISSED = false
+    const val BULK_DISPLAY_MODE_NOTICE_DISMISSED = false
+    val LAST_GLOBAL_DISPLAY_MODE: DashboardCardDisplayMode? = null
 
     const val IS_CUSTOM_PALETTE_ENABLED = false
     const val CUSTOM_SECONDARY_COLOR = 0xFFCCC2DCL
