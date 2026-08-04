@@ -63,7 +63,7 @@
         80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency
         Window: ±%1$d min grace period before score drops.</string>
     <string name="spo2_calibrating">Calibrating</string>
-    <string name="label_circadian_consistency">Circadian consistency</string>
+    <string name="label_circadian_consistency">Circadian</string>
     <string name="label_circadian_median">Median: %1$s→%2$s</string>
     <string name="chart_accessibility_no_selection">No point selected</string>
     <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
