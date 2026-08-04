@@ -115,7 +115,7 @@ private fun mergeConsecutiveStages(stages: List<SleepStageData>): List<SleepStag
     return merged
 }
 
-private fun getLabelTimestamps(
+internal fun getLabelTimestamps(
     startMs: Long,
     endMs: Long,
 ): List<Long> {
