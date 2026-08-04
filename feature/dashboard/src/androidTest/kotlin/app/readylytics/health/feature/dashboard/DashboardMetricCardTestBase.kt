@@ -9,7 +9,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplay
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Rule
 import org.junit.runner.RunWith
@@ -33,8 +32,6 @@ abstract class DashboardMetricCardTestBase {
 
     protected val testSpec =
         UniversalMetricCardSpec(
-            cardId = CardId.SLEEP_SCORE,
-            legacyDefaultMode = UniversalCardDisplayMode.GAUGE,
             supportedModes =
                 listOf(
                     UniversalCardDisplayMode.GAUGE,

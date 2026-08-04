@@ -375,11 +375,20 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
         }
 
         composeRule
-            .onNodeWithContentDescription(string(R.string.menu_content_description_visualization_style))
-            .performClick()
+            .onNodeWithContentDescription(
+                string(app.readylytics.health.core.ui.R.string.menu_content_description_visualization_style),
+            ).performClick()
 
-        val selectedDescription = string(R.string.menu_item_description_mode_selected, string(R.string.mode_bar))
-        val unselectedDescription = string(R.string.menu_item_description_mode, string(R.string.mode_gauge))
+        val selectedDescription =
+            string(
+                app.readylytics.health.core.ui.R.string.menu_item_description_mode_selected,
+                string(app.readylytics.health.core.ui.R.string.mode_bar),
+            )
+        val unselectedDescription =
+            string(
+                app.readylytics.health.core.ui.R.string.menu_item_description_mode,
+                string(app.readylytics.health.core.ui.R.string.mode_gauge),
+            )
 
         composeRule.onNodeWithContentDescription(selectedDescription).assertIsDisplayed().assertIsSelected()
         composeRule.onNodeWithContentDescription(unselectedDescription).assertIsDisplayed()
@@ -403,8 +412,9 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
         // equivalents and are exact here since the selector's IconButton is a fixed 48.dp box
         // with no extra touch-target padding, so its layout bounds equal its touch bounds.
         composeRule
-            .onNodeWithContentDescription(string(R.string.menu_content_description_visualization_style))
-            .assertWidthIsAtLeast(48.dp)
+            .onNodeWithContentDescription(
+                string(app.readylytics.health.core.ui.R.string.menu_content_description_visualization_style),
+            ).assertWidthIsAtLeast(48.dp)
             .assertHeightIsAtLeast(48.dp)
     }
 }

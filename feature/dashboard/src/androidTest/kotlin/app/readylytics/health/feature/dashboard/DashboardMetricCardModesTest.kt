@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer

@@ -20,11 +20,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Assert.assertEquals
@@ -200,7 +200,7 @@ class DashboardScreenTest {
 
     private fun createConfigurableTestUiState(
         isManagingCards: Boolean,
-        hrvRequestedMode: UniversalCardDisplayMode? = null,
+        hrvRequestedMode: DashboardCardDisplayMode? = null,
     ): DashboardUiState {
         val hrvPresentation =
             UniversalMetricPresentation(
@@ -305,7 +305,7 @@ class DashboardScreenTest {
     @Test
     fun displayModeMenu_selectingHrvBar_invokesCallbackForHrvOnly() {
         var receivedCardId: CardId? = null
-        var receivedMode: UniversalCardDisplayMode? = null
+        var receivedMode: DashboardCardDisplayMode? = null
 
         composeRule.setContent {
             DashboardScreen(
@@ -334,7 +334,7 @@ class DashboardScreenTest {
         composeRule.onNodeWithText("Bar").performClick()
 
         assertEquals(CardId.HRV, receivedCardId)
-        assertEquals(UniversalCardDisplayMode.BAR, receivedMode)
+        assertEquals(DashboardCardDisplayMode.BAR, receivedMode)
     }
 
     @Test
@@ -405,7 +405,7 @@ class DashboardScreenTest {
             mutableStateOf(
                 createConfigurableTestUiState(
                     isManagingCards = true,
-                    hrvRequestedMode = UniversalCardDisplayMode.VALUE,
+                    hrvRequestedMode = DashboardCardDisplayMode.VALUE,
                 ),
             )
         composeRule.setContent {
@@ -437,7 +437,7 @@ class DashboardScreenTest {
                     cardConfigurations =
                         state.value.cardConfigurations.map {
                             if (it.cardId == CardId.HRV) {
-                                it.copy(requestedDisplayMode = UniversalCardDisplayMode.BAR)
+                                it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR)
                             } else {
                                 it
                             }
