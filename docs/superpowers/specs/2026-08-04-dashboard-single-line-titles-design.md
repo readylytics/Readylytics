@@ -11,13 +11,11 @@ The goal is to ensure that all dashboard metric cards display their titles on a 
 * The existing `overflow = TextOverflow.Ellipsis` property will remain in place to gracefully truncate any titles that are still unexpectedly long.
 
 ### 2. String Updates
-Several titles will be shortened to comfortably fit within the single-line constraint.
+Several titles will be shortened to comfortably fit within the single-line constraint. We will ensure these changes are applied globally across the app (including other tabs like the Sleep tab), updating all string resources that represent these titles.
 
-**In `feature/dashboard/src/main/res/values/strings.xml`:**
+**Target strings to update (in `feature/dashboard`, `feature/sleep`, `core/ui`, etc.):**
 * `card_title_circadian_consistency`: "Circadian consistency" → "Circadian"
 * `card_title_oxygen_saturation`: "Oxygen saturation" → "SpO2"
 * `card_title_resting_hr`: "Resting heart rate" → "Resting HR"
 * `card_title_sleep_duration`: "Sleep duration" → "Sleep Time"
-
-**In `core/ui/src/main/res/values/strings.xml`:**
 * `card_title_sleep_efficiency`: "Sleep Efficiency" → "Sleep Eff."
