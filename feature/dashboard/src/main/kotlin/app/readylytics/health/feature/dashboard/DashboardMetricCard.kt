@@ -151,10 +151,7 @@ private fun DashboardMetricCardContent(
             Text(
                 text = presentation.title,
                 style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        // Trim the platform's half-leading above/below the block, and disable
-                        // legacy font padding, so a two-line title's declared 24sp lineHeight
-                        // drives its layout height rather than per-typeface ascent/descent.
+                    MaterialTheme.typography.titleSmall.copy(
                         platformStyle = PlatformTextStyle(includeFontPadding = false),
                         lineHeightStyle =
                             LineHeightStyle(
@@ -163,13 +160,9 @@ private fun DashboardMetricCardContent(
                             ),
                     ),
                 color = contentColor,
-                // No fixed height: trimmed line-height plus minLines/maxLines = 2 already makes
-                // the intrinsic height exactly two lines, so the row never reflows between a
-                // one-line and a two-line title while still growing with the user's font scale.
                 modifier = Modifier.weight(1f),
-                // Shared across every mode so the title row allows a two-line title.
-                minLines = 2,
-                maxLines = 2,
+                minLines = 1,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
 
