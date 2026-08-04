@@ -118,7 +118,7 @@
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="sleep_duration_minutes_only">%1$dm</string>
     <string name="sleep_duration_hours_only">%1$dh</string>
-    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_title_sleep_efficiency">Sleep Eff.</string>
     <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
     <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
     <string name="insight_rest_day_perfect_sleep">Your night\'s rest was perfect!</string>
