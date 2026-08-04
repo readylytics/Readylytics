@@ -243,6 +243,7 @@ fun SleepHrChart(
                 list
             }
 
+        val bpmUnitLabel = stringResource(CoreUiR.string.unit_bpm)
         val chartSummary = stringResource(R.string.chart_accessibility_sleep_hr_summary)
         val selectedValueDescription =
             selectedSample?.let { sample ->
@@ -327,6 +328,12 @@ fun SleepHrChart(
                     )
                 }
             }
+
+            val bpmUnitMeasured = textMeasurer.measure(bpmUnitLabel, labelStyle)
+            drawText(
+                textLayoutResult = bpmUnitMeasured,
+                topLeft = Offset(0f, plotTop + 2.dp.toPx()),
+            )
 
             for (ts in labelTimestamps) {
                 val x = zoomedX(ts)
