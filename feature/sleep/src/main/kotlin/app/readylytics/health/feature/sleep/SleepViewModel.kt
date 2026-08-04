@@ -16,6 +16,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
@@ -50,6 +51,7 @@ data class SleepUiState(
     val latestMetrics: DailyMetrics? = null,
     val latestSession: SleepSessionData? = null,
     val stageTimeline: List<SleepStageData> = emptyList(),
+    val sleepHrSamples: List<HeartRateRecordData> = emptyList(),
     val selectedDate: LocalDate = LocalDate.now(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -172,6 +174,15 @@ class SleepViewModel
                             }
                         }
 
+                    val hrSamplesFlow =
+                        sessionFlow.flatMapLatest { session ->
+                            if (session == null) {
+                                flowOf(emptyList())
+                            } else {
+                                heartRateRepository.observeSleepHrTimelineForSession(session.id)
+                            }
+                        }
+
                     val metricsFlow = dailyMetricsRepository.observeByDate(date)
 
                     val trendSessionsFlow =
@@ -225,6 +236,7 @@ class SleepViewModel
                         trendSessionsFlow,
                         settingsRepo.userPreferences,
                         yesterdaySummaryFlow,
+                        hrSamplesFlow,
                     ) { array ->
                         val latestSummary = array[0] as DailySummary?
                         val latestSession = array[1] as SleepSessionData?
@@ -242,6 +254,9 @@ class SleepViewModel
                             >
                         val prefs = array[5] as UserPreferences
                         val yesterdaySummary = array[6] as DailySummary?
+
+                        @Suppress("UNCHECKED_CAST")
+                        val hrSamples = array[7] as List<HeartRateRecordData>
 
                         SleepUiState(
                             latestSummary = latestSummary,
@@ -262,6 +277,7 @@ class SleepViewModel
                                     goalSleepHours = prefs.goalSleepHours,
                                 ),
                             yesterdaySleepScoreRounded = yesterdaySummary?.sleepScore?.roundToInt(),
+                            sleepHrSamples = hrSamples,
                         )
                     }.distinctUntilChanged()
                         // isSyncing is merged in after the heavy pipeline instead of inside it
