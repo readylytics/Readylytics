@@ -136,21 +136,34 @@ fun ReorderableCardGrid(
 
     val draggedId = dragController.draggedCardId
 
-    val performDragEnd = {
-        val result = dragController.onDragEnd()
-        val draggedId = result.draggedId
-        if (draggedId != null) {
-            if (result.delete) {
-                onCardRemove(draggedId)
-            } else {
-                val updated =
-                    result.finalOrder
-                        .mapNotNull { id -> configByCardId[id] }
-                        .mapIndexed { index, config -> config.copy(position = index) }
-                onCardReorder(updated)
+    // Memoized against dragController's stable identity so this lambda's own identity stays
+    // stable across recompositions (reading the latest configByCardId/callbacks via
+    // rememberUpdatedState instead of closing over them directly). Passed into every rendered
+    // card's RenderCardItem call below; if it were a fresh closure each recomposition (a plain,
+    // non-remembered lambda), Compose could never skip any card slot when the grid recomposes
+    // for an unrelated reason (e.g. one sibling's mode change), leaking recomposition into every
+    // other card's body.
+    val latestConfigByCardId by rememberUpdatedState(configByCardId)
+    val latestOnCardRemove by rememberUpdatedState(onCardRemove)
+    val latestOnCardReorder by rememberUpdatedState(onCardReorder)
+    val performDragEnd =
+        remember(dragController) {
+            {
+                val result = dragController.onDragEnd()
+                val draggedId = result.draggedId
+                if (draggedId != null) {
+                    if (result.delete) {
+                        latestOnCardRemove(draggedId)
+                    } else {
+                        val updated =
+                            result.finalOrder
+                                .mapNotNull { id -> latestConfigByCardId[id] }
+                                .mapIndexed { index, config -> config.copy(position = index) }
+                        latestOnCardReorder(updated)
+                    }
+                }
             }
         }
-    }
 
     Column(
         modifier =

@@ -184,7 +184,7 @@ private fun UniversalMetricCardContent(
                         onModeSelected = onModeSelected,
                     )
                 }
-            } else if (!isEditing) {
+            } else if (!isEditing && presentation.tooltip.isNotEmpty()) {
                 Box(
                     modifier =
                         Modifier
