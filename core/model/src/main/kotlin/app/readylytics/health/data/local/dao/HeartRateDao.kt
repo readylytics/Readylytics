@@ -90,6 +90,16 @@ interface HeartRateDao {
     ): Int?
 
     @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "ORDER BY timestampMs ASC, sourceRecordId ASC",
+    )
+    fun _observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>>
+
+    fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>> =
+        _observeSleepHrTimelineForSession(sessionId).distinctUntilChanged()
+
+    @Query(
         "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
             "WHERE timestampMs >= :startTimeMs AND timestampMs <= :endTimeMs",
     )

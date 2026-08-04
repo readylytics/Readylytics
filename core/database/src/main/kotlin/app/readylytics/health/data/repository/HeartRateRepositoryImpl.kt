@@ -30,6 +30,9 @@ class HeartRateRepositoryImpl
             endTimeMs: Long,
         ): List<HeartRateRecordData> = heartRateDao.getByTimeRange(startTimeMs, endTimeMs).map { mapToDomain(it) }
 
+        override fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordData>> =
+            heartRateDao.observeSleepHrTimelineForSession(sessionId).map { list -> list.map { mapToDomain(it) } }
+
         override fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordData>> =
             hrvDao.observeSleepHrvSince(fromMs).map { list ->
                 list.map { mapToDomain(it) }

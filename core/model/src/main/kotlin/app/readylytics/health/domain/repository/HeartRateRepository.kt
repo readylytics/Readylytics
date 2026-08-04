@@ -32,6 +32,8 @@ interface HeartRateRepository {
         endTimeMs: Long,
     ): List<HeartRateRecordData>
 
+    fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordData>>
+
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordData>>
 
     fun observeByTimeRange(

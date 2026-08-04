@@ -11,6 +11,7 @@ import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -272,5 +273,51 @@ class QueryOptimizationTest {
             assert(avgHrs.size == 3)
             assert(hrvValues.size == 3)
             assert(elapsedTotal < 1000) { "Combined queries took ${elapsedTotal}ms, expected <1000ms" }
+        }
+
+    @Test
+    fun heartRateDao_observeSleepHrTimelineForSession_returnsOnlyThatSessionsSleepSamplesInOrder() =
+        runTest {
+            val baselineMs = Instant.now().minus(1, ChronoUnit.DAYS).toEpochMilli()
+            val sleepRecords =
+                listOf(
+                    HeartRateRecordEntity(
+                        id = "sleep_2",
+                        sessionId = "sleep_session",
+                        recordType = "SLEEP",
+                        timestampMs = baselineMs + 120_000L,
+                        beatsPerMinute = 58,
+                    ),
+                    HeartRateRecordEntity(
+                        id = "sleep_1",
+                        sessionId = "sleep_session",
+                        recordType = "SLEEP",
+                        timestampMs = baselineMs,
+                        beatsPerMinute = 55,
+                    ),
+                )
+            val otherSessionRecord =
+                HeartRateRecordEntity(
+                    id = "workout_sample",
+                    sessionId = "workout_session",
+                    recordType = "EXERCISE",
+                    timestampMs = baselineMs + 60_000L,
+                    beatsPerMinute = 140,
+                )
+            val restingRecord =
+                HeartRateRecordEntity(
+                    id = "resting_sample",
+                    sessionId = null,
+                    recordType = "RESTING",
+                    timestampMs = baselineMs + 60_000L,
+                    beatsPerMinute = 62,
+                )
+            heartRateDao.upsertAll(sleepRecords + otherSessionRecord + restingRecord)
+
+            val result = heartRateDao.observeSleepHrTimelineForSession("sleep_session").first()
+
+            assert(result.size == 2) { "expected 2 sleep samples, got ${result.size}" }
+            assert(result[0].beatsPerMinute == 55) { "expected first sample (earliest timestamp) to be 55 bpm" }
+            assert(result[1].beatsPerMinute == 58) { "expected second sample to be 58 bpm" }
         }
 }
