@@ -3,6 +3,7 @@ package app.readylytics.health.feature.dashboard
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,8 +35,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
@@ -150,18 +149,9 @@ private fun DashboardMetricCardContent(
         ) {
             Text(
                 text = presentation.title,
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                        lineHeightStyle =
-                            LineHeightStyle(
-                                alignment = LineHeightStyle.Alignment.Center,
-                                trim = LineHeightStyle.Trim.Both,
-                            ),
-                    ),
+                style = MaterialTheme.typography.titleMedium,
                 color = contentColor,
                 modifier = Modifier.weight(1f),
-                minLines = 1,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -187,6 +177,8 @@ private fun DashboardMetricCardContent(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
 
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (requestedMode) {
