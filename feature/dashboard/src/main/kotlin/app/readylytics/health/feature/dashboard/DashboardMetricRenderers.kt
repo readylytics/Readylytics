@@ -81,7 +81,7 @@ fun DashboardGaugeRenderer(
             valueColor = activeColor,
             unitColor = contentColor.copy(alpha = 0.8f),
             animateMarker = animateMarker,
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
+            modifier = Modifier.fillMaxWidth().weight(1f),
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.hairline))

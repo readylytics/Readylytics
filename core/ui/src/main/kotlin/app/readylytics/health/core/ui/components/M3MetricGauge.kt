@@ -179,7 +179,7 @@ fun M3MetricGaugeWithValue(
             activeColor = activeColor,
             markerColor = markerColor,
             animateMarker = animateMarker,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
         )
 
         Column(
