@@ -10,6 +10,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardConfiguration
@@ -17,7 +20,6 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.feature.dashboard.DashboardMetricCard
 import app.readylytics.health.feature.dashboard.DashboardScreen
 import app.readylytics.health.feature.dashboard.DashboardUiState
 import org.junit.Assert.assertEquals
@@ -38,6 +40,9 @@ import org.junit.runner.RunWith
 class DashboardRecompositionTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    private fun DashboardCardDisplayMode.toUniversalMode(): UniversalCardDisplayMode =
+        UniversalCardDisplayMode.valueOf(name)
 
     private fun baseUiState(): DashboardUiState =
         DashboardUiState(
@@ -157,20 +162,32 @@ class DashboardRecompositionTest {
                 mapOf(
                     CardId.HRV to { configuration: CardConfiguration ->
                         SideEffect { hrvBodyCompositions++ }
-                        DashboardMetricCard(
+                        UniversalMetricCard(
                             presentation = hrvPresentation,
-                            specification = DashboardCardCatalog.spec(CardId.HRV)!!,
-                            requestedMode = DashboardCardCatalog.requestedMode(configuration),
+                            specification =
+                                UniversalMetricCardSpec(
+                                    supportedModes =
+                                        DashboardCardCatalog.spec(CardId.HRV)!!.supportedModes.map {
+                                            it.toUniversalMode()
+                                        },
+                                ),
+                            requestedMode = DashboardCardCatalog.requestedMode(configuration).toUniversalMode(),
                             isEditing = true,
                             onModeSelected = {},
                         )
                     },
                     CardId.READINESS to { configuration: CardConfiguration ->
                         SideEffect { readinessBodyCompositions++ }
-                        DashboardMetricCard(
+                        UniversalMetricCard(
                             presentation = readinessPresentation,
-                            specification = DashboardCardCatalog.spec(CardId.READINESS)!!,
-                            requestedMode = DashboardCardCatalog.requestedMode(configuration),
+                            specification =
+                                UniversalMetricCardSpec(
+                                    supportedModes =
+                                        DashboardCardCatalog.spec(CardId.READINESS)!!.supportedModes.map {
+                                            it.toUniversalMode()
+                                        },
+                                ),
+                            requestedMode = DashboardCardCatalog.requestedMode(configuration).toUniversalMode(),
                             isEditing = true,
                             onModeSelected = {},
                         )
