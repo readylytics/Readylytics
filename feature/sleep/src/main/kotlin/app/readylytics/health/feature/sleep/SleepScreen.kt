@@ -216,6 +216,26 @@ fun SleepScreen(
             }
         }
 
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+
+        if (uiState.isLoading) {
+            SkeletonCard(
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                height = 260.dp,
+            )
+        } else {
+            TrendCard(
+                title = stringResource(R.string.sleep_hr_chart_title),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+            ) {
+                SleepHrChart(
+                    session = singleSessionVisual,
+                    samples = uiState.sleepHrSamples,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         SectionHeader(
