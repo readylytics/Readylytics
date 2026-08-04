@@ -1,5 +1,8 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
@@ -17,10 +20,7 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
-import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
 import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
-import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
-import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -51,23 +51,23 @@ class DashboardMetricPresentationFactory
                 },
             )
 
-        private fun unavailableReasonText(reason: DashboardMetricUnavailableReason): String =
+        private fun unavailableReasonText(reason: UniversalMetricUnavailableReason): String =
             resourceProvider.getString(
                 when (reason) {
-                    DashboardMetricUnavailableReason.MISSING_VALUE ->
+                    UniversalMetricUnavailableReason.MISSING_VALUE ->
                         CoreUiR.string.metric_unavailable_missing_value
-                    DashboardMetricUnavailableReason.MISSING_TARGET ->
+                    UniversalMetricUnavailableReason.MISSING_TARGET ->
                         CoreUiR.string.metric_unavailable_missing_target
-                    DashboardMetricUnavailableReason.BASELINE_NOT_READY ->
+                    UniversalMetricUnavailableReason.BASELINE_NOT_READY ->
                         CoreUiR.string.metric_unavailable_baseline_not_ready
-                    DashboardMetricUnavailableReason.MISSING_BMI ->
+                    UniversalMetricUnavailableReason.MISSING_BMI ->
                         CoreUiR.string.metric_unavailable_missing_bmi
                 },
             )
 
         private fun unavailableDescription(
             title: String,
-            reason: DashboardMetricUnavailableReason,
+            reason: UniversalMetricUnavailableReason,
         ): String =
             resourceProvider.getString(
                 DashboardR.string.semantics_unavailable_format,
@@ -129,8 +129,8 @@ class DashboardMetricPresentationFactory
             circadianResult: CircadianConsistencyResult?,
             heartRateSummary: HeartRateDaySummary?,
             todayStrainIncrease: Float? = null,
-        ): Map<CardId, DashboardMetricPresentation> {
-            val map = mutableMapOf<CardId, DashboardMetricPresentation>()
+        ): Map<CardId, UniversalMetricPresentation> {
+            val map = mutableMapOf<CardId, UniversalMetricPresentation>()
 
             val unavailableValueText =
                 resourceProvider.getString(CoreUiR.string.metric_value_unavailable)
@@ -170,7 +170,7 @@ class DashboardMetricPresentationFactory
                     classificationText(sleepScoreStatus),
                 )
             map[CardId.SLEEP_SCORE] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = sleepScoreTitle,
                     valueText = sleepScoreValueText,
                     unitText = "",
@@ -201,7 +201,7 @@ class DashboardMetricPresentationFactory
                     classificationText(readinessStatus),
                 )
             map[CardId.READINESS] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = readinessTitle,
                     valueText = readinessValueText,
                     unitText = "",
@@ -225,7 +225,7 @@ class DashboardMetricPresentationFactory
                     midpoint = bmiReference.referenceMidpoint,
                     maximum = bmiReference.axisMaximum,
                     scaleAvailable = isHeightValid,
-                    unavailableReason = if (!isHeightValid) DashboardMetricUnavailableReason.MISSING_BMI else null,
+                    unavailableReason = if (!isHeightValid) UniversalMetricUnavailableReason.MISSING_BMI else null,
                 )
             val weightStatus = bmiAssessment?.status?.toMetricStatus() ?: MetricStatus.CALIBRATING
             val weightTitle =
@@ -260,7 +260,7 @@ class DashboardMetricPresentationFactory
                     classificationText(weightStatus),
                 )
             map[CardId.WEIGHT] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = weightTitle,
                     valueText = weightValueText,
                     unitText = weightUnitText,
@@ -314,7 +314,7 @@ class DashboardMetricPresentationFactory
                     classificationText(bodyFatStatusVal),
                 )
             map[CardId.BODY_FAT] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = bodyFatTitle,
                     valueText = bodyFatValueText,
                     unitText = "",
@@ -361,7 +361,7 @@ class DashboardMetricPresentationFactory
                     classificationText(effStatus),
                 )
             map[CardId.SLEEP_EFFICIENCY] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = sleepEffTitle,
                     valueText = effValText,
                     unitText = "",
@@ -399,7 +399,7 @@ class DashboardMetricPresentationFactory
                     classificationText(oxygenStatus),
                 )
             map[CardId.OXYGEN_SATURATION] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = spo2Title,
                     valueText = spo2ValueText,
                     unitText = "",
@@ -435,7 +435,7 @@ class DashboardMetricPresentationFactory
                 }
             val bpDescription =
                 if (systolic <= 0 || diastolic <= 0) {
-                    unavailableDescription(bpTitle, DashboardMetricUnavailableReason.MISSING_VALUE)
+                    unavailableDescription(bpTitle, UniversalMetricUnavailableReason.MISSING_VALUE)
                 } else {
                     resourceProvider.getString(
                         DashboardR.string.semantics_value_note_format,
@@ -445,7 +445,7 @@ class DashboardMetricPresentationFactory
                     )
                 }
             map[CardId.BLOOD_PRESSURE] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = bpTitle,
                     valueText = bpValueText,
                     unitText = bpUnitText,
@@ -453,7 +453,7 @@ class DashboardMetricPresentationFactory
                     status = bpStatus,
                     tooltip = bpTooltip,
                     accessibilityDescription = bpDescription,
-                    visual = DashboardMetricVisual.ValueOnly,
+                    visual = UniversalMetricVisual.ValueOnly,
                 )
 
             // 13. HEART RATE
@@ -469,7 +469,7 @@ class DashboardMetricPresentationFactory
             val hrStatus = HeartRateStatusClassifier.classify(heartRateSummary?.avgBpm)
             val hrDescription =
                 if (heartRateSummary?.avgBpm == null) {
-                    unavailableDescription(hrTitle, DashboardMetricUnavailableReason.MISSING_VALUE)
+                    unavailableDescription(hrTitle, UniversalMetricUnavailableReason.MISSING_VALUE)
                 } else {
                     resourceProvider.getString(
                         DashboardR.string.semantics_value_note_format,
@@ -479,7 +479,7 @@ class DashboardMetricPresentationFactory
                     )
                 }
             map[CardId.HEART_RATE] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = hrTitle,
                     valueText = hrValueText,
                     unitText = "",
@@ -487,7 +487,7 @@ class DashboardMetricPresentationFactory
                     status = hrStatus,
                     tooltip = resourceProvider.getString(DashboardR.string.tooltip_heart_rate_card),
                     accessibilityDescription = hrDescription,
-                    visual = DashboardMetricVisual.ValueOnly,
+                    visual = UniversalMetricVisual.ValueOnly,
                 )
 
             // 14. CIRCADIAN
@@ -516,7 +516,7 @@ class DashboardMetricPresentationFactory
                     classificationText(circStatus),
                 )
             map[CardId.CIRCADIAN_CONSISTENCY] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = circTitle,
                     valueText = circValueText,
                     unitText = "",
@@ -562,7 +562,7 @@ class DashboardMetricPresentationFactory
                     classificationText(strainStatus),
                 )
             map[CardId.STRAIN_RATIO] =
-                DashboardMetricPresentation(
+                UniversalMetricPresentation(
                     title = strainTitle,
                     valueText = strainValueText,
                     unitText = "",

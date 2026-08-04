@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -64,8 +64,8 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     @Test
     fun `sleep score and readiness share score thresholds`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        val sleep = cards.getValue(CardId.SLEEP_SCORE).visual as DashboardMetricVisual.Score
-        val readiness = cards.getValue(CardId.READINESS).visual as DashboardMetricVisual.Score
+        val sleep = cards.getValue(CardId.SLEEP_SCORE).visual as UniversalMetricVisual.Score
+        val readiness = cards.getValue(CardId.READINESS).visual as UniversalMetricVisual.Score
         assertEquals(0f, sleep.minValue)
         assertEquals(100f, sleep.maxValue)
         assertEquals(0f, readiness.minValue)
@@ -180,7 +180,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             )
 
         val readiness = cards.getValue(CardId.READINESS)
-        val visual = readiness.visual as DashboardMetricVisual.Score
+        val visual = readiness.visual as UniversalMetricVisual.Score
         assertEquals(84.6f, visual.rawValue)
         assertEquals("85", readiness.valueText)
         assertEquals(MetricStatus.NEUTRAL, readiness.status)
@@ -198,7 +198,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                 null,
             )
         val card = cards.getValue(CardId.WEIGHT)
-        val visual = card.visual as DashboardMetricVisual.ReferenceRange
+        val visual = card.visual as UniversalMetricVisual.ReferenceRange
         assertEquals(0.5f, visual.referenceMarkerFraction)
         assertEquals(0.5f, visual.markerFraction)
     }
@@ -262,7 +262,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                 null,
                 null,
             )
-        val visual = cards.getValue(CardId.BODY_FAT).visual as DashboardMetricVisual.ReferenceRange
+        val visual = cards.getValue(CardId.BODY_FAT).visual as UniversalMetricVisual.ReferenceRange
         assertEquals(0.5f, visual.markerFraction)
     }
 
@@ -277,7 +277,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                 null,
                 null,
             )
-        val visual = cards.getValue(CardId.SLEEP_DURATION).visual as DashboardMetricVisual.Goal
+        val visual = cards.getValue(CardId.SLEEP_DURATION).visual as UniversalMetricVisual.Goal
         assertEquals(480f, visual.targetValue)
         assertEquals(450f, visual.rawValue)
     }
@@ -285,7 +285,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     @Test
     fun `ras permits overflow beyond 100`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        val visual = cards.getValue(CardId.RAS_DAILY).visual as DashboardMetricVisual.Score
+        val visual = cards.getValue(CardId.RAS_DAILY).visual as UniversalMetricVisual.Score
         assertEquals(100f, visual.maxValue)
     }
 
@@ -295,7 +295,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             app.readylytics.health.domain.scoring.CircadianConsistencyResult
                 .Ready(85f, 0, 0, 0, 0)
         val cards = factory.build(summary(), preferences(), date, null, circResult, null)
-        val visual = cards.getValue(CardId.CIRCADIAN_CONSISTENCY).visual as DashboardMetricVisual.Score
+        val visual = cards.getValue(CardId.CIRCADIAN_CONSISTENCY).visual as UniversalMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(100f, visual.maxValue)
     }
@@ -317,7 +317,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
         val cards = factory.build(summary(), preferences(), date, null, circResult, null)
         val presentation = cards.getValue(CardId.CIRCADIAN_CONSISTENCY)
-        val visual = presentation.visual as DashboardMetricVisual.Score
+        val visual = presentation.visual as UniversalMetricVisual.Score
 
         assertEquals("95%", presentation.valueText)
         assertEquals(MetricStatus.OPTIMAL, presentation.status)
@@ -328,7 +328,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     @Test
     fun `sleep efficiency uses 0 to 100 bounds`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        val visual = cards.getValue(CardId.SLEEP_EFFICIENCY).visual as DashboardMetricVisual.Score
+        val visual = cards.getValue(CardId.SLEEP_EFFICIENCY).visual as UniversalMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(100f, visual.maxValue)
     }
@@ -347,7 +347,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
         val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
-        val visual = presentation.visual as DashboardMetricVisual.Score
+        val visual = presentation.visual as UniversalMetricVisual.Score
 
         assertEquals("95%", presentation.valueText)
         assertEquals("", presentation.unitText)
@@ -361,7 +361,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
         val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
-        val visual = presentation.visual as DashboardMetricVisual.Score
+        val visual = presentation.visual as UniversalMetricVisual.Score
 
         assertEquals("90%", presentation.valueText)
         assertEquals("", presentation.unitText)

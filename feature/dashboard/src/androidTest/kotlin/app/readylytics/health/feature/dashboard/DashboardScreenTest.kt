@@ -20,6 +20,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
@@ -201,7 +203,7 @@ class DashboardScreenTest {
         hrvRequestedMode: DashboardCardDisplayMode? = null,
     ): DashboardUiState {
         val hrvPresentation =
-            DashboardMetricPresentation(
+            UniversalMetricPresentation(
                 title = "HRV",
                 valueText = "55",
                 unitText = "ms",
@@ -210,7 +212,7 @@ class DashboardScreenTest {
                 tooltip = "HRV tooltip text",
                 accessibilityDescription = "HRV 55 ms",
                 visual =
-                    DashboardMetricVisual.Score(
+                    UniversalMetricVisual.Score(
                         rawValue = 55f,
                         minValue = 0f,
                         maxValue = 100f,
@@ -219,7 +221,7 @@ class DashboardScreenTest {
                     ),
             )
         val heartRatePresentation =
-            DashboardMetricPresentation(
+            UniversalMetricPresentation(
                 title = "Heart Rate",
                 valueText = "62",
                 unitText = "bpm",
@@ -227,10 +229,10 @@ class DashboardScreenTest {
                 status = MetricStatus.NEUTRAL,
                 tooltip = "",
                 accessibilityDescription = "Heart Rate 62 bpm",
-                visual = DashboardMetricVisual.ValueOnly,
+                visual = UniversalMetricVisual.ValueOnly,
             )
         val bloodPressurePresentation =
-            DashboardMetricPresentation(
+            UniversalMetricPresentation(
                 title = "Blood Pressure",
                 valueText = "118/76",
                 unitText = "mmHg",
@@ -238,7 +240,7 @@ class DashboardScreenTest {
                 status = MetricStatus.NEUTRAL,
                 tooltip = "",
                 accessibilityDescription = "Blood Pressure 118/76 mmHg",
-                visual = DashboardMetricVisual.ValueOnly,
+                visual = UniversalMetricVisual.ValueOnly,
             )
 
         return DashboardUiState(

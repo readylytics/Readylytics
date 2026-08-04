@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import app.readylytics.health.core.designsystem.FitDashboardTheme
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
@@ -33,7 +35,7 @@ abstract class DashboardVisualizationRegressionTestBase {
         )
 
     protected val presentation =
-        DashboardMetricPresentation(
+        UniversalMetricPresentation(
             title = "Metric",
             valueText = "0",
             unitText = "",
@@ -42,7 +44,7 @@ abstract class DashboardVisualizationRegressionTestBase {
             tooltip = "Metric context",
             accessibilityDescription = "Metric value, normal.",
             visual =
-                DashboardMetricVisual.Score(
+                UniversalMetricVisual.Score(
                     rawValue = 0f,
                     minValue = 0f,
                     maxValue = 100f,
@@ -53,7 +55,7 @@ abstract class DashboardVisualizationRegressionTestBase {
 
     protected fun setMetricCard(
         mode: DashboardCardDisplayMode,
-        presentation: DashboardMetricPresentation,
+        presentation: UniversalMetricPresentation,
         specification: DashboardCardSpec = this.specification,
     ) {
         composeRule.setContent {
@@ -72,7 +74,7 @@ abstract class DashboardVisualizationRegressionTestBase {
     protected fun presentationFor(
         cardId: CardId,
         valueText: String,
-    ): DashboardMetricPresentation {
+    ): UniversalMetricPresentation {
         val (title, unitText) =
             when (cardId) {
                 CardId.SLEEP_SCORE -> "Sleep score" to ""
@@ -89,7 +91,7 @@ abstract class DashboardVisualizationRegressionTestBase {
             unitText = unitText,
             accessibilityDescription = "$title $valueText $unitText, normal.",
             visual =
-                DashboardMetricVisual.Score(
+                UniversalMetricVisual.Score(
                     rawValue = 74f,
                     minValue = 0f,
                     maxValue = 100f,

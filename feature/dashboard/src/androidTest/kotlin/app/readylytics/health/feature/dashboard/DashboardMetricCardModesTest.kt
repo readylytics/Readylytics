@@ -10,7 +10,8 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,14 +42,14 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
         val missingTargetPresentation =
             defaultPresentation.copy(
                 visual =
-                    DashboardMetricVisual.Goal(
+                    UniversalMetricVisual.Goal(
                         rawValue = 50f,
                         targetValue = null,
                         markerFraction = 0.5f,
                         targetMarkerFraction = null,
                         isAboveTarget = false,
                         selectionAvailable = false,
-                        unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET,
+                        unavailableReason = UniversalMetricUnavailableReason.MISSING_TARGET,
                     ),
             )
 
@@ -79,14 +80,14 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
         val missingTargetPresentation =
             defaultPresentation.copy(
                 visual =
-                    DashboardMetricVisual.Goal(
+                    UniversalMetricVisual.Goal(
                         rawValue = 50f,
                         targetValue = null,
                         markerFraction = 0.5f,
                         targetMarkerFraction = null,
                         isAboveTarget = false,
                         selectionAvailable = false,
-                        unavailableReason = DashboardMetricUnavailableReason.MISSING_TARGET,
+                        unavailableReason = UniversalMetricUnavailableReason.MISSING_TARGET,
                     ),
             )
 
@@ -131,12 +132,12 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             defaultPresentation.copy(
                 valueText = "—",
                 visual =
-                    DashboardMetricVisual.Score(
+                    UniversalMetricVisual.Score(
                         rawValue = null,
                         minValue = 0f,
                         maxValue = 100f,
                         markerFraction = null,
-                        unavailableReason = DashboardMetricUnavailableReason.MISSING_VALUE,
+                        unavailableReason = UniversalMetricUnavailableReason.MISSING_VALUE,
                     ),
             )
 
@@ -171,14 +172,14 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
         val notReadyPresentation =
             defaultPresentation.copy(
                 visual =
-                    DashboardMetricVisual.PersonalBaseline(
+                    UniversalMetricVisual.PersonalBaseline(
                         rawValue = 45f,
                         baselineValue = null,
                         ratio = null,
                         markerFraction = null,
                         baselineMarkerFraction = 0f,
                         selectionAvailable = false,
-                        unavailableReason = DashboardMetricUnavailableReason.BASELINE_NOT_READY,
+                        unavailableReason = UniversalMetricUnavailableReason.BASELINE_NOT_READY,
                     ),
             )
 
@@ -211,12 +212,12 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             defaultPresentation.copy(
                 valueText = "70",
                 visual =
-                    DashboardMetricVisual.ReferenceRange(
+                    UniversalMetricVisual.ReferenceRange(
                         rawValue = null,
                         markerFraction = null,
                         referenceMarkerFraction = null,
                         selectionAvailable = false,
-                        unavailableReason = DashboardMetricUnavailableReason.MISSING_BMI,
+                        unavailableReason = UniversalMetricUnavailableReason.MISSING_BMI,
                     ),
             )
 

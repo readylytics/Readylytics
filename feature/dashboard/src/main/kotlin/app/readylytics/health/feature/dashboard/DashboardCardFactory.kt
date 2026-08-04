@@ -25,6 +25,8 @@ import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.StepsCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
@@ -46,7 +48,7 @@ import kotlin.math.roundToInt
 @Composable
 private fun ConfigurableMetricCard(
     cardId: CardId,
-    presentation: DashboardMetricPresentation?,
+    presentation: UniversalMetricPresentation?,
     configuration: CardConfiguration,
     isEditing: Boolean,
     isLoading: Boolean,
@@ -108,7 +110,7 @@ fun buildCardDataMap(
         val sleepScoreCard = uiState.cardDataMap[CardId.SLEEP_SCORE]
         val deltaText =
             formatRoundedScoreDelta(
-                currentRounded = (sleepScoreCard?.visual as? DashboardMetricVisual.Score)?.rawValue?.roundToInt(),
+                currentRounded = (sleepScoreCard?.visual as? UniversalMetricVisual.Score)?.rawValue?.roundToInt(),
                 previousRounded = uiState.yesterdaySleepScoreRounded,
             ).resolveOrNull()
         ConfigurableMetricCard(
@@ -125,7 +127,7 @@ fun buildCardDataMap(
 
     cardMap[CardId.READINESS] = { configuration ->
         val readinessCard = uiState.cardDataMap[CardId.READINESS]
-        val readinessVal = (readinessCard?.visual as? DashboardMetricVisual.Score)?.rawValue
+        val readinessVal = (readinessCard?.visual as? UniversalMetricVisual.Score)?.rawValue
         val readinessDelta =
             formatRoundedScoreDelta(
                 currentRounded = readinessVal?.roundToInt(),

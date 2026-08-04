@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.DailySummary
@@ -8,7 +9,6 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.util.ResourceProvider
-import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -133,7 +133,7 @@ class DashboardRecoveryMetricPresentationFactoryTest {
                 null,
             )
 
-        val visual = cards.getValue(CardId.HRV).visual as DashboardMetricVisual.PersonalBaseline
+        val visual = cards.getValue(CardId.HRV).visual as UniversalMetricVisual.PersonalBaseline
 
         assertEquals(0.5f, visual.markerFraction!!, 0.001f)
         assertEquals(0.5f, visual.baselineMarkerFraction, 0.001f)

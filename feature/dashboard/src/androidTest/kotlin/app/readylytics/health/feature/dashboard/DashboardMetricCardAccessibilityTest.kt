@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -148,7 +149,7 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 valueText = "120/80",
                 unitText = "mmHg",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricVisual.ValueOnly,
+                visual = UniversalMetricVisual.ValueOnly,
             )
 
         composeRule.setContent {
@@ -176,7 +177,7 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 valueText = "72",
                 unitText = "bpm",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricVisual.ValueOnly,
+                visual = UniversalMetricVisual.ValueOnly,
             )
 
         composeRule.setContent {

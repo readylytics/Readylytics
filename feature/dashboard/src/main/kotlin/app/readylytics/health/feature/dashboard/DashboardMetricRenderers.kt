@@ -31,6 +31,8 @@ import app.readylytics.health.core.ui.components.M3MetricGaugeWithValue
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.core.ui.components.metricVisualizationTrackColor
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
 
 internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
@@ -39,13 +41,13 @@ internal const val DASHBOARD_BAR_TAG = "dashboard_metric_bar"
 internal const val DASHBOARD_DELTA_PILL_TAG = "dashboard_metric_delta_pill"
 internal const val DASHBOARD_TITLE_INFO_ICON_TAG = "dashboard_metric_title_info_icon"
 
-internal fun DashboardMetricVisual.progressFraction(): Float? =
+internal fun UniversalMetricVisual.progressFraction(): Float? =
     when (this) {
-        is DashboardMetricVisual.Score -> markerFraction
-        is DashboardMetricVisual.Goal -> markerFraction
-        is DashboardMetricVisual.PersonalBaseline -> markerFraction
-        is DashboardMetricVisual.ReferenceRange -> markerFraction
-        is DashboardMetricVisual.ValueOnly -> null
+        is UniversalMetricVisual.Score -> markerFraction
+        is UniversalMetricVisual.Goal -> markerFraction
+        is UniversalMetricVisual.PersonalBaseline -> markerFraction
+        is UniversalMetricVisual.ReferenceRange -> markerFraction
+        is UniversalMetricVisual.ValueOnly -> null
     }
 
 // Fixed slot for the delta pill / plain secondary text, kept out of the weighted value row so it
@@ -54,7 +56,7 @@ private val DASHBOARD_SECONDARY_SLOT_HEIGHT = 20.dp
 
 @Composable
 fun DashboardGaugeRenderer(
-    presentation: DashboardMetricPresentation,
+    presentation: UniversalMetricPresentation,
     secondaryUsesPill: Boolean,
     animateMarker: Boolean,
     contentColor: Color,
@@ -112,7 +114,7 @@ fun DashboardGaugeRenderer(
 
 @Composable
 fun DashboardBarRenderer(
-    presentation: DashboardMetricPresentation,
+    presentation: UniversalMetricPresentation,
     secondaryUsesPill: Boolean,
     contentColor: Color,
     modifier: Modifier = Modifier,
@@ -154,7 +156,7 @@ fun DashboardBarRenderer(
 // whether the track is painted and everything else stays put when switching between them.
 @Composable
 private fun DashboardValueUnitColumn(
-    presentation: DashboardMetricPresentation,
+    presentation: UniversalMetricPresentation,
     contentColor: Color,
     secondaryUsesPill: Boolean,
     modifier: Modifier = Modifier,
@@ -269,7 +271,7 @@ internal fun CardId.usesDeltaPill(): Boolean =
 
 @Composable
 fun DashboardValueRenderer(
-    presentation: DashboardMetricPresentation,
+    presentation: UniversalMetricPresentation,
     contentColor: Color,
     cardId: CardId,
     modifier: Modifier = Modifier,

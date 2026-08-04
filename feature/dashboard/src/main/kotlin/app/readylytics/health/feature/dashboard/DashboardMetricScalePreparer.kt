@@ -1,5 +1,8 @@
 package app.readylytics.health.feature.dashboard
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
+
 object DashboardMetricScalePreparer {
     private fun linearFraction(
         value: Float,
@@ -30,22 +33,22 @@ object DashboardMetricScalePreparer {
         value: Float?,
         minimum: Float,
         maximum: Float,
-    ): DashboardMetricVisual.Score {
+    ): UniversalMetricVisual.Score {
         val markerFraction = if (value != null) linearFraction(value, minimum, maximum) else null
 
-        return DashboardMetricVisual.Score(
+        return UniversalMetricVisual.Score(
             rawValue = value,
             minValue = minimum,
             maxValue = maximum,
             markerFraction = markerFraction,
-            unavailableReason = if (value == null) DashboardMetricUnavailableReason.MISSING_VALUE else null,
+            unavailableReason = if (value == null) UniversalMetricUnavailableReason.MISSING_VALUE else null,
         )
     }
 
     fun goal(
         value: Float?,
         target: Float?,
-    ): DashboardMetricVisual.Goal {
+    ): UniversalMetricVisual.Goal {
         val isValidTarget = target != null && target > 0f
 
         val markerFraction =
@@ -57,12 +60,12 @@ object DashboardMetricScalePreparer {
 
         val unavailableReason =
             when {
-                !isValidTarget -> DashboardMetricUnavailableReason.MISSING_TARGET
-                value == null -> DashboardMetricUnavailableReason.MISSING_VALUE
+                !isValidTarget -> UniversalMetricUnavailableReason.MISSING_TARGET
+                value == null -> UniversalMetricUnavailableReason.MISSING_VALUE
                 else -> null
             }
 
-        return DashboardMetricVisual.Goal(
+        return UniversalMetricVisual.Goal(
             rawValue = value,
             targetValue = target,
             markerFraction = markerFraction,
@@ -79,7 +82,7 @@ object DashboardMetricScalePreparer {
         axisMinimumRatio: Float,
         axisMaximumRatio: Float,
         baselineReady: Boolean,
-    ): DashboardMetricVisual.PersonalBaseline {
+    ): UniversalMetricVisual.PersonalBaseline {
         val isValidBaseline = baseline != null && baseline > 0f && baselineReady
 
         val minVal = if (isValidBaseline) baseline!! * axisMinimumRatio else 0f
@@ -101,12 +104,12 @@ object DashboardMetricScalePreparer {
 
         val unavailableReason =
             when {
-                !isValidBaseline -> DashboardMetricUnavailableReason.BASELINE_NOT_READY
-                value == null -> DashboardMetricUnavailableReason.MISSING_VALUE
+                !isValidBaseline -> UniversalMetricUnavailableReason.BASELINE_NOT_READY
+                value == null -> UniversalMetricUnavailableReason.MISSING_VALUE
                 else -> null
             }
 
-        return DashboardMetricVisual.PersonalBaseline(
+        return UniversalMetricVisual.PersonalBaseline(
             rawValue = value,
             baselineValue = baseline,
             ratio = if (isValidBaseline && value != null) value / baseline!! else null,
@@ -123,8 +126,8 @@ object DashboardMetricScalePreparer {
         midpoint: Float,
         maximum: Float,
         scaleAvailable: Boolean,
-        unavailableReason: DashboardMetricUnavailableReason?,
-    ): DashboardMetricVisual.ReferenceRange {
+        unavailableReason: UniversalMetricUnavailableReason?,
+    ): UniversalMetricVisual.ReferenceRange {
         require(scaleAvailable || unavailableReason != null) {
             "An unavailable scale must provide an unavailableReason"
         }
@@ -145,12 +148,12 @@ object DashboardMetricScalePreparer {
 
         val finalUnavailableReason =
             if (scaleAvailable && value == null) {
-                DashboardMetricUnavailableReason.MISSING_VALUE
+                UniversalMetricUnavailableReason.MISSING_VALUE
             } else {
                 unavailableReason
             }
 
-        return DashboardMetricVisual.ReferenceRange(
+        return UniversalMetricVisual.ReferenceRange(
             rawValue = value,
             markerFraction = markerFraction,
             referenceMarkerFraction = referenceMarkerFraction,

@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
@@ -36,8 +37,8 @@ private val hrvSpec = DashboardCardCatalog.spec(CardId.HRV)!!
 private val weightSpec = DashboardCardCatalog.spec(CardId.WEIGHT)!!
 
 @Composable
-private fun sleepScorePresentation(): DashboardMetricPresentation =
-    DashboardMetricPresentation(
+private fun sleepScorePresentation(): UniversalMetricPresentation =
+    UniversalMetricPresentation(
         title = stringResource(R.string.card_title_sleep_score),
         valueText = "82",
         unitText = "",
@@ -49,9 +50,9 @@ private fun sleepScorePresentation(): DashboardMetricPresentation =
     )
 
 @Composable
-private fun goalAboveTargetPresentation(): DashboardMetricPresentation {
+private fun goalAboveTargetPresentation(): UniversalMetricPresentation {
     val visual = DashboardMetricScalePreparer.goal(520f, 480f)
-    return DashboardMetricPresentation(
+    return UniversalMetricPresentation(
         title = stringResource(R.string.card_title_sleep_duration),
         valueText = "8h 40m",
         unitText = "",
@@ -66,7 +67,7 @@ private fun goalAboveTargetPresentation(): DashboardMetricPresentation {
 }
 
 @Composable
-private fun baselineWithinRangePresentation(): DashboardMetricPresentation {
+private fun baselineWithinRangePresentation(): UniversalMetricPresentation {
     val visual =
         DashboardMetricScalePreparer.personalBaseline(
             value = 62f,
@@ -75,7 +76,7 @@ private fun baselineWithinRangePresentation(): DashboardMetricPresentation {
             axisMaximumRatio = 1.5f,
             baselineReady = true,
         )
-    return DashboardMetricPresentation(
+    return UniversalMetricPresentation(
         title = stringResource(R.string.card_title_hrv),
         valueText = "62",
         unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_ms),
@@ -90,7 +91,7 @@ private fun baselineWithinRangePresentation(): DashboardMetricPresentation {
 }
 
 @Composable
-private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
+private fun weightReferenceRangePresentation(): UniversalMetricPresentation {
     val visual =
         DashboardMetricScalePreparer.referenceRange(
             value = 21.7f,
@@ -101,7 +102,7 @@ private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
             unavailableReason = null,
         )
     val bmiSecondary = stringResource(app.readylytics.health.core.ui.R.string.bmi_secondary_text, "21.7")
-    return DashboardMetricPresentation(
+    return UniversalMetricPresentation(
         title = stringResource(R.string.card_title_weight),
         valueText = "70",
         unitText = stringResource(R.string.unit_metric_kg),
@@ -116,10 +117,10 @@ private fun weightReferenceRangePresentation(): DashboardMetricPresentation {
 }
 
 @Composable
-private fun goalUnavailablePresentation(): DashboardMetricPresentation {
+private fun goalUnavailablePresentation(): UniversalMetricPresentation {
     val visual = DashboardMetricScalePreparer.goal(null, null)
     val reason = stringResource(app.readylytics.health.core.ui.R.string.metric_unavailable_missing_target)
-    return DashboardMetricPresentation(
+    return UniversalMetricPresentation(
         title = stringResource(R.string.card_title_sleep_duration),
         valueText = "—",
         unitText = "",

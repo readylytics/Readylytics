@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.di.DefaultDispatcher
@@ -362,9 +363,9 @@ data class DashboardUiState(
     val summary: DailySummary? = null,
     val selectedDate: LocalDate = LocalDate.now(),
     val today: LocalDate = LocalDate.now(),
-    val cardDataMap: Map<CardId, DashboardMetricPresentation> = emptyMap(),
+    val cardDataMap: Map<CardId, UniversalMetricPresentation> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
-    val restingHrCard: DashboardMetricPresentation? = null,
+    val restingHrCard: UniversalMetricPresentation? = null,
     val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
@@ -401,7 +402,7 @@ data class DashboardUiState(
  */
 @Immutable
 data class DashboardCardInputs(
-    val cardDataMap: Map<CardId, DashboardMetricPresentation>,
+    val cardDataMap: Map<CardId, UniversalMetricPresentation>,
     val summary: DailySummary?,
     val circadianConsistency: CircadianConsistencyResult?,
     val heartRateDaySummary: HeartRateDaySummary?,

@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.onContainerColor
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
@@ -108,7 +109,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 presentation.copy(
                     title = "Very long readiness title that uses two lines",
                     visual =
-                        DashboardMetricVisual.Score(
+                        UniversalMetricVisual.Score(
                             rawValue = 100f,
                             minValue = 0f,
                             maxValue = 100f,
@@ -126,14 +127,14 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
     fun progressFraction_returnsEachNormalizedVisualMarkerFraction() {
         val visuals =
             listOf(
-                DashboardMetricVisual.Score(
+                UniversalMetricVisual.Score(
                     rawValue = 12f,
                     minValue = 0f,
                     maxValue = 100f,
                     markerFraction = 0.12f,
                     unavailableReason = null,
                 ) to 0.12f,
-                DashboardMetricVisual.Goal(
+                UniversalMetricVisual.Goal(
                     rawValue = 34f,
                     targetValue = 100f,
                     markerFraction = 0.34f,
@@ -142,7 +143,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                     selectionAvailable = true,
                     unavailableReason = null,
                 ) to 0.34f,
-                DashboardMetricVisual.PersonalBaseline(
+                UniversalMetricVisual.PersonalBaseline(
                     rawValue = 56f,
                     baselineValue = 50f,
                     ratio = 1.12f,
@@ -151,7 +152,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                     selectionAvailable = true,
                     unavailableReason = null,
                 ) to 0.56f,
-                DashboardMetricVisual.ReferenceRange(
+                UniversalMetricVisual.ReferenceRange(
                     rawValue = 78f,
                     markerFraction = 0.78f,
                     referenceMarkerFraction = 0.5f,

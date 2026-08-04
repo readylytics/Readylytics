@@ -10,14 +10,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.dashboard.DashboardMetricCard
-import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
-import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import app.readylytics.health.feature.dashboard.DashboardScreen
 import app.readylytics.health.feature.dashboard.DashboardUiState
 import org.junit.Assert.assertEquals
@@ -121,7 +121,7 @@ class DashboardRecompositionTest {
         var readinessBodyCompositions = 0
 
         val hrvPresentation =
-            DashboardMetricPresentation(
+            UniversalMetricPresentation(
                 title = "HRV",
                 valueText = "55",
                 unitText = "ms",
@@ -130,7 +130,7 @@ class DashboardRecompositionTest {
                 tooltip = "",
                 accessibilityDescription = "HRV 55 ms",
                 visual =
-                    DashboardMetricVisual.Score(
+                    UniversalMetricVisual.Score(
                         rawValue = 55f,
                         minValue = 0f,
                         maxValue = 100f,

@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
-import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,7 +34,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     @Test
     fun `spo2 uses 80 to 100 bounds`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        val visual = cards.getValue(CardId.OXYGEN_SATURATION).visual as DashboardMetricVisual.Score
+        val visual = cards.getValue(CardId.OXYGEN_SATURATION).visual as UniversalMetricVisual.Score
         assertEquals(80f, visual.minValue)
         assertEquals(100f, visual.maxValue)
     }
@@ -42,21 +42,21 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     @Test
     fun `hrv uses baseline scale`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        val visual = cards.getValue(CardId.HRV).visual as DashboardMetricVisual.PersonalBaseline
+        val visual = cards.getValue(CardId.HRV).visual as UniversalMetricVisual.PersonalBaseline
         assertNull(visual.ratio)
     }
 
     @Test
     fun `rhr uses baseline scale`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        val visual = cards.getValue(CardId.RESTING_HR).visual as DashboardMetricVisual.PersonalBaseline
+        val visual = cards.getValue(CardId.RESTING_HR).visual as UniversalMetricVisual.PersonalBaseline
         assertNull(visual.ratio)
     }
 
     @Test
     fun `strain ratio uses bands from 0 to 2`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        val visual = cards.getValue(CardId.STRAIN_RATIO).visual as DashboardMetricVisual.Score
+        val visual = cards.getValue(CardId.STRAIN_RATIO).visual as UniversalMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(2f, visual.maxValue)
     }
@@ -109,8 +109,8 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     @Test
     fun `heart rate and blood pressure are value only`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
-        assertTrue(cards.getValue(CardId.HEART_RATE).visual is DashboardMetricVisual.ValueOnly)
-        assertTrue(cards.getValue(CardId.BLOOD_PRESSURE).visual is DashboardMetricVisual.ValueOnly)
+        assertTrue(cards.getValue(CardId.HEART_RATE).visual is UniversalMetricVisual.ValueOnly)
+        assertTrue(cards.getValue(CardId.BLOOD_PRESSURE).visual is UniversalMetricVisual.ValueOnly)
     }
 
     @Test
@@ -139,15 +139,15 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
         val cards = factory.build(null, preferences(), date, null, null, null)
 
         val sleep = cards.getValue(CardId.SLEEP_SCORE)
-        val sleepVisual = sleep.visual as DashboardMetricVisual.Score
+        val sleepVisual = sleep.visual as UniversalMetricVisual.Score
         assertEquals("—", sleep.valueText)
-        assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, sleepVisual.unavailableReason)
+        assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, sleepVisual.unavailableReason)
         assertNull(sleepVisual.markerFraction)
 
         val readiness = cards.getValue(CardId.READINESS)
-        val readinessVisual = readiness.visual as DashboardMetricVisual.Score
+        val readinessVisual = readiness.visual as UniversalMetricVisual.Score
         assertEquals("—", readiness.valueText)
-        assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, readinessVisual.unavailableReason)
+        assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, readinessVisual.unavailableReason)
     }
 
     @Test
@@ -161,9 +161,9 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 null,
                 null,
             )
-        val zeroHeightVisual = zeroHeightCards.getValue(CardId.WEIGHT).visual as DashboardMetricVisual.ReferenceRange
+        val zeroHeightVisual = zeroHeightCards.getValue(CardId.WEIGHT).visual as UniversalMetricVisual.ReferenceRange
         assertFalse(zeroHeightVisual.selectionAvailable)
-        assertEquals(DashboardMetricUnavailableReason.MISSING_BMI, zeroHeightVisual.unavailableReason)
+        assertEquals(UniversalMetricUnavailableReason.MISSING_BMI, zeroHeightVisual.unavailableReason)
         assertNull(zeroHeightVisual.markerFraction)
         assertNotEquals("—", zeroHeightCards.getValue(CardId.WEIGHT).valueText)
 
@@ -176,9 +176,9 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 null,
                 null,
             )
-        val nullHeightVisual = nullHeightCards.getValue(CardId.WEIGHT).visual as DashboardMetricVisual.ReferenceRange
+        val nullHeightVisual = nullHeightCards.getValue(CardId.WEIGHT).visual as UniversalMetricVisual.ReferenceRange
         assertFalse(nullHeightVisual.selectionAvailable)
-        assertEquals(DashboardMetricUnavailableReason.MISSING_BMI, nullHeightVisual.unavailableReason)
+        assertEquals(UniversalMetricUnavailableReason.MISSING_BMI, nullHeightVisual.unavailableReason)
     }
 
     @Test
@@ -192,7 +192,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                 null,
                 null,
             )
-        val visual = cards.getValue(CardId.SLEEP_DURATION).visual as DashboardMetricVisual.Goal
+        val visual = cards.getValue(CardId.SLEEP_DURATION).visual as UniversalMetricVisual.Goal
         assertEquals(600f, visual.rawValue)
         assertEquals(1f, visual.markerFraction)
         assertTrue(visual.isAboveTarget)
@@ -202,9 +202,9 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     fun `missing sleep session reports missing value for sleep efficiency instead of a zero reading`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
-        val visual = presentation.visual as DashboardMetricVisual.Score
+        val visual = presentation.visual as UniversalMetricVisual.Score
         assertEquals("—", presentation.valueText)
-        assertEquals(DashboardMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
+        assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
         assertNull(visual.markerFraction)
     }
 
@@ -213,7 +213,7 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
         val lastSleepSession = SleepSessionSummary(efficiency = 0f, startTime = 0L, endTime = 0L)
         val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
-        val visual = presentation.visual as DashboardMetricVisual.Score
+        val visual = presentation.visual as UniversalMetricVisual.Score
         assertEquals("0%", presentation.valueText)
         assertEquals("", presentation.unitText)
         assertNull(visual.unavailableReason)

@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.DailySummary
@@ -9,7 +10,6 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.util.logE
-import app.readylytics.health.feature.dashboard.DashboardMetricPresentation
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -23,7 +23,7 @@ class GetDashboardDataUseCase
         private val factory: DashboardMetricPresentationFactory,
     ) {
         data class DashboardCards(
-            val cardDataMap: Map<CardId, DashboardMetricPresentation>,
+            val cardDataMap: Map<CardId, UniversalMetricPresentation>,
             val rasDailyBreakdown: List<Pair<String, Float>>,
         )
 

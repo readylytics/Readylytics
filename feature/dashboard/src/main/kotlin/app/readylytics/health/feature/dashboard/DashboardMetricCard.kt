@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.containerColor
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.onContainerColor
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
@@ -50,7 +52,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun DashboardMetricCard(
-    presentation: DashboardMetricPresentation,
+    presentation: UniversalMetricPresentation,
     specification: DashboardCardSpec,
     requestedMode: DashboardCardDisplayMode,
     isEditing: Boolean,
@@ -126,7 +128,7 @@ fun DashboardMetricCard(
 @OptIn(ExperimentalTextApi::class)
 @Composable
 private fun DashboardMetricCardContent(
-    presentation: DashboardMetricPresentation,
+    presentation: UniversalMetricPresentation,
     specification: DashboardCardSpec,
     requestedMode: DashboardCardDisplayMode,
     isEditing: Boolean,
@@ -160,9 +162,9 @@ private fun DashboardMetricCardContent(
             if (isEditing && specification.supportedModes.size > 1) {
                 val selectionAvailable =
                     when (val visual = presentation.visual) {
-                        is DashboardMetricVisual.Goal -> visual.selectionAvailable
-                        is DashboardMetricVisual.PersonalBaseline -> visual.selectionAvailable
-                        is DashboardMetricVisual.ReferenceRange -> visual.selectionAvailable
+                        is UniversalMetricVisual.Goal -> visual.selectionAvailable
+                        is UniversalMetricVisual.PersonalBaseline -> visual.selectionAvailable
+                        is UniversalMetricVisual.ReferenceRange -> visual.selectionAvailable
                         else -> true // Score and ValueOnly don't have this field explicitly disabling it
                     }
                 Box(
@@ -178,7 +180,11 @@ private fun DashboardMetricCardContent(
                 }
             } else if (!isEditing) {
                 Box(
-                    modifier = Modifier.size(MaterialTheme.dimens.iconStandard).wrapContentSize(align = Alignment.TopEnd, unbounded = true),
+                    modifier =
+                        Modifier
+                            .size(
+                                MaterialTheme.dimens.iconStandard,
+                            ).wrapContentSize(align = Alignment.TopEnd, unbounded = true),
                 ) {
                     DashboardTitleInfoAction(
                         description = presentation.tooltip,

@@ -5,6 +5,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
@@ -42,7 +44,7 @@ abstract class DashboardMetricCardTestBase {
         )
 
     protected val defaultPresentation =
-        DashboardMetricPresentation(
+        UniversalMetricPresentation(
             title = "Test Metric",
             valueText = "85",
             unitText = "pts",
@@ -51,7 +53,7 @@ abstract class DashboardMetricCardTestBase {
             tooltip = "Tooltip text",
             accessibilityDescription = "Card description",
             visual =
-                DashboardMetricVisual.Score(
+                UniversalMetricVisual.Score(
                     rawValue = 85f,
                     minValue = 0f,
                     maxValue = 100f,

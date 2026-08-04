@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UserPreferences
@@ -7,8 +9,6 @@ import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.ResourceProvider
-import app.readylytics.health.feature.dashboard.DashboardMetricUnavailableReason
-import app.readylytics.health.feature.dashboard.DashboardMetricVisual
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -134,13 +134,13 @@ abstract class DashboardMetricPresentationFactoryTestBase {
         }
 }
 
-internal fun DashboardMetricVisual.unavailableReasonOrNull(): DashboardMetricUnavailableReason? =
+internal fun UniversalMetricVisual.unavailableReasonOrNull(): UniversalMetricUnavailableReason? =
     when (this) {
-        is DashboardMetricVisual.Score -> unavailableReason
-        is DashboardMetricVisual.Goal -> unavailableReason
-        is DashboardMetricVisual.PersonalBaseline -> unavailableReason
-        is DashboardMetricVisual.ReferenceRange -> unavailableReason
-        DashboardMetricVisual.ValueOnly -> null
+        is UniversalMetricVisual.Score -> unavailableReason
+        is UniversalMetricVisual.Goal -> unavailableReason
+        is UniversalMetricVisual.PersonalBaseline -> unavailableReason
+        is UniversalMetricVisual.ReferenceRange -> unavailableReason
+        UniversalMetricVisual.ValueOnly -> null
     }
 
 internal fun io.mockk.Invocation.formattedArguments(): String = formatArguments().joinToString("|")
