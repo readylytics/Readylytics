@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -60,7 +61,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 
 internal const val SLEEP_HR_GAP_THRESHOLD_MS = 10 * 60 * 1000L // 10 minutes
 private const val Y_TICK_COUNT = 4
-private val LEFT_LABEL_WIDTH = 36.dp
+private val LEFT_LABEL_WIDTH = 44.dp
 private val BOTTOM_LABEL_HEIGHT = 20.dp
 private val CHART_HEIGHT = 220.dp
 
@@ -131,6 +132,7 @@ fun SleepHrChart(
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val labelStyle = TextStyle(color = axisTextColor, fontSize = 10.sp)
+    val axisTitleStyle = TextStyle(color = axisTextColor, fontSize = 12.sp)
 
     val yMin = remember(sortedSamples) { (sortedSamples.minOf { it.beatsPerMinute } - 10).coerceAtLeast(30) }
     val yMax =
@@ -329,11 +331,18 @@ fun SleepHrChart(
                 }
             }
 
-            val bpmUnitMeasured = textMeasurer.measure(bpmUnitLabel, labelStyle)
-            drawText(
-                textLayoutResult = bpmUnitMeasured,
-                topLeft = Offset(0f, plotTop + 2.dp.toPx()),
-            )
+            val bpmUnitMeasured = textMeasurer.measure(bpmUnitLabel, axisTitleStyle)
+            val bpmUnitPivot = Offset(x = 10.dp.toPx(), y = (plotTop + plotBottom) / 2f)
+            rotate(degrees = -90f, pivot = bpmUnitPivot) {
+                drawText(
+                    textLayoutResult = bpmUnitMeasured,
+                    topLeft =
+                        Offset(
+                            bpmUnitPivot.x - bpmUnitMeasured.size.width / 2f,
+                            bpmUnitPivot.y - bpmUnitMeasured.size.height / 2f,
+                        ),
+                )
+            }
 
             for (ts in labelTimestamps) {
                 val x = zoomedX(ts)
