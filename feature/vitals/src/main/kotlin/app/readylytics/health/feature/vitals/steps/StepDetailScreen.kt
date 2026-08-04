@@ -35,8 +35,8 @@ import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.StepsCard
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.feature.vitals.R
@@ -125,22 +125,16 @@ fun StepDetailScreen(
                     } else {
                         null
                     }
-                M3ScoreGaugeCard(
+                StepsCard(
+                    stepCount = stepCount,
+                    stepGoal = stepGoal,
                     modifier =
                         Modifier
-                            .fillMaxWidth()
                             .padding(
                                 horizontal = MaterialTheme.spacing.pageHorizontal,
                                 vertical = MaterialTheme.spacing.small,
                             ),
-                    title = stringResource(R.string.label_steps_today),
-                    score = stepCount?.toFloat(),
-                    displayText = stepCount?.let { String.format(java.util.Locale.US, "%,d", it) } ?: "—",
-                    unitText = stringResource(CoreUiR.string.unit_steps),
-                    maxScore = (stepGoal * 1.5f),
-                    status = uiState.currentStepsStatus,
-                    deltaText = stepsDelta,
-                    tooltipDescription = pluralStringResource(R.plurals.tooltip_steps_today, stepGoal, stepGoal),
+                    onClick = null,
                 )
             }
 
