@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -132,7 +133,10 @@ fun SleepHrChart(
     val labelStyle = TextStyle(color = axisTextColor, fontSize = 10.sp)
 
     val yMin = remember(sortedSamples) { (sortedSamples.minOf { it.beatsPerMinute } - 10).coerceAtLeast(30) }
-    val yMax = remember(sortedSamples) { sortedSamples.maxOf { it.beatsPerMinute } + 10 }
+    val yMax =
+        remember(sortedSamples, yMin) {
+            (sortedSamples.maxOf { it.beatsPerMinute } + 10).coerceAtLeast(yMin + 20)
+        }
 
     val scale = remember(session.startTime, session.endTime) { DayTimelineScale(session.startTime, session.endTime) }
 
@@ -382,7 +386,7 @@ fun SleepHrChart(
                     )
                     drawCircle(color = lineColor, radius = 4.dp.toPx(), center = Offset(selectedX, selectedY))
                     drawCircle(
-                        color = androidx.compose.ui.graphics.Color.White,
+                        color = Color.White,
                         radius = 1.5.dp.toPx(),
                         center = Offset(selectedX, selectedY),
                     )
