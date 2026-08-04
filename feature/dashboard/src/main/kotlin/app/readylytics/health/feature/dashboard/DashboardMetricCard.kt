@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -153,7 +152,6 @@ private fun DashboardMetricCardContent(
                 text = presentation.title,
                 style =
                     MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
                         platformStyle = PlatformTextStyle(includeFontPadding = false),
                         lineHeightStyle =
                             LineHeightStyle(
