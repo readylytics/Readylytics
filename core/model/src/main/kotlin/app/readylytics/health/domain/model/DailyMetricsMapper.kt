@@ -127,6 +127,17 @@ object DailyMetricsMapper {
         return if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
     }
 
+    /**
+     * Returns hours and minutes as separate strings for split gauge display
+     * (hours on the value line, minutes on the unit line).
+     */
+    fun formatSleepDurationSplit(minutes: Int?): Pair<String, String>? {
+        if (minutes == null) return null
+        val hours = minutes / 60
+        val mins = minutes % 60
+        return "${hours}h" to if (mins > 0) "${mins}m" else ""
+    }
+
     private fun formatBloodPressure(
         systolic: Int?,
         diastolic: Int?,

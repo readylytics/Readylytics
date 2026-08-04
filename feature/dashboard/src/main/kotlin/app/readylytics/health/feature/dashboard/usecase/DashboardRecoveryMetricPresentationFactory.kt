@@ -78,11 +78,14 @@ internal class DashboardRecoveryMetricPresentationFactory(
                     )
             }
         val tooltip = resourceProvider.getString(CoreUiR.string.tooltip_sleep_duration, goalText)
+        val durationSplit = DailyMetricsMapper.formatSleepDurationSplit(summary?.sleepDurationMinutes)
 
         return DashboardMetricPresentation(
             title = title,
             valueText = valueText,
             unitText = "",
+            gaugeValueTextOverride = durationSplit?.first,
+            gaugeUnitTextOverride = durationSplit?.second,
             secondaryText =
                 lastSleepSession?.let { session ->
                     resourceProvider.getString(

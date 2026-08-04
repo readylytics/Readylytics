@@ -58,4 +58,14 @@ data class DashboardMetricPresentation(
     val tooltip: String,
     val accessibilityDescription: String,
     val visual: DashboardMetricVisual,
-)
+    /** Gauge-only override: when a combined [valueText] is too wide for the horseshoe,
+     *  callers split it into a short value (top) and a unit-like suffix (bottom). */
+    val gaugeValueTextOverride: String? = null,
+    val gaugeUnitTextOverride: String? = null,
+) {
+    val gaugeValueText: String
+        get() = gaugeValueTextOverride ?: valueText
+
+    val gaugeUnitText: String
+        get() = gaugeUnitTextOverride ?: unitText
+}
