@@ -193,7 +193,7 @@ fun M3MetricGaugeWithValue(
             Text(
                 text = valueText,
                 style =
-                    MaterialTheme.typography.headlineMedium.copy(
+                    MaterialTheme.typography.headlineSmall.copy(
                         lineHeightStyle =
                             LineHeightStyle(
                                 alignment = LineHeightStyle.Alignment.Center,
