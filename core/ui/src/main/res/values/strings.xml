@@ -198,4 +198,14 @@
     <string name="metric_unavailable_missing_bmi">Missing height for BMI</string>
     <string name="bmi_secondary_text">BMI: %1$s</string>
 
+
+    <!-- Extracted from Dashboard for UniversalMetricCard -->
+    <string name="menu_content_description_visualization_style">Change visualization style</string>
+    <string name="mode_gauge">Gauge</string>
+    <string name="mode_bar">Bar</string>
+    <string name="mode_value">Value</string>
+    <string name="menu_item_description_mode">Visualization style: %1$s</string>
+    <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
+    <string name="semantics_edit_mode_separator">, %1$s</string>
+
 </resources>

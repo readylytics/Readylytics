@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.MetricCardSkeleton
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
@@ -62,12 +63,12 @@ private fun ConfigurableMetricCard(
         content = {
             val spec = DashboardCardCatalog.spec(cardId)
             if (presentation != null && spec != null) {
-                DashboardMetricCard(
+                UniversalMetricCard(
                     presentation = presentation,
-                    specification = spec,
-                    requestedMode = DashboardCardCatalog.requestedMode(configuration),
+                    specification = spec.toUniversalSpec(),
+                    requestedMode = DashboardCardCatalog.requestedMode(configuration).toUniversalMode(),
                     isEditing = isEditing,
-                    onModeSelected = { mode -> onCardDisplayModeChanged(cardId, mode) },
+                    onModeSelected = { mode -> onCardDisplayModeChanged(cardId, mode.toDashboardMode()) },
                     onClick = if (isEditing) null else onClick,
                 )
             }

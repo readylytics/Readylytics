@@ -1,4 +1,6 @@
 package app.readylytics.health.feature.dashboard
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -104,7 +106,7 @@ abstract class DashboardVisualizationRegressionTestBase {
     protected fun assertVisualizationIsInsideCard(tag: String) {
         val cardBounds =
             composeRule
-                .onNodeWithTag(DASHBOARD_METRIC_CARD_TAG)
+                .onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG)
                 .fetchSemanticsNode()
                 .boundsInRoot
         val visualizationBounds =
@@ -124,7 +126,7 @@ abstract class DashboardVisualizationRegressionTestBase {
     protected fun assertTagIsInsideCard(tag: String) {
         val cardBounds =
             composeRule
-                .onNodeWithTag(DASHBOARD_METRIC_CARD_TAG)
+                .onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG)
                 .fetchSemanticsNode()
                 .boundsInRoot
         val taggedBounds =
@@ -181,7 +183,7 @@ abstract class DashboardVisualizationRegressionTestBase {
                 .boundsInRoot
         val barBounds =
             composeRule
-                .onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true)
+                .onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true)
                 .fetchSemanticsNode()
                 .boundsInRoot
         // Allow overlap because M3 components expand their semantic bounds to 48dp minimum.
@@ -199,7 +201,7 @@ abstract class DashboardVisualizationRegressionTestBase {
                 .boundsInRoot
         val barBounds =
             composeRule
-                .onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true)
+                .onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true)
                 .fetchSemanticsNode()
                 .boundsInRoot
         // Allow overlap because M3 components expand their semantic bounds to 48dp minimum.

@@ -8,14 +8,14 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.DashboardCardSpec
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Rule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-abstract class DashboardMetricCardTestBase {
+abstract class UniversalMetricCardTestBase {
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -32,14 +32,14 @@ abstract class DashboardMetricCardTestBase {
     ): String = context.getString(id, *args)
 
     protected val testSpec =
-        DashboardCardSpec(
+        UniversalMetricCardSpec(
             cardId = CardId.SLEEP_SCORE,
-            legacyDefaultMode = DashboardCardDisplayMode.GAUGE,
+            legacyDefaultMode = UniversalCardDisplayMode.GAUGE,
             supportedModes =
                 listOf(
-                    DashboardCardDisplayMode.GAUGE,
-                    DashboardCardDisplayMode.BAR,
-                    DashboardCardDisplayMode.VALUE,
+                    UniversalCardDisplayMode.GAUGE,
+                    UniversalCardDisplayMode.BAR,
+                    UniversalCardDisplayMode.VALUE,
                 ),
         )
 

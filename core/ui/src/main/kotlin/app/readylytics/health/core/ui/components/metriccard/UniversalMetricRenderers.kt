@@ -1,4 +1,4 @@
-package app.readylytics.health.feature.dashboard
+package app.readylytics.health.core.ui.components.metriccard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,15 +33,14 @@ import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.core.ui.components.metricVisualizationTrackColor
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.dashboard.CardId
 
-internal const val DASHBOARD_METRIC_CARD_TAG = "dashboard_metric_card"
-internal const val DASHBOARD_GAUGE_TAG = "dashboard_metric_gauge"
-internal const val DASHBOARD_BAR_TAG = "dashboard_metric_bar"
-internal const val DASHBOARD_DELTA_PILL_TAG = "dashboard_metric_delta_pill"
-internal const val DASHBOARD_TITLE_INFO_ICON_TAG = "dashboard_metric_title_info_icon"
+const val UNIVERSAL_METRIC_CARD_TAG = "dashboard_metric_card"
+const val UNIVERSAL_GAUGE_TAG = "dashboard_metric_gauge"
+const val UNIVERSAL_BAR_TAG = "dashboard_metric_bar"
+const val UNIVERSAL_DELTA_PILL_TAG = "dashboard_metric_delta_pill"
+const val UNIVERSAL_TITLE_INFO_ICON_TAG = "dashboard_metric_title_info_icon"
 
-internal fun UniversalMetricVisual.progressFraction(): Float? =
+fun UniversalMetricVisual.progressFraction(): Float? =
     when (this) {
         is UniversalMetricVisual.Score -> markerFraction
         is UniversalMetricVisual.Goal -> markerFraction
@@ -52,10 +51,10 @@ internal fun UniversalMetricVisual.progressFraction(): Float? =
 
 // Fixed slot for the delta pill / plain secondary text, kept out of the weighted value row so it
 // cannot be squeezed away at large font scales.
-private val DASHBOARD_SECONDARY_SLOT_HEIGHT = 20.dp
+private val UNIVERSAL_SECONDARY_SLOT_HEIGHT = 20.dp
 
 @Composable
-fun DashboardGaugeRenderer(
+fun UniversalGaugeRenderer(
     presentation: UniversalMetricPresentation,
     secondaryUsesPill: Boolean,
     animateMarker: Boolean,
@@ -71,7 +70,7 @@ fun DashboardGaugeRenderer(
         }
 
     Column(
-        modifier = modifier.fillMaxSize().testTag(DASHBOARD_GAUGE_TAG),
+        modifier = modifier.fillMaxSize().testTag(UNIVERSAL_GAUGE_TAG),
         verticalArrangement = Arrangement.Bottom,
     ) {
         M3MetricGaugeWithValue(
@@ -92,12 +91,12 @@ fun DashboardGaugeRenderer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(DASHBOARD_SECONDARY_SLOT_HEIGHT),
+                    .height(UNIVERSAL_SECONDARY_SLOT_HEIGHT),
             contentAlignment = Alignment.Center,
         ) {
             presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
                 if (secondaryUsesPill) {
-                    DashboardMetricDeltaPill(deltaText)
+                    UniversalMetricDeltaPill(deltaText)
                 } else {
                     Text(
                         text = deltaText,
@@ -113,7 +112,7 @@ fun DashboardGaugeRenderer(
 }
 
 @Composable
-fun DashboardBarRenderer(
+fun UniversalBarRenderer(
     presentation: UniversalMetricPresentation,
     secondaryUsesPill: Boolean,
     contentColor: Color,
@@ -128,7 +127,7 @@ fun DashboardBarRenderer(
         }
     val trackColor = metricVisualizationTrackColor()
 
-    DashboardValueUnitColumn(
+    UniversalValueUnitColumn(
         presentation = presentation,
         contentColor = contentColor,
         secondaryUsesPill = secondaryUsesPill,
@@ -142,7 +141,7 @@ fun DashboardBarRenderer(
                     .fillMaxWidth()
                     .height(MaterialTheme.dimens.metricTrackThickness)
                     .padding(horizontal = MaterialTheme.spacing.extraSmall)
-                    .testTag(DASHBOARD_BAR_TAG),
+                    .testTag(UNIVERSAL_BAR_TAG),
             color = activeColor,
             trackColor = trackColor,
             strokeCap = StrokeCap.Round,
@@ -155,7 +154,7 @@ fun DashboardBarRenderer(
 // into the track slot, Value mode leaves the same slot empty, so the two modes differ only in
 // whether the track is painted and everything else stays put when switching between them.
 @Composable
-private fun DashboardValueUnitColumn(
+private fun UniversalValueUnitColumn(
     presentation: UniversalMetricPresentation,
     contentColor: Color,
     secondaryUsesPill: Boolean,
@@ -206,12 +205,12 @@ private fun DashboardValueUnitColumn(
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
 
         Box(
-            modifier = Modifier.fillMaxWidth().height(DASHBOARD_SECONDARY_SLOT_HEIGHT),
+            modifier = Modifier.fillMaxWidth().height(UNIVERSAL_SECONDARY_SLOT_HEIGHT),
             contentAlignment = Alignment.CenterStart,
         ) {
             presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
                 if (secondaryUsesPill) {
-                    DashboardMetricDeltaPill(deltaText)
+                    UniversalMetricDeltaPill(deltaText)
                 } else {
                     Text(
                         text = deltaText,
@@ -230,7 +229,7 @@ private fun DashboardValueUnitColumn(
 // Card's contentColor) instead of a fixed neutral grey, so it stays legible on a WARNING/POOR/
 // OPTIMAL tinted container.
 @Composable
-private fun DashboardMetricDeltaPill(deltaText: String) {
+private fun UniversalMetricDeltaPill(deltaText: String) {
     val pillContentColor = LocalContentColor.current
     Surface(
         shape = CircleShape,
@@ -245,7 +244,7 @@ private fun DashboardMetricDeltaPill(deltaText: String) {
                     .padding(
                         horizontal = MaterialTheme.spacing.small,
                         vertical = MaterialTheme.spacing.hairline,
-                    ).testTag(DASHBOARD_DELTA_PILL_TAG),
+                    ).testTag(UNIVERSAL_DELTA_PILL_TAG),
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -253,33 +252,18 @@ private fun DashboardMetricDeltaPill(deltaText: String) {
     }
 }
 
-// Secondary-text treatment, keyed by card identity rather than by inspecting the text itself:
-// only cards whose secondary text is an actual delta (a change since baseline/yesterday) get
-// the pill; range/duration and averaged text (Sleep Duration, Circadian, Heart Rate) stay as
-// plain bounded text.
-internal fun CardId.usesDeltaPill(): Boolean =
-    when (this) {
-        CardId.SLEEP_SCORE,
-        CardId.READINESS,
-        CardId.HRV,
-        CardId.SLEEP_RHR,
-        CardId.RESTING_HR,
-        CardId.STRAIN_RATIO,
-        -> true
-        else -> false
-    }
 
 @Composable
-fun DashboardValueRenderer(
+fun UniversalValueRenderer(
     presentation: UniversalMetricPresentation,
     contentColor: Color,
-    cardId: CardId,
+    secondaryUsesPill: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    DashboardValueUnitColumn(
+    UniversalValueUnitColumn(
         presentation = presentation,
         contentColor = contentColor,
-        secondaryUsesPill = cardId.usesDeltaPill(),
+        secondaryUsesPill = secondaryUsesPill,
         modifier = modifier,
     ) {
         // Value mode is Bar mode without the painted track: the slot is still reserved so the

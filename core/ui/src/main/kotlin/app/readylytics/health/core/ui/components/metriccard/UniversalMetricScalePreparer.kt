@@ -1,9 +1,9 @@
-package app.readylytics.health.feature.dashboard
+package app.readylytics.health.core.ui.components.metriccard
 
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 
-object DashboardMetricScalePreparer {
+object UniversalMetricScalePreparer {
     private fun linearFraction(
         value: Float,
         minimum: Float,

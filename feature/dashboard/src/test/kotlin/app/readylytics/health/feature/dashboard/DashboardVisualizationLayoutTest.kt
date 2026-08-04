@@ -1,4 +1,9 @@
 package app.readylytics.health.feature.dashboard
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_TITLE_INFO_ICON_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_DELTA_PILL_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_GAUGE_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -15,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
+import app.readylytics.health.core.ui.components.metriccard.progressFraction
 import app.readylytics.health.core.ui.components.onContainerColor
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
@@ -44,7 +50,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
         )
 
         composeRule.onNodeWithText("86").assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
         assertTextIsAboveBar("86")
     }
 
@@ -62,7 +68,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
         )
 
         composeRule.onNodeWithText("↑ 0.23").assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
         assertTextIsBelowBar("↑ 0.23")
     }
 
@@ -97,8 +103,8 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
         composeRule.onNodeWithText("ms").assertIsDisplayed()
 
         // Gauge visualization should remain inside the card
-        composeRule.onNodeWithTag(DASHBOARD_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
-        assertVisualizationIsInsideCard(DASHBOARD_GAUGE_TAG)
+        composeRule.onNodeWithTag(UNIVERSAL_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertVisualizationIsInsideCard(UNIVERSAL_GAUGE_TAG)
     }
 
     @Test
@@ -119,8 +125,8 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 ),
         )
 
-        composeRule.onNodeWithTag(DASHBOARD_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
-        assertVisualizationIsInsideCard(DASHBOARD_GAUGE_TAG)
+        composeRule.onNodeWithTag(UNIVERSAL_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertVisualizationIsInsideCard(UNIVERSAL_GAUGE_TAG)
     }
 
     @Test
@@ -183,7 +189,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
 
         DashboardCardDisplayMode.entries.forEach { newMode ->
             composeRule.runOnIdle { mode = newMode }
-            composeRule.onNodeWithTag(DASHBOARD_METRIC_CARD_TAG).assertHeightIsEqualTo(156.dp)
+            composeRule.onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG).assertHeightIsEqualTo(156.dp)
         }
     }
 
@@ -213,10 +219,10 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
         }
 
         // Both must still be laid out (not squeezed to zero) *and* inside the card.
-        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
-        assertTagIsInsideCard(DASHBOARD_BAR_TAG)
-        assertTagIsInsideCard(DASHBOARD_DELTA_PILL_TAG)
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTagIsInsideCard(UNIVERSAL_BAR_TAG)
+        assertTagIsInsideCard(UNIVERSAL_DELTA_PILL_TAG)
     }
 
     @Test
@@ -248,9 +254,9 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
         listOf(1f, 1.5f).forEach { newFontScale ->
             composeRule.runOnIdle { fontScale = newFontScale }
             composeRule
-                .onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true)
+                .onNodeWithTag(UNIVERSAL_DELTA_PILL_TAG, useUnmergedTree = true)
                 .assertIsDisplayed()
-            assertTagIsInsideCard(DASHBOARD_DELTA_PILL_TAG)
+            assertTagIsInsideCard(UNIVERSAL_DELTA_PILL_TAG)
         }
     }
 
@@ -279,7 +285,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
 
         val barValue = boundsOfText("41")
         val barUnit = boundsOfText("ms")
-        val barPill = boundsOfTag(DASHBOARD_DELTA_PILL_TAG)
+        val barPill = boundsOfTag(UNIVERSAL_DELTA_PILL_TAG)
         composeRule.runOnIdle { mode = DashboardCardDisplayMode.VALUE }
 
         // Value mode is Bar mode without the painted track: the value/unit row and the
@@ -287,12 +293,12 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
         // the value rather than on its own line below it.
         assertEquals("Value row must not move between Bar and Value", barValue, boundsOfText("41"))
         assertEquals("Unit must not move between Bar and Value", barUnit, boundsOfText("ms"))
-        assertEquals("Delta pill must not move between Bar and Value", barPill, boundsOfTag(DASHBOARD_DELTA_PILL_TAG))
+        assertEquals("Delta pill must not move between Bar and Value", barPill, boundsOfTag(UNIVERSAL_DELTA_PILL_TAG))
         assertTrue(
             "Unit must sit beside the value, not below it: value=$barValue, unit=$barUnit",
             barUnit.left >= barValue.right,
         )
-        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
@@ -381,7 +387,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
             composeRule.runOnIdle { title = newTitle }
             val cardBounds =
                 composeRule
-                    .onNodeWithTag(DASHBOARD_METRIC_CARD_TAG)
+                    .onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG)
                     .fetchSemanticsNode()
                     .boundsInRoot
             val titleBounds =
@@ -391,7 +397,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                     .boundsInRoot
             val iconBounds =
                 composeRule
-                    .onNodeWithTag(DASHBOARD_TITLE_INFO_ICON_TAG, useUnmergedTree = true)
+                    .onNodeWithTag(UNIVERSAL_TITLE_INFO_ICON_TAG, useUnmergedTree = true)
                     .fetchSemanticsNode()
                     .boundsInRoot
             val actionBounds =

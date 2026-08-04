@@ -19,11 +19,13 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 
 // Compose Preview fixtures for DashboardMetricCard, covering every visual/render-mode combination
 // the Task 10 brief calls out for visual accessibility review in Android Studio. These carry no
 // assertions of their own (see DashboardMetricCardTest for the automated semantics coverage) and
-// build on the same DashboardMetricScalePreparer helpers production code uses, so the fractions
+// build on the same UniversalMetricScalePreparer helpers production code uses, so the fractions
 // drawn here match how the real renderers would compute them.
 //
 // Titles below are pulled from real string resources (via stringResource) so previews reflect
@@ -46,12 +48,12 @@ private fun sleepScorePresentation(): UniversalMetricPresentation =
         status = MetricStatus.OPTIMAL,
         tooltip = "Total quality of rest based on duration and cycles.",
         accessibilityDescription = "Sleep score: 82 of 100, Optimal",
-        visual = DashboardMetricScalePreparer.score(82f, 0f, 100f),
+        visual = UniversalMetricScalePreparer.score(82f, 0f, 100f),
     )
 
 @Composable
 private fun goalAboveTargetPresentation(): UniversalMetricPresentation {
-    val visual = DashboardMetricScalePreparer.goal(520f, 480f)
+    val visual = UniversalMetricScalePreparer.goal(520f, 480f)
     return UniversalMetricPresentation(
         title = stringResource(R.string.card_title_sleep_duration),
         valueText = "8h 40m",
@@ -69,7 +71,7 @@ private fun goalAboveTargetPresentation(): UniversalMetricPresentation {
 @Composable
 private fun baselineWithinRangePresentation(): UniversalMetricPresentation {
     val visual =
-        DashboardMetricScalePreparer.personalBaseline(
+        UniversalMetricScalePreparer.personalBaseline(
             value = 62f,
             baseline = 60f,
             axisMinimumRatio = 0.5f,
@@ -93,7 +95,7 @@ private fun baselineWithinRangePresentation(): UniversalMetricPresentation {
 @Composable
 private fun weightReferenceRangePresentation(): UniversalMetricPresentation {
     val visual =
-        DashboardMetricScalePreparer.referenceRange(
+        UniversalMetricScalePreparer.referenceRange(
             value = 21.7f,
             minimum = 15f,
             midpoint = 21.7f,
@@ -118,7 +120,7 @@ private fun weightReferenceRangePresentation(): UniversalMetricPresentation {
 
 @Composable
 private fun goalUnavailablePresentation(): UniversalMetricPresentation {
-    val visual = DashboardMetricScalePreparer.goal(null, null)
+    val visual = UniversalMetricScalePreparer.goal(null, null)
     val reason = stringResource(app.readylytics.health.core.ui.R.string.metric_unavailable_missing_target)
     return UniversalMetricPresentation(
         title = stringResource(R.string.card_title_sleep_duration),
@@ -136,10 +138,10 @@ private fun goalUnavailablePresentation(): UniversalMetricPresentation {
 @Composable
 private fun DashboardScoreGaugePreview() {
     FitDashboardTheme {
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec,
-            requestedMode = DashboardCardDisplayMode.GAUGE,
+            specification = sleepScoreSpec.toUniversalSpec(),
+            requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
         )
@@ -150,10 +152,10 @@ private fun DashboardScoreGaugePreview() {
 @Composable
 private fun DashboardScoreBarPreview() {
     FitDashboardTheme {
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec,
-            requestedMode = DashboardCardDisplayMode.BAR,
+            specification = sleepScoreSpec.toUniversalSpec(),
+            requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
         )
@@ -164,10 +166,10 @@ private fun DashboardScoreBarPreview() {
 @Composable
 private fun DashboardScoreValuePreview() {
     FitDashboardTheme {
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec,
-            requestedMode = DashboardCardDisplayMode.VALUE,
+            specification = sleepScoreSpec.toUniversalSpec(),
+            requestedMode = DashboardCardDisplayMode.VALUE.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
         )
@@ -178,10 +180,10 @@ private fun DashboardScoreValuePreview() {
 @Composable
 private fun DashboardGoalAboveTargetBarPreview() {
     FitDashboardTheme {
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = goalAboveTargetPresentation(),
-            specification = sleepDurationSpec,
-            requestedMode = DashboardCardDisplayMode.BAR,
+            specification = sleepDurationSpec.toUniversalSpec(),
+            requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
         )
@@ -192,10 +194,10 @@ private fun DashboardGoalAboveTargetBarPreview() {
 @Composable
 private fun DashboardBaselineWithinRangeGaugePreview() {
     FitDashboardTheme {
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = baselineWithinRangePresentation(),
-            specification = hrvSpec,
-            requestedMode = DashboardCardDisplayMode.GAUGE,
+            specification = hrvSpec.toUniversalSpec(),
+            requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
         )
@@ -206,10 +208,10 @@ private fun DashboardBaselineWithinRangeGaugePreview() {
 @Composable
 private fun DashboardWeightReferenceRangeBarPreview() {
     FitDashboardTheme {
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = weightReferenceRangePresentation(),
-            specification = weightSpec,
-            requestedMode = DashboardCardDisplayMode.BAR,
+            specification = weightSpec.toUniversalSpec(),
+            requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
         )
@@ -220,10 +222,10 @@ private fun DashboardWeightReferenceRangeBarPreview() {
 @Composable
 private fun DashboardGoalUnavailableBarPreview() {
     FitDashboardTheme {
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = goalUnavailablePresentation(),
-            specification = sleepDurationSpec,
-            requestedMode = DashboardCardDisplayMode.BAR,
+            specification = sleepDurationSpec.toUniversalSpec(),
+            requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
         )
@@ -235,12 +237,12 @@ private fun DashboardGoalUnavailableBarPreview() {
 private fun DashboardEditModeSelectorPreview() {
     FitDashboardTheme {
         var mode by remember { mutableStateOf(DashboardCardDisplayMode.GAUGE) }
-        DashboardMetricCard(
+        UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec,
-            requestedMode = mode,
+            specification = sleepScoreSpec.toUniversalSpec(),
+            requestedMode = mode.toUniversalMode(),
             isEditing = true,
-            onModeSelected = { mode = it },
+            onModeSelected = { mode = it.toDashboardMode() },
         )
     }
 }
@@ -253,10 +255,10 @@ private fun DashboardCardFontScaleDefaultPreview() {
             modifier = Modifier.padding(MaterialTheme.spacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
         ) {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = sleepScorePresentation(),
-                specification = sleepScoreSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                specification = sleepScoreSpec.toUniversalSpec(),
+                requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
                 isEditing = true,
                 onModeSelected = {},
             )
@@ -272,10 +274,10 @@ private fun DashboardCardFontScaleLargePreview() {
             modifier = Modifier.padding(MaterialTheme.spacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
         ) {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = sleepScorePresentation(),
-                specification = sleepScoreSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                specification = sleepScoreSpec.toUniversalSpec(),
+                requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
                 isEditing = true,
                 onModeSelected = {},
             )

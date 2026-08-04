@@ -18,7 +18,7 @@ import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.ResourceProvider
-import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import kotlin.math.abs
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
@@ -49,7 +49,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
     ): UniversalMetricPresentation {
         val goalMinutes = (preferences.goalSleepHours * 60).toInt()
         val durationVisual =
-            DashboardMetricScalePreparer.goal(
+            UniversalMetricScalePreparer.goal(
                 value = summary?.sleepDurationMinutes?.toFloat(),
                 target = goalMinutes.toFloat(),
             )
@@ -110,7 +110,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
         val baseline = metrics?.hrvBaselineRounded?.toFloat()
         val poorRatio = prefs.hrvWarningThreshold - (1f - prefs.hrvWarningThreshold)
         val visual =
-            DashboardMetricScalePreparer.personalBaseline(
+            UniversalMetricScalePreparer.personalBaseline(
                 value = summary?.nocturnalHrv?.toFloat(),
                 baseline = baseline,
                 axisMinimumRatio = poorRatio,
@@ -211,7 +211,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
                 LoadSourceSelector.selectTotalRas(it, preferences.rasSourceMode)
             }
         val visual =
-            DashboardMetricScalePreparer.score(
+            UniversalMetricScalePreparer.score(
                 value,
                 0f,
                 100f,
@@ -247,7 +247,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
     ) = run {
         val baseline = metrics?.rhrBaselineRaw
         val poorRatio = prefs.rhrWarningThreshold + (prefs.rhrWarningThreshold - 1f)
-        DashboardMetricScalePreparer.personalBaseline(
+        UniversalMetricScalePreparer.personalBaseline(
             value = summary?.restingHeartRate?.toFloat(),
             baseline = baseline,
             axisMinimumRatio = 1f - (poorRatio - 1f),

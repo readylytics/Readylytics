@@ -1,4 +1,4 @@
-package app.readylytics.health.feature.dashboard
+package app.readylytics.health.core.ui.components.metriccard
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,7 +29,11 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,42 +41,44 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+
 import app.readylytics.health.core.ui.components.containerColor
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.onContainerColor
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.DashboardCardSpec
-import app.readylytics.health.feature.dashboard.R
 import kotlinx.coroutines.launch
-import app.readylytics.health.core.ui.R as CoreUiR
+
+
 
 @Composable
-fun DashboardMetricCard(
+fun UniversalMetricCard(
     presentation: UniversalMetricPresentation,
-    specification: DashboardCardSpec,
-    requestedMode: DashboardCardDisplayMode,
-    isEditing: Boolean,
-    onModeSelected: (DashboardCardDisplayMode) -> Unit,
+    specification: UniversalMetricCardSpec,
+    requestedMode: UniversalCardDisplayMode,
+    isEditing: Boolean = false,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit = {},
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
     val modeStringRes =
         when (requestedMode) {
-            DashboardCardDisplayMode.GAUGE -> R.string.mode_gauge
-            DashboardCardDisplayMode.BAR -> R.string.mode_bar
-            DashboardCardDisplayMode.VALUE -> R.string.mode_value
+            UniversalCardDisplayMode.GAUGE -> app.readylytics.health.core.ui.R.string.mode_gauge
+            UniversalCardDisplayMode.BAR -> app.readylytics.health.core.ui.R.string.mode_bar
+            UniversalCardDisplayMode.VALUE -> app.readylytics.health.core.ui.R.string.mode_value
         }
     val modeContext = stringResource(id = modeStringRes)
     val contentDesc =
         if (isEditing) {
-            stringResource(R.string.semantics_edit_mode_separator, modeContext)
+            stringResource(app.readylytics.health.core.ui.R.string.semantics_edit_mode_separator, modeContext)
                 .let(presentation.accessibilityDescription::plus)
         } else {
             presentation.accessibilityDescription
@@ -82,7 +91,7 @@ fun DashboardMetricCard(
         modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.cardHeight)
-            .testTag(DASHBOARD_METRIC_CARD_TAG)
+            .testTag(UNIVERSAL_METRIC_CARD_TAG)
     val colors =
         CardDefaults.cardColors(
             containerColor = containerColor,
@@ -96,7 +105,7 @@ fun DashboardMetricCard(
             shape = MaterialTheme.shapes.large,
             colors = colors,
         ) {
-            DashboardMetricCardContent(
+            UniversalMetricCardContent(
                 presentation = presentation,
                 specification = specification,
                 requestedMode = requestedMode,
@@ -112,7 +121,7 @@ fun DashboardMetricCard(
             shape = MaterialTheme.shapes.large,
             colors = colors,
         ) {
-            DashboardMetricCardContent(
+            UniversalMetricCardContent(
                 presentation = presentation,
                 specification = specification,
                 requestedMode = requestedMode,
@@ -127,14 +136,14 @@ fun DashboardMetricCard(
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
-private fun DashboardMetricCardContent(
+private fun UniversalMetricCardContent(
     presentation: UniversalMetricPresentation,
-    specification: DashboardCardSpec,
-    requestedMode: DashboardCardDisplayMode,
+    specification: UniversalMetricCardSpec,
+    requestedMode: UniversalCardDisplayMode,
     isEditing: Boolean,
     cardContentDescription: String,
     contentColor: Color,
-    onModeSelected: (DashboardCardDisplayMode) -> Unit,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit,
 ) {
     Column(
         modifier =
@@ -171,7 +180,7 @@ private fun DashboardMetricCardContent(
                     modifier = Modifier.size(MaterialTheme.dimens.iconStandard).wrapContentSize(unbounded = true),
                     contentAlignment = Alignment.Center,
                 ) {
-                    DashboardDisplayModeMenu(
+                    UniversalDisplayModeMenu(
                         specification = specification,
                         requestedMode = requestedMode,
                         isSelectionAvailable = selectionAvailable,
@@ -186,7 +195,7 @@ private fun DashboardMetricCardContent(
                                 MaterialTheme.dimens.iconStandard,
                             ).wrapContentSize(align = Alignment.TopEnd, unbounded = true),
                 ) {
-                    DashboardTitleInfoAction(
+                    UniversalTitleInfoAction(
                         description = presentation.tooltip,
                         iconTint = contentColor,
                     )
@@ -198,24 +207,24 @@ private fun DashboardMetricCardContent(
 
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (requestedMode) {
-                DashboardCardDisplayMode.GAUGE ->
-                    DashboardGaugeRenderer(
+                UniversalCardDisplayMode.GAUGE ->
+                    UniversalGaugeRenderer(
                         presentation = presentation,
-                        secondaryUsesPill = specification.cardId.usesDeltaPill(),
+                        secondaryUsesPill = specification.usesDeltaPill,
                         animateMarker = !isEditing,
                         contentColor = contentColor,
                     )
-                DashboardCardDisplayMode.BAR ->
-                    DashboardBarRenderer(
+                UniversalCardDisplayMode.BAR ->
+                    UniversalBarRenderer(
                         presentation = presentation,
-                        secondaryUsesPill = specification.cardId.usesDeltaPill(),
+                        secondaryUsesPill = specification.usesDeltaPill,
                         contentColor = contentColor,
                     )
-                DashboardCardDisplayMode.VALUE ->
-                    DashboardValueRenderer(
+                UniversalCardDisplayMode.VALUE ->
+                    UniversalValueRenderer(
                         presentation = presentation,
                         contentColor = contentColor,
-                        cardId = specification.cardId,
+                        secondaryUsesPill = specification.usesDeltaPill,
                     )
             }
         }
@@ -226,14 +235,14 @@ private fun DashboardMetricCardContent(
 // reach it independently of the metric card's value and status description.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DashboardTitleInfoAction(
+private fun UniversalTitleInfoAction(
     description: String,
     iconTint: Color,
     modifier: Modifier = Modifier,
 ) {
     val tooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
-    val infoContentDescription = stringResource(id = CoreUiR.string.accessibility_more_information)
+    val infoContentDescription = stringResource(id = app.readylytics.health.core.ui.R.string.accessibility_more_information)
 
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
@@ -256,7 +265,77 @@ private fun DashboardTitleInfoAction(
                     modifier =
                         Modifier
                             .size(MaterialTheme.dimens.iconMedium)
-                            .testTag(DASHBOARD_TITLE_INFO_ICON_TAG),
+                            .testTag(UNIVERSAL_TITLE_INFO_ICON_TAG),
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun UniversalDisplayModeMenu(
+    specification: UniversalMetricCardSpec,
+    requestedMode: UniversalCardDisplayMode,
+    isSelectionAvailable: Boolean,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(48.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = stringResource(id = app.readylytics.health.core.ui.R.string.menu_content_description_visualization_style),
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            specification.supportedModes.forEach { mode ->
+                val textRes =
+                    when (mode) {
+                        UniversalCardDisplayMode.GAUGE -> app.readylytics.health.core.ui.R.string.mode_gauge
+                        UniversalCardDisplayMode.BAR -> app.readylytics.health.core.ui.R.string.mode_bar
+                        UniversalCardDisplayMode.VALUE -> app.readylytics.health.core.ui.R.string.mode_value
+                    }
+
+                val enabled =
+                    when (mode) {
+                        UniversalCardDisplayMode.GAUGE, UniversalCardDisplayMode.BAR -> isSelectionAvailable
+                        UniversalCardDisplayMode.VALUE -> true
+                    }
+
+                val isSelected = mode == requestedMode
+                val modeName = stringResource(id = textRes)
+                // A dedicated contentDescription (rather than relying on the visible text plus
+                // the `selected` boolean alone) gives TalkBack a single, unambiguous announcement
+                // that names the category ("Visualization style") and the selection state.
+                val itemDescription =
+                    if (isSelected) {
+                        stringResource(app.readylytics.health.core.ui.R.string.menu_item_description_mode_selected, modeName)
+                    } else {
+                        stringResource(app.readylytics.health.core.ui.R.string.menu_item_description_mode, modeName)
+                    }
+
+                DropdownMenuItem(
+                    text = { Text(modeName) },
+                    onClick = {
+                        onModeSelected(mode)
+                        expanded = false
+                    },
+                    enabled = enabled,
+                    modifier =
+                        Modifier.semantics {
+                            selected = isSelected
+                            contentDescription = itemDescription
+                        },
                 )
             }
         }

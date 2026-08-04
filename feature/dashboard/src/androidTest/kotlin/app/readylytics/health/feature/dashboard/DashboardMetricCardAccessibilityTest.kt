@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.dashboard
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,12 +15,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
+class UniversalMetricCardAccessibilityTest : UniversalMetricCardTestBase() {
     @Test
     fun restingHrSemanticsCommunicateValueAndPersonalRangeRelationship() {
         val title = string(R.string.card_title_resting_hr)
@@ -32,7 +34,7 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 unitText = string(app.readylytics.health.core.ui.R.string.unit_bpm),
                 accessibilityDescription = expectedDescription,
                 visual =
-                    DashboardMetricScalePreparer.personalBaseline(
+                    UniversalMetricScalePreparer.personalBaseline(
                         value = 60f,
                         baseline = 60f,
                         axisMinimumRatio = 0.5f,
@@ -42,10 +44,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -65,14 +67,14 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 title = title,
                 valueText = "85",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f),
+                visual = UniversalMetricScalePreparer.score(85f, 0f, 100f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -93,14 +95,14 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 valueText = "88",
                 unitText = "%",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(88f, 0f, 100f),
+                visual = UniversalMetricScalePreparer.score(88f, 0f, 100f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -121,14 +123,14 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 valueText = "98",
                 unitText = "%",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(98f, 80f, 100f),
+                visual = UniversalMetricScalePreparer.score(98f, 80f, 100f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -153,10 +155,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.VALUE,
+                requestedMode = UniversalCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -181,10 +183,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.VALUE,
+                requestedMode = UniversalCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -204,14 +206,14 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 title = title,
                 valueText = "85",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f),
+                visual = UniversalMetricScalePreparer.score(85f, 0f, 100f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -231,14 +233,14 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 title = title,
                 valueText = "1.10",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(1.1f, 0f, 2f),
+                visual = UniversalMetricScalePreparer.score(1.1f, 0f, 2f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -253,7 +255,7 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
         val title = string(R.string.card_title_sleep_duration)
         val expectedDescription = string(R.string.semantics_goal_above_target_format, title, "520", classification)
 
-        val goalVisual = DashboardMetricScalePreparer.goal(520f, 480f)
+        val goalVisual = UniversalMetricScalePreparer.goal(520f, 480f)
         check(goalVisual.isAboveTarget) { "Fixture must exercise the above-target branch" }
 
         val presentation =
@@ -265,10 +267,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -288,14 +290,14 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 title = title,
                 valueText = "—",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.goal(null, null),
+                visual = UniversalMetricScalePreparer.goal(null, null),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.VALUE,
+                requestedMode = UniversalCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -316,7 +318,7 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
                 valueText = "—",
                 accessibilityDescription = expectedDescription,
                 visual =
-                    DashboardMetricScalePreparer.personalBaseline(
+                    UniversalMetricScalePreparer.personalBaseline(
                         value = null,
                         baseline = null,
                         axisMinimumRatio = 0.5f,
@@ -326,10 +328,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.VALUE,
+                requestedMode = UniversalCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -341,10 +343,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
     @Test
     fun informationAction_isSeparatelyReachableAndShowsTooltip() {
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = defaultPresentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -360,10 +362,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
 
     @Test
     fun modeSelectorItemSemanticsCommunicateVisualizationStyleAndSelectedState() {
-        var selectedMode by mutableStateOf(DashboardCardDisplayMode.BAR)
+        var selectedMode by mutableStateOf(UniversalCardDisplayMode.BAR)
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = defaultPresentation,
                 specification = testSpec,
                 requestedMode = selectedMode,
@@ -386,10 +388,10 @@ class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
     @Test
     fun modeSelectorMeetsMinimumTouchTargetSize() {
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = defaultPresentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = true,
                 onModeSelected = {},
             )

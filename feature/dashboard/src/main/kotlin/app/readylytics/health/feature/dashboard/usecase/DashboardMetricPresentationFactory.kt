@@ -20,7 +20,7 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
-import app.readylytics.health.feature.dashboard.DashboardMetricScalePreparer
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -150,7 +150,7 @@ class DashboardMetricPresentationFactory
 
             // 1. SLEEP SCORE
             val sleepScoreVisual =
-                DashboardMetricScalePreparer.score(
+                UniversalMetricScalePreparer.score(
                     summary?.sleepScore,
                     0f,
                     100f,
@@ -186,7 +186,7 @@ class DashboardMetricPresentationFactory
                 summary?.let {
                     LoadSourceSelector.selectReadiness(it, preferences.strainLoadSourceMode)
                 }
-            val readinessVisual = DashboardMetricScalePreparer.score(readinessScore, 0f, 100f)
+            val readinessVisual = UniversalMetricScalePreparer.score(readinessScore, 0f, 100f)
             val readinessStatus = scoreStatus(readinessScore)
             val readinessTitle = resourceProvider.getString(CoreUiR.string.card_title_readiness)
             val readinessValueText = m?.readinessRounded?.toString() ?: unavailableValueText
@@ -219,7 +219,7 @@ class DashboardMetricPresentationFactory
             val bmiAssessment = bmi?.let(BodyCompositionAssessment::assessBmi)
             val bmiReference = BodyCompositionAssessment.bmiReference
             val weightVisual =
-                DashboardMetricScalePreparer.referenceRange(
+                UniversalMetricScalePreparer.referenceRange(
                     value = bmi,
                     minimum = bmiReference.axisMinimum,
                     midpoint = bmiReference.referenceMidpoint,
@@ -283,7 +283,7 @@ class DashboardMetricPresentationFactory
                 }
             val bodyFatStatusVal = bodyFatAssessment?.status?.toMetricStatus() ?: MetricStatus.NEUTRAL
             val bodyFatVisual =
-                DashboardMetricScalePreparer.referenceRange(
+                UniversalMetricScalePreparer.referenceRange(
                     value = bodyFatPercent,
                     minimum = bodyFatAssessment?.reference?.axisMinimum ?: 0f,
                     midpoint = bodyFatAssessment?.reference?.referenceMidpoint ?: 20f,
@@ -342,7 +342,7 @@ class DashboardMetricPresentationFactory
                     "${efficiencyPercent.roundToInt()}%"
                 }
             val effVisual =
-                DashboardMetricScalePreparer.score(
+                UniversalMetricScalePreparer.score(
                     efficiencyPercent,
                     0f,
                     100f,
@@ -377,7 +377,7 @@ class DashboardMetricPresentationFactory
             val roundedSpo2 = spo2?.roundToInt()
             val oxygenStatus = spo2Status(spo2)
             val spo2Visual =
-                DashboardMetricScalePreparer.score(
+                UniversalMetricScalePreparer.score(
                     spo2,
                     80f,
                     100f,
@@ -499,7 +499,7 @@ class DashboardMetricPresentationFactory
             val circSemanticsValueText = circReady?.score?.roundToInt()?.toString() ?: unavailableValueText
             val circValueText = circReady?.score?.roundToInt()?.let { "$it%" } ?: unavailableValueText
             val circVisual =
-                DashboardMetricScalePreparer.score(
+                UniversalMetricScalePreparer.score(
                     circReady?.score,
                     0f,
                     100f,
@@ -546,7 +546,7 @@ class DashboardMetricPresentationFactory
                     }
                 }
             val strainVisual =
-                DashboardMetricScalePreparer.score(
+                UniversalMetricScalePreparer.score(
                     m?.strainRatioRaw,
                     0f,
                     2f,

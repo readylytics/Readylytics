@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.dashboard
 
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,19 +14,19 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
+class UniversalMetricCardModesTest : UniversalMetricCardTestBase() {
     @Test
     fun menuVisibilityInModes() {
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = defaultPresentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -37,7 +39,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
 
     @Test
     fun menuItemsAndDisabledStateForMissingTarget() {
-        var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
+        var selectedMode by mutableStateOf(UniversalCardDisplayMode.GAUGE)
 
         val missingTargetPresentation =
             defaultPresentation.copy(
@@ -54,7 +56,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = missingTargetPresentation,
                 specification = testSpec,
                 requestedMode = selectedMode,
@@ -92,10 +94,10 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = missingTargetPresentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -107,10 +109,10 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
     @Test
     fun valueRendererShowsContext() {
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = defaultPresentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.VALUE,
+                requestedMode = UniversalCardDisplayMode.VALUE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -124,9 +126,9 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
     @Test
     fun scoreVisualKeepsAllModesSelectableEvenWhenValueIsMissing() {
         // Unlike Goal/PersonalBaseline/ReferenceRange, a Score visual has no
-        // selectionAvailable field: DashboardMetricCard treats it as always
+        // selectionAvailable field: UniversalMetricCard treats it as always
         // selectable, even when its unavailableReason is set for a missing value.
-        var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
+        var selectedMode by mutableStateOf(UniversalCardDisplayMode.GAUGE)
 
         val missingScorePresentation =
             defaultPresentation.copy(
@@ -142,7 +144,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = missingScorePresentation,
                 specification = testSpec,
                 requestedMode = selectedMode,
@@ -167,7 +169,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
 
     @Test
     fun personalBaselineNotReadyDisablesGaugeAndBarButPreservesSelection() {
-        var selectedMode by mutableStateOf(DashboardCardDisplayMode.VALUE)
+        var selectedMode by mutableStateOf(UniversalCardDisplayMode.VALUE)
 
         val notReadyPresentation =
             defaultPresentation.copy(
@@ -184,7 +186,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = notReadyPresentation,
                 specification = testSpec,
                 requestedMode = selectedMode,
@@ -206,7 +208,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
 
     @Test
     fun referenceRangeUnavailableDisablesGaugeAndBarButKeepsRealValueVisible() {
-        var selectedMode by mutableStateOf(DashboardCardDisplayMode.GAUGE)
+        var selectedMode by mutableStateOf(UniversalCardDisplayMode.GAUGE)
 
         val missingBmiPresentation =
             defaultPresentation.copy(
@@ -222,7 +224,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = missingBmiPresentation,
                 specification = testSpec,
                 requestedMode = selectedMode,
@@ -247,8 +249,8 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
     // -------------------------------------------------------------------------
     // Task 10: accessibility semantics regression coverage.
     //
-    // DashboardMetricCard only forwards presentation.accessibilityDescription verbatim into a
-    // single merged contentDescription (see DashboardMetricCard.kt); these fixtures assemble
+    // UniversalMetricCard only forwards presentation.accessibilityDescription verbatim into a
+    // single merged contentDescription (see UniversalMetricCard.kt); these fixtures assemble
     // that description from real, localized resource strings (never a hardcoded literal for a
     // word this feature introduced/touched) to prove the shell threads it through correctly for
     // each visual type the brief calls out.
@@ -265,14 +267,14 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
                 title = title,
                 valueText = "85",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(85f, 0f, 100f),
+                visual = UniversalMetricScalePreparer.score(85f, 0f, 100f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -292,14 +294,14 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
                 title = title,
                 valueText = "7h 30m",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.goal(450f, 480f),
+                visual = UniversalMetricScalePreparer.goal(450f, 480f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -321,7 +323,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
                 unitText = string(app.readylytics.health.core.ui.R.string.unit_ms),
                 accessibilityDescription = expectedDescription,
                 visual =
-                    DashboardMetricScalePreparer.personalBaseline(
+                    UniversalMetricScalePreparer.personalBaseline(
                         value = 55f,
                         baseline = 50f,
                         axisMinimumRatio = 0.5f,
@@ -331,10 +333,10 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -359,7 +361,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
                 secondaryText = bmiSecondary,
                 accessibilityDescription = expectedDescription,
                 visual =
-                    DashboardMetricScalePreparer.referenceRange(
+                    UniversalMetricScalePreparer.referenceRange(
                         value = 21.7f,
                         minimum = 15f,
                         midpoint = 21.7f,
@@ -370,10 +372,10 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -395,7 +397,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
                 unitText = "%",
                 accessibilityDescription = expectedDescription,
                 visual =
-                    DashboardMetricScalePreparer.referenceRange(
+                    UniversalMetricScalePreparer.referenceRange(
                         value = 20f,
                         minimum = 10f,
                         midpoint = 20f,
@@ -406,10 +408,10 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -429,14 +431,14 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
                 title = title,
                 valueText = "80",
                 accessibilityDescription = expectedDescription,
-                visual = DashboardMetricScalePreparer.score(80f, 0f, 100f),
+                visual = UniversalMetricScalePreparer.score(80f, 0f, 100f),
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )
@@ -458,7 +460,7 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
                 unitText = string(app.readylytics.health.core.ui.R.string.unit_bpm),
                 accessibilityDescription = expectedDescription,
                 visual =
-                    DashboardMetricScalePreparer.personalBaseline(
+                    UniversalMetricScalePreparer.personalBaseline(
                         value = 55f,
                         baseline = 55f,
                         axisMinimumRatio = 0.5f,
@@ -468,10 +470,10 @@ class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
             )
 
         composeRule.setContent {
-            DashboardMetricCard(
+            UniversalMetricCard(
                 presentation = presentation,
                 specification = testSpec,
-                requestedMode = DashboardCardDisplayMode.GAUGE,
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 isEditing = false,
                 onModeSelected = {},
             )

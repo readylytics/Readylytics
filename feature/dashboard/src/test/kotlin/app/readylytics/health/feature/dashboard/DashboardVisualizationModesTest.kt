@@ -1,4 +1,8 @@
 package app.readylytics.health.feature.dashboard
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_DELTA_PILL_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_GAUGE_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -93,7 +97,7 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
 
         composeRule.onNodeWithText("4321").assertIsDisplayed()
         composeRule.onNodeWithText("/ 10000").assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_METRIC_CARD_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -157,12 +161,12 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                     appTheme = newTheme
                     mode = newMode
                 }
-                composeRule.onNodeWithTag(DASHBOARD_METRIC_CARD_TAG).assertHeightIsEqualTo(156.dp)
+                composeRule.onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG).assertHeightIsEqualTo(156.dp)
                 composeRule.onNodeWithText("41").assertIsDisplayed()
                 composeRule.onNodeWithText("ms").assertIsDisplayed()
                 when (newMode) {
-                    DashboardCardDisplayMode.GAUGE -> assertVisualizationIsInsideCard(DASHBOARD_GAUGE_TAG)
-                    DashboardCardDisplayMode.BAR -> assertVisualizationIsInsideCard(DASHBOARD_BAR_TAG)
+                    DashboardCardDisplayMode.GAUGE -> assertVisualizationIsInsideCard(UNIVERSAL_GAUGE_TAG)
+                    DashboardCardDisplayMode.BAR -> assertVisualizationIsInsideCard(UNIVERSAL_BAR_TAG)
                     DashboardCardDisplayMode.VALUE -> Unit
                 }
             }
@@ -235,8 +239,8 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
         )
 
         composeRule.onNodeWithText("↑ 0.23").assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
-        assertTagIsInsideCard(DASHBOARD_DELTA_PILL_TAG)
+        composeRule.onNodeWithTag(UNIVERSAL_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTagIsInsideCard(UNIVERSAL_DELTA_PILL_TAG)
     }
 
     @Test
@@ -309,8 +313,8 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
         composeRule.onNodeWithText("ms").assertIsDisplayed()
         composeRule.onNodeWithText("22:51 → 06:02").assertIsDisplayed()
         composeRule.onNodeWithText("Normal").assertDoesNotExist()
-        composeRule.onNodeWithTag(DASHBOARD_GAUGE_TAG).assertDoesNotExist()
-        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(UNIVERSAL_GAUGE_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -326,7 +330,7 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                 ),
         )
 
-        composeRule.onNodeWithTag(DASHBOARD_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_GAUGE_TAG, useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("41").assertIsDisplayed()
         composeRule.onNodeWithText("ms").assertIsDisplayed()
         composeRule.onNodeWithText("↓ 2").assertIsDisplayed()
@@ -350,8 +354,8 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
         composeRule.onNodeWithText("bpm").assertIsDisplayed()
         composeRule.onNodeWithText("↓ 1").assertIsDisplayed()
         composeRule.onNodeWithText("Optimal").assertDoesNotExist()
-        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
 
         assertTextIsAboveBar("48")
         assertTextIsAboveBar("bpm")
@@ -374,8 +378,8 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
 
         composeRule.onNodeWithText("6h 50m").assertIsDisplayed()
         composeRule.onNodeWithText("22:51 → 06:02").assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_DELTA_PILL_TAG, useUnmergedTree = true).assertDoesNotExist()
-        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_DELTA_PILL_TAG, useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
         assertTextIsAboveBar("6h 50m")
         assertTextIsBelowBar("22:51 → 06:02")
     }
@@ -394,7 +398,7 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
 
         composeRule.onNodeWithText("41").assertIsDisplayed()
         composeRule.onNodeWithText("ms").assertIsDisplayed()
-        composeRule.onNodeWithTag(DASHBOARD_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
         assertTextIsAboveBar("41")
         assertTextIsAboveBar("ms")
     }
