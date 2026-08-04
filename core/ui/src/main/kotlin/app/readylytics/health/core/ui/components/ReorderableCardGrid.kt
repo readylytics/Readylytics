@@ -26,12 +26,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -134,41 +136,75 @@ fun ReorderableCardGrid(
     var rootCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var deleteZoneTopPx by remember { mutableStateOf<Float?>(null) }
 
+    // Bounds of each card's drag-handle, in root-local space. Used only to decide where a drag
+    // may START (so taps/gestures elsewhere on the card body never begin a drag). Gesture
+    // detection itself lives on the root Column below - not on the handle - so an in-progress
+    // drag survives pendingOrder swaps re-parenting the dragged card under a different
+    // leftCard/rightCard/full-width Box template mid-gesture (a per-handle pointerInput node
+    // gets torn down by that re-parenting, which cancels the gesture after a single swap).
+    val handleBounds = remember { mutableStateMapOf<CardId, Rect>() }
+    val hapticFeedback = LocalHapticFeedback.current
+
     val draggedId = dragController.draggedCardId
 
-    // Memoized against dragController's stable identity so this lambda's own identity stays
-    // stable across recompositions (reading the latest configByCardId/callbacks via
-    // rememberUpdatedState instead of closing over them directly). Passed into every rendered
-    // card's RenderCardItem call below; if it were a fresh closure each recomposition (a plain,
-    // non-remembered lambda), Compose could never skip any card slot when the grid recomposes
-    // for an unrelated reason (e.g. one sibling's mode change), leaking recomposition into every
-    // other card's body.
-    val latestConfigByCardId by rememberUpdatedState(configByCardId)
-    val latestOnCardRemove by rememberUpdatedState(onCardRemove)
-    val latestOnCardReorder by rememberUpdatedState(onCardReorder)
-    val performDragEnd =
-        remember(dragController) {
-            {
-                val result = dragController.onDragEnd()
-                val draggedId = result.draggedId
-                if (draggedId != null) {
-                    if (result.delete) {
-                        latestOnCardRemove(draggedId)
-                    } else {
-                        val updated =
-                            result.finalOrder
-                                .mapNotNull { id -> latestConfigByCardId[id] }
-                                .mapIndexed { index, config -> config.copy(position = index) }
-                        latestOnCardReorder(updated)
-                    }
-                }
+    val performDragEnd = {
+        val result = dragController.onDragEnd()
+        val draggedId = result.draggedId
+        if (draggedId != null) {
+            if (result.delete) {
+                onCardRemove(draggedId)
+            } else {
+                val updated =
+                    result.finalOrder
+                        .mapNotNull { id -> configByCardId[id] }
+                        .mapIndexed { index, config -> config.copy(position = index) }
+                onCardReorder(updated)
             }
         }
+    }
+
+    val onHandlePositioned: (CardId, LayoutCoordinates) -> Unit = { cardId, coords ->
+        rootCoords?.let { root -> handleBounds[cardId] = root.localBoundingBoxOf(coords) }
+    }
+
+    // pointerInput(Unit) below never restarts across recomposition, so its closure would
+    // otherwise capture stale performDragEnd/deleteZoneTopPx from the composition it first ran
+    // in. rememberUpdatedState keeps it reading the current values (see commit 9d7faf1).
+    val currentDeleteZoneTopPx by rememberUpdatedState(deleteZoneTopPx)
+    val currentPerformDragEnd by rememberUpdatedState(performDragEnd)
 
     Column(
         modifier =
             modifier
-                .onGloballyPositioned { rootCoords = it },
+                .onGloballyPositioned { rootCoords = it }
+                .then(
+                    if (isEditing) {
+                        Modifier.pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { offset ->
+                                    val targetCardId =
+                                        handleBounds.entries
+                                            .firstOrNull { (_, rect) -> rect.contains(offset) }
+                                            ?.key
+                                    if (targetCardId != null) {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        dragController.onDragStart(targetCardId)
+                                    }
+                                },
+                                onDragEnd = { currentPerformDragEnd() },
+                                onDragCancel = { currentPerformDragEnd() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    if (dragController.draggedCardId != null) {
+                                        dragController.onDrag(dragAmount, currentDeleteZoneTopPx)
+                                    }
+                                },
+                            )
+                        }
+                    } else {
+                        Modifier
+                    },
+                ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         var cardIndex = 0
@@ -192,8 +228,7 @@ fun ReorderableCardGrid(
                         cardDataMap = dataMap,
                         isEditing = isEditing,
                         controller = dragController,
-                        deleteZoneTopPx = deleteZoneTopPx,
-                        performDragEnd = performDragEnd,
+                        onHandlePositioned = onHandlePositioned,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -224,8 +259,7 @@ fun ReorderableCardGrid(
                             cardDataMap = dataMap,
                             isEditing = isEditing,
                             controller = dragController,
-                            deleteZoneTopPx = deleteZoneTopPx,
-                            performDragEnd = performDragEnd,
+                            onHandlePositioned = onHandlePositioned,
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                         )
                     }
@@ -256,8 +290,7 @@ fun ReorderableCardGrid(
                                 cardDataMap = dataMap,
                                 isEditing = isEditing,
                                 controller = dragController,
-                                deleteZoneTopPx = deleteZoneTopPx,
-                                performDragEnd = performDragEnd,
+                                onHandlePositioned = onHandlePositioned,
                                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                             )
                         }
@@ -329,8 +362,7 @@ private fun RenderCardItem(
     cardDataMap: Map<CardId, @Composable (CardConfiguration) -> Unit>,
     isEditing: Boolean,
     controller: DragController,
-    deleteZoneTopPx: Float?,
-    performDragEnd: () -> Unit,
+    onHandlePositioned: (CardId, LayoutCoordinates) -> Unit,
     modifier: Modifier,
 ) {
     // Keying the whole slot by cardId (rather than by loop position) keeps composition
@@ -358,8 +390,7 @@ private fun RenderCardItem(
             isEditing = isEditing,
             isDragged = isDragged,
             controller = controller,
-            deleteZoneTopPx = deleteZoneTopPx,
-            performDragEnd = performDragEnd,
+            onHandlePositioned = onHandlePositioned,
             modifier = modifier,
         )
     }
@@ -372,14 +403,9 @@ private fun ReorderableCardItem(
     isEditing: Boolean,
     isDragged: Boolean,
     controller: DragController,
-    deleteZoneTopPx: Float?,
-    performDragEnd: () -> Unit,
+    onHandlePositioned: (CardId, LayoutCoordinates) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
-    val currentDeleteZoneTopPx by rememberUpdatedState(deleteZoneTopPx)
-    val currentPerformDragEnd by rememberUpdatedState(performDragEnd)
-
     Box(
         modifier =
             modifier
@@ -420,10 +446,11 @@ private fun ReorderableCardItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isEditing) {
-                // Drag gesture detection lives on this handle only (not the card body), so
-                // taps/menus elsewhere on the card (e.g. the display-mode selector) never start
-                // a drag. Because the handle already identifies its own card, no bounds hit-test
-                // is needed on drag start.
+                // Drag gesture detection lives on the grid's root Column (survives pendingOrder
+                // swaps reparenting this card mid-drag - see handleBounds comment above). This
+                // Box only reports its own bounds so the root's hit test can restrict drag START
+                // to this 48dp handle, keeping taps/menus elsewhere on the card (e.g. the
+                // display-mode selector) from starting a drag.
                 //
                 // The contentDescription lives on this 48dp Box (not the inner Icon): there is no
                 // mergeDescendants/clickable/toggleable anywhere in this handle, so a description
@@ -439,20 +466,7 @@ private fun ReorderableCardItem(
                         Modifier
                             .size(48.dp)
                             .semantics { contentDescription = dragHandleDescription }
-                            .pointerInput(card.cardId) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        controller.onDragStart(card.cardId)
-                                    },
-                                    onDragEnd = { currentPerformDragEnd() },
-                                    onDragCancel = { currentPerformDragEnd() },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        controller.onDrag(dragAmount, currentDeleteZoneTopPx)
-                                    },
-                                )
-                            },
+                            .onGloballyPositioned { coords -> onHandlePositioned(card.cardId, coords) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

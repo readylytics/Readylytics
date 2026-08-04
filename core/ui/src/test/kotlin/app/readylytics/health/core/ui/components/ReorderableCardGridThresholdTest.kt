@@ -257,4 +257,52 @@ class ReorderableCardGridThresholdTest {
             reordered!!.single { it.cardId == CardId.HRV }.requestedDisplayMode,
         )
     }
+
+    // -------------------------------------------------------------------------
+    // Regression: a live mid-drag reorder (pendingOrder swap while still dragging) must not
+    // cancel the in-progress gesture. SLEEP_SCORE and HRV are paired side-by-side in one Row
+    // (grid.kt's leftCard/rightCard Box templates). Dragging SLEEP_SCORE across into HRV's slot
+    // swaps pendingOrder mid-gesture, which moves SLEEP_SCORE from the "left" Box template to
+    // the "right" one (and vice versa for HRV) - a parent swap identical in kind to the one that
+    // tears down a per-card pointerInput node if the gesture detector lives on the handle itself.
+    // If that happens, detectDragGesturesAfterLongPress fires onDragCancel and the drag ends
+    // after the single swap instead of continuing to respond to further movement.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun handleDrag_continuesAfterMidDragReorderSwap() {
+        val gridController = DragController(listOf(CardId.SLEEP_SCORE, CardId.HRV))
+
+        composeTestRule.setContent {
+            ReorderableCardGrid(
+                cardConfigurations = fakeCardConfigurations(),
+                cardDataMap = fakeCardDataMap(),
+                isEditing = true,
+                onCardRemove = {},
+                onCardReorder = {},
+                controller = gridController,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Read the real slots DragController hit-tests against, rather than re-deriving pixel
+        // math independently - guarantees the computed delta lands exactly inside HRV's rect.
+        val sleepCenter = gridController.slotBounds.getValue(CardId.SLEEP_SCORE).center
+        val hrvCenter = gridController.slotBounds.getValue(CardId.HRV).center
+        val deltaToHrv = Offset(hrvCenter.x - sleepCenter.x, hrvCenter.y - sleepCenter.y)
+
+        // Drag SLEEP_SCORE across into HRV's slot (triggers the mid-drag swap), then keep
+        // moving within the same continuous gesture. The drag must still be live afterwards.
+        composeTestRule.onAllNodesWithContentDescription("Drag to reorder")[0].performTouchInput {
+            down(center)
+            advanceEventTime(600)
+            moveBy(deltaToHrv)
+            advanceEventTime(50)
+            moveBy(Offset(-20f, 0f))
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(listOf(CardId.HRV, CardId.SLEEP_SCORE), gridController.pendingOrder)
+        assertEquals(CardId.SLEEP_SCORE, gridController.draggedCardId)
+    }
 }
