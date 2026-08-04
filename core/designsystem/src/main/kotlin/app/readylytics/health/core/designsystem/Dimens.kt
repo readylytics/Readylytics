@@ -45,7 +45,8 @@ data class Dimens(
     val metricTrackThickness: Dp = 10.dp,
     val metricGaugeMarkerDiameter: Dp = 6.dp,
     val metricGaugeTickDiameter: Dp = 4.dp,
-    val metricGaugeValueUnitSpacing: Dp = 0.dp,
+    val metricGaugeValueUnitSpacing: Dp = 2.dp,
+    val metricGaugeValueVerticalOffset: Dp = 6.dp,
 )
 
 val LocalDimens = staticCompositionLocalOf { Dimens() }
