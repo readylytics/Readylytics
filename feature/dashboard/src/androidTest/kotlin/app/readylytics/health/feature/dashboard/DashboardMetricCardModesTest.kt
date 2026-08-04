@@ -1,7 +1,5 @@
 package app.readylytics.health.feature.dashboard
 
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,14 +10,16 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class UniversalMetricCardModesTest : UniversalMetricCardTestBase() {
+class DashboardMetricCardModesTest : DashboardMetricCardTestBase() {
     @Test
     fun menuVisibilityInModes() {
         composeRule.setContent {

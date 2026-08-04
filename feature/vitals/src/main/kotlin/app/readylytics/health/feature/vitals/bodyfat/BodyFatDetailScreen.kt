@@ -34,13 +34,14 @@ import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -122,7 +123,7 @@ fun BodyFatDetailScreen(
                         Gender.PREFER_NOT_TO_SAY -> CoreUiR.string.gender_prefer_not_to_say
                         null -> R.string.body_fat_reference_group_unset
                     }
-                M3ScoreGaugeCard(
+                UniversalVitalsMetricCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -131,13 +132,13 @@ fun BodyFatDetailScreen(
                                 vertical = MaterialTheme.spacing.pageSectionGapSmall,
                             ),
                     title = stringResource(R.string.label_body_fat),
-                    score = uiState.latestBodyFat,
-                    displayText = uiState.bodyFatDisplay ?: "—",
+                    rawValue = uiState.latestBodyFat,
+                    valueText = uiState.bodyFatDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = stringResource(CoreUiR.string.unit_percent),
-                    maxScore = uiState.referenceAxisMaximum * 2f,
-                    status = uiState.bodyFatStatus,
-                    deltaText = uiState.deltaBodyFatDisplay.resolveOrNull(),
-                    tooltipDescription =
+                    maxValue = uiState.referenceAxisMaximum * 2f,
+                    status = uiState.bodyFatStatus ?: MetricStatus.CALIBRATING,
+                    secondaryText = uiState.deltaBodyFatDisplay.resolveOrNull(),
+                    tooltip =
                         stringResource(
                             R.string.tooltip_body_fat_current,
                             uiState.bodyFatDisplay ?: "—",

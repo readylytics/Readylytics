@@ -28,7 +28,6 @@ import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.domain.display.MetricFormatter
@@ -133,17 +132,18 @@ fun WorkoutStatsSection(
                             null
                         }
 
-                    M3ScoreGaugeCard(
+                    UniversalWorkoutMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(CoreUiR.string.card_title_strain_ratio),
-                        score = strainRatio,
-                        displayText =
+                        rawValue = strainRatio,
+                        valueText =
                             uiState.latestMetrics?.strainRatioDisplay ?: stringResource(CoreUiR.string.delta_no_change),
                         unitText = "",
-                        maxScore = 2.0f,
+                        maxValue = 2.0f,
                         status = strainStatus,
-                        deltaText = strainDelta,
-                        tooltipDescription = strainTooltip,
+                        secondaryText = strainDelta,
+                        tooltip = strainTooltip,
+                        mode = app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode.GAUGE,
                     )
 
                     val readinessVal = uiState.latestMetrics?.readinessRounded?.toFloat()
@@ -153,16 +153,26 @@ fun WorkoutStatsSection(
                             previousRounded = uiState.yesterdayReadiness?.toInt(),
                         ).resolveOrNull()
 
-                    M3ScoreGaugeCard(
+                    UniversalWorkoutMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(CoreUiR.string.card_title_readiness),
-                        score = readinessVal,
-                        displayText =
+                        status =
+                            readinessVal?.let {
+                                when {
+                                    it >= 85f -> MetricStatus.OPTIMAL
+                                    it >= 60f -> MetricStatus.NEUTRAL
+                                    it >= 40f -> MetricStatus.WARNING
+                                    else -> MetricStatus.POOR
+                                }
+                            } ?: MetricStatus.CALIBRATING,
+                        rawValue = readinessVal,
+                        valueText =
                             uiState.latestMetrics?.readinessRounded?.toString()
                                 ?: stringResource(CoreUiR.string.delta_no_change),
                         unitText = "",
-                        deltaText = readinessDelta,
-                        tooltipDescription = stringResource(CoreUiR.string.tooltip_readiness),
+                        secondaryText = readinessDelta,
+                        tooltip = stringResource(CoreUiR.string.tooltip_readiness),
+                        mode = app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode.GAUGE,
                     )
                 }
             },

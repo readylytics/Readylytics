@@ -1,7 +1,5 @@
 package app.readylytics.health.feature.dashboard
 
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,13 +12,15 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class UniversalMetricCardAccessibilityTest : UniversalMetricCardTestBase() {
+class DashboardMetricCardAccessibilityTest : DashboardMetricCardTestBase() {
     @Test
     fun restingHrSemanticsCommunicateValueAndPersonalRangeRelationship() {
         val title = string(R.string.card_title_resting_hr)

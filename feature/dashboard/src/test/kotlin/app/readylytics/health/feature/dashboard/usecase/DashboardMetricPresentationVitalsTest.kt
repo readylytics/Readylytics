@@ -1,6 +1,4 @@
 package app.readylytics.health.feature.dashboard.usecase
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
-
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile

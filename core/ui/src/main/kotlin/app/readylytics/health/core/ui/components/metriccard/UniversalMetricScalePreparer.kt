@@ -53,7 +53,7 @@ object UniversalMetricScalePreparer {
 
         val markerFraction =
             if (isValidTarget && value != null) {
-                linearFraction(value, 0f, target!!)
+                linearFraction(value, 0f, target)
             } else {
                 null
             }
@@ -70,7 +70,7 @@ object UniversalMetricScalePreparer {
             targetValue = target,
             markerFraction = markerFraction,
             targetMarkerFraction = if (isValidTarget) 1f else null,
-            isAboveTarget = if (isValidTarget && value != null) value > target!! else false,
+            isAboveTarget = if (isValidTarget && value != null) value > target else false,
             selectionAvailable = isValidTarget,
             unavailableReason = unavailableReason,
         )
@@ -85,8 +85,8 @@ object UniversalMetricScalePreparer {
     ): UniversalMetricVisual.PersonalBaseline {
         val isValidBaseline = baseline != null && baseline > 0f && baselineReady
 
-        val minVal = if (isValidBaseline) baseline!! * axisMinimumRatio else 0f
-        val maxVal = if (isValidBaseline) baseline!! * axisMaximumRatio else 1f
+        val minVal = if (isValidBaseline) baseline * axisMinimumRatio else 0f
+        val maxVal = if (isValidBaseline) baseline * axisMaximumRatio else 1f
 
         val markerFraction =
             if (isValidBaseline && value != null) {
@@ -97,7 +97,7 @@ object UniversalMetricScalePreparer {
 
         val baselineMarkerFraction =
             if (isValidBaseline) {
-                linearFraction(baseline!!, minVal, maxVal)
+                linearFraction(baseline, minVal, maxVal)
             } else {
                 0f
             }
@@ -112,7 +112,7 @@ object UniversalMetricScalePreparer {
         return UniversalMetricVisual.PersonalBaseline(
             rawValue = value,
             baselineValue = baseline,
-            ratio = if (isValidBaseline && value != null) value / baseline!! else null,
+            ratio = if (isValidBaseline && value != null) value / baseline else null,
             markerFraction = markerFraction,
             baselineMarkerFraction = baselineMarkerFraction,
             selectionAvailable = isValidBaseline,

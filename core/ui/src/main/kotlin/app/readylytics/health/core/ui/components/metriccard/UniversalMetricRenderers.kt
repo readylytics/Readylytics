@@ -252,7 +252,6 @@ private fun UniversalMetricDeltaPill(deltaText: String) {
     }
 }
 
-
 @Composable
 fun UniversalValueRenderer(
     presentation: UniversalMetricPresentation,

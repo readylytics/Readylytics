@@ -1,10 +1,4 @@
 package app.readylytics.health.feature.dashboard
-import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_TITLE_INFO_ICON_TAG
-import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_DELTA_PILL_TAG
-import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
-import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_GAUGE_TAG
-import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
-
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +13,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_DELTA_PILL_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_GAUGE_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_TITLE_INFO_ICON_TAG
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.metriccard.progressFraction
 import app.readylytics.health.core.ui.components.onContainerColor

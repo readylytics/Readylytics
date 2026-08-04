@@ -10,6 +10,12 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
+import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,11 +100,23 @@ class M3MetricGaugeTest {
     @Test
     fun m3ScoreGaugeCard_regression_semanticsAndRendering() {
         composeTestRule.setContent {
-            M3ScoreGaugeCard(
-                title = "Test Score",
-                score = 86f,
-                displayText = "86",
-                unitText = "pts",
+            UniversalMetricCard(
+                presentation =
+                    UniversalMetricPresentation(
+                        title = "Test Score",
+                        valueText = "86",
+                        unitText = "pts",
+                        secondaryText = null,
+                        status = MetricStatus.NEUTRAL,
+                        tooltip = "Test score",
+                        accessibilityDescription = "Test Score: 86 pts",
+                        visual = UniversalMetricScalePreparer.score(86f, 0f, 100f),
+                    ),
+                specification =
+                    UniversalMetricCardSpec(
+                        supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                    ),
+                requestedMode = UniversalCardDisplayMode.GAUGE,
                 onClick = {},
             )
         }

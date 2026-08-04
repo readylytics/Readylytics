@@ -5,17 +5,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Rule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-abstract class UniversalMetricCardTestBase {
+abstract class DashboardMetricCardTestBase {
     @get:Rule
     val composeRule = createComposeRule()
 

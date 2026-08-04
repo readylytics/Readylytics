@@ -1,7 +1,4 @@
 package app.readylytics.health.feature.dashboard
-import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
-import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
-
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
@@ -11,6 +8,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import app.readylytics.health.core.designsystem.FitDashboardTheme
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
+import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId

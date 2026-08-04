@@ -2,9 +2,9 @@ package app.readylytics.health.feature.dashboard
 
 import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
+import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.dashboard.DashboardCardSpec
-import app.readylytics.health.domain.dashboard.CardId
 
 internal fun DashboardCardDisplayMode.toUniversalMode(): UniversalCardDisplayMode =
     when (this) {
@@ -23,7 +23,7 @@ internal fun UniversalCardDisplayMode.toDashboardMode(): DashboardCardDisplayMod
 internal fun DashboardCardSpec.toUniversalSpec(): UniversalMetricCardSpec =
     UniversalMetricCardSpec(
         supportedModes = supportedModes.map { it.toUniversalMode() },
-        usesDeltaPill = cardId.usesDeltaPill()
+        usesDeltaPill = cardId.usesDeltaPill(),
     )
 
 // From the deleted DashboardMetricRenderers.kt
@@ -34,6 +34,7 @@ internal fun CardId.usesDeltaPill(): Boolean =
         CardId.HRV,
         CardId.SLEEP_RHR,
         CardId.RESTING_HR,
-        CardId.STRAIN_RATIO -> true
+        CardId.STRAIN_RATIO,
+        -> true
         else -> false
     }

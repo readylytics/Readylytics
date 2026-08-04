@@ -48,7 +48,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
-
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
@@ -56,8 +55,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.onContainerColor
 import kotlinx.coroutines.launch
-
-
 
 @Composable
 fun UniversalMetricCard(
@@ -242,7 +239,8 @@ private fun UniversalTitleInfoAction(
 ) {
     val tooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
-    val infoContentDescription = stringResource(id = app.readylytics.health.core.ui.R.string.accessibility_more_information)
+    val infoContentDescription =
+        stringResource(id = app.readylytics.health.core.ui.R.string.accessibility_more_information)
 
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
@@ -272,7 +270,6 @@ private fun UniversalTitleInfoAction(
     }
 }
 
-
 @Composable
 fun UniversalDisplayModeMenu(
     specification: UniversalMetricCardSpec,
@@ -290,7 +287,10 @@ fun UniversalDisplayModeMenu(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = stringResource(id = app.readylytics.health.core.ui.R.string.menu_content_description_visualization_style),
+                contentDescription =
+                    stringResource(
+                        id = app.readylytics.health.core.ui.R.string.menu_content_description_visualization_style,
+                    ),
             )
         }
 
@@ -319,7 +319,10 @@ fun UniversalDisplayModeMenu(
                 // that names the category ("Visualization style") and the selection state.
                 val itemDescription =
                     if (isSelected) {
-                        stringResource(app.readylytics.health.core.ui.R.string.menu_item_description_mode_selected, modeName)
+                        stringResource(
+                            app.readylytics.health.core.ui.R.string.menu_item_description_mode_selected,
+                            modeName,
+                        )
                     } else {
                         stringResource(app.readylytics.health.core.ui.R.string.menu_item_description_mode, modeName)
                     }

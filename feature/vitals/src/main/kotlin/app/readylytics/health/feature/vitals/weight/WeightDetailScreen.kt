@@ -38,7 +38,6 @@ import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
@@ -48,6 +47,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.model.weightZoneBands
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import java.util.Locale
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -202,32 +202,32 @@ fun WeightDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    M3ScoreGaugeCard(
+                    UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_weight_unit_format, unitLabel),
-                        score = uiState.latestWeight,
-                        displayText = uiState.weightDisplay ?: "—",
+                        rawValue = uiState.latestWeight,
+                        valueText = uiState.weightDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = unitLabel,
-                        maxScore = weightMaxScore,
+                        maxValue = weightMaxScore,
                         status = bmiStatus,
-                        deltaText = uiState.deltaWeightDisplay.resolveOrNull(),
-                        tooltipDescription =
+                        secondaryText = uiState.deltaWeightDisplay.resolveOrNull(),
+                        tooltip =
                             stringResource(
                                 R.string.tooltip_weight_current,
                                 uiState.weightDisplay?.let { "$it $unitLabel" } ?: "—",
                                 heightTooltip,
                             ),
                     )
-                    M3ScoreGaugeCard(
+                    UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_bmi),
-                        score = uiState.bmi,
-                        displayText = uiState.bmiDisplay ?: "—",
+                        rawValue = uiState.bmi,
+                        valueText = uiState.bmiDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = "",
-                        maxScore = 40f,
+                        maxValue = 40f,
                         status = bmiStatus,
-                        deltaText = null,
-                        tooltipDescription = stringResource(R.string.tooltip_bmi),
+                        secondaryText = null,
+                        tooltip = stringResource(R.string.tooltip_bmi),
                     )
                 }
             }

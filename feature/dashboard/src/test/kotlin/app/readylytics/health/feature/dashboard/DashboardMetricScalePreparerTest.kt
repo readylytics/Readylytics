@@ -1,13 +1,12 @@
 package app.readylytics.health.feature.dashboard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
-
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class UniversalMetricScalePreparerTest {
+class DashboardMetricScalePreparerTest {
     @Test
     fun `piecewise scale maps anchors and clamps only geometry`() {
         assertEquals(0f, UniversalMetricScalePreparer.piecewiseFraction(10f, 10f, 21.7f, 40f), 0.001f)

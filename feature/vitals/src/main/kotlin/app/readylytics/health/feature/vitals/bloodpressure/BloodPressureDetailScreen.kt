@@ -38,11 +38,11 @@ import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -146,16 +146,18 @@ fun BloodPressureDetailScreen(
                             null
                         }
 
-                    M3ScoreGaugeCard(
+                    UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_systolic),
-                        score = uiState.latestSystolic?.toFloat(),
-                        displayText = uiState.latestSystolic?.toString() ?: "—",
+                        rawValue = uiState.latestSystolic?.toFloat(),
+                        valueText =
+                            uiState.latestSystolic?.toString()
+                                ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
-                        maxScore = 200f,
+                        maxValue = 200f,
                         status = uiState.systolicStatus,
-                        deltaText = systolicDelta,
-                        tooltipDescription = stringResource(R.string.tooltip_blood_pressure_systolic),
+                        secondaryText = systolicDelta,
+                        tooltip = stringResource(R.string.tooltip_blood_pressure_systolic),
                     )
 
                     val diastolicDelta =
@@ -174,16 +176,18 @@ fun BloodPressureDetailScreen(
                             null
                         }
 
-                    M3ScoreGaugeCard(
+                    UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_diastolic),
-                        score = uiState.latestDiastolic?.toFloat(),
-                        displayText = uiState.latestDiastolic?.toString() ?: "—",
+                        rawValue = uiState.latestDiastolic?.toFloat(),
+                        valueText =
+                            uiState.latestDiastolic?.toString()
+                                ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
-                        maxScore = 120f,
+                        maxValue = 120f,
                         status = uiState.diastolicStatus,
-                        deltaText = diastolicDelta,
-                        tooltipDescription = stringResource(R.string.tooltip_blood_pressure_diastolic),
+                        secondaryText = diastolicDelta,
+                        tooltip = stringResource(R.string.tooltip_blood_pressure_diastolic),
                     )
                 }
 

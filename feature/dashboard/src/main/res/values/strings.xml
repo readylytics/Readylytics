@@ -25,12 +25,6 @@
     <string name="card_title_steps">Steps</string>
 
     <string name="card_title_weight">Weight</string>
-    <string name="menu_content_description_visualization_style">Change visualization style</string>
-    <string name="mode_gauge">Gauge</string>
-    <string name="mode_bar">Bar</string>
-    <string name="mode_value">Value</string>
-    <string name="menu_item_description_mode">Visualization style: %1$s</string>
-    <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
     <string name="personal_baseline_within_range_description">within your baseline range</string>
     <string name="personal_baseline_above_range_description">above your baseline range</string>
     <string name="personal_baseline_below_range_description">below your baseline range</string>
@@ -47,7 +41,6 @@
     <string name="semantics_value_note_status_format">%1$s: %2$s, %3$s, %4$s</string>
     <string name="semantics_weight_bmi_format">%1$s: %2$s, %3$s, %4$s</string>
     <string name="semantics_unavailable_format">%1$s: %2$s</string>
-    <string name="semantics_edit_mode_separator">, %1$s</string>
     <string name="sleep_session_time_range_format">%1$s → %2$s</string>
 
     <string name="manage_cards">Manage Cards</string>

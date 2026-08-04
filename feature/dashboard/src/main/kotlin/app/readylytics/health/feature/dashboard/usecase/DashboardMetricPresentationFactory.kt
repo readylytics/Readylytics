@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
@@ -20,7 +21,6 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
