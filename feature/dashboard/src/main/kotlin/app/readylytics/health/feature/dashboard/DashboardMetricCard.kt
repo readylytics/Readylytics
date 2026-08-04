@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
@@ -164,17 +165,26 @@ private fun DashboardMetricCardContent(
                         is DashboardMetricVisual.ReferenceRange -> visual.selectionAvailable
                         else -> true // Score and ValueOnly don't have this field explicitly disabling it
                     }
-                DashboardDisplayModeMenu(
-                    specification = specification,
-                    requestedMode = requestedMode,
-                    isSelectionAvailable = selectionAvailable,
-                    onModeSelected = onModeSelected,
-                )
+                Box(
+                    modifier = Modifier.size(MaterialTheme.dimens.iconStandard).wrapContentSize(unbounded = true),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DashboardDisplayModeMenu(
+                        specification = specification,
+                        requestedMode = requestedMode,
+                        isSelectionAvailable = selectionAvailable,
+                        onModeSelected = onModeSelected,
+                    )
+                }
             } else if (!isEditing) {
-                DashboardTitleInfoAction(
-                    description = presentation.tooltip,
-                    iconTint = contentColor,
-                )
+                Box(
+                    modifier = Modifier.size(MaterialTheme.dimens.iconStandard).wrapContentSize(align = Alignment.TopEnd, unbounded = true),
+                ) {
+                    DashboardTitleInfoAction(
+                        description = presentation.tooltip,
+                        iconTint = contentColor,
+                    )
+                }
             }
         }
 
