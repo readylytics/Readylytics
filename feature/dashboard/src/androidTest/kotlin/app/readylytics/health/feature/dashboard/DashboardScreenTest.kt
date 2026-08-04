@@ -11,6 +11,8 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onFirst
@@ -395,7 +397,11 @@ class DashboardScreenTest {
         composeRule.onNodeWithContentDescription("HRV 55 ms").performClick()
         assertEquals(true, hrvClicked)
 
-        composeRule.onNodeWithContentDescription("More information").performClick()
+        composeRule
+            .onNode(
+                hasContentDescription("More information") and
+                    hasAnyAncestor(hasContentDescription("HRV 55 ms")),
+            ).performClick()
         composeRule.onNodeWithText("HRV tooltip text").assertIsDisplayed()
     }
 
