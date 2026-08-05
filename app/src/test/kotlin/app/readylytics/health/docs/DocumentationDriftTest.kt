@@ -327,11 +327,16 @@ class DocumentationDriftTest {
         )
         assertTrue(
             dataFlowMd.contains("Room migration chain ends at v6"),
-            "expected internal-docs/DATA_FLOW.md to record that Room migrations end at v6",
+            "expected internal-docs/DATA_FLOW.md to record that the pre-bridge Room migration " +
+                "chain ends at v6",
         )
+        // The external SQLCipher migration (V7DatabaseMigrator) only ever bridged v6->v7 — that
+        // is a fixed historical fact, not something that grows with DATABASE_VERSION. Versions
+        // beyond 7 (this one included, via MIGRATION_7_8) are owned by ordinary Room migrations,
+        // so this assertion intentionally checks the fixed "v7", not the current $version.
         assertTrue(
-            dataFlowMd.contains("external migration owns v$version"),
-            "expected internal-docs/DATA_FLOW.md to record that external migration owns v$version",
+            dataFlowMd.contains("external migration owns v7"),
+            "expected internal-docs/DATA_FLOW.md to record that the external migration owns v7",
         )
     }
 

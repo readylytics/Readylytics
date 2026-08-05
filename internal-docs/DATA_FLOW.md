@@ -245,7 +245,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 7)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 8)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
@@ -779,7 +779,7 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v7)                              | 13 entities; Room migration chain ends at v6; external migration owns v7                 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v8)                              | 13 entities; Room migration chain ends at v6; external migration owns v7                 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing/v7 ready; v5/v6 or resumable metadata require external migration                 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |

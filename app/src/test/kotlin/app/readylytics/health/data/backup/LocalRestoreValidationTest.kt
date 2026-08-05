@@ -37,9 +37,9 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
         }
 
     @Test
-    fun validate_acceptsBackupVersionsFiveThroughSeven() =
+    fun validate_acceptsBackupVersionsFiveThroughCurrent() =
         runTest {
-            for (version in listOf(5, 6, 7)) {
+            for (version in BackupSchemaPolicy.MIN_SUPPORTED_VERSION..BackupSchemaPolicy.MAX_SUPPORTED_VERSION) {
                 val json = createValidBackupJson().put("schemaVersion", version)
                 val zipFile = createBackupZipFile("backup-v$version.zip", json)
 
@@ -50,9 +50,11 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
         }
 
     @Test
-    fun validate_rejectsBackupVersionsFourAndEight() =
+    fun validate_rejectsBackupVersionsBelowMinAndAboveMax() =
         runTest {
-            for (version in listOf(4, 8)) {
+            val belowMin = BackupSchemaPolicy.MIN_SUPPORTED_VERSION - 1
+            val aboveMax = BackupSchemaPolicy.MAX_SUPPORTED_VERSION + 1
+            for (version in listOf(belowMin, aboveMax)) {
                 val json = createValidBackupJson().put("schemaVersion", version)
                 val zipFile = createBackupZipFile("unsupported-v$version.zip", json)
 
@@ -65,8 +67,11 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
         }
 
     @Test
-    fun backupSchemaPolicy_pinsMaximumSupportedVersionToSeven() {
-        assertEquals(7, BackupSchemaPolicy.MAX_SUPPORTED_VERSION)
+    fun backupSchemaPolicy_tracksHealthDatabaseVersion() {
+        // MAX_SUPPORTED_VERSION const-folds from HealthDatabase.DATABASE_VERSION so the two can
+        // never drift apart across a schema bump; this asserts that invariant rather than a
+        // version number frozen at whatever DATABASE_VERSION happened to be when this was written.
+        assertEquals(HealthDatabase.DATABASE_VERSION, BackupSchemaPolicy.MAX_SUPPORTED_VERSION)
     }
 
     @Test
@@ -76,7 +81,9 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             assertTrue(manager.applyRestore(Uri.fromFile(seedZipFile)) is RestoreResult.SuccessRequiresRestart)
             seedZipFile.delete()
 
-            for (version in listOf(4, 8)) {
+            val belowMin = BackupSchemaPolicy.MIN_SUPPORTED_VERSION - 1
+            val aboveMax = BackupSchemaPolicy.MAX_SUPPORTED_VERSION + 1
+            for (version in listOf(belowMin, aboveMax)) {
                 val unsupportedJson =
                     createValidBackupJson()
                         .put("schemaVersion", version)
