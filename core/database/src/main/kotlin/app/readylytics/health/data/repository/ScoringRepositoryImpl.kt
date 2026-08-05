@@ -2,6 +2,7 @@ package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
@@ -78,6 +79,7 @@ class ScoringRepositoryImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
         private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
         private val scoringHistoryRepository: ScoringHistoryRepository,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
@@ -396,6 +398,22 @@ class ScoringRepositoryImpl
                         null
                     }
 
+                val avgBodyTemp =
+                    if (session != null) {
+                        val bodyTempSamples = bodyTemperatureRecordDao.getByTimeRange(session.startTime, session.endTime)
+                        if (bodyTempSamples.isNotEmpty()) {
+                            bodyTempSamples
+                                .asSequence()
+                                .map { it.celsius }
+                                .average()
+                                .toFloat()
+                        } else {
+                            null
+                        }
+                    } else {
+                        null
+                    }
+
                 if (!isCalibrated) {
                     if (session != null) {
                         val hrvValues =
@@ -452,6 +470,7 @@ class ScoringRepositoryImpl
                                     },
                                 isCalibrating = true,
                                 avgSleepingSpo2 = avgSpo2,
+                                avgSleepingBodyTemp = avgBodyTemp,
                                 snapshotCalibrationPhase = Phase.CALIBRATION.name,
                             )
                     } else {
@@ -459,6 +478,7 @@ class ScoringRepositoryImpl
                             summary.copy(
                                 isCalibrating = true,
                                 avgSleepingSpo2 = avgSpo2,
+                                avgSleepingBodyTemp = avgBodyTemp,
                                 snapshotCalibrationPhase = Phase.CALIBRATION.name,
                             )
                     }
@@ -616,6 +636,7 @@ class ScoringRepositoryImpl
                         rhrSigma = rhrSigma,
                         baselineCalculatedAtDate = targetDate,
                         avgSleepingSpo2 = avgSpo2,
+                        avgSleepingBodyTemp = avgBodyTemp,
                         hrMax = summary.hrMax ?: hrMax,
                         rasScalingFactor = summary.rasScalingFactor ?: scoringConfig.rasScalingFactor,
                         snapshotProfile = summary.snapshotProfile ?: prefs.physiologyProfile.name,

@@ -124,6 +124,26 @@ class DatabaseMigrationInstrumentedTest {
         }
     }
 
+    @Test
+    fun migrate7To9CreatesBodyTemperatureTableAndDailySummaryColumn() {
+        helper.createDatabase(TEST_DATABASE, 7).apply { close() }
+
+        val database =
+            helper.runMigrationsAndValidate(
+                TEST_DATABASE,
+                9,
+                true,
+                *DatabaseMigrations.all,
+            )
+
+        database.query("SELECT * FROM body_temperature_records LIMIT 1").use { cursor ->
+            assertTrue(cursor.columnNames.toList().containsAll(listOf("id", "timestampMs", "celsius", "deviceName")))
+        }
+        database.query("SELECT avgSleepingBodyTemp FROM daily_summaries LIMIT 1").use { cursor ->
+            assertTrue(cursor.columnNames.contains("avgSleepingBodyTemp"))
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "audit-migration-test"
     }

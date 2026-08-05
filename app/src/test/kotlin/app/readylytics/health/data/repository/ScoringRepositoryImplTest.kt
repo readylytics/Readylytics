@@ -1,6 +1,7 @@
 package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
@@ -40,6 +41,7 @@ class ScoringRepositoryImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
@@ -65,6 +67,7 @@ class ScoringRepositoryImplTest {
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
                 UnconfinedTestDispatcher(),
@@ -449,5 +452,69 @@ class ScoringRepositoryImplTest {
             repo.computeDailySummary(today)
 
             coVerify(exactly = 0) { workoutDao.upsertAll(any()) }
+        }
+
+    @Test
+    fun `computeAndPersistDailySummary averages body temperature samples in sleep session without touching score`() =
+        runTest {
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+
+            val mockSession =
+                SleepSessionEntity(
+                    id = "test_session",
+                    startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
+                    endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
+                    durationMinutes = 450,
+                    efficiency = 85f,
+                    deepSleepMinutes = 90,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 210,
+                    awakeMinutes = 15,
+                )
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
+            coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
+            coEvery { sleepSessionDao.countSince(any()) } returns 7
+
+            coEvery { bodyTemperatureRecordDao.getByTimeRange(any(), any()) } returns
+                listOf(
+                    BodyTemperatureRecordEntity(id = "1", timestampMs = 1L, celsius = 36.4f),
+                    BodyTemperatureRecordEntity(id = "2", timestampMs = 2L, celsius = 36.8f),
+                )
+
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
+                Result.success(
+                    DailySummaryMapper.toDomain(
+                        DailySummaryEntity(0L, sleepScore = 82f),
+                        zoneId,
+                    ),
+                )
+
+            val entitySlot = slot<DailySummaryEntity>()
+            coEvery { dailySummaryDao.upsert(capture(entitySlot)) } returns Unit
+
+            repo.computeAndPersistDailySummary(today, steps = null, prefs = UserPreferences())
+
+            // Averages the two stubbed samples (36.4 + 36.8) / 2 = 36.6.
+            assertEquals(36.6f, entitySlot.captured.avgSleepingBodyTemp!!, 0.01f)
+            // Verifies the "never a scoring input" guarantee: computing this field must not move
+            // the sleep score for an otherwise-identical day.
+            val summaryWithoutBodyTemp = entitySlot.captured.copy(avgSleepingBodyTemp = null)
+            assertEquals(entitySlot.captured.sleepScore, summaryWithoutBodyTemp.sleepScore)
         }
 }

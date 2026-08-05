@@ -53,7 +53,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v6)  │   13 entities — single source of truth
+│  HealthDatabase (SQLite v9)  │   14 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -245,7 +245,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 8)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 9)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
@@ -302,6 +302,12 @@ key. Version 7 (DB-001) rebuilds `heart_rate_records` and `hrv_records` onto an 
 `rowId` primary key: the previous `id` (the Health Connect record id) is renamed `sourceRecordId`
 and is no longer unique on its own — a unique index on `(sourceRecordId, timestampMs)` replaces it,
 because re-ingestion can otherwise see the same source id more than once within a resync window.
+Version 8 adds the `body_temperature_records` table (14th entity) holding raw skin/body-temperature
+samples ingested from Health Connect; it does not change any other table or scoring formula.
+Version 9 adds a nullable `daily_summaries.avgSleepingBodyTemp` column: a nightly-average
+body-temperature cache that `ScoringRepositoryImpl` computes by averaging `body_temperature_records`
+samples within that day's sleep-session window, mirroring exactly how `avgSleepingSpo2` is already
+computed there. It is a pure display/insight field, never read by any `domain/scoring/**` formula.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -314,7 +320,8 @@ because re-ingestion can otherwise see the same source id more than once within 
 | `BodyFatRecordEntity`          | `body_fat_records`          | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `BloodPressureRecordEntity`    | `blood_pressure_records`    | `id: String` (composite)               | systolic/diastolic, `timestampMs`, `deviceName`                                                                                                           |
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
-| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2 snapshots |
+| `BodyTemperatureRecordEntity`  | `body_temperature_records`  | `id: String` (composite)               | `celsius`, `timestampMs`, `deviceName`                                                                                                                     |
+| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2/body-temp snapshots (`avgSleepingBodyTemp` — nightly average, never a scoring input) |
 | `InsightDismissalEntity`       | `insight_dismissals`        | `(dateMidnightMs: Long, type: String)` | `type: String` (LATE_NADIR, SICK_INDICATOR, STRONG_RECOVERY_SIGNAL, LOAD_SPIKE_RECOVERY_STRAIN, …) — represents dismissed dashboard insights                                                       |
 | `AuditEventEntity`             | `audit_events`              | `id: Long` (auto)                      | `type`, `occurredAtEpochMs`, optional coarse `detail` for local backup/restore/key-lifecycle events                                                       |
 
@@ -779,7 +786,7 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v8)                              | 13 entities; Room migration chain ends at v6; external migration owns v7                 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v9)                              | 14 entities; Room migration chain ends at v6; external migration owns v7                 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing/v7 ready; v5/v6 or resumable metadata require external migration                 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
