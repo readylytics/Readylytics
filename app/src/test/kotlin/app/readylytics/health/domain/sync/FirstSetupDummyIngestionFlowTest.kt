@@ -121,6 +121,7 @@ class FirstSetupDummyIngestionFlowTest {
                     bodyFatSamples = emptyList(),
                     bloodPressureSamples = emptyList(),
                     oxygenSaturationSamples = listOf(),
+                    bodyTemperatureSamples = emptyList(),
                     stepRecords = emptyList(),
                 )
             assertEquals(expectedBatch, batch)

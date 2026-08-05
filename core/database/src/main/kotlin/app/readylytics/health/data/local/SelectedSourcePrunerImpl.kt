@@ -2,6 +2,7 @@ package app.readylytics.health.data.local
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
@@ -29,6 +30,7 @@ class SelectedSourcePrunerImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
     ) : SelectedSourcePruner {
         override suspend fun prune(
             start: LocalDate,
@@ -64,6 +66,8 @@ class SelectedSourcePrunerImpl
                                 bloodPressureRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.OXYGEN_SATURATION ->
                                 oxygenSaturationRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                            HealthDataType.BODY_TEMPERATURE ->
+                                bodyTemperatureRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.STEPS -> {
                                 // Steps are in daily_summaries
                             }

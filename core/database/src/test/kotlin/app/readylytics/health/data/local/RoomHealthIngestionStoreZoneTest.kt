@@ -65,6 +65,7 @@ class RoomHealthIngestionStoreZoneTest {
             bodyFatRecordDao = noOpDao(),
             bloodPressureRecordDao = noOpDao(),
             oxygenSaturationRecordDao = noOpDao(),
+            bodyTemperatureRecordDao = noOpDao(),
             stepRecordDao = noOpDao(),
             dailySummaryDao = dailySummaryDao,
             transactionRunner =

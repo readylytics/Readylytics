@@ -19,6 +19,7 @@ import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.mapper.BloodPressureDataMapper
 import app.readylytics.health.data.mapper.BodyFatDataMapper
+import app.readylytics.health.data.mapper.BodyTemperatureDataMapper
 import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
 import app.readylytics.health.data.mapper.WeightDataMapper
 import app.readylytics.health.data.local.entity.SleepStageEntity
@@ -56,6 +57,7 @@ class HealthChangeSynchronizerImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
         private val stepRecordDao: StepRecordDao,
     ) : HealthChangeSynchronizer {
         private val client by lazy { HealthConnectClient.getOrCreate(context) }
@@ -307,6 +309,13 @@ class HealthChangeSynchronizerImpl
                         oxygenSaturationRecordDao.upsertAll(entity)
                     }
                 }
+                HealthDataType.BODY_TEMPERATURE -> {
+                    if (record is BodyTemperatureRecord) {
+                        val domainBodyTemperature = record.toDomain()
+                        val entity = BodyTemperatureDataMapper.toEntities(listOf(domainBodyTemperature))
+                        bodyTemperatureRecordDao.upsertAll(entity)
+                    }
+                }
                 HealthDataType.STEPS -> {
                     if (record is StepsRecord) {
                         // Steps have no dedicated table for scoring (daily totals come from
@@ -339,6 +348,7 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.HEART_RATE -> setOf(HealthConnectHeartRateRecord::class)
                 HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
                 HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
+                HealthDataType.BODY_TEMPERATURE -> setOf(BodyTemperatureRecord::class)
             }
 
         private fun isTokenExpiredException(e: Exception): Boolean {
@@ -381,6 +391,7 @@ class HealthChangeSynchronizerImpl
                 is HealthConnectBodyFatRecord -> getDateFor(record.time, zoneId)
                 is HealthConnectBloodPressureRecord -> getDateFor(record.time, zoneId)
                 is OxygenSaturationRecord -> getDateFor(record.time, zoneId)
+                is BodyTemperatureRecord -> getDateFor(record.time, zoneId)
                 else -> emptySet()
             }
 
@@ -430,6 +441,11 @@ class HealthChangeSynchronizerImpl
                         .getBySourceRecordId(id)
                         .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
+                HealthDataType.BODY_TEMPERATURE -> {
+                    bodyTemperatureRecordDao
+                        .getBySourceRecordId(id)
+                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
+                }
                 HealthDataType.STEPS -> {
                     // Resolve from the raw row upsertRecord's STEPS branch persisted, before
                     // deleteRecordLocal removes it (HC-005) -- must be called before the delete.
@@ -452,6 +468,7 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.BODY_FAT -> bodyFatRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.BLOOD_PRESSURE -> bloodPressureRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.OXYGEN_SATURATION -> oxygenSaturationRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.BODY_TEMPERATURE -> bodyTemperatureRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.STEPS -> stepRecordDao.deleteById(id)
             }
         }

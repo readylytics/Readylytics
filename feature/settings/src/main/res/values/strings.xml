@@ -113,6 +113,7 @@
 <string name="data_sources_title">Data sources</string>
 <string name="data_type_blood_pressure">Blood pressure</string>
 <string name="data_type_body_fat">Body fat</string>
+<string name="data_type_body_temperature">Body temperature</string>
 <string name="data_type_exercise">Exercise</string>
 <string name="data_type_heart_rate">Heart rate</string>
 <string name="data_type_hrv">Heart rate variability</string>

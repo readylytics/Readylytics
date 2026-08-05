@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
@@ -35,6 +36,7 @@ class SelectedSourcePrunerImplTest {
     private lateinit var bodyFatDao: BodyFatRecordDao
     private lateinit var bloodPressureDao: BloodPressureRecordDao
     private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
+    private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
     private lateinit var pruner: SelectedSourcePrunerImpl
 
     @Before
@@ -54,6 +56,7 @@ class SelectedSourcePrunerImplTest {
         bodyFatDao = database.bodyFatRecordDao()
         bloodPressureDao = database.bloodPressureRecordDao()
         oxygenSaturationDao = database.oxygenSaturationRecordDao()
+        bodyTemperatureDao = database.bodyTemperatureRecordDao()
 
         val transactionRunner = RoomTransactionRunner(database)
 
@@ -68,6 +71,7 @@ class SelectedSourcePrunerImplTest {
                 bodyFatRecordDao = bodyFatDao,
                 bloodPressureRecordDao = bloodPressureDao,
                 oxygenSaturationRecordDao = oxygenSaturationDao,
+                bodyTemperatureRecordDao = bodyTemperatureDao,
             )
     }
 
