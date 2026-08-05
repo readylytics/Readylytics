@@ -12,6 +12,7 @@ import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.HealthDataType
@@ -152,6 +153,42 @@ class SelectedSourcePrunerImplTest {
             val remainingHr = heartRateDao.getByTimeRange(0, timestamp + 10000000)
             assertEquals(1, remainingHr.size)
             assertEquals("hr_b", remainingHr[0].id)
+        }
+
+    @Test
+    fun pruneDeletesNonMatchingBodyTemperatureDevicesWithinRange() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val date = LocalDate.of(2024, 6, 1)
+            val timestamp = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            bodyTemperatureDao.upsertAll(
+                listOf(
+                    BodyTemperatureRecordEntity(
+                        id = "bt_a",
+                        timestampMs = timestamp,
+                        celsius = 36.6f,
+                        deviceName = "Device A",
+                    ),
+                    BodyTemperatureRecordEntity(
+                        id = "bt_b",
+                        timestampMs = timestamp,
+                        celsius = 36.7f,
+                        deviceName = "Device B",
+                    ),
+                ),
+            )
+
+            val selections =
+                mapOf(
+                    HealthDataType.BODY_TEMPERATURE to "Device B",
+                )
+
+            pruner.prune(date, date, selections, zoneId)
+
+            val remainingBodyTemperature = bodyTemperatureDao.getByTimeRange(0, timestamp + 10000000)
+            assertEquals(1, remainingBodyTemperature.size)
+            assertEquals("bt_b", remainingBodyTemperature[0].id)
         }
 
     @Test
