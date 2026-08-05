@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -19,6 +20,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -73,6 +75,7 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(BodyFatRecord::class),
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
                 HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+                HealthPermission.getReadPermission(BodyTemperatureRecord::class),
             )
 
         override val allPermissions: Set<String> =
@@ -138,6 +141,21 @@ class HealthConnectRepositoryImpl
                         ) { "Missing permissions count: ${missing.size}" }
                     }
                     PermissionStatus.Missing(missing)
+                }
+            }
+
+        override suspend fun hasBodyTemperaturePermission(): Boolean =
+            withContext(ioDispatcher) {
+                if (!isAvailable()) return@withContext false
+                try {
+                    client.permissionController
+                        .getGrantedPermissions()
+                        .contains(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                        "Failed to check body temperature permission"
+                    }
+                    false
                 }
             }
 
@@ -440,6 +458,33 @@ class HealthConnectRepositoryImpl
                 }
             }
 
+        override suspend fun readBodyTemperatureRecords(
+            from: Instant,
+            to: Instant,
+        ): List<DomainBodyTemperatureRecord> =
+            withContext(ioDispatcher) {
+                try {
+                    readAllPages<BodyTemperatureRecord>(from, to).map { it.toDomain() }
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Body temperature record permission not granted"
+                    }
+                    emptyList()
+                } catch (e: SecurityException) {
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Body temperature record permission not granted"
+                    }
+                    emptyList()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                        "Error reading body temperature records"
+                    }
+                    throw e
+                }
+            }
+
         private suspend fun <T> readOrEmpty(block: suspend () -> List<T>): List<T> =
             try {
                 block()
@@ -481,6 +526,8 @@ class HealthConnectRepositoryImpl
                             async { readOrEmpty { readBloodPressureRecords(from, to) } }
                         val spo2RecordsDeferred =
                             async { readOrEmpty { readOxygenSaturationRecords(from, to) } }
+                        val bodyTemperatureRecordsDeferred =
+                            async { readOrEmpty { readBodyTemperatureRecords(from, to) } }
 
                         sleepSessionsDeferred.await().forEach { record ->
                             devices.add(record.deviceName)
@@ -518,6 +565,10 @@ class HealthConnectRepositoryImpl
 
                         spo2RecordsDeferred.await().forEach { record ->
                             devices.add(record.deviceName)
+                        }
+
+                        bodyTemperatureRecordsDeferred.await().forEach { record ->
+                            record.deviceName?.let { devices.add(it) }
                         }
                     }
 

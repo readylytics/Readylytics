@@ -2,6 +2,7 @@ package app.readylytics.health.domain.repository
 
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHrvRecord
@@ -145,4 +146,12 @@ interface HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<DomainOxygenSaturationRecord>
+
+    suspend fun readBodyTemperatureRecords(
+        from: Instant,
+        to: Instant,
+    ): List<DomainBodyTemperatureRecord>
+
+    /** Whether the optional `READ_BODY_TEMPERATURE` permission is currently granted. */
+    suspend fun hasBodyTemperaturePermission(): Boolean
 }
