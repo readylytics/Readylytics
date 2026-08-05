@@ -10,6 +10,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
@@ -186,6 +187,7 @@ class SleepViewModelTest {
                 DailySummary(date = selectedDate, sleepDurationMinutes = 480)
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
+            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(emptyList())
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
             viewModel = createViewModel()
@@ -195,6 +197,66 @@ class SleepViewModelTest {
             val gaugeData = state.sleepTimeGaugeData
             assertEquals(0.5f, gaugeData.progress!!, 0.001f)
             assertEquals("8h", gaugeData.displayText)
+        }
+
+    @Test
+    fun `ui state exposes sleep HR samples for the current session`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val selectedDate = LocalDate.of(2026, 6, 11)
+            val session =
+                SleepSessionData(
+                    id = "session_1",
+                    deviceName = "SmartRing",
+                    startTime =
+                        selectedDate
+                            .minusDays(1)
+                            .atTime(22, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    endTime =
+                        selectedDate
+                            .atTime(6, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 480,
+                    efficiency = 0.93f,
+                    deepSleepMinutes = 90,
+                    lightSleepMinutes = 300,
+                    remSleepMinutes = 90,
+                    awakeMinutes = 30,
+                )
+            val hrSamples =
+                listOf(
+                    HeartRateRecordData(
+                        id = "hr1",
+                        timestampMs = session.startTime + 60_000L,
+                        beatsPerMinute = 54,
+                        recordType = "SLEEP",
+                        sessionId = session.id,
+                    ),
+                )
+            every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
+            every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
+            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(hrSamples)
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.latestSession != null }
+            assertEquals(hrSamples, state.sleepHrSamples)
+        }
+
+    @Test
+    fun `ui state has empty sleep HR samples when there is no current session`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading }
+            assertEquals(emptyList<HeartRateRecordData>(), state.sleepHrSamples)
         }
 
     @Test
@@ -439,6 +501,7 @@ class SleepViewModelTest {
                 )
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
+            every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(emptyList())
             // Also feed the same session into the trend query (observeSince), which is what
             // isLoading is now based on -- without this, the trend list stays empty (setUp()
             // default) and isLoading would (correctly, per the fix) be true while syncing, since

@@ -9,8 +9,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.model.HrSample
 import app.readylytics.health.domain.model.SleepStageType
+import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData
+import app.readylytics.health.feature.sleep.SleepHrChart
 import app.readylytics.health.feature.sleep.SleepStagesChart
 import app.readylytics.health.feature.vitals.heartrate.HrTimelineChart
 import app.readylytics.health.feature.vitals.steps.StepsBar
@@ -150,6 +152,67 @@ class ChartAccessibilityTest {
         canvasNode.assert(stateDescriptionStartsWith("Selected: Light stage, duration 1m, starting at "))
 
         // Perform "Clear selection"
+        canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
+        canvasNode.assert(hasStateDescription("No point selected"))
+    }
+
+    @Test
+    fun sleepHrChart_accessibilitySemantics() {
+        composeTestRule.mainClock.autoAdvance = false
+
+        val session =
+            SleepSessionData(
+                id = "session1",
+                deviceName = "Phone",
+                startTime = 1700000000000L,
+                endTime = 1700000120000L,
+                durationMinutes = 2,
+                efficiency = 1f,
+                deepSleepMinutes = 1,
+                lightSleepMinutes = 1,
+                remSleepMinutes = 0,
+                awakeMinutes = 0,
+            )
+        val samples =
+            listOf(
+                HeartRateRecordData(
+                    id = "hr1",
+                    timestampMs = 1700000000000L,
+                    beatsPerMinute = 55,
+                    recordType = "SLEEP",
+                    sessionId = "session1",
+                ),
+                HeartRateRecordData(
+                    id = "hr2",
+                    timestampMs = 1700000060000L,
+                    beatsPerMinute = 58,
+                    recordType = "SLEEP",
+                    sessionId = "session1",
+                ),
+            )
+        composeTestRule.setContent {
+            Surface {
+                SleepHrChart(session = session, samples = samples)
+            }
+        }
+
+        val canvasNode = composeTestRule.onNodeWithTag("SleepHrChartCanvas")
+        canvasNode.assertExists()
+
+        canvasNode.assertContentDescriptionEquals(
+            "Heart rate timeline chart showing heart rate values in beats per minute during the sleep session.",
+        )
+        canvasNode.assert(hasStateDescription("No point selected"))
+
+        canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
+        canvasNode.assert(stateDescriptionStartsWith("Selected: 55 bpm at "))
+
+        canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
+        canvasNode.assert(stateDescriptionStartsWith("Selected: 58 bpm at "))
+
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
         composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
