@@ -65,6 +65,10 @@ object SettingsDefaults {
     const val MIN_HRR_TOLERANCE_SECONDS = 15
     const val MAX_HRR_TOLERANCE_SECONDS = 60
     const val HRR_TOLERANCE_SECONDS = 30
+    const val BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 1.0f
+    const val MIN_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 0.25f
+    const val MAX_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 1.5f
+    const val BODY_TEMP_ELEVATED_THRESHOLD_STEP_CELSIUS = 0.25f
 
     /**
      * Authoritative runtime value for RAS scaling.

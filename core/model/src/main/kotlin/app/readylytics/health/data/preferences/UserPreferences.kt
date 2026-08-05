@@ -101,6 +101,7 @@ data class UserPreferences(
     val minimumCountedSleepSegmentMinutes: Int = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
     val supplementalArchitectureCoveragePercent: Int =
         SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+    val bodyTempElevatedThresholdCelsius: Float = SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
 )
 
 /**
