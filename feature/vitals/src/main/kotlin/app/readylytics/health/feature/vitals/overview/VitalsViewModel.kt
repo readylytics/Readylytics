@@ -14,6 +14,7 @@ import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.scoring.RhrBaselineProvider
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,7 +39,7 @@ import javax.inject.Inject
 @Immutable
 data class VitalsUiState(
     val latestSummary: DailySummary? = null,
-    val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList()),
+    val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList(), emptyList()),
     val presentation: VitalsPresentationState = VitalsPresentationState.empty(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
@@ -71,6 +72,7 @@ class VitalsViewModel
         private val savedStateHandle: SavedStateHandle,
         private val hrvBaselineProvider: HrvBaselineProvider,
         private val rhrBaselineProvider: RhrBaselineProvider,
+        private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
@@ -85,6 +87,7 @@ class VitalsViewModel
                     Baselines(
                         hrv = hrvBaselineProvider.getRoundedHrvBaseline(date)?.toFloat(),
                         rhr = rhrBaselineProvider.getRoundedRhrBaseline(date),
+                        bodyTemp = bodyTemperatureBaselineProvider.getBaseline(date),
                     )
                 }.distinctUntilChanged()
                 .flowOn(ioDispatcher)
@@ -123,10 +126,17 @@ class VitalsViewModel
                     combine(
                         latestFlow,
                         dailySummaryRepository.observeSince(fromMs),
-                    ) { latest, summaries ->
+                        settingsRepo.userPreferences,
+                    ) { latest, summaries, prefs ->
                         VitalsContentState(
                             latestSummary = latest,
-                            chartSeries = buildVitalsChartSeries(summaries, startDate, selection.range.days),
+                            chartSeries =
+                                buildVitalsChartSeries(
+                                    summaries,
+                                    startDate,
+                                    selection.range.days,
+                                    prefs.unitSystem,
+                                ),
                             selection = selection,
                             rangeStartMs = startDayMs,
                         )
@@ -141,6 +151,7 @@ class VitalsViewModel
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                     rhrWarningThreshold = prefs.rhrWarningThreshold,
+                    unitSystem = prefs.unitSystem,
                 )
             }.distinctUntilChanged()
                 .flowOn(ioDispatcher)
@@ -163,7 +174,8 @@ class VitalsViewModel
                 val hasHistoricalData =
                     content.chartSeries.hrv.any { it.value != null } ||
                         content.chartSeries.rhr.any { it.value != null } ||
-                        content.chartSeries.spo2.any { it.value != null }
+                        content.chartSeries.spo2.any { it.value != null } ||
+                        content.chartSeries.bodyTemp.any { it.value != null }
                 VitalsUiState(
                     latestSummary = content.latestSummary,
                     chartSeries = content.chartSeries,

@@ -10,6 +10,8 @@ import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.model.hrvZoneBands
 import app.readylytics.health.domain.model.rhrZoneBands
 import app.readylytics.health.domain.model.spo2ZoneBands
+import app.readylytics.health.domain.preferences.UnitSystem
+import app.readylytics.health.domain.util.UnitConverter
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import kotlin.math.roundToInt
@@ -19,12 +21,17 @@ data class VitalsChartSeries(
     val hrv: List<DailyDataPoint>,
     val rhr: List<DailyDataPoint>,
     val spo2: List<DailyDataPoint>,
+    val bodyTemp: List<DailyDataPoint>,
 )
 
 @Immutable
 data class VitalsPresentationState(
     val baselineHrv: Float?,
     val baselineRhr: Int?,
+    val baselineBodyTemp: Float?,
+    val bodyTempAxisMin: Double,
+    val bodyTempAxisMax: Double,
+    val bodyTempUnitSystem: UnitSystem,
     val hrvZoneBands: List<ZoneBand>?,
     val rhrZoneBands: List<ZoneBand>?,
     val spo2ZoneBands: List<ZoneBand>,
@@ -38,6 +45,10 @@ data class VitalsPresentationState(
             VitalsPresentationState(
                 baselineHrv = null,
                 baselineRhr = null,
+                baselineBodyTemp = null,
+                bodyTempAxisMin = 35.5,
+                bodyTempAxisMax = 39.0,
+                bodyTempUnitSystem = UnitSystem.METRIC,
                 hrvZoneBands = null,
                 rhrZoneBands = null,
                 spo2ZoneBands = spo2ZoneBands(),
@@ -78,6 +89,7 @@ internal fun buildVitalsChartSeries(
     summaries: List<DailySummary>,
     startDate: LocalDate,
     rangeDays: Int,
+    unitSystem: UnitSystem,
 ): VitalsChartSeries {
     fun points(value: (DailySummary) -> Float?): List<DailyDataPoint> =
         summaries
@@ -92,6 +104,12 @@ internal fun buildVitalsChartSeries(
         hrv = points { it.nocturnalHrv?.toFloat() },
         rhr = points { it.restingHeartRate?.toFloat() },
         spo2 = points { it.avgSleepingSpo2?.roundToInt()?.toFloat() },
+        bodyTemp =
+            points {
+                it.avgSleepingBodyTemp?.let { celsius ->
+                    UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
+                }
+            },
     )
 }
 
@@ -101,6 +119,7 @@ internal fun buildVitalsPresentationState(
     hrvWarningThreshold: Float,
     rhrOptimalThreshold: Float,
     rhrWarningThreshold: Float,
+    unitSystem: UnitSystem,
 ): VitalsPresentationState {
     val hrvBands =
         baselines.hrv?.let { baseline ->
@@ -122,6 +141,10 @@ internal fun buildVitalsPresentationState(
     return VitalsPresentationState(
         baselineHrv = baselines.hrv,
         baselineRhr = baselines.rhr,
+        baselineBodyTemp = baselines.bodyTemp?.let { UnitConverter.celsiusToDisplayTemperature(it, unitSystem) },
+        bodyTempAxisMin = UnitConverter.celsiusToDisplayTemperature(35.5f, unitSystem).toDouble(),
+        bodyTempAxisMax = UnitConverter.celsiusToDisplayTemperature(39f, unitSystem).toDouble(),
+        bodyTempUnitSystem = unitSystem,
         hrvZoneBands = hrvBands,
         rhrZoneBands = rhrBands,
         spo2ZoneBands = spo2ZoneBands(),

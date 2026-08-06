@@ -10,6 +10,7 @@ import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.scoring.RhrBaselineProvider
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
 import io.mockk.every
@@ -89,6 +90,10 @@ class VitalsViewModelTest {
         mockk<RhrBaselineProvider> {
             coEvery { getRoundedRhrBaseline(any()) } returns 48
         }
+    private val bodyTemperatureBaselineProvider =
+        mockk<BodyTemperatureBaselineProvider> {
+            coEvery { getBaseline(any()) } returns 36.5f
+        }
 
     private fun createViewModel() =
         VitalsViewModel(
@@ -100,6 +105,7 @@ class VitalsViewModelTest {
             savedStateHandle = SavedStateHandle(),
             hrvBaselineProvider = hrvBaselineProvider,
             rhrBaselineProvider = rhrBaselineProvider,
+            bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
             ioDispatcher = testDispatcher,
         )
 
@@ -140,6 +146,7 @@ class VitalsViewModelTest {
                 assertSame(before.chartSeries.hrv, during.chartSeries.hrv)
                 assertSame(before.chartSeries.rhr, during.chartSeries.rhr)
                 assertSame(before.chartSeries.spo2, during.chartSeries.spo2)
+                assertSame(before.chartSeries.bodyTemp, during.chartSeries.bodyTemp)
             } finally {
                 collector.cancel()
             }
@@ -250,6 +257,7 @@ class VitalsViewModelTest {
                 assertSame(before.chartSeries.hrv, after.chartSeries.hrv)
                 assertSame(before.chartSeries.rhr, after.chartSeries.rhr)
                 assertSame(before.chartSeries.spo2, after.chartSeries.spo2)
+                assertSame(before.chartSeries.bodyTemp, after.chartSeries.bodyTemp)
             } finally {
                 collector.cancel()
             }

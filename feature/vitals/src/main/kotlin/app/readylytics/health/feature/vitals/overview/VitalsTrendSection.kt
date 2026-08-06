@@ -15,6 +15,7 @@ import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
+import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.feature.vitals.R
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -137,6 +138,48 @@ internal fun VitalsTrendSection(
                         baselineDecimalPlaces = 0,
                         minYOverride = 90.0,
                         maxYOverride = 100.0,
+                        parentScrollInProgress = parentScrollInProgress,
+                    )
+                }
+            },
+        )
+
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+
+        // Chart 4: Body Temperature Trend
+        CardLoader(
+            isLoading = chartInputs.isLoading,
+            skeleton = {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    height = 250.dp,
+                )
+            },
+            content = {
+                TrendCard(
+                    title = stringResource(CoreUiR.string.label_body_temperature),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                ) {
+                    TrendChart(
+                        points = chartSeries.bodyTemp,
+                        rangeStartMs = chartInputs.rangeStartMs,
+                        rangeDays = chartInputs.selectedRange.days,
+                        metricName = stringResource(CoreUiR.string.label_body_temperature),
+                        baselineUnit =
+                            if (presentation.bodyTempUnitSystem == UnitSystem.IMPERIAL) {
+                                stringResource(CoreUiR.string.unit_fahrenheit)
+                            } else {
+                                stringResource(CoreUiR.string.unit_celsius)
+                            },
+                        modifier = Modifier.testTag("BodyTemperatureTrendChart"),
+                        baseline = presentation.baselineBodyTemp,
+                        showBaseline = presentation.baselineBodyTemp != null,
+                        baselineDecimalPlaces = 1,
+                        axisDecimalPlaces = 1,
+                        minYOverride = presentation.bodyTempAxisMin,
+                        maxYOverride = presentation.bodyTempAxisMax,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                         parentScrollInProgress = parentScrollInProgress,
                     )
                 }
