@@ -188,17 +188,17 @@ fun createDashboardCardStateFlow(
         },
         kotlinx.coroutines.flow.flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
     ) { isManaging, pendingConfig, cardConfig, session, bodyTempPermissionGranted ->
-        val visibleCardConfig =
+        fun List<CardConfiguration>.filteredForPermission(): List<CardConfiguration> =
             if (bodyTempPermissionGranted) {
-                cardConfig
+                this
             } else {
-                cardConfig.filter { it.cardId != CardId.BODY_TEMPERATURE }
+                filter { it.cardId != CardId.BODY_TEMPERATURE }
             }
         DashboardCardState(
             isManagingCards = isManaging,
-            cardConfiguration = visibleCardConfig,
+            cardConfiguration = cardConfig.filteredForPermission(),
             lastSleepSession = session,
-            pendingConfiguration = pendingConfig,
+            pendingConfiguration = pendingConfig?.filteredForPermission(),
         )
     }
 }
