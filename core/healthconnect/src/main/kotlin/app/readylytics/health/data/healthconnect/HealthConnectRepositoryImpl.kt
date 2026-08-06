@@ -568,7 +568,7 @@ class HealthConnectRepositoryImpl
                         }
 
                         bodyTemperatureRecordsDeferred.await().forEach { record ->
-                            record.deviceName?.let { devices.add(it) }
+                            devices.add(record.deviceName)
                         }
                     }
 

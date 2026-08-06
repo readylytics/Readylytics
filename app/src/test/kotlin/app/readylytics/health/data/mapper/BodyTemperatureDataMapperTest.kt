@@ -28,7 +28,7 @@ class BodyTemperatureDataMapperTest {
     fun `toEntities maps every record in the list`() {
         val records =
             listOf(
-                DomainBodyTemperatureRecord("a", Instant.ofEpochMilli(1L), 36.5f, null),
+                DomainBodyTemperatureRecord("a", Instant.ofEpochMilli(1L), 36.5f, "Whoop"),
                 DomainBodyTemperatureRecord("b", Instant.ofEpochMilli(2L), 37.1f, "Oura"),
             )
 

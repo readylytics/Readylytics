@@ -24,6 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.ZoneId
@@ -125,7 +126,7 @@ fun createDashboardBasicInputsFlow(
                     .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
 
             val bodyTempBaselineFlow =
-                kotlinx.coroutines.flow.flow {
+                flow {
                     emit(
                         bodyTemperatureBaselineProvider.getBaseline(date),
                     )
@@ -186,7 +187,12 @@ fun createDashboardCardStateFlow(
                         .toEpochMilli(),
             )
         },
-        kotlinx.coroutines.flow.flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
+        // One-shot check, not re-polled -- relies on DashboardViewModel.uiState's
+        // WhileSubscribed(5_000) sharing policy naturally restarting this flow after a
+        // permission-grant round trip (navigating to the Health Connect permission screen and
+        // back always takes > 5s). If that sharing policy ever changes, this needs an explicit
+        // refresh trigger.
+        flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
     ) { isManaging, pendingConfig, cardConfig, session, bodyTempPermissionGranted ->
         fun List<CardConfiguration>.filteredForPermission(): List<CardConfiguration> =
             if (bodyTempPermissionGranted) {

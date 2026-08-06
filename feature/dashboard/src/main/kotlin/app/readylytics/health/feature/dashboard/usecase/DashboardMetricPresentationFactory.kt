@@ -19,6 +19,7 @@ import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.UnitConverter
@@ -33,6 +34,7 @@ class DashboardMetricPresentationFactory
     constructor(
         private val resourceProvider: ResourceProvider,
         private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
+        private val bodyTemperatureBaselineCalculator: BodyTemperatureBaselineCalculator,
     ) {
         // Human-readable, TalkBack-friendly accessibilityDescription wiring for all 15 dashboard metric
         // cards (Sleep Score, Readiness, Weight, Body Fat, Sleep Duration, HRV, Sleep RHR, Resting HR,
@@ -132,9 +134,8 @@ class DashboardMetricPresentationFactory
             when {
                 value == null -> MetricStatus.CALIBRATING
                 baseline == null -> MetricStatus.NEUTRAL
-                app.readylytics.health.domain.service
-                    .BodyTemperatureBaselineCalculator()
-                    .isElevated(value, baseline, thresholdCelsius) -> MetricStatus.WARNING
+                bodyTemperatureBaselineCalculator.isElevated(value, baseline, thresholdCelsius) ->
+                    MetricStatus.WARNING
                 else -> MetricStatus.NEUTRAL
             }
 

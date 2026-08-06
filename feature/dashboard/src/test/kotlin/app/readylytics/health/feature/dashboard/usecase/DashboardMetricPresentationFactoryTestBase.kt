@@ -7,6 +7,7 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.util.ResourceProvider
 import io.mockk.clearMocks
 import io.mockk.every
@@ -26,7 +27,12 @@ abstract class DashboardMetricPresentationFactoryTestBase {
     fun setup() {
         resourceProvider = mockk(relaxed = true)
         getWorkoutMetricsUseCase = mockk(relaxed = true)
-        factory = DashboardMetricPresentationFactory(resourceProvider, getWorkoutMetricsUseCase)
+        factory =
+            DashboardMetricPresentationFactory(
+                resourceProvider,
+                getWorkoutMetricsUseCase,
+                BodyTemperatureBaselineCalculator(),
+            )
         every { resourceProvider.getString(any()) } returns "mock_string"
         every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
         every { resourceProvider.getString(CoreUiR.string.score_maximum) } returns "100"

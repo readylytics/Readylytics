@@ -7,6 +7,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.util.ResourceProvider
 import io.mockk.every
 import io.mockk.mockk
@@ -54,6 +55,7 @@ class DashboardRecoveryMetricPresentationFactoryTest {
             DashboardMetricPresentationFactory(
                 resourceProvider,
                 mockk<GetWorkoutMetricsUseCase>(relaxed = true),
+                BodyTemperatureBaselineCalculator(),
             )
 
         every {

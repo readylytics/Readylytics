@@ -130,7 +130,6 @@
     <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.</string>
     <string name="tooltip_vitals_body_temperature" formatted="false">Average sleeping body temperature last night, compared to your 14-day baseline.</string>
     <string name="body_temperature_calibrating">Calibrating</string>
-    <string name="body_temperature_elevated_format">%1$s elevated vs your baseline</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>
