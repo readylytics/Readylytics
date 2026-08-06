@@ -86,7 +86,10 @@ class DashboardViewModel
                 Result.failure("Cannot select future dates", "INVALID_DATE")
             }
 
-        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
+        private val cardManagementDelegate =
+            CardManagementDelegate(cardConfigRepository, viewModelScope) {
+                healthConnectRepository.hasBodyTemperaturePermission()
+            }
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
