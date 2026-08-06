@@ -245,6 +245,8 @@
 <string name="threshold_baseline_window_desc">Number of past sleep sessions used to calculate
         your median bedtime anchor. Default: 14.</string>
 <string name="threshold_baseline_window_label">Baseline Window</string>
+<string name="threshold_body_temp_elevated_desc">How far your body temperature must deviate from your 14-day baseline before it\'s flagged as elevated.</string>
+<string name="threshold_body_temp_elevated_label">Body temp elevated threshold</string>
 <string name="threshold_evaluation_period_desc">Number of recent sleep sessions scored to
         compute your current consistency. Default: 7.</string>
 <string name="threshold_evaluation_period_label">Evaluation Period</string>

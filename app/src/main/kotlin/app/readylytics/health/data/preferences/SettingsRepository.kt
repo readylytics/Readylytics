@@ -148,6 +148,9 @@ class SettingsRepository
 
         override suspend fun updateRhrWarningThreshold(value: Float) = thresholds.updateRhrWarningThreshold(value)
 
+        override suspend fun updateBodyTempElevatedThreshold(value: Float) =
+            thresholds.updateBodyTempElevatedThreshold(value)
+
         override suspend fun updateRestingHrPercentile(percentile: Int) =
             physiology.updateRestingHrPercentile(percentile)
 

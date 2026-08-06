@@ -23,6 +23,7 @@ data class ThresholdSettingsState(
     val hrvWarningThreshold: Float = SettingsDefaults.HRV_WARNING_THRESHOLD,
     val rhrOptimalThreshold: Float = SettingsDefaults.RHR_OPTIMAL_THRESHOLD,
     val rhrWarningThreshold: Float = SettingsDefaults.RHR_WARNING_THRESHOLD,
+    val bodyTempElevatedThreshold: Float = SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
     val consistencyThresholdMinutes: Int = SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES,
     val consistencyEvaluationDays: Int = SettingsDefaults.CONSISTENCY_EVALUATION_DAYS,
     val consistencyBaselineDays: Int = SettingsDefaults.CONSISTENCY_BASELINE_DAYS,
