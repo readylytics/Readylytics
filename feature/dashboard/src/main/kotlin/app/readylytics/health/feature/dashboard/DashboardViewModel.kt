@@ -30,6 +30,7 @@ import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
@@ -74,6 +75,7 @@ class DashboardViewModel
         private val insightDismissalRepository: InsightDismissalRepository,
         private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
+        private val healthConnectRepository: HealthConnectRepository,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
@@ -108,6 +110,7 @@ class DashboardViewModel
                     cardManagementDelegate,
                     cardConfigRepository,
                     dailySummaryRepository,
+                    healthConnectRepository,
                 ),
                 createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
                 observeDashboardStrainIncreaseUseCase(

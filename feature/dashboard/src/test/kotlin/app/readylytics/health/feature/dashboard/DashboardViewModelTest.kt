@@ -9,6 +9,7 @@ import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
@@ -55,6 +56,7 @@ class DashboardViewModelTest {
     private lateinit var insightDismissalRepository: InsightDismissalRepository
     private lateinit var observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase
     private lateinit var bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider
+    private lateinit var healthConnectRepository: HealthConnectRepository
     private lateinit var viewModel: DashboardViewModel
 
     @Before
@@ -73,6 +75,7 @@ class DashboardViewModelTest {
         insightDismissalRepository = mockk(relaxed = true)
         observeDashboardStrainIncreaseUseCase = mockk(relaxed = true)
         bodyTemperatureBaselineProvider = mockk(relaxed = true)
+        healthConnectRepository = mockk(relaxed = true)
 
         viewModel =
             DashboardViewModel(
@@ -88,6 +91,7 @@ class DashboardViewModelTest {
                 insightDismissalRepository = insightDismissalRepository,
                 observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                 bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+                healthConnectRepository = healthConnectRepository,
                 clock = java.time.Clock.systemDefaultZone(),
                 defaultDispatcher = testDispatcher,
             )
@@ -197,6 +201,7 @@ class DashboardViewModelTest {
             // MockK's relaxed default for a suspend fun returning Float? is 0f, not null --
             // stub explicitly so bodyTempBaseline resolves to null like the other basic inputs.
             coEvery { bodyTemperatureBaselineProvider.getBaseline(any()) } returns null
+            coEvery { healthConnectRepository.hasBodyTemperaturePermission() } returns true
             every {
                 getDashboardDataUseCase.invoke(
                     summary = summary,
@@ -230,6 +235,7 @@ class DashboardViewModelTest {
                     insightDismissalRepository = insightDismissalRepository,
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+                    healthConnectRepository = healthConnectRepository,
                     clock = java.time.Clock.systemDefaultZone(),
                     defaultDispatcher = testDispatcher,
                 )
