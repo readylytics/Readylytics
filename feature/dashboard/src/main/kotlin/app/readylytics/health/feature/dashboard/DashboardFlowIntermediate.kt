@@ -15,6 +15,7 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,6 +41,7 @@ data class DashboardBasicInputs(
     val circadianResult: CircadianConsistencyResult?,
     val rasSummaries: List<DailySummary>,
     val dismissedInsightTypes: Set<InsightType> = emptySet(),
+    val bodyTempBaseline: Float? = null,
 )
 
 /**
@@ -87,6 +89,7 @@ fun createDashboardBasicInputsFlow(
     settingsRepository: UserPreferencesReader,
     circadianRepository: CircadianConsistencyRepository,
     insightDismissalRepository: InsightDismissalRepository,
+    bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
 ): Flow<DashboardBasicInputs> =
     combine(selectedDate, settingsRepository.userPreferences) { date, prefs -> date to prefs }
         .flatMapLatest { (date, prefs) ->
@@ -119,13 +122,21 @@ fun createDashboardBasicInputsFlow(
                 insightDismissalRepository
                     .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
 
+            val bodyTempBaselineFlow =
+                kotlinx.coroutines.flow.flow {
+                    emit(
+                        bodyTemperatureBaselineProvider.getBaseline(date),
+                    )
+                }
+
             // Combine all basic inputs
             combine(
                 summaryFlow,
                 circadianRepository.resultFor(date),
                 rasBreakdownFlow,
                 dismissalFlow,
-            ) { summary, circadian, rasSummaries, dismissed ->
+                bodyTempBaselineFlow,
+            ) { summary, circadian, rasSummaries, dismissed, bodyTempBaseline ->
                 DashboardBasicInputs(
                     selectedDate = date,
                     summary = summary,
@@ -133,6 +144,7 @@ fun createDashboardBasicInputsFlow(
                     circadianResult = circadian,
                     rasSummaries = rasSummaries,
                     dismissedInsightTypes = dismissed,
+                    bodyTempBaseline = bodyTempBaseline,
                 )
             }
         }

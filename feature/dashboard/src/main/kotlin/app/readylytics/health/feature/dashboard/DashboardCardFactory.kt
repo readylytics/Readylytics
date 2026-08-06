@@ -346,6 +346,18 @@ fun buildCardDataMap(
         )
     }
 
+    cardMap[CardId.BODY_TEMPERATURE] = { configuration ->
+        ConfigurableMetricCard(
+            cardId = CardId.BODY_TEMPERATURE,
+            presentation = uiState.cardDataMap[CardId.BODY_TEMPERATURE],
+            configuration = configuration,
+            isEditing = isEditing,
+            isLoading = isLoading,
+            onClick = onNavigateToVitals,
+            onCardDisplayModeChanged = onCardDisplayModeChanged,
+        )
+    }
+
     return cardMap
 }
 
