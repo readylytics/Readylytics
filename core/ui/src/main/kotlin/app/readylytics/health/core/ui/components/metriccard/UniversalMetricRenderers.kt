@@ -51,8 +51,8 @@ fun UniversalMetricVisual.progressFraction(): Float? =
 // Fixed slot for the delta pill / plain secondary text, kept out of the weighted value row so it
 // cannot be squeezed away at large font scales.
 private val UNIVERSAL_SECONDARY_SLOT_HEIGHT = 20.dp
-private val UNIVERSAL_TRACK_SECONDARY_GAP = 5.dp
-private val UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS = 2.dp
+private val UNIVERSAL_TRACK_SECONDARY_GAP = 6.dp
+private val UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS = 4.dp
 
 // Internal inset for the delta pill's label. Plain secondary text is anchored directly to the
 // renderer's content edge so it shares the card's bottom-start anchor with the pill surface.
