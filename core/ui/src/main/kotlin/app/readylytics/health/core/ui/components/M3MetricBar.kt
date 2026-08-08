@@ -4,10 +4,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,8 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 
 internal val METRIC_BAR_TICK_FRACTIONS: List<Float> = listOf(0.2f, 0.4f, 0.6f, 0.8f)
@@ -47,25 +46,44 @@ fun M3MetricBar(
     val progressToDraw = if (animateProgress) animated else clamped
     val tickDiameter = MaterialTheme.dimens.metricGaugeTickDiameter
 
-    Box(modifier = modifier.height(barHeight)) {
-        LinearProgressIndicator(
-            progress = { progressToDraw },
-            modifier = Modifier.fillMaxSize(),
-            color = activeColor,
-            trackColor = trackColor,
-            strokeCap = StrokeCap.Round,
-            gapSize = 0.dp,
-            drawStopIndicator = {},
+    Canvas(
+        modifier =
+            modifier
+                .height(barHeight)
+                .semantics {
+                    progressBarRangeInfo = ProgressBarRangeInfo(progressToDraw, 0f..1f)
+                },
+    ) {
+        // One continuous track capsule spanning the full width; the fill overlays it with the same
+        // round cap, so the track never reads as a second pill alongside the fill. (M3's
+        // LinearProgressIndicator instead draws the track as the remainder after the fill, which is
+        // what produced the "two pills" split.)
+        val strokeWidth = size.height
+        val centerY = size.height / 2f
+        drawLine(
+            color = trackColor,
+            start = Offset(strokeWidth / 2f, centerY),
+            end = Offset(size.width - strokeWidth / 2f, centerY),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round,
         )
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val tickRadiusPx = tickDiameter.toPx() / 2f
-            visibleTickFractions(progressToDraw).forEach { fraction ->
-                drawCircle(
-                    color = tickColor,
-                    radius = tickRadiusPx,
-                    center = Offset(size.width * fraction, size.height / 2f),
-                )
-            }
+        if (progressToDraw > 0f) {
+            val fillEndX = (size.width * progressToDraw).coerceAtLeast(strokeWidth / 2f)
+            drawLine(
+                color = activeColor,
+                start = Offset(strokeWidth / 2f, centerY),
+                end = Offset(fillEndX, centerY),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round,
+            )
+        }
+        val tickRadiusPx = tickDiameter.toPx() / 2f
+        visibleTickFractions(progressToDraw).forEach { fraction ->
+            drawCircle(
+                color = tickColor,
+                radius = tickRadiusPx,
+                center = Offset(size.width * fraction, centerY),
+            )
         }
     }
 }
