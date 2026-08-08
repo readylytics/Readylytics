@@ -29,6 +29,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -263,17 +264,41 @@ class VitalsViewModelTest {
             }
         }
 
+    @Test
+    fun `temperature summaries reach the Vitals chart series`() =
+        runTest {
+            summaries.value =
+                listOf(
+                    summary(date = LocalDate.now(), bodyTemp = 36.7f),
+                )
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                assertEquals(
+                    36.7f,
+                    viewModel.uiState.value.chartSeries.bodyTemp
+                        .last()
+                        .value,
+                )
+            } finally {
+                collector.cancel()
+            }
+        }
+
     private fun summary(
         date: LocalDate,
         hrv: Int? = null,
         rhr: Int? = null,
         spo2: Float? = null,
+        bodyTemp: Float? = null,
     ): DailySummary =
         DailySummary(
             date = date,
             nocturnalHrv = hrv,
             restingHeartRate = rhr,
             avgSleepingSpo2 = spo2,
+            avgSleepingBodyTemp = bodyTemp,
             isCalibrating = false,
         )
 

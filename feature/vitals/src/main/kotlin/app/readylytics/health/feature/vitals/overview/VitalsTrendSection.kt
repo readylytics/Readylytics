@@ -22,7 +22,7 @@ import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import app.readylytics.health.core.ui.R as CoreUiR
 
 /**
- * The three Vico trend charts (HRV, RHR, SpO2) on the Vitals screen. Takes only [VitalsChartInputs]
+ * The four Vico trend charts (HRV, RHR, SpO2, body temperature) on the Vitals screen. Takes only [VitalsChartInputs]
  * (never the raw [VitalsUiState]) so gauge-only or refresh-only state changes never recompose the
  * chart subtree -- this is the guarantee F1/F5 exist to provide.
  */
@@ -174,10 +174,14 @@ internal fun VitalsTrendSection(
                         modifier = Modifier.testTag("BodyTemperatureTrendChart"),
                         baseline = presentation.baselineBodyTemp,
                         showBaseline = presentation.baselineBodyTemp != null,
+                        baselineUnavailableLabel =
+                            if (presentation.baselineBodyTemp == null) {
+                                stringResource(CoreUiR.string.body_temperature_calibrating)
+                            } else {
+                                null
+                            },
                         baselineDecimalPlaces = 1,
                         axisDecimalPlaces = 1,
-                        minYOverride = presentation.bodyTempAxisMin,
-                        maxYOverride = presentation.bodyTempAxisMax,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         parentScrollInProgress = parentScrollInProgress,

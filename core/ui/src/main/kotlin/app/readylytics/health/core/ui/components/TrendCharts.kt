@@ -69,6 +69,7 @@ fun TrendChart(
     modifier: Modifier = Modifier,
     baseline: Float? = null,
     baselineLabel: String? = null,
+    baselineUnavailableLabel: String? = null,
     baselineDecimalPlaces: Int = 0,
     axisDecimalPlaces: Int = 0,
     tooltipDecimalPlaces: Int = axisDecimalPlaces,
@@ -343,26 +344,28 @@ fun TrendChart(
         }
     }
 
-    if (shouldShowBaseline) {
+    if (shouldShowBaseline || baselineUnavailableLabel != null) {
         Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
         BaselineLegend(
-            value = baselineValue,
+            value = if (shouldShowBaseline) baselineValue else null,
             unit = baselineUnit,
             label = resolvedBaselineLabel,
             color = baselineColor,
             decimalPlaces = baselineDecimalPlaces,
+            unavailableValueLabel = baselineUnavailableLabel,
         )
     }
 }
 
 @Composable
 fun BaselineLegend(
-    value: Float,
+    value: Float?,
     unit: String,
     color: Color,
     modifier: Modifier = Modifier,
     label: String = "Baseline",
     decimalPlaces: Int = 0,
+    unavailableValueLabel: String? = null,
 ) {
     Row(
         modifier = modifier,
@@ -375,14 +378,17 @@ fun BaselineLegend(
                     .background(color),
         )
         Spacer(Modifier.width(MaterialTheme.spacing.small))
-        val formattedValue =
-            if (decimalPlaces == 0) {
-                value.roundToInt().toString()
-            } else {
-                String.format("%.${decimalPlaces}f", value)
-            }
         Text(
-            text = "$label: $formattedValue $unit",
+            text =
+                requireNotNull(
+                    formatBaselineLegendText(
+                        value = value,
+                        unit = unit,
+                        label = label,
+                        decimalPlaces = decimalPlaces,
+                        unavailableValueLabel = unavailableValueLabel,
+                    ),
+                ),
             style = MaterialTheme.typography.labelSmall,
             color = color,
         )
@@ -425,6 +431,23 @@ internal fun formatTrendTooltipValue(
         if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
     return if (hideUnit) formatted else "$formatted $unit"
 }
+
+internal fun formatBaselineLegendText(
+    value: Float?,
+    unit: String,
+    label: String,
+    decimalPlaces: Int,
+    unavailableValueLabel: String?,
+): String? =
+    when {
+        value != null -> {
+            val formattedValue =
+                if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
+            "$label: $formattedValue $unit"
+        }
+        unavailableValueLabel != null -> "$label: $unavailableValueLabel"
+        else -> null
+    }
 
 internal fun shouldProcessTrendMarker(parentScrollInProgress: Boolean): Boolean = !parentScrollInProgress
 

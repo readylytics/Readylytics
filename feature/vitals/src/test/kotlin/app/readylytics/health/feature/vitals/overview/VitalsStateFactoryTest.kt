@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.vitals.overview
 
+import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.model.Baselines
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UnitSystem
@@ -9,8 +10,28 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 class VitalsStateFactoryTest {
+    @Test
+    fun `vitals range uses the persisted scoring timezone`() {
+        val selectedDate = LocalDate.of(2026, 6, 10)
+        val scoringZone = ZoneId.of("Pacific/Kiritimati")
+
+        val result = resolveVitalsRangeWindow(TimeRange.SEVEN_DAYS, selectedDate, scoringZone)
+
+        assertEquals(
+            selectedDate
+                .minusDays(6)
+                .atStartOfDay(scoringZone)
+                .toInstant()
+                .toEpochMilli(),
+            result.fromMs,
+        )
+        assertEquals(selectedDate.minusDays(6), result.startDate)
+        assertEquals(selectedDate.atStartOfDay(scoringZone).toInstant().toEpochMilli(), result.selectedMidnightMs)
+    }
+
     @Test
     fun `series builder pads and sorts each metric independently`() {
         val start = LocalDate.of(2026, 6, 1)
@@ -76,7 +97,7 @@ class VitalsStateFactoryTest {
     }
 
     @Test
-    fun `buildVitalsPresentationState converts the body temperature baseline and axis bounds to the display unit`() {
+    fun `buildVitalsPresentationState converts the body temperature baseline to the display unit`() {
         val metricState =
             buildVitalsPresentationState(
                 baselines = Baselines(hrv = 50f, rhr = 55, bodyTemp = 36.7f),
@@ -87,8 +108,6 @@ class VitalsStateFactoryTest {
                 unitSystem = UnitSystem.METRIC,
             )
         assertEquals(36.7f, metricState.baselineBodyTemp)
-        assertEquals(35.5, metricState.bodyTempAxisMin, 0.01)
-        assertEquals(39.0, metricState.bodyTempAxisMax, 0.01)
 
         val imperialState =
             buildVitalsPresentationState(
@@ -102,11 +121,6 @@ class VitalsStateFactoryTest {
         assertEquals(
             UnitConverter.celsiusToDisplayTemperature(36.7f, UnitSystem.IMPERIAL),
             imperialState.baselineBodyTemp,
-        )
-        assertEquals(
-            UnitConverter.celsiusToDisplayTemperature(35.5f, UnitSystem.IMPERIAL).toDouble(),
-            imperialState.bodyTempAxisMin,
-            0.01,
         )
     }
 

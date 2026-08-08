@@ -10,13 +10,13 @@ import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.scoring.RhrBaselineProvider
 import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,9 +31,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 
 @Immutable
@@ -98,47 +96,38 @@ class VitalsViewModel
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val contentFlow =
-            selectionFlow
+            combine(selectionFlow, settingsRepo.userPreferences) { selection, prefs -> selection to prefs }
                 .flatMapLatest { selection ->
-                    val fromMs = selection.range.fromMs(selection.date)
-                    val startDayMs = fromMs.truncateToDayMs()
-                    val zoneId = ZoneId.systemDefault()
-                    val startDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
-                    val selectedMidnightMs =
-                        selection
-                            .date
-                            .atStartOfDay(zoneId)
-                            .toInstant()
-                            .toEpochMilli()
+                    val (vitalsSelection, prefs) = selection
+                    val window =
+                        resolveVitalsRangeWindow(
+                            range = vitalsSelection.range,
+                            selectedDate = vitalsSelection.date,
+                            scoringZone = prefs.scoringZone(),
+                        )
                     val latestFlow =
-                        if (selection.date == LocalDate.now(zoneId)) {
-                            val todayMs =
-                                LocalDate
-                                    .now(zoneId)
-                                    .atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli()
-                            dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
+                        if (window.isToday) {
+                            dailySummaryRepository.observeSince(window.selectedMidnightMs).map { it.firstOrNull() }
                         } else {
-                            dailySummaryRepository.observeByDate(selectedMidnightMs)
+                            dailySummaryRepository.observeByDate(window.selectedMidnightMs)
                         }
 
                     combine(
                         latestFlow,
-                        dailySummaryRepository.observeSince(fromMs),
-                        settingsRepo.userPreferences,
-                    ) { latest, summaries, prefs ->
+                        dailySummaryRepository.observeSince(window.fromMs),
+                    ) { latest, summaries ->
                         VitalsContentState(
                             latestSummary = latest,
                             chartSeries =
                                 buildVitalsChartSeries(
                                     summaries,
-                                    startDate,
-                                    selection.range.days,
+                                    window.startDate,
+                                    vitalsSelection.range.days,
                                     prefs.unitSystem,
+                                    endDate = vitalsSelection.date,
                                 ),
-                            selection = selection,
-                            rangeStartMs = startDayMs,
+                            selection = vitalsSelection,
+                            rangeStartMs = window.fromMs,
                         )
                     }.distinctUntilChanged()
                 }.flowOn(ioDispatcher)

@@ -13,6 +13,7 @@ import app.readylytics.health.domain.model.spo2ZoneBands
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.util.UnitConverter
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlin.math.roundToInt
 
@@ -24,13 +25,33 @@ data class VitalsChartSeries(
     val bodyTemp: List<DailyDataPoint>,
 )
 
+internal data class VitalsRangeWindow(
+    val fromMs: Long,
+    val startDate: LocalDate,
+    val selectedMidnightMs: Long,
+    val isToday: Boolean,
+)
+
+internal fun resolveVitalsRangeWindow(
+    range: TimeRange,
+    selectedDate: LocalDate,
+    scoringZone: ZoneId,
+    today: LocalDate = LocalDate.now(scoringZone),
+): VitalsRangeWindow {
+    val startDate = selectedDate.minusDays(range.days.toLong() - 1)
+    return VitalsRangeWindow(
+        fromMs = startDate.atStartOfDay(scoringZone).toInstant().toEpochMilli(),
+        startDate = startDate,
+        selectedMidnightMs = selectedDate.atStartOfDay(scoringZone).toInstant().toEpochMilli(),
+        isToday = selectedDate == today,
+    )
+}
+
 @Immutable
 data class VitalsPresentationState(
     val baselineHrv: Float?,
     val baselineRhr: Int?,
     val baselineBodyTemp: Float?,
-    val bodyTempAxisMin: Double,
-    val bodyTempAxisMax: Double,
     val bodyTempUnitSystem: UnitSystem,
     val hrvZoneBands: List<ZoneBand>?,
     val rhrZoneBands: List<ZoneBand>?,
@@ -46,8 +67,6 @@ data class VitalsPresentationState(
                 baselineHrv = null,
                 baselineRhr = null,
                 baselineBodyTemp = null,
-                bodyTempAxisMin = 35.5,
-                bodyTempAxisMax = 39.0,
                 bodyTempUnitSystem = UnitSystem.METRIC,
                 hrvZoneBands = null,
                 rhrZoneBands = null,
@@ -61,7 +80,7 @@ data class VitalsPresentationState(
 }
 
 /**
- * The subset of [VitalsUiState] the three trend charts read. Passing only this into
+ * The subset of [VitalsUiState] the four trend charts read. Passing only this into
  * [VitalsTrendSection] means gauge-only or refresh-only state changes never recompose the chart
  * subtree — mirrors [app.readylytics.health.feature.dashboard.DashboardUiState.cardInputs].
  */
@@ -90,9 +109,11 @@ internal fun buildVitalsChartSeries(
     startDate: LocalDate,
     rangeDays: Int,
     unitSystem: UnitSystem,
+    endDate: LocalDate = startDate.plusDays(rangeDays.toLong() - 1),
 ): VitalsChartSeries {
     fun points(value: (DailySummary) -> Float?): List<DailyDataPoint> =
         summaries
+            .filter { it.date in startDate..endDate }
             .mapNotNull { summary ->
                 value(summary)?.let {
                     DailyDataPoint(ChronoUnit.DAYS.between(startDate, summary.date).toInt(), it)
@@ -142,8 +163,6 @@ internal fun buildVitalsPresentationState(
         baselineHrv = baselines.hrv,
         baselineRhr = baselines.rhr,
         baselineBodyTemp = baselines.bodyTemp?.let { UnitConverter.celsiusToDisplayTemperature(it, unitSystem) },
-        bodyTempAxisMin = UnitConverter.celsiusToDisplayTemperature(35.5f, unitSystem).toDouble(),
-        bodyTempAxisMax = UnitConverter.celsiusToDisplayTemperature(39f, unitSystem).toDouble(),
         bodyTempUnitSystem = unitSystem,
         hrvZoneBands = hrvBands,
         rhrZoneBands = rhrBands,
