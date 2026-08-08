@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -143,7 +145,7 @@ fun DataPointTooltip(
                             .padding(horizontal = MaterialTheme.spacing.small),
                 ) {
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                        horizontalAlignment = Alignment.Start,
                         modifier =
                             Modifier
                                 .padding(
@@ -157,6 +159,8 @@ fun DataPointTooltip(
                             text = data.valueText,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.inverseOnSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
                         )
                         Text(
                             text = data.dateText,

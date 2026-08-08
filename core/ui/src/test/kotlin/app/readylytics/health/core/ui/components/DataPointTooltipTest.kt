@@ -19,22 +19,30 @@ class DataPointTooltipTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun `supplemental tooltip lines are retained before the date`() {
+    fun `tooltip data orders date then duration then details`() {
         val data =
             DataPointTooltipData(
-                valueText = "Duration: 8h 05m",
-                dateText = "Bedtime: 11:42 PM - 7:10 AM",
+                valueText = "01.08",
+                dateText = "Duration: 8h 05m",
                 preDateLines =
                     listOf(
+                        "Bedtime: 11:42 PM - 7:10 AM",
                         "Naps:",
                         "• 2:00 PM – 2:35 PM (35m)",
                     ),
-                extraLine = "01.08",
             )
 
-        assertEquals("Bedtime: 11:42 PM - 7:10 AM", data.dateText)
-        assertEquals(listOf("Naps:", "• 2:00 PM – 2:35 PM (35m)"), data.preDateLines)
-        assertEquals("01.08", data.extraLine)
+        assertEquals("01.08", data.valueText)
+        assertEquals("Duration: 8h 05m", data.dateText)
+        assertEquals(
+            listOf(
+                "Bedtime: 11:42 PM - 7:10 AM",
+                "Naps:",
+                "• 2:00 PM – 2:35 PM (35m)",
+            ),
+            data.preDateLines,
+        )
+        assertEquals(null, data.extraLine)
     }
 
     @Test
@@ -57,24 +65,30 @@ class DataPointTooltipTest {
                     isVisible = true,
                     data =
                         DataPointTooltipData(
-                            valueText = "Duration: 8h 05m",
-                            dateText = "Bedtime: 11:42 PM - 7:10 AM",
-                            preDateLines = listOf("Naps:", "• 2:00 PM – 2:35 PM (35m)"),
-                            extraLine = "01.08",
+                            valueText = "01.08",
+                            dateText = "Duration: 8h 05m",
+                            preDateLines =
+                                listOf(
+                                    "Bedtime: 11:42 PM - 7:10 AM",
+                                    "Naps:",
+                                    "• 2:00 PM – 2:35 PM (35m)",
+                                ),
                         ),
                     onDismissRequest = {},
                 )
             }
         }
 
+        val dateTop = textTop("01.08")
+        val durationTop = textTop("Duration: 8h 05m")
         val bedtimeTop = textTop("Bedtime: 11:42 PM - 7:10 AM")
         val napsHeadingTop = textTop("Naps:")
         val napItemTop = textTop("• 2:00 PM – 2:35 PM (35m)")
-        val dateTop = textTop("01.08")
 
+        assertTrue(dateTop < durationTop)
+        assertTrue(durationTop < bedtimeTop)
         assertTrue(bedtimeTop < napsHeadingTop)
         assertTrue(napsHeadingTop < napItemTop)
-        assertTrue(napItemTop < dateTop)
     }
 
     @Test

@@ -38,37 +38,36 @@ internal fun buildSleepTrendTooltipData(
 
     fun formatClock(epochMs: Long?): String = epochMs?.let { scoringClockFormatter.format(Date(it)) } ?: "—"
 
-    val napLines =
-        selectedState.naps
-            .takeIf { it.isNotEmpty() }
-            ?.let { naps ->
-                buildList {
-                    add(strings.napsHeading)
-                    naps.forEach { nap ->
-                        add(
-                            String.format(
-                                locale,
-                                strings.napItemFormat,
-                                formatClock(nap.startTimeMs),
-                                formatClock(nap.endTimeMs),
-                                DateFormatUtils.formatSleepDuration(nap.durationMinutes),
-                            ),
-                        )
-                    }
+    val detailLines =
+        buildList {
+            add(
+                String.format(
+                    locale,
+                    strings.bedtimeFormat,
+                    formatClock(selectedState.coreStartTimeMs),
+                    formatClock(selectedState.coreEndTimeMs),
+                ),
+            )
+            if (selectedState.naps.isNotEmpty()) {
+                add(strings.napsHeading)
+                selectedState.naps.forEach { nap ->
+                    add(
+                        String.format(
+                            locale,
+                            strings.napItemFormat,
+                            formatClock(nap.startTimeMs),
+                            formatClock(nap.endTimeMs),
+                            DateFormatUtils.formatSleepDuration(nap.durationMinutes),
+                        ),
+                    )
                 }
-            }.orEmpty()
+            }
+        }
 
     return DataPointTooltipData(
-        valueText = String.format(locale, strings.durationFormat, duration),
-        dateText =
-            String.format(
-                locale,
-                strings.bedtimeFormat,
-                formatClock(selectedState.coreStartTimeMs),
-                formatClock(selectedState.coreEndTimeMs),
-            ),
-        preDateLines = napLines,
-        extraLine = ChartUtils.formatTooltipDate(date),
+        valueText = ChartUtils.formatTooltipDate(date),
+        dateText = String.format(locale, strings.durationFormat, duration),
+        preDateLines = detailLines,
         offset =
             IntOffset(
                 selectedState.canvasX.toInt(),

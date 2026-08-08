@@ -69,9 +69,16 @@ class SleepTrendTooltipFormatterTest {
                 locale = Locale.US,
             )
 
-        assertEquals("Duration: 8h 35m", result.valueText)
-        assertEquals("Bedtime: 23:15 - 07:15", result.dateText)
-        assertEquals(listOf("Naps:", "• 13:05 – 13:40 (0h 35m)"), result.preDateLines)
-        assertEquals("02.08", result.extraLine)
+        assertEquals("02.08", result.valueText)
+        assertEquals("Duration: 8h 35m", result.dateText)
+        assertEquals(
+            listOf(
+                "Bedtime: 23:15 - 07:15",
+                "Naps:",
+                "• 13:05 – 13:40 (0h 35m)",
+            ),
+            result.preDateLines,
+        )
+        assertEquals(null, result.extraLine)
     }
 }
