@@ -22,6 +22,14 @@ internal val METRIC_BAR_TICK_FRACTIONS: List<Float> = listOf(0.2f, 0.4f, 0.6f, 0
 
 internal fun visibleTickFractions(progress: Float): List<Float> = METRIC_BAR_TICK_FRACTIONS.filter { it > progress }
 
+// The fill's round cap overhangs `strokeWidth / 2` past its center, so its center must be clamped
+// to `[strokeWidth/2, width - strokeWidth/2]`: otherwise at 100% the cap overshoots the track end.
+internal fun fillEndCenterX(
+    progress: Float,
+    width: Float,
+    strokeWidth: Float,
+): Float = (width * progress).coerceIn(strokeWidth / 2f, width - strokeWidth / 2f)
+
 @Composable
 fun M3MetricBar(
     progressFraction: Float?,
@@ -68,11 +76,10 @@ fun M3MetricBar(
             cap = StrokeCap.Round,
         )
         if (progressToDraw > 0f) {
-            val fillEndX = (size.width * progressToDraw).coerceAtLeast(strokeWidth / 2f)
             drawLine(
                 color = activeColor,
                 start = Offset(strokeWidth / 2f, centerY),
-                end = Offset(fillEndX, centerY),
+                end = Offset(fillEndCenterX(progressToDraw, size.width, strokeWidth), centerY),
                 strokeWidth = strokeWidth,
                 cap = StrokeCap.Round,
             )

@@ -28,6 +28,20 @@ class M3MetricBarTest {
     }
 
     @Test
+    fun fillEndCenterX_clampsSoTheFillNeverOvershootsTheTrack() {
+        val width = 200f
+        val strokeWidth = 10f
+        // At 100% the fill cap must end flush with the track's right end, not stick out past it.
+        assertEquals(width - strokeWidth / 2f, fillEndCenterX(1f, width, strokeWidth))
+        assertEquals(width - strokeWidth / 2f, fillEndCenterX(1.5f, width, strokeWidth))
+        // Intermediate progress stays proportional so the cap bulges into the track.
+        assertEquals(100f, fillEndCenterX(0.5f, width, strokeWidth))
+        // Tiny/zero progress stays left-anchored instead of going negative.
+        assertEquals(strokeWidth / 2f, fillEndCenterX(0f, width, strokeWidth))
+        assertEquals(strokeWidth / 2f, fillEndCenterX(0.001f, width, strokeWidth))
+    }
+
+    @Test
     fun metricBar_acceptsNull_andClampsOutOfRange_progressSurfacedThroughSemantics() {
         composeTestRule.setContent {
             M3MetricBar(
