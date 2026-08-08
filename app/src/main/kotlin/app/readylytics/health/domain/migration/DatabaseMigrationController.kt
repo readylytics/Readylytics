@@ -53,7 +53,13 @@ class DatabaseMigrationControllerImpl
             val workInfo =
                 workInfos.firstOrNull()
                     ?: return DatabaseMigrationUiState(databaseReadinessInspector.inspect())
-            if (workInfo.state == WorkInfo.State.FAILED) {
+
+            // WorkManager keeps terminal WorkInfo around across process restarts, so a failure from
+            // an earlier run is still the first thing this flow emits on the next cold start.
+            // The database itself is the authority on whether that failure still matters: once it
+            // reports Ready, a stale FAILED record must not pin the user to the retry screen.
+            val readiness = databaseReadinessInspector.inspect()
+            if (workInfo.state == WorkInfo.State.FAILED && readiness != DatabaseReadiness.Ready) {
                 val requiredBytes =
                     workInfo.outputData.getLong(DatabaseMigrationWorker.KEY_REQUIRED_BYTES, MISSING_BYTES)
                 val availableBytes =
@@ -81,7 +87,7 @@ class DatabaseMigrationControllerImpl
                         )
                     }
             return DatabaseMigrationUiState(
-                readiness = databaseReadinessInspector.inspect(),
+                readiness = readiness,
                 progress =
                     if (workInfo.state == WorkInfo.State.RUNNING || workInfo.state == WorkInfo.State.ENQUEUED) {
                         progress

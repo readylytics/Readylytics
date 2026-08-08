@@ -130,6 +130,32 @@ class DatabaseMigrationControllerTest {
     }
 
     @Test
+    fun `stale failed work is ignored once the database reports ready`() {
+        every { gate.inspect() } returns DatabaseReadiness.Ready
+        val controller = controller()
+
+        // WorkManager replays the previous run's terminal FAILED record on the next cold start.
+        workInfos.value = listOf(workInfo(WorkInfo.State.FAILED))
+        scope.advanceUntilIdle()
+
+        assertEquals(DatabaseMigrationUiState(DatabaseReadiness.Ready), controller.state.value)
+    }
+
+    @Test
+    fun `failed work still surfaces while the database is not ready`() {
+        every { gate.inspect() } returns DatabaseReadiness.MigrationRequired(6)
+        val controller = controller()
+
+        workInfos.value = listOf(workInfo(WorkInfo.State.FAILED))
+        scope.advanceUntilIdle()
+
+        assertEquals(
+            DatabaseMigrationUiState(DatabaseReadiness.Failed("Database migration failed")),
+            controller.state.value,
+        )
+    }
+
+    @Test
     fun `start or resume schedules unique migration work`() {
         every { gate.inspect() } returns DatabaseReadiness.MigrationRequired(5)
         val controller = controller()

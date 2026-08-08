@@ -290,7 +290,14 @@ copy so `MigrationTestHelper` must inspect the physical tables and indexes.
 `DatabaseMigrationWorker` performs this state machine as foreground `dataSync` work and publishes
 phase plus copied/total-row progress; the migration screen gates normal app content, and
 Room-backed startup, sync, backup, and cleanup work remain blocked or retry until
-`DatabaseReadinessGate` reports v7 ready.
+`DatabaseReadinessGate` reports ready — that is, `user_version` has reached the externally
+migrated v7 floor and has not passed `HealthDatabase.DATABASE_VERSION`. The gate's upper bound is
+the `DATABASE_VERSION` constant itself rather than a hand-copied literal: Room owns every step
+from v7 up to the current version, so a gate pinned to one exact version would reject the schema
+Room had just migrated to and strand the app on the migration screen after the next bump.
+`DatabaseMigrationController` likewise re-inspects the database before honouring a `FAILED`
+`WorkInfo`, since WorkManager replays a previous run's terminal record on the next cold start and
+that stale failure must not outrank a database that now reports ready.
 Version 4 adds
 the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
@@ -844,7 +851,7 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v9)                              | 14 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v9 |
-| `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing/v7 ready; v5/v6 or resumable metadata require external migration                 |
+| `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
 | `app/src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt`                                               | Storage — scoped encrypted DB access                | opens raw SQLCipher DB only inside a callback and zeroes plaintext key bytes              |
