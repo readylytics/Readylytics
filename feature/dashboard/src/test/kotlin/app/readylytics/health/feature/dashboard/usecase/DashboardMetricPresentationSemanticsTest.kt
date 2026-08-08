@@ -5,6 +5,7 @@ import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
+import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -181,16 +182,81 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
             listOf(
                 0.5f to MetricStatus.WARNING,
                 0.8f to MetricStatus.OPTIMAL,
-                1.3f to MetricStatus.WARNING,
-                1.5f to MetricStatus.POOR,
-                1.7f to MetricStatus.POOR,
+                1.3f to MetricStatus.OPTIMAL,
+                1.5f to MetricStatus.NEUTRAL,
+                1.7f to MetricStatus.WARNING,
+                2.0f to MetricStatus.WARNING,
+                2.01f to MetricStatus.POOR,
             )
 
         expectations.forEach { (rawStrainRatio, expectedStatus) ->
             val cards = factory.build(summary(strainRatio = rawStrainRatio), preferences(), date, null, null, null)
 
             assertEquals(expectedStatus, cards.getValue(CardId.STRAIN_RATIO).status)
-            assertNotEquals(MetricStatus.NEUTRAL, cards.getValue(CardId.STRAIN_RATIO).status)
+        }
+    }
+
+    @Test
+    fun `score boundaries retain shared status policy`() {
+        listOf(
+            40f to MetricStatus.WARNING,
+            60f to MetricStatus.NEUTRAL,
+            85f to MetricStatus.OPTIMAL,
+        ).forEach { (score, expectedStatus) ->
+            val cards =
+                factory.build(
+                    summary().copy(sleepScore = score, readinessWorkoutOnly = score),
+                    preferences(),
+                    date,
+                    null,
+                    null,
+                    null,
+                )
+
+            assertEquals(expectedStatus, cards.getValue(CardId.SLEEP_SCORE).status)
+            assertEquals(expectedStatus, cards.getValue(CardId.READINESS).status)
+        }
+    }
+
+    @Test
+    fun `sleep efficiency boundaries retain shared status policy`() {
+        listOf(
+            70f to MetricStatus.WARNING,
+            80f to MetricStatus.NEUTRAL,
+            85f to MetricStatus.OPTIMAL,
+        ).forEach { (efficiency, expectedStatus) ->
+            val cards =
+                factory.build(
+                    summary(),
+                    preferences(),
+                    date,
+                    SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
+                    null,
+                    null,
+                )
+
+            assertEquals(expectedStatus, cards.getValue(CardId.SLEEP_EFFICIENCY).status)
+        }
+    }
+
+    @Test
+    fun `circadian consistency boundaries retain shared status policy`() {
+        listOf(
+            40f to MetricStatus.WARNING,
+            60f to MetricStatus.NEUTRAL,
+            80f to MetricStatus.OPTIMAL,
+        ).forEach { (score, expectedStatus) ->
+            val cards =
+                factory.build(
+                    summary(),
+                    preferences(),
+                    date,
+                    null,
+                    CircadianConsistencyResult.Ready(score, 0, 0, 0, 0),
+                    null,
+                )
+
+            assertEquals(expectedStatus, cards.getValue(CardId.CIRCADIAN_CONSISTENCY).status)
         }
     }
 
