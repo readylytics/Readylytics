@@ -1,8 +1,12 @@
 package app.readylytics.health.feature.dashboard
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
@@ -363,6 +367,85 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
             "Bar plain secondary text must follow the card's status content color",
             expectedContentColor.copy(alpha = 0.8f).toArgb(),
             textColorArgb("22:51 → 06:02"),
+        )
+    }
+
+    @Test
+    fun plainSecondaryText_isAnchoredToTheValueRowBottomStart() {
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation =
+                        presentation.copy(
+                            title = "Sleep duration",
+                            valueText = "7h 11m",
+                            secondaryText = "22:51 → 06:02",
+                        ),
+                    specification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_DURATION)),
+                    requestedMode = DashboardCardDisplayMode.VALUE,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        val valueBounds = boundsOfText("7h 11m")
+        val secondaryBounds = boundsOfText("22:51 → 06:02")
+        assertEquals(
+            "Plain secondary text must start at the value row's content edge",
+            valueBounds.left,
+            secondaryBounds.left,
+        )
+        assertTrue(
+            "Plain secondary text must be below the value row: value=$valueBounds, secondary=$secondaryBounds",
+            secondaryBounds.top >= valueBounds.bottom,
+        )
+    }
+
+    @Test
+    fun secondaryContent_sharesBottomEdgeAcrossDifferentValueHeights() {
+        composeRule.setContent {
+            TestTheme {
+                Row(modifier = Modifier.width(400.dp)) {
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = "HRV",
+                                valueText = "42",
+                                unitText = "ms",
+                                secondaryText = "↑ 1 ms",
+                            ),
+                        specification = requireNotNull(DashboardCardCatalog.spec(CardId.HRV)),
+                        requestedMode = DashboardCardDisplayMode.VALUE,
+                        isEditing = false,
+                        onModeSelected = {},
+                        modifier = Modifier.weight(1f).height(240.dp),
+                    )
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = "Sleep Time",
+                                valueText = "7h 11m",
+                                unitText = "",
+                                secondaryText = "22:56 → 06:50",
+                            ),
+                        specification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_DURATION)),
+                        requestedMode = DashboardCardDisplayMode.VALUE,
+                        isEditing = false,
+                        onModeSelected = {},
+                        modifier = Modifier.weight(1f).height(240.dp),
+                    )
+                }
+            }
+        }
+
+        val pillBounds = boundsOfTag(UNIVERSAL_DELTA_PILL_TAG)
+        val plainBounds = boundsOfText("22:56 → 06:50")
+        assertEquals(
+            "HRV pill and Sleep Time text must share the secondary slot bottom edge: " +
+                "pill=$pillBounds, plain=$plainBounds",
+            pillBounds.bottom,
+            plainBounds.bottom,
         )
     }
 
