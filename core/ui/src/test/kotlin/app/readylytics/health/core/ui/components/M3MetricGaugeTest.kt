@@ -79,20 +79,17 @@ class M3MetricGaugeTest {
     @Test
     fun gaugeTextBounds_shrinkForHeightConstrainedGaugeSlot() {
         val inset = 12f
-        val blockHeight = 40f
         val wide =
             resolveGaugeTextBoundsPx(
                 geometry = resolveHorseshoeGaugeGeometry(Size(160f, 160f), inset),
                 trackInsetPx = inset,
                 textBlockCenterYOffsetPx = 0f,
-                textBlockHeightPx = blockHeight,
             )
         val short =
             resolveGaugeTextBoundsPx(
                 geometry = resolveHorseshoeGaugeGeometry(Size(160f, 80f), inset),
                 trackInsetPx = inset,
                 textBlockCenterYOffsetPx = 0f,
-                textBlockHeightPx = blockHeight,
             )
 
         assertTrue(short.width < wide.width)
@@ -110,7 +107,6 @@ class M3MetricGaugeTest {
                 geometry = geometry,
                 trackInsetPx = inset,
                 textBlockCenterYOffsetPx = 0f,
-                textBlockHeightPx = 50f,
             )
         val maxInner = (geometry.radius - inset) * 2f
 
@@ -127,7 +123,6 @@ class M3MetricGaugeTest {
                 geometry = geometry,
                 trackInsetPx = inset,
                 textBlockCenterYOffsetPx = 5f,
-                textBlockHeightPx = 50f,
             )
 
         assertTrue(bounds.width >= 0f)

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
@@ -73,28 +72,23 @@ internal fun resolveHorseshoeGaugeGeometry(
 }
 
 /**
- * Widest rectangle (width, height) available to the gauge's value/unit overlay,
- * inscribed inside the horseshoe's circle minus the track stroke inset.
- * The block's vertical span is assumed to be centered at [textBlockCenterYOffsetPx]
- * from the circle center, with height [textBlockHeightPx]; the safe width is twice
- * the smaller chord half-width at the block's top and bottom edges, so the text can
- * never legitimately overlap the track. Degenerate/oversized inputs clamp to 0.
+ * Width/height bounds for the gauge's value/unit overlay, derived from the same
+ * [HorseshoeGaugeGeometry] the track is drawn with so the text can never legitimately
+ * overlap the stroke. Width is twice the chord half-width at the block's vertical
+ * center ([textBlockCenterYOffsetPx] from the circle center), on the inner circle
+ * (radius minus [trackInsetPx]); height is the inner circle's diameter. This keeps
+ * short values at full size (their natural width is below the chord) while forcing
+ * long values to auto-size down to fit. Degenerate/oversized inputs clamp to 0.
  */
 internal fun resolveGaugeTextBoundsPx(
     geometry: HorseshoeGaugeGeometry,
     trackInsetPx: Float,
     textBlockCenterYOffsetPx: Float,
-    textBlockHeightPx: Float,
 ): Size {
     val innerRadius = (geometry.radius - trackInsetPx).coerceAtLeast(0f)
-    val halfBlockHeight = textBlockHeightPx / 2f
-    val halfWidthAt = { dy: Float -> sqrt(maxOf(0f, innerRadius * innerRadius - dy * dy)) }
-    val topDy = textBlockCenterYOffsetPx - halfBlockHeight
-    val bottomDy = textBlockCenterYOffsetPx + halfBlockHeight
-    val safeHalfWidth = minOf(halfWidthAt(topDy), halfWidthAt(bottomDy)).coerceAtLeast(0f)
-    val safeHeight =
-        (minOf(bottomDy, innerRadius) - maxOf(topDy, -innerRadius)).coerceAtLeast(0f)
-    return Size(width = safeHalfWidth * 2f, height = safeHeight)
+    val chordHalfWidth =
+        sqrt(maxOf(0f, innerRadius * innerRadius - textBlockCenterYOffsetPx * textBlockCenterYOffsetPx))
+    return Size(width = chordHalfWidth * 2f, height = innerRadius * 2f)
 }
 
 @Composable
@@ -219,21 +213,13 @@ fun M3MetricGaugeWithValue(
         val geometry = resolveHorseshoeGaugeGeometry(canvasSizePx, activeStrokeWidthPx)
         val textBlockCenterYOffsetPx =
             with(density) { (maxHeight / 2f + verticalOffset).toPx() } - geometry.center.y
-        val textBlockHeightPx =
-            with(density) {
-                MaterialTheme.typography.headlineMedium.lineHeight.toPx() +
-                    unitSpacing.toPx() +
-                    MaterialTheme.typography.labelSmall.lineHeight.toPx()
-            }
         val textBoundsPx =
             resolveGaugeTextBoundsPx(
                 geometry = geometry,
                 trackInsetPx = activeStrokeWidthPx,
                 textBlockCenterYOffsetPx = textBlockCenterYOffsetPx,
-                textBlockHeightPx = textBlockHeightPx,
             )
         val textBoundsWidth = with(density) { textBoundsPx.width.toDp() }
-        val textBoundsHeight = with(density) { textBoundsPx.height.toDp() }
 
         M3MetricGauge(
             markerFraction = markerFraction,
@@ -250,7 +236,6 @@ fun M3MetricGaugeWithValue(
                 Modifier
                     .offset(y = verticalOffset)
                     .widthIn(max = textBoundsWidth)
-                    .heightIn(max = textBoundsHeight)
                     .testTag("metric_gauge_value_overlay"),
         ) {
             BasicText(
