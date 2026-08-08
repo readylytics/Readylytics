@@ -18,6 +18,11 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.assessHrv
 import app.readylytics.health.domain.model.assessRhr
 import app.readylytics.health.domain.model.assessSpo2
+import app.readylytics.health.domain.model.circadianConsistencyStatus
+import app.readylytics.health.domain.model.normalizedSleepEfficiencyPercent
+import app.readylytics.health.domain.model.scoreStatus
+import app.readylytics.health.domain.model.sleepEfficiencyStatus
+import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -80,43 +85,6 @@ class DashboardMetricPresentationFactory
                 title,
                 unavailableReasonText(reason),
             )
-
-        private fun scoreStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 40f -> MetricStatus.POOR
-                value < 60f -> MetricStatus.WARNING
-                value < 85f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
-        private fun sleepEfficiencyStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 70f -> MetricStatus.POOR
-                value < 80f -> MetricStatus.WARNING
-                value < 85f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
-        private fun circadianStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 40f -> MetricStatus.POOR
-                value < 60f -> MetricStatus.WARNING
-                value < 80f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
-        private fun strainStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 0.5f -> MetricStatus.POOR
-                value < 0.8f -> MetricStatus.WARNING
-                value < 1.3f -> MetricStatus.OPTIMAL
-                value < 1.5f -> MetricStatus.WARNING
-                else -> MetricStatus.POOR
-            }
 
         // Deliberately not POOR/OPTIMAL: elevated body temperature is a deviation flag, not a
         // "good/bad" score.
@@ -185,7 +153,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     100f,
                 )
-            val sleepScoreStatus = scoreStatus(summary?.sleepScore)
+            val sleepScoreStatus = summary?.sleepScore.scoreStatus()
             val sleepScoreTitle =
                 resourceProvider.getString(DashboardR.string.card_title_sleep_score)
             val sleepScoreValueText = m?.sleepScoreRounded?.toString() ?: unavailableValueText
@@ -217,7 +185,7 @@ class DashboardMetricPresentationFactory
                     LoadSourceSelector.selectReadiness(it, preferences.strainLoadSourceMode)
                 }
             val readinessVisual = UniversalMetricScalePreparer.score(readinessScore, 0f, 100f)
-            val readinessStatus = scoreStatus(readinessScore)
+            val readinessStatus = readinessScore.scoreStatus()
             val readinessTitle = resourceProvider.getString(CoreUiR.string.card_title_readiness)
             val readinessValueText = m?.readinessRounded?.toString() ?: unavailableValueText
             val readinessDescription =
@@ -357,11 +325,8 @@ class DashboardMetricPresentationFactory
 
             // 10. SLEEP EFFICIENCY
             val efficiency = lastSleepSession?.efficiency
-            val efficiencyPercent =
-                efficiency?.let { value ->
-                    if (value in 0f..1f) value * 100f else value
-                }
-            val effStatus = sleepEfficiencyStatus(efficiencyPercent)
+            val efficiencyPercent = efficiency.normalizedSleepEfficiencyPercent()?.takeIf { it.isFinite() }
+            val effStatus = efficiencyPercent.sleepEfficiencyStatus()
 
             val effValText =
                 if (efficiencyPercent == null) {
@@ -584,7 +549,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     100f,
                 )
-            val circStatus = circadianStatus(circReady?.score)
+            val circStatus = circReady?.score.circadianConsistencyStatus()
             val circadianDescription =
                 circVisual.unavailableReason?.let { reason ->
                     unavailableDescription(circTitle, reason)
@@ -631,7 +596,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     2f,
                 )
-            val strainStatus = strainStatus(m?.strainRatioRaw)
+            val strainStatus = m?.strainRatioRaw?.strainRatioStatus() ?: MetricStatus.CALIBRATING
             val strainDescription =
                 strainVisual.unavailableReason?.let { reason ->
                     unavailableDescription(strainTitle, reason)

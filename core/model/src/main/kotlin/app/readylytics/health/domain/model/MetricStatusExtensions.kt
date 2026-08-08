@@ -5,22 +5,44 @@ import app.readylytics.health.domain.scoring.ScoringConstants
 import kotlin.math.roundToInt
 
 fun SleepSessionData.efficiencyStatus(): MetricStatus =
-    when {
-        efficiency >= 85f -> MetricStatus.OPTIMAL
-        efficiency >= 80f -> MetricStatus.NEUTRAL
-        efficiency >= 70f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
+    if (efficiency.isNaN()) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
+
+fun SleepSessionSummary.efficiencyStatus(): MetricStatus =
+    if (efficiency?.isNaN() == true) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
+
+fun Float?.normalizedSleepEfficiencyPercent(): Float? =
+    this?.let { value ->
+        if (value in 0f..1f) value * 100f else value
     }
 
-fun SleepSessionSummary.efficiencyStatus(): MetricStatus {
-    val eff = efficiency ?: return MetricStatus.CALIBRATING
+fun Float?.scoreStatus(): MetricStatus =
+    when {
+        this == null || !this.isFinite() -> MetricStatus.CALIBRATING
+        this < 40f -> MetricStatus.POOR
+        this < 60f -> MetricStatus.WARNING
+        this < 85f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.OPTIMAL
+    }
+
+fun Float?.sleepEfficiencyStatus(): MetricStatus {
+    val efficiencyPercent = normalizedSleepEfficiencyPercent()
     return when {
-        eff >= 85f -> MetricStatus.OPTIMAL
-        eff >= 80f -> MetricStatus.NEUTRAL
-        eff >= 70f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
+        efficiencyPercent == null || !efficiencyPercent.isFinite() -> MetricStatus.CALIBRATING
+        efficiencyPercent < 70f -> MetricStatus.POOR
+        efficiencyPercent < 80f -> MetricStatus.WARNING
+        efficiencyPercent < 85f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.OPTIMAL
     }
 }
+
+fun Float?.circadianConsistencyStatus(): MetricStatus =
+    when {
+        this == null || !this.isFinite() -> MetricStatus.CALIBRATING
+        this < 40f -> MetricStatus.POOR
+        this < 60f -> MetricStatus.WARNING
+        this < 80f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.OPTIMAL
+    }
 
 fun DailySummary.deepSleepStatus(): MetricStatus {
     val pct = deepSleepPercent
@@ -108,12 +130,11 @@ fun stepsStatus(
 
 fun Float.strainRatioStatus(): MetricStatus =
     when {
-        this < 0.0f -> MetricStatus.CALIBRATING
-        this in 0.8f..1.3f -> MetricStatus.OPTIMAL
-        this in 1.3f..1.5f -> MetricStatus.NEUTRAL
-        this in 1.5f..2.0f -> MetricStatus.WARNING
-        this > 2.0f -> MetricStatus.POOR
-        this in 0.5f..0.8f -> MetricStatus.WARNING
+        this.isNaN() || this < 0.0f -> MetricStatus.CALIBRATING
         this < 0.5f -> MetricStatus.POOR
-        else -> MetricStatus.CALIBRATING
+        this < 0.8f -> MetricStatus.WARNING
+        this <= 1.3f -> MetricStatus.OPTIMAL
+        this <= 1.5f -> MetricStatus.NEUTRAL
+        this <= 2.0f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
     }

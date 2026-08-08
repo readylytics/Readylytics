@@ -5,6 +5,9 @@ import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
+import app.readylytics.health.domain.model.efficiencyStatus
+import app.readylytics.health.domain.repository.SleepSessionData
+import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -176,21 +179,101 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     }
 
     @Test
-    fun `strain ratio uses lower-inclusive raw boundaries`() {
+    fun `strain ratio uses shared status boundaries including IEEE neighbors`() {
         val expectations =
             listOf(
+                Math.nextDown(0.5f) to MetricStatus.POOR,
                 0.5f to MetricStatus.WARNING,
+                Math.nextUp(0.5f) to MetricStatus.WARNING,
+                Math.nextDown(0.8f) to MetricStatus.WARNING,
                 0.8f to MetricStatus.OPTIMAL,
-                1.3f to MetricStatus.WARNING,
-                1.5f to MetricStatus.POOR,
-                1.7f to MetricStatus.POOR,
+                Math.nextUp(0.8f) to MetricStatus.OPTIMAL,
+                Math.nextDown(1.3f) to MetricStatus.OPTIMAL,
+                1.3f to MetricStatus.OPTIMAL,
+                Math.nextUp(1.3f) to MetricStatus.NEUTRAL,
+                1.37f to MetricStatus.NEUTRAL,
+                Math.nextDown(1.5f) to MetricStatus.NEUTRAL,
+                1.5f to MetricStatus.NEUTRAL,
+                Math.nextUp(1.5f) to MetricStatus.WARNING,
+                1.7f to MetricStatus.WARNING,
+                Math.nextDown(2.0f) to MetricStatus.WARNING,
+                2.0f to MetricStatus.WARNING,
+                Math.nextUp(2.0f) to MetricStatus.POOR,
             )
 
         expectations.forEach { (rawStrainRatio, expectedStatus) ->
             val cards = factory.build(summary(strainRatio = rawStrainRatio), preferences(), date, null, null, null)
 
             assertEquals(expectedStatus, cards.getValue(CardId.STRAIN_RATIO).status)
-            assertNotEquals(MetricStatus.NEUTRAL, cards.getValue(CardId.STRAIN_RATIO).status)
+        }
+    }
+
+    @Test
+    fun `score boundaries retain shared status policy`() {
+        listOf(
+            40f to MetricStatus.WARNING,
+            60f to MetricStatus.NEUTRAL,
+            85f to MetricStatus.OPTIMAL,
+        ).forEach { (score, expectedStatus) ->
+            val cards =
+                factory.build(
+                    summary().copy(sleepScore = score, readinessWorkoutOnly = score),
+                    preferences(),
+                    date,
+                    null,
+                    null,
+                    null,
+                )
+
+            assertEquals(expectedStatus, cards.getValue(CardId.SLEEP_SCORE).status)
+            assertEquals(expectedStatus, cards.getValue(CardId.READINESS).status)
+        }
+    }
+
+    @Test
+    fun `sleep efficiency fractional and percentage values match Sleep status`() {
+        listOf(
+            0.70f to MetricStatus.WARNING,
+            70f to MetricStatus.WARNING,
+            0.80f to MetricStatus.NEUTRAL,
+            80f to MetricStatus.NEUTRAL,
+            0.85f to MetricStatus.OPTIMAL,
+            85f to MetricStatus.OPTIMAL,
+        ).forEach { (efficiency, expectedStatus) ->
+            val cards =
+                factory.build(
+                    summary(),
+                    preferences(),
+                    date,
+                    SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
+                    null,
+                    null,
+                )
+
+            val dashboardStatus = cards.getValue(CardId.SLEEP_EFFICIENCY).status
+            assertEquals(expectedStatus, dashboardStatus)
+            assertEquals(dashboardStatus, sleepSession(efficiency).efficiencyStatus())
+        }
+    }
+
+    @Test
+    fun `circadian consistency boundaries retain shared status policy`() {
+        listOf(
+            40f to MetricStatus.WARNING,
+            60f to MetricStatus.NEUTRAL,
+            80f to MetricStatus.OPTIMAL,
+        ).forEach { (score, expectedStatus) ->
+            val cards =
+                factory.build(
+                    summary(),
+                    preferences(),
+                    date,
+                    null,
+                    CircadianConsistencyResult.Ready(score, 0, 0, 0, 0),
+                    null,
+                )
+
+            assertEquals(expectedStatus, cards.getValue(CardId.CIRCADIAN_CONSISTENCY).status)
         }
     }
 
@@ -219,6 +302,20 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
         assertNull(cards.getValue(CardId.STRAIN_RATIO).secondaryText)
     }
+
+    private fun sleepSession(efficiency: Float) =
+        SleepSessionData(
+            id = "sleep-session",
+            deviceName = null,
+            startTime = 0L,
+            endTime = 0L,
+            durationMinutes = 0,
+            efficiency = efficiency,
+            deepSleepMinutes = 0,
+            lightSleepMinutes = 0,
+            remSleepMinutes = 0,
+            awakeMinutes = 0,
+        )
 
     @Test
     fun `heart rate and blood pressure are value only`() {
@@ -320,6 +417,29 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
         assertEquals("—", presentation.valueText)
         assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
         assertNull(visual.markerFraction)
+    }
+
+    @Test
+    fun `non-finite sleep efficiency is unavailable before gauge preparation`() {
+        listOf(Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY).forEach { efficiency ->
+            val cards =
+                factory.build(
+                    summary(),
+                    preferences(),
+                    date,
+                    SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
+                    null,
+                    null,
+                )
+            val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
+            val visual = presentation.visual as UniversalMetricVisual.Score
+
+            assertEquals("—", presentation.valueText)
+            assertEquals(MetricStatus.CALIBRATING, presentation.status)
+            assertNull(visual.rawValue)
+            assertNull(visual.markerFraction)
+            assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
+        }
     }
 
     @Test
