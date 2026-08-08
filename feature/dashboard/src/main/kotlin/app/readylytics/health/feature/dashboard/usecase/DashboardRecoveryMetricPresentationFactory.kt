@@ -11,11 +11,9 @@ import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.PersonalBaselineAssessment
 import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.domain.model.hrvStatus
 import app.readylytics.health.domain.model.rasStatus
-import app.readylytics.health.domain.model.restingHrStatus
-import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.ResourceProvider
@@ -31,13 +29,15 @@ internal class DashboardRecoveryMetricPresentationFactory(
         metrics: DailyMetrics?,
         preferences: UserPreferences,
         lastSleepSession: SleepSessionSummary?,
+        hrvAssessment: PersonalBaselineAssessment,
+        rhrAssessment: PersonalBaselineAssessment,
     ): Map<CardId, UniversalMetricPresentation> =
         mapOf(
             CardId.SLEEP_DURATION to
                 sleepDurationPresentation(summary, metrics, preferences, lastSleepSession),
-            CardId.HRV to hrvPresentation(summary, metrics, preferences),
-            CardId.SLEEP_RHR to rhrPresentation(summary, metrics, preferences, isSleep = true),
-            CardId.RESTING_HR to rhrPresentation(summary, metrics, preferences, isSleep = false),
+            CardId.HRV to hrvPresentation(metrics, preferences, hrvAssessment),
+            CardId.SLEEP_RHR to rhrPresentation(metrics, preferences, rhrAssessment, isSleep = true),
+            CardId.RESTING_HR to rhrPresentation(metrics, preferences, rhrAssessment, isSleep = false),
             CardId.RAS_DAILY to rasPresentation(summary, metrics, preferences),
         )
 
@@ -103,25 +103,21 @@ internal class DashboardRecoveryMetricPresentationFactory(
     }
 
     private fun hrvPresentation(
-        summary: DailySummary?,
         metrics: DailyMetrics?,
         prefs: UserPreferences,
+        assessment: PersonalBaselineAssessment,
     ): UniversalMetricPresentation {
-        val baseline = metrics?.hrvBaselineRounded?.toFloat()
+        val baseline = assessment.baseline?.toFloat()
         val poorRatio = prefs.hrvWarningThreshold - (1f - prefs.hrvWarningThreshold)
         val visual =
             UniversalMetricScalePreparer.personalBaseline(
-                value = summary?.nocturnalHrv?.toFloat(),
+                value = assessment.value?.toFloat(),
                 baseline = baseline,
                 axisMinimumRatio = poorRatio,
                 axisMaximumRatio = 1f + (1f - poorRatio),
-                baselineReady = summary?.isCalibrating == false && baseline != null && baseline > 0f,
+                baselineReady = baseline != null && baseline > 0f,
             )
-        val status =
-            summary?.hrvStatus(
-                prefs.hrvOptimalThreshold,
-                prefs.hrvWarningThreshold,
-            ) ?: MetricStatus.CALIBRATING
+        val status = assessment.status
         val title = resourceProvider.getString(DashboardR.string.card_title_hrv)
         val valueText = metrics?.nocturnalHrvRounded?.toString() ?: "—"
         val unitText = resourceProvider.getString(CoreUiR.string.unit_ms)
@@ -132,12 +128,12 @@ internal class DashboardRecoveryMetricPresentationFactory(
             unitText = unitText,
             secondaryText =
                 baselineDeltaText(
-                    arrow = metrics?.hrvBaselineArrow,
-                    difference = metrics?.hrvBaselineDiff,
+                    arrow = baselineArrow(assessment.delta),
+                    difference = assessment.delta,
                     unitText = unitText,
                 ),
             status = status,
-            tooltip = hrvTooltip(metrics),
+            tooltip = hrvTooltip(metrics, assessment),
             accessibilityDescription =
                 visual.unavailableReason?.let { unavailableDescription(title, it) }
                     ?: personalBaselineDescription(
@@ -154,30 +150,21 @@ internal class DashboardRecoveryMetricPresentationFactory(
     }
 
     private fun rhrPresentation(
-        summary: DailySummary?,
         metrics: DailyMetrics?,
         prefs: UserPreferences,
+        assessment: PersonalBaselineAssessment,
         isSleep: Boolean,
     ): UniversalMetricPresentation {
-        val visual = rhrVisual(summary, metrics, prefs)
+        val visual = rhrVisual(assessment, prefs)
         val title =
             resourceProvider.getString(
                 if (isSleep) DashboardR.string.card_title_sleep_rhr else DashboardR.string.card_title_resting_hr,
             )
         val valueText = metrics?.restingHeartRateRounded?.toString() ?: "—"
         val unitText = resourceProvider.getString(CoreUiR.string.unit_bpm)
-        val status =
-            if (isSleep) {
-                summary?.rhrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
-            } else {
-                summary?.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
-            } ?: MetricStatus.CALIBRATING
-        val (arrow, difference) =
-            if (isSleep) {
-                metrics?.rhrBaselineArrow to metrics?.rhrBaselineDiff
-            } else {
-                metrics?.restingHrBaselineArrow to metrics?.restingHrBaselineDiff
-            }
+        val status = assessment.status
+        val arrow = baselineArrow(assessment.delta)
+        val difference = assessment.delta
 
         return UniversalMetricPresentation(
             title = title,
@@ -185,7 +172,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
             unitText = unitText,
             secondaryText = baselineDeltaText(arrow, difference, unitText),
             status = status,
-            tooltip = rhrTooltip(metrics, isSleep),
+            tooltip = rhrTooltip(assessment, isSleep),
             accessibilityDescription =
                 visual.unavailableReason?.let { unavailableDescription(title, it) }
                     ?: personalBaselineDescription(
@@ -241,18 +228,17 @@ internal class DashboardRecoveryMetricPresentationFactory(
     }
 
     private fun rhrVisual(
-        summary: DailySummary?,
-        metrics: DailyMetrics?,
+        assessment: PersonalBaselineAssessment,
         prefs: UserPreferences,
     ) = run {
-        val baseline = metrics?.rhrBaselineRaw
+        val baseline = assessment.baseline?.toFloat()
         val poorRatio = prefs.rhrWarningThreshold + (prefs.rhrWarningThreshold - 1f)
         UniversalMetricScalePreparer.personalBaseline(
-            value = summary?.restingHeartRate?.toFloat(),
+            value = assessment.value?.toFloat(),
             baseline = baseline,
             axisMinimumRatio = 1f - (poorRatio - 1f),
             axisMaximumRatio = poorRatio,
-            baselineReady = summary?.isCalibrating == false && baseline != null && baseline > 0f,
+            baselineReady = baseline != null && baseline > 0f,
         )
     }
 
@@ -287,12 +273,15 @@ internal class DashboardRecoveryMetricPresentationFactory(
         )
     }
 
-    private fun hrvTooltip(metrics: DailyMetrics?): String =
+    private fun hrvTooltip(
+        metrics: DailyMetrics?,
+        assessment: PersonalBaselineAssessment,
+    ): String =
         buildString {
             append(resourceProvider.getString(CoreUiR.string.tooltip_sleep_hrv))
-            val baseline = metrics?.hrvBaselineRounded
-            val arrow = metrics?.hrvBaselineArrow?.symbol
-            val difference = metrics?.hrvBaselineDiff
+            val baseline = assessment.baseline
+            val arrow = baselineArrow(assessment.delta)?.symbol
+            val difference = assessment.delta?.let(::abs)
             when {
                 baseline == null ->
                     append(resourceProvider.getString(CoreUiR.string.tooltip_sleep_hrv_no_baseline))
@@ -327,12 +316,12 @@ internal class DashboardRecoveryMetricPresentationFactory(
         }
 
     private fun rhrTooltip(
-        metrics: DailyMetrics?,
+        assessment: PersonalBaselineAssessment,
         isSleep: Boolean,
     ): String {
-        val baseline = metrics?.rhrBaselineRounded
-        val arrow = metrics?.rhrBaselineArrow?.symbol
-        val difference = metrics?.rhrBaselineDiff
+        val baseline = assessment.baseline
+        val arrow = baselineArrow(assessment.delta)?.symbol
+        val difference = assessment.delta?.let(::abs)
         val tooltipResources =
             if (isSleep) {
                 CoreUiR.string.tooltip_sleep_rhr_baseline to CoreUiR.string.tooltip_sleep_rhr_no_baseline
@@ -352,6 +341,14 @@ internal class DashboardRecoveryMetricPresentationFactory(
             }
         return if (isSleep) resourceProvider.getString(CoreUiR.string.tooltip_sleep_rhr) + details else details
     }
+
+    private fun baselineArrow(delta: Int?): BaselineArrow? =
+        when {
+            delta == null -> null
+            delta > 0 -> BaselineArrow.UP
+            delta < 0 -> BaselineArrow.DOWN
+            else -> BaselineArrow.EQUAL
+        }
 
     private fun baselineDeltaText(
         arrow: BaselineArrow?,

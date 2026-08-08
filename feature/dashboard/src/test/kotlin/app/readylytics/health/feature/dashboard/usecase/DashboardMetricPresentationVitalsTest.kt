@@ -1,4 +1,5 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
@@ -11,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.ln
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
@@ -136,6 +138,133 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
             assertEquals(expected, cards.getValue(CardId.OXYGEN_SATURATION).status)
         }
+    }
+
+    @Test
+    fun `dashboard hrv uses displayed baseline for 110 percent boundary and tooltip`() {
+        every { resourceProvider.getString(CoreUiR.string.tooltip_sleep_hrv) } returns "HRV"
+        every {
+            resourceProvider.getString(CoreUiR.string.tooltip_sleep_hrv_baseline, 41, "↑", 1)
+        } returns "\n\nBaseline: 41 ms ↑ (1 ms)"
+
+        val cards =
+            factory.build(
+                summary().copy(
+                    nocturnalHrv = 42,
+                    hrvBaseline = 38,
+                    hrvMuMssd = ln(41.0).toFloat(),
+                ),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val hrv = cards.getValue(CardId.HRV)
+        assertEquals(MetricStatus.NEUTRAL, hrv.status)
+        assertTrue(hrv.tooltip.contains("Baseline: 41"))
+    }
+
+    @Test
+    fun `dashboard rhr uses override rounded baseline for both cards status and delta`() {
+        every { resourceProvider.getString(CoreUiR.string.delta_up) } returns "↑"
+        every { resourceProvider.getString(CoreUiR.string.delta_up_format, *anyVararg()) } returns "↑ 6 bpm"
+
+        val cards =
+            factory.build(
+                summary().copy(
+                    restingHeartRate = 62,
+                    restingHrRatio = 1.11f,
+                    rhrBpm = 60f,
+                    baselineCalculatedAtDate = null,
+                ),
+                preferences().copy(rhrBaselineOverride = 55.6f),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val sleepRhr = cards.getValue(CardId.SLEEP_RHR)
+        val restingHr = cards.getValue(CardId.RESTING_HR)
+
+        assertEquals(MetricStatus.WARNING, sleepRhr.status)
+        assertEquals("↑ 6 bpm", sleepRhr.secondaryText)
+        assertEquals(MetricStatus.WARNING, restingHr.status)
+        assertEquals("↑ 6 bpm", restingHr.secondaryText)
+        assertEquals(56f, (sleepRhr.visual as UniversalMetricVisual.PersonalBaseline).baselineValue)
+        assertEquals(56f, (restingHr.visual as UniversalMetricVisual.PersonalBaseline).baselineValue)
+    }
+
+    @Test
+    fun `dashboard rhr stays calibrating with no baseline on a calibrating day`() {
+        every { resourceProvider.getString(CoreUiR.string.tooltip_sleep_rhr) } returns
+            "Average heart rate during sleep."
+        every {
+            resourceProvider.getString(CoreUiR.string.tooltip_sleep_rhr_no_baseline)
+        } returns "\n\nNot enough data to calculate baseline."
+        every {
+            resourceProvider.getString(DashboardR.string.tooltip_resting_hr_no_baseline)
+        } returns "Resting heart rate calculated as the low-percentile baseline."
+
+        val cards =
+            factory.build(
+                summary().copy(
+                    restingHeartRate = 62,
+                    restingHrRatio = 1.03f,
+                    isCalibrating = true,
+                    rhrBpm = null,
+                ),
+                preferences().copy(rhrBaselineOverride = null),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val sleepRhr = cards.getValue(CardId.SLEEP_RHR)
+        val restingHr = cards.getValue(CardId.RESTING_HR)
+
+        assertEquals(MetricStatus.CALIBRATING, sleepRhr.status)
+        assertEquals(MetricStatus.CALIBRATING, restingHr.status)
+        assertNull(sleepRhr.secondaryText)
+        assertNull(restingHr.secondaryText)
+        assertEquals("Average heart rate during sleep.\n\nNot enough data to calculate baseline.", sleepRhr.tooltip)
+        assertEquals("Resting heart rate calculated as the low-percentile baseline.", restingHr.tooltip)
+    }
+
+    @Test
+    fun `dashboard rhr ignores calibrating synthetic default without baseline marker`() {
+        val cards =
+            factory.build(
+                summary().copy(
+                    restingHeartRate = 62,
+                    restingHrRatio = 1.03f,
+                    isCalibrating = true,
+                    rhrBpm = 60f,
+                    baselineCalculatedAtDate = null,
+                ),
+                preferences().copy(rhrBaselineOverride = null),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val sleepRhr = cards.getValue(CardId.SLEEP_RHR)
+        val restingHr = cards.getValue(CardId.RESTING_HR)
+        val sleepVisual = sleepRhr.visual as UniversalMetricVisual.PersonalBaseline
+        val restingVisual = restingHr.visual as UniversalMetricVisual.PersonalBaseline
+
+        assertEquals(MetricStatus.CALIBRATING, sleepRhr.status)
+        assertEquals(MetricStatus.CALIBRATING, restingHr.status)
+        assertNull(sleepRhr.secondaryText)
+        assertNull(restingHr.secondaryText)
+        assertEquals(UniversalMetricUnavailableReason.BASELINE_NOT_READY, sleepVisual.unavailableReason)
+        assertEquals(UniversalMetricUnavailableReason.BASELINE_NOT_READY, restingVisual.unavailableReason)
+        assertNull(sleepVisual.baselineValue)
+        assertNull(restingVisual.baselineValue)
     }
 
     @Test
@@ -412,6 +541,23 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
         assertEquals("96%", presentation.valueText)
         assertEquals("", presentation.unitText)
+    }
+
+    @Test
+    fun `dashboard spo2 keeps raw 97 point 6 neutral while displaying rounded 98 percent`() {
+        val cards =
+            factory.build(
+                summary().copy(avgSleepingSpo2 = 97.6f),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val presentation = cards.getValue(CardId.OXYGEN_SATURATION)
+        assertEquals(MetricStatus.NEUTRAL, presentation.status)
+        assertEquals("98%", presentation.valueText)
     }
 
     @Test

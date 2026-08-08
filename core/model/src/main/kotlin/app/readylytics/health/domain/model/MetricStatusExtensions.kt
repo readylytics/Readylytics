@@ -2,6 +2,7 @@ package app.readylytics.health.domain.model
 
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.ScoringConstants
+import kotlin.math.roundToInt
 
 fun SleepSessionData.efficiencyStatus(): MetricStatus =
     when {
@@ -46,47 +47,33 @@ fun DailySummary.rhrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
-    val ratio = restingHrRatio ?: return MetricStatus.CALIBRATING
-    val poorThreshold = warningThreshold + (warningThreshold - 1)
-    return when {
-        ratio <= optimalThreshold -> MetricStatus.OPTIMAL
-        ratio < warningThreshold -> MetricStatus.NEUTRAL
-        ratio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
+    restingHrRatio ?: return MetricStatus.CALIBRATING
+    return assessRhr(
+        value = restingHeartRate,
+        baseline = rhrBpm?.roundToInt(),
+        optimalRatio = optimalThreshold,
+        warningRatio = warningThreshold,
+    ).status
 }
 
 fun DailySummary.restingHrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
-    val rhr = restingHeartRate ?: return MetricStatus.CALIBRATING
-    val ratio = restingHrRatio ?: return MetricStatus.CALIBRATING
-
-    val poorThreshold = warningThreshold + (warningThreshold - 1)
-    return when {
-        ratio <= optimalThreshold -> MetricStatus.OPTIMAL
-        ratio < warningThreshold -> MetricStatus.NEUTRAL
-        ratio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
+    restingHeartRate ?: return MetricStatus.CALIBRATING
+    restingHrRatio ?: return MetricStatus.CALIBRATING
+    return assessRhr(
+        value = restingHeartRate,
+        baseline = rhrBpm?.roundToInt(),
+        optimalRatio = optimalThreshold,
+        warningRatio = warningThreshold,
+    ).status
 }
 
 fun DailySummary.hrvStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
-): MetricStatus {
-    val hrv = nocturnalHrv ?: return MetricStatus.CALIBRATING
-    val baseline = hrvBaseline ?: return MetricStatus.CALIBRATING
-    val ratio = hrv.toFloat() / baseline
-    val poorThreshold = warningThreshold - (1 - warningThreshold)
-    return when {
-        ratio >= optimalThreshold -> MetricStatus.OPTIMAL
-        ratio > warningThreshold -> MetricStatus.NEUTRAL
-        ratio >= poorThreshold -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-}
+): MetricStatus = assessHrv(nocturnalHrv, hrvBaseline, optimalThreshold, warningThreshold).status
 
 fun DailySummary.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     val duration = sleepDurationMinutes
