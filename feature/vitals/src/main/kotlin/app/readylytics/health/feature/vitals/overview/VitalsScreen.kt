@@ -104,7 +104,6 @@ fun VitalsScreen(
         ) {
             VitalsGaugeRow(
                 isLoading = uiState.isLoading,
-                latestSummary = uiState.latestSummary,
                 presentation = uiState.presentation,
                 onNavigateToHrv = onNavigateToHrv,
                 onNavigateToRhr = onNavigateToRhr,

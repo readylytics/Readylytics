@@ -46,10 +46,125 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     }
 
     @Test
+    fun `hrv uses displayed rounded baseline for status at the 110 percent boundary`() {
+        val cards =
+            factory.build(
+                summary().copy(
+                    nocturnalHrv = 42,
+                    hrvBaseline = 38,
+                    hrvMuMssd = kotlin.math.ln(41.0).toFloat(),
+                ),
+                preferences(),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val visual = cards.getValue(CardId.HRV).visual as UniversalMetricVisual.PersonalBaseline
+        assertEquals(41f, visual.baselineValue)
+        assertEquals(42f / 41f, visual.ratio!!)
+        assertEquals(MetricStatus.NEUTRAL, cards.getValue(CardId.HRV).status)
+    }
+
+    @Test
     fun `rhr uses baseline scale`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         val visual = cards.getValue(CardId.RESTING_HR).visual as UniversalMetricVisual.PersonalBaseline
         assertNull(visual.ratio)
+    }
+
+    @Test
+    fun `rhr visual uses rounded override baseline instead of raw baseline`() {
+        val cards =
+            factory.build(
+                summary().copy(
+                    restingHeartRate = 62,
+                    restingHrRatio = 1.11f,
+                ),
+                preferences().copy(rhrBaselineOverride = 55.6f),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val sleepVisual = cards.getValue(CardId.SLEEP_RHR).visual as UniversalMetricVisual.PersonalBaseline
+        val restingVisual = cards.getValue(CardId.RESTING_HR).visual as UniversalMetricVisual.PersonalBaseline
+
+        assertEquals(56f, sleepVisual.baselineValue)
+        assertEquals(62f / 56f, sleepVisual.ratio!!)
+        assertEquals(56f, restingVisual.baselineValue)
+        assertEquals(62f / 56f, restingVisual.ratio!!)
+    }
+
+    @Test
+    fun `rhr cards stay unavailable without a real baseline on calibrating day`() {
+        val cards =
+            factory.build(
+                summary().copy(
+                    restingHeartRate = 62,
+                    restingHrRatio = 1.03f,
+                    isCalibrating = true,
+                    rhrBpm = null,
+                ),
+                preferences().copy(rhrBaselineOverride = null),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val sleepVisual = cards.getValue(CardId.SLEEP_RHR).visual as UniversalMetricVisual.PersonalBaseline
+        val restingVisual = cards.getValue(CardId.RESTING_HR).visual as UniversalMetricVisual.PersonalBaseline
+
+        assertEquals(UniversalMetricUnavailableReason.BASELINE_NOT_READY, sleepVisual.unavailableReason)
+        assertEquals(UniversalMetricUnavailableReason.BASELINE_NOT_READY, restingVisual.unavailableReason)
+        assertNull(sleepVisual.baselineValue)
+        assertNull(restingVisual.baselineValue)
+        assertNull(sleepVisual.ratio)
+        assertNull(restingVisual.ratio)
+    }
+
+    @Test
+    fun `hrv and rhr visuals stay ready on calibrating day when explicit overrides supply baselines`() {
+        val cards =
+            factory.build(
+                summary().copy(
+                    nocturnalHrv = 42,
+                    restingHeartRate = 62,
+                    isCalibrating = true,
+                    rhrBpm = null,
+                    hrvMuMssd = null,
+                    hrvBaseline = null,
+                ),
+                preferences().copy(
+                    hrvBaselineOverride = 40f,
+                    hrvOptimalThreshold = 1.05f,
+                    hrvWarningThreshold = 0.90f,
+                    rhrBaselineOverride = 60f,
+                    rhrOptimalThreshold = 1.05f,
+                    rhrWarningThreshold = 1.15f,
+                ),
+                date,
+                null,
+                null,
+                null,
+            )
+
+        val hrvVisual = cards.getValue(CardId.HRV).visual as UniversalMetricVisual.PersonalBaseline
+        val sleepRhrVisual = cards.getValue(CardId.SLEEP_RHR).visual as UniversalMetricVisual.PersonalBaseline
+        val restingHrVisual = cards.getValue(CardId.RESTING_HR).visual as UniversalMetricVisual.PersonalBaseline
+
+        assertEquals(MetricStatus.OPTIMAL, cards.getValue(CardId.HRV).status)
+        assertEquals(MetricStatus.OPTIMAL, cards.getValue(CardId.SLEEP_RHR).status)
+        assertEquals(MetricStatus.OPTIMAL, cards.getValue(CardId.RESTING_HR).status)
+        assertNull(hrvVisual.unavailableReason)
+        assertNull(sleepRhrVisual.unavailableReason)
+        assertNull(restingHrVisual.unavailableReason)
+        assertEquals(42f / 40f, hrvVisual.ratio!!)
+        assertEquals(62f / 60f, sleepRhrVisual.ratio!!)
+        assertEquals(62f / 60f, restingHrVisual.ratio!!)
     }
 
     @Test

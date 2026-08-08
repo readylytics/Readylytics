@@ -13,13 +13,8 @@ import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.hrvStatus
-import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 
 private const val RHR_DIAL_FLOOR = 30
@@ -32,7 +27,6 @@ private const val RHR_BASELINE_FILL = 0.5f
 @Composable
 internal fun VitalsGaugeRow(
     isLoading: Boolean,
-    latestSummary: DailySummary?,
     presentation: VitalsPresentationState,
     onNavigateToHrv: () -> Unit,
     onNavigateToRhr: () -> Unit,
@@ -68,10 +62,12 @@ internal fun VitalsGaugeRow(
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val baselineHrv = presentation.baselineHrv
-                val baselineRhr = presentation.baselineRhr
-                val currentRhr = latestSummary?.restingHeartRate
-                val currentHrv = latestSummary?.nocturnalHrv
+                val hrvAssessment = presentation.hrv
+                val rhrAssessment = presentation.rhr
+                val baselineHrv = hrvAssessment.baseline
+                val baselineRhr = rhrAssessment.baseline
+                val currentRhr = rhrAssessment.value
+                val currentHrv = hrvAssessment.value
 
                 val rhrFill =
                     if (baselineRhr != null && baselineRhr > RHR_DIAL_FLOOR && currentRhr != null) {
@@ -82,11 +78,6 @@ internal fun VitalsGaugeRow(
                     } else {
                         null
                     }
-                val rhrStatus =
-                    latestSummary?.rhrStatus(
-                        optimalThreshold = presentation.rhrOptimalThreshold,
-                        warningThreshold = presentation.rhrWarningThreshold,
-                    ) ?: MetricStatus.CALIBRATING
                 val rhrTooltip = stringResource(CoreUiR.string.tooltip_sleep_rhr)
 
                 // stringResource calls hoisted to locals before `remember` -- composable calls are
@@ -98,9 +89,9 @@ internal fun VitalsGaugeRow(
                 val msUnit = stringResource(CoreUiR.string.unit_ms)
 
                 val rhrDelta =
-                    remember(currentRhr, baselineRhr, deltaUpText, deltaDownText, deltaNoChangeText, bpmUnit) {
-                        if (currentRhr != null && baselineRhr != null) {
-                            val diff = currentRhr - baselineRhr
+                    remember(rhrAssessment.delta, deltaUpText, deltaDownText, deltaNoChangeText, bpmUnit) {
+                        val diff = rhrAssessment.delta
+                        if (diff != null) {
                             when {
                                 diff > 0 -> "$deltaUpText $diff $bpmUnit"
                                 diff < 0 -> "$deltaDownText ${abs(diff)} $bpmUnit"
@@ -118,24 +109,19 @@ internal fun VitalsGaugeRow(
                     valueText = currentRhr?.toString() ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = bpmUnit,
                     maxValue = 1f,
-                    status = rhrStatus,
+                    status = rhrAssessment.status,
                     secondaryText = rhrDelta,
                     tooltip = rhrTooltip,
                     onClick = onNavigateToRhr,
                 )
 
-                val hrvMax = if (baselineHrv != null && baselineHrv > 0f) baselineHrv * 2.0f else 150f
-                val hrvStatus =
-                    latestSummary?.hrvStatus(
-                        optimalThreshold = presentation.hrvOptimalThreshold,
-                        warningThreshold = presentation.hrvWarningThreshold,
-                    ) ?: MetricStatus.CALIBRATING
+                val hrvMax = if (baselineHrv != null && baselineHrv > 0) baselineHrv * 2.0f else 150f
                 val hrvTooltip = stringResource(CoreUiR.string.tooltip_sleep_hrv)
 
                 val hrvDelta =
-                    remember(currentHrv, baselineHrv, deltaUpText, deltaDownText, deltaNoChangeText, msUnit) {
-                        if (currentHrv != null && baselineHrv != null) {
-                            val diff = (currentHrv - baselineHrv).roundToInt()
+                    remember(hrvAssessment.delta, deltaUpText, deltaDownText, deltaNoChangeText, msUnit) {
+                        val diff = hrvAssessment.delta
+                        if (diff != null) {
                             when {
                                 diff > 0 -> "$deltaUpText $diff $msUnit"
                                 diff < 0 -> "$deltaDownText ${abs(diff)} $msUnit"
@@ -153,7 +139,7 @@ internal fun VitalsGaugeRow(
                     valueText = currentHrv?.toString() ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = msUnit,
                     maxValue = hrvMax,
-                    status = hrvStatus,
+                    status = hrvAssessment.status,
                     secondaryText = hrvDelta,
                     tooltip = hrvTooltip,
                     onClick = onNavigateToHrv,

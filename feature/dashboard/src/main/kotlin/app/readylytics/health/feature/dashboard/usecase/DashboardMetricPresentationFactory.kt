@@ -15,6 +15,9 @@ import app.readylytics.health.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
+import app.readylytics.health.domain.model.assessHrv
+import app.readylytics.health.domain.model.assessRhr
+import app.readylytics.health.domain.model.assessSpo2
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -96,15 +99,6 @@ class DashboardMetricPresentationFactory
                 else -> MetricStatus.OPTIMAL
             }
 
-        private fun spo2Status(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 90f -> MetricStatus.POOR
-                value < 95f -> MetricStatus.WARNING
-                value < 98f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
         private fun circadianStatus(value: Float?): MetricStatus =
             when {
                 value == null -> MetricStatus.CALIBRATING
@@ -157,6 +151,21 @@ class DashboardMetricPresentationFactory
                 resourceProvider.getString(CoreUiR.string.score_maximum)
 
             val m = if (summary != null) DailyMetricsMapper.toMetrics(summary, preferences) else null
+            val hrvAssessment =
+                assessHrv(
+                    value = summary?.nocturnalHrv,
+                    baseline = m?.hrvBaselineRounded,
+                    optimalRatio = preferences.hrvOptimalThreshold,
+                    warningRatio = preferences.hrvWarningThreshold,
+                )
+            val rhrAssessment =
+                assessRhr(
+                    value = summary?.restingHeartRate,
+                    baseline = m?.rhrBaselineRounded,
+                    optimalRatio = preferences.rhrOptimalThreshold,
+                    warningRatio = preferences.rhrWarningThreshold,
+                )
+            val spo2Assessment = assessSpo2(summary?.avgSleepingSpo2)
 
             map.putAll(
                 DashboardRecoveryMetricPresentationFactory(resourceProvider).build(
@@ -164,6 +173,8 @@ class DashboardMetricPresentationFactory
                     metrics = m,
                     preferences = preferences,
                     lastSleepSession = lastSleepSession,
+                    hrvAssessment = hrvAssessment,
+                    rhrAssessment = rhrAssessment,
                 ),
             )
 
@@ -392,9 +403,9 @@ class DashboardMetricPresentationFactory
                 )
 
             // 11. OXYGEN SATURATION
-            val spo2 = summary?.avgSleepingSpo2
+            val spo2 = spo2Assessment.value
             val roundedSpo2 = spo2?.roundToInt()
-            val oxygenStatus = spo2Status(spo2)
+            val oxygenStatus = spo2Assessment.status
             val spo2Visual =
                 UniversalMetricScalePreparer.score(
                     spo2,

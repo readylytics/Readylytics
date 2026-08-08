@@ -60,11 +60,11 @@ internal fun VitalsTrendSection(
                         metricName = stringResource(CoreUiR.string.label_hrv),
                         baselineUnit = stringResource(CoreUiR.string.unit_ms),
                         modifier = Modifier.testTag("HrvTrendChart"),
-                        baseline = presentation.baselineHrv,
-                        showBaseline = !chartInputs.isCalibrating,
+                        baseline = presentation.hrv.baseline?.toFloat(),
+                        showBaseline = presentation.hrv.baseline != null,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                        zoneBands = presentation.hrvZoneBands,
+                        zoneBands = presentation.hrv.zoneBands,
                         parentScrollInProgress = parentScrollInProgress,
                     )
                 }
@@ -94,11 +94,11 @@ internal fun VitalsTrendSection(
                         metricName = stringResource(CoreUiR.string.label_rhr),
                         baselineUnit = stringResource(CoreUiR.string.unit_bpm),
                         modifier = Modifier.testTag("RestingHeartRateTrendChart"),
-                        baseline = presentation.baselineRhr?.toFloat(),
-                        showBaseline = !chartInputs.isCalibrating,
+                        baseline = presentation.rhr.baseline?.toFloat(),
+                        showBaseline = presentation.rhr.baseline != null,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                        zoneBands = presentation.rhrZoneBands,
+                        zoneBands = presentation.rhr.zoneBands,
                         parentScrollInProgress = parentScrollInProgress,
                     )
                 }
@@ -133,7 +133,7 @@ internal fun VitalsTrendSection(
                         showBaseline = true,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                        zoneBands = presentation.spo2ZoneBands,
+                        zoneBands = presentation.spo2.zoneBands,
                         axisDecimalPlaces = 0,
                         baselineDecimalPlaces = 0,
                         minYOverride = 90.0,
