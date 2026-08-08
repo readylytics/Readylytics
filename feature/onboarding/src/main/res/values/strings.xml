@@ -3,7 +3,7 @@
     <string name="onboarding_welcome_title">Welcome to Readylytics</string>
     <string name="onboarding_welcome_subtitle">Your personal recovery &amp; readiness tracker —
         powered entirely by your own data.</string>
-    <string name="onboarding_feature_sleep_title">Sleep score</string>
+    <string name="onboarding_feature_sleep_title">Sleep Score</string>
     <string name="onboarding_feature_sleep_desc">Weighted by duration, architecture, and restoration
         quality.</string>
     <string name="onboarding_feature_hrv_title">HRV &amp; resting HR tracking</string>

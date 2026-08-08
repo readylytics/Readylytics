@@ -79,7 +79,7 @@
         training load to your baseline.\n\n• &lt;0.5: Poor\n• 0.5–&lt;0.8: Warning\n• 0.8–1.3: Optimal\n• &gt;1.3–1.5: Neutral\n• &gt;1.5–2.0:
         Warning\n• &gt;2.0: Poor</string>
     <string name="card_title_readiness">Readiness</string>
-    <string name="card_title_strain_ratio">Strain ratio</string>
+    <string name="card_title_strain_ratio">Strain Ratio</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_mmHg">mmHg</string>
     <string name="unit_ms">ms</string>
