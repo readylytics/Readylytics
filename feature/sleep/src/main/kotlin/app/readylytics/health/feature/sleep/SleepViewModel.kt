@@ -64,6 +64,7 @@ data class SleepUiState(
     val trendActualDurationPoints: List<DailyDataPoint> = emptyList(),
     val trendDays: List<SleepTrendDay> = emptyList(),
     val trendRangeStartMs: Long = 0,
+    val trendScoringZoneId: ZoneId = ZoneId.systemDefault(),
     val goalSleepHours: Float = SettingsDefaults.GOAL_SLEEP_HOURS,
     val sleepTimeGaugeData: SleepTimeGaugeData =
         buildSleepTimeGaugeData(
@@ -81,12 +82,18 @@ private data class SleepTrendData(
     val trendDays: List<SleepTrendDay>,
 )
 
-private fun SleepSessionData.toSleepDaySegment() =
-    SleepDaySegment(
+private fun SleepSessionData.toSleepDaySegment(): SleepDaySegment {
+    val normalizedDurationMinutes =
+        if (durationMinutes > 0) {
+            durationMinutes
+        } else {
+            ((endTime - startTime) / 60_000L).toInt()
+        }
+    return SleepDaySegment(
         stableId = id,
         startTimeMs = startTime,
         endTimeMs = endTime,
-        durationMinutes = durationMinutes,
+        durationMinutes = normalizedDurationMinutes,
         lightSleepMinutes = lightSleepMinutes,
         deepSleepMinutes = deepSleepMinutes,
         remSleepMinutes = remSleepMinutes,
@@ -94,7 +101,9 @@ private fun SleepSessionData.toSleepDaySegment() =
         efficiency = efficiency,
         startZoneOffsetSeconds = startZoneOffsetSeconds,
         endZoneOffsetSeconds = endZoneOffsetSeconds,
+        sourcePackageName = deviceName,
     )
+}
 
 @HiltViewModel
 class SleepViewModel
@@ -306,6 +315,7 @@ class SleepViewModel
                             trendActualDurationPoints = trendData.actualDurationPoints,
                             trendDays = trendData.trendDays,
                             trendRangeStartMs = visibleRangeStartMs,
+                            trendScoringZoneId = scoringZoneId,
                             goalSleepHours = prefs.goalSleepHours,
                             sleepTimeGaugeData =
                                 buildSleepTimeGaugeData(

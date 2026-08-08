@@ -277,6 +277,7 @@ fun SleepScreen(
                 actualDurationPoints = uiState.trendActualDurationPoints,
                 trendDays = uiState.trendDays,
                 rangeStartMs = uiState.trendRangeStartMs,
+                scoringZoneId = uiState.trendScoringZoneId,
                 scrollState = trendScrollState,
                 zoomState = trendZoomState,
                 parentScrollInProgress = { scrollState.isScrollInProgress },

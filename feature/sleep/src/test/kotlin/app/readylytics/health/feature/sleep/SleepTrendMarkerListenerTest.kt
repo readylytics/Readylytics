@@ -78,6 +78,8 @@ class SleepTrendMarkerListenerTest {
         assertEquals(170f, resolvedState.barCanvasYBottom)
         assertEquals(70f, resolvedState.barCanvasYTop)
         assertEquals(45f, resolvedState.lineCanvasY)
+        assertEquals(10L, resolvedState.coreStartTimeMs)
+        assertEquals(20L, resolvedState.coreEndTimeMs)
         assertEquals(naps, resolvedState.naps)
     }
 

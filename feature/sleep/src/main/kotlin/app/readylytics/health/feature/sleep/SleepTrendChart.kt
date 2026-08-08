@@ -32,17 +32,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
-import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.feature.sleep.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -66,7 +62,7 @@ import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
-import java.util.Date
+import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -85,6 +81,7 @@ fun SleepTrendCard(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
+    scoringZoneId: ZoneId = ZoneId.systemDefault(),
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -108,6 +105,7 @@ fun SleepTrendCard(
                 scrollState = scrollState,
                 zoomState = zoomState,
                 parentScrollInProgress = parentScrollInProgress,
+                scoringZoneId = scoringZoneId,
             )
         }
     }
@@ -125,6 +123,7 @@ fun SleepTrendChart(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
+    scoringZoneId: ZoneId = ZoneId.systemDefault(),
 ) {
     val rangeDays = selectedRange.days
     var selectedState by
@@ -181,93 +180,25 @@ fun SleepTrendChart(
         remember(
             selectedState,
             rangeStartMs,
+            scoringZoneId,
             durationFormat,
             bedtimeFormat,
             napsHeading,
             napItemFormat,
             clockFormatter,
         ) {
-            selectedState?.let { s ->
-                val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
-                val dateText = ChartUtils.formatTooltipDate(date)
-
-                fun formatTime(offsetHours: Float?): String {
-                    if (offsetHours == null) return "—"
-                    val totalMinutes = (offsetHours * 60f).roundToInt()
-                    val positiveMinutes = (720 + totalMinutes).mod(1440)
-                    val hour = positiveMinutes / 60
-                    val minute = positiveMinutes % 60
-                    return String.format(
-                        Locale.getDefault(),
-                        "%d:%02d %s",
-                        if (hour > 12) {
-                            hour - 12
-                        } else if (hour == 0) {
-                            12
-                        } else {
-                            hour
-                        },
-                        minute,
-                        if (hour >= 12) "PM" else "AM",
-                    )
-                }
-
-                val bedtimeText = formatTime(s.startOffsetValue)
-                val wakeupText =
-                    formatTime(
-                        s.startOffsetValue?.let { start ->
-                            s.durationSpanValue?.let { span ->
-                                start + span
-                            }
-                        },
-                    )
-
-                val durationStr =
-                    DateFormatUtils.formatSleepDuration(
-                        ((s.actualDurationValue ?: 0f) * 60f).roundToInt(),
-                    )
-                val valueText =
-                    String.format(
-                        Locale.getDefault(),
-                        durationFormat,
-                        durationStr,
-                    )
-                val dateTextVal =
-                    String.format(
-                        Locale.getDefault(),
-                        bedtimeFormat,
-                        bedtimeText,
-                        wakeupText,
-                    )
-                val napLines =
-                    s.naps
-                        .takeIf { it.isNotEmpty() }
-                        ?.let { naps ->
-                            buildList {
-                                add(napsHeading)
-                                naps.forEach { nap ->
-                                    add(
-                                        String.format(
-                                            Locale.getDefault(),
-                                            napItemFormat,
-                                            clockFormatter.format(Date(nap.startTimeMs)),
-                                            clockFormatter.format(Date(nap.endTimeMs)),
-                                            DateFormatUtils.formatSleepDuration(nap.durationMinutes),
-                                        ),
-                                    )
-                                }
-                            }
-                        }.orEmpty()
-
-                DataPointTooltipData(
-                    valueText = valueText,
-                    dateText = dateTextVal,
-                    preDateLines = napLines,
-                    extraLine = dateText,
-                    offset =
-                        IntOffset(
-                            s.canvasX.toInt(),
-                            (s.lineCanvasY ?: s.barCanvasYTop ?: 0f).toInt(),
+            selectedState?.let { state ->
+                buildSleepTrendTooltipData(
+                    selectedState = state,
+                    rangeStartMs = rangeStartMs,
+                    scoringZoneId = scoringZoneId,
+                    clockFormatter = clockFormatter,
+                    strings =
+                        SleepTrendTooltipStrings(
+                            durationFormat = durationFormat,
+                            bedtimeFormat = bedtimeFormat,
+                            napsHeading = napsHeading,
+                            napItemFormat = napItemFormat,
                         ),
                 )
             }
@@ -379,7 +310,7 @@ fun SleepTrendChart(
             }
         }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs, scoringZoneId)
 
     val hasData =
         remember(startOffsetPoints, durationSpanPoints, actualDurationPoints) {

@@ -78,6 +78,7 @@ fun rememberSleepTrendMarkerVisibilityListener(
                 val startVal = startOffsetMap[resolvedOffset]?.value
                 val spanVal = durationSpanMap[resolvedOffset]?.value
                 val actualVal = actualDurationMap[resolvedOffset]?.value
+                val trendDay = currentTrendDays.value.getOrNull(resolvedOffset)
 
                 currentOnStateChanged.value(
                     SleepTrendSelectedState(
@@ -89,11 +90,9 @@ fun rememberSleepTrendMarkerVisibilityListener(
                         barCanvasYTop = barCanvasYTop,
                         barCanvasYBottom = barCanvasYBottom,
                         lineCanvasY = lineCanvasY,
-                        naps =
-                            currentTrendDays.value
-                                .getOrNull(resolvedOffset)
-                                ?.naps
-                                .orEmpty(),
+                        coreStartTimeMs = trendDay?.coreStartTimeMs,
+                        coreEndTimeMs = trendDay?.coreEndTimeMs,
+                        naps = trendDay?.naps.orEmpty(),
                     ),
                 )
             }

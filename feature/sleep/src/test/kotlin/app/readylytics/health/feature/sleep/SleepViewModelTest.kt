@@ -384,6 +384,80 @@ class SleepViewModelTest {
         }
 
     @Test
+    fun `trend overlap tie-breaking preserves the session source name`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val earlierStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val laterStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 30)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val stableIdWinnerWithoutSource =
+                sleepSession(
+                    id = "a-stable-id",
+                    startTime = earlierStart,
+                    endTime = earlierStart + 480 * 60_000L,
+                    durationMinutes = 480,
+                    deviceName = "z-source",
+                )
+            val sourceWinner =
+                sleepSession(
+                    id = "z-stable-id",
+                    startTime = laterStart,
+                    endTime = laterStart + 480 * 60_000L,
+                    durationMinutes = 480,
+                    deviceName = "a-source",
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns
+                flowOf(listOf(stableIdWinnerWithoutSource, sourceWinner))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendDays.last().coreStartTimeMs != null }
+            assertEquals(laterStart, state.trendDays.last().coreStartTimeMs)
+        }
+
+    @Test
+    fun `trend derives a positive duration for a legacy zero-duration session`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val startTime =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val session =
+                sleepSession(
+                    id = "legacy-zero-duration",
+                    startTime = startTime,
+                    endTime = startTime + 8 * 60 * 60_000L,
+                    durationMinutes = 0,
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendDays.last().totalDurationMinutes != null }
+            assertEquals(480, state.trendDays.last().totalDurationMinutes)
+            assertEquals(8f, state.trendActualDurationPoints.last().value!!, 0.01f)
+        }
+
+    @Test
     fun `trend assigns a cutoff-boundary session to its following scoring day`() =
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
@@ -452,6 +526,7 @@ class SleepViewModelTest {
 
             val state = viewModel.uiState.first { !it.isLoading && it.trendActualDurationPoints.last().value != null }
             assertNotEquals(deviceZoneId, scoringZoneId)
+            assertEquals(scoringZoneId, state.trendScoringZoneId)
             assertEquals(0.5f, state.trendActualDurationPoints.last().value!!, 0.01f)
         }
 
@@ -476,9 +551,10 @@ class SleepViewModelTest {
         startTime: Long,
         endTime: Long,
         durationMinutes: Int,
+        deviceName: String = "SmartRing",
     ) = SleepSessionData(
         id = id,
-        deviceName = "SmartRing",
+        deviceName = deviceName,
         startTime = startTime,
         endTime = endTime,
         durationMinutes = durationMinutes,
