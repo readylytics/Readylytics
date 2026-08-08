@@ -4,13 +4,15 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.ScoringConstants
 import kotlin.math.roundToInt
 
-fun SleepSessionData.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
+fun SleepSessionData.efficiencyStatus(): MetricStatus =
+    if (efficiency.isNaN()) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
 
-fun SleepSessionSummary.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
+fun SleepSessionSummary.efficiencyStatus(): MetricStatus =
+    if (efficiency?.isNaN() == true) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
 
 fun Float?.scoreStatus(): MetricStatus =
     when {
-        this == null -> MetricStatus.CALIBRATING
+        this == null || !this.isFinite() -> MetricStatus.CALIBRATING
         this < 40f -> MetricStatus.POOR
         this < 60f -> MetricStatus.WARNING
         this < 85f -> MetricStatus.NEUTRAL
@@ -19,7 +21,7 @@ fun Float?.scoreStatus(): MetricStatus =
 
 fun Float?.sleepEfficiencyStatus(): MetricStatus =
     when {
-        this == null -> MetricStatus.CALIBRATING
+        this == null || !this.isFinite() -> MetricStatus.CALIBRATING
         this < 70f -> MetricStatus.POOR
         this < 80f -> MetricStatus.WARNING
         this < 85f -> MetricStatus.NEUTRAL
@@ -28,7 +30,7 @@ fun Float?.sleepEfficiencyStatus(): MetricStatus =
 
 fun Float?.circadianConsistencyStatus(): MetricStatus =
     when {
-        this == null -> MetricStatus.CALIBRATING
+        this == null || !this.isFinite() -> MetricStatus.CALIBRATING
         this < 40f -> MetricStatus.POOR
         this < 60f -> MetricStatus.WARNING
         this < 80f -> MetricStatus.NEUTRAL
@@ -121,7 +123,7 @@ fun stepsStatus(
 
 fun Float.strainRatioStatus(): MetricStatus =
     when {
-        this < 0.0f -> MetricStatus.CALIBRATING
+        this.isNaN() || this < 0.0f -> MetricStatus.CALIBRATING
         this < 0.5f -> MetricStatus.POOR
         this < 0.8f -> MetricStatus.WARNING
         this <= 1.3f -> MetricStatus.OPTIMAL

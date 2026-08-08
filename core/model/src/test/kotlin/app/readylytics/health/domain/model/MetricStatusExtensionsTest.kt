@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.model
 
+import app.readylytics.health.domain.repository.SleepSessionData
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -7,6 +8,7 @@ class MetricStatusExtensionsTest {
     @Test
     fun scoreStatus_classifiesNullAndDashboardBoundaries() {
         assertEquals(MetricStatus.CALIBRATING, (null as Float?).scoreStatus())
+        assertEquals(MetricStatus.CALIBRATING, Float.NaN.scoreStatus())
         assertEquals(MetricStatus.POOR, 39.99f.scoreStatus())
         assertEquals(MetricStatus.WARNING, 40f.scoreStatus())
         assertEquals(MetricStatus.WARNING, 59.99f.scoreStatus())
@@ -18,6 +20,7 @@ class MetricStatusExtensionsTest {
     @Test
     fun sleepEfficiencyStatus_classifiesNullAndDashboardBoundaries() {
         assertEquals(MetricStatus.CALIBRATING, (null as Float?).sleepEfficiencyStatus())
+        assertEquals(MetricStatus.CALIBRATING, Float.NaN.sleepEfficiencyStatus())
         assertEquals(MetricStatus.POOR, 69.99f.sleepEfficiencyStatus())
         assertEquals(MetricStatus.WARNING, 70f.sleepEfficiencyStatus())
         assertEquals(MetricStatus.WARNING, 79.99f.sleepEfficiencyStatus())
@@ -29,6 +32,7 @@ class MetricStatusExtensionsTest {
     @Test
     fun circadianConsistencyStatus_classifiesNullAndDashboardBoundaries() {
         assertEquals(MetricStatus.CALIBRATING, (null as Float?).circadianConsistencyStatus())
+        assertEquals(MetricStatus.CALIBRATING, Float.NaN.circadianConsistencyStatus())
         assertEquals(MetricStatus.POOR, 39.99f.circadianConsistencyStatus())
         assertEquals(MetricStatus.WARNING, 40f.circadianConsistencyStatus())
         assertEquals(MetricStatus.WARNING, 59.99f.circadianConsistencyStatus())
@@ -50,5 +54,27 @@ class MetricStatusExtensionsTest {
         assertEquals(MetricStatus.WARNING, 2.0f.strainRatioStatus())
         assertEquals(MetricStatus.POOR, Math.nextUp(2.0f).strainRatioStatus())
         assertEquals(MetricStatus.CALIBRATING, (-0.01f).strainRatioStatus())
+        assertEquals(MetricStatus.CALIBRATING, Float.NaN.strainRatioStatus())
+    }
+
+    @Test
+    fun efficiencyStatus_wrappers_preserveNaNBehavior() {
+        val session =
+            SleepSessionData(
+                id = "session-id",
+                deviceName = null,
+                startTime = 0L,
+                endTime = 0L,
+                durationMinutes = 0,
+                efficiency = Float.NaN,
+                deepSleepMinutes = 0,
+                lightSleepMinutes = 0,
+                remSleepMinutes = 0,
+                awakeMinutes = 0,
+            )
+        val summary = SleepSessionSummary(efficiency = Float.NaN, startTime = 0L, endTime = 0L)
+
+        assertEquals(MetricStatus.POOR, session.efficiencyStatus())
+        assertEquals(MetricStatus.POOR, summary.efficiencyStatus())
     }
 }
