@@ -4,7 +4,12 @@ import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -21,6 +26,20 @@ class BodyTemperatureBaselineProvider
         private val userPreferencesReader: UserPreferencesReader,
         private val calculator: BodyTemperatureBaselineCalculator,
     ) {
+        @OptIn(ExperimentalCoroutinesApi::class)
+        fun observeBaseline(date: LocalDate): Flow<Float?> =
+            userPreferencesReader.userPreferences
+                .map { it.scoringZone() }
+                .distinctUntilChanged()
+                .flatMapLatest { zoneId ->
+                    val fromMs = date.minusDays(14).toMidnightEpochMilli(zoneId)
+                    dailySummaryRepository.observeSince(fromMs).map { summaries ->
+                        calculator.calculateBaseline(
+                            summaries.filter { it.date.isBefore(date) }.mapNotNull { it.avgSleepingBodyTemp },
+                        )
+                    }
+                }.distinctUntilChanged()
+
         suspend fun getBaseline(date: LocalDate): Float? {
             val zoneId = userPreferencesReader.userPreferences.first().scoringZone()
             val windowStartMs =

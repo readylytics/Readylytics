@@ -7,13 +7,20 @@ import app.readylytics.health.data.preferences.UserPreferences
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BodyTemperatureBaselineProviderTest {
     private val dailySummaryRepository = mockk<DailySummaryRepository>()
     private val userPreferencesReader =
@@ -53,5 +60,37 @@ class BodyTemperatureBaselineProviderTest {
 
             val expected = (1..14).map { 36.0f + it * 0.01f }.average().toFloat()
             assertEquals(expected, provider.getBaseline(target)!!, 0.001f)
+        }
+
+    @Test
+    fun `emits a baseline when the fourteenth pre-target temperature arrives`() =
+        runTest {
+            val target = LocalDate.of(2026, 3, 1)
+            val summaries =
+                MutableStateFlow(
+                    (1..13).map { day ->
+                        DailySummary(
+                            date = target.minusDays(day.toLong()),
+                            avgSleepingBodyTemp = 36.5f,
+                        )
+                    },
+                )
+            every { dailySummaryRepository.observeSince(any()) } returns summaries
+            val emissions = mutableListOf<Float?>()
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                provider.observeBaseline(target).collect { emissions += it }
+            }
+            advanceUntilIdle()
+            assertNull(emissions.single())
+
+            summaries.value +=
+                DailySummary(
+                    date = target.minusDays(14),
+                    avgSleepingBodyTemp = 36.5f,
+                )
+            advanceUntilIdle()
+
+            assertEquals(36.5f, emissions.last())
         }
 }
