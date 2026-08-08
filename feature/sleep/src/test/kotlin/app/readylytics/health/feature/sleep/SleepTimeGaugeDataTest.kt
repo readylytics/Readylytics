@@ -2,6 +2,7 @@ package app.readylytics.health.feature.sleep
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -9,6 +10,18 @@ import org.junit.Test
 import java.time.LocalDate
 
 class SleepTimeGaugeDataTest {
+    @Test
+    fun `shared sleep score status honors dashboard boundaries and unavailable values`() {
+        assertEquals(MetricStatus.CALIBRATING, (null as Float?).scoreStatus())
+        assertEquals(MetricStatus.CALIBRATING, Float.NaN.scoreStatus())
+        assertEquals(MetricStatus.POOR, 39.99f.scoreStatus())
+        assertEquals(MetricStatus.WARNING, 40f.scoreStatus())
+        assertEquals(MetricStatus.WARNING, 59.99f.scoreStatus())
+        assertEquals(MetricStatus.NEUTRAL, 60f.scoreStatus())
+        assertEquals(MetricStatus.NEUTRAL, 84.99f.scoreStatus())
+        assertEquals(MetricStatus.OPTIMAL, 85f.scoreStatus())
+    }
+
     @Test
     fun `actual sleep subtracts awake minutes`() {
         val session = sleepSession(durationMinutes = 510, awakeMinutes = 45)

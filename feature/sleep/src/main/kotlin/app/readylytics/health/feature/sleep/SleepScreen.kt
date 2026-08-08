@@ -50,6 +50,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.deepSleepStatus
 import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
+import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
@@ -450,21 +451,13 @@ private fun SleepScoreCard(
         rawValue = score,
         valueText = displayText,
         unitText = unitText,
-        status = score?.let(::sleepScoreStatus) ?: MetricStatus.CALIBRATING,
+        status = score.scoreStatus(),
         tooltip = tooltipDescription,
         deltaText = deltaText,
         mode = UniversalCardDisplayMode.GAUGE,
         modifier = modifier,
     )
 }
-
-private fun sleepScoreStatus(score: Float): MetricStatus =
-    when {
-        score >= 85f -> MetricStatus.OPTIMAL
-        score >= 60f -> MetricStatus.NEUTRAL
-        score >= 40f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
 
 @Composable
 private fun SleepMetricCard(
