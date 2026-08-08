@@ -19,6 +19,7 @@ import com.patrykandpatrick.vico.compose.common.component.LineComponent
 import com.patrykandpatrick.vico.compose.common.component.TextComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import java.time.ZoneId
 
 object ChartDefaults {
     @Composable
@@ -42,8 +43,15 @@ object ChartDefaults {
 
     @Composable
     fun rememberDayOffsetFormatter(rangeStartMs: Long): CartesianValueFormatter =
-        remember(rangeStartMs) {
-            val labels = DayOffsetLabelCache(rangeStartMs)
+        rememberDayOffsetFormatter(rangeStartMs, ZoneId.systemDefault())
+
+    @Composable
+    fun rememberDayOffsetFormatter(
+        rangeStartMs: Long,
+        zoneId: ZoneId,
+    ): CartesianValueFormatter =
+        remember(rangeStartMs, zoneId) {
+            val labels = DayOffsetLabelCache(rangeStartMs, zoneId)
             CartesianValueFormatter { _, value, _ -> labels.label(value) }
         }
 
