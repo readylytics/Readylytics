@@ -13,7 +13,7 @@ Fix the sleep trend chart so each scoring day reports the canonical main sleep, 
 - The duration line shows total counted sleep, including naps.
 - The tooltip bedtime uses the canonical core start and end.
 - Naps are tooltip-only for now and are listed as separate bullet points with start, end, and duration.
-- A nap-only day remains visible with total duration and nap details; bedtime is unavailable.
+- A day with only one counted sleep segment still uses the aggregator-selected `coreCluster` as main sleep, so its interval supplies the bedtime range.
 - Existing chart legends, scrolling, zooming, selection, and overlay behavior remain unchanged.
 
 Example tooltip content:
@@ -34,7 +34,7 @@ The sleep feature will consume a focused, pure-Kotlin chart projection built fro
 1. Load all sessions relevant to the selected trend range, including sessions that begin before the range but are assigned to a scoring day inside it.
 2. Aggregate sessions using the existing scoring policy. This preserves canonicalization, core-cluster selection, overnight merging, minimum-duration filtering, and scoring-day assignment.
 3. Project each aggregate into a trend-day model containing:
-   - optional canonical core start and end;
+- canonical core start and end for every non-empty aggregate;
    - total counted sleep duration;
    - ordered supplemental nap intervals;
    - whether canonical core sleep exists.
@@ -49,7 +49,7 @@ The chart must not choose a session with `firstOrNull()`. Scoring formulas, inge
 
 The existing Compose/Vico chart remains the rendering surface. New tooltip labels and the unavailable-bedtime text must be added to `feature/sleep/src/main/res/values/strings.xml`; no user-facing text is hardcoded in Kotlin.
 
-The tooltip keeps total duration as its primary value, followed by main bedtime, optional nap bullets, and the date. Nap-only days show a localized unavailable value (`Bedtime: —`) instead of a bedtime range.
+The tooltip keeps total duration as its primary value, followed by the aggregator-selected main bedtime, optional nap bullets, and the date. Because the aggregator always selects a core cluster for a non-empty aggregate, a day containing only one counted sleep segment still has a bedtime range and no unavailable-bedtime state is required.
 
 ## Testing
 
@@ -60,7 +60,7 @@ Add pure unit coverage for:
 - total duration including naps;
 - nap ordering and tooltip formatting;
 - sessions around the scoring-day cutoff;
-- nap-only days;
+- single-segment days treated as the aggregator-selected core cluster;
 - no-data days;
 - preservation of existing chart selection behavior.
 
