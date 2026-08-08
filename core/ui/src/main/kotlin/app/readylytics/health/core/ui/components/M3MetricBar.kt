@@ -28,7 +28,10 @@ internal fun fillEndCenterX(
     progress: Float,
     width: Float,
     strokeWidth: Float,
-): Float = (width * progress).coerceIn(strokeWidth / 2f, width - strokeWidth / 2f)
+): Float {
+    val half = strokeWidth / 2f
+    return (width * progress).coerceIn(half, (width - half).coerceAtLeast(half))
+}
 
 @Composable
 fun M3MetricBar(
@@ -41,17 +44,17 @@ fun M3MetricBar(
     animateProgress: Boolean = true,
 ) {
     val clamped = progressFraction?.coerceIn(0f, 1f) ?: 0f
-    val animated by animateFloatAsState(
-        targetValue = clamped,
-        animationSpec =
-            if (animateProgress) {
-                tween(durationMillis = 800, easing = FastOutSlowInEasing)
-            } else {
-                tween(durationMillis = 0)
-            },
-        label = "bar_progress",
-    )
-    val progressToDraw = if (animateProgress) animated else clamped
+    val progressToDraw =
+        if (animateProgress) {
+            val animated by animateFloatAsState(
+                targetValue = clamped,
+                animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+                label = "bar_progress",
+            )
+            animated
+        } else {
+            clamped
+        }
     val tickDiameter = MaterialTheme.dimens.metricGaugeTickDiameter
 
     Canvas(

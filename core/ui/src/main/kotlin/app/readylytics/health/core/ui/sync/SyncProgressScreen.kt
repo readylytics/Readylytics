@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.components.M3MetricBar
@@ -99,7 +100,7 @@ fun SyncProgressScreen(
                 progressFraction = progress?.fraction(),
                 activeColor = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.secondaryContainer,
-                barHeight = 4.dp,
+                barHeight = MaterialTheme.dimens.syncProgressBarThickness,
                 animateProgress = false,
                 modifier = Modifier.fillMaxWidth(),
             )
