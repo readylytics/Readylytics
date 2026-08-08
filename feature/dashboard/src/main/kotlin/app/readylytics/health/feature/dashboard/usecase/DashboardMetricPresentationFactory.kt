@@ -19,6 +19,7 @@ import app.readylytics.health.domain.model.assessHrv
 import app.readylytics.health.domain.model.assessRhr
 import app.readylytics.health.domain.model.assessSpo2
 import app.readylytics.health.domain.model.circadianConsistencyStatus
+import app.readylytics.health.domain.model.normalizedSleepEfficiencyPercent
 import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.model.sleepEfficiencyStatus
 import app.readylytics.health.domain.model.strainRatioStatus
@@ -324,14 +325,11 @@ class DashboardMetricPresentationFactory
 
             // 10. SLEEP EFFICIENCY
             val efficiency = lastSleepSession?.efficiency
-            val efficiencyPercent =
-                efficiency?.let { value ->
-                    if (value in 0f..1f) value * 100f else value
-                }
+            val efficiencyPercent = efficiency.normalizedSleepEfficiencyPercent()
             val effStatus = efficiencyPercent.sleepEfficiencyStatus()
 
             val effValText =
-                if (efficiencyPercent == null) {
+                if (efficiencyPercent == null || !efficiencyPercent.isFinite()) {
                     unavailableValueText
                 } else if (efficiencyPercent == 0f) {
                     "0%"

@@ -58,23 +58,36 @@ class MetricStatusExtensionsTest {
     }
 
     @Test
-    fun efficiencyStatus_wrappers_preserveNaNBehavior() {
-        val session =
-            SleepSessionData(
-                id = "session-id",
-                deviceName = null,
-                startTime = 0L,
-                endTime = 0L,
-                durationMinutes = 0,
-                efficiency = Float.NaN,
-                deepSleepMinutes = 0,
-                lightSleepMinutes = 0,
-                remSleepMinutes = 0,
-                awakeMinutes = 0,
-            )
+    fun sleepEfficiencyStatus_normalizesLegacyFractionsBeforeClassification() {
+        assertEquals(MetricStatus.WARNING, 0.70f.sleepEfficiencyStatus())
+        assertEquals(MetricStatus.WARNING, 70f.sleepEfficiencyStatus())
+        assertEquals(MetricStatus.NEUTRAL, 0.80f.sleepEfficiencyStatus())
+        assertEquals(MetricStatus.NEUTRAL, 80f.sleepEfficiencyStatus())
+        assertEquals(MetricStatus.OPTIMAL, 0.85f.sleepEfficiencyStatus())
+        assertEquals(MetricStatus.OPTIMAL, 85f.sleepEfficiencyStatus())
+    }
+
+    @Test
+    fun efficiencyStatus_wrappers_shareNormalizedNaNBehavior() {
+        val session = sleepSession(efficiency = Float.NaN)
         val summary = SleepSessionSummary(efficiency = Float.NaN, startTime = 0L, endTime = 0L)
 
-        assertEquals(MetricStatus.POOR, session.efficiencyStatus())
-        assertEquals(MetricStatus.POOR, summary.efficiencyStatus())
+        assertEquals(MetricStatus.CALIBRATING, Float.NaN.sleepEfficiencyStatus())
+        assertEquals(MetricStatus.CALIBRATING, session.efficiencyStatus())
+        assertEquals(MetricStatus.CALIBRATING, summary.efficiencyStatus())
     }
+
+    private fun sleepSession(efficiency: Float) =
+        SleepSessionData(
+            id = "session-id",
+            deviceName = null,
+            startTime = 0L,
+            endTime = 0L,
+            durationMinutes = 0,
+            efficiency = efficiency,
+            deepSleepMinutes = 0,
+            lightSleepMinutes = 0,
+            remSleepMinutes = 0,
+            awakeMinutes = 0,
+        )
 }

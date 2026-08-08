@@ -5,6 +5,8 @@ import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
+import app.readylytics.health.domain.model.efficiencyStatus
+import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import io.mockk.every
 import org.junit.Assert.assertEquals
@@ -177,16 +179,26 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     }
 
     @Test
-    fun `strain ratio uses lower-inclusive raw boundaries`() {
+    fun `strain ratio uses shared status boundaries including IEEE neighbors`() {
         val expectations =
             listOf(
+                Math.nextDown(0.5f) to MetricStatus.POOR,
                 0.5f to MetricStatus.WARNING,
+                Math.nextUp(0.5f) to MetricStatus.WARNING,
+                Math.nextDown(0.8f) to MetricStatus.WARNING,
                 0.8f to MetricStatus.OPTIMAL,
+                Math.nextUp(0.8f) to MetricStatus.OPTIMAL,
+                Math.nextDown(1.3f) to MetricStatus.OPTIMAL,
                 1.3f to MetricStatus.OPTIMAL,
+                Math.nextUp(1.3f) to MetricStatus.NEUTRAL,
+                1.37f to MetricStatus.NEUTRAL,
+                Math.nextDown(1.5f) to MetricStatus.NEUTRAL,
                 1.5f to MetricStatus.NEUTRAL,
+                Math.nextUp(1.5f) to MetricStatus.WARNING,
                 1.7f to MetricStatus.WARNING,
+                Math.nextDown(2.0f) to MetricStatus.WARNING,
                 2.0f to MetricStatus.WARNING,
-                2.01f to MetricStatus.POOR,
+                Math.nextUp(2.0f) to MetricStatus.POOR,
             )
 
         expectations.forEach { (rawStrainRatio, expectedStatus) ->
@@ -219,11 +231,15 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
     }
 
     @Test
-    fun `sleep efficiency boundaries retain shared status policy`() {
+    fun `sleep efficiency fractional and percentage values match Sleep status`() {
         listOf(
+            0.70f to MetricStatus.WARNING,
             70f to MetricStatus.WARNING,
+            0.80f to MetricStatus.NEUTRAL,
             80f to MetricStatus.NEUTRAL,
+            0.85f to MetricStatus.OPTIMAL,
             85f to MetricStatus.OPTIMAL,
+            Float.NaN to MetricStatus.CALIBRATING,
         ).forEach { (efficiency, expectedStatus) ->
             val cards =
                 factory.build(
@@ -235,7 +251,9 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
                     null,
                 )
 
-            assertEquals(expectedStatus, cards.getValue(CardId.SLEEP_EFFICIENCY).status)
+            val dashboardStatus = cards.getValue(CardId.SLEEP_EFFICIENCY).status
+            assertEquals(expectedStatus, dashboardStatus)
+            assertEquals(dashboardStatus, sleepSession(efficiency).efficiencyStatus())
         }
     }
 
@@ -285,6 +303,20 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
 
         assertNull(cards.getValue(CardId.STRAIN_RATIO).secondaryText)
     }
+
+    private fun sleepSession(efficiency: Float) =
+        SleepSessionData(
+            id = "sleep-session",
+            deviceName = null,
+            startTime = 0L,
+            endTime = 0L,
+            durationMinutes = 0,
+            efficiency = efficiency,
+            deepSleepMinutes = 0,
+            lightSleepMinutes = 0,
+            remSleepMinutes = 0,
+            awakeMinutes = 0,
+        )
 
     @Test
     fun `heart rate and blood pressure are value only`() {

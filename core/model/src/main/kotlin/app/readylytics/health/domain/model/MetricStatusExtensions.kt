@@ -4,11 +4,14 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.ScoringConstants
 import kotlin.math.roundToInt
 
-fun SleepSessionData.efficiencyStatus(): MetricStatus =
-    if (efficiency.isNaN()) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
+fun SleepSessionData.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
 
-fun SleepSessionSummary.efficiencyStatus(): MetricStatus =
-    if (efficiency?.isNaN() == true) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
+fun SleepSessionSummary.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
+
+fun Float?.normalizedSleepEfficiencyPercent(): Float? =
+    this?.let { value ->
+        if (value in 0f..1f) value * 100f else value
+    }
 
 fun Float?.scoreStatus(): MetricStatus =
     when {
@@ -19,14 +22,16 @@ fun Float?.scoreStatus(): MetricStatus =
         else -> MetricStatus.OPTIMAL
     }
 
-fun Float?.sleepEfficiencyStatus(): MetricStatus =
-    when {
-        this == null || !this.isFinite() -> MetricStatus.CALIBRATING
-        this < 70f -> MetricStatus.POOR
-        this < 80f -> MetricStatus.WARNING
-        this < 85f -> MetricStatus.NEUTRAL
+fun Float?.sleepEfficiencyStatus(): MetricStatus {
+    val efficiencyPercent = normalizedSleepEfficiencyPercent()
+    return when {
+        efficiencyPercent == null || !efficiencyPercent.isFinite() -> MetricStatus.CALIBRATING
+        efficiencyPercent < 70f -> MetricStatus.POOR
+        efficiencyPercent < 80f -> MetricStatus.WARNING
+        efficiencyPercent < 85f -> MetricStatus.NEUTRAL
         else -> MetricStatus.OPTIMAL
     }
+}
 
 fun Float?.circadianConsistencyStatus(): MetricStatus =
     when {
