@@ -318,6 +318,43 @@ class VitalsViewModelTest {
             }
         }
 
+    @Test
+    fun `date navigation ignores emissions from the previous body temperature baseline stream`() =
+        runTest {
+            val initialDate = selectedDateFlow.value
+            val nextDate = initialDate.minusDays(1)
+            val initialDateBaseline = MutableStateFlow<Float?>(36.2f)
+            val nextDateBaseline = MutableStateFlow<Float?>(36.4f)
+            val baselineByDate =
+                mapOf(
+                    initialDate to initialDateBaseline,
+                    nextDate to nextDateBaseline,
+                )
+            every { bodyTemperatureBaselineProvider.observeBaseline(any()) } answers {
+                baselineByDate.getValue(firstArg<LocalDate>())
+            }
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                assertEquals(36.2f, viewModel.uiState.value.presentation.baselineBodyTemp)
+
+                selectedDateFlow.value = nextDate
+                advanceUntilIdle()
+                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+
+                initialDateBaseline.value = 37.1f
+                advanceUntilIdle()
+                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+
+                nextDateBaseline.value = 36.5f
+                advanceUntilIdle()
+                assertEquals(36.5f, viewModel.uiState.value.presentation.baselineBodyTemp)
+            } finally {
+                collector.cancel()
+            }
+        }
+
     private fun summary(
         date: LocalDate,
         hrv: Int? = null,
