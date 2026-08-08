@@ -4,23 +4,36 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.ScoringConstants
 import kotlin.math.roundToInt
 
-fun SleepSessionData.efficiencyStatus(): MetricStatus =
+fun SleepSessionData.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
+
+fun SleepSessionSummary.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
+
+fun Float?.scoreStatus(): MetricStatus =
     when {
-        efficiency >= 85f -> MetricStatus.OPTIMAL
-        efficiency >= 80f -> MetricStatus.NEUTRAL
-        efficiency >= 70f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
+        this == null -> MetricStatus.CALIBRATING
+        this < 40f -> MetricStatus.POOR
+        this < 60f -> MetricStatus.WARNING
+        this < 85f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.OPTIMAL
     }
 
-fun SleepSessionSummary.efficiencyStatus(): MetricStatus {
-    val eff = efficiency ?: return MetricStatus.CALIBRATING
-    return when {
-        eff >= 85f -> MetricStatus.OPTIMAL
-        eff >= 80f -> MetricStatus.NEUTRAL
-        eff >= 70f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
+fun Float?.sleepEfficiencyStatus(): MetricStatus =
+    when {
+        this == null -> MetricStatus.CALIBRATING
+        this < 70f -> MetricStatus.POOR
+        this < 80f -> MetricStatus.WARNING
+        this < 85f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.OPTIMAL
     }
-}
+
+fun Float?.circadianConsistencyStatus(): MetricStatus =
+    when {
+        this == null -> MetricStatus.CALIBRATING
+        this < 40f -> MetricStatus.POOR
+        this < 60f -> MetricStatus.WARNING
+        this < 80f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.OPTIMAL
+    }
 
 fun DailySummary.deepSleepStatus(): MetricStatus {
     val pct = deepSleepPercent
@@ -109,11 +122,10 @@ fun stepsStatus(
 fun Float.strainRatioStatus(): MetricStatus =
     when {
         this < 0.0f -> MetricStatus.CALIBRATING
-        this in 0.8f..1.3f -> MetricStatus.OPTIMAL
-        this in 1.3f..1.5f -> MetricStatus.NEUTRAL
-        this in 1.5f..2.0f -> MetricStatus.WARNING
-        this > 2.0f -> MetricStatus.POOR
-        this in 0.5f..0.8f -> MetricStatus.WARNING
         this < 0.5f -> MetricStatus.POOR
-        else -> MetricStatus.CALIBRATING
+        this < 0.8f -> MetricStatus.WARNING
+        this <= 1.3f -> MetricStatus.OPTIMAL
+        this <= 1.5f -> MetricStatus.NEUTRAL
+        this <= 2.0f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
     }
