@@ -41,6 +41,7 @@ import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.feature.sleep.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -75,6 +76,7 @@ fun SleepTrendCard(
     startOffsetPoints: List<DailyDataPoint>,
     durationSpanPoints: List<DailyDataPoint>,
     actualDurationPoints: List<DailyDataPoint>,
+    trendDays: List<SleepTrendDay>,
     rangeStartMs: Long,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
@@ -98,6 +100,7 @@ fun SleepTrendCard(
                 startOffsetPoints = startOffsetPoints,
                 durationSpanPoints = durationSpanPoints,
                 actualDurationPoints = actualDurationPoints,
+                trendDays = trendDays,
                 rangeStartMs = rangeStartMs,
                 scrollState = scrollState,
                 zoomState = zoomState,
@@ -113,6 +116,7 @@ fun SleepTrendChart(
     startOffsetPoints: List<DailyDataPoint>,
     durationSpanPoints: List<DailyDataPoint>,
     actualDurationPoints: List<DailyDataPoint>,
+    trendDays: List<SleepTrendDay>,
     rangeStartMs: Long,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
@@ -120,9 +124,16 @@ fun SleepTrendChart(
     parentScrollInProgress: () -> Boolean = { false },
 ) {
     val rangeDays = selectedRange.days
-    var selectedState by remember(startOffsetPoints, durationSpanPoints, actualDurationPoints, rangeStartMs) {
-        mutableStateOf<SleepTrendSelectedState?>(null)
-    }
+    var selectedState by
+        remember(
+            startOffsetPoints,
+            durationSpanPoints,
+            actualDurationPoints,
+            trendDays,
+            rangeStartMs,
+        ) {
+            mutableStateOf<SleepTrendSelectedState?>(null)
+        }
 
     LaunchedEffect(scrollState) {
         snapshotFlow { scrollState.value }.collect {

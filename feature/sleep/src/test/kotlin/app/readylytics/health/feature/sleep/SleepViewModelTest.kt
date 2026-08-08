@@ -34,6 +34,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
@@ -418,6 +419,43 @@ class SleepViewModelTest {
         }
 
     @Test
+    fun `trend assigns sessions using the configured scoring zone instead of the device zone`() =
+        runTest(testDispatcher) {
+            val deviceZoneId = ZoneId.systemDefault()
+            val scoringZoneId =
+                if (deviceZoneId == ZoneId.of("UTC")) {
+                    ZoneId.of("America/New_York")
+                } else {
+                    ZoneId.of("UTC")
+                }
+            val scoreDay = selectedDateFlow.value
+            val cutoffMinutes = 20 * 60
+            val sessionStart =
+                (0..(48 * 60))
+                    .asSequence()
+                    .map { minuteOffset ->
+                        scoreDay
+                            .minusDays(1)
+                            .atStartOfDay(ZoneId.of("UTC"))
+                            .plusMinutes(minuteOffset.toLong())
+                            .toInstant()
+                    }.first { instant ->
+                        scoreDayFor(instant, scoringZoneId, cutoffMinutes) == scoreDay &&
+                            scoreDayFor(instant, deviceZoneId, cutoffMinutes) != scoreDay
+                    }.toEpochMilli()
+            val session = sleepSession("zone", sessionStart, sessionStart + 30 * 60_000L, 30)
+            every { settingsRepo.userPreferences } returns flowOf(UserPreferences(scoringZoneId = scoringZoneId.id))
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendActualDurationPoints.last().value != null }
+            assertNotEquals(deviceZoneId, scoringZoneId)
+            assertEquals(0.5f, state.trendActualDurationPoints.last().value!!, 0.01f)
+        }
+
+    @Test
     fun `trend data points are padded with null values when no sleep sessions exist`() =
         runTest(testDispatcher) {
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
@@ -450,6 +488,16 @@ class SleepViewModelTest {
         remSleepMinutes = 90,
         awakeMinutes = 0,
     )
+
+    private fun scoreDayFor(
+        instant: java.time.Instant,
+        zoneId: ZoneId,
+        cutoffMinutes: Int,
+    ): LocalDate {
+        val localTime = instant.atZone(zoneId)
+        val minutesOfDay = localTime.hour * 60 + localTime.minute
+        return if (minutesOfDay < cutoffMinutes) localTime.toLocalDate() else localTime.toLocalDate().plusDays(1)
+    }
 
     @Test
     fun `ui state observes yesterday sleep score as rounded reactive value`() =
