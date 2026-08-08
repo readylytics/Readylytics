@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -23,6 +23,10 @@ import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
+import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
+import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
+import app.readylytics.health.domain.scoring.sleep.SleepTrendDayAssembler
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -39,7 +43,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -59,7 +62,9 @@ data class SleepUiState(
     val trendStartOffsetPoints: List<DailyDataPoint> = emptyList(),
     val trendDurationSpanPoints: List<DailyDataPoint> = emptyList(),
     val trendActualDurationPoints: List<DailyDataPoint> = emptyList(),
+    val trendDays: List<SleepTrendDay> = emptyList(),
     val trendRangeStartMs: Long = 0,
+    val trendScoringZoneId: ZoneId = ZoneId.systemDefault(),
     val goalSleepHours: Float = SettingsDefaults.GOAL_SLEEP_HOURS,
     val sleepTimeGaugeData: SleepTimeGaugeData =
         buildSleepTimeGaugeData(
@@ -69,6 +74,36 @@ data class SleepUiState(
         ),
     val yesterdaySleepScoreRounded: Int? = null,
 )
+
+private data class SleepTrendData(
+    val startOffsetPoints: List<DailyDataPoint>,
+    val durationSpanPoints: List<DailyDataPoint>,
+    val actualDurationPoints: List<DailyDataPoint>,
+    val trendDays: List<SleepTrendDay>,
+)
+
+private fun SleepSessionData.toSleepDaySegment(): SleepDaySegment {
+    val normalizedDurationMinutes =
+        if (durationMinutes > 0) {
+            durationMinutes
+        } else {
+            ((endTime - startTime) / 60_000L).toInt()
+        }
+    return SleepDaySegment(
+        stableId = id,
+        startTimeMs = startTime,
+        endTimeMs = endTime,
+        durationMinutes = normalizedDurationMinutes,
+        lightSleepMinutes = lightSleepMinutes,
+        deepSleepMinutes = deepSleepMinutes,
+        remSleepMinutes = remSleepMinutes,
+        awakeMinutes = awakeMinutes,
+        efficiency = efficiency,
+        startZoneOffsetSeconds = startZoneOffsetSeconds,
+        endZoneOffsetSeconds = endZoneOffsetSeconds,
+        sourcePackageName = deviceName,
+    )
+}
 
 @HiltViewModel
 class SleepViewModel
@@ -104,36 +139,38 @@ class SleepViewModel
             combine(
                 selectedDateRepository.selectedDate,
                 selectedTrendRangeFlow,
-            ) { date, range -> date to range }
-                .flatMapLatest { (date, range) ->
-                    val zoneId = ZoneId.systemDefault()
+                settingsRepo.userPreferences,
+            ) { date, range, prefs -> Triple(date, range, prefs) }
+                .flatMapLatest { (date, range, prefs) ->
+                    val deviceZoneId = ZoneId.systemDefault()
+                    val scoringZoneId = prefs.scoringZone()
                     val selectedMidnightMs =
                         date
-                            .atStartOfDay(zoneId)
+                            .atStartOfDay(deviceZoneId)
                             .toInstant()
                             .toEpochMilli()
                     val nextDayMidnightMs =
                         date
                             .plusDays(1)
-                            .atStartOfDay(zoneId)
+                            .atStartOfDay(deviceZoneId)
                             .toInstant()
                             .toEpochMilli()
 
                     val rangeStart = date.minusDays((range.days - 1).toLong())
-                    val visibleRangeStartMs = rangeStart.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    val visibleRangeStartMs = rangeStart.atStartOfDay(scoringZoneId).toInstant().toEpochMilli()
                     val queryStartMs =
                         rangeStart
                             .minusDays(2)
-                            .atStartOfDay(zoneId)
+                            .atStartOfDay(scoringZoneId)
                             .toInstant()
                             .toEpochMilli()
 
                     val summaryFlow =
-                        if (date == LocalDate.now(zoneId)) {
+                        if (date == LocalDate.now(deviceZoneId)) {
                             val todayMs =
                                 LocalDate
-                                    .now(zoneId)
-                                    .atStartOfDay(zoneId)
+                                    .now(deviceZoneId)
+                                    .atStartOfDay(deviceZoneId)
                                     .toInstant()
                                     .toEpochMilli()
                             dailySummaryRepository
@@ -153,7 +190,7 @@ class SleepViewModel
                     val yesterdayMidnightMs =
                         date
                             .minusDays(1)
-                            .atStartOfDay(zoneId)
+                            .atStartOfDay(deviceZoneId)
                             .toInstant()
                             .toEpochMilli()
                     val yesterdaySummaryFlow =
@@ -187,34 +224,44 @@ class SleepViewModel
 
                     val trendSessionsFlow =
                         sleepSessionRepository.observeSince(queryStartMs).map { list ->
-                            val filtered = list.filter { it.endTime <= nextDayMidnightMs }
-                            val sessionsByDay =
-                                filtered.groupBy { session ->
-                                    Instant.ofEpochMilli(session.endTime).atZone(zoneId).toLocalDate()
-                                }
+                            val policy =
+                                SleepDayPolicy(
+                                    coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                                    supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                                    minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                                    supplementalArchitectureCoveragePercent =
+                                        prefs.supplementalArchitectureCoveragePercent,
+                                    scoringZoneId = scoringZoneId,
+                                )
+                            val trendDays =
+                                SleepTrendDayAssembler.assemble(
+                                    segments = list.map(SleepSessionData::toSleepDaySegment),
+                                    rangeStart = rangeStart,
+                                    rangeDays = range.days,
+                                    policy = policy,
+                                )
 
                             val startOffsetPoints = mutableListOf<DailyDataPoint>()
                             val durationSpanPoints = mutableListOf<DailyDataPoint>()
                             val actualDurationPoints = mutableListOf<DailyDataPoint>()
 
-                            for (dayOffset in 0 until range.days) {
-                                val targetDate = rangeStart.plusDays(dayOffset.toLong())
-                                val sessionsForDay = sessionsByDay[targetDate]
-                                val session = sessionsForDay?.firstOrNull()
+                            trendDays.forEachIndexed { dayOffset, trendDay ->
+                                val coreStartTimeMs = trendDay.coreStartTimeMs
+                                val coreEndTimeMs = trendDay.coreEndTimeMs
 
-                                if (session != null) {
+                                if (coreStartTimeMs != null && coreEndTimeMs != null) {
                                     val baselineMs =
-                                        targetDate
+                                        trendDay.scoreDay
                                             .minusDays(
                                                 1,
                                             ).atTime(12, 0)
-                                            .atZone(zoneId)
+                                            .atZone(scoringZoneId)
                                             .toInstant()
                                             .toEpochMilli()
-                                    val startOffset = (session.startTime - baselineMs) / 3_600_000f
-                                    val endOffset = (session.endTime - baselineMs) / 3_600_000f
+                                    val startOffset = (coreStartTimeMs - baselineMs) / 3_600_000f
+                                    val endOffset = (coreEndTimeMs - baselineMs) / 3_600_000f
                                     val span = endOffset - startOffset
-                                    val actualDuration = (session.durationMinutes - session.awakeMinutes) / 60f
+                                    val actualDuration = trendDay.totalDurationMinutes!! / 60f
 
                                     startOffsetPoints.add(DailyDataPoint(dayOffset, startOffset))
                                     durationSpanPoints.add(DailyDataPoint(dayOffset, span))
@@ -225,7 +272,12 @@ class SleepViewModel
                                     actualDurationPoints.add(DailyDataPoint(dayOffset, null))
                                 }
                             }
-                            Triple(startOffsetPoints, durationSpanPoints, actualDurationPoints)
+                            SleepTrendData(
+                                startOffsetPoints = startOffsetPoints,
+                                durationSpanPoints = durationSpanPoints,
+                                actualDurationPoints = actualDurationPoints,
+                                trendDays = trendDays,
+                            )
                         }
 
                     combine(
@@ -234,7 +286,6 @@ class SleepViewModel
                         stagesFlow,
                         metricsFlow,
                         trendSessionsFlow,
-                        settingsRepo.userPreferences,
                         yesterdaySummaryFlow,
                         hrSamplesFlow,
                     ) { array ->
@@ -246,17 +297,11 @@ class SleepViewModel
                         val latestMetrics = array[3] as DailyMetrics?
 
                         @Suppress("UNCHECKED_CAST")
-                        val trendData =
-                            array[4] as Triple<
-                                List<DailyDataPoint>,
-                                List<DailyDataPoint>,
-                                List<DailyDataPoint>,
-                            >
-                        val prefs = array[5] as UserPreferences
-                        val yesterdaySummary = array[6] as DailySummary?
+                        val trendData = array[4] as SleepTrendData
+                        val yesterdaySummary = array[5] as DailySummary?
 
                         @Suppress("UNCHECKED_CAST")
-                        val hrSamples = array[7] as List<HeartRateRecordData>
+                        val hrSamples = array[6] as List<HeartRateRecordData>
 
                         SleepUiState(
                             latestSummary = latestSummary,
@@ -265,10 +310,12 @@ class SleepViewModel
                             stageTimeline = stages,
                             selectedDate = date,
                             selectedTrendRange = range,
-                            trendStartOffsetPoints = trendData.first,
-                            trendDurationSpanPoints = trendData.second,
-                            trendActualDurationPoints = trendData.third,
+                            trendStartOffsetPoints = trendData.startOffsetPoints,
+                            trendDurationSpanPoints = trendData.durationSpanPoints,
+                            trendActualDurationPoints = trendData.actualDurationPoints,
+                            trendDays = trendData.trendDays,
                             trendRangeStartMs = visibleRangeStartMs,
+                            trendScoringZoneId = scoringZoneId,
                             goalSleepHours = prefs.goalSleepHours,
                             sleepTimeGaugeData =
                                 buildSleepTimeGaugeData(

@@ -8,20 +8,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.M3MetricBar
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
@@ -52,16 +51,16 @@ fun RasWeeklyBar(
     val chartSummary = stringResource(R.string.chart_accessibility_ras_summary)
 
     Column(modifier = modifier) {
-        LinearProgressIndicator(
-            progress = { (totalRas / BAR_MAX).coerceIn(0f, 1f) },
+        M3MetricBar(
+            progressFraction = (totalRas / BAR_MAX).coerceIn(0f, 1f),
+            activeColor = fillColor,
+            trackColor = trackColor,
+            barHeight = MaterialTheme.dimens.miniBarHeight,
+            animateProgress = false,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(MaterialTheme.dimens.miniBarHeight)
                     .semantics { contentDescription = chartSummary },
-            color = fillColor,
-            trackColor = trackColor,
-            strokeCap = StrokeCap.Round,
         )
 
         Spacer(Modifier.height(MaterialTheme.spacing.small))

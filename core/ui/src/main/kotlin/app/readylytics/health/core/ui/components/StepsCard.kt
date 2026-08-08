@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -82,14 +80,15 @@ private fun StepsCardContent(
             )
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
-        LinearProgressIndicator(
-            progress = {
-                val count = stepCount ?: 0
-                val max = stepGoal / 0.75f
-                (count.toFloat() / max.coerceAtLeast(1f)).coerceIn(0f, 1f)
-            },
-            modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.miniBarHeight),
-            strokeCap = StrokeCap.Round,
+        val count = stepCount ?: 0
+        val max = stepGoal / 0.75f
+        M3MetricBar(
+            progressFraction = (count.toFloat() / max.coerceAtLeast(1f)).coerceIn(0f, 1f),
+            activeColor = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.secondaryContainer,
+            barHeight = MaterialTheme.dimens.miniBarHeight,
+            animateProgress = false,
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
         Row(

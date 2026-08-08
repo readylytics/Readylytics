@@ -9,4 +9,8 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.manifest)
 }
