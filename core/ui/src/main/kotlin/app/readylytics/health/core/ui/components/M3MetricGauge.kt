@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 @Composable
 fun metricVisualizationTrackColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
@@ -60,6 +61,31 @@ internal fun resolveHorseshoeGaugeGeometry(
         topLeft = Offset(center.x - safeRadius, center.y - safeRadius),
         arcSize = Size(safeRadius * 2f, safeRadius * 2f),
     )
+}
+
+/**
+ * Widest rectangle (width, height) available to the gauge's value/unit overlay,
+ * inscribed inside the horseshoe's circle minus the track stroke inset.
+ * The block's vertical span is assumed to be centered at [textBlockCenterYOffsetPx]
+ * from the circle center, with height [textBlockHeightPx]; the safe width is twice
+ * the smaller chord half-width at the block's top and bottom edges, so the text can
+ * never legitimately overlap the track. Degenerate/oversized inputs clamp to 0.
+ */
+internal fun resolveGaugeTextBoundsPx(
+    geometry: HorseshoeGaugeGeometry,
+    trackInsetPx: Float,
+    textBlockCenterYOffsetPx: Float,
+    textBlockHeightPx: Float,
+): Size {
+    val innerRadius = (geometry.radius - trackInsetPx).coerceAtLeast(0f)
+    val halfBlockHeight = textBlockHeightPx / 2f
+    val halfWidthAt = { dy: Float -> sqrt(maxOf(0f, innerRadius * innerRadius - dy * dy)) }
+    val topDy = textBlockCenterYOffsetPx - halfBlockHeight
+    val bottomDy = textBlockCenterYOffsetPx + halfBlockHeight
+    val safeHalfWidth = minOf(halfWidthAt(topDy), halfWidthAt(bottomDy)).coerceAtLeast(0f)
+    val safeHeight =
+        (minOf(bottomDy, innerRadius) - maxOf(topDy, -innerRadius)).coerceAtLeast(0f)
+    return Size(width = safeHalfWidth * 2f, height = safeHeight)
 }
 
 @Composable

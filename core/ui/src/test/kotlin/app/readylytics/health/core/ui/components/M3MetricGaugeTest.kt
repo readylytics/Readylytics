@@ -70,6 +70,64 @@ class M3MetricGaugeTest {
     }
 
     @Test
+    fun gaugeTextBounds_shrinkForHeightConstrainedGaugeSlot() {
+        val inset = 12f
+        val blockHeight = 40f
+        val wide =
+            resolveGaugeTextBoundsPx(
+                geometry = resolveHorseshoeGaugeGeometry(Size(160f, 160f), inset),
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 0f,
+                textBlockHeightPx = blockHeight,
+            )
+        val short =
+            resolveGaugeTextBoundsPx(
+                geometry = resolveHorseshoeGaugeGeometry(Size(160f, 80f), inset),
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 0f,
+                textBlockHeightPx = blockHeight,
+            )
+
+        assertTrue(short.width < wide.width)
+        assertTrue(short.height <= wide.height)
+        assertTrue(short.width >= 0f)
+        assertTrue(short.height >= 0f)
+    }
+
+    @Test
+    fun gaugeTextBounds_neverExceedCircleDiameterMinusTrackInset() {
+        val inset = 12f
+        val geometry = resolveHorseshoeGaugeGeometry(Size(200f, 150f), inset)
+        val bounds =
+            resolveGaugeTextBoundsPx(
+                geometry = geometry,
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 0f,
+                textBlockHeightPx = 50f,
+            )
+        val maxInner = (geometry.radius - inset) * 2f
+
+        assertTrue(bounds.width <= maxInner + 0.001f)
+        assertTrue(bounds.height <= maxInner + 0.001f)
+    }
+
+    @Test
+    fun gaugeTextBounds_nonNegativeForDegenerateSmallCanvas() {
+        val inset = 12f
+        val geometry = resolveHorseshoeGaugeGeometry(Size(5f, 5f), inset)
+        val bounds =
+            resolveGaugeTextBoundsPx(
+                geometry = geometry,
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 5f,
+                textBlockHeightPx = 50f,
+            )
+
+        assertTrue(bounds.width >= 0f)
+        assertTrue(bounds.height >= 0f)
+    }
+
+    @Test
     fun metricGauge_acceptsNullMarker_andClampsOutsideRange_withSingleTrackContract() {
         composeTestRule.setContent {
             M3MetricGauge(
