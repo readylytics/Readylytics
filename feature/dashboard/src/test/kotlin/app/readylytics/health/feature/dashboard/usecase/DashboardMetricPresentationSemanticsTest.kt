@@ -239,7 +239,6 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
             80f to MetricStatus.NEUTRAL,
             0.85f to MetricStatus.OPTIMAL,
             85f to MetricStatus.OPTIMAL,
-            Float.NaN to MetricStatus.CALIBRATING,
         ).forEach { (efficiency, expectedStatus) ->
             val cards =
                 factory.build(
@@ -418,6 +417,29 @@ class DashboardMetricPresentationSemanticsTest : DashboardMetricPresentationFact
         assertEquals("—", presentation.valueText)
         assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
         assertNull(visual.markerFraction)
+    }
+
+    @Test
+    fun `non-finite sleep efficiency is unavailable before gauge preparation`() {
+        listOf(Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY).forEach { efficiency ->
+            val cards =
+                factory.build(
+                    summary(),
+                    preferences(),
+                    date,
+                    SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
+                    null,
+                    null,
+                )
+            val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
+            val visual = presentation.visual as UniversalMetricVisual.Score
+
+            assertEquals("—", presentation.valueText)
+            assertEquals(MetricStatus.CALIBRATING, presentation.status)
+            assertNull(visual.rawValue)
+            assertNull(visual.markerFraction)
+            assertEquals(UniversalMetricUnavailableReason.MISSING_VALUE, visual.unavailableReason)
+        }
     }
 
     @Test

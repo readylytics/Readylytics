@@ -68,13 +68,13 @@ class MetricStatusExtensionsTest {
     }
 
     @Test
-    fun efficiencyStatus_wrappers_shareNormalizedNaNBehavior() {
+    fun efficiencyStatus_wrappers_preserveLegacyNaNAsPoor() {
         val session = sleepSession(efficiency = Float.NaN)
         val summary = SleepSessionSummary(efficiency = Float.NaN, startTime = 0L, endTime = 0L)
 
         assertEquals(MetricStatus.CALIBRATING, Float.NaN.sleepEfficiencyStatus())
-        assertEquals(MetricStatus.CALIBRATING, session.efficiencyStatus())
-        assertEquals(MetricStatus.CALIBRATING, summary.efficiencyStatus())
+        assertEquals(MetricStatus.POOR, session.efficiencyStatus())
+        assertEquals(MetricStatus.POOR, summary.efficiencyStatus())
     }
 
     private fun sleepSession(efficiency: Float) =

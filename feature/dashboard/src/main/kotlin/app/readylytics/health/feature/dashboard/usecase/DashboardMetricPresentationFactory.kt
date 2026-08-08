@@ -325,11 +325,11 @@ class DashboardMetricPresentationFactory
 
             // 10. SLEEP EFFICIENCY
             val efficiency = lastSleepSession?.efficiency
-            val efficiencyPercent = efficiency.normalizedSleepEfficiencyPercent()
+            val efficiencyPercent = efficiency.normalizedSleepEfficiencyPercent()?.takeIf { it.isFinite() }
             val effStatus = efficiencyPercent.sleepEfficiencyStatus()
 
             val effValText =
-                if (efficiencyPercent == null || !efficiencyPercent.isFinite()) {
+                if (efficiencyPercent == null) {
                     unavailableValueText
                 } else if (efficiencyPercent == 0f) {
                     "0%"

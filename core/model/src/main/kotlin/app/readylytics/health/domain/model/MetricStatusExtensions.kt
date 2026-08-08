@@ -4,9 +4,11 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.ScoringConstants
 import kotlin.math.roundToInt
 
-fun SleepSessionData.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
+fun SleepSessionData.efficiencyStatus(): MetricStatus =
+    if (efficiency.isNaN()) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
 
-fun SleepSessionSummary.efficiencyStatus(): MetricStatus = efficiency.sleepEfficiencyStatus()
+fun SleepSessionSummary.efficiencyStatus(): MetricStatus =
+    if (efficiency?.isNaN() == true) MetricStatus.POOR else efficiency.sleepEfficiencyStatus()
 
 fun Float?.normalizedSleepEfficiencyPercent(): Float? =
     this?.let { value ->
