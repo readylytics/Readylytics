@@ -64,7 +64,7 @@
     <string name="label_workout_details">Workout details</string>
     <string name="acwr_training_load">Training load</string>
     <string name="acwr_legend_daily_trimp">Daily TRIMP</string>
-    <string name="acwr_legend_strain_ratio">Strain ratio</string>
+    <string name="acwr_legend_strain_ratio">Strain Ratio</string>
     <string name="acwr_tooltip_trimp_format">TRIMP: %1$s</string>
     <string name="acwr_tooltip_strain_format">Strain: %1$s</string>
     <string name="message_no_hr_data">No HR data available</string>
