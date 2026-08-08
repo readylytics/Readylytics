@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.sleep
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -64,6 +66,7 @@ import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
+import java.util.Date
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -149,7 +152,10 @@ fun SleepTrendChart(
 
     val durationFormat = stringResource(R.string.sleep_trend_tooltip_duration_format)
     val bedtimeFormat = stringResource(R.string.sleep_trend_tooltip_bedtime_format)
+    val napsHeading = stringResource(R.string.sleep_trend_tooltip_naps_heading)
+    val napItemFormat = stringResource(R.string.sleep_trend_tooltip_nap_item_format)
     val hoursOnlyFormat = stringResource(CoreUiR.string.sleep_duration_hours_only)
+    val clockFormatter = DateFormat.getTimeFormat(LocalContext.current)
 
     var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker =
@@ -172,7 +178,15 @@ fun SleepTrendChart(
         }
 
     val tooltipState =
-        remember(selectedState, rangeStartMs, durationFormat, bedtimeFormat) {
+        remember(
+            selectedState,
+            rangeStartMs,
+            durationFormat,
+            bedtimeFormat,
+            napsHeading,
+            napItemFormat,
+            clockFormatter,
+        ) {
             selectedState?.let { s ->
                 val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                 val dateText = ChartUtils.formatTooltipDate(date)
@@ -225,10 +239,30 @@ fun SleepTrendChart(
                         bedtimeText,
                         wakeupText,
                     )
+                val napLines =
+                    s.naps
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { naps ->
+                            buildList {
+                                add(napsHeading)
+                                naps.forEach { nap ->
+                                    add(
+                                        String.format(
+                                            Locale.getDefault(),
+                                            napItemFormat,
+                                            clockFormatter.format(Date(nap.startTimeMs)),
+                                            clockFormatter.format(Date(nap.endTimeMs)),
+                                            DateFormatUtils.formatSleepDuration(nap.durationMinutes),
+                                        ),
+                                    )
+                                }
+                            }
+                        }.orEmpty()
 
                 DataPointTooltipData(
                     valueText = valueText,
                     dateText = dateTextVal,
+                    preDateLines = napLines,
                     extraLine = dateText,
                     offset =
                         IntOffset(
@@ -435,6 +469,7 @@ fun SleepTrendChart(
             startOffsetPoints = startOffsetPoints,
             durationSpanPoints = durationSpanPoints,
             actualDurationPoints = actualDurationPoints,
+            trendDays = trendDays,
             onStateChanged = { selectedState = it },
         )
 

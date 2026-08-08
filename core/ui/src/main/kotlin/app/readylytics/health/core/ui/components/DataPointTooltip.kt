@@ -31,7 +31,9 @@ data class DataPointTooltipData(
     val valueText: String,
     val dateText: String,
     val offset: IntOffset = IntOffset(0, 0),
-    // Optional third line rendered below dateText; null omits the row entirely.
+    // Optional lines rendered after dateText and before extraLine.
+    val preDateLines: List<String> = emptyList(),
+    // Optional line rendered below preDateLines; null omits the row entirely.
     val extraLine: String? = null,
 )
 
@@ -161,6 +163,13 @@ fun DataPointTooltip(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
                         )
+                        data.preDateLines.forEach { line ->
+                            Text(
+                                text = line,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
+                            )
+                        }
                         data.extraLine?.let { extra ->
                             Text(
                                 text = extra,
