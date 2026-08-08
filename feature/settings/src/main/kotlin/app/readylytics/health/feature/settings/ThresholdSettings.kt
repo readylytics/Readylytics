@@ -87,7 +87,7 @@ fun ThresholdSettingsSection(
             },
             valueRange = 0.25f..1.5f,
             steps = 4,
-            displayValue = "%.2f°C".format(bodyTempElevatedThreshold),
+            displayValue = stringResource(R.string.threshold_body_temp_elevated_value, bodyTempElevatedThreshold),
             description = stringResource(R.string.threshold_body_temp_elevated_desc),
         )
 
