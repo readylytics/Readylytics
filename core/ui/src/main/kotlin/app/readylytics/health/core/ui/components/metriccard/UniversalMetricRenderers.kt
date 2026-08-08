@@ -3,7 +3,6 @@ package app.readylytics.health.core.ui.components.metriccard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,6 +51,8 @@ fun UniversalMetricVisual.progressFraction(): Float? =
 // Fixed slot for the delta pill / plain secondary text, kept out of the weighted value row so it
 // cannot be squeezed away at large font scales.
 private val UNIVERSAL_SECONDARY_SLOT_HEIGHT = 20.dp
+private val UNIVERSAL_TRACK_SECONDARY_GAP = 5.dp
+private val UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS = 2.dp
 
 // Internal inset for the delta pill's label. Plain secondary text is anchored directly to the
 // renderer's content edge so it shares the card's bottom-start anchor with the pill surface.
@@ -152,8 +153,7 @@ fun UniversalBarRenderer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(MaterialTheme.dimens.metricTrackThickness)
-                    .padding(horizontal = MaterialTheme.spacing.extraSmall)
+                    .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS)
                     .testTag(UNIVERSAL_BAR_TAG),
             color = activeColor,
             trackColor = trackColor,
@@ -172,14 +172,20 @@ private fun UniversalValueUnitColumn(
     contentColor: Color,
     secondaryUsesPill: Boolean,
     modifier: Modifier = Modifier,
-    track: @Composable ColumnScope.() -> Unit,
+    track: @Composable () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(bottom = UNIVERSAL_SECONDARY_SLOT_HEIGHT + MaterialTheme.spacing.extraSmall),
+                    .padding(
+                        bottom =
+                            UNIVERSAL_SECONDARY_SLOT_HEIGHT +
+                                UNIVERSAL_TRACK_SECONDARY_GAP +
+                                MaterialTheme.dimens.metricTrackThickness +
+                                UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS,
+                    ),
         ) {
             Row(
                 // Elastic: the value/unit line keeps its natural height while the card has room and
@@ -216,7 +222,16 @@ private fun UniversalValueUnitColumn(
             // the column's fixed elements still have to fit the value line's full height at font
             // scale 1.0, and the weighted value row above is the single element that yields further.
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
+        }
 
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(bottom = UNIVERSAL_SECONDARY_SLOT_HEIGHT + UNIVERSAL_TRACK_SECONDARY_GAP)
+                    .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS),
+        ) {
             track()
         }
 
@@ -286,6 +301,11 @@ fun UniversalValueRenderer(
     ) {
         // Value mode is Bar mode without the painted track: the slot is still reserved so the
         // value row and the secondary/delta row keep their position when the mode is switched.
-        Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.metricTrackThickness))
+        Spacer(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS),
+        )
     }
 }

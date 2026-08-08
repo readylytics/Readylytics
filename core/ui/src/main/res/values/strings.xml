@@ -81,7 +81,7 @@
         Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe
         under-training</string>
     <string name="card_title_readiness">Readiness</string>
-    <string name="card_title_strain_ratio">Strain ratio</string>
+    <string name="card_title_strain_ratio">Strain Ratio</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_mmHg">mmHg</string>
     <string name="unit_ms">ms</string>

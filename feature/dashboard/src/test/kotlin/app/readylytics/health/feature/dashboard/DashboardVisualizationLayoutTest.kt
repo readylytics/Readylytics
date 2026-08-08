@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -446,6 +447,67 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 "pill=$pillBounds, plain=$plainBounds",
             pillBounds.bottom,
             plainBounds.bottom,
+        )
+    }
+
+    @Test
+    fun barTrack_sharesVerticalPositionAcrossDifferentValueHeights() {
+        composeRule.setContent {
+            TestTheme {
+                Row(modifier = Modifier.width(400.dp)) {
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = "HRV",
+                                valueText = "42",
+                                unitText = "ms",
+                                secondaryText = "↑ 1 ms",
+                            ),
+                        specification = requireNotNull(DashboardCardCatalog.spec(CardId.HRV)),
+                        requestedMode = DashboardCardDisplayMode.BAR,
+                        isEditing = false,
+                        onModeSelected = {},
+                        modifier = Modifier.weight(1f).height(240.dp),
+                    )
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = "Sleep Time",
+                                valueText = "7h 11m",
+                                unitText = "",
+                                secondaryText = "22:56 → 06:50",
+                            ),
+                        specification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_DURATION)),
+                        requestedMode = DashboardCardDisplayMode.BAR,
+                        isEditing = false,
+                        onModeSelected = {},
+                        modifier = Modifier.weight(1f).height(240.dp),
+                    )
+                }
+            }
+        }
+
+        val barBounds =
+            composeRule
+                .onAllNodesWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .map { it.boundsInRoot }
+        assertEquals(
+            "HRV and Sleep Time bars must share the same vertical position",
+            barBounds[0].top,
+            barBounds[1].top,
+        )
+        assertEquals(
+            "HRV and Sleep Time bars must share the same height",
+            barBounds[0].bottom,
+            barBounds[1].bottom,
+        )
+
+        val sleepSecondaryBounds = boundsOfText("22:56 → 06:50")
+        assertEquals(
+            "Sleep Time bar must start at the same content edge as its plain secondary text",
+            barBounds[1].left,
+            sleepSecondaryBounds.left,
         )
     }
 
