@@ -322,7 +322,99 @@ class SleepViewModelTest {
             assertEquals(6, startPoint.dayOffset)
             assertEquals(10f, startPoint.value!!, 0.01f)
             assertEquals(8f, spanPoint.value!!, 0.01f)
-            assertEquals(7.5f, actualPoint.value!!, 0.01f)
+            assertEquals(8f, actualPoint.value!!, 0.01f)
+        }
+
+    @Test
+    fun `trend uses core window and total duration for a scoring day with a nap`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val coreStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val napStart =
+                scoreDay
+                    .atTime(13, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val coreEnd =
+                scoreDay
+                    .atTime(6, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val napEnd =
+                scoreDay
+                    .atTime(13, 30)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val core =
+                sleepSession(
+                    id = "core",
+                    startTime = coreStart,
+                    endTime = coreEnd,
+                    durationMinutes = 480,
+                )
+            val nap =
+                sleepSession(
+                    id = "nap",
+                    startTime = napStart,
+                    endTime = napEnd,
+                    durationMinutes = 30,
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(core, nap))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendActualDurationPoints.last().value != null }
+            val dayOffset = TimeRange.SEVEN_DAYS.days - 1
+            assertEquals(10f, state.trendStartOffsetPoints[dayOffset].value!!, 0.01f)
+            assertEquals(8f, state.trendDurationSpanPoints[dayOffset].value!!, 0.01f)
+            assertEquals(8.5f, state.trendActualDurationPoints[dayOffset].value!!, 0.01f)
+            assertEquals(listOf(napStart), state.trendDays[dayOffset].naps.map { it.startTimeMs })
+        }
+
+    @Test
+    fun `trend assigns a cutoff-boundary session to its following scoring day`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val cutoffStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(20, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val session =
+                sleepSession(
+                    id = "cutoff",
+                    startTime = cutoffStart,
+                    endTime =
+                        scoreDay
+                            .minusDays(1)
+                            .atTime(20, 30)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 30,
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendActualDurationPoints.last().value != null }
+            assertEquals(0.5f, state.trendActualDurationPoints.last().value!!, 0.01f)
+            assertEquals(null, state.trendActualDurationPoints[TimeRange.SEVEN_DAYS.days - 2].value)
         }
 
     @Test
@@ -340,6 +432,24 @@ class SleepViewModelTest {
             assertEquals(true, state.trendDurationSpanPoints.all { it.value == null })
             assertEquals(true, state.trendActualDurationPoints.all { it.value == null })
         }
+
+    private fun sleepSession(
+        id: String,
+        startTime: Long,
+        endTime: Long,
+        durationMinutes: Int,
+    ) = SleepSessionData(
+        id = id,
+        deviceName = "SmartRing",
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+        efficiency = 0.93f,
+        deepSleepMinutes = 90,
+        lightSleepMinutes = 300,
+        remSleepMinutes = 90,
+        awakeMinutes = 0,
+    )
 
     @Test
     fun `ui state observes yesterday sleep score as rounded reactive value`() =
