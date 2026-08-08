@@ -19,8 +19,10 @@ import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
+import app.readylytics.health.domain.util.UnitConverter
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -32,6 +34,7 @@ class DashboardMetricPresentationFactory
     constructor(
         private val resourceProvider: ResourceProvider,
         private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
+        private val bodyTemperatureBaselineCalculator: BodyTemperatureBaselineCalculator,
     ) {
         // Human-readable, TalkBack-friendly accessibilityDescription wiring for all 15 dashboard metric
         // cards (Sleep Score, Readiness, Weight, Body Fat, Sleep Duration, HRV, Sleep RHR, Resting HR,
@@ -121,6 +124,21 @@ class DashboardMetricPresentationFactory
                 else -> MetricStatus.POOR
             }
 
+        // Deliberately not POOR/OPTIMAL: elevated body temperature is a deviation flag, not a
+        // "good/bad" score.
+        private fun bodyTempStatus(
+            value: Float?,
+            baseline: Float?,
+            thresholdCelsius: Float,
+        ): MetricStatus =
+            when {
+                value == null -> MetricStatus.CALIBRATING
+                baseline == null -> MetricStatus.NEUTRAL
+                bodyTemperatureBaselineCalculator.isElevated(value, baseline, thresholdCelsius) ->
+                    MetricStatus.WARNING
+                else -> MetricStatus.NEUTRAL
+            }
+
         fun build(
             summary: DailySummary?,
             preferences: UserPreferences,
@@ -129,6 +147,7 @@ class DashboardMetricPresentationFactory
             circadianResult: CircadianConsistencyResult?,
             heartRateSummary: HeartRateDaySummary?,
             todayStrainIncrease: Float? = null,
+            bodyTempBaseline: Float? = null,
         ): Map<CardId, UniversalMetricPresentation> {
             val map = mutableMapOf<CardId, UniversalMetricPresentation>()
 
@@ -456,7 +475,57 @@ class DashboardMetricPresentationFactory
                     visual = UniversalMetricVisual.ValueOnly,
                 )
 
-            // 13. HEART RATE
+            // 13. BODY TEMPERATURE
+            val bodyTempCelsius = summary?.avgSleepingBodyTemp
+            val unitSystem = preferences.unitSystem
+            val bodyTempDisplay =
+                bodyTempCelsius?.let { UnitConverter.celsiusToDisplayTemperature(it, unitSystem) }
+            val bodyTempUnitLabel =
+                if (unitSystem == UnitSystem.IMPERIAL) {
+                    resourceProvider.getString(CoreUiR.string.unit_fahrenheit)
+                } else {
+                    resourceProvider.getString(CoreUiR.string.unit_celsius)
+                }
+            val bodyTempStatus =
+                bodyTempStatus(bodyTempCelsius, bodyTempBaseline, preferences.bodyTempElevatedThresholdCelsius)
+            val bodyTempTitle = resourceProvider.getString(DashboardR.string.card_title_body_temperature)
+            val bodyTempValueText =
+                bodyTempDisplay?.let { "%.1f".format(it) } ?: unavailableValueText
+            val bodyTempSecondaryText =
+                when {
+                    bodyTempCelsius == null -> null
+                    bodyTempBaseline == null -> resourceProvider.getString(CoreUiR.string.body_temperature_calibrating)
+                    else -> {
+                        val deltaCelsius = bodyTempCelsius - bodyTempBaseline
+                        val deltaDisplay = UnitConverter.celsiusDeltaToDisplayDelta(deltaCelsius, unitSystem)
+                        val sign = if (deltaDisplay >= 0f) "+" else ""
+                        "$sign%.1f°".format(deltaDisplay)
+                    }
+                }
+            val bodyTempVisual =
+                UniversalMetricScalePreparer.score(bodyTempCelsius, 35.5f, 39f)
+            val bodyTempDescription =
+                bodyTempVisual.unavailableReason?.let { reason ->
+                    unavailableDescription(bodyTempTitle, reason)
+                } ?: resourceProvider.getString(
+                    DashboardR.string.semantics_value_note_format,
+                    bodyTempTitle,
+                    bodyTempValueText,
+                    classificationText(bodyTempStatus),
+                )
+            map[CardId.BODY_TEMPERATURE] =
+                UniversalMetricPresentation(
+                    title = bodyTempTitle,
+                    valueText = bodyTempValueText,
+                    unitText = bodyTempUnitLabel,
+                    secondaryText = bodyTempSecondaryText,
+                    status = bodyTempStatus,
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_vitals_body_temperature),
+                    accessibilityDescription = bodyTempDescription,
+                    visual = bodyTempVisual,
+                )
+
+            // 14. HEART RATE
             val hrTitle =
                 resourceProvider.getString(
                     DashboardR.string.card_title_heart_rate,
@@ -490,7 +559,7 @@ class DashboardMetricPresentationFactory
                     visual = UniversalMetricVisual.ValueOnly,
                 )
 
-            // 14. CIRCADIAN
+            // 15. CIRCADIAN
             val circReady = circadianResult as? app.readylytics.health.domain.scoring.CircadianConsistencyResult.Ready
             val circTitle =
                 resourceProvider.getString(
@@ -527,7 +596,7 @@ class DashboardMetricPresentationFactory
                     visual = circVisual,
                 )
 
-            // 15. STRAIN RATIO
+            // 16. STRAIN RATIO
             val strainTitle =
                 resourceProvider.getString(
                     CoreUiR.string.card_title_strain_ratio,

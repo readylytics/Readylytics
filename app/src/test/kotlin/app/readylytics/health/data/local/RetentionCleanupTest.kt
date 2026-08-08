@@ -25,6 +25,7 @@ class RetentionCleanupTest {
     private lateinit var bodyFatDao: BodyFatRecordDao
     private lateinit var bloodPressureDao: BloodPressureRecordDao
     private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
+    private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
     private lateinit var stepRecordDao: StepRecordDao
     private lateinit var retentionCleanup: RetentionCleanup
 
@@ -46,6 +47,7 @@ class RetentionCleanupTest {
         bodyFatDao = database.bodyFatRecordDao()
         bloodPressureDao = database.bloodPressureRecordDao()
         oxygenSaturationDao = database.oxygenSaturationRecordDao()
+        bodyTemperatureDao = database.bodyTemperatureRecordDao()
         stepRecordDao = database.stepRecordDao()
 
         val transactionRunner = RoomTransactionRunner(database)
@@ -61,6 +63,7 @@ class RetentionCleanupTest {
                 bodyFatDao = bodyFatDao,
                 bloodPressureDao = bloodPressureDao,
                 oxygenSaturationDao = oxygenSaturationDao,
+                bodyTemperatureDao = bodyTemperatureDao,
                 stepRecordDao = stepRecordDao,
             )
     }
@@ -282,6 +285,15 @@ class RetentionCleanupTest {
                 ),
             )
 
+            // 10. Body temperature
+            bodyTemperatureDao.upsertAll(
+                listOf(
+                    BodyTemperatureRecordEntity(id = "old_bt", timestampMs = cutoffMs - 1, celsius = 36.5f),
+                    BodyTemperatureRecordEntity(id = "equal_bt", timestampMs = cutoffMs, celsius = 36.5f),
+                    BodyTemperatureRecordEntity(id = "new_bt", timestampMs = cutoffMs + 1, celsius = 36.5f),
+                ),
+            )
+
             // Execute cleanup
             retentionCleanup.deleteBefore(cutoffMs)
 
@@ -328,5 +340,9 @@ class RetentionCleanupTest {
             // Verify Oxygen Saturation
             val oxygenSaturationRemaining = oxygenSaturationDao.getSince(0)
             assertEquals(listOf("equal_spo2", "new_spo2"), oxygenSaturationRemaining.map { it.id }.sorted())
+
+            // Verify Body Temperature
+            val bodyTemperatureRemaining = bodyTemperatureDao.getByTimeRange(0, Long.MAX_VALUE)
+            assertEquals(listOf("equal_bt", "new_bt"), bodyTemperatureRemaining.map { it.id }.sorted())
         }
 }

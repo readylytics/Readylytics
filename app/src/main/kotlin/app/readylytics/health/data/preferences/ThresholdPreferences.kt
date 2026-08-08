@@ -16,6 +16,8 @@ internal class ThresholdPreferences
 
         private fun Float.toValidRhrWarning() = coerceIn(1.0f, 1.2f)
 
+        private fun Float.toValidBodyTempElevatedThreshold() = coerceIn(0.25f, 1.5f)
+
         suspend fun updateHrvOptimalThreshold(value: Float) {
             dataStore.updateData {
                 it.toBuilder().setHrvOptimalThreshold(value.toValidHrvOptimal()).build()
@@ -37,6 +39,12 @@ internal class ThresholdPreferences
         suspend fun updateRhrWarningThreshold(value: Float) {
             dataStore.updateData {
                 it.toBuilder().setRhrWarningThreshold(value.toValidRhrWarning()).build()
+            }
+        }
+
+        suspend fun updateBodyTempElevatedThreshold(value: Float) {
+            dataStore.updateData {
+                it.toBuilder().setBodyTempElevatedThresholdCelsius(value.toValidBodyTempElevatedThreshold()).build()
             }
         }
     }

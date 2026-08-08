@@ -45,6 +45,9 @@ object SettingsValidators {
     val RHR_OPTIMAL_THRESHOLD_RULE = FloatRangeRule(0.8f, 1.0f, "RHR: 0.8–1.0")
     val RHR_WARNING_THRESHOLD_RULE = FloatRangeRule(1.0f, 1.2f, "RHR: 1.0–1.2")
 
+    // Body temperature elevated-deviation threshold (0.25–1.5°C, 0.25°C steps)
+    val BODY_TEMP_ELEVATED_THRESHOLD_RULE = FloatRangeRule(0.25f, 1.5f, "Threshold: 0.25–1.5°C")
+
     // TRIMP parameters
     val TRIMP_BANISTER_MULTIPLIER_RULE = TrimpParameterRule(0.5f, 2.5f, "Multiplier: 0.5–2.5")
     val TRIMP_CHENG_BETA_RULE = TrimpParameterRule(0.04f, 0.12f, "Beta: 0.04–0.12")

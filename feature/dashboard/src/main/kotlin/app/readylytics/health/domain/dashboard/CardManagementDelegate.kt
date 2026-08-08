@@ -64,14 +64,32 @@ sealed interface CardManagementEvent {
 class CardManagementDelegate(
     private val cardConfigRepository: CardConfigurationRepository,
     private val scope: CoroutineScope,
+    // Gates BODY_TEMPERATURE persistence on the Health Connect permission. Defaults to
+    // "granted" so every existing 2-arg call site (and its tests) is unaffected; the
+    // dashboard wires the real HealthConnectRepository check through this.
+    private val hasBodyTemperaturePermission: suspend () -> Boolean = { true },
 ) {
     private val _isManagingCards = MutableStateFlow(false)
     private val _pendingConfigs = MutableStateFlow<List<CardConfiguration>?>(null)
     private val persistTrigger = MutableStateFlow<List<CardConfiguration>?>(null)
 
     // Suspend persistence via repository. Called reactively on SaveChanges event.
+    //
+    // This is the single choke point for persistence, regardless of which onEvent path
+    // produced `configs` (manual edits, ResetToDefaults, etc.) -- filtering here, rather
+    // than only where pendingConfigs is populated, guarantees BODY_TEMPERATURE can never
+    // be written with isVisible = true unless the permission is currently granted. Note
+    // this only gates what reaches the repository; the pendingConfigs StateFlow itself
+    // (and therefore the management sheet's live display) is filtered separately by
+    // DashboardFlowIntermediate's createDashboardCardStateFlow.
     private suspend fun persistConfigs(configs: List<CardConfiguration>) {
-        cardConfigRepository.updateDashboardCardConfigurations(configs)
+        val toPersist =
+            if (hasBodyTemperaturePermission()) {
+                configs
+            } else {
+                configs.filter { it.cardId != CardId.BODY_TEMPERATURE }
+            }
+        cardConfigRepository.updateDashboardCardConfigurations(toPersist)
     }
 
     init {

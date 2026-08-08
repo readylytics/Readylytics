@@ -50,6 +50,7 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                 bodyFatRecordDao = database.bodyFatRecordDao(),
                 bloodPressureRecordDao = database.bloodPressureRecordDao(),
                 oxygenSaturationRecordDao = database.oxygenSaturationRecordDao(),
+                bodyTemperatureRecordDao = database.bodyTemperatureRecordDao(),
                 stepRecordDao = database.stepRecordDao(),
                 dailySummaryDao = database.dailySummaryDao(),
                 transactionRunner = RoomTransactionRunner(database),
@@ -214,6 +215,7 @@ class WorkoutModelTrimpIngestionDeterminismTest {
             bodyFatSamples = emptyList(),
             bloodPressureSamples = emptyList(),
             oxygenSaturationSamples = emptyList(),
+            bodyTemperatureSamples = emptyList(),
             stepRecords = emptyList(),
         )
 }

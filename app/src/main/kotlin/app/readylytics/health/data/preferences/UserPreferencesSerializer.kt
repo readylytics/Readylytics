@@ -69,6 +69,7 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setCustomSecondaryColor(SettingsDefaults.CUSTOM_SECONDARY_COLOR)
             .setCustomTertiaryColor(SettingsDefaults.CUSTOM_TERTIARY_COLOR)
             .setCustomPrimaryColor(SettingsDefaults.CUSTOM_PRIMARY_COLOR)
+            .setBodyTempElevatedThresholdCelsius(SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS)
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -174,6 +175,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setCustomSecondaryColor(domain.customSecondaryColor)
         .setCustomTertiaryColor(domain.customTertiaryColor)
         .setCustomPrimaryColor(domain.customPrimaryColor)
+        .setBodyTempElevatedThresholdCelsius(domain.bodyTempElevatedThresholdCelsius)
 
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }

@@ -2,6 +2,7 @@ package app.readylytics.health.data.local
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -13,6 +14,7 @@ import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
@@ -24,6 +26,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.BloodPressureInput
 import app.readylytics.health.domain.sync.BodyFatInput
+import app.readylytics.health.domain.sync.BodyTemperatureInput
 import app.readylytics.health.domain.sync.HealthIngestionBatch
 import app.readylytics.health.domain.sync.HealthIngestionStore
 import app.readylytics.health.domain.sync.HeartRateInput
@@ -55,6 +58,7 @@ class RoomHealthIngestionStore
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
         private val stepRecordDao: StepRecordDao,
         private val dailySummaryDao: DailySummaryDao,
         private val transactionRunner: TransactionRunner,
@@ -83,6 +87,9 @@ class RoomHealthIngestionStore
                 bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))
                 oxygenSaturationRecordDao.upsertAll(
                     batch.oxygenSaturationSamples.map(OxygenSaturationInput::toEntity),
+                )
+                bodyTemperatureRecordDao.upsertAll(
+                    batch.bodyTemperatureSamples.map(BodyTemperatureInput::toEntity),
                 )
                 stepRecordDao.upsertAll(batch.stepRecords.map(StepRecordInput::toEntity))
             }
@@ -260,6 +267,14 @@ private fun OxygenSaturationInput.toEntity() =
         id = id,
         timestampMs = timestampMs,
         percentage = percentage,
+        deviceName = deviceName,
+    )
+
+private fun BodyTemperatureInput.toEntity() =
+    BodyTemperatureRecordEntity(
+        id = id,
+        timestampMs = timestampMs,
+        celsius = celsius,
         deviceName = deviceName,
     )
 

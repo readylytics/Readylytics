@@ -10,6 +10,7 @@ import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.dao.AuditEventDao
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -106,6 +107,10 @@ abstract class DatabaseModule {
         @Provides
         fun provideOxygenSaturationRecordDao(db: HealthDatabase): OxygenSaturationRecordDao =
             db.oxygenSaturationRecordDao()
+
+        @Provides
+        fun provideBodyTemperatureRecordDao(db: HealthDatabase): BodyTemperatureRecordDao =
+            db.bodyTemperatureRecordDao()
 
         @Provides
         fun provideInsightDismissalDao(db: HealthDatabase): InsightDismissalDao = db.insightDismissalDao()

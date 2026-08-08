@@ -5,12 +5,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.HealthDataType
@@ -35,6 +37,7 @@ class SelectedSourcePrunerImplTest {
     private lateinit var bodyFatDao: BodyFatRecordDao
     private lateinit var bloodPressureDao: BloodPressureRecordDao
     private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
+    private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
     private lateinit var pruner: SelectedSourcePrunerImpl
 
     @Before
@@ -54,6 +57,7 @@ class SelectedSourcePrunerImplTest {
         bodyFatDao = database.bodyFatRecordDao()
         bloodPressureDao = database.bloodPressureRecordDao()
         oxygenSaturationDao = database.oxygenSaturationRecordDao()
+        bodyTemperatureDao = database.bodyTemperatureRecordDao()
 
         val transactionRunner = RoomTransactionRunner(database)
 
@@ -68,6 +72,7 @@ class SelectedSourcePrunerImplTest {
                 bodyFatRecordDao = bodyFatDao,
                 bloodPressureRecordDao = bloodPressureDao,
                 oxygenSaturationRecordDao = oxygenSaturationDao,
+                bodyTemperatureRecordDao = bodyTemperatureDao,
             )
     }
 
@@ -148,6 +153,42 @@ class SelectedSourcePrunerImplTest {
             val remainingHr = heartRateDao.getByTimeRange(0, timestamp + 10000000)
             assertEquals(1, remainingHr.size)
             assertEquals("hr_b", remainingHr[0].id)
+        }
+
+    @Test
+    fun pruneDeletesNonMatchingBodyTemperatureDevicesWithinRange() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val date = LocalDate.of(2024, 6, 1)
+            val timestamp = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            bodyTemperatureDao.upsertAll(
+                listOf(
+                    BodyTemperatureRecordEntity(
+                        id = "bt_a",
+                        timestampMs = timestamp,
+                        celsius = 36.6f,
+                        deviceName = "Device A",
+                    ),
+                    BodyTemperatureRecordEntity(
+                        id = "bt_b",
+                        timestampMs = timestamp,
+                        celsius = 36.7f,
+                        deviceName = "Device B",
+                    ),
+                ),
+            )
+
+            val selections =
+                mapOf(
+                    HealthDataType.BODY_TEMPERATURE to "Device B",
+                )
+
+            pruner.prune(date, date, selections, zoneId)
+
+            val remainingBodyTemperature = bodyTemperatureDao.getByTimeRange(0, timestamp + 10000000)
+            assertEquals(1, remainingBodyTemperature.size)
+            assertEquals("bt_b", remainingBodyTemperature[0].id)
         }
 
     @Test

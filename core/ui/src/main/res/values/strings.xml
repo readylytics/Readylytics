@@ -89,6 +89,8 @@
     <string name="unit_steps">steps</string>
     <string name="unit_kg">kg</string>
     <string name="unit_lbs">lbs</string>
+    <string name="unit_celsius">°C</string>
+    <string name="unit_fahrenheit">°F</string>
     <string name="label_average">Average</string>
     <string name="label_normal_limit">Normal Limit</string>
     <string name="label_min">Min</string>
@@ -102,6 +104,7 @@
     <string name="label_hrv">HRV</string>
     <string name="label_steps">Steps</string>
     <string name="label_spo2">SpO2</string>
+    <string name="label_body_temperature">Body temperature</string>
     <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
         your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
@@ -125,6 +128,8 @@
     <string name="card_efficiency_format">%1$s%%</string>
     <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
     <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.</string>
+    <string name="tooltip_vitals_body_temperature" formatted="false">Average sleeping body temperature last night, compared to your 14-day baseline.</string>
+    <string name="body_temperature_calibrating">Calibrating</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>

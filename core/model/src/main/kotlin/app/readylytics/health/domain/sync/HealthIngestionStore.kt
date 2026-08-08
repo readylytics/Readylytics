@@ -38,6 +38,7 @@ data class HealthIngestionBatch(
     val bodyFatSamples: List<BodyFatInput>,
     val bloodPressureSamples: List<BloodPressureInput>,
     val oxygenSaturationSamples: List<OxygenSaturationInput>,
+    val bodyTemperatureSamples: List<BodyTemperatureInput>,
     val stepRecords: List<StepRecordInput>,
 )
 
@@ -125,6 +126,13 @@ data class OxygenSaturationInput(
     val id: String,
     val timestampMs: Long,
     val percentage: Float,
+    val deviceName: String?,
+)
+
+data class BodyTemperatureInput(
+    val id: String,
+    val timestampMs: Long,
+    val celsius: Float,
     val deviceName: String?,
 )
 

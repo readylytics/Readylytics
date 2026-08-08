@@ -53,7 +53,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v6)  │   13 entities — single source of truth
+│  HealthDatabase (SQLite v9)  │   14 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -91,13 +91,16 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
 
 - **Critical:** `READ_SLEEP`, `READ_HEART_RATE`, `READ_HEART_RATE_VARIABILITY`, `READ_EXERCISE`, `READ_STEPS`
 - **Required:** critical + `READ_HEALTH_DATA_HISTORY`
-- **Optional:** `READ_WEIGHT`, `READ_BODY_FAT`, `READ_BLOOD_PRESSURE`, `READ_OXYGEN_SATURATION`
+- **Optional:** `READ_WEIGHT`, `READ_BODY_FAT`, `READ_BLOOD_PRESSURE`, `READ_OXYGEN_SATURATION`,
+  `READ_BODY_TEMPERATURE`
 
 **Read methods:** `readSleepSessions`, `readHeartRateSamples` / `readHeartRateSamplesPaged`,
 `readHrvSamples` / `readHrvSamplesPaged`,
 `readExerciseSessions`, `readSteps` / `readDailyStepTotals`, `readWeightRecords`,
 `readBodyFatRecords`, `readBloodPressureRecords`, `readOxygenSaturationRecords`,
-`discoverDevices`.
+`readBodyTemperatureRecords`, `hasBodyTemperaturePermission()` (dedicated single-permission
+check, since body temperature is gated as its own dashboard-card/card-management concern rather
+than folded into the generic optional-permission status), `discoverDevices`.
 
 **Rate-Limit and Transient Fault Protection:**
 Each Health Connect read is retried through `HealthConnectRetryPolicy`, which retries transient
@@ -124,7 +127,7 @@ explicit and idempotent.
 | `PeriodicHealthSyncWorker`    | `app/src/main/kotlin/app/readylytics/health/workers/PeriodicHealthSyncWorker.kt`        | "Background Sync" toggle in Settings. Before resolving its lazy Room-backed `HealthSyncUseCase` or lazy `ForegroundSyncController`, it requires `DatabaseReadiness.Ready`; otherwise it retries without opening Room or constructing the controller graph. Once ready, this `@HiltWorker` periodic **standard (non-foreground) worker** calls `HealthSyncUseCase.sync(windowDays = 2)` (shares `syncMutex` with the other two flows), bridges progress to `ForegroundSyncController`, shows/dismisses a silent transient notification (`SyncNotifications.BACKGROUND_SYNC_CHANNEL_ID`) via `NotificationManagerCompat` directly — no `setForeground()`, since `READ_HEALTH_DATA_IN_BACKGROUND` already permits background HC reads and starting a foreground service from a periodic background worker risks `ForegroundServiceStartNotAllowedException` on API 34+. Ordinary failures return `Result.retry()`; `REQUIRES_HISTORICAL_RESYNC` enqueues `WorkerScheduler.scheduleResyncWorker()` and finishes successfully so durable catch-up runs once without periodic retry churn. |
 | `LocalBackupWorker`           | `app/src/main/kotlin/app/readylytics/health/workers/LocalBackupWorker.kt`                | Before resolving its lazy Room-backed `LocalBackupManager`, it requires `DatabaseReadiness.Ready`; otherwise it retries without opening Room. Ready runs preserve the existing local encrypted backup result mapping. |
 | `DataCleanupWorker`           | `app/src/main/kotlin/app/readylytics/health/workers/DataCleanupWorker.kt`               | Daily retention enforcement; before resolving lazy `RetentionCleanup`, it requires `DatabaseReadiness.Ready` and retries without opening Room otherwise. Cutoff is resolved via `RetentionBounds.resolveRetentionCutoffMs()` (shared with resync). No-op when retention disabled. |
-| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`             | Executes transactional deletions of data strictly older than the cutoff across all 10 sensitive tables (incl. `step_records`). |
+| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`             | Executes transactional deletions of data strictly older than the cutoff across all 11 sensitive tables (incl. `step_records`, `body_temperature_records`). |
 | `RetentionBounds`             | `core/model/src/main/kotlin/app/readylytics/health/domain/util/RetentionBounds.kt`             | Single source of truth for retention→date math: enabled → `today − retentionDays`; disabled → `today − ABSOLUTE_MAX_DAYS` (3650 / 10y). |
 | `RoomTransactionRunner`       | `core/database/src/main/kotlin/app/readylytics/health/data/local/RoomTransactionRunner.kt`        | Wraps `HealthDatabase.withTransaction { … }`. Ingestion commits parent/low-volume records together, then HR and HRV in bounded 5,000-row transactions with cancellation checks between batches. A failed window may contain partial new upserts, but never deletes prior valid rows; its unchanged checkpoint causes an idempotent replay. Also wraps the sync/resync walk-forward recompute via `DailyRecomputeSupport`. |
 | `HealthChangeSynchronizer`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthChangeSynchronizer.kt`    | Reconciles differential Health Connect Changes API responses (upsertions and deletions) incrementally during daily/foreground sync. Resolves dates of deleted records via local DB lookup — steps resolve via the new `step_records` raw table (HC-005), every other type via its own scoring table. Composite-key metric changes delete every Room row owned by the HC source record before re-upsert
@@ -244,8 +247,9 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `BodyFatDataMapper`          | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyFatDataMapper.kt`          | `DomainBodyFatRecord` → `BodyFatRecordEntity` (%).                                                                                                 |
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
+| `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 7)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 9)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
@@ -286,7 +290,14 @@ copy so `MigrationTestHelper` must inspect the physical tables and indexes.
 `DatabaseMigrationWorker` performs this state machine as foreground `dataSync` work and publishes
 phase plus copied/total-row progress; the migration screen gates normal app content, and
 Room-backed startup, sync, backup, and cleanup work remain blocked or retry until
-`DatabaseReadinessGate` reports v7 ready.
+`DatabaseReadinessGate` reports ready — that is, `user_version` has reached the externally
+migrated v7 floor and has not passed `HealthDatabase.DATABASE_VERSION`. The gate's upper bound is
+the `DATABASE_VERSION` constant itself rather than a hand-copied literal: Room owns every step
+from v7 up to the current version, so a gate pinned to one exact version would reject the schema
+Room had just migrated to and strand the app on the migration screen after the next bump.
+`DatabaseMigrationController` likewise re-inspects the database before honouring a `FAILED`
+`WorkInfo`, since WorkManager replays a previous run's terminal record on the next cold start and
+that stale failure must not outrank a database that now reports ready.
 Version 4 adds
 the metadata-only `audit_events` table; it does not change Health Connect
 ingestion tables or scoring formulas. Version 5 adds two nullable `daily_summaries` columns,
@@ -302,6 +313,12 @@ key. Version 7 (DB-001) rebuilds `heart_rate_records` and `hrv_records` onto an 
 `rowId` primary key: the previous `id` (the Health Connect record id) is renamed `sourceRecordId`
 and is no longer unique on its own — a unique index on `(sourceRecordId, timestampMs)` replaces it,
 because re-ingestion can otherwise see the same source id more than once within a resync window.
+Version 8 adds the `body_temperature_records` table (14th entity) holding raw skin/body-temperature
+samples ingested from Health Connect; it does not change any other table or scoring formula.
+Version 9 adds a nullable `daily_summaries.avgSleepingBodyTemp` column: a nightly-average
+body-temperature cache that `ScoringRepositoryImpl` computes by averaging `body_temperature_records`
+samples within that day's sleep-session window, mirroring exactly how `avgSleepingSpo2` is already
+computed there. It is a pure display/insight field, never read by any `domain/scoring/**` formula.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -314,7 +331,8 @@ because re-ingestion can otherwise see the same source id more than once within 
 | `BodyFatRecordEntity`          | `body_fat_records`          | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `BloodPressureRecordEntity`    | `blood_pressure_records`    | `id: String` (composite)               | systolic/diastolic, `timestampMs`, `deviceName`                                                                                                           |
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
-| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2 snapshots |
+| `BodyTemperatureRecordEntity`  | `body_temperature_records`  | `id: String` (composite)               | `celsius`, `timestampMs`, `deviceName`                                                                                                                     |
+| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2/body-temp snapshots (`avgSleepingBodyTemp` — nightly average, never a scoring input) |
 | `InsightDismissalEntity`       | `insight_dismissals`        | `(dateMidnightMs: Long, type: String)` | `type: String` (LATE_NADIR, SICK_INDICATOR, STRONG_RECOVERY_SIGNAL, LOAD_SPIKE_RECOVERY_STRAIN, …) — represents dismissed dashboard insights                                                       |
 | `AuditEventEntity`             | `audit_events`              | `id: Long` (auto)                      | `type`, `occurredAtEpochMs`, optional coarse `detail` for local backup/restore/key-lifecycle events                                                       |
 
@@ -357,6 +375,65 @@ Sleep/Readiness display rounding stable across app-open recalculation, backgroun
 historical resync. Recent sync and historical resync both run `SessionLinkReconciler` after
 ingestion so overlap upserts cannot replace canonical session links with mapper-local links before
 scoring.
+
+### 1.5 Body Temperature — 14-day baseline, elevated-deviation threshold, and display surfaces
+
+Raw ingestion, the nightly-average `avgSleepingBodyTemp` cache, and the entity/table shape are
+covered above (§1.3, §1.4 version-9 note, entity table). This subsection covers everything built on
+top of that cache — all of it deliberately outside `domain/scoring/**` and never read by any scoring
+formula:
+
+- **Baseline.** `BodyTemperatureBaselineCalculator`
+  (`core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`)
+  is a pure-Kotlin plain trailing average over the 14 calendar days immediately before the target
+  date (`BASELINE_WINDOW_DAYS = 14`); it returns `null` ("Calibrating") until at least 14 non-null
+  `avgSleepingBodyTemp` values exist in that window. `isElevated(today, baseline, threshold)` flags a
+  day when `|today − baseline| >= threshold`, in either direction. This is intentionally independent
+  of the HRV/RHR scoring-baseline machinery (`BaselineComputer`, `ScoringHistoryRepository` — see
+  §2.4): a plain average rather than a log-normal EWMA, computed from the already-cached display
+  field, and never persisted anywhere the scoring pipeline reads from.
+  `BodyTemperatureBaselineProvider`
+  (`core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineProvider.kt`)
+  exposes `observeBaseline(date)` for one selected date at a time — mirroring how
+  `HrvBaselineProvider` is consumed — by observing `DailySummaryRepository` emissions for the
+  14-day window and delegating to the calculator. Room summary emissions (including recalculation)
+  recompute this display-only baseline reactively, while scoring-zone preference changes
+  independently resubscribe its window.
+- **Elevated-deviation threshold.** A user-configurable preference,
+  `UserPreferences.bodyTempElevatedThresholdCelsius`
+  (`core/model/src/main/kotlin/app/readylytics/health/data/preferences/UserPreferences.kt`), default
+  `1.0f`, clamped to `[0.25, 1.5]` °C
+  (`SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS` /
+  `MIN_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS` / `MAX_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS`,
+  `core/model/.../data/preferences/SettingsDefaults.kt`; validated by
+  `SettingsValidators.BODY_TEMP_ELEVATED_THRESHOLD_RULE`). `ThresholdPreferences.updateBodyTempElevatedThreshold`
+  persists it (coerced) to proto DataStore; `ThresholdSettingsViewModel`/`ThresholdSettings.kt`
+  (`feature/settings/`) expose it as a slider (0.25°C step) that survives app restart. This threshold
+  only feeds the dashboard-card/Vitals-chart deviation badge below — it is never read by
+  `domain/scoring/**`.
+- **Dashboard card.** `DashboardMetricPresentationFactory` (§3, `feature/dashboard/.../usecase/`)
+  builds `CardId.BODY_TEMPERATURE`'s `UniversalMetricPresentation` from `summary.avgSleepingBodyTemp`,
+  the resolved baseline, and `preferences.bodyTempElevatedThresholdCelsius`: `MetricStatus.CALIBRATING`
+  when there's no reading yet, `NEUTRAL` while the baseline itself is still calibrating (shows a
+  "Calibrating" secondary label), `WARNING` when `BodyTemperatureBaselineCalculator.isElevated(...)`
+  is true, else `NEUTRAL`. Value/unit display converts through `UnitConverter.celsiusToDisplayTemperature`
+  per `preferences.unitSystem` (°C/°F), and the secondary text shows the signed delta from baseline in
+  the same display unit. The card is registered in `DashboardCardCatalog` (VALUE/BAR/GAUGE modes) and
+  gated end-to-end on the optional `READ_BODY_TEMPERATURE` permission: `CardManagementDelegate`
+  (`feature/dashboard/.../domain/dashboard/CardManagementDelegate.kt`) refuses to persist
+  `CardId.BODY_TEMPERATURE` as visible — and `DashboardFlowIntermediate`'s card-state flow filters it
+  out of the live management sheet — whenever `hasBodyTemperaturePermission()` reports `false`, so a
+  revoked permission both hides the card and cannot silently re-enable it later.
+- **Vitals trend chart.** `VitalsViewModel` (`feature/vitals/.../overview/VitalsViewModel.kt`) observes
+  the per-day baseline via `BodyTemperatureBaselineProvider.observeBaseline(date)` alongside the existing
+  HRV/RHR/SpO2 trend series. Room summary emissions (including recalculation) recalculate the
+  display-only baseline stream, while scoring-zone preference changes independently resubscribe its
+  window, so the baseline/legend remains aligned with chart summary updates without date navigation.
+  `VitalsStateFactory` converts the raw/baseline Celsius values to the display unit and
+  derives fixed chart-axis bounds (35.5–39.0 °C, unit-converted). `VitalsTrendSection` renders it as
+  a fourth `TrendChart`/`TrendCard` (test tag `BodyTemperatureTrendChart`) with the baseline plotted
+  as a reference line, using the same shared Vico chart component as the other Vitals trends — no
+  bespoke chart implementation.
 
 ---
 
@@ -654,7 +731,7 @@ ViewModels collect repository flows, fuse them with `combine()`, and expose immu
 | :---------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DashboardViewModel`                                                                                        | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt` | `uiState: StateFlow<DashboardUiState>` (summary, card map, circadian, RAS, `recalcProgress`); `onRefresh()` → `foregroundSyncController.triggerDailySync()`. Dashboard presentation factories classify raw metric values once to create card status, while `DashboardMetricScalePreparer` provides marker geometry and unavailable reasons only. The overnight-average SpO2 card uses: below 90% Poor; 90–94% Warning; 95–97% Neutral; 98% and above Optimal. |
 | `SyncViewModel`                                                                                             | `ui/sync/SyncViewModel.kt`                                    | `uiState` (sealed sync state machine), `isSyncing`, `recalcProgress` (forwarded from `ForegroundSyncController`).                                                                                                          |
-| `VitalsViewModel`                                                                                           | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | HRV / RHR / SpO2 daily trends + baseline bands.                                                                                                                                                                            |
+| `VitalsViewModel`                                                                                           | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | HRV / RHR / SpO2 / body temperature daily trends + baseline bands (body temperature via `BodyTemperatureBaselineProvider` — see §1.5).                                                                                     |
 | `SleepViewModel`                                                                                            | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepViewModel.kt`                      | Sleep summary, stage timeline, circadian consistency, sleep window/duration trend data, sleep HR timeline.                                                                                                                                    |
 | `WorkoutsViewModel` / `WorkoutDetailViewModel`                                                              | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/`                                 | Daily TRIMP/strain trends, RAS breakdown; per-workout TRIMP/strain/HRR. Per-workout load cards/rows consume `ComputeWorkoutLoadMetricsUseCase` so history and detail show the same rounded TRIMP and gained-strain values plus the same derived **overall load** and optional **intensity** label. For post-workout HRR, `WorkoutDetailViewModel` extends both the Health Connect pull and Room heart-rate query through `workout end + 3 minutes + hrrToleranceSeconds`; `RecoveryMetricsMapper` then matches each 1/2/3-minute target to the nearest sample inside an inclusive `±hrrToleranceSeconds` window (default `30` seconds). The workout chart and end-of-workout HR input stay clamped to samples at or before the workout end, so the extended recovery read does not widen the plotted workout timeline or shift `endHr`. |
 | `HeartRateDetailViewModel`                                                                                  | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/heartrate/HeartRateDetailViewModel.kt`| Intra-day HR samples + zone totals.                                                                                                                                                                                        |
@@ -763,7 +840,7 @@ resetting to zero.
 | `app/src/main/kotlin/app/readylytics/health/workers/PeriodicHealthSyncWorker.kt`                                      | Ingestion — periodic background sync (2-day window) | silent transient notification                                                            |
 | `core/model/src/main/kotlin/app/readylytics/health/workers/WorkerScheduler.kt`                                               | Ingestion — work scheduling                         | full resync (KEEP), recompute successor (APPEND_OR_REPLACE), periodic sync (UPDATE)       |
 | `app/src/main/kotlin/app/readylytics/health/workers/DataCleanupWorker.kt`                                             | Ingestion — retention enforcement                   | retention cutoff (shared)                                                                |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`                                           | Ingestion — retention cleanup                       | transactional deletion across all 9 sensitive tables                                    |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`                                           | Ingestion — retention cleanup                       | transactional deletion across all 11 sensitive tables                                   |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/RoomTransactionRunner.kt`                                      | Ingestion — atomic transaction                      | per-window upsert                                                                        |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/link/SessionLinker.kt`                                        | Ingestion — session linkage                         | pure `resolve()`: sleep > workout > resting precedence                                   |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/link/SessionLinkReconciler.kt`                                | Ingestion — post-resync reconcile                   | re-tags HR/HRV by session, recomputes workout TRIMP/zones                                |
@@ -779,8 +856,8 @@ resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v7)                              | 13 entities; Room migration chain ends at v6; external migration owns v7                 |
-| `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing/v7 ready; v5/v6 or resumable metadata require external migration                 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v9)                              | 14 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v9 |
+| `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
 | `app/src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt`                                               | Storage — scoped encrypted DB access                | opens raw SQLCipher DB only inside a callback and zeroes plaintext key bytes              |
@@ -807,7 +884,11 @@ resetting to zero.
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ComputeSleepMetricsUseCase.kt`                             | Processing — sleep metrics assembly                 | sleep + restoration                                                                      |
 | `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt` | UI — dashboard state                                | summary, cards, RAS, recalc progress                                                     |
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
-| `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 trends + bands                                                          |
+| `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 / body temperature trends + bands                                       |
+| `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsTrendSection.kt`      | UI — Vico chart                                     | body temperature trend chart + baseline reference line (display-only, see §1.5)          |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`    | Domain — display-only baseline (non-scoring)         | 14-day plain trailing average + elevated-deviation check                                 |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineProvider.kt`      | Domain — display-only baseline (non-scoring)         | `observeBaseline(date)` stream; Room summary/scoring-zone emissions recalculate dashboard + Vitals baseline |
+| `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`       | Ingestion — mapper                                   | body temperature (°C)                                                                    |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepViewModel.kt`                      | UI — sleep state                                    | sleep score, stage timeline, sleep window/duration trend data, `sleepHrSamples`          |
 | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsViewModel.kt`             | UI — workouts state                                 | TRIMP / strain / RAS                                                                     |
 | `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/SettingsState.kt`             | UI — settings state                                 | `SyncSettingsState` resync progress                                                      |

@@ -352,6 +352,45 @@ class CardManagementDelegateTest {
         }
 
     @Test
+    fun `reset then save strips body temperature from persisted configs when permission is denied`() =
+        testScope.runTest {
+            // Reset to defaults writes the raw SettingsDefaults.DEFAULT_DASHBOARD_CARDS (which
+            // includes BODY_TEMPERATURE, isVisible = true) straight into pendingConfigs. SaveChanges
+            // must still gate what actually reaches the repository on the injected permission check,
+            // independent of what createDashboardCardStateFlow filters for display.
+            val gatedDelegate =
+                CardManagementDelegate(repository, delegateScope) { false }
+
+            gatedDelegate.enterEditMode(sampleConfigs)
+            gatedDelegate.onResetToDefaults()
+            gatedDelegate.saveChanges()
+            advanceUntilIdle()
+
+            val expectedPersisted =
+                SettingsDefaults.DEFAULT_DASHBOARD_CARDS.filter { it.cardId != CardId.BODY_TEMPERATURE }
+            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expectedPersisted) }
+            coVerify(exactly = 0) {
+                repository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
+            }
+        }
+
+    @Test
+    fun `reset then save persists body temperature when permission is granted`() =
+        testScope.runTest {
+            val grantedDelegate =
+                CardManagementDelegate(repository, delegateScope) { true }
+
+            grantedDelegate.enterEditMode(sampleConfigs)
+            grantedDelegate.onResetToDefaults()
+            grantedDelegate.saveChanges()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) {
+                repository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
+            }
+        }
+
+    @Test
     fun `multiple saves persist each set independently`() =
         testScope.runTest {
             delegate.enterEditMode(sampleConfigs)

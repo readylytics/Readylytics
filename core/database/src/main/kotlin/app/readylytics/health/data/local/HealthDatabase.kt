@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import app.readylytics.health.data.local.dao.AuditEventDao
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -19,6 +20,7 @@ import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.AuditEventEntity
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
@@ -42,6 +44,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
         BodyFatRecordEntity::class,
         BloodPressureRecordEntity::class,
         OxygenSaturationRecordEntity::class,
+        BodyTemperatureRecordEntity::class,
         InsightDismissalEntity::class,
         AuditEventEntity::class,
         StepRecordEntity::class,
@@ -70,6 +73,8 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun oxygenSaturationRecordDao(): OxygenSaturationRecordDao
 
+    abstract fun bodyTemperatureRecordDao(): BodyTemperatureRecordDao
+
     abstract fun insightDismissalDao(): InsightDismissalDao
 
     abstract fun auditEventDao(): AuditEventDao
@@ -77,6 +82,6 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun stepRecordDao(): StepRecordDao
 
     companion object {
-        const val DATABASE_VERSION = 7
+        const val DATABASE_VERSION = 9
     }
 }

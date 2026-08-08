@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard.usecase
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
@@ -10,6 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
 class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactoryTestBase() {
@@ -410,5 +412,66 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
         assertEquals("96%", presentation.valueText)
         assertEquals("", presentation.unitText)
+    }
+
+    @Test
+    fun `body temperature card shows Calibrating secondary text when baseline is not yet available`() {
+        every { resourceProvider.getString(CoreUiR.string.body_temperature_calibrating) } returns "Calibrating"
+        val summary = summary().copy(avgSleepingBodyTemp = 37.0f)
+
+        val result =
+            factory.build(
+                summary = summary,
+                preferences = preferences(),
+                selectedDate = date,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+                bodyTempBaseline = null,
+            )
+
+        val presentation = result.getValue(CardId.BODY_TEMPERATURE)
+        // Baseline missing -> NEUTRAL, not CALIBRATING (the reading itself is present; only the
+        // baseline is still warming up).
+        assertEquals(MetricStatus.NEUTRAL, presentation.status)
+        assertTrue(presentation.secondaryText!!.contains("Calibrating"))
+    }
+
+    @Test
+    fun `body temperature card status is WARNING when deviation meets the configured threshold`() {
+        val summary = summary().copy(avgSleepingBodyTemp = 38.0f)
+        val prefs = UserPreferences(bodyTempElevatedThresholdCelsius = 1.0f)
+
+        val result =
+            factory.build(
+                summary = summary,
+                preferences = prefs,
+                selectedDate = date,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+                bodyTempBaseline = 36.9f,
+            )
+
+        assertEquals(MetricStatus.WARNING, result.getValue(CardId.BODY_TEMPERATURE).status)
+    }
+
+    @Test
+    fun `body temperature card status is NEUTRAL when deviation is below the configured threshold`() {
+        val summary = summary().copy(avgSleepingBodyTemp = 37.2f)
+        val prefs = UserPreferences(bodyTempElevatedThresholdCelsius = 1.0f)
+
+        val result =
+            factory.build(
+                summary = summary,
+                preferences = prefs,
+                selectedDate = date,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+                bodyTempBaseline = 36.9f,
+            )
+
+        assertEquals(MetricStatus.NEUTRAL, result.getValue(CardId.BODY_TEMPERATURE).status)
     }
 }

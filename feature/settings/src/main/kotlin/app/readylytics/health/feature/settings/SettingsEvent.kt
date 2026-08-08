@@ -117,6 +117,10 @@ sealed interface SettingsEvent {
         val value: Float,
     ) : SettingsEvent
 
+    data class BodyTempElevatedThresholdChanged(
+        val value: Float,
+    ) : SettingsEvent
+
     data class RestingHrPercentileChanged(
         val percentile: Int,
     ) : SettingsEvent

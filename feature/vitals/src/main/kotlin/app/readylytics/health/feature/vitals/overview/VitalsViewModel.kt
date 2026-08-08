@@ -10,12 +10,13 @@ import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.scoring.RhrBaselineProvider
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,15 +31,13 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 
 @Immutable
 data class VitalsUiState(
     val latestSummary: DailySummary? = null,
-    val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList()),
+    val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList(), emptyList()),
     val presentation: VitalsPresentationState = VitalsPresentationState.empty(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
@@ -71,6 +70,7 @@ class VitalsViewModel
         private val savedStateHandle: SavedStateHandle,
         private val hrvBaselineProvider: HrvBaselineProvider,
         private val rhrBaselineProvider: RhrBaselineProvider,
+        private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
@@ -79,14 +79,24 @@ class VitalsViewModel
             )
         val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()
 
-        private val baselinesFlow =
+        private val scoringBaselinesFlow =
             selectedDateRepository.selectedDate
                 .map { date ->
                     Baselines(
                         hrv = hrvBaselineProvider.getRoundedHrvBaseline(date)?.toFloat(),
                         rhr = rhrBaselineProvider.getRoundedRhrBaseline(date),
                     )
-                }.distinctUntilChanged()
+                }
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        private val bodyTemperatureBaselineFlow =
+            selectedDateRepository.selectedDate
+                .flatMapLatest { date -> bodyTemperatureBaselineProvider.observeBaseline(date) }
+
+        private val baselinesFlow =
+            combine(scoringBaselinesFlow, bodyTemperatureBaselineFlow) { scoring, bodyTemp ->
+                scoring.copy(bodyTemp = bodyTemp)
+            }.distinctUntilChanged()
                 .flowOn(ioDispatcher)
 
         private val selectionFlow =
@@ -95,40 +105,38 @@ class VitalsViewModel
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val contentFlow =
-            selectionFlow
+            combine(selectionFlow, settingsRepo.userPreferences) { selection, prefs -> selection to prefs }
                 .flatMapLatest { selection ->
-                    val fromMs = selection.range.fromMs(selection.date)
-                    val startDayMs = fromMs.truncateToDayMs()
-                    val zoneId = ZoneId.systemDefault()
-                    val startDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
-                    val selectedMidnightMs =
-                        selection
-                            .date
-                            .atStartOfDay(zoneId)
-                            .toInstant()
-                            .toEpochMilli()
+                    val (vitalsSelection, prefs) = selection
+                    val window =
+                        resolveVitalsRangeWindow(
+                            range = vitalsSelection.range,
+                            selectedDate = vitalsSelection.date,
+                            scoringZone = prefs.scoringZone(),
+                        )
                     val latestFlow =
-                        if (selection.date == LocalDate.now(zoneId)) {
-                            val todayMs =
-                                LocalDate
-                                    .now(zoneId)
-                                    .atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli()
-                            dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
+                        if (window.isToday) {
+                            dailySummaryRepository.observeSince(window.selectedMidnightMs).map { it.firstOrNull() }
                         } else {
-                            dailySummaryRepository.observeByDate(selectedMidnightMs)
+                            dailySummaryRepository.observeByDate(window.selectedMidnightMs)
                         }
 
                     combine(
                         latestFlow,
-                        dailySummaryRepository.observeSince(fromMs),
+                        dailySummaryRepository.observeSince(window.fromMs),
                     ) { latest, summaries ->
                         VitalsContentState(
                             latestSummary = latest,
-                            chartSeries = buildVitalsChartSeries(summaries, startDate, selection.range.days),
-                            selection = selection,
-                            rangeStartMs = startDayMs,
+                            chartSeries =
+                                buildVitalsChartSeries(
+                                    summaries,
+                                    window.startDate,
+                                    vitalsSelection.range.days,
+                                    prefs.unitSystem,
+                                    endDate = vitalsSelection.date,
+                                ),
+                            selection = vitalsSelection,
+                            rangeStartMs = window.fromMs,
                         )
                     }.distinctUntilChanged()
                 }.flowOn(ioDispatcher)
@@ -141,6 +149,7 @@ class VitalsViewModel
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                     rhrWarningThreshold = prefs.rhrWarningThreshold,
+                    unitSystem = prefs.unitSystem,
                 )
             }.distinctUntilChanged()
                 .flowOn(ioDispatcher)
@@ -163,7 +172,8 @@ class VitalsViewModel
                 val hasHistoricalData =
                     content.chartSeries.hrv.any { it.value != null } ||
                         content.chartSeries.rhr.any { it.value != null } ||
-                        content.chartSeries.spo2.any { it.value != null }
+                        content.chartSeries.spo2.any { it.value != null } ||
+                        content.chartSeries.bodyTemp.any { it.value != null }
                 VitalsUiState(
                     latestSummary = content.latestSummary,
                     chartSeries = content.chartSeries,

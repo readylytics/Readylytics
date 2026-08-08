@@ -148,6 +148,7 @@ class WalkForwardTransactionEquivalenceTest {
                     bodyFatRecordDao = db.bodyFatRecordDao(),
                     bloodPressureRecordDao = db.bloodPressureRecordDao(),
                     oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
+                    bodyTemperatureRecordDao = db.bodyTemperatureRecordDao(),
                     sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
                     scoringHistoryRepository = scoringHistoryRepository,
                     defaultDispatcher = UnconfinedTestDispatcher(),

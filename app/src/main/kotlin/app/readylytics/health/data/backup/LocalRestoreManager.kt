@@ -258,7 +258,7 @@ class LocalRestoreManager
                         while (reader.hasNext()) {
                             val row = readNextObjectAsString(reader)
                             val entity =
-                                if (schemaVersion == BackupSchemaPolicy.MAX_SUPPORTED_VERSION) {
+                                if (schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION) {
                                     json.decodeFromString<HeartRateRecordEntity>(row)
                                 } else {
                                     json.decodeFromString<LegacyHeartRateRecordBackup>(row).toCurrent()
@@ -278,7 +278,7 @@ class LocalRestoreManager
                         while (reader.hasNext()) {
                             val row = readNextObjectAsString(reader)
                             val entity =
-                                if (schemaVersion == BackupSchemaPolicy.MAX_SUPPORTED_VERSION) {
+                                if (schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION) {
                                     json.decodeFromString<HrvRecordEntity>(row)
                                 } else {
                                     json.decodeFromString<LegacyHrvRecordBackup>(row).toCurrent()

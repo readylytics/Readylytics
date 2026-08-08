@@ -61,6 +61,7 @@ interface ThresholdSettings {
     suspend fun updateHrvWarningThreshold(value: Float)
     suspend fun updateRhrOptimalThreshold(value: Float)
     suspend fun updateRhrWarningThreshold(value: Float)
+    suspend fun updateBodyTempElevatedThreshold(value: Float)
     suspend fun updateConsistencyThresholdMinutes(minutes: Int)
     suspend fun updateConsistencyEvaluationDays(days: Int)
     suspend fun updateConsistencyBaselineDays(days: Int)

@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -167,6 +168,7 @@ class ScoringRepositoryN1Test {
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+        val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
 
         repo =
             ScoringRepositoryImpl(
@@ -186,6 +188,7 @@ class ScoringRepositoryN1Test {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 scoringHistoryRepository = scoringHistoryRepository,
                 defaultDispatcher = UnconfinedTestDispatcher(),

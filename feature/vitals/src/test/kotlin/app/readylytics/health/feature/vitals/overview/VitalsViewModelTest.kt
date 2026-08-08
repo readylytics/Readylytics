@@ -5,12 +5,15 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.scoring.RhrBaselineProvider
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.domain.util.UnitConverter
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -28,6 +31,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -44,6 +48,7 @@ class VitalsViewModelTest {
     private val selectedDateFlow = MutableStateFlow(LocalDate.now())
     private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
     private val syncing = MutableStateFlow(false)
+    private val bodyTemperatureBaseline = MutableStateFlow<Float?>(36.5f)
     private val settingsRepo = FakeUserPreferencesReader()
 
     private lateinit var viewModel: VitalsViewModel
@@ -89,6 +94,11 @@ class VitalsViewModelTest {
         mockk<RhrBaselineProvider> {
             coEvery { getRoundedRhrBaseline(any()) } returns 48
         }
+    private val bodyTemperatureBaselineProvider =
+        mockk<BodyTemperatureBaselineProvider> {
+            coEvery { getBaseline(any()) } answers { bodyTemperatureBaseline.value }
+            every { observeBaseline(any()) } returns bodyTemperatureBaseline
+        }
 
     private fun createViewModel() =
         VitalsViewModel(
@@ -100,6 +110,7 @@ class VitalsViewModelTest {
             savedStateHandle = SavedStateHandle(),
             hrvBaselineProvider = hrvBaselineProvider,
             rhrBaselineProvider = rhrBaselineProvider,
+            bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
             ioDispatcher = testDispatcher,
         )
 
@@ -113,6 +124,7 @@ class VitalsViewModelTest {
                 summary(date = LocalDate.now().minusDays(1), hrv = 40, rhr = 49, spo2 = 95f),
             )
         syncing.value = false
+        bodyTemperatureBaseline.value = 36.5f
     }
 
     @After
@@ -140,6 +152,7 @@ class VitalsViewModelTest {
                 assertSame(before.chartSeries.hrv, during.chartSeries.hrv)
                 assertSame(before.chartSeries.rhr, during.chartSeries.rhr)
                 assertSame(before.chartSeries.spo2, during.chartSeries.spo2)
+                assertSame(before.chartSeries.bodyTemp, during.chartSeries.bodyTemp)
             } finally {
                 collector.cancel()
             }
@@ -250,6 +263,93 @@ class VitalsViewModelTest {
                 assertSame(before.chartSeries.hrv, after.chartSeries.hrv)
                 assertSame(before.chartSeries.rhr, after.chartSeries.rhr)
                 assertSame(before.chartSeries.spo2, after.chartSeries.spo2)
+                assertSame(before.chartSeries.bodyTemp, after.chartSeries.bodyTemp)
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `temperature summaries reach the Vitals chart series`() =
+        runTest {
+            summaries.value =
+                listOf(
+                    summary(date = LocalDate.now(), bodyTemp = 36.7f),
+                )
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                assertEquals(
+                    36.7f,
+                    viewModel.uiState.value.chartSeries.bodyTemp
+                        .last()
+                        .value,
+                )
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `body temperature baseline refreshes presentation without changing selected date or chart series`() =
+        runTest {
+            bodyTemperatureBaseline.value = null
+            settingsRepo.emitUnitSystem(UnitSystem.IMPERIAL)
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                val before = viewModel.uiState.value
+                val selectedDate = selectedDateFlow.value
+
+                bodyTemperatureBaseline.value = 36.5f
+                advanceUntilIdle()
+
+                val after = viewModel.uiState.value
+                assertEquals(
+                    UnitConverter.celsiusToDisplayTemperature(36.5f, UnitSystem.IMPERIAL),
+                    after.presentation.baselineBodyTemp,
+                )
+                assertEquals(selectedDate, selectedDateFlow.value)
+                assertSame(before.chartSeries, after.chartSeries)
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `date navigation ignores emissions from the previous body temperature baseline stream`() =
+        runTest {
+            val initialDate = selectedDateFlow.value
+            val nextDate = initialDate.minusDays(1)
+            val initialDateBaseline = MutableStateFlow<Float?>(36.2f)
+            val nextDateBaseline = MutableStateFlow<Float?>(36.4f)
+            val baselineByDate =
+                mapOf(
+                    initialDate to initialDateBaseline,
+                    nextDate to nextDateBaseline,
+                )
+            every { bodyTemperatureBaselineProvider.observeBaseline(any()) } answers {
+                baselineByDate.getValue(firstArg<LocalDate>())
+            }
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                assertEquals(36.2f, viewModel.uiState.value.presentation.baselineBodyTemp)
+
+                selectedDateFlow.value = nextDate
+                advanceUntilIdle()
+                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+
+                initialDateBaseline.value = 37.1f
+                advanceUntilIdle()
+                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+
+                nextDateBaseline.value = 36.5f
+                advanceUntilIdle()
+                assertEquals(36.5f, viewModel.uiState.value.presentation.baselineBodyTemp)
             } finally {
                 collector.cancel()
             }
@@ -260,12 +360,14 @@ class VitalsViewModelTest {
         hrv: Int? = null,
         rhr: Int? = null,
         spo2: Float? = null,
+        bodyTemp: Float? = null,
     ): DailySummary =
         DailySummary(
             date = date,
             nocturnalHrv = hrv,
             restingHeartRate = rhr,
             avgSleepingSpo2 = spo2,
+            avgSleepingBodyTemp = bodyTemp,
             isCalibrating = false,
         )
 
@@ -286,6 +388,10 @@ class VitalsViewModelTest {
                     hrvOptimalThreshold = optimal,
                     hrvWarningThreshold = warning,
                 )
+        }
+
+        fun emitUnitSystem(unitSystem: UnitSystem) {
+            preferences.value = preferences.value.copy(unitSystem = unitSystem)
         }
     }
 }

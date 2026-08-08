@@ -30,11 +30,13 @@ import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
@@ -72,6 +74,8 @@ class DashboardViewModel
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
         private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
+        private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
+        private val healthConnectRepository: HealthConnectRepository,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
@@ -82,7 +86,10 @@ class DashboardViewModel
                 Result.failure("Cannot select future dates", "INVALID_DATE")
             }
 
-        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
+        private val cardManagementDelegate =
+            CardManagementDelegate(cardConfigRepository, viewModelScope) {
+                healthConnectRepository.hasBodyTemperaturePermission()
+            }
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
@@ -99,12 +106,14 @@ class DashboardViewModel
                     settingsRepo,
                     circadianRepo,
                     insightDismissalRepository,
+                    bodyTemperatureBaselineProvider,
                 ),
                 createDashboardCardStateFlow(
                     selectedDateRepository.selectedDate,
                     cardManagementDelegate,
                     cardConfigRepository,
                     dailySummaryRepository,
+                    healthConnectRepository,
                 ),
                 createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
                 observeDashboardStrainIncreaseUseCase(
@@ -157,6 +166,7 @@ class DashboardViewModel
                     circadianResult = basicInputs.circadianResult,
                     heartRateSummary = hrSummary,
                     todayStrainIncrease = todayStrainIncrease,
+                    bodyTempBaseline = basicInputs.bodyTempBaseline,
                 )
 
             val cards = cardsResult.getOrNull()

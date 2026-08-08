@@ -15,13 +15,14 @@ import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
+import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.feature.vitals.R
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import app.readylytics.health.core.ui.R as CoreUiR
 
 /**
- * The three Vico trend charts (HRV, RHR, SpO2) on the Vitals screen. Takes only [VitalsChartInputs]
+ * The four Vico trend charts (HRV, RHR, SpO2, body temperature) on the Vitals screen. Takes only [VitalsChartInputs]
  * (never the raw [VitalsUiState]) so gauge-only or refresh-only state changes never recompose the
  * chart subtree -- this is the guarantee F1/F5 exist to provide.
  */
@@ -137,6 +138,52 @@ internal fun VitalsTrendSection(
                         baselineDecimalPlaces = 0,
                         minYOverride = 90.0,
                         maxYOverride = 100.0,
+                        parentScrollInProgress = parentScrollInProgress,
+                    )
+                }
+            },
+        )
+
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+
+        // Chart 4: Body Temperature Trend
+        CardLoader(
+            isLoading = chartInputs.isLoading,
+            skeleton = {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    height = 250.dp,
+                )
+            },
+            content = {
+                TrendCard(
+                    title = stringResource(CoreUiR.string.label_body_temperature),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                ) {
+                    TrendChart(
+                        points = chartSeries.bodyTemp,
+                        rangeStartMs = chartInputs.rangeStartMs,
+                        rangeDays = chartInputs.selectedRange.days,
+                        metricName = stringResource(CoreUiR.string.label_body_temperature),
+                        baselineUnit =
+                            if (presentation.bodyTempUnitSystem == UnitSystem.IMPERIAL) {
+                                stringResource(CoreUiR.string.unit_fahrenheit)
+                            } else {
+                                stringResource(CoreUiR.string.unit_celsius)
+                            },
+                        modifier = Modifier.testTag("BodyTemperatureTrendChart"),
+                        baseline = presentation.baselineBodyTemp,
+                        showBaseline = presentation.baselineBodyTemp != null,
+                        baselineUnavailableLabel =
+                            if (presentation.baselineBodyTemp == null) {
+                                stringResource(CoreUiR.string.body_temperature_calibrating)
+                            } else {
+                                null
+                            },
+                        baselineDecimalPlaces = 1,
+                        axisDecimalPlaces = 1,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                         parentScrollInProgress = parentScrollInProgress,
                     )
                 }

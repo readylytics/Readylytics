@@ -2,6 +2,7 @@ package app.readylytics.health.data.healthconnect
 
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -11,6 +12,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -120,5 +122,13 @@ fun OxygenSaturationRecord.toDomain(): DomainOxygenSaturationRecord =
         id = metadata.id,
         time = time,
         percentage = percentage.value.toFloat(),
+        deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+    )
+
+fun BodyTemperatureRecord.toDomain(): DomainBodyTemperatureRecord =
+    DomainBodyTemperatureRecord(
+        id = metadata.id,
+        time = time,
+        celsius = temperature.inCelsius.toFloat(),
         deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
     )

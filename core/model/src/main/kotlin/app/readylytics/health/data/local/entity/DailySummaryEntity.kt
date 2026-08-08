@@ -55,6 +55,7 @@ data class DailySummaryEntity(
     val bloodPressureSystolic: Int? = null,
     val bloodPressureDiastolic: Int? = null,
     val avgSleepingSpo2: Float? = null,
+    val avgSleepingBodyTemp: Float? = null,
     // Point-in-time baseline snapshots (Task B)
     @ColumnInfo(name = "hrv_mu_mssd")
     val hrvMuMssd: Float? = null,
