@@ -28,6 +28,17 @@ class M3MetricBarTest {
     }
 
     @Test
+    fun visibleTickFractions_withCapCoverage_excludesTicksInsideTheFillCapOverhang() {
+        // A tick nominally just past `progress` (0.2 > 0.16) would previously stay visible, but the
+        // fill's round cap overhangs `capCoverageFraction` past the raw progress, so it must hide.
+        assertEquals(listOf(0.4f, 0.6f, 0.8f), visibleTickFractions(0.16f, 0.05f))
+        // A tick that clears the overhang stays visible (0.16 + 0.03 < 0.2).
+        assertEquals(listOf(0.2f, 0.4f, 0.6f, 0.8f), visibleTickFractions(0.16f, 0.03f))
+        // Zero coverage keeps the pure-filtering behaviour.
+        assertEquals(visibleTickFractions(0.16f), visibleTickFractions(0.16f, 0f))
+    }
+
+    @Test
     fun fillEndCenterX_clampsSoTheFillNeverOvershootsTheTrack() {
         val width = 200f
         val strokeWidth = 10f

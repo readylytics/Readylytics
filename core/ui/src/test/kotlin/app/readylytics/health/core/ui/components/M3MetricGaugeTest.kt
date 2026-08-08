@@ -70,6 +70,26 @@ class M3MetricGaugeTest {
     }
 
     @Test
+    fun arcTickCapCoverageFraction_offsetsTicksInsideTheArcCapOverhang() {
+        val sweep = 240f
+        val radius = 60f
+        val stroke = 12f
+        val coverage = arcTickCapCoverageFraction(stroke, radius, sweep)
+        // Semi-stroke over the radius, converted to a small fraction of the sweep.
+        assertEquals(Math.toDegrees((stroke / 2f / radius).toDouble()).toFloat() / sweep, coverage)
+        assertTrue(coverage in 0.01f..0.05f)
+        // A tick at 0.2 is within `coverage` of progress 0.18 and must be hidden, mirroring how the
+        // gauge filters its ticks against progressToDraw + capCoverageFraction.
+        val progress = 0.18f
+        val visible = floatArrayOf(0.2f, 0.4f, 0.6f, 0.8f).filter { it > progress + coverage }
+        assertEquals(listOf(0.4f, 0.6f, 0.8f), visible)
+        // Degenerate inputs never explode the filter into hiding everything.
+        assertEquals(0f, arcTickCapCoverageFraction(0f, radius, sweep))
+        assertEquals(0f, arcTickCapCoverageFraction(stroke, 0f, sweep))
+        assertEquals(0f, arcTickCapCoverageFraction(stroke, radius, 0f))
+    }
+
+    @Test
     fun metricGauge_acceptsNullMarker_andClampsOutsideRange_withSingleTrackContract() {
         composeTestRule.setContent {
             M3MetricGauge(

@@ -150,6 +150,7 @@ fun UniversalBarRenderer(
             progressFraction = progressFraction,
             activeColor = activeColor,
             trackColor = trackColor,
+            markerColor = presentation.status.containerColor(),
             barHeight = MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS,
             animateProgress = false,
             modifier =
