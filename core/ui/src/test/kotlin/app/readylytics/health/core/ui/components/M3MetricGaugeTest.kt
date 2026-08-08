@@ -1,7 +1,13 @@
 package app.readylytics.health.core.ui.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -22,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -206,5 +213,34 @@ class M3MetricGaugeTest {
             .onNodeWithTag("metric_gauge_value_overlay", useUnmergedTree = true)
             .assertExists()
             .assertHeightIsAtLeast(1.dp)
+    }
+
+    @Test
+    fun metricGaugeWithValue_longValue_rendersFullTextWithoutTruncation() {
+        composeTestRule.setContent {
+            Box(
+                modifier = Modifier.width(140.dp).height(120.dp),
+            ) {
+                M3MetricGaugeWithValue(
+                    markerFraction = 0.7f,
+                    activeColor = Color.Green,
+                    markerColor = Color.White,
+                    valueText = "142.8",
+                    unitText = "kg",
+                    valueColor = Color.White,
+                    unitColor = Color.Gray,
+                    animateMarker = false,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        val valueNode = composeTestRule.onNodeWithText("142.8", substring = false)
+        valueNode.assertExists()
+        val valueSemantics = valueNode.fetchSemanticsNode()
+        val valueText = valueSemantics.config[SemanticsProperties.Text].joinToString("") { it.text }
+        assertFalse(valueText.contains('\u2026'))
+        assertEquals("142.8", valueText)
+        assertTrue(valueSemantics.boundsInRoot.width <= 140.dp.value)
     }
 }

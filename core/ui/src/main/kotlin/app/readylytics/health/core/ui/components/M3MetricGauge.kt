@@ -6,14 +6,18 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -23,15 +27,20 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.readylytics.health.core.designsystem.dimens
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+
+private val GAUGE_VALUE_MIN_FONT_SIZE = 16.sp
+private val GAUGE_UNIT_MIN_FONT_SIZE = 9.sp
 
 @Composable
 fun metricVisualizationTrackColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
@@ -196,10 +205,36 @@ fun M3MetricGaugeWithValue(
     modifier: Modifier = Modifier,
     animateMarker: Boolean = true,
 ) {
-    Box(
+    BoxWithConstraints(
         modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
+        val density = LocalDensity.current
+        val trackThickness = MaterialTheme.dimens.metricTrackThickness
+        val verticalOffset = MaterialTheme.dimens.metricGaugeValueVerticalOffset
+        val unitSpacing = MaterialTheme.dimens.metricGaugeValueUnitSpacing
+
+        val activeStrokeWidthPx = with(density) { (trackThickness + 2.dp).toPx() }
+        val canvasSizePx = with(density) { Size(maxWidth.toPx(), maxHeight.toPx()) }
+        val geometry = resolveHorseshoeGaugeGeometry(canvasSizePx, activeStrokeWidthPx)
+        val textBlockCenterYOffsetPx =
+            with(density) { (maxHeight / 2f + verticalOffset).toPx() } - geometry.center.y
+        val textBlockHeightPx =
+            with(density) {
+                MaterialTheme.typography.headlineMedium.lineHeight.toPx() +
+                    unitSpacing.toPx() +
+                    MaterialTheme.typography.labelSmall.lineHeight.toPx()
+            }
+        val textBoundsPx =
+            resolveGaugeTextBoundsPx(
+                geometry = geometry,
+                trackInsetPx = activeStrokeWidthPx,
+                textBlockCenterYOffsetPx = textBlockCenterYOffsetPx,
+                textBlockHeightPx = textBlockHeightPx,
+            )
+        val textBoundsWidth = with(density) { textBoundsPx.width.toDp() }
+        val textBoundsHeight = with(density) { textBoundsPx.height.toDp() }
+
         M3MetricGauge(
             markerFraction = markerFraction,
             activeColor = activeColor,
@@ -213,10 +248,12 @@ fun M3MetricGaugeWithValue(
             verticalArrangement = Arrangement.Center,
             modifier =
                 Modifier
-                    .offset(y = MaterialTheme.dimens.metricGaugeValueVerticalOffset)
+                    .offset(y = verticalOffset)
+                    .widthIn(max = textBoundsWidth)
+                    .heightIn(max = textBoundsHeight)
                     .testTag("metric_gauge_value_overlay"),
         ) {
-            Text(
+            BasicText(
                 text = valueText,
                 style =
                     MaterialTheme.typography.headlineMedium.copy(
@@ -226,27 +263,39 @@ fun M3MetricGaugeWithValue(
                                 trim = LineHeightStyle.Trim.Both,
                             ),
                     ),
-                color = valueColor,
+                color = { valueColor },
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
                 modifier = Modifier.weight(1f, fill = false),
+                autoSize =
+                    TextAutoSize.StepBased(
+                        minFontSize = GAUGE_VALUE_MIN_FONT_SIZE,
+                        maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
+                        stepSize = 1.sp,
+                    ),
             )
             if (unitText.isNotBlank()) {
-                Spacer(Modifier.height(MaterialTheme.dimens.metricGaugeValueUnitSpacing))
-                Text(
+                Spacer(Modifier.height(unitSpacing))
+                BasicText(
                     text = unitText,
                     style =
                         MaterialTheme.typography.labelSmall.copy(
+                            textAlign = TextAlign.Center,
                             lineHeightStyle =
                                 LineHeightStyle(
                                     alignment = LineHeightStyle.Alignment.Center,
                                     trim = LineHeightStyle.Trim.Both,
                                 ),
                         ),
-                    color = unitColor,
-                    textAlign = TextAlign.Center,
+                    color = { unitColor },
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Clip,
+                    autoSize =
+                        TextAutoSize.StepBased(
+                            minFontSize = GAUGE_UNIT_MIN_FONT_SIZE,
+                            maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                            stepSize = 1.sp,
+                        ),
                 )
             }
         }
