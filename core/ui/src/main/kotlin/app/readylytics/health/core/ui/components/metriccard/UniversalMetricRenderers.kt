@@ -53,6 +53,16 @@ fun UniversalMetricVisual.progressFraction(): Float? =
 // cannot be squeezed away at large font scales.
 private val UNIVERSAL_SECONDARY_SLOT_HEIGHT = 20.dp
 
+// Shared inset for the secondary line under the value/bar: the pill's inner text and the plain
+// secondary text both apply it, so every card's second line starts at the same horizontal offset
+// regardless of whether it renders as a pill or as plain text.
+@Composable
+private fun Modifier.secondaryTextInset(): Modifier =
+    padding(
+        horizontal = MaterialTheme.spacing.small,
+        vertical = MaterialTheme.spacing.hairline,
+    )
+
 @Composable
 fun UniversalGaugeRenderer(
     presentation: UniversalMetricPresentation,
@@ -104,6 +114,7 @@ fun UniversalGaugeRenderer(
                         color = contentColor.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.secondaryTextInset(),
                     )
                 }
             }
@@ -218,6 +229,7 @@ private fun UniversalValueUnitColumn(
                         color = contentColor.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.secondaryTextInset(),
                     )
                 }
             }
@@ -241,10 +253,8 @@ private fun UniversalMetricDeltaPill(deltaText: String) {
             style = MaterialTheme.typography.labelSmall,
             modifier =
                 Modifier
-                    .padding(
-                        horizontal = MaterialTheme.spacing.small,
-                        vertical = MaterialTheme.spacing.hairline,
-                    ).testTag(UNIVERSAL_DELTA_PILL_TAG),
+                    .secondaryTextInset()
+                    .testTag(UNIVERSAL_DELTA_PILL_TAG),
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
