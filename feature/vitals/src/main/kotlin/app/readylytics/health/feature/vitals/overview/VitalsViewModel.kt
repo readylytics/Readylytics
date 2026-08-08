@@ -79,15 +79,24 @@ class VitalsViewModel
             )
         val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()
 
-        private val baselinesFlow =
+        private val scoringBaselinesFlow =
             selectedDateRepository.selectedDate
                 .map { date ->
                     Baselines(
                         hrv = hrvBaselineProvider.getRoundedHrvBaseline(date)?.toFloat(),
                         rhr = rhrBaselineProvider.getRoundedRhrBaseline(date),
-                        bodyTemp = bodyTemperatureBaselineProvider.getBaseline(date),
                     )
-                }.distinctUntilChanged()
+                }
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        private val bodyTemperatureBaselineFlow =
+            selectedDateRepository.selectedDate
+                .flatMapLatest { date -> bodyTemperatureBaselineProvider.observeBaseline(date) }
+
+        private val baselinesFlow =
+            combine(scoringBaselinesFlow, bodyTemperatureBaselineFlow) { scoring, bodyTemp ->
+                scoring.copy(bodyTemp = bodyTemp)
+            }.distinctUntilChanged()
                 .flowOn(ioDispatcher)
 
         private val selectionFlow =

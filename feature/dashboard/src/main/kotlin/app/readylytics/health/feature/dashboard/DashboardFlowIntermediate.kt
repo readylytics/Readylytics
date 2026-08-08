@@ -125,12 +125,7 @@ fun createDashboardBasicInputsFlow(
                 insightDismissalRepository
                     .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
 
-            val bodyTempBaselineFlow =
-                flow {
-                    emit(
-                        bodyTemperatureBaselineProvider.getBaseline(date),
-                    )
-                }
+            val bodyTempBaselineFlow = bodyTemperatureBaselineProvider.observeBaseline(date)
 
             // Combine all basic inputs
             combine(
