@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,13 +19,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.M3MetricBar
 import app.readylytics.health.core.ui.components.M3MetricGaugeWithValue
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.gaugeColor
@@ -133,18 +132,17 @@ fun UniversalBarRenderer(
         secondaryUsesPill = secondaryUsesPill,
         modifier = modifier,
     ) {
-        val progress = progressFraction?.coerceIn(0f, 1f) ?: 0f
-        LinearProgressIndicator(
-            progress = { progress },
+        M3MetricBar(
+            progressFraction = progressFraction,
+            activeColor = activeColor,
+            trackColor = trackColor,
+            barHeight = MaterialTheme.dimens.metricTrackThickness,
+            animateProgress = false,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(MaterialTheme.dimens.metricTrackThickness)
                     .padding(horizontal = MaterialTheme.spacing.extraSmall)
                     .testTag(UNIVERSAL_BAR_TAG),
-            color = activeColor,
-            trackColor = trackColor,
-            strokeCap = StrokeCap.Round,
         )
     }
 }
