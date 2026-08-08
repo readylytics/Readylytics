@@ -198,9 +198,7 @@ class DashboardViewModelTest {
             every {
                 observeDashboardStrainIncreaseUseCase.invoke(any(), any())
             } returns flowOf(0.23f)
-            // MockK's relaxed default for a suspend fun returning Float? is 0f, not null --
-            // stub explicitly so bodyTempBaseline resolves to null like the other basic inputs.
-            coEvery { bodyTemperatureBaselineProvider.getBaseline(any()) } returns null
+            every { bodyTemperatureBaselineProvider.observeBaseline(any()) } returns flowOf(null)
             coEvery { healthConnectRepository.hasBodyTemperaturePermission() } returns true
             every {
                 getDashboardDataUseCase.invoke(

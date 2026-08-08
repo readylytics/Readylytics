@@ -396,8 +396,9 @@ formula:
   (`core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineProvider.kt`)
   exposes `observeBaseline(date)` for one selected date at a time — mirroring how
   `HrvBaselineProvider` is consumed — by observing `DailySummaryRepository` emissions for the
-  14-day window and delegating to the calculator. Room summary emissions (including recalculation
-  and scoring-zone changes) therefore recompute this display-only baseline reactively.
+  14-day window and delegating to the calculator. Room summary emissions (including recalculation)
+  recompute this display-only baseline reactively, while scoring-zone preference changes
+  independently resubscribe its window.
 - **Elevated-deviation threshold.** A user-configurable preference,
   `UserPreferences.bodyTempElevatedThresholdCelsius`
   (`core/model/src/main/kotlin/app/readylytics/health/data/preferences/UserPreferences.kt`), default
@@ -425,9 +426,10 @@ formula:
   revoked permission both hides the card and cannot silently re-enable it later.
 - **Vitals trend chart.** `VitalsViewModel` (`feature/vitals/.../overview/VitalsViewModel.kt`) observes
   the per-day baseline via `BodyTemperatureBaselineProvider.observeBaseline(date)` alongside the existing
-  HRV/RHR/SpO2 trend series. Room summary or scoring-zone emissions recalculate the display-only
-  baseline stream, so the baseline/legend remains aligned with chart summary updates without date
-  navigation. `VitalsStateFactory` converts the raw/baseline Celsius values to the display unit and
+  HRV/RHR/SpO2 trend series. Room summary emissions (including recalculation) recalculate the
+  display-only baseline stream, while scoring-zone preference changes independently resubscribe its
+  window, so the baseline/legend remains aligned with chart summary updates without date navigation.
+  `VitalsStateFactory` converts the raw/baseline Celsius values to the display unit and
   derives fixed chart-axis bounds (35.5–39.0 °C, unit-converted). `VitalsTrendSection` renders it as
   a fourth `TrendChart`/`TrendCard` (test tag `BodyTemperatureTrendChart`) with the baseline plotted
   as a reference line, using the same shared Vico chart component as the other Vitals trends — no
