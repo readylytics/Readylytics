@@ -14,11 +14,13 @@ class SleepTrendDayAssemblerTest {
     fun `total uses core cluster and supplemental blocks while core interval stays main sleep`() {
         val coreStart = at(2026, 8, 1, 23, 0)
         val coreEnd = at(2026, 8, 2, 7, 0)
-        val napStart = at(2026, 8, 2, 13, 0)
+        val firstNapStart = at(2026, 8, 2, 13, 0)
+        val secondNapStart = at(2026, 8, 2, 14, 0)
         val segments =
             listOf(
-                segment("core", coreStart, coreEnd, durationMinutes = 510),
-                segment("nap", napStart, at(2026, 8, 2, 13, 35)),
+                segment("core", coreStart, coreEnd),
+                segment("nap-1", firstNapStart, at(2026, 8, 2, 13, 35)),
+                segment("nap-2", secondNapStart, at(2026, 8, 2, 14, 30)),
             )
 
         val days = SleepTrendDayAssembler.assemble(segments, LocalDate.of(2026, 8, 2), 1, policy())
@@ -26,8 +28,11 @@ class SleepTrendDayAssemblerTest {
         assertEquals(545, days.single().totalDurationMinutes)
         assertEquals(coreStart.toInstant().toEpochMilli(), days.single().coreStartTimeMs)
         assertEquals(coreEnd.toInstant().toEpochMilli(), days.single().coreEndTimeMs)
-        assertEquals(listOf(napStart.toInstant().toEpochMilli()), days.single().naps.map { it.startTimeMs })
-        assertEquals(35, days.single().naps.single().durationMinutes)
+        assertEquals(
+            listOf(firstNapStart.toInstant().toEpochMilli(), secondNapStart.toInstant().toEpochMilli()),
+            days.single().naps.map { it.startTimeMs },
+        )
+        assertEquals(listOf(35, 30), days.single().naps.map { it.durationMinutes })
     }
 
     @Test
@@ -41,9 +46,9 @@ class SleepTrendDayAssemblerTest {
     }
 
     @Test
-    fun `uses cutoff assignment and minimum duration filtering from aggregator`() {
+    fun `assigns qualifying segment at cutoff to following score day`() {
         val beforeCutoff = segment("before", at(2026, 8, 1, 13, 59), at(2026, 8, 1, 14, 29))
-        val atCutoff = segment("at-cutoff", at(2026, 8, 1, 15, 0), at(2026, 8, 1, 15, 20))
+        val atCutoff = segment("at-cutoff", at(2026, 8, 1, 15, 0), at(2026, 8, 1, 15, 30))
 
         val result = SleepTrendDayAssembler.assemble(
             listOf(beforeCutoff, atCutoff),
@@ -53,7 +58,8 @@ class SleepTrendDayAssemblerTest {
         )
 
         assertEquals(30, result[0].totalDurationMinutes)
-        assertEquals(null, result[1].totalDurationMinutes)
+        assertEquals(30, result[1].totalDurationMinutes)
+        assertEquals(atCutoff.startTimeMs, result[1].coreStartTimeMs)
     }
 
     @Test
@@ -80,7 +86,7 @@ class SleepTrendDayAssemblerTest {
     }
 
     @Test
-    fun `emits empty days and sorts naps by start time then stable id`() {
+    fun `emits empty days and sorts naps by start time`() {
         val later = segment("z", at(2026, 8, 2, 13, 0), at(2026, 8, 2, 13, 30))
         val earlier = segment("b", at(2026, 8, 2, 12, 0), at(2026, 8, 2, 12, 30))
         val core = segment("core", at(2026, 8, 1, 23, 0), at(2026, 8, 2, 7, 0))
@@ -96,6 +102,20 @@ class SleepTrendDayAssemblerTest {
         assertEquals(emptyList(), result[0].naps)
         assertEquals(null, result[2].coreStartTimeMs)
         assertEquals(listOf(earlier.startTimeMs, later.startTimeMs), result[1].naps.map { it.startTimeMs })
+    }
+
+    @Test
+    fun `uses stable id tie break for equal start segments before projection`() {
+        val napB = segment("nap-b", at(2026, 8, 2, 13, 0), at(2026, 8, 2, 13, 30))
+        val napA = segment("nap-a", at(2026, 8, 2, 13, 0), at(2026, 8, 2, 13, 30))
+        val reversedSegments = listOf(napB, napA)
+
+        val aggregate = SleepDayAggregator.aggregate(reversedSegments, policy()).aggregates.single()
+        val result = SleepTrendDayAssembler.assemble(reversedSegments, LocalDate.of(2026, 8, 2), 1, policy())
+
+        assertEquals("nap-a", aggregate.coreCluster.stableSessionTieBreakId)
+        assertEquals(emptyList(), result.single().naps)
+        assertEquals(30, result.single().totalDurationMinutes)
     }
 
     private fun policy(minimumCountedSleepSegmentMinutes: Int = 30): SleepDayPolicy =
