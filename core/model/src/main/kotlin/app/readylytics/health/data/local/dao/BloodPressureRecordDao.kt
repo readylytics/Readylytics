@@ -60,6 +60,15 @@ interface BloodPressureRecordDao {
     @Upsert
     suspend fun upsertAll(records: List<BloodPressureRecordEntity>)
 
+    @Query(
+        "SELECT * FROM blood_pressure_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<BloodPressureRecordEntity>
+
     @Query("DELETE FROM blood_pressure_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 

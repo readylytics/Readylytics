@@ -63,6 +63,15 @@ interface WeightRecordDao {
     @Upsert
     suspend fun upsertAll(records: List<WeightRecordEntity>)
 
+    @Query(
+        "SELECT * FROM weight_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<WeightRecordEntity>
+
     @Query("DELETE FROM weight_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
