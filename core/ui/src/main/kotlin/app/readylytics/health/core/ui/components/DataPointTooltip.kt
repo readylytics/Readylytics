@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -31,7 +33,9 @@ data class DataPointTooltipData(
     val valueText: String,
     val dateText: String,
     val offset: IntOffset = IntOffset(0, 0),
-    // Optional third line rendered below dateText; null omits the row entirely.
+    // Optional lines rendered after dateText and before extraLine.
+    val preDateLines: List<String> = emptyList(),
+    // Optional line rendered below preDateLines; null omits the row entirely.
     val extraLine: String? = null,
 )
 
@@ -141,7 +145,7 @@ fun DataPointTooltip(
                             .padding(horizontal = MaterialTheme.spacing.small),
                 ) {
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                        horizontalAlignment = Alignment.Start,
                         modifier =
                             Modifier
                                 .padding(
@@ -155,12 +159,21 @@ fun DataPointTooltip(
                             text = data.valueText,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.inverseOnSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
                         )
                         Text(
                             text = data.dateText,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
                         )
+                        data.preDateLines.forEach { line ->
+                            Text(
+                                text = line,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
+                            )
+                        }
                         data.extraLine?.let { extra ->
                             Text(
                                 text = extra,

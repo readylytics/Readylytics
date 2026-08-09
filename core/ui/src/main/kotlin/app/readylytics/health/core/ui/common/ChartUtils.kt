@@ -20,10 +20,16 @@ object ChartUtils {
     fun dayOffsetToLocalDate(
         dayOffset: Int,
         rangeStartMs: Long,
+    ): LocalDate = dayOffsetToLocalDate(dayOffset, rangeStartMs, ZoneId.systemDefault())
+
+    fun dayOffsetToLocalDate(
+        dayOffset: Int,
+        rangeStartMs: Long,
+        zoneId: ZoneId,
     ): LocalDate =
         Instant
             .ofEpochMilli(rangeStartMs)
-            .atZone(ZoneId.systemDefault())
+            .atZone(zoneId)
             .toLocalDate()
             .plusDays(dayOffset.toLong())
 
