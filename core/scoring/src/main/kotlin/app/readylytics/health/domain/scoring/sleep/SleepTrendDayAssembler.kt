@@ -20,6 +20,7 @@ object SleepTrendDayAssembler {
             val aggregate = aggregatesByDay[scoreDay]
             if (aggregate == null) {
                 SleepTrendDay(
+                    dayOffset = offset,
                     scoreDay = scoreDay,
                     coreStartTimeMs = null,
                     coreEndTimeMs = null,
@@ -28,6 +29,7 @@ object SleepTrendDayAssembler {
                 )
             } else {
                 SleepTrendDay(
+                    dayOffset = offset,
                     scoreDay = scoreDay,
                     coreStartTimeMs = aggregate.coreCluster.startTimeMs,
                     coreEndTimeMs = aggregate.coreCluster.endTimeMs,

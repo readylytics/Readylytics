@@ -9,6 +9,7 @@ data class SleepTrendNap(
 )
 
 data class SleepTrendDay(
+    val dayOffset: Int,
     val scoreDay: LocalDate,
     val coreStartTimeMs: Long?,
     val coreEndTimeMs: Long?,
