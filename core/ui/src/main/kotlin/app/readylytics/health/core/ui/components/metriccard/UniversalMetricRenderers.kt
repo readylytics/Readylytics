@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
@@ -52,6 +53,11 @@ fun UniversalMetricVisual.progressFraction(): Float? =
 private val UNIVERSAL_SECONDARY_SLOT_HEIGHT = 20.dp
 private val UNIVERSAL_TRACK_SECONDARY_GAP = 6.dp
 private val UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS = 4.dp
+
+// Single source of truth for the bar's rendered track height, so a future thickness tweak cannot
+// resize the painted bar in one place while its reserved slot stays the same elsewhere.
+private val universalBarTrackThickness: Dp
+    @Composable get() = MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS
 
 // Internal inset for the delta pill's label. Plain secondary text is anchored directly to the
 // renderer's content edge so it shares the card's bottom-start anchor with the pill surface.
@@ -150,7 +156,8 @@ fun UniversalBarRenderer(
             progressFraction = progressFraction,
             activeColor = activeColor,
             trackColor = trackColor,
-            barHeight = MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS,
+            markerColor = presentation.status.containerColor(),
+            barHeight = universalBarTrackThickness,
             animateProgress = false,
             modifier =
                 Modifier
@@ -172,71 +179,52 @@ private fun UniversalValueUnitColumn(
     modifier: Modifier = Modifier,
     track: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        bottom =
-                            UNIVERSAL_SECONDARY_SLOT_HEIGHT +
-                                UNIVERSAL_TRACK_SECONDARY_GAP +
-                                MaterialTheme.dimens.metricTrackThickness +
-                                UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS,
-                    ),
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            // Elastic: the value/unit line keeps its natural height while the card has room and
+            // gives way first under font-scale pressure, so the fixed-height track and the
+            // secondary slot below it are never pushed out of the card.
+            modifier = Modifier.weight(1f, fill = false),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
         ) {
-            Row(
-                // Elastic: the value/unit line keeps its natural height while the card has room and
-                // gives way first under font-scale pressure, so the fixed-height track and the
-                // secondary slot below it are never pushed out of the card.
-                modifier = Modifier.weight(1f, fill = false),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
-            ) {
+            Text(
+                text = presentation.valueText,
+                // Same plain typography token as Value mode: no bold, no custom
+                // letter-spacing, no length-based branching.
+                style = MaterialTheme.typography.displaySmall,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                // Baseline (not bounding-box bottom) alignment so the small unit label sits on
+                // the same baseline as the much larger value, the way "56 bpm" is normally set.
+                modifier = Modifier.alignByBaseline(),
+            )
+            if (presentation.unitText.isNotBlank()) {
                 Text(
-                    text = presentation.valueText,
-                    // Same plain typography token as Value mode: no bold, no custom
-                    // letter-spacing, no length-based branching.
-                    style = MaterialTheme.typography.displaySmall,
-                    color = contentColor,
+                    text = presentation.unitText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    // Baseline (not bounding-box bottom) alignment so the small unit label sits on
-                    // the same baseline as the much larger value, the way "56 bpm" is normally set.
                     modifier = Modifier.alignByBaseline(),
                 )
-                if (presentation.unitText.isNotBlank()) {
-                    Text(
-                        text = presentation.unitText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = contentColor.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.alignByBaseline(),
-                    )
-                }
             }
-
-            // Tight gaps around the track: with the larger displaySmall value and the thicker track,
-            // the column's fixed elements still have to fit the value line's full height at font
-            // scale 1.0, and the weighted value row above is the single element that yields further.
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
         }
 
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
         Box(
             modifier =
                 Modifier
-                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(bottom = UNIVERSAL_SECONDARY_SLOT_HEIGHT + UNIVERSAL_TRACK_SECONDARY_GAP)
-                    .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS),
+                    .height(universalBarTrackThickness),
         ) {
             track()
         }
 
+        Spacer(modifier = Modifier.height(UNIVERSAL_TRACK_SECONDARY_GAP))
         Box(
             modifier =
                 Modifier
-                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .height(UNIVERSAL_SECONDARY_SLOT_HEIGHT),
             contentAlignment = Alignment.BottomStart,
@@ -303,7 +291,7 @@ fun UniversalValueRenderer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS),
+                    .height(universalBarTrackThickness),
         )
     }
 }

@@ -101,6 +101,7 @@ fun SyncProgressScreen(
                 activeColor = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.secondaryContainer,
                 barHeight = MaterialTheme.dimens.syncProgressBarThickness,
+                markerDiameter = MaterialTheme.dimens.syncProgressBarThickness,
                 animateProgress = false,
                 modifier = Modifier.fillMaxWidth(),
             )

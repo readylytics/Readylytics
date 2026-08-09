@@ -118,6 +118,19 @@ class SleepTrendDayAssemblerTest {
         assertEquals(30, result.single().totalDurationMinutes)
     }
 
+    @Test
+    fun `emits dayOffset matching list index for populated and gap days`() {
+        val core = segment("core", at(2026, 8, 1, 23, 0), at(2026, 8, 2, 7, 0))
+
+        val result = SleepTrendDayAssembler.assemble(listOf(core), LocalDate.of(2026, 8, 1), 3, policy())
+
+        assertEquals(listOf(0, 1, 2), result.map { it.dayOffset })
+        assertEquals(0, result[0].dayOffset)
+        assertEquals(LocalDate.of(2026, 8, 1), result[0].scoreDay)
+        assertEquals(2, result[2].dayOffset)
+        assertEquals(null, result[2].coreStartTimeMs)
+    }
+
     private fun policy(minimumCountedSleepSegmentMinutes: Int = 30): SleepDayPolicy =
         SleepDayPolicy(90, 15 * 60, minimumCountedSleepSegmentMinutes, 70, berlin)
 

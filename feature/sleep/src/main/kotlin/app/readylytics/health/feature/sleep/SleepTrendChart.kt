@@ -154,7 +154,8 @@ fun SleepTrendChart(
     val napsHeading = stringResource(R.string.sleep_trend_tooltip_naps_heading)
     val napItemFormat = stringResource(R.string.sleep_trend_tooltip_nap_item_format)
     val hoursOnlyFormat = stringResource(CoreUiR.string.sleep_duration_hours_only)
-    val clockFormatter = DateFormat.getTimeFormat(LocalContext.current)
+    val context = LocalContext.current
+    val clockFormatter = remember(context) { DateFormat.getTimeFormat(context) }
 
     var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker =

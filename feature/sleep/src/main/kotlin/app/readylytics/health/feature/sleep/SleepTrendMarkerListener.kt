@@ -24,11 +24,12 @@ fun rememberSleepTrendMarkerVisibilityListener(
     val startOffsetMap = remember(startOffsetPoints) { startOffsetPoints.associateBy { it.dayOffset } }
     val durationSpanMap = remember(durationSpanPoints) { durationSpanPoints.associateBy { it.dayOffset } }
     val actualDurationMap = remember(actualDurationPoints) { actualDurationPoints.associateBy { it.dayOffset } }
+    val trendDayMap = remember(trendDays) { trendDays.associateBy { it.dayOffset } }
 
     val currentOnStateChanged = rememberUpdatedState(onStateChanged)
-    val currentTrendDays = rememberUpdatedState(trendDays)
+    val currentTrendDayMap = rememberUpdatedState(trendDayMap)
 
-    return remember(startOffsetMap, durationSpanMap, actualDurationMap) {
+    return remember(startOffsetMap, durationSpanMap, actualDurationMap, trendDayMap) {
         object : CartesianMarkerVisibilityListener {
             override fun onShown(
                 marker: CartesianMarker,
@@ -78,7 +79,7 @@ fun rememberSleepTrendMarkerVisibilityListener(
                 val startVal = startOffsetMap[resolvedOffset]?.value
                 val spanVal = durationSpanMap[resolvedOffset]?.value
                 val actualVal = actualDurationMap[resolvedOffset]?.value
-                val trendDay = currentTrendDays.value.getOrNull(resolvedOffset)
+                val trendDay = currentTrendDayMap.value[resolvedOffset]
 
                 currentOnStateChanged.value(
                     SleepTrendSelectedState(
