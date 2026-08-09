@@ -479,7 +479,11 @@ class DashboardMetricPresentationFactory
                     }
                 }
             val bodyTempVisual =
-                UniversalMetricScalePreparer.score(bodyTempCelsius, 35.5f, 39f)
+                UniversalMetricScalePreparer.score(
+                    bodyTempDisplay,
+                    UnitConverter.celsiusToDisplayTemperature(35.5f, unitSystem),
+                    UnitConverter.celsiusToDisplayTemperature(39f, unitSystem),
+                )
             val bodyTempDescription =
                 bodyTempVisual.unavailableReason?.let { reason ->
                     unavailableDescription(bodyTempTitle, reason)
