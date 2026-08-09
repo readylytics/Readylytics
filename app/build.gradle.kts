@@ -1,5 +1,6 @@
 import com.github.triplet.gradle.androidpublisher.ReleaseStatus
 import org.gradle.api.DefaultTask
+import readylytics.buildlogic.DebugInstallIdentity
 import org.gradle.api.GradleException
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.tasks.Input
@@ -112,6 +113,9 @@ val resolvedVersion = computeVersion()
 val computedVersionCode = resolvedVersion.first
 val computedVersionName = resolvedVersion.second
 
+val rawHostname = DebugInstallIdentity.rawHostname
+val machineIdSegment = DebugInstallIdentity.machineIdSegment
+
 kotlin {
     jvmToolchain(17)
     compilerOptions {
@@ -171,9 +175,10 @@ android {
             )
         }
         debug {
-            applicationIdSuffix = ".local"
+            applicationIdSuffix = ".local.$machineIdSegment"
             versionNameSuffix = "-local"
             enableUnitTestCoverage = true
+            resValue("string", "app_name", "Readylytics Local ($rawHostname)")
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
@@ -227,6 +232,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
     lint {
         abortOnError = true
