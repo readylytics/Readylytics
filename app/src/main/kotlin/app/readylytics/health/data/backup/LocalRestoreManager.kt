@@ -6,10 +6,16 @@ import android.util.JsonReader
 import android.util.JsonToken
 import androidx.room.withTransaction
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.local.entity.StepRecordEntity
+import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
@@ -223,6 +229,12 @@ class LocalRestoreManager
             val hrvDao = healthDatabase.hrvDao()
             val workoutDao = healthDatabase.workoutDao()
             val dailySummaryDao = healthDatabase.dailySummaryDao()
+            val weightRecordDao = healthDatabase.weightRecordDao()
+            val bodyFatRecordDao = healthDatabase.bodyFatRecordDao()
+            val bloodPressureRecordDao = healthDatabase.bloodPressureRecordDao()
+            val oxygenSaturationRecordDao = healthDatabase.oxygenSaturationRecordDao()
+            val bodyTemperatureRecordDao = healthDatabase.bodyTemperatureRecordDao()
+            val stepRecordDao = healthDatabase.stepRecordDao()
 
             // Clear all tables first
             sleepSessionDao.deleteAll()
@@ -316,6 +328,95 @@ class LocalRestoreManager
                             }
                         }
                         if (batch.isNotEmpty()) dailySummaryDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    // The six raw-vitals tables below predate this key existing in the export
+                    // (see the backup export task). Each one's deleteAll() is scoped inside its
+                    // own branch -- it only fires when the key is actually present -- so restoring
+                    // an older backup that has none of these keys leaves the current local rows
+                    // for these tables untouched instead of silently wiping them.
+                    "weightRecords" -> {
+                        weightRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<WeightRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                weightRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) weightRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "bodyFatRecords" -> {
+                        bodyFatRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<BodyFatRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                bodyFatRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) bodyFatRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "bloodPressureRecords" -> {
+                        bloodPressureRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<BloodPressureRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                bloodPressureRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) bloodPressureRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "oxygenSaturationRecords" -> {
+                        oxygenSaturationRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<OxygenSaturationRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                oxygenSaturationRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) oxygenSaturationRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "bodyTemperatureRecords" -> {
+                        bodyTemperatureRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<BodyTemperatureRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                bodyTemperatureRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) bodyTemperatureRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "stepRecords" -> {
+                        stepRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<StepRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 500) {
+                                stepRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) stepRecordDao.upsertAll(batch)
                         reader.endArray()
                     }
                     else -> reader.skipValue()
