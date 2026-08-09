@@ -112,6 +112,7 @@ class MainActivity : ComponentActivity() {
                                 readiness = readiness,
                                 progress = migrationState.progress,
                                 onRetry = databaseMigrationController::startOrResume,
+                                onSendDiagnostics = {},
                             )
                         }
                     }
@@ -123,6 +124,7 @@ class MainActivity : ComponentActivity() {
                                 readiness = readiness,
                                 progress = migrationState.progress,
                                 onRetry = databaseMigrationController::startOrResume,
+                                onSendDiagnostics = {},
                             )
                         }
                     }

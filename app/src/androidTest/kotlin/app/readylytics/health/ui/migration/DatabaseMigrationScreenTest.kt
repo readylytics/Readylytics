@@ -12,6 +12,8 @@ import app.readylytics.health.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.V7MigrationPhase
 import app.readylytics.health.ui.theme.DatabaseReadinessTheme
+import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -74,9 +76,31 @@ class DatabaseMigrationScreenTest {
         composeRule.onAllNodesWithText("Delete", substring = true).assertCountEquals(0)
     }
 
+    @Test
+    fun failedMigrationShowsSendDiagnosticsAction() {
+        var sends = 0
+        setScreen(
+            readiness = DatabaseReadiness.Failed("migration failed"),
+            onSendDiagnostics = { sends++ },
+        )
+
+        composeRule.onNodeWithText("Send diagnostic log").assertIsDisplayed().performClick()
+        assertEquals(1, sends)
+    }
+
+    @Test
+    fun insufficientSpaceShowsSendDiagnosticsAction() {
+        setScreen(
+            readiness = DatabaseReadiness.InsufficientSpace(requiredBytes = 1_500, availableBytes = 500),
+        )
+
+        composeRule.onNodeWithText("Send diagnostic log").assertIsDisplayed()
+    }
+
     private fun setScreen(
         readiness: DatabaseReadiness,
         progress: DatabaseMigrationProgress? = null,
+        onSendDiagnostics: () -> Unit = {},
     ) {
         composeRule.setContent {
             DatabaseReadinessTheme {
@@ -84,6 +108,7 @@ class DatabaseMigrationScreenTest {
                     readiness = readiness,
                     progress = progress,
                     onRetry = {},
+                    onSendDiagnostics = onSendDiagnostics,
                 )
             }
         }
