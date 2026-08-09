@@ -116,6 +116,7 @@ class TrendPeriodAggregationTest {
             )
 
         assertEquals("Feb", summary?.periodLabel)
+        assertEquals("Jan", summary?.previousPeriodLabel)
         assertEquals(24f, summary?.average)
         assertEquals(20f, summary?.previousAverage)
     }
@@ -130,6 +131,7 @@ class TrendPeriodAggregationTest {
             )
 
         assertEquals("Q2", summary?.periodLabel)
+        assertEquals("Q1", summary?.previousPeriodLabel)
         assertEquals(20f, summary?.average)
         assertEquals(10f, summary?.previousAverage)
     }

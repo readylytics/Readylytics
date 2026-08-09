@@ -36,6 +36,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -104,6 +105,7 @@ fun TrendChart(
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
     parentScrollInProgress: () -> Boolean = { false },
+    periodSummary: PeriodAverageSummary? = null,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -353,6 +355,15 @@ fun TrendChart(
             color = baselineColor,
             decimalPlaces = baselineDecimalPlaces,
             unavailableValueLabel = baselineUnavailableLabel,
+        )
+    }
+
+    if (periodSummary != null) {
+        Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
+        PeriodAverageSummaryRow(
+            summary = periodSummary,
+            unit = baselineUnit,
+            decimalPlaces = baselineDecimalPlaces,
         )
     }
 }

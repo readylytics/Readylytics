@@ -11,6 +11,7 @@ import java.util.Locale
  */
 data class PeriodAverageSummary(
     val periodLabel: String,
+    val previousPeriodLabel: String,
     val average: Float?,
     val previousAverage: Float?,
 )
@@ -102,6 +103,7 @@ fun buildPeriodAverageSummary(
     val previous = points[points.lastIndex - 1]
     return PeriodAverageSummary(
         periodLabel = latest.periodLabel(granularity, startDate),
+        previousPeriodLabel = previous.periodLabel(granularity, startDate),
         average = latest.value,
         previousAverage = previous.value,
     )
