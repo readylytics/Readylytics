@@ -211,8 +211,6 @@ private fun UniversalValueUnitColumn(
             }
         }
 
-        Spacer(Modifier.weight(1f))
-
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
         Box(
             modifier =
