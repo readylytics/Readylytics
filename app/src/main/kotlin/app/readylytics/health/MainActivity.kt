@@ -1,6 +1,7 @@
 package app.readylytics.health
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -20,12 +21,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import app.readylytics.health.benchmark.applyBenchmarkTestTagSemantics
+import app.readylytics.health.crashreport.DiagnosticLogFileExport
+import app.readylytics.health.crashreport.buildLogFileShareIntent
 import app.readylytics.health.data.backup.LocalRestoreManager
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.migration.DatabaseMigrationController
 import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.ui.crashreport.CrashReportPrompt
 import app.readylytics.health.ui.migration.DatabaseMigrationScreen
 import app.readylytics.health.ui.navigation.AppNavHost
@@ -33,10 +38,13 @@ import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
 import app.readylytics.health.ui.theme.DatabaseReadinessTheme
 import app.readylytics.health.ui.theme.FitDashboardTheme
+import app.readylytics.health.util.SecureFileLogSink
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -56,6 +64,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var databaseMigrationController: DatabaseMigrationController
+
+    @Inject
+    @ReleaseLogSink
+    lateinit var secureLogSink: SecureFileLogSink
 
     private var isKeyValidationComplete by mutableStateOf(false)
 
@@ -112,6 +124,7 @@ class MainActivity : ComponentActivity() {
                                 readiness = readiness,
                                 progress = migrationState.progress,
                                 onRetry = databaseMigrationController::startOrResume,
+                                onSendDiagnostics = ::sendMigrationDiagnostics,
                             )
                         }
                     }
@@ -123,6 +136,7 @@ class MainActivity : ComponentActivity() {
                                 readiness = readiness,
                                 progress = migrationState.progress,
                                 onRetry = databaseMigrationController::startOrResume,
+                                onSendDiagnostics = ::sendMigrationDiagnostics,
                             )
                         }
                     }
@@ -195,6 +209,28 @@ class MainActivity : ComponentActivity() {
 
                 AppNavHost(viewModel = viewModel)
                 CrashReportPrompt()
+            }
+        }
+    }
+
+    private fun sendMigrationDiagnostics() {
+        lifecycleScope.launch {
+            runCatching {
+                val logText = withContext(Dispatchers.IO) { secureLogSink.readLogsDecrypted() }
+                val file =
+                    withContext(Dispatchers.IO) {
+                        DiagnosticLogFileExport.write(cacheDir, logText)
+                    }
+                startActivity(buildLogFileShareIntent(this@MainActivity, file))
+            }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
+                logE("DatabaseMigration", throwable) { "Failed to prepare diagnostic log" }
+                Toast
+                    .makeText(
+                        this@MainActivity,
+                        R.string.database_migration_diagnostics_error,
+                        Toast.LENGTH_LONG,
+                    ).show()
             }
         }
     }
