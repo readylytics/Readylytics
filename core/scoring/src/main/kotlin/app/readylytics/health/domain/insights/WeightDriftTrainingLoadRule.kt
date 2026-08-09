@@ -26,7 +26,7 @@ class WeightDriftTrainingLoadRule : InsightRule {
                 ?: return null
 
         val deltaKg = todayWeight - oldestWeight
-        val percent = abs(deltaKg) / oldestWeight
+        val percent = (abs(deltaKg) / oldestWeight) * 100f
         if (percent <= InsightConstants.WEIGHT_DRIFT_PERCENT_THRESHOLD) return null
 
         val strainRatio =
