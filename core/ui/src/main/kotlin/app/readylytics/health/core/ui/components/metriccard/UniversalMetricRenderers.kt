@@ -110,7 +110,7 @@ fun UniversalGaugeRenderer(
                 Modifier
                     .fillMaxWidth()
                     .height(UNIVERSAL_SECONDARY_SLOT_HEIGHT),
-            contentAlignment = Alignment.BottomStart,
+            contentAlignment = Alignment.Center,
         ) {
             presentation.secondaryText?.takeIf(String::isNotBlank)?.let { deltaText ->
                 if (secondaryUsesPill) {

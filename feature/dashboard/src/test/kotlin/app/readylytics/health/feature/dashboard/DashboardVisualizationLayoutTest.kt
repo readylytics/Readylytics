@@ -342,6 +342,80 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
     }
 
     @Test
+    fun gaugeMode_centersDeltaPillAndPlainSecondaryBelowCard() {
+        val hrvSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.HRV))
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation =
+                        presentation.copy(
+                            title = "HRV",
+                            valueText = "41",
+                            unitText = "ms",
+                            secondaryText = "↓ 2",
+                            accessibilityDescription = "HRV 41 milliseconds, normal.",
+                        ),
+                    specification = hrvSpecification,
+                    requestedMode = DashboardCardDisplayMode.GAUGE,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        val cardBounds =
+            composeRule
+                .onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val cardCenterX = cardBounds.left + cardBounds.width / 2f
+
+        val pillBounds = boundsOfTag(UNIVERSAL_DELTA_PILL_TAG)
+        val pillCenterX = pillBounds.left + pillBounds.width / 2f
+        assertTrue(
+            "Gauge delta pill must be horizontally centered below the card: " +
+                "cardCenter=$cardCenterX, pillCenter=$pillCenterX, pill=$pillBounds",
+            kotlin.math.abs(pillCenterX - cardCenterX) <= 1f,
+        )
+    }
+
+    @Test
+    fun gaugeMode_centersPlainSecondaryTextBelowCard() {
+        composeRule.setContent {
+            TestTheme {
+                DashboardMetricCard(
+                    presentation =
+                        presentation.copy(
+                            title = "Sleep time",
+                            valueText = "7h 11m",
+                            secondaryText = "22:51 → 06:02",
+                            accessibilityDescription = "Sleep time 7 hours 11 minutes, normal.",
+                        ),
+                    specification = requireNotNull(DashboardCardCatalog.spec(CardId.SLEEP_DURATION)),
+                    requestedMode = DashboardCardDisplayMode.GAUGE,
+                    isEditing = false,
+                    onModeSelected = {},
+                )
+            }
+        }
+
+        val cardBounds =
+            composeRule
+                .onNodeWithTag(UNIVERSAL_METRIC_CARD_TAG)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val cardCenterX = cardBounds.left + cardBounds.width / 2f
+
+        val secondaryBounds = boundsOfText("22:51 → 06:02")
+        val secondaryCenterX = secondaryBounds.left + secondaryBounds.width / 2f
+        assertTrue(
+            "Gauge plain secondary text must be horizontally centered below the card: " +
+                "cardCenter=$cardCenterX, secondaryCenter=$secondaryCenterX, secondary=$secondaryBounds",
+            kotlin.math.abs(secondaryCenterX - cardCenterX) <= 1f,
+        )
+    }
+
+    @Test
     fun barPlainSecondaryFollowsTheStatusContentColor_forNonNeutralStatus() {
         var expectedContentColor = Color.Unspecified
         composeRule.setContent {
