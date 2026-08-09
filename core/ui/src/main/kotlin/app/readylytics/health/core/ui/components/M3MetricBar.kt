@@ -20,7 +20,10 @@ import app.readylytics.health.core.designsystem.dimens
 
 internal val METRIC_BAR_TICK_FRACTIONS: List<Float> = listOf(0.2f, 0.4f, 0.6f, 0.8f)
 
-internal fun visibleTickFractions(progress: Float): List<Float> = METRIC_BAR_TICK_FRACTIONS.filter { it > progress }
+internal fun visibleTickFractions(
+    progress: Float,
+    capCoverageFraction: Float = 0f,
+): List<Float> = METRIC_BAR_TICK_FRACTIONS.filter { it > progress + capCoverageFraction }
 
 // The fill's round cap overhangs `strokeWidth / 2` past its center, so its center must be clamped
 // to `[strokeWidth/2, width - strokeWidth/2]`: otherwise at 100% the cap overshoots the track end.
@@ -33,6 +36,14 @@ internal fun fillEndCenterX(
     return (width * progress).coerceIn(half, (width - half).coerceAtLeast(half))
 }
 
+// Fraction of the bar width the fill's round cap overhangs past its center. Zero progress or a
+// zero-width canvas (early/collapsing composition frame) must yield 0f, never Infinity.
+internal fun capCoverageFraction(
+    progress: Float,
+    width: Float,
+    strokeWidth: Float,
+): Float = if (progress > 0f && width > 0f) (strokeWidth / 2f) / width else 0f
+
 @Composable
 fun M3MetricBar(
     progressFraction: Float?,
@@ -41,6 +52,8 @@ fun M3MetricBar(
     modifier: Modifier = Modifier,
     tickColor: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
     barHeight: Dp = MaterialTheme.dimens.metricTrackThickness,
+    markerColor: Color = activeColor,
+    markerDiameter: Dp = MaterialTheme.dimens.metricGaugeMarkerDiameter,
     animateProgress: Boolean = true,
 ) {
     val clamped = progressFraction?.coerceIn(0f, 1f) ?: 0f
@@ -88,11 +101,26 @@ fun M3MetricBar(
             )
         }
         val tickRadiusPx = tickDiameter.toPx() / 2f
-        visibleTickFractions(progressToDraw).forEach { fraction ->
+        // The fill's round cap overhangs `strokeWidth / 2` px past the raw progress fraction, so a
+        // tick nominally just past `progressToDraw` can still sit inside that cap and render on top
+        // of the fill (ticks are drawn after the fill). Hide ticks that fall within the overhang.
+        visibleTickFractions(
+            progressToDraw,
+            capCoverageFraction(progressToDraw, size.width, strokeWidth),
+        ).forEach { fraction ->
             drawCircle(
                 color = tickColor,
                 radius = tickRadiusPx,
                 center = Offset(size.width * fraction, centerY),
+            )
+        }
+        // Value marker dot sitting exactly at the visual end of the fill's rounded cap, mirroring
+        // the gauge's marker (drawn last, on top of track/fill/ticks).
+        if (progressFraction != null && progressToDraw > 0f) {
+            drawCircle(
+                color = markerColor,
+                radius = markerDiameter.toPx() / 2f,
+                center = Offset(fillEndCenterX(progressToDraw, size.width, strokeWidth), centerY),
             )
         }
     }

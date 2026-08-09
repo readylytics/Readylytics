@@ -71,6 +71,20 @@ internal fun resolveHorseshoeGaugeGeometry(
     )
 }
 
+// The active arc is stroked with a round cap that overhangs its end angle by roughly
+// `activeStrokeWidthPx / 2 / radius` radians. Converted to the same 0..1 fraction-of-sweep units
+// as tickFractions/progressToDraw so ticks that fall inside that overhang can be hidden (ticks are
+// drawn after the fill and would otherwise render on top of it).
+internal fun arcTickCapCoverageFraction(
+    activeStrokeWidthPx: Float,
+    radius: Float,
+    sweepAngle: Float,
+): Float {
+    if (activeStrokeWidthPx <= 0f || radius <= 0f || sweepAngle <= 0f) return 0f
+    val overhangRadians = activeStrokeWidthPx / 2f / radius
+    return Math.toDegrees(overhangRadians.toDouble()).toFloat() / sweepAngle
+}
+
 /**
  * Width/height bounds for the gauge's value/unit overlay, derived from the same
  * [HorseshoeGaugeGeometry] the track is drawn with so the text can never legitimately
@@ -147,8 +161,14 @@ fun M3MetricGauge(
             val activeSweep = geometry.sweepAngle * progressToDraw
             val activeEndAngle = geometry.startAngle + activeSweep
 
+            val capCoverageFraction =
+                if (progressToDraw > 0f) {
+                    arcTickCapCoverageFraction(activeStrokeWidthPx, geometry.radius, geometry.sweepAngle)
+                } else {
+                    0f
+                }
             tickFractions
-                .filter { it > progressToDraw }
+                .filter { it > progressToDraw + capCoverageFraction }
                 .forEach { fraction ->
                     val angle = Math.toRadians((geometry.startAngle + geometry.sweepAngle * fraction).toDouble())
                     drawCircle(

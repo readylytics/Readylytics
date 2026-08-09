@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
@@ -17,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -28,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import app.readylytics.health.core.designsystem.spacing
+
+const val DATA_POINT_TOOLTIP_TAG = "data_point_tooltip"
 
 data class DataPointTooltipData(
     val valueText: String,
@@ -142,10 +143,12 @@ fun DataPointTooltip(
                     modifier =
                         modifier
                             .widthIn(min = 70.dp, max = 150.dp)
-                            .padding(horizontal = MaterialTheme.spacing.small),
+                            .padding(horizontal = MaterialTheme.spacing.small)
+                            .testTag(DATA_POINT_TOOLTIP_TAG),
                 ) {
+                    val hasExtraContent = data.preDateLines.isNotEmpty() || data.extraLine != null
                     Column(
-                        horizontalAlignment = Alignment.Start,
+                        horizontalAlignment = if (hasExtraContent) Alignment.Start else Alignment.CenterHorizontally,
                         modifier =
                             Modifier
                                 .padding(
@@ -159,8 +162,6 @@ fun DataPointTooltip(
                             text = data.valueText,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.inverseOnSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
                         )
                         Text(
                             text = data.dateText,

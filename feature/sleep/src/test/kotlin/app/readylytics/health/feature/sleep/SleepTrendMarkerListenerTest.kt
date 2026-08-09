@@ -42,8 +42,22 @@ class SleepTrendMarkerListenerTest {
                     actualDurationPoints = listOf(DailyDataPoint(1, 9f)),
                     trendDays =
                         listOf(
-                            SleepTrendDay(LocalDate.of(2026, 8, 1), null, null, null, emptyList()),
-                            SleepTrendDay(LocalDate.of(2026, 8, 2), 10L, 20L, 540, naps),
+                            SleepTrendDay(
+                                dayOffset = 0,
+                                scoreDay = LocalDate.of(2026, 8, 1),
+                                coreStartTimeMs = null,
+                                coreEndTimeMs = null,
+                                totalDurationMinutes = null,
+                                naps = emptyList(),
+                            ),
+                            SleepTrendDay(
+                                dayOffset = 1,
+                                scoreDay = LocalDate.of(2026, 8, 2),
+                                coreStartTimeMs = 10L,
+                                coreEndTimeMs = 20L,
+                                totalDurationMinutes = 540,
+                                naps = naps,
+                            ),
                         ),
                     onStateChanged = { selectedState = it },
                 )
@@ -81,6 +95,52 @@ class SleepTrendMarkerListenerTest {
         assertEquals(10L, resolvedState.coreStartTimeMs)
         assertEquals(20L, resolvedState.coreEndTimeMs)
         assertEquals(naps, resolvedState.naps)
+    }
+
+    @Test
+    fun `selected marker resolves trend day by offset key when list is sparse`() {
+        var selectedState: SleepTrendSelectedState? = null
+        lateinit var listener: com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
+
+        composeRule.setContent {
+            listener =
+                rememberSleepTrendMarkerVisibilityListener(
+                    startOffsetPoints = listOf(DailyDataPoint(5, 11f)),
+                    durationSpanPoints = listOf(DailyDataPoint(5, 8f)),
+                    actualDurationPoints = listOf(DailyDataPoint(5, 9f)),
+                    trendDays =
+                        listOf(
+                            SleepTrendDay(
+                                dayOffset = 5,
+                                scoreDay = LocalDate.of(2026, 8, 6),
+                                coreStartTimeMs = 42L,
+                                coreEndTimeMs = 52L,
+                                totalDurationMinutes = 600,
+                                naps = emptyList(),
+                            ),
+                        ),
+                    onStateChanged = { selectedState = it },
+                )
+        }
+
+        composeRule.runOnIdle {
+            listener.onShown(
+                marker = TestMarker,
+                targets =
+                    listOf(
+                        TestColumnTarget(
+                            x = 5.0,
+                            canvasX = 300f,
+                            columns = listOf(column(canvasY = 170f), column(canvasY = 70f)),
+                        ),
+                    ),
+            )
+        }
+
+        val resolvedState = requireNotNull(selectedState)
+        assertEquals(5, resolvedState.dayOffset)
+        assertEquals(42L, resolvedState.coreStartTimeMs)
+        assertEquals(52L, resolvedState.coreEndTimeMs)
     }
 
     private fun column(canvasY: Float) =

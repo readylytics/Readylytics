@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
@@ -82,6 +83,28 @@ private data class SleepTrendData(
     val trendDays: List<SleepTrendDay>,
 )
 
+// Only these preference fields are consumed by the inner pipeline; projecting them through
+// distinctUntilChanged means unrelated pref changes (theme, retention, HR zones, ...) do not
+// cancel and restart the observe* flows that feed the Sleep screen.
+private data class SleepScoringPrefs(
+    val scoringZoneId: ZoneId,
+    val coreMergeGapMinutes: Int,
+    val supplementalCutoffMinutesOfDay: Int,
+    val minimumCountedSleepSegmentMinutes: Int,
+    val supplementalArchitectureCoveragePercent: Int,
+    val goalSleepHours: Float,
+)
+
+private fun UserPreferences.toSleepScoringPrefs() =
+    SleepScoringPrefs(
+        scoringZoneId = scoringZone(),
+        coreMergeGapMinutes = coreMergeGapMinutes,
+        supplementalCutoffMinutesOfDay = supplementalCutoffMinutesOfDay,
+        minimumCountedSleepSegmentMinutes = minimumCountedSleepSegmentMinutes,
+        supplementalArchitectureCoveragePercent = supplementalArchitectureCoveragePercent,
+        goalSleepHours = goalSleepHours,
+    )
+
 private fun SleepSessionData.toSleepDaySegment(): SleepDaySegment {
     val normalizedDurationMinutes =
         if (durationMinutes > 0) {
@@ -123,6 +146,11 @@ class SleepViewModel
     ) : ViewModel() {
         private val selectedTrendRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
+        private val sleepScoringPrefsFlow =
+            settingsRepo.userPreferences
+                .map { it.toSleepScoringPrefs() }
+                .distinctUntilChanged()
+
         @OptIn(ExperimentalCoroutinesApi::class)
         val circadianConsistencyFlow =
             selectedDateRepository.selectedDate
@@ -139,11 +167,11 @@ class SleepViewModel
             combine(
                 selectedDateRepository.selectedDate,
                 selectedTrendRangeFlow,
-                settingsRepo.userPreferences,
+                sleepScoringPrefsFlow,
             ) { date, range, prefs -> Triple(date, range, prefs) }
                 .flatMapLatest { (date, range, prefs) ->
                     val deviceZoneId = ZoneId.systemDefault()
-                    val scoringZoneId = prefs.scoringZone()
+                    val scoringZoneId = prefs.scoringZoneId
                     val selectedMidnightMs =
                         date
                             .atStartOfDay(deviceZoneId)

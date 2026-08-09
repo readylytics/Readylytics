@@ -3,6 +3,7 @@ package app.readylytics.health.feature.sleep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
@@ -36,6 +37,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -551,6 +553,67 @@ class SleepViewModelTest {
             assertEquals(true, state.trendStartOffsetPoints.all { it.value == null })
             assertEquals(true, state.trendDurationSpanPoints.all { it.value == null })
             assertEquals(true, state.trendActualDurationPoints.all { it.value == null })
+        }
+
+    @Test
+    fun `unrelated pref change does not resubscribe inner flows`() =
+        runTest(testDispatcher) {
+            val prefsFlow = MutableStateFlow(UserPreferences())
+            every { settingsRepo.userPreferences } returns prefsFlow
+            var observeSinceCalls = 0
+            every { sleepSessionRepository.observeSince(any()) } answers {
+                observeSinceCalls++
+                flowOf(emptyList())
+            }
+            var observeFirstSessionCalls = 0
+            every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } answers {
+                observeFirstSessionCalls++
+                flowOf(null)
+            }
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val initialSinceCalls = observeSinceCalls
+            val initialFirstSessionCalls = observeFirstSessionCalls
+            assertTrue("initial load must subscribe once", initialSinceCalls >= 1)
+
+            prefsFlow.value = UserPreferences(appTheme = AppTheme.DARK)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals("unrelated pref change must not restart observeSince", initialSinceCalls, observeSinceCalls)
+            assertEquals(
+                "unrelated pref change must not restart observeFirstSessionEndingInRange",
+                initialFirstSessionCalls,
+                observeFirstSessionCalls,
+            )
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `sleep-relevant pref change resubscribes inner flows`() =
+        runTest(testDispatcher) {
+            val prefsFlow = MutableStateFlow(UserPreferences())
+            every { settingsRepo.userPreferences } returns prefsFlow
+            var observeSinceCalls = 0
+            every { sleepSessionRepository.observeSince(any()) } answers {
+                observeSinceCalls++
+                flowOf(emptyList())
+            }
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+            val initialSinceCalls = observeSinceCalls
+
+            prefsFlow.value = UserPreferences(coreMergeGapMinutes = 120)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(initialSinceCalls + 1, observeSinceCalls)
+
+            collectJob.cancelAndJoin()
         }
 
     private fun sleepSession(
