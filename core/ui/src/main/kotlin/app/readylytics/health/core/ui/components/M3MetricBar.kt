@@ -36,6 +36,14 @@ internal fun fillEndCenterX(
     return (width * progress).coerceIn(half, (width - half).coerceAtLeast(half))
 }
 
+// Fraction of the bar width the fill's round cap overhangs past its center. Zero progress or a
+// zero-width canvas (early/collapsing composition frame) must yield 0f, never Infinity.
+internal fun capCoverageFraction(
+    progress: Float,
+    width: Float,
+    strokeWidth: Float,
+): Float = if (progress > 0f && width > 0f) (strokeWidth / 2f) / width else 0f
+
 @Composable
 fun M3MetricBar(
     progressFraction: Float?,
@@ -96,8 +104,10 @@ fun M3MetricBar(
         // The fill's round cap overhangs `strokeWidth / 2` px past the raw progress fraction, so a
         // tick nominally just past `progressToDraw` can still sit inside that cap and render on top
         // of the fill (ticks are drawn after the fill). Hide ticks that fall within the overhang.
-        val capCoverageFraction = if (progressToDraw > 0f) (strokeWidth / 2f) / size.width else 0f
-        visibleTickFractions(progressToDraw, capCoverageFraction).forEach { fraction ->
+        visibleTickFractions(
+            progressToDraw,
+            capCoverageFraction(progressToDraw, size.width, strokeWidth),
+        ).forEach { fraction ->
             drawCircle(
                 color = tickColor,
                 radius = tickRadiusPx,

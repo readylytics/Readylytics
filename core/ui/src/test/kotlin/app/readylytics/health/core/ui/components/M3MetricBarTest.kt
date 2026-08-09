@@ -53,6 +53,17 @@ class M3MetricBarTest {
     }
 
     @Test
+    fun capCoverageFraction_zeroWidthOrZeroProgress_returnsZero() {
+        // Zero-width canvas on an early/collapsing composition frame must not produce Infinity.
+        assertEquals(0f, capCoverageFraction(0.5f, 0f, 10f))
+        // Zero progress means no fill, so no overhang to hide ticks under.
+        assertEquals(0f, capCoverageFraction(0f, 200f, 10f))
+        assertEquals(0f, capCoverageFraction(0f, 0f, 10f))
+        // Normal case: (strokeWidth / 2) / width.
+        assertEquals(0.025f, capCoverageFraction(0.5f, 200f, 10f))
+    }
+
+    @Test
     fun metricBar_acceptsNull_andClampsOutOfRange_progressSurfacedThroughSemantics() {
         composeTestRule.setContent {
             M3MetricBar(
