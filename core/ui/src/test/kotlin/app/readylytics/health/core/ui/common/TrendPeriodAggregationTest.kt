@@ -96,7 +96,10 @@ class TrendPeriodAggregationTest {
 
     @Test
     fun `empty list buckets to empty and has no summary`() {
-        assertEquals(emptyList<DailyDataPoint>(), emptyList<DailyDataPoint>().bucketBy(TrendGranularity.MONTHLY, LocalDate.of(2026, 1, 1)))
+        assertEquals(
+            emptyList<DailyDataPoint>(),
+            emptyList<DailyDataPoint>().bucketBy(TrendGranularity.MONTHLY, LocalDate.of(2026, 1, 1)),
+        )
         assertNull(
             buildPeriodAverageSummary(
                 points = emptyList(),

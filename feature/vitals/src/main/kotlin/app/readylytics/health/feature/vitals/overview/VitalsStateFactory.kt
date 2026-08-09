@@ -133,9 +133,7 @@ internal fun buildVitalsChartSeries(
                 }
             }.sortedBy(DailyDataPoint::dayOffset)
 
-    fun seriesAndSummary(
-        value: (DailySummary) -> Float?,
-    ): Pair<List<DailyDataPoint>, PeriodAverageSummary?> {
+    fun seriesAndSummary(value: (DailySummary) -> Float?): Pair<List<DailyDataPoint>, PeriodAverageSummary?> {
         val real = realPoints(value)
         if (range.granularity == TrendGranularity.DAILY) {
             return real.padToRange(range.days) to null

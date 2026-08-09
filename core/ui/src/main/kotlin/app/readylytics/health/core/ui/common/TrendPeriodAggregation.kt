@@ -92,7 +92,11 @@ fun List<DailyDataPoint>.bucketBy(
     return buckets.map { bucket ->
         val length = bucketLengthDays(bucket.start, granularity)
         val mid = bucket.start.plusDays(((length - 1) / 2).toLong())
-        val average = bucket.points.mapNotNull(DailyDataPoint::value).average().toFloat()
+        val average =
+            bucket.points
+                .mapNotNull(DailyDataPoint::value)
+                .average()
+                .toFloat()
         DailyDataPoint(ChronoUnit.DAYS.between(startDate, mid).toInt(), average)
     }
 }

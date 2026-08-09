@@ -44,7 +44,8 @@ class VitalsStateFactoryTest {
                 summary(date = start, hrv = 40, rhr = null, spo2 = 94.4),
             )
 
-        val result = buildVitalsChartSeries(summaries, start, range = TimeRange.SEVEN_DAYS, unitSystem = UnitSystem.METRIC)
+        val result =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.SEVEN_DAYS, unitSystem = UnitSystem.METRIC)
 
         assertEquals(7, result.hrv.size)
         assertEquals(40f, result.hrv[0].value)
@@ -155,7 +156,8 @@ class VitalsStateFactoryTest {
                 DailySummary(date = startDate.plusDays(2), avgSleepingBodyTemp = 37.1f),
             )
 
-        val metricSeries = buildVitalsChartSeries(summaries, startDate, range = TimeRange.SEVEN_DAYS, unitSystem = UnitSystem.METRIC)
+        val metricSeries =
+            buildVitalsChartSeries(summaries, startDate, range = TimeRange.SEVEN_DAYS, unitSystem = UnitSystem.METRIC)
         assertEquals(36.5f, metricSeries.bodyTemp[0].value)
         assertEquals(null, metricSeries.bodyTemp[1].value)
         assertEquals(37.1f, metricSeries.bodyTemp[2].value)
