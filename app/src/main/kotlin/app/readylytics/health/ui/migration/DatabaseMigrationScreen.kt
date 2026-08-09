@@ -4,6 +4,7 @@ import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +34,7 @@ fun DatabaseMigrationScreen(
     readiness: DatabaseReadiness,
     progress: DatabaseMigrationProgress?,
     onRetry: () -> Unit,
+    onSendDiagnostics: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { contentPadding ->
@@ -67,8 +70,13 @@ fun DatabaseMigrationScreen(
                     if (readiness is DatabaseReadiness.InsufficientSpace ||
                         readiness is DatabaseReadiness.Failed
                     ) {
-                        Button(onClick = onRetry) {
-                            Text(stringResource(R.string.database_migration_retry))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = onRetry) {
+                                Text(stringResource(R.string.database_migration_retry))
+                            }
+                            OutlinedButton(onClick = onSendDiagnostics) {
+                                Text(stringResource(R.string.database_migration_send_diagnostics))
+                            }
                         }
                     }
                 }

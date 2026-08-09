@@ -121,6 +121,22 @@ class ProductionReadinessStaticTest {
     }
 
     @Test
+    fun `main activity diagnostics rethrows coroutine cancellation`() {
+        val source = projectFile("app/src/main/kotlin/app/readylytics/health/MainActivity.kt").readText()
+        val cancellationRethrow = source.indexOf("is CancellationException")
+        val genericFailureHandler = source.indexOf("Failed to prepare diagnostic log")
+
+        assertTrue(
+            "MainActivity must import kotlinx.coroutines.CancellationException",
+            source.contains("import kotlinx.coroutines.CancellationException"),
+        )
+        assertTrue(
+            "CancellationException must be rethrown before the generic failure handler",
+            cancellationRethrow >= 0 && genericFailureHandler >= 0 && cancellationRethrow < genericFailureHandler,
+        )
+    }
+
+    @Test
     fun `local backup stages encrypted zip before publishing default backup file`() {
         val source = sourceFile("src/main/kotlin/app/readylytics/health/data/backup/LocalBackupManager.kt").readText()
 
