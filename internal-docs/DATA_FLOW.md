@@ -346,6 +346,11 @@ Restore is staged. Database replacement is atomic within Room. Preferences are r
 database transaction commits because Room and DataStore cannot share a transaction. If a later
 stage fails, the app returns an explicit partial-success result requiring restart and instructs
 the user to rerun restore. Backup manifests v5, v6, and v7 restore into the current v7 entities.
+Sleep/heart-rate/HRV/workout/daily-summary tables are cleared and replaced unconditionally on every
+restore (their keys have been present in every supported backup format). The six raw-vitals tables
+(weight, body fat, blood pressure, SpO2, body temperature, steps) are cleared and replaced only when
+their corresponding JSON key is present in the backup being restored, so restoring an older backup
+that predates these tables leaves the current local rows for them untouched.
 For v5/v6 payloads, legacy HR/HRV composite IDs normalize to
 `(sourceRecordId, timestampMs)` by removing only an exact trailing `_<timestampMs>` suffix.
 

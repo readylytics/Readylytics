@@ -3,6 +3,7 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnava
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
+import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.MetricStatus
@@ -619,5 +620,28 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             )
 
         assertEquals(MetricStatus.NEUTRAL, result.getValue(CardId.BODY_TEMPERATURE).status)
+    }
+
+    @Test
+    fun `body temperature gauge bounds convert to the display unit like the headline value`() {
+        val summary = summary().copy(avgSleepingBodyTemp = 37.0f)
+        val prefs = UserPreferences(unitSystem = UnitSystem.IMPERIAL)
+
+        val result =
+            factory.build(
+                summary = summary,
+                preferences = prefs,
+                selectedDate = date,
+                lastSleepSession = null,
+                circadianResult = null,
+                heartRateSummary = null,
+                bodyTempBaseline = null,
+            )
+
+        val visual = result.getValue(CardId.BODY_TEMPERATURE).visual as UniversalMetricVisual.Score
+        // 37.0C -> 98.6F headline; scale bounds 35.5C/39C -> 95.9F/102.2F, matching the same unit.
+        assertEquals(98.6f, visual.rawValue!!, 0.01f)
+        assertEquals(95.9f, visual.minValue, 0.01f)
+        assertEquals(102.2f, visual.maxValue, 0.01f)
     }
 }
