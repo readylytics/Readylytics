@@ -2,7 +2,11 @@ package app.readylytics.health.feature.vitals.overview
 
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.bucketBy
+import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailyMetrics
@@ -25,6 +29,10 @@ data class VitalsChartSeries(
     val rhr: List<DailyDataPoint>,
     val spo2: List<DailyDataPoint>,
     val bodyTemp: List<DailyDataPoint>,
+    val hrvPeriodSummary: PeriodAverageSummary? = null,
+    val rhrPeriodSummary: PeriodAverageSummary? = null,
+    val spo2PeriodSummary: PeriodAverageSummary? = null,
+    val bodyTempPeriodSummary: PeriodAverageSummary? = null,
 )
 
 internal data class VitalsRangeWindow(
@@ -112,11 +120,11 @@ fun VitalsUiState.chartInputs(): VitalsChartInputs =
 internal fun buildVitalsChartSeries(
     summaries: List<DailySummary>,
     startDate: LocalDate,
-    rangeDays: Int,
+    range: TimeRange,
     unitSystem: UnitSystem,
-    endDate: LocalDate = startDate.plusDays(rangeDays.toLong() - 1),
+    endDate: LocalDate = startDate.plusDays(range.days.toLong() - 1),
 ): VitalsChartSeries {
-    fun points(value: (DailySummary) -> Float?): List<DailyDataPoint> =
+    fun realPoints(value: (DailySummary) -> Float?): List<DailyDataPoint> =
         summaries
             .filter { it.date in startDate..endDate }
             .mapNotNull { summary ->
@@ -124,18 +132,37 @@ internal fun buildVitalsChartSeries(
                     DailyDataPoint(ChronoUnit.DAYS.between(startDate, summary.date).toInt(), it)
                 }
             }.sortedBy(DailyDataPoint::dayOffset)
-            .padToRange(rangeDays)
+
+    fun seriesAndSummary(
+        value: (DailySummary) -> Float?,
+    ): Pair<List<DailyDataPoint>, PeriodAverageSummary?> {
+        val real = realPoints(value)
+        if (range.granularity == TrendGranularity.DAILY) {
+            return real.padToRange(range.days) to null
+        }
+        val bucketed = real.bucketBy(range.granularity, startDate)
+        return bucketed to buildPeriodAverageSummary(bucketed, range.granularity, startDate)
+    }
+
+    val hrv = seriesAndSummary { it.nocturnalHrv?.toFloat() }
+    val rhr = seriesAndSummary { it.restingHeartRate?.toFloat() }
+    val spo2 = seriesAndSummary { it.avgSleepingSpo2 }
+    val bodyTemp =
+        seriesAndSummary {
+            it.avgSleepingBodyTemp?.let { celsius ->
+                UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
+            }
+        }
 
     return VitalsChartSeries(
-        hrv = points { it.nocturnalHrv?.toFloat() },
-        rhr = points { it.restingHeartRate?.toFloat() },
-        spo2 = points { it.avgSleepingSpo2 },
-        bodyTemp =
-            points {
-                it.avgSleepingBodyTemp?.let { celsius ->
-                    UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
-                }
-            },
+        hrv = hrv.first,
+        rhr = rhr.first,
+        spo2 = spo2.first,
+        bodyTemp = bodyTemp.first,
+        hrvPeriodSummary = hrv.second,
+        rhrPeriodSummary = rhr.second,
+        spo2PeriodSummary = spo2.second,
+        bodyTempPeriodSummary = bodyTemp.second,
     )
 }
 
