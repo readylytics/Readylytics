@@ -1,5 +1,3 @@
-import readylytics.buildlogic.DebugInstallIdentity
-
 plugins {
     id("com.android.test")
     alias(libs.plugins.androidx.baselineprofile)
@@ -22,7 +20,6 @@ android {
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "DEBUGGABLE"
-        testInstrumentationRunnerArguments["readylytics.machineIdSegment"] = DebugInstallIdentity.machineIdSegment
     }
 
     buildTypes {

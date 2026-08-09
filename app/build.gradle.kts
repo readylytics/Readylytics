@@ -113,8 +113,14 @@ val resolvedVersion = computeVersion()
 val computedVersionCode = resolvedVersion.first
 val computedVersionName = resolvedVersion.second
 
-val rawHostname = DebugInstallIdentity.rawHostname
-val machineIdSegment = DebugInstallIdentity.machineIdSegment
+val rawHostname =
+    providers
+        .environmentVariable("COMPUTERNAME")
+        .orElse(providers.environmentVariable("HOSTNAME"))
+        .orElse(providers.systemProperty("user.name"))
+        .orElse("device")
+        .map(DebugInstallIdentity::stripMdnsSuffix)
+val machineIdSegment = rawHostname.map(DebugInstallIdentity::sanitizeMachineId)
 
 kotlin {
     jvmToolchain(17)
@@ -175,10 +181,10 @@ android {
             )
         }
         debug {
-            applicationIdSuffix = ".local.$machineIdSegment"
+            applicationIdSuffix = ".local.${machineIdSegment.get()}"
             versionNameSuffix = "-local"
             enableUnitTestCoverage = true
-            resValue("string", "app_name", "Readylytics Local ($rawHostname)")
+            resValue("string", "app_name", "Readylytics Local (${rawHostname.get()})")
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
