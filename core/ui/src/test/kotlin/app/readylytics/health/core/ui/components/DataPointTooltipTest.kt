@@ -3,7 +3,9 @@ package app.readylytics.health.core.ui.components
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -92,6 +94,76 @@ class DataPointTooltipTest {
     }
 
     @Test
+    fun `tooltip without extra content centers lines and shrinks to content`() {
+        composeRule.setContent {
+            MaterialTheme {
+                DataPointTooltip(
+                    isVisible = true,
+                    data = DataPointTooltipData(valueText = "Duration: 8h", dateText = "01.08"),
+                    onDismissRequest = {},
+                )
+            }
+        }
+
+        val valueBounds = composeRule.onNodeWithText("Duration: 8h").fetchSemanticsNode().boundsInRoot
+        val dateBounds = composeRule.onNodeWithText("01.08").fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            kotlin.math.abs(valueBounds.center.x - dateBounds.center.x) <= 1f,
+            "value and date must share the same center axis: value=${valueBounds.center.x}, date=${dateBounds.center.x}",
+        )
+
+        val bubble = boundsOfTag(DATA_POINT_TOOLTIP_TAG)
+        val maxWidthPx = with(composeRule.density) { 150.dp.toPx() }
+        assertTrue(
+            bubble.width < maxWidthPx,
+            "short tooltip must shrink toward content width instead of forcing 150dp, width=${bubble.width}",
+        )
+    }
+
+    @Test
+    fun `tooltip with pre-date lines left aligns value date and lines`() {
+        composeRule.setContent {
+            MaterialTheme {
+                DataPointTooltip(
+                    isVisible = true,
+                    data =
+                        DataPointTooltipData(
+                            valueText = "01.08",
+                            dateText = "Duration: 8h 05m",
+                            preDateLines = listOf("Bedtime: 11:42 PM - 7:10 AM"),
+                        ),
+                    onDismissRequest = {},
+                )
+            }
+        }
+
+        val valueLeft =
+            composeRule
+                .onNodeWithText("01.08")
+                .fetchSemanticsNode()
+                .boundsInRoot.left
+        val dateLeft =
+            composeRule
+                .onNodeWithText("Duration: 8h 05m")
+                .fetchSemanticsNode()
+                .boundsInRoot.left
+        val bedtimeLeft =
+            composeRule
+                .onNodeWithText(
+                    "Bedtime: 11:42 PM - 7:10 AM",
+                ).fetchSemanticsNode()
+                .boundsInRoot.left
+        assertTrue(
+            kotlin.math.abs(valueLeft - dateLeft) <= 1f,
+            "value must be left-aligned with date: value=$valueLeft, date=$dateLeft",
+        )
+        assertTrue(
+            kotlin.math.abs(dateLeft - bedtimeLeft) <= 1f,
+            "date must be left-aligned with bedtime line: date=$dateLeft, bedtime=$bedtimeLeft",
+        )
+    }
+
+    @Test
     fun `tooltip does not render naps heading without nap lines`() {
         composeRule.setContent {
             MaterialTheme {
@@ -117,4 +189,10 @@ class DataPointTooltipTest {
             .fetchSemanticsNode()
             .boundsInRoot
             .top
+
+    private fun boundsOfTag(tag: String): androidx.compose.ui.geometry.Rect =
+        composeRule
+            .onNodeWithTag(tag, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
 }
