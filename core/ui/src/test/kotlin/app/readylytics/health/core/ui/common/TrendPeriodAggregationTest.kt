@@ -26,6 +26,28 @@ class TrendPeriodAggregationTest {
     }
 
     @Test
+    fun `bucket midpoint is clamped to selected range`() {
+        val startDate = LocalDate.of(2026, 1, 20)
+        val points =
+            listOf(
+                DailyDataPoint(0, 10f), // January 20
+                DailyDataPoint(21, 20f), // February 10
+            )
+
+        assertEquals(
+            listOf(
+                DailyDataPoint(0, 10f),
+                DailyDataPoint(21, 20f),
+            ),
+            points.bucketBy(
+                granularity = TrendGranularity.MONTHLY,
+                startDate = startDate,
+                endDate = LocalDate.of(2026, 2, 10),
+            ),
+        )
+    }
+
+    @Test
     fun `quarterly bucket averages partial trailing bucket`() {
         val points =
             listOf(

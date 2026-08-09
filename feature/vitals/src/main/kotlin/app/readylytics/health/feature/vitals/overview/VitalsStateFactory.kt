@@ -138,7 +138,7 @@ internal fun buildVitalsChartSeries(
         if (range.granularity == TrendGranularity.DAILY) {
             return real.padToRange(range.days) to null
         }
-        val bucketed = real.bucketBy(range.granularity, startDate)
+        val bucketed = real.bucketBy(range.granularity, startDate, endDate)
         return bucketed to buildPeriodAverageSummary(bucketed, range.granularity, startDate)
     }
 

@@ -72,11 +72,14 @@ private fun DailyDataPoint.periodLabel(
  * Groups [DailyDataPoint]s by calendar month or quarter (per [granularity]), averages each
  * bucket's non-null values, and emits one point per populated bucket positioned at that bucket's
  * midpoint calendar day offset relative to [startDate]. Buckets with no data are omitted entirely.
- * `DAILY` returns the original non-null points sorted by day offset (no averaging).
+ * When [endDate] is supplied, midpoint positions are clamped to the selected date range so
+ * partial boundary buckets remain visible. `DAILY` returns the original non-null points sorted by
+ * day offset (no averaging).
  */
 fun List<DailyDataPoint>.bucketBy(
     granularity: TrendGranularity,
     startDate: LocalDate,
+    endDate: LocalDate? = null,
 ): List<DailyDataPoint> {
     val present = filter { it.value != null }
     if (granularity == TrendGranularity.DAILY) {
@@ -91,7 +94,8 @@ fun List<DailyDataPoint>.bucketBy(
 
     return buckets.map { bucket ->
         val length = bucketLengthDays(bucket.start, granularity)
-        val mid = bucket.start.plusDays(((length - 1) / 2).toLong())
+        val midpoint = bucket.start.plusDays(((length - 1) / 2).toLong())
+        val mid = endDate?.let { midpoint.coerceIn(startDate, it) } ?: midpoint
         val average =
             bucket.points
                 .mapNotNull(DailyDataPoint::value)
