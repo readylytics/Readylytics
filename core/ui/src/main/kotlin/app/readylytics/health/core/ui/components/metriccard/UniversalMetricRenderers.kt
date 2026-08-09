@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
@@ -52,6 +53,11 @@ fun UniversalMetricVisual.progressFraction(): Float? =
 private val UNIVERSAL_SECONDARY_SLOT_HEIGHT = 20.dp
 private val UNIVERSAL_TRACK_SECONDARY_GAP = 6.dp
 private val UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS = 4.dp
+
+// Single source of truth for the bar's rendered track height, so a future thickness tweak cannot
+// resize the painted bar in one place while its reserved slot stays the same elsewhere.
+private val universalBarTrackThickness: Dp
+    @Composable get() = MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS
 
 // Internal inset for the delta pill's label. Plain secondary text is anchored directly to the
 // renderer's content edge so it shares the card's bottom-start anchor with the pill surface.
@@ -151,7 +157,7 @@ fun UniversalBarRenderer(
             activeColor = activeColor,
             trackColor = trackColor,
             markerColor = presentation.status.containerColor(),
-            barHeight = MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS,
+            barHeight = universalBarTrackThickness,
             animateProgress = false,
             modifier =
                 Modifier
@@ -212,7 +218,7 @@ private fun UniversalValueUnitColumn(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS),
+                    .height(universalBarTrackThickness),
         ) {
             track()
         }
@@ -287,7 +293,7 @@ fun UniversalValueRenderer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS),
+                    .height(universalBarTrackThickness),
         )
     }
 }
