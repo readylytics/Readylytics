@@ -361,4 +361,68 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             assertTrue(sessions.isNotEmpty())
             zipFile.delete()
         }
+
+    @Test
+    fun applyRestore_oldFormatBackupWithoutVitalsKeysLeavesExistingVitalsUntouched() =
+        runTest {
+            db.weightRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                        id = "existing_weight",
+                        timestampMs = 5000L,
+                        weightKg = 72.0f,
+                    ),
+                ),
+            )
+
+            // createValidBackupJson() has no "weightRecords"/"bodyFatRecords"/etc keys, matching
+            // every backup created before this table set was added to the export.
+            val json = createValidBackupJson()
+            val zipFile = createBackupZipFile("old_format_no_vitals_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val remainingWeights = db.weightRecordDao().getSince(0)
+            assertEquals(1, remainingWeights.size)
+            assertEquals("existing_weight", remainingWeights.single().id)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_newFormatBackupReplacesExistingVitalsWithBackupContents() =
+        runTest {
+            db.weightRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                        id = "stale_weight",
+                        timestampMs = 5000L,
+                        weightKg = 72.0f,
+                    ),
+                ),
+            )
+
+            val json = createValidBackupJson()
+            json.put(
+                "weightRecords",
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("id", "restored_weight")
+                            put("timestampMs", 9000L)
+                            put("weightKg", 68.2)
+                        },
+                    )
+                },
+            )
+            val zipFile = createBackupZipFile("new_format_vitals_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            val remainingWeights = db.weightRecordDao().getSince(0)
+            assertEquals(1, remainingWeights.size)
+            assertEquals("restored_weight", remainingWeights.single().id)
+            zipFile.delete()
+        }
 }
