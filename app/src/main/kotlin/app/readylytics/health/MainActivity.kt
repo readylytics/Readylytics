@@ -41,6 +41,7 @@ import app.readylytics.health.ui.theme.FitDashboardTheme
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -222,6 +223,7 @@ class MainActivity : ComponentActivity() {
                     }
                 startActivity(buildLogFileShareIntent(this@MainActivity, file))
             }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
                 logE("DatabaseMigration", throwable) { "Failed to prepare diagnostic log" }
                 Toast
                     .makeText(
