@@ -173,71 +173,54 @@ private fun UniversalValueUnitColumn(
     modifier: Modifier = Modifier,
     track: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        bottom =
-                            UNIVERSAL_SECONDARY_SLOT_HEIGHT +
-                                UNIVERSAL_TRACK_SECONDARY_GAP +
-                                MaterialTheme.dimens.metricTrackThickness +
-                                UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS,
-                    ),
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            // Elastic: the value/unit line keeps its natural height while the card has room and
+            // gives way first under font-scale pressure, so the fixed-height track and the
+            // secondary slot below it are never pushed out of the card.
+            modifier = Modifier.weight(1f, fill = false),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
         ) {
-            Row(
-                // Elastic: the value/unit line keeps its natural height while the card has room and
-                // gives way first under font-scale pressure, so the fixed-height track and the
-                // secondary slot below it are never pushed out of the card.
-                modifier = Modifier.weight(1f, fill = false),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
-            ) {
+            Text(
+                text = presentation.valueText,
+                // Same plain typography token as Value mode: no bold, no custom
+                // letter-spacing, no length-based branching.
+                style = MaterialTheme.typography.displaySmall,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                // Baseline (not bounding-box bottom) alignment so the small unit label sits on
+                // the same baseline as the much larger value, the way "56 bpm" is normally set.
+                modifier = Modifier.alignByBaseline(),
+            )
+            if (presentation.unitText.isNotBlank()) {
                 Text(
-                    text = presentation.valueText,
-                    // Same plain typography token as Value mode: no bold, no custom
-                    // letter-spacing, no length-based branching.
-                    style = MaterialTheme.typography.displaySmall,
-                    color = contentColor,
+                    text = presentation.unitText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    // Baseline (not bounding-box bottom) alignment so the small unit label sits on
-                    // the same baseline as the much larger value, the way "56 bpm" is normally set.
                     modifier = Modifier.alignByBaseline(),
                 )
-                if (presentation.unitText.isNotBlank()) {
-                    Text(
-                        text = presentation.unitText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = contentColor.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.alignByBaseline(),
-                    )
-                }
             }
-
-            // Tight gaps around the track: with the larger displaySmall value and the thicker track,
-            // the column's fixed elements still have to fit the value line's full height at font
-            // scale 1.0, and the weighted value row above is the single element that yields further.
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
         }
 
+        Spacer(Modifier.weight(1f))
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
         Box(
             modifier =
                 Modifier
-                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(bottom = UNIVERSAL_SECONDARY_SLOT_HEIGHT + UNIVERSAL_TRACK_SECONDARY_GAP)
                     .height(MaterialTheme.dimens.metricTrackThickness + UNIVERSAL_BAR_TRACK_EXTRA_THICKNESS),
         ) {
             track()
         }
 
+        Spacer(modifier = Modifier.height(UNIVERSAL_TRACK_SECONDARY_GAP))
         Box(
             modifier =
                 Modifier
-                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .height(UNIVERSAL_SECONDARY_SLOT_HEIGHT),
             contentAlignment = Alignment.BottomStart,
