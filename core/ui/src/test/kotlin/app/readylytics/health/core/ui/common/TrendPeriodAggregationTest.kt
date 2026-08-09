@@ -161,4 +161,20 @@ class TrendPeriodAggregationTest {
             points.bucketBy(TrendGranularity.DAILY, LocalDate.of(2026, 1, 1)),
         )
     }
+
+    @Test
+    fun `monthly labels use localized month abbreviations`() {
+        assertEquals("Jan", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 1, 1)))
+        assertEquals("Feb", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 2, 15)))
+        assertEquals("Dec", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 12, 31)))
+    }
+
+    @Test
+    fun `quarterly labels use quarter numbers`() {
+        assertEquals("Q1", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 1, 1)))
+        assertEquals("Q1", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 3, 31)))
+        assertEquals("Q2", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 4, 1)))
+        assertEquals("Q3", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 7, 1)))
+        assertEquals("Q4", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 10, 1)))
+    }
 }

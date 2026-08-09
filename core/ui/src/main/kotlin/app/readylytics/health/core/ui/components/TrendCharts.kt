@@ -37,6 +37,7 @@ import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -97,6 +98,7 @@ fun TrendChart(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.fixed(2f)
                     }
                 },
@@ -105,6 +107,7 @@ fun TrendChart(
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
     parentScrollInProgress: () -> Boolean = { false },
+    granularity: TrendGranularity = TrendGranularity.DAILY,
     periodSummary: PeriodAverageSummary? = null,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -172,7 +175,7 @@ fun TrendChart(
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
 
     LaunchedEffect(renderData.validPoints) {
         modelProducer.runTransaction {
@@ -316,9 +319,19 @@ fun TrendChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(
-                                    rangeDays,
-                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                if (granularity == TrendGranularity.DAILY) {
+                                    remember(
+                                        rangeDays,
+                                    ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) }
+                                } else {
+                                    remember(
+                                        renderData.validPoints,
+                                    ) {
+                                        ChartDefaults.itemPlacerForPoints(
+                                            renderData.validPoints.map(DailyDataPoint::dayOffset),
+                                        )
+                                    }
+                                },
                             guideline = guidelineComponent,
                         ),
                     decorations = decorations,

@@ -6,6 +6,8 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -19,6 +21,7 @@ import com.patrykandpatrick.vico.compose.common.component.LineComponent
 import com.patrykandpatrick.vico.compose.common.component.TextComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import java.time.Instant
 import java.time.ZoneId
 
 object ChartDefaults {
@@ -55,6 +58,28 @@ object ChartDefaults {
             CartesianValueFormatter { _, value, _ -> labels.label(value) }
         }
 
+    /**
+     * Granularity-aware x-axis formatter. [DAILY] delegates to [rememberDayOffsetFormatter];
+     * [MONTHLY] and [QUARTERLY] resolve each day offset to its calendar date in [zoneId] and
+     * format the containing period via [periodLabelFor].
+     */
+    @Composable
+    fun rememberPeriodFormatter(
+        rangeStartMs: Long,
+        granularity: TrendGranularity,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): CartesianValueFormatter {
+        if (granularity == TrendGranularity.DAILY) {
+            return rememberDayOffsetFormatter(rangeStartMs, zoneId)
+        }
+        return remember(rangeStartMs, granularity, zoneId) {
+            val baseDate = Instant.ofEpochMilli(rangeStartMs).atZone(zoneId).toLocalDate()
+            CartesianValueFormatter { _, value, _ ->
+                periodLabelFor(granularity, baseDate.plusDays(value.toLong()))
+            }
+        }
+    }
+
     @Composable
     fun rememberChartState(
         rangeDays: Int,
@@ -79,6 +104,7 @@ object ChartDefaults {
                             when (rangeDays) {
                                 30 -> Zoom.fixed(6f)
                                 180 -> Zoom.fixed(25f)
+                                360 -> Zoom.fixed(45f)
                                 else -> Zoom.fixed(2f)
                             }
                         },
@@ -121,6 +147,38 @@ object ChartDefaults {
                 fullXRange: ClosedFloatingPointRange<Double>,
                 maxLabelWidth: Float,
             ): List<Double> = ticks.values(visibleXRange)
+        }
+    }
+
+    /**
+     * Places one tick per actual plotted point offset (used for bucketed monthly/quarterly charts,
+     * where there are ~12 or ~4 points instead of up to 180/360 daily ones). Intentionally does not
+     * reuse [DayOffsetTickCalculator]: its spacing-invariant assumes daily ranges and "TimeRange
+     * only ships {7, 30, 180}", which adding [app.readylytics.health.core.ui.common.TimeRange.TWELVE_MONTHS]
+     * would violate.
+     */
+    fun itemPlacerForPoints(pointOffsets: List<Int>): HorizontalAxis.ItemPlacer {
+        val basePlacer =
+            HorizontalAxis.ItemPlacer.aligned(
+                spacing = { 1 },
+                addExtremeLabelPadding = true,
+            )
+        val ticks = pointOffsets.sorted().distinct().map { it.toDouble() }
+
+        return object : HorizontalAxis.ItemPlacer by basePlacer {
+            override fun getLabelValues(
+                context: CartesianDrawingContext,
+                visibleXRange: ClosedFloatingPointRange<Double>,
+                fullXRange: ClosedFloatingPointRange<Double>,
+                maxLabelWidth: Float,
+            ): List<Double> = ticks.filter { it in visibleXRange }
+
+            override fun getLineValues(
+                context: CartesianDrawingContext,
+                visibleXRange: ClosedFloatingPointRange<Double>,
+                fullXRange: ClosedFloatingPointRange<Double>,
+                maxLabelWidth: Float,
+            ): List<Double> = ticks.filter { it in visibleXRange }
         }
     }
 }

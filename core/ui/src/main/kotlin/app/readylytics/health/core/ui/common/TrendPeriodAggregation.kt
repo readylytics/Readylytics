@@ -47,18 +47,26 @@ private fun bucketLengthDays(
             ChronoUnit.DAYS.between(bucketStart, bucketStart.plusMonths(3)).toInt()
     }
 
-private fun DailyDataPoint.periodLabel(
+/**
+ * Display label for the period containing [date]: localized month abbreviation for [MONTHLY],
+ * `Qn` for [QUARTERLY], or the ISO date for [DAILY]. Shared by the axis formatter and the
+ * period summary builder so both render identical labels.
+ */
+fun periodLabelFor(
     granularity: TrendGranularity,
-    startDate: LocalDate,
-): String {
-    val date = startDate.plusDays(dayOffset.toLong())
-    return when (granularity) {
+    date: LocalDate,
+): String =
+    when (granularity) {
         TrendGranularity.MONTHLY ->
             date.format(DateTimeFormatter.ofPattern("MMM", Locale.getDefault()))
         TrendGranularity.QUARTERLY -> "Q${(date.monthValue - 1) / 3 + 1}"
         TrendGranularity.DAILY -> date.toString()
     }
-}
+
+private fun DailyDataPoint.periodLabel(
+    granularity: TrendGranularity,
+    startDate: LocalDate,
+): String = periodLabelFor(granularity, startDate.plusDays(dayOffset.toLong()))
 
 /**
  * Groups [DailyDataPoint]s by calendar month or quarter (per [granularity]), averages each
