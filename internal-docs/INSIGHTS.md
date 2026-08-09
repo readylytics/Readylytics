@@ -288,7 +288,7 @@ Trigger:
 Generated when:
 - `today.weightKg` is not null.
 - There is a past weight reading in the last 7 days (excluding today).
-- `percent = abs(todayWeight - oldestWeight) / oldestWeight` > `WEIGHT_DRIFT_PERCENT_THRESHOLD` (0.02f).
+- `percent = abs(todayWeight - oldestWeight) / oldestWeight * 100` > `WEIGHT_DRIFT_PERCENT_THRESHOLD` (2.0f).
 - `strainRatio` > `STRAIN_HIGH_RATIO_THRESHOLD` (1.3f).
 
 ---
