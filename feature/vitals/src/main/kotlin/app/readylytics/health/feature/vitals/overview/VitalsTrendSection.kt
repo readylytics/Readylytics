@@ -66,6 +66,8 @@ internal fun VitalsTrendSection(
                         zoomState = chartZoomState,
                         zoneBands = presentation.hrv.zoneBands,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.hrvPeriodSummary,
                     )
                 }
             },
@@ -100,6 +102,8 @@ internal fun VitalsTrendSection(
                         zoomState = chartZoomState,
                         zoneBands = presentation.rhr.zoneBands,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.rhrPeriodSummary,
                     )
                 }
             },
@@ -139,6 +143,8 @@ internal fun VitalsTrendSection(
                         minYOverride = 90.0,
                         maxYOverride = 100.0,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.spo2PeriodSummary,
                     )
                 }
             },
@@ -185,6 +191,8 @@ internal fun VitalsTrendSection(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.bodyTempPeriodSummary,
                     )
                 }
             },

@@ -262,6 +262,48 @@ class VitalsStateFactoryTest {
         assertNull(series.hrvPeriodSummary)
     }
 
+    @Test
+    fun `all four metrics bucket together with independent averages`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val summaries =
+            listOf(
+                DailySummary(
+                    date = start,
+                    nocturnalHrv = 20,
+                    restingHeartRate = 51,
+                    avgSleepingSpo2 = 94.4f,
+                    avgSleepingBodyTemp = 36.5f,
+                    isCalibrating = false,
+                ),
+                DailySummary(
+                    date = start.plusDays(31),
+                    nocturnalHrv = 24,
+                    restingHeartRate = 53,
+                    avgSleepingSpo2 = 96.6f,
+                    avgSleepingBodyTemp = 37.1f,
+                    isCalibrating = false,
+                ),
+            )
+
+        val series =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.SIX_MONTHS, unitSystem = UnitSystem.METRIC)
+
+        assertEquals(listOf(15, 44), series.hrv.map { it.dayOffset })
+        assertEquals(listOf(15, 44), series.rhr.map { it.dayOffset })
+        assertEquals(listOf(15, 44), series.spo2.map { it.dayOffset })
+        assertEquals(listOf(15, 44), series.bodyTemp.map { it.dayOffset })
+
+        assertEquals(listOf(20f, 24f), series.hrv.map { it.value })
+        assertEquals(listOf(51f, 53f), series.rhr.map { it.value })
+        assertEquals(listOf(94.4f, 96.6f), series.spo2.map { it.value })
+        assertEquals(listOf(36.5f, 37.1f), series.bodyTemp.map { it.value })
+
+        assertEquals(24f, series.hrvPeriodSummary?.average)
+        assertEquals(53f, series.rhrPeriodSummary?.average)
+        assertEquals(96.6f, series.spo2PeriodSummary?.average)
+        assertEquals(37.1f, series.bodyTempPeriodSummary?.average)
+    }
+
     private fun summary(
         date: LocalDate,
         hrv: Int? = null,
