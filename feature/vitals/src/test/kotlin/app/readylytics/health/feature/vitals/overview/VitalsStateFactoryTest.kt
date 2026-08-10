@@ -297,12 +297,12 @@ class VitalsStateFactoryTest {
 
         assertEquals(listOf(20f, 24f), series.hrv.map { it.value })
         assertEquals(listOf(51f, 53f), series.rhr.map { it.value })
-        assertEquals(listOf(94.4f, 96.6f), series.spo2.map { it.value })
+        assertEquals(listOf(94f, 97f), series.spo2.map { it.value })
         assertEquals(listOf(36.5f, 37.1f), series.bodyTemp.map { it.value })
 
         assertEquals(24f, series.hrvPeriodSummary?.average)
         assertEquals(53f, series.rhrPeriodSummary?.average)
-        assertEquals(96.6f, series.spo2PeriodSummary?.average)
+        assertEquals(97f, series.spo2PeriodSummary?.average)
         assertEquals(37.1f, series.bodyTempPeriodSummary?.average)
     }
 

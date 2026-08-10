@@ -8,9 +8,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
+import app.readylytics.health.core.ui.common.DeltaDirection
+import app.readylytics.health.core.ui.common.DeltaOutcome
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
+import app.readylytics.health.core.ui.common.assessDeltaOutcome
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
 import java.util.Locale
@@ -19,6 +23,8 @@ import kotlin.math.roundToInt
 /**
  * Compact latest-bucket-vs-prior-bucket summary rendered beneath a bucketed trend chart,
  * e.g. "Aug Avg: 44 ms ↑3 vs Jul". Reuses the existing delta arrow/number formatting.
+ * The delta arrow is colored by [direction]: favourable movement uses the optimal color, the
+ * opposite the warning color, and neutral/no-change the neutral color.
  */
 @Composable
 fun PeriodAverageSummaryRow(
@@ -26,15 +32,31 @@ fun PeriodAverageSummaryRow(
     unit: String,
     decimalPlaces: Int,
     modifier: Modifier = Modifier,
+    direction: DeltaDirection = DeltaDirection.HIGHER_IS_BETTER,
 ) {
-    val valueText =
-        summary.average?.let { "${formatPeriodValue(it, decimalPlaces)} $unit" }
-            ?: return
+    val average = summary.average ?: return
+    val valueText = "${formatPeriodValue(average, decimalPlaces)} $unit"
+    val currentRounded = average.roundToInt()
+    val previousRounded = summary.previousAverage?.roundToInt()
     val deltaText =
         formatRoundedScoreDelta(
-            currentRounded = summary.average?.roundToInt(),
-            previousRounded = summary.previousAverage?.roundToInt(),
+            currentRounded = currentRounded,
+            previousRounded = previousRounded,
         ).resolveOrNull() ?: return
+    val statusColors = LocalStatusColors.current
+    val deltaColor =
+        when (
+            assessDeltaOutcome(
+                currentRounded = currentRounded,
+                previousRounded = previousRounded,
+                direction = direction,
+            )
+        ) {
+            DeltaOutcome.IMPROVED -> statusColors.optimal
+            DeltaOutcome.WORSENED -> statusColors.warning
+            DeltaOutcome.NEUTRAL -> statusColors.neutral
+            null -> statusColors.neutral
+        }
     val avgLabel = stringResource(R.string.label_avg)
     val previousLabel = stringResource(R.string.period_summary_vs, summary.previousPeriodLabel)
 
@@ -51,7 +73,7 @@ fun PeriodAverageSummaryRow(
         Text(
             text = deltaText,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = deltaColor,
         )
         Text(
             text = previousLabel,

@@ -67,6 +67,42 @@ class TrendPeriodAggregationTest {
     }
 
     @Test
+    fun `monthly bucket rounds fractional averages to integer by default`() {
+        val points =
+            listOf(
+                DailyDataPoint(0, 94.4f), // January
+                DailyDataPoint(1, 94.6f), // January
+                DailyDataPoint(31, 96.3f), // February
+            )
+
+        assertEquals(
+            listOf(
+                DailyDataPoint(15, 95f), // January avg 94.5 rounded
+                DailyDataPoint(44, 96f), // February avg 96.3 rounded
+            ),
+            points.bucketBy(TrendGranularity.MONTHLY, LocalDate.of(2026, 1, 1)),
+        )
+    }
+
+    @Test
+    fun `bucket average respects configured decimal places`() {
+        val points =
+            listOf(
+                DailyDataPoint(0, 36.5f), // January
+                DailyDataPoint(1, 36.8f), // January
+            )
+
+        assertEquals(
+            listOf(DailyDataPoint(15, 36.7f)), // avg 36.65 rounded to 1 decimal
+            points.bucketBy(
+                granularity = TrendGranularity.MONTHLY,
+                startDate = LocalDate.of(2026, 1, 1),
+                valueDecimalPlaces = 1,
+            ),
+        )
+    }
+
+    @Test
     fun `missing days do not create empty buckets or affect average`() {
         val points =
             listOf(

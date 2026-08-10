@@ -4,6 +4,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * Latest-bucket-vs-prior-bucket summary for a bucketed trend series.
@@ -70,16 +72,18 @@ private fun DailyDataPoint.periodLabel(
 
 /**
  * Groups [DailyDataPoint]s by calendar month or quarter (per [granularity]), averages each
- * bucket's non-null values, and emits one point per populated bucket positioned at that bucket's
- * midpoint calendar day offset relative to [startDate]. Buckets with no data are omitted entirely.
- * When [endDate] is supplied, midpoint positions are clamped to the selected date range so
- * partial boundary buckets remain visible. `DAILY` returns the original non-null points sorted by
+ * bucket's non-null values, rounds that average to [valueDecimalPlaces], and emits one point per
+ * populated bucket positioned at that bucket's midpoint calendar day offset relative to [startDate].
+ * Buckets with no data are omitted entirely. `DAILY` returns the original non-null points sorted by
  * day offset (no averaging).
+ * When [endDate] is supplied, midpoint positions are clamped to the selected date range so
+ * partial boundary buckets remain visible.
  */
 fun List<DailyDataPoint>.bucketBy(
     granularity: TrendGranularity,
     startDate: LocalDate,
     endDate: LocalDate? = null,
+    valueDecimalPlaces: Int = 0,
 ): List<DailyDataPoint> {
     val present = filter { it.value != null }
     if (granularity == TrendGranularity.DAILY) {
@@ -101,8 +105,14 @@ fun List<DailyDataPoint>.bucketBy(
                 .mapNotNull(DailyDataPoint::value)
                 .average()
                 .toFloat()
+                .roundToDecimalPlaces(valueDecimalPlaces)
         DailyDataPoint(ChronoUnit.DAYS.between(startDate, mid).toInt(), average)
     }
+}
+
+private fun Float.roundToDecimalPlaces(decimalPlaces: Int): Float {
+    val factor = 10f.pow(decimalPlaces)
+    return (this * factor).roundToInt() / factor
 }
 
 /**

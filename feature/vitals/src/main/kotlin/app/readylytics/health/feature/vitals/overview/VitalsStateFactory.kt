@@ -133,12 +133,15 @@ internal fun buildVitalsChartSeries(
                 }
             }.sortedBy(DailyDataPoint::dayOffset)
 
-    fun seriesAndSummary(value: (DailySummary) -> Float?): Pair<List<DailyDataPoint>, PeriodAverageSummary?> {
+    fun seriesAndSummary(
+        valueDecimalPlaces: Int = 0,
+        value: (DailySummary) -> Float?,
+    ): Pair<List<DailyDataPoint>, PeriodAverageSummary?> {
         val real = realPoints(value)
         if (range.granularity == TrendGranularity.DAILY) {
             return real.padToRange(range.days) to null
         }
-        val bucketed = real.bucketBy(range.granularity, startDate, endDate)
+        val bucketed = real.bucketBy(range.granularity, startDate, endDate, valueDecimalPlaces = valueDecimalPlaces)
         return bucketed to buildPeriodAverageSummary(bucketed, range.granularity, startDate)
     }
 
@@ -146,7 +149,7 @@ internal fun buildVitalsChartSeries(
     val rhr = seriesAndSummary { it.restingHeartRate?.toFloat() }
     val spo2 = seriesAndSummary { it.avgSleepingSpo2 }
     val bodyTemp =
-        seriesAndSummary {
+        seriesAndSummary(valueDecimalPlaces = 1) {
             it.avgSleepingBodyTemp?.let { celsius ->
                 UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
             }

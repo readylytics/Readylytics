@@ -36,8 +36,10 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -109,6 +111,9 @@ fun TrendChart(
     parentScrollInProgress: () -> Boolean = { false },
     granularity: TrendGranularity = TrendGranularity.DAILY,
     periodSummary: PeriodAverageSummary? = null,
+    // Whether an increase is favourable for [periodSummary]'s metric (e.g. HRV) or not (e.g. RHR);
+    // drives the summary delta arrow color. [DeltaDirection.NEUTRAL] keeps the arrow neutral.
+    deltaDirection: DeltaDirection = DeltaDirection.HIGHER_IS_BETTER,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -254,7 +259,7 @@ fun TrendChart(
             val nextTooltip =
                 DataPointTooltipData(
                     valueText = valueText,
-                    dateText = ChartUtils.formatTooltipDate(date),
+                    dateText = formatTrendTooltipDate(granularity, date),
                     offset =
                         androidx.compose.ui.unit
                             .IntOffset(canvasX.toInt(), canvasY.toInt()),
@@ -377,6 +382,7 @@ fun TrendChart(
             summary = periodSummary,
             unit = baselineUnit,
             decimalPlaces = baselineDecimalPlaces,
+            direction = deltaDirection,
         )
     }
 }
@@ -455,6 +461,20 @@ internal fun formatTrendTooltipValue(
         if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
     return if (hideUnit) formatted else "$formatted $unit"
 }
+
+/**
+ * Tooltip date line: [DAILY] keeps the short date format; bucketed [MONTHLY]/[QUARTERLY] points
+ * show the containing period label (e.g. "Juli" / "Q3") instead of a mid-month calendar date.
+ */
+internal fun formatTrendTooltipDate(
+    granularity: TrendGranularity,
+    date: java.time.LocalDate,
+): String =
+    if (granularity == TrendGranularity.DAILY) {
+        ChartUtils.formatTooltipDate(date)
+    } else {
+        periodLabelFor(granularity, date)
+    }
 
 internal fun formatBaselineLegendText(
     value: Float?,
