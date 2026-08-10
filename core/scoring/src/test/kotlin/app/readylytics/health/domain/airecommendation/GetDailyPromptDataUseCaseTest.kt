@@ -8,6 +8,7 @@ import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.model.PermittedRecommendation
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
@@ -110,6 +111,59 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals(PermittedRecommendation.REST, result.today.permittedRecommendation)
         assertEquals(PermittedRecommendation.REST, result.today.recommendedAction)
         assertEquals(RecommendedLoadPromptData(qualitative = "NORMAL"), result.loadState.recommendedLoad)
+    }
+
+    @Test
+    fun `execute applies every everyday coverage tier to advisor confidence`() = runTest {
+        every { preferencesReader.userPreferences } returns
+            flowOf(UserPreferences(scoringZoneId = "UTC", strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))
+        coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
+
+        listOf(
+            LoadCoverageConfidence.NONE to "MEDIUM",
+            LoadCoverageConfidence.LOW to "MEDIUM",
+            LoadCoverageConfidence.MEDIUM to "HIGH",
+            LoadCoverageConfidence.HIGH to "HIGH",
+        ).forEach { (coverage, expectedConfidence) ->
+            coEvery { dailySummaryRepository.getByDate(todayMidnight) } returns
+                summary(today, everydayLoadConfidence = coverage.name)
+
+            assertEquals(expectedConfidence, useCase.execute(today).advisorDataConfidence)
+        }
+    }
+
+    @Test
+    fun `execute does not apply everyday coverage when workout-only source is selected`() = runTest {
+        coEvery { dailySummaryRepository.getByDate(todayMidnight) } returns
+            summary(today, everydayLoadConfidence = LoadCoverageConfidence.NONE.name)
+        coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
+
+        val result = useCase.execute(today)
+
+        assertEquals("HIGH", result.advisorDataConfidence)
+    }
+
+    @Test
+    fun `execute combines everyday none coverage with missing recovery signals`() = runTest {
+        every { preferencesReader.userPreferences } returns
+            flowOf(UserPreferences(scoringZoneId = "UTC", strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE))
+        coEvery { dailySummaryRepository.getByDate(todayMidnight) } returns
+            summary(
+                today,
+                everydayLoadConfidence = LoadCoverageConfidence.NONE.name,
+                flags = setOf(RecoveryFlag.HRV_MISSING),
+            )
+        coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
+
+        val result = useCase.execute(today)
+
+        assertEquals("LOW", result.advisorDataConfidence)
     }
 
     @Test
@@ -233,6 +287,7 @@ class GetDailyPromptDataUseCaseTest {
         date: LocalDate,
         readinessEverydayHr: Float? = null,
         flags: Set<RecoveryFlag> = emptySet(),
+        everydayLoadConfidence: String = "High",
     ): DailySummary =
         DailySummary(
             date = date,
@@ -270,7 +325,7 @@ class GetDailyPromptDataUseCaseTest {
             readinessWorkoutOnly = 78f,
             readinessEverydayHr = readinessEverydayHr,
             everydayCoverageMinutes = 120,
-            everydayLoadConfidence = "High",
+            everydayLoadConfidence = everydayLoadConfidence,
         )
 
     private fun workoutData(id: String): WorkoutData =

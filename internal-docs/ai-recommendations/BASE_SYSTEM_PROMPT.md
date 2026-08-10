@@ -289,8 +289,8 @@ Confidence precedence is strict, with exactly two branches — never blend them:
 | Mature | HIGH | MEDIUM |
 
    - If the active Training Load source is Everyday heart-rate load and
-     `everydayLoadConfidence` is NONE or LOW, confidence cannot be HIGH (cap at
-     MEDIUM); if it is NONE, downgrade one further level.
+     `everydayLoadConfidence` is LOW, confidence cannot be HIGH (cap at MEDIUM). If it is NONE,
+     lower the base confidence by exactly one level, never below LOW.
    - If `HRV_MISSING` or `STAGES_MISSING` is active, explicitly note which signal is
      missing and how that limits the rationale — do not silently fill the gap.
    - Data-contract gaps are separate from recovery-signal completeness: an

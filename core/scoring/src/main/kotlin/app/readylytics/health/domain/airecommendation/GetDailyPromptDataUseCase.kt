@@ -83,9 +83,14 @@ class GetDailyPromptDataUseCase
                         ?.let { Instant.ofEpochMilli(it).toString() }
                 }
 
-            val isEverydaySourceLowConfidence =
-                sourceMode == LoadSourceMode.EVERYDAY_HEART_RATE &&
-                    todaySummary?.everydayLoadConfidence == LoadCoverageConfidence.LOW.name
+            val everydayLoadConfidence =
+                if (sourceMode == LoadSourceMode.EVERYDAY_HEART_RATE) {
+                    todaySummary?.everydayLoadConfidence?.let {
+                        runCatching { enumValueOf<LoadCoverageConfidence>(it.uppercase()) }.getOrNull()
+                    }
+                } else {
+                    null
+                }
             val hasMajorMissingSignals =
                 todaySummary?.recoveryFlags?.any {
                     it == RecoveryFlag.HRV_MISSING || it == RecoveryFlag.STAGES_MISSING
@@ -94,7 +99,7 @@ class GetDailyPromptDataUseCase
                 todaySummary?.snapshotCalibrationPhase?.let { runCatching { enumValueOf<CalibrationPhase>(it.uppercase()) }.getOrNull() }
                     ?: CalibrationPhase.CALIBRATION
             val advisorConf =
-                resolveAdvisorConfidence(phase, hasMajorMissingSignals, isEverydaySourceLowConfidence).name
+                resolveAdvisorConfidence(phase, hasMajorMissingSignals, everydayLoadConfidence).name
 
             val workoutBlocks =
                 yesterdayWorkouts.map { workout ->

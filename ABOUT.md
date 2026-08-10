@@ -186,7 +186,9 @@ and above** minutes contribute TRIMP using the standard per-minute formula.
 - **Confidence** is derived from `coverageMinutes`: 0 → **None**, 1–179 → **Low**,
   180–479 → **Medium**, 480+ → **High**. A day needs at least 180 coverage minutes to be
   a valid everyday-load estimate; below that, Readiness shows a low-confidence indicator
-  whenever the Strain / Training Load source is set to Everyday heart-rate load.
+  whenever the Strain / Training Load source is set to Everyday heart-rate load. For the AI
+  Advisor with that source selected, **Low** coverage caps a high confidence at **Medium**;
+  **None** lowers the base confidence by one level, never below **Low**.
 
 Both source variants are calculated and stored for every day, so switching either
 setting is instant — no recalculation or history rewrite is needed.

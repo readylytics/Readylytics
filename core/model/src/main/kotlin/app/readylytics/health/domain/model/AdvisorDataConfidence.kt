@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.model
 
+import app.readylytics.health.domain.scoring.LoadCoverageConfidence
+
 enum class AdvisorDataConfidence {
     LOW,
     MEDIUM,
@@ -9,7 +11,7 @@ enum class AdvisorDataConfidence {
 fun resolveAdvisorConfidence(
     phase: CalibrationPhase,
     hasMajorMissingSignals: Boolean,
-    isEverydaySourceLowConfidence: Boolean
+    everydayLoadConfidence: LoadCoverageConfidence?,
 ): AdvisorDataConfidence {
     val base = when (phase) {
         CalibrationPhase.CALIBRATION, CalibrationPhase.EARLY_BASELINE -> AdvisorDataConfidence.LOW
@@ -17,8 +19,14 @@ fun resolveAdvisorConfidence(
         CalibrationPhase.MATURE -> if (hasMajorMissingSignals) AdvisorDataConfidence.MEDIUM else AdvisorDataConfidence.HIGH
     }
 
-    if (isEverydaySourceLowConfidence && base == AdvisorDataConfidence.HIGH) {
-        return AdvisorDataConfidence.MEDIUM
+    return when (everydayLoadConfidence) {
+        LoadCoverageConfidence.LOW -> minOf(base, AdvisorDataConfidence.MEDIUM)
+        LoadCoverageConfidence.NONE ->
+            when (base) {
+                AdvisorDataConfidence.HIGH -> AdvisorDataConfidence.MEDIUM
+                AdvisorDataConfidence.MEDIUM, AdvisorDataConfidence.LOW -> AdvisorDataConfidence.LOW
+            }
+
+        null, LoadCoverageConfidence.MEDIUM, LoadCoverageConfidence.HIGH -> base
     }
-    return base
 }

@@ -980,6 +980,12 @@ Key behaviors:
   `WorkoutDao.getWorkoutsInRange` (added for this feature; bounded, no schema change).
 - The prompt labels which Training Load source is active; `LoadSourceSelector` projects the
   active-source ATL/CTL/ratio/load/readiness columns. RAS totals are informational only.
+- `GetDailyPromptDataUseCase` parses the persisted everyday coverage confidence once and only
+  when Everyday heart-rate load is the selected source, then passes the typed value to
+  `resolveAdvisorConfidence`. `LOW` coverage caps an otherwise high advisor confidence at
+  medium; `NONE` coverage lowers it one level with a low floor. Absent, medium, and high coverage
+  leave the calibration/recovery-signal confidence unchanged. Workout-only prompts pass no
+  everyday coverage confidence.
 - `ComputeWorkoutPatternSummaryUseCase` (Section G) groups the three-month window by exercise type
   (frequency, avg TRIMP, avg duration, preferred weekdays) and computes rest-day average, rest-day
   gap, and current training streak. Workout day boundaries resolve in UTC.
