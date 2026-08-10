@@ -30,7 +30,28 @@ class DailyPromptFormatterTest {
         assertTrue(text.contains("Data current until: 12:00 PM"))
         assertTrue(text.contains("Recommended action: TRAIN"))
         assertTrue(text.contains("Load context: MAINTAINING"))
-        assertTrue(text.contains("Recommended load for remaining training today: NORMAL"))
+    }
+
+    @Test
+    fun `format serializes recommended load as a structured object`() {
+        val text = DailyPromptFormatter.format(populatedPromptData())
+
+        assertTrue(
+            text.contains(
+                "Recommended load for remaining training today: { \"qualitative\": \"NORMAL\" }",
+            ),
+        )
+    }
+
+    @Test
+    fun `format preserves recommended load object when qualitative is null`() {
+        val text = DailyPromptFormatter.format(emptyPromptData())
+
+        assertTrue(
+            text.contains(
+                "Recommended load for remaining training today: { \"qualitative\": null }",
+            ),
+        )
     }
 
     @Test
@@ -39,7 +60,6 @@ class DailyPromptFormatterTest {
 
         assertTrue(text.contains("insufficient data"))
         assertTrue(text.contains("Recommended action: insufficient data"))
-        assertTrue(text.contains("Recommended load for remaining training today: insufficient data"))
         assertFalse(text.contains("{{"))
         assertFalse(text.contains("}}"))
         assertFalse(text.contains("#each"))

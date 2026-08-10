@@ -150,9 +150,13 @@ object DailyPromptFormatter {
                 "${intOrUnavailable(load.everydayCoverageMinutes)} minutes",
         )
         appendLine("- Load context: ${orUnavailable(load.loadContext)}")
+        val recommendedLoad =
+            load.recommendedLoad?.qualitative?.let { qualitative ->
+                "{ \"qualitative\": \"$qualitative\" }"
+            } ?: "{ \"qualitative\": null }"
         appendLine(
             "- Recommended load for remaining training today: " +
-                "${orUnavailable(load.recommendedLoad?.qualitative)}",
+                recommendedLoad,
         )
         appendLine()
     }
