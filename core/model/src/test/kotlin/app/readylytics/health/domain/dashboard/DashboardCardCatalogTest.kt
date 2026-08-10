@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DashboardCardCatalogTest {
@@ -69,18 +70,28 @@ class DashboardCardCatalogTest {
     }
 
     @Test
-    fun `Insights is not in catalog`() {
+    fun `Insights and AI recommendation are not in catalog`() {
         assertNull(DashboardCardCatalog.spec(CardId.INSIGHTS))
+        assertNull(DashboardCardCatalog.spec(CardId.AI_RECOMMENDATION))
     }
 
     @Test
-    fun `every default dashboard card except Insights has a catalog spec`() {
+    fun `every default dashboard card except Insights and AI recommendation has a catalog spec`() {
         SettingsDefaults.DEFAULT_DASHBOARD_CARDS
             .map { it.cardId }
-            .filter { it != CardId.INSIGHTS }
+            .filter { it != CardId.INSIGHTS && it != CardId.AI_RECOMMENDATION }
             .forEach { cardId ->
                 assertNotNull("Missing catalog spec for $cardId", DashboardCardCatalog.spec(cardId))
             }
+    }
+
+    @Test
+    fun `AI recommendation card is a visible default appended last`() {
+        val aiCard = SettingsDefaults.DEFAULT_DASHBOARD_CARDS.last()
+
+        assertEquals(CardId.AI_RECOMMENDATION, aiCard.cardId)
+        assertTrue(aiCard.isVisible)
+        assertEquals(1, SettingsDefaults.DEFAULT_DASHBOARD_CARDS.count { it.cardId == CardId.AI_RECOMMENDATION })
     }
 
     @Test

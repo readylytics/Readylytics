@@ -119,6 +119,7 @@ object SettingsDefaults {
             CardConfiguration(CardId.BLOOD_PRESSURE, isVisible = true, position = 14),
             CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = true, position = 15),
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
+            CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 17),
         )
 }
 
