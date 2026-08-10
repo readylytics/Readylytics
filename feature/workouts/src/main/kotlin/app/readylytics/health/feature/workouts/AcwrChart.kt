@@ -29,13 +29,10 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.ui.common.DeltaDirection
-import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
-import app.readylytics.health.core.ui.components.PeriodAverageSummaryRow
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -72,8 +69,6 @@ internal fun AcwrChartCard(
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
     granularity: TrendGranularity = TrendGranularity.DAILY,
-    trimpPeriodSummary: PeriodAverageSummary? = null,
-    strainRatioPeriodSummary: PeriodAverageSummary? = null,
 ) {
     val trimpColor = MaterialTheme.colorScheme.primary
     val ratioColor = MaterialTheme.colorScheme.tertiary
@@ -109,24 +104,6 @@ internal fun AcwrChartCard(
                 ratioColor = ratioColor,
             )
 
-            trimpPeriodSummary?.let { summary ->
-                Spacer(Modifier.height(MaterialTheme.spacing.small))
-                PeriodAverageSummaryRow(
-                    summary = summary,
-                    unit = "",
-                    decimalPlaces = 0,
-                    direction = DeltaDirection.NEUTRAL,
-                )
-            }
-            strainRatioPeriodSummary?.let { summary ->
-                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-                PeriodAverageSummaryRow(
-                    summary = summary,
-                    unit = "",
-                    decimalPlaces = 0,
-                    direction = DeltaDirection.NEUTRAL,
-                )
-            }
         }
     }
 }
@@ -185,22 +162,39 @@ private fun AcwrChart(
     // inside the lambda (where Composable calls are not permitted).
     val trimpFormat = stringResource(R.string.acwr_tooltip_trimp_format)
     val strainFormat = stringResource(R.string.acwr_tooltip_strain_format)
+    val avgTrimpFormat = stringResource(R.string.acwr_tooltip_avg_trimp_format)
+    val avgStrainFormat = stringResource(R.string.acwr_tooltip_avg_strain_format)
 
     // Derive tooltipState directly from selectedState to avoid separate side-effects.
     // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
     val tooltipState =
-        remember(selectedState, rangeStartMs, trimpFormat, strainFormat) {
+        remember(selectedState, rangeStartMs, trimpFormat, strainFormat, avgTrimpFormat, avgStrainFormat, granularity) {
             selectedState?.let { s ->
                 val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                 val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
                 val trimpText = s.trimpValue?.let { MetricFormatter.roundTrimp(it).toString() } ?: "—"
                 val strainText = MetricFormatter.formatStrain(s.strainRatioValue)
-                DataPointTooltipData(
-                    valueText = trimpFormat.format(trimpText),
-                    dateText = strainFormat.format(strainText),
-                    extraLine = ChartUtils.formatTooltipDate(date),
-                    offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
-                )
+
+                if (granularity != TrendGranularity.DAILY) {
+                    val periodLabel = when (granularity) {
+                        TrendGranularity.MONTHLY -> date.format(java.time.format.DateTimeFormatter.ofPattern("MMM", java.util.Locale.getDefault()))
+                        TrendGranularity.QUARTERLY -> "Q${((date.monthValue - 1) / 3) + 1}"
+                        TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
+                    }
+                    DataPointTooltipData(
+                        valueText = periodLabel,
+                        dateText = avgTrimpFormat.format(trimpText),
+                        extraLine = avgStrainFormat.format(strainText),
+                        offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
+                    )
+                } else {
+                    DataPointTooltipData(
+                        valueText = trimpFormat.format(trimpText),
+                        dateText = strainFormat.format(strainText),
+                        extraLine = ChartUtils.formatTooltipDate(date),
+                        offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
+                    )
+                }
             }
         }
 
@@ -352,7 +346,7 @@ private fun AcwrChart(
                 ColumnCartesianLayer.ColumnProvider.series(
                     rememberLineComponent(
                         fill = Fill(MaterialTheme.colorScheme.primary),
-                        thickness = 8.dp,
+                        thickness = if (granularity == TrendGranularity.DAILY) 8.dp else 24.dp,
                         shape = CircleShape,
                     ),
                 ),

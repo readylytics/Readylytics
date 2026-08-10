@@ -281,8 +281,6 @@ fun SleepScreen(
                 scrollState = trendScrollState,
                 zoomState = trendZoomState,
                 parentScrollInProgress = { scrollState.isScrollInProgress },
-                startOffsetSummary = uiState.trendStartOffsetSummary,
-                durationSpanSummary = uiState.trendDurationSpanSummary,
                 actualDurationSummary = uiState.trendActualDurationSummary,
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )

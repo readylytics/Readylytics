@@ -35,14 +35,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.ui.common.DeltaDirection
+import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
-import app.readylytics.health.core.ui.components.PeriodAverageSummaryRow
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.feature.sleep.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -68,6 +68,7 @@ import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -86,8 +87,6 @@ fun SleepTrendCard(
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
     scoringZoneId: ZoneId = ZoneId.systemDefault(),
-    startOffsetSummary: PeriodAverageSummary? = null,
-    durationSpanSummary: PeriodAverageSummary? = null,
     actualDurationSummary: PeriodAverageSummary? = null,
 ) {
     val barColor = MaterialTheme.colorScheme.primary
@@ -123,30 +122,53 @@ fun SleepTrendCard(
                 lineColor = lineColor,
             )
 
-            startOffsetSummary?.let { summary ->
-                Spacer(Modifier.height(MaterialTheme.spacing.small))
-                PeriodAverageSummaryRow(
-                    summary = summary,
-                    unit = "h",
-                    decimalPlaces = 1,
-                    direction = DeltaDirection.NEUTRAL,
-                )
-            }
-            durationSpanSummary?.let { summary ->
-                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-                PeriodAverageSummaryRow(
-                    summary = summary,
-                    unit = "h",
-                    decimalPlaces = 1,
-                )
-            }
             actualDurationSummary?.let { summary ->
-                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-                PeriodAverageSummaryRow(
-                    summary = summary,
-                    unit = "h",
-                    decimalPlaces = 1,
-                )
+                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                val avg = summary.average
+                val prev = summary.previousAverage
+                if (avg != null) {
+                    val avgMinutes = (avg * 60f).roundToInt()
+                    val durationText = DateFormatUtils.formatSleepDuration(avgMinutes)
+
+                    val quarterTemplate = stringResource(CoreUiR.string.period_label_quarter)
+                    val periodLabel = periodLabelFor(summary.granularity, summary.periodStartDate) { quarter ->
+                        String.format(Locale.getDefault(), quarterTemplate, quarter)
+                    }
+                    val avgLabel = stringResource(CoreUiR.string.label_avg)
+
+                    val previousLabel = periodLabelFor(summary.granularity, summary.previousPeriodStartDate) { quarter ->
+                        String.format(Locale.getDefault(), quarterTemplate, quarter)
+                    }
+                    val previousLabelText = stringResource(CoreUiR.string.period_summary_vs, previousLabel)
+
+                    val deltaMinutes = prev?.let { ((avg - it) * 60f).roundToInt() }
+                    val deltaText = if (deltaMinutes != null && deltaMinutes != 0) {
+                        val sign = if (deltaMinutes > 0) "+" else ""
+                        val absMin = kotlin.math.abs(deltaMinutes)
+                        "$sign${absMin}min"
+                    } else "—"
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+                    ) {
+                        Text(
+                            text = "$periodLabel $avgLabel: $durationText",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = deltaText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = previousLabelText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }
@@ -194,9 +216,13 @@ fun SleepTrendChart(
     val bedtimeFormat = stringResource(R.string.sleep_trend_tooltip_bedtime_format)
     val napsHeading = stringResource(R.string.sleep_trend_tooltip_naps_heading)
     val napItemFormat = stringResource(R.string.sleep_trend_tooltip_nap_item_format)
+    val avgDurationFormat = stringResource(R.string.sleep_trend_tooltip_avg_duration_format)
+    val avgBedtimeFormat = stringResource(R.string.sleep_trend_tooltip_avg_bedtime_format)
+    val quarterLabelFormat = stringResource(R.string.sleep_trend_tooltip_quarter_format)
     val hoursOnlyFormat = stringResource(CoreUiR.string.sleep_duration_hours_only)
     val context = LocalContext.current
     val clockFormatter = remember(context) { DateFormat.getTimeFormat(context) }
+    val granularity = selectedRange.granularity
 
     var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker =
@@ -227,7 +253,11 @@ fun SleepTrendChart(
             bedtimeFormat,
             napsHeading,
             napItemFormat,
+            avgDurationFormat,
+            avgBedtimeFormat,
+            quarterLabelFormat,
             clockFormatter,
+            granularity,
         ) {
             selectedState?.let { state ->
                 buildSleepTrendTooltipData(
@@ -241,7 +271,11 @@ fun SleepTrendChart(
                             bedtimeFormat = bedtimeFormat,
                             napsHeading = napsHeading,
                             napItemFormat = napItemFormat,
+                            avgDurationFormat = avgDurationFormat,
+                            avgBedtimeFormat = avgBedtimeFormat,
+                            quarterLabelFormat = quarterLabelFormat,
                         ),
+                    granularity = granularity,
                 )
             }
         }
@@ -350,7 +384,6 @@ fun SleepTrendChart(
             }
         }
 
-    val granularity = selectedRange.granularity
     val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity, scoringZoneId)
 
     val hasData =
@@ -394,11 +427,11 @@ fun SleepTrendChart(
                 ColumnCartesianLayer.ColumnProvider.series(
                     rememberLineComponent(
                         fill = Fill(Color.Transparent),
-                        thickness = 8.dp,
+                        thickness = if (granularity == TrendGranularity.DAILY) 8.dp else 24.dp,
                     ),
                     rememberLineComponent(
                         fill = Fill(MaterialTheme.colorScheme.primary),
-                        thickness = 8.dp,
+                        thickness = if (granularity == TrendGranularity.DAILY) 8.dp else 24.dp,
                         shape = CircleShape,
                     ),
                 ),

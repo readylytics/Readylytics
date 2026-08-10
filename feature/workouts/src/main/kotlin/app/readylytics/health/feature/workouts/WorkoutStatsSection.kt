@@ -285,8 +285,6 @@ fun WorkoutStatsSection(
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
                     granularity = uiState.selectedRange.granularity,
-                    trimpPeriodSummary = uiState.trimpPeriodSummary,
-                    strainRatioPeriodSummary = uiState.strainRatioPeriodSummary,
                     modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },

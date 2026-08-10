@@ -18,6 +18,9 @@
     <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
     <string name="sleep_trend_tooltip_naps_heading">Naps:</string>
     <string name="sleep_trend_tooltip_nap_item_format">• %1$s – %2$s (%3$s)</string>
+    <string name="sleep_trend_tooltip_avg_duration_format">Avg. Duration: %1$s</string>
+    <string name="sleep_trend_tooltip_avg_bedtime_format">Avg. Bedtime: %1$s</string>
+    <string name="sleep_trend_tooltip_quarter_format">Q%d</string>
 
     <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
     <string name="sleep_hr_chart_title">Heart rate during sleep</string>
