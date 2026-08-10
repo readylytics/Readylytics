@@ -150,3 +150,34 @@ fun List<DailyDataPoint>.aggregateByRange(
         val bucketed = this.bucketBy(granularity, startDate, endDate, valueDecimalPlaces = valueDecimalPlaces)
         bucketed to buildPeriodAverageSummary(bucketed, granularity, startDate)
     }
+
+fun List<DailyDataPoint>.padBucketsToRange(
+    granularity: TrendGranularity,
+    startDate: LocalDate,
+    endDate: LocalDate,
+): List<DailyDataPoint> {
+    if (granularity == TrendGranularity.DAILY) return this
+    val byOffset = this.associateBy { it.dayOffset }
+    val offsets = mutableListOf<Int>()
+    var cursor = startDate
+    while (!cursor.isAfter(endDate)) {
+        val bucketStart = when (granularity) {
+            TrendGranularity.MONTHLY -> cursor.withDayOfMonth(1)
+            TrendGranularity.QUARTERLY -> {
+                val qm = ((cursor.monthValue - 1) / 3) * 3 + 1
+                cursor.withDayOfMonth(1).withMonth(qm)
+            }
+            else -> cursor
+        }
+        val length = bucketLengthDays(bucketStart, granularity)
+        val midpoint = bucketStart.plusDays(((length - 1) / 2).toLong()).coerceIn(startDate, endDate)
+        val offset = ChronoUnit.DAYS.between(startDate, midpoint).toInt()
+        if (offset !in offsets) offsets.add(offset)
+        cursor = when (granularity) {
+            TrendGranularity.MONTHLY -> bucketStart.plusMonths(1)
+            TrendGranularity.QUARTERLY -> bucketStart.plusMonths(3)
+            else -> cursor.plusDays(1)
+        }
+    }
+    return offsets.map { offset -> byOffset[offset] ?: DailyDataPoint(offset, null) }
+}

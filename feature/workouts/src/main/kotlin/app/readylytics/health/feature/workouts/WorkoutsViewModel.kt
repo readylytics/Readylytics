@@ -8,6 +8,7 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.aggregateByRange
+import app.readylytics.health.core.ui.common.padBucketsToRange
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -315,6 +316,9 @@ class WorkoutsViewModel
                                         valueDecimalPlaces = 2,
                                     )
 
+                            val paddedTrimp = bucketedTrimp.padBucketsToRange(range.granularity, displayStartDayDate, date)
+                            val paddedStrain = bucketedStrainRatio.padBucketsToRange(range.granularity, displayStartDayDate, date)
+
                             val summaryByDate = trimpSummaries.associateBy { it.date }
 
                             val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
@@ -418,8 +422,8 @@ class WorkoutsViewModel
                             WorkoutsUiState(
                                 latestSummary = latest,
                                 latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
-                                dailyTrimp = bucketedTrimp,
-                                dailyStrainRatio = bucketedStrainRatio,
+                                dailyTrimp = paddedTrimp,
+                                dailyStrainRatio = paddedStrain,
                                 recentWorkouts = paginatedItems,
                                 selectedRange = range,
                                 selectedDate = date,

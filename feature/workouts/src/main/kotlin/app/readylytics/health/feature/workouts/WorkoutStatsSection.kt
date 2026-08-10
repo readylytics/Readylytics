@@ -269,7 +269,7 @@ fun WorkoutStatsSection(
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         CardLoader(
-            isLoading = uiState.isLoading || uiState.isRangeChanging,
+            isLoading = uiState.isLoading,
             skeleton = {
                 SkeletonCard(
                     height = 312.dp,
@@ -293,6 +293,13 @@ fun WorkoutStatsSection(
                         parentScrollInProgress = parentScrollInProgress,
                         granularity = selectedRange.granularity,
                     )
+                    if (uiState.isRangeChanging) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp,
+                        )
+                    }
                 }
             },
         )

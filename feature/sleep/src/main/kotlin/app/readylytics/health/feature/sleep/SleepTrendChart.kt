@@ -309,23 +309,13 @@ fun SleepTrendChart(
         if (granularity == TrendGranularity.DAILY) startOffsetPoints
         else startOffsetPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
     }
-    val remappedSpanPoints = remember(durationSpanPoints, granularity, startOffsetPoints) {
+    val remappedSpanPoints = remember(durationSpanPoints, granularity) {
         if (granularity == TrendGranularity.DAILY) durationSpanPoints
-        else {
-            val spanByOffset = durationSpanPoints.associateBy { it.dayOffset }
-            startOffsetPoints.mapIndexed { i, p ->
-                spanByOffset[p.dayOffset]?.copy(dayOffset = i) ?: DailyDataPoint(i, null)
-            }
-        }
+        else durationSpanPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
     }
-    val remappedActualPoints = remember(actualDurationPoints, granularity, startOffsetPoints) {
+    val remappedActualPoints = remember(actualDurationPoints, granularity) {
         if (granularity == TrendGranularity.DAILY) actualDurationPoints
-        else {
-            val actualByOffset = actualDurationPoints.associateBy { it.dayOffset }
-            startOffsetPoints.mapIndexed { i, p ->
-                actualByOffset[p.dayOffset]?.copy(dayOffset = i) ?: DailyDataPoint(i, null)
-            }
-        }
+        else actualDurationPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
     }
     val xAxisRangeDays = remember(startOffsetPoints, granularity) {
         if (granularity == TrendGranularity.DAILY) rangeDays

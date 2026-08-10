@@ -217,16 +217,9 @@ private fun AcwrChart(
         if (granularity == TrendGranularity.DAILY) trimpPoints
         else trimpPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
     }
-    val remappedRatioPoints = remember(ratioPoints, granularity, trimpPoints) {
+    val remappedRatioPoints = remember(ratioPoints, granularity) {
         if (granularity == TrendGranularity.DAILY) ratioPoints
-        else {
-            val trimpByOffset = trimpPoints.associateBy { it.dayOffset }
-            val ratioByOffset = ratioPoints.associateBy { it.dayOffset }
-            val allOffsets = trimpPoints.map { it.dayOffset }.sorted()
-            allOffsets.mapIndexed { i, offset ->
-                ratioByOffset[offset]?.copy(dayOffset = i) ?: DailyDataPoint(i, null)
-            }
-        }
+        else ratioPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
     }
     val xAxisRangeDays = remember(trimpPoints, granularity) {
         if (granularity == TrendGranularity.DAILY) rangeDays

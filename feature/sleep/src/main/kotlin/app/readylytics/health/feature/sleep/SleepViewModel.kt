@@ -8,6 +8,7 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.aggregateByRange
+import app.readylytics.health.core.ui.common.padBucketsToRange
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.preferences.scoringZone
@@ -334,10 +335,14 @@ class SleepViewModel
                                     valueDecimalPlaces = 1,
                                 )
 
+                            val paddedStart = bucketedStart.padBucketsToRange(range.granularity, rangeStart, trendEndDate)
+                            val paddedSpan = bucketedSpan.padBucketsToRange(range.granularity, rangeStart, trendEndDate)
+                            val paddedDuration = bucketedDuration.padBucketsToRange(range.granularity, rangeStart, trendEndDate)
+
                             SleepTrendData(
-                                startOffsetPoints = bucketedStart,
-                                durationSpanPoints = bucketedSpan,
-                                actualDurationPoints = bucketedDuration,
+                                startOffsetPoints = paddedStart,
+                                durationSpanPoints = paddedSpan,
+                                actualDurationPoints = paddedDuration,
                                 trendDays = trendDays,
                                 startOffsetSummary = startSummary,
                                 durationSpanSummary = spanSummary,
