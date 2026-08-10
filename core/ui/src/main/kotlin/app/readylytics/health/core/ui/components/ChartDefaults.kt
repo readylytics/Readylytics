@@ -122,13 +122,37 @@ object ChartDefaults {
         }
 
     /**
-     * The returned placer is stateful: it owns a [DayOffsetTickCalculator] holding per-instance
-     * candidate and single-entry result caches. Callers must scope it to a single chart via
-     * `remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) }` — constructing it
-     * inline on every recomposition silently discards the caching (no test failure, no visual
-     * difference, just the optimization evaporating).
+     * Single tick source for all Vico horizontal axes. With [pointOffsets] non-empty (bucketed
+     * monthly/quarterly charts) it places one tick per actual plotted point offset. With empty
+     * [pointOffsets] (daily charts) it delegates to [DayOffsetTickCalculator], which owns the
+     * zoom-aware spacing/caching for `0..rangeDays-1` domains.
      */
-    fun itemPlacerForRangeDays(rangeDays: Int): HorizontalAxis.ItemPlacer {
+    internal fun tickValuesFor(
+        rangeDays: Int,
+        pointOffsets: List<Int>,
+        visibleXRange: ClosedFloatingPointRange<Double>,
+    ): List<Double> =
+        if (pointOffsets.isEmpty()) {
+            DayOffsetTickCalculator(rangeDays).values(visibleXRange)
+        } else {
+            pointOffsets
+                .sorted()
+                .distinct()
+                .map { it.toDouble() }
+                .filter { it in visibleXRange }
+        }
+
+    /**
+     * The returned placer is stateful: the daily branch owns a [DayOffsetTickCalculator] holding
+     * per-instance candidate and single-entry result caches. Callers must scope it to a single chart
+     * via `remember(rangeDays, pointOffsets) { ChartDefaults.itemPlacerForRangeDays(...) }` —
+     * constructing it inline on every recomposition silently discards the caching (no test failure,
+     * no visual difference, just the optimization evaporating).
+     */
+    fun itemPlacerForRangeDays(
+        rangeDays: Int,
+        pointOffsets: List<Int> = emptyList(),
+    ): HorizontalAxis.ItemPlacer {
         val basePlacer =
             HorizontalAxis.ItemPlacer.aligned(
                 spacing = { 1 },
@@ -136,11 +160,18 @@ object ChartDefaults {
             )
 
         // Per-instance caches are safe here: Vico measures and draws on a single thread, this placer
-        // is scoped to one chart via remember(rangeDays) at every call site, and Vico only iterates
-        // the returned list (HorizontalAxis.kt:184-185 and :294-295 in Vico 3.2.3) -- it never mutates
-        // it, so handing the same cached instance to getLabelValues, getLineValues, and consecutive
-        // frames is safe. A single frame asks three times with the same visible range.
-        val ticks = DayOffsetTickCalculator(rangeDays)
+        // is scoped to one chart via remember(rangeDays, pointOffsets) at every call site, and Vico
+        // only iterates the returned list (HorizontalAxis.kt:184-185 and :294-295 in Vico 3.2.3) --
+        // it never mutates it, so handing the same cached instance to getLabelValues, getLineValues,
+        // and consecutive frames is safe. A single frame asks three times with the same visible range.
+        // The bucketed branch has no cache: its point-offset list is already the tick list.
+        val dailyTicks = if (pointOffsets.isEmpty()) DayOffsetTickCalculator(rangeDays) else null
+        val pointTicks =
+            if (pointOffsets.isEmpty()) {
+                null
+            } else {
+                pointOffsets.sorted().distinct().map { it.toDouble() }
+            }
 
         return object : HorizontalAxis.ItemPlacer by basePlacer {
             override fun getLabelValues(
@@ -148,46 +179,24 @@ object ChartDefaults {
                 visibleXRange: ClosedFloatingPointRange<Double>,
                 fullXRange: ClosedFloatingPointRange<Double>,
                 maxLabelWidth: Float,
-            ): List<Double> = ticks.values(visibleXRange)
+            ): List<Double> =
+                if (pointTicks != null) {
+                    pointTicks.filter { it in visibleXRange }
+                } else {
+                    requireNotNull(dailyTicks).values(visibleXRange)
+                }
 
             override fun getLineValues(
                 context: CartesianDrawingContext,
                 visibleXRange: ClosedFloatingPointRange<Double>,
                 fullXRange: ClosedFloatingPointRange<Double>,
                 maxLabelWidth: Float,
-            ): List<Double> = ticks.values(visibleXRange)
-        }
-    }
-
-    /**
-     * Places one tick per actual plotted point offset (used for bucketed monthly/quarterly charts,
-     * where there are ~12 or ~4 points instead of up to 180/360 daily ones). Intentionally does not
-     * reuse [DayOffsetTickCalculator]: its spacing-invariant assumes daily ranges and "TimeRange
-     * only ships {7, 30, 180}", which adding [app.readylytics.health.core.ui.common.TimeRange.TWELVE_MONTHS]
-     * would violate.
-     */
-    fun itemPlacerForPoints(pointOffsets: List<Int>): HorizontalAxis.ItemPlacer {
-        val basePlacer =
-            HorizontalAxis.ItemPlacer.aligned(
-                spacing = { 1 },
-                addExtremeLabelPadding = true,
-            )
-        val ticks = pointOffsets.sorted().distinct().map { it.toDouble() }
-
-        return object : HorizontalAxis.ItemPlacer by basePlacer {
-            override fun getLabelValues(
-                context: CartesianDrawingContext,
-                visibleXRange: ClosedFloatingPointRange<Double>,
-                fullXRange: ClosedFloatingPointRange<Double>,
-                maxLabelWidth: Float,
-            ): List<Double> = ticks.filter { it in visibleXRange }
-
-            override fun getLineValues(
-                context: CartesianDrawingContext,
-                visibleXRange: ClosedFloatingPointRange<Double>,
-                fullXRange: ClosedFloatingPointRange<Double>,
-                maxLabelWidth: Float,
-            ): List<Double> = ticks.filter { it in visibleXRange }
+            ): List<Double> =
+                if (pointTicks != null) {
+                    pointTicks.filter { it in visibleXRange }
+                } else {
+                    requireNotNull(dailyTicks).values(visibleXRange)
+                }
         }
     }
 }

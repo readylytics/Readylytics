@@ -333,18 +333,16 @@ fun TrendChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                if (granularity == TrendGranularity.DAILY) {
-                                    remember(
-                                        rangeDays,
-                                    ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) }
-                                } else {
-                                    remember(
-                                        renderData.validPoints,
-                                    ) {
-                                        ChartDefaults.itemPlacerForPoints(
-                                            renderData.validPoints.map(DailyDataPoint::dayOffset),
-                                        )
-                                    }
+                                remember(rangeDays, renderData.validPoints) {
+                                    ChartDefaults.itemPlacerForRangeDays(
+                                        rangeDays = rangeDays,
+                                        pointOffsets =
+                                            if (granularity == TrendGranularity.DAILY) {
+                                                emptyList()
+                                            } else {
+                                                renderData.validPoints.map(DailyDataPoint::dayOffset)
+                                            },
+                                    )
                                 },
                             guideline = guidelineComponent,
                         ),

@@ -3,6 +3,7 @@ package app.readylytics.health.core.ui.components
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class DayOffsetTickCalculatorTest {
     /**
@@ -134,7 +135,7 @@ class DayOffsetTickCalculatorTest {
 
     @Test
     fun `golden vs reference across the full grid`() {
-        for (rangeDays in listOf(7, 30, 90, 180)) {
+        for (rangeDays in listOf(7, 30, 90, 180, 360)) {
             val calculator = DayOffsetTickCalculator(rangeDays)
             for (range in rangesFor(rangeDays)) {
                 assertEquals(
@@ -144,6 +145,18 @@ class DayOffsetTickCalculatorTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun `rangeDays 360 keeps strictly ascending ticks including both endpoints`() {
+        val calculator = DayOffsetTickCalculator(360)
+        val range = 0.0..359.0
+        val values = calculator.values(range)
+        assertTrue(values.first() == 0.0)
+        assertTrue(values.last() == 359.0)
+        assertEquals(values.sorted(), values)
+        assertEquals(values.distinct(), values)
+        assertTrue(values.zipWithNext().all { (a, b) -> b - a > 0.0 })
     }
 
     @Test
@@ -198,6 +211,22 @@ class DayOffsetTickCalculatorTest {
         assertEquals(referenceValues(90, rangeA), firstA)
         assertEquals(referenceValues(90, rangeA), secondA)
         assertEquals(referenceValues(90, rangeA), thirdA)
+    }
+
+    @Test
+    fun `tickValuesFor places one tick per bucketed point offset`() {
+        assertEquals(
+            listOf(45.0, 135.0, 225.0, 315.0),
+            ChartDefaults.tickValuesFor(360, listOf(315, 45, 225, 135), 0.0..359.0),
+        )
+    }
+
+    @Test
+    fun `tickValuesFor without point offsets delegates to the daily calculator`() {
+        assertEquals(
+            listOf(0.0, 6.0, 12.0, 18.0, 24.0, 29.0),
+            ChartDefaults.tickValuesFor(30, emptyList(), 0.0..29.0),
+        )
     }
 
     @Test
