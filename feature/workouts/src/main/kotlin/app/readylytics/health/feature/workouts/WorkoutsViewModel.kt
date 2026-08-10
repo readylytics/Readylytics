@@ -447,6 +447,15 @@ class WorkoutsViewModel
                         }
                     }
                 }.distinctUntilChanged()
+                .map { state ->
+                    // Reset the range-change spinner only once the pipeline actually emits for the
+                    // newly-selected range (selectedRange field in the state already reflects the
+                    // chosen range at this point -- set by CombinedParams.range on pipeline restart).
+                    // Previously this was in the isSyncing combine, which re-emitted on every sync
+                    // toggle and could hide the spinner before flatMapLatest finished recomputing.
+                    _isRangeChanging.value = false
+                    state
+                }
                 // isSyncing is merged in after the heavy pipeline instead of inside it (mirrors
                 // DashboardViewModel.kt:104-113) so a sync toggle only triggers a cheap copy, not a
                 // full pipeline restart (Room re-subscriptions, EMA series, N+1 HR-sample loop).
@@ -455,7 +464,6 @@ class WorkoutsViewModel
                 // padded to displayDayMidnights.size entries (null-valued, never actually empty),
                 // so latestSummary/recentWorkouts are the correct "no data yet" signal here.
                 .combine(foregroundSyncController.isSyncing) { state, syncing ->
-                    _isRangeChanging.value = false
                     state.copy(
                         isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
                         isRefreshing = syncing,
