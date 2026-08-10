@@ -307,7 +307,10 @@ class WorkoutsViewModel
                                     .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
                             val (bucketedStrainRatio, strainSummary) =
                                 dailyStrainRatio
-                                    .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
+                                    .aggregateByRange(
+                                        range.granularity, displayStartDayDate, date, range.days,
+                                        valueDecimalPlaces = 2,
+                                    )
 
                             val summaryByDate = trimpSummaries.associateBy { it.date }
 

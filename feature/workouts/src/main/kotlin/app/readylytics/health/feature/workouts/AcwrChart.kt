@@ -350,7 +350,12 @@ private fun AcwrChart(
                 ColumnCartesianLayer.ColumnProvider.series(
                     rememberLineComponent(
                         fill = Fill(MaterialTheme.colorScheme.primary),
-                        thickness = if (granularity == TrendGranularity.DAILY) 8.dp else 24.dp,
+                        thickness =
+                            when {
+                                granularity == TrendGranularity.QUARTERLY -> 64.dp
+                                granularity == TrendGranularity.MONTHLY -> 48.dp
+                                else -> 8.dp
+                            },
                         shape = CircleShape,
                     ),
                 ),
