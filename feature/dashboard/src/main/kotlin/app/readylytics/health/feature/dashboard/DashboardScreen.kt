@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.dashboard
 
+import android.content.ClipData
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,7 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -78,7 +81,7 @@ fun DashboardRoute(
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val copiedMessage = stringResource(R.string.ai_recommendation_copied_snackbar)
     val setupPrompt = stringResource(R.string.ai_init_prompt)
     val dailyPromptText by viewModel.dailyPromptText.collectAsStateWithLifecycle()
@@ -93,7 +96,7 @@ fun DashboardRoute(
 
     LaunchedEffect(dailyPromptText) {
         dailyPromptText?.let { prompt ->
-            clipboardManager.setText(AnnotatedString(prompt))
+            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("Copied Text", prompt)))
             snackbarIsError.value = false
             snackbarHostState.showSnackbar(copiedMessage)
             viewModel.clearDailyPromptText()
@@ -129,9 +132,11 @@ fun DashboardRoute(
         onRestoreInsights = { viewModel.onEvent(DashboardEvent.RestoreInsights) },
         onOpenInsight = onOpenInsight,
         onCopySetupPrompt = {
-            clipboardManager.setText(AnnotatedString(setupPrompt))
-            snackbarIsError.value = false
-            scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+            scope.launch {
+                clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("Copied Text", setupPrompt)))
+                snackbarIsError.value = false
+                snackbarHostState.showSnackbar(copiedMessage)
+            }
         },
         onCopyDailyPrompt = { viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy) },
         insightDetail = insightDetail,
