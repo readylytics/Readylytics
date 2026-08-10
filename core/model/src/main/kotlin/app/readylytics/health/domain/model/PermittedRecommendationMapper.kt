@@ -8,7 +8,7 @@ object PermittedRecommendationMapper {
         if (flags.contains(RecoveryFlag.OVERREACHING)) {
             return PermittedRecommendation.ACTIVE_RECOVERY
         }
-        
+
         return when (status) {
             MetricStatus.POOR -> PermittedRecommendation.REST
             MetricStatus.WARNING -> PermittedRecommendation.ACTIVE_RECOVERY

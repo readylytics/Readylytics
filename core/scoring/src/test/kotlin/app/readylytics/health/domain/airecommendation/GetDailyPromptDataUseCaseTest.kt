@@ -171,7 +171,7 @@ class GetDailyPromptDataUseCaseTest {
         assertNull("recommendedAction not null", result.today.recommendedAction)
         assertNull("recommendedLoad not null", result.loadState.recommendedLoad)
         assertNull("todayTrainingMinutes not null", result.today.todayTrainingMinutes)
-        assertNotNull("dataCurrentUntil is null", result.today.dataCurrentUntil)
+        assertNull("dataCurrentUntil not null", result.today.dataCurrentUntil)
         assertNull("loadContext not null", result.loadState.loadContext)
     }
 
@@ -180,7 +180,7 @@ class GetDailyPromptDataUseCaseTest {
         coEvery { dailySummaryRepository.getByDate(any()) } returns null
         coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
         coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
-        
+
         val w1 = workoutData("w1").copy(trimp = 50f, durationMinutes = 30, endTime = todayMidnight + 1000L)
         val w2 = workoutData("w2").copy(trimp = 70f, durationMinutes = 40, endTime = todayMidnight + 2000L)
         coEvery { workoutRepository.getInRange(todayMidnight, tomorrowMidnight) } returns listOf(w1, w2)
@@ -191,6 +191,26 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals(120f, result.today.todayTrimp)
         assertEquals(70, result.today.todayTrainingMinutes)
         assertEquals(java.time.Instant.ofEpochMilli(todayMidnight + 2000L).toString(), result.today.dataCurrentUntil)
+    }
+
+    @Test
+    fun `execute uses the persisted sync watermark when no workout has completed today`() = runTest {
+        val syncWatermark = java.time.Instant.parse("2026-08-09T14:25:00Z")
+        every { preferencesReader.userPreferences } returns
+            flowOf(
+                UserPreferences(
+                    scoringZoneId = "UTC",
+                    strainLoadSourceMode = LoadSourceMode.WORKOUT_ONLY,
+                    lastSyncTimestamp = syncWatermark.toEpochMilli(),
+                ),
+            )
+        coEvery { dailySummaryRepository.getByDate(any()) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
+
+        val result = useCase.execute(today)
+
+        assertEquals(syncWatermark.toString(), result.today.dataCurrentUntil)
     }
 
     private fun summary(

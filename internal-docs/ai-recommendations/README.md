@@ -52,9 +52,4 @@ describe:
 | `today_completed_workouts`, `today_trimp`, `today_training_minutes`, `data_current_until` | So the recommendation is for *remaining* training today | `RESOLVED` — computed in `GetDailyPromptDataUseCase.execute()` from `WorkoutRepository.getInRange(todayMidnight, tomorrowMidnight)`; rendered in Section B |
 | `advisor_data_confidence` (LOW/MEDIUM/HIGH) | Deterministic confidence from Readylytics | `RESOLVED` — `resolveAdvisorConfidence()` always populates it (not gated on a `DailySummary` existing); rendered in Section A. The system prompt's prompt-side fallback mapping (Section 7) is now dead code in practice but stays as a documented fallback in case this field is ever absent |
 
-**Remaining gap:** None. Every field in the original gap list is wired end-to-end.
-The revised system prompt (`BASE_SYSTEM_PROMPT.md`, synced to the
-in-app `ai_init_prompt` string resource in
-`feature/dashboard/src/main/res/values/strings.xml`) depends on is already emitted by
-`DailyPromptFormatter`.
-
+Every field the revised system prompt depends on is already emitted.

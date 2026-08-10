@@ -78,7 +78,9 @@ class GetDailyPromptDataUseCase
                 if (todaysWorkouts.isNotEmpty()) {
                     Instant.ofEpochMilli(todaysWorkouts.maxOf { it.endTime }).toString()
                 } else {
-                    today.atTime(java.time.LocalTime.MAX).atZone(zoneId).toInstant().toString()
+                    preferences.lastSyncTimestamp
+                        .takeIf { it > 0L }
+                        ?.let { Instant.ofEpochMilli(it).toString() }
                 }
 
             val isEverydaySourceLowConfidence =
