@@ -59,9 +59,11 @@ class DailyPromptFormatterTest {
             isCalibrating = false,
             activeTrainingLoadSource = "Workout only",
             everydayLoadConfidence = "High",
+            advisorDataConfidence = null,
             today =
                 TodayPromptData(
                     readinessScore = 78f,
+                    readinessBand = null,
                     restorationScore = 0.82f,
                     hrvBaseline = 45,
                     hrvMuMssd = 44.2f,
@@ -73,6 +75,10 @@ class DailyPromptFormatterTest {
                     zLnHrv = 0.1f,
                     zRhr = 0.2f,
                     baselineCalculatedAtDate = LocalDate.of(2026, 7, 15),
+                    todayCompletedWorkouts = 0,
+                    todayTrimp = null,
+                    todayTrainingMinutes = null,
+                    dataCurrentUntil = null,
                 ),
             yesterdaySleep =
                 YesterdaySleepPromptData(
@@ -101,6 +107,7 @@ class DailyPromptFormatterTest {
                     chronicLoad = 80f,
                     strainRatio = 1.06f,
                     loadScore = 88f,
+                    loadContext = null,
                     totalRasWorkoutOnly = 350f,
                     totalRasEverydayHr = 410f,
                     everydayCoverageMinutes = 120,
@@ -142,9 +149,11 @@ class DailyPromptFormatterTest {
             isCalibrating = true,
             activeTrainingLoadSource = "Workout only",
             everydayLoadConfidence = null,
+            advisorDataConfidence = null,
             today =
                 TodayPromptData(
                     readinessScore = null,
+                    readinessBand = null,
                     restorationScore = null,
                     hrvBaseline = null,
                     hrvMuMssd = null,
@@ -156,6 +165,10 @@ class DailyPromptFormatterTest {
                     zLnHrv = null,
                     zRhr = null,
                     baselineCalculatedAtDate = null,
+                    todayCompletedWorkouts = 0,
+                    todayTrimp = null,
+                    todayTrainingMinutes = null,
+                    dataCurrentUntil = null,
                 ),
             yesterdaySleep = null,
             yesterdayWorkouts = emptyList(),
@@ -165,6 +178,7 @@ class DailyPromptFormatterTest {
                     chronicLoad = null,
                     strainRatio = null,
                     loadScore = null,
+                    loadContext = null,
                     totalRasWorkoutOnly = null,
                     totalRasEverydayHr = null,
                     everydayCoverageMinutes = null,

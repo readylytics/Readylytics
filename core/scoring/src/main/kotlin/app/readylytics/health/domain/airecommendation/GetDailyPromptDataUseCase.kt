@@ -86,10 +86,12 @@ class GetDailyPromptDataUseCase
                 isCalibrating = todaySummary?.isCalibrating ?: false,
                 activeTrainingLoadSource = sourceName(sourceMode),
                 everydayLoadConfidence = todaySummary?.everydayLoadConfidence,
+                advisorDataConfidence = null,
                 today =
                     todaySummary?.let { mapToday(it, sourceMode) }
                         ?: TodayPromptData(
                             readinessScore = null,
+                            readinessBand = null,
                             restorationScore = null,
                             hrvBaseline = null,
                             hrvMuMssd = null,
@@ -101,6 +103,10 @@ class GetDailyPromptDataUseCase
                             zLnHrv = null,
                             zRhr = null,
                             baselineCalculatedAtDate = null,
+                            todayCompletedWorkouts = 0,
+                            todayTrimp = null,
+                            todayTrainingMinutes = null,
+                            dataCurrentUntil = null,
                         ),
                 yesterdaySleep = yesterdaySummary?.let(::mapYesterdaySleep),
                 yesterdayWorkouts = workoutBlocks,
@@ -111,6 +117,7 @@ class GetDailyPromptDataUseCase
                             chronicLoad = null,
                             strainRatio = null,
                             loadScore = null,
+                            loadContext = null,
                             totalRasWorkoutOnly = null,
                             totalRasEverydayHr = null,
                             everydayCoverageMinutes = null,
@@ -131,6 +138,7 @@ class GetDailyPromptDataUseCase
         private fun mapToday(summary: DailySummary, mode: LoadSourceMode): TodayPromptData =
             TodayPromptData(
                 readinessScore = LoadSourceSelector.selectReadiness(summary, mode),
+                readinessBand = null,
                 restorationScore = summary.sRest,
                 hrvBaseline = summary.hrvBaseline,
                 hrvMuMssd = summary.hrvMuMssd,
@@ -142,6 +150,10 @@ class GetDailyPromptDataUseCase
                 zLnHrv = summary.zLnHrv,
                 zRhr = summary.zRhr,
                 baselineCalculatedAtDate = summary.baselineCalculatedAtDate,
+                todayCompletedWorkouts = 0,
+                todayTrimp = null,
+                todayTrainingMinutes = null,
+                dataCurrentUntil = null,
             )
 
         private fun mapYesterdaySleep(summary: DailySummary): YesterdaySleepPromptData =
@@ -161,6 +173,7 @@ class GetDailyPromptDataUseCase
                 chronicLoad = LoadSourceSelector.selectCtl(summary, mode),
                 strainRatio = LoadSourceSelector.selectStrainRatio(summary, mode),
                 loadScore = LoadSourceSelector.selectLoadScore(summary, mode),
+                loadContext = null,
                 totalRasWorkoutOnly = summary.totalRasWorkoutOnly,
                 totalRasEverydayHr = summary.totalRasEverydayHr,
                 everydayCoverageMinutes = summary.everydayCoverageMinutes,

@@ -17,6 +17,7 @@ data class DailyPromptData(
     val isCalibrating: Boolean,
     val activeTrainingLoadSource: String,
     val everydayLoadConfidence: String?,
+    val advisorDataConfidence: String? = null,
     val today: TodayPromptData,
     val yesterdaySleep: YesterdaySleepPromptData?,
     val yesterdayWorkouts: List<YesterdayWorkout>,
@@ -27,6 +28,7 @@ data class DailyPromptData(
 
 data class TodayPromptData(
     val readinessScore: Float?,
+    val readinessBand: String? = null,
     val restorationScore: Float?,
     val hrvBaseline: Int?,
     val hrvMuMssd: Float?,
@@ -38,6 +40,10 @@ data class TodayPromptData(
     val zLnHrv: Float?,
     val zRhr: Float?,
     val baselineCalculatedAtDate: LocalDate?,
+    val todayCompletedWorkouts: Int = 0,
+    val todayTrimp: Float? = null,
+    val todayTrainingMinutes: Int? = null,
+    val dataCurrentUntil: String? = null,
 )
 
 data class YesterdaySleepPromptData(
@@ -64,6 +70,7 @@ data class LoadStatePromptData(
     val chronicLoad: Float?,
     val strainRatio: Float?,
     val loadScore: Float?,
+    val loadContext: String? = null,
     val totalRasWorkoutOnly: Float?,
     val totalRasEverydayHr: Float?,
     val everydayCoverageMinutes: Int?,
