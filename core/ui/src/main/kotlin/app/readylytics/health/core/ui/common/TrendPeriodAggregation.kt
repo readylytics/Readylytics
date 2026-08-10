@@ -136,3 +136,18 @@ fun buildPeriodAverageSummary(
         previousAverage = previous.value,
     )
 }
+
+fun List<DailyDataPoint>.aggregateByRange(
+    granularity: TrendGranularity,
+    startDate: LocalDate,
+    endDate: LocalDate,
+    rangeDays: Int,
+    valueDecimalPlaces: Int = 0,
+): Pair<List<DailyDataPoint>, PeriodAverageSummary?> {
+    return if (granularity == TrendGranularity.DAILY) {
+        this.padToRange(rangeDays) to null
+    } else {
+        val bucketed = this.bucketBy(granularity, startDate, endDate, valueDecimalPlaces = valueDecimalPlaces)
+        bucketed to buildPeriodAverageSummary(bucketed, granularity, startDate)
+    }
+}
