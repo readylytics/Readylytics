@@ -2,6 +2,7 @@ package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
@@ -53,6 +54,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
@@ -74,6 +76,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             bodyFatRecordDao,
             bloodPressureRecordDao,
             oxygenSaturationRecordDao,
+            bodyTemperatureRecordDao,
             sleepPercentileRhrCalculator,
             scoringHistoryRepository,
             UnconfinedTestDispatcher(),

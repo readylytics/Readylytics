@@ -90,6 +90,15 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                     SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS,
                 )
             },
+        bodyTempElevatedThresholdCelsius =
+            if (hasBodyTempElevatedThresholdCelsius()) {
+                bodyTempElevatedThresholdCelsius.coerceIn(
+                    SettingsDefaults.MIN_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
+                    SettingsDefaults.MAX_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
+                )
+            } else {
+                SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS
+            },
         rasScalingFactor = rasScalingFactor,
         stepGoal = stepGoal,
         retentionDaysEnabled = retentionDaysEnabled,

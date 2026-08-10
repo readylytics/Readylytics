@@ -1,7 +1,13 @@
 package app.readylytics.health.core.ui.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -22,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -67,6 +74,79 @@ class M3MetricGaugeTest {
         assertTrue(short.topLeft.x + short.arcSize.width + activeStrokeWidthPx / 2f <= 120f)
         assertTrue(short.topLeft.y - activeStrokeWidthPx / 2f >= 0f)
         assertTrue(short.center.y + short.radius * 0.5f + activeStrokeWidthPx / 2f <= 60f)
+    }
+
+    @Test
+    fun arcTickCapCoverageFraction_offsetsTicksInsideTheArcCapOverhang() {
+        val sweep = 240f
+        val radius = 60f
+        val stroke = 12f
+        val coverage = arcTickCapCoverageFraction(stroke, radius, sweep)
+        // Semi-stroke over the radius, converted to a small fraction of the sweep.
+        assertEquals(Math.toDegrees((stroke / 2f / radius).toDouble()).toFloat() / sweep, coverage)
+        assertTrue(coverage in 0.01f..0.05f)
+        // A tick at 0.2 is within `coverage` of progress 0.18 and must be hidden, mirroring how the
+        // gauge filters its ticks against progressToDraw + capCoverageFraction.
+        val progress = 0.18f
+        val visible = floatArrayOf(0.2f, 0.4f, 0.6f, 0.8f).filter { it > progress + coverage }
+        assertEquals(listOf(0.4f, 0.6f, 0.8f), visible)
+        // Degenerate inputs never explode the filter into hiding everything.
+        assertEquals(0f, arcTickCapCoverageFraction(0f, radius, sweep))
+        assertEquals(0f, arcTickCapCoverageFraction(stroke, 0f, sweep))
+        assertEquals(0f, arcTickCapCoverageFraction(stroke, radius, 0f))
+    }
+
+    @Test
+    fun gaugeTextBounds_shrinkForHeightConstrainedGaugeSlot() {
+        val inset = 12f
+        val wide =
+            resolveGaugeTextBoundsPx(
+                geometry = resolveHorseshoeGaugeGeometry(Size(160f, 160f), inset),
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 0f,
+            )
+        val short =
+            resolveGaugeTextBoundsPx(
+                geometry = resolveHorseshoeGaugeGeometry(Size(160f, 80f), inset),
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 0f,
+            )
+
+        assertTrue(short.width < wide.width)
+        assertTrue(short.height <= wide.height)
+        assertTrue(short.width >= 0f)
+        assertTrue(short.height >= 0f)
+    }
+
+    @Test
+    fun gaugeTextBounds_neverExceedCircleDiameterMinusTrackInset() {
+        val inset = 12f
+        val geometry = resolveHorseshoeGaugeGeometry(Size(200f, 150f), inset)
+        val bounds =
+            resolveGaugeTextBoundsPx(
+                geometry = geometry,
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 0f,
+            )
+        val maxInner = (geometry.radius - inset) * 2f
+
+        assertTrue(bounds.width <= maxInner + 0.001f)
+        assertTrue(bounds.height <= maxInner + 0.001f)
+    }
+
+    @Test
+    fun gaugeTextBounds_nonNegativeForDegenerateSmallCanvas() {
+        val inset = 12f
+        val geometry = resolveHorseshoeGaugeGeometry(Size(5f, 5f), inset)
+        val bounds =
+            resolveGaugeTextBoundsPx(
+                geometry = geometry,
+                trackInsetPx = inset,
+                textBlockCenterYOffsetPx = 5f,
+            )
+
+        assertTrue(bounds.width >= 0f)
+        assertTrue(bounds.height >= 0f)
     }
 
     @Test
@@ -148,5 +228,34 @@ class M3MetricGaugeTest {
             .onNodeWithTag("metric_gauge_value_overlay", useUnmergedTree = true)
             .assertExists()
             .assertHeightIsAtLeast(1.dp)
+    }
+
+    @Test
+    fun metricGaugeWithValue_longValue_rendersFullTextWithoutTruncation() {
+        composeTestRule.setContent {
+            Box(
+                modifier = Modifier.width(140.dp).height(120.dp),
+            ) {
+                M3MetricGaugeWithValue(
+                    markerFraction = 0.7f,
+                    activeColor = Color.Green,
+                    markerColor = Color.White,
+                    valueText = "142.8",
+                    unitText = "kg",
+                    valueColor = Color.White,
+                    unitColor = Color.Gray,
+                    animateMarker = false,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        val valueNode = composeTestRule.onNodeWithText("142.8", substring = false)
+        valueNode.assertExists()
+        val valueSemantics = valueNode.fetchSemanticsNode()
+        val valueText = valueSemantics.config[SemanticsProperties.Text].joinToString("") { it.text }
+        assertFalse(valueText.contains('\u2026'))
+        assertEquals("142.8", valueText)
+        assertTrue(valueSemantics.boundsInRoot.width <= 140.dp.value)
     }
 }

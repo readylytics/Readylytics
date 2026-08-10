@@ -4,53 +4,90 @@ import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.core.ui.model.Baselines
+import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.DailyMetrics
+import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.ZoneBand
-import app.readylytics.health.domain.model.hrvZoneBands
-import app.readylytics.health.domain.model.rhrZoneBands
-import app.readylytics.health.domain.model.spo2ZoneBands
+import app.readylytics.health.domain.model.PersonalBaselineAssessment
+import app.readylytics.health.domain.model.Spo2Assessment
+import app.readylytics.health.domain.model.assessHrv
+import app.readylytics.health.domain.model.assessRhr
+import app.readylytics.health.domain.model.assessSpo2
+import app.readylytics.health.domain.preferences.UnitSystem
+import app.readylytics.health.domain.util.UnitConverter
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import kotlin.math.roundToInt
 
 @Immutable
 data class VitalsChartSeries(
     val hrv: List<DailyDataPoint>,
     val rhr: List<DailyDataPoint>,
     val spo2: List<DailyDataPoint>,
+    val bodyTemp: List<DailyDataPoint>,
 )
+
+internal data class VitalsRangeWindow(
+    val fromMs: Long,
+    val startDate: LocalDate,
+    val selectedMidnightMs: Long,
+    val isToday: Boolean,
+)
+
+internal fun resolveVitalsRangeWindow(
+    range: TimeRange,
+    selectedDate: LocalDate,
+    scoringZone: ZoneId,
+    today: LocalDate = LocalDate.now(scoringZone),
+): VitalsRangeWindow {
+    val startDate = selectedDate.minusDays(range.days.toLong() - 1)
+    return VitalsRangeWindow(
+        fromMs = startDate.atStartOfDay(scoringZone).toInstant().toEpochMilli(),
+        startDate = startDate,
+        selectedMidnightMs = selectedDate.atStartOfDay(scoringZone).toInstant().toEpochMilli(),
+        isToday = selectedDate == today,
+    )
+}
 
 @Immutable
 data class VitalsPresentationState(
-    val baselineHrv: Float?,
-    val baselineRhr: Int?,
-    val hrvZoneBands: List<ZoneBand>?,
-    val rhrZoneBands: List<ZoneBand>?,
-    val spo2ZoneBands: List<ZoneBand>,
-    val hrvOptimalThreshold: Float,
-    val hrvWarningThreshold: Float,
-    val rhrOptimalThreshold: Float,
-    val rhrWarningThreshold: Float,
+    val hrv: PersonalBaselineAssessment,
+    val rhr: PersonalBaselineAssessment,
+    val spo2: Spo2Assessment,
+    val baselineBodyTemp: Float?,
+    val bodyTempUnitSystem: UnitSystem,
 ) {
     companion object {
         fun empty(): VitalsPresentationState =
-            VitalsPresentationState(
-                baselineHrv = null,
-                baselineRhr = null,
-                hrvZoneBands = null,
-                rhrZoneBands = null,
-                spo2ZoneBands = spo2ZoneBands(),
-                hrvOptimalThreshold = 0.9f,
-                hrvWarningThreshold = 0.8f,
-                rhrOptimalThreshold = 1.05f,
-                rhrWarningThreshold = 1.15f,
+            buildVitalsPresentationState(
+                metrics = null,
+                summary = null,
+                prefs = UserPreferences(),
+                bodyTemperatureBaselineCelsius = null,
             )
     }
 }
 
+private fun presentationStateFromAssessments(
+    hrv: PersonalBaselineAssessment,
+    rhr: PersonalBaselineAssessment,
+    spo2: Spo2Assessment,
+    bodyTemperatureBaselineCelsius: Float?,
+    unitSystem: UnitSystem,
+): VitalsPresentationState =
+    VitalsPresentationState(
+        hrv = hrv,
+        rhr = rhr,
+        spo2 = spo2,
+        baselineBodyTemp =
+            bodyTemperatureBaselineCelsius?.let {
+                UnitConverter.celsiusToDisplayTemperature(it, unitSystem)
+            },
+        bodyTempUnitSystem = unitSystem,
+    )
+
 /**
- * The subset of [VitalsUiState] the three trend charts read. Passing only this into
+ * The subset of [VitalsUiState] the four trend charts read. Passing only this into
  * [VitalsTrendSection] means gauge-only or refresh-only state changes never recompose the chart
  * subtree — mirrors [app.readylytics.health.feature.dashboard.DashboardUiState.cardInputs].
  */
@@ -60,7 +97,6 @@ data class VitalsChartInputs(
     val rangeStartMs: Long,
     val selectedRange: TimeRange,
     val presentation: VitalsPresentationState,
-    val isCalibrating: Boolean,
     val isLoading: Boolean,
 )
 
@@ -70,7 +106,6 @@ fun VitalsUiState.chartInputs(): VitalsChartInputs =
         rangeStartMs = rangeStartMs,
         selectedRange = selectedRange,
         presentation = presentation,
-        isCalibrating = latestSummary?.isCalibrating ?: false,
         isLoading = isLoading,
     )
 
@@ -78,9 +113,12 @@ internal fun buildVitalsChartSeries(
     summaries: List<DailySummary>,
     startDate: LocalDate,
     rangeDays: Int,
+    unitSystem: UnitSystem,
+    endDate: LocalDate = startDate.plusDays(rangeDays.toLong() - 1),
 ): VitalsChartSeries {
     fun points(value: (DailySummary) -> Float?): List<DailyDataPoint> =
         summaries
+            .filter { it.date in startDate..endDate }
             .mapNotNull { summary ->
                 value(summary)?.let {
                     DailyDataPoint(ChronoUnit.DAYS.between(startDate, summary.date).toInt(), it)
@@ -91,43 +129,44 @@ internal fun buildVitalsChartSeries(
     return VitalsChartSeries(
         hrv = points { it.nocturnalHrv?.toFloat() },
         rhr = points { it.restingHeartRate?.toFloat() },
-        spo2 = points { it.avgSleepingSpo2?.roundToInt()?.toFloat() },
+        spo2 = points { it.avgSleepingSpo2 },
+        bodyTemp =
+            points {
+                it.avgSleepingBodyTemp?.let { celsius ->
+                    UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
+                }
+            },
     )
 }
 
 internal fun buildVitalsPresentationState(
-    baselines: Baselines,
-    hrvOptimalThreshold: Float,
-    hrvWarningThreshold: Float,
-    rhrOptimalThreshold: Float,
-    rhrWarningThreshold: Float,
+    metrics: DailyMetrics?,
+    summary: DailySummary?,
+    prefs: UserPreferences,
+    bodyTemperatureBaselineCelsius: Float? = null,
 ): VitalsPresentationState {
-    val hrvBands =
-        baselines.hrv?.let { baseline ->
-            hrvZoneBands(
-                optimalMin = hrvOptimalThreshold * baseline,
-                neutralMin = hrvWarningThreshold * baseline,
-                warningMin = (2f * hrvWarningThreshold - 1f) * baseline,
-            )
-        }
-    val rhrBands =
-        baselines.rhr?.toFloat()?.let { baseline ->
-            rhrZoneBands(
-                optimalMax = rhrOptimalThreshold * baseline,
-                neutralMax = rhrWarningThreshold * baseline,
-                warningMax = rhrWarningThreshold * 1.3f * baseline,
-            )
-        }
+    val selectedMetrics = metrics ?: summary?.let { DailyMetricsMapper.toMetrics(it, prefs) }
+    val hrvAssessment =
+        assessHrv(
+            value = selectedMetrics?.nocturnalHrvRounded ?: summary?.nocturnalHrv,
+            baseline = selectedMetrics?.hrvBaselineRounded,
+            optimalRatio = prefs.hrvOptimalThreshold,
+            warningRatio = prefs.hrvWarningThreshold,
+        )
+    val rhrAssessment =
+        assessRhr(
+            value = selectedMetrics?.nocturnalRhrRounded ?: summary?.restingHeartRate,
+            baseline = selectedMetrics?.rhrBaselineRounded,
+            optimalRatio = prefs.rhrOptimalThreshold,
+            warningRatio = prefs.rhrWarningThreshold,
+        )
+    val spo2Assessment = assessSpo2(summary?.avgSleepingSpo2)
 
-    return VitalsPresentationState(
-        baselineHrv = baselines.hrv,
-        baselineRhr = baselines.rhr,
-        hrvZoneBands = hrvBands,
-        rhrZoneBands = rhrBands,
-        spo2ZoneBands = spo2ZoneBands(),
-        hrvOptimalThreshold = hrvOptimalThreshold,
-        hrvWarningThreshold = hrvWarningThreshold,
-        rhrOptimalThreshold = rhrOptimalThreshold,
-        rhrWarningThreshold = rhrWarningThreshold,
+    return presentationStateFromAssessments(
+        hrv = hrvAssessment,
+        rhr = rhrAssessment,
+        spo2 = spo2Assessment,
+        bodyTemperatureBaselineCelsius = bodyTemperatureBaselineCelsius,
+        unitSystem = prefs.unitSystem,
     )
 }

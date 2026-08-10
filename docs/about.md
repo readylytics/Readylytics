@@ -279,6 +279,27 @@ overnight average rather than a scoring-engine calculation.
 
 ---
 
+## Body Temperature
+
+The dashboard card and Vitals trend chart show your overnight average body temperature
+(nightly average of Health Connect readings within your sleep-session window). This is an
+**optional metric** — it requires the separate `READ_BODY_TEMPERATURE` Health Connect
+permission, and the card stays hidden until you grant it.
+
+Once you have 14 nights of readings, we show a rolling **14-day baseline** — a plain
+trailing average of your own recent nights. Before that, the card shows "Calibrating"
+instead of a deviation badge. We compare today's reading against that baseline and flag a
+day as elevated when it deviates by at least your configured **elevated-deviation
+threshold** (Settings, default **1.0°C**, adjustable from 0.25°C to 1.5°C) in either
+direction — a wider swing than typical night-to-night noise.
+
+This baseline is intentionally a simple average, not the log-normal statistical model used
+for HRV/RHR — it exists purely to flag a possibly-illness-related change for you to notice.
+**Body temperature does not affect Sleep Score, Load Score, or Readiness in any way.** It is
+a display-only insight, entirely outside the scoring engine.
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:

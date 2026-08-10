@@ -65,6 +65,10 @@ object SettingsDefaults {
     const val MIN_HRR_TOLERANCE_SECONDS = 15
     const val MAX_HRR_TOLERANCE_SECONDS = 60
     const val HRR_TOLERANCE_SECONDS = 30
+    const val BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 1.0f
+    const val MIN_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 0.25f
+    const val MAX_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 1.5f
+    const val BODY_TEMP_ELEVATED_THRESHOLD_STEP_CELSIUS = 0.25f
 
     /**
      * Authoritative runtime value for RAS scaling.
@@ -119,7 +123,8 @@ object SettingsDefaults {
             CardConfiguration(CardId.BLOOD_PRESSURE, isVisible = true, position = 14),
             CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = true, position = 15),
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
-            CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 17),
+            CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
+            CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
         )
 }
 

@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
@@ -150,6 +151,25 @@ class SourceRecordIdSargableQueryTest {
                     OxygenSaturationRecordEntity(id = "abc", timestampMs = 1L, percentage = 0.97f),
                     OxygenSaturationRecordEntity(id = "abc_1", timestampMs = 2L, percentage = 0.98f),
                     OxygenSaturationRecordEntity(id = "abcd_1", timestampMs = 3L, percentage = 0.99f),
+                ),
+            )
+
+            val matches = dao.getBySourceRecordId("abc")
+            assertEquals(setOf("abc", "abc_1"), matches.map { it.id }.toSet())
+
+            val deleted = dao.deleteBySourceRecordId("abc")
+            assertEquals(2, deleted)
+        }
+
+    @Test
+    fun `bodyTemperatureRecordDao matches the source id and its composite children, not an unrelated prefix match`() =
+        runTest {
+            val dao = database.bodyTemperatureRecordDao()
+            dao.upsertAll(
+                listOf(
+                    BodyTemperatureRecordEntity(id = "abc", timestampMs = 1L, celsius = 36.6f),
+                    BodyTemperatureRecordEntity(id = "abc_1", timestampMs = 2L, celsius = 36.7f),
+                    BodyTemperatureRecordEntity(id = "abcd_1", timestampMs = 3L, celsius = 36.8f),
                 ),
             )
 

@@ -76,6 +76,21 @@ fun ThresholdSettingsSection(
             description = stringResource(R.string.threshold_rhr_warning_desc),
         )
 
+        var bodyTempElevatedThreshold by
+            remember(uiState.bodyTempElevatedThreshold) { mutableFloatStateOf(uiState.bodyTempElevatedThreshold) }
+        ThresholdSliderItem(
+            label = stringResource(R.string.threshold_body_temp_elevated_label),
+            value = bodyTempElevatedThreshold,
+            onValueChange = { bodyTempElevatedThreshold = it },
+            onValueChangeFinished = {
+                onEvent(SettingsEvent.BodyTempElevatedThresholdChanged(bodyTempElevatedThreshold))
+            },
+            valueRange = 0.25f..1.5f,
+            steps = 4,
+            displayValue = stringResource(R.string.threshold_body_temp_elevated_value, bodyTempElevatedThreshold),
+            description = stringResource(R.string.threshold_body_temp_elevated_desc),
+        )
+
         // The circadian-consistency deviation threshold is no longer a flat slider here; it is
         // derived from the physiology profile (+ optional override) in the dedicated
         // "Circadian consistency" section (CircadianThresholdSettingsSection).

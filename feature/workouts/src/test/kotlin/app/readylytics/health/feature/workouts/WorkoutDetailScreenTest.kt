@@ -1,9 +1,16 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.strainRatioStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class WorkoutDetailScreenTest {
+    @Test
+    fun strainRatioStatus_matchesDashboardParityAtNeutralValue() {
+        assertEquals(MetricStatus.NEUTRAL, 1.37f.strainRatioStatus())
+    }
+
     @Test
     fun computeLabelMinutes_durationZero_returnsZero() {
         val result = computeLabelMinutes(0, 6)

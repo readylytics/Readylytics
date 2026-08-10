@@ -3,6 +3,7 @@ package app.readylytics.health.feature.sleep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
@@ -34,7 +35,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -322,7 +325,218 @@ class SleepViewModelTest {
             assertEquals(6, startPoint.dayOffset)
             assertEquals(10f, startPoint.value!!, 0.01f)
             assertEquals(8f, spanPoint.value!!, 0.01f)
-            assertEquals(7.5f, actualPoint.value!!, 0.01f)
+            assertEquals(8f, actualPoint.value!!, 0.01f)
+        }
+
+    @Test
+    fun `trend uses core window and total duration for a scoring day with a nap`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val coreStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val napStart =
+                scoreDay
+                    .atTime(13, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val coreEnd =
+                scoreDay
+                    .atTime(6, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val napEnd =
+                scoreDay
+                    .atTime(13, 30)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val core =
+                sleepSession(
+                    id = "core",
+                    startTime = coreStart,
+                    endTime = coreEnd,
+                    durationMinutes = 480,
+                )
+            val nap =
+                sleepSession(
+                    id = "nap",
+                    startTime = napStart,
+                    endTime = napEnd,
+                    durationMinutes = 30,
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(core, nap))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendActualDurationPoints.last().value != null }
+            val dayOffset = TimeRange.SEVEN_DAYS.days - 1
+            assertEquals(10f, state.trendStartOffsetPoints[dayOffset].value!!, 0.01f)
+            assertEquals(8f, state.trendDurationSpanPoints[dayOffset].value!!, 0.01f)
+            assertEquals(8.5f, state.trendActualDurationPoints[dayOffset].value!!, 0.01f)
+            assertEquals(listOf(napStart), state.trendDays[dayOffset].naps.map { it.startTimeMs })
+        }
+
+    @Test
+    fun `trend overlap tie-breaking preserves the session source name`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val earlierStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val laterStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 30)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val stableIdWinnerWithoutSource =
+                sleepSession(
+                    id = "a-stable-id",
+                    startTime = earlierStart,
+                    endTime = earlierStart + 480 * 60_000L,
+                    durationMinutes = 480,
+                    deviceName = "z-source",
+                )
+            val sourceWinner =
+                sleepSession(
+                    id = "z-stable-id",
+                    startTime = laterStart,
+                    endTime = laterStart + 480 * 60_000L,
+                    durationMinutes = 480,
+                    deviceName = "a-source",
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns
+                flowOf(listOf(stableIdWinnerWithoutSource, sourceWinner))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendDays.last().coreStartTimeMs != null }
+            assertEquals(laterStart, state.trendDays.last().coreStartTimeMs)
+        }
+
+    @Test
+    fun `trend derives a positive duration for a legacy zero-duration session`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val startTime =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(22, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val session =
+                sleepSession(
+                    id = "legacy-zero-duration",
+                    startTime = startTime,
+                    endTime = startTime + 8 * 60 * 60_000L,
+                    durationMinutes = 0,
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendDays.last().totalDurationMinutes != null }
+            assertEquals(480, state.trendDays.last().totalDurationMinutes)
+            assertEquals(8f, state.trendActualDurationPoints.last().value!!, 0.01f)
+        }
+
+    @Test
+    fun `trend assigns a cutoff-boundary session to its following scoring day`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val cutoffStart =
+                scoreDay
+                    .minusDays(1)
+                    .atTime(20, 0)
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val session =
+                sleepSession(
+                    id = "cutoff",
+                    startTime = cutoffStart,
+                    endTime =
+                        scoreDay
+                            .minusDays(1)
+                            .atTime(20, 30)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 30,
+                )
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendActualDurationPoints.last().value != null }
+            assertEquals(0.5f, state.trendActualDurationPoints.last().value!!, 0.01f)
+            assertEquals(null, state.trendActualDurationPoints[TimeRange.SEVEN_DAYS.days - 2].value)
+        }
+
+    @Test
+    fun `trend assigns sessions using the configured scoring zone instead of the device zone`() =
+        runTest(testDispatcher) {
+            val deviceZoneId = ZoneId.systemDefault()
+            val scoreDay = selectedDateFlow.value
+            val cutoffMinutes = 20 * 60
+            // Device zone may be a UTC-equivalent alias (Etc/UTC, GMT, Iceland, Azores in summer,
+            // ...) whose ID differs from "UTC" but has an identical offset. Comparing IDs would pick
+            // a scoring zone with the same offset and no instant could diverge, so pick a candidate
+            // scoring zone whose actual offset differs from the device zone's.
+            val referenceInstant = scoreDay.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant()
+            val deviceOffsetSeconds = deviceZoneId.rules.getOffset(referenceInstant).totalSeconds
+            val scoringZoneId =
+                listOf("America/New_York", "Pacific/Kiritimati", "Pacific/Pago_Pago")
+                    .asSequence()
+                    .map(ZoneId::of)
+                    .first { zone ->
+                        zone.rules.getOffset(referenceInstant).totalSeconds != deviceOffsetSeconds
+                    }
+            val sessionStart =
+                (0..(48 * 60))
+                    .asSequence()
+                    .map { minuteOffset ->
+                        scoreDay
+                            .minusDays(1)
+                            .atStartOfDay(ZoneId.of("UTC"))
+                            .plusMinutes(minuteOffset.toLong())
+                            .toInstant()
+                    }.first { instant ->
+                        scoreDayFor(instant, scoringZoneId, cutoffMinutes) == scoreDay &&
+                            scoreDayFor(instant, deviceZoneId, cutoffMinutes) != scoreDay
+                    }.toEpochMilli()
+            val session = sleepSession("zone", sessionStart, sessionStart + 30 * 60_000L, 30)
+            every { settingsRepo.userPreferences } returns flowOf(UserPreferences(scoringZoneId = scoringZoneId.id))
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.trendActualDurationPoints.last().value != null }
+            assertNotEquals(deviceZoneId, scoringZoneId)
+            assertEquals(scoringZoneId, state.trendScoringZoneId)
+            assertEquals(0.5f, state.trendActualDurationPoints.last().value!!, 0.01f)
         }
 
     @Test
@@ -340,6 +554,96 @@ class SleepViewModelTest {
             assertEquals(true, state.trendDurationSpanPoints.all { it.value == null })
             assertEquals(true, state.trendActualDurationPoints.all { it.value == null })
         }
+
+    @Test
+    fun `unrelated pref change does not resubscribe inner flows`() =
+        runTest(testDispatcher) {
+            val prefsFlow = MutableStateFlow(UserPreferences())
+            every { settingsRepo.userPreferences } returns prefsFlow
+            var observeSinceCalls = 0
+            every { sleepSessionRepository.observeSince(any()) } answers {
+                observeSinceCalls++
+                flowOf(emptyList())
+            }
+            var observeFirstSessionCalls = 0
+            every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } answers {
+                observeFirstSessionCalls++
+                flowOf(null)
+            }
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val initialSinceCalls = observeSinceCalls
+            val initialFirstSessionCalls = observeFirstSessionCalls
+            assertTrue("initial load must subscribe once", initialSinceCalls >= 1)
+
+            prefsFlow.value = UserPreferences(appTheme = AppTheme.DARK)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals("unrelated pref change must not restart observeSince", initialSinceCalls, observeSinceCalls)
+            assertEquals(
+                "unrelated pref change must not restart observeFirstSessionEndingInRange",
+                initialFirstSessionCalls,
+                observeFirstSessionCalls,
+            )
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `sleep-relevant pref change resubscribes inner flows`() =
+        runTest(testDispatcher) {
+            val prefsFlow = MutableStateFlow(UserPreferences())
+            every { settingsRepo.userPreferences } returns prefsFlow
+            var observeSinceCalls = 0
+            every { sleepSessionRepository.observeSince(any()) } answers {
+                observeSinceCalls++
+                flowOf(emptyList())
+            }
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testDispatcher.scheduler.advanceUntilIdle()
+            val initialSinceCalls = observeSinceCalls
+
+            prefsFlow.value = UserPreferences(coreMergeGapMinutes = 120)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(initialSinceCalls + 1, observeSinceCalls)
+
+            collectJob.cancelAndJoin()
+        }
+
+    private fun sleepSession(
+        id: String,
+        startTime: Long,
+        endTime: Long,
+        durationMinutes: Int,
+        deviceName: String = "SmartRing",
+    ) = SleepSessionData(
+        id = id,
+        deviceName = deviceName,
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+        efficiency = 0.93f,
+        deepSleepMinutes = 90,
+        lightSleepMinutes = 300,
+        remSleepMinutes = 90,
+        awakeMinutes = 0,
+    )
+
+    private fun scoreDayFor(
+        instant: java.time.Instant,
+        zoneId: ZoneId,
+        cutoffMinutes: Int,
+    ): LocalDate {
+        val localTime = instant.atZone(zoneId)
+        val minutesOfDay = localTime.hour * 60 + localTime.minute
+        return if (minutesOfDay < cutoffMinutes) localTime.toLocalDate() else localTime.toLocalDate().plusDays(1)
+    }
 
     @Test
     fun `ui state observes yesterday sleep score as rounded reactive value`() =

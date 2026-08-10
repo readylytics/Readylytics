@@ -58,6 +58,20 @@ class TrendChartRenderDataTest {
     }
 
     @Test
+    fun `baseline legend identifies calibration when a baseline is unavailable`() {
+        assertEquals(
+            "Baseline: Calibrating",
+            formatBaselineLegendText(
+                value = null,
+                unit = "°C",
+                label = "Baseline",
+                decimalPlaces = 1,
+                unavailableValueLabel = "Calibrating",
+            ),
+        )
+    }
+
+    @Test
     fun `marker work is suppressed during parent scroll`() {
         assertFalse(shouldProcessTrendMarker(parentScrollInProgress = true))
         assertTrue(shouldProcessTrendMarker(parentScrollInProgress = false))

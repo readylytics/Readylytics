@@ -88,3 +88,10 @@ data class DomainOxygenSaturationRecord(
     val percentage: Float,
     val deviceName: String,
 )
+
+data class DomainBodyTemperatureRecord(
+    val id: String,
+    val time: Instant,
+    val celsius: Float,
+    val deviceName: String,
+)

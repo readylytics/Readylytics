@@ -60,4 +60,20 @@ class UnitConverterTest {
             UnitConverter.weightKgToDisplayShort(72.34f, UnitSystem.IMPERIAL),
         )
     }
+
+    @Test
+    fun `celsiusToDisplayTemperature passes through unchanged for metric`() {
+        assertEquals(36.6f, UnitConverter.celsiusToDisplayTemperature(36.6f, UnitSystem.METRIC), 0.01f)
+    }
+
+    @Test
+    fun `celsiusToDisplayTemperature converts to fahrenheit for imperial`() {
+        assertEquals(97.88f, UnitConverter.celsiusToDisplayTemperature(36.6f, UnitSystem.IMPERIAL), 0.01f)
+    }
+
+    @Test
+    fun `celsiusDeltaToDisplayDelta scales without the 32-degree offset`() {
+        assertEquals(1.0f, UnitConverter.celsiusDeltaToDisplayDelta(1.0f, UnitSystem.METRIC), 0.01f)
+        assertEquals(1.8f, UnitConverter.celsiusDeltaToDisplayDelta(1.0f, UnitSystem.IMPERIAL), 0.01f)
+    }
 }

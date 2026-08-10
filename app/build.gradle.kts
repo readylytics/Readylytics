@@ -6,6 +6,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import readylytics.buildlogic.DebugInstallIdentity
 
 val releaseSigningEnvironmentVariables =
     listOf(
@@ -112,6 +113,15 @@ val resolvedVersion = computeVersion()
 val computedVersionCode = resolvedVersion.first
 val computedVersionName = resolvedVersion.second
 
+val rawHostname =
+    providers
+        .environmentVariable("COMPUTERNAME")
+        .orElse(providers.environmentVariable("HOSTNAME"))
+        .orElse(providers.systemProperty("user.name"))
+        .orElse("device")
+        .map(DebugInstallIdentity::stripMdnsSuffix)
+val machineIdSegment = rawHostname.map(DebugInstallIdentity::sanitizeMachineId)
+
 kotlin {
     jvmToolchain(17)
     compilerOptions {
@@ -171,9 +181,10 @@ android {
             )
         }
         debug {
-            applicationIdSuffix = ".local"
+            applicationIdSuffix = ".local.${machineIdSegment.get()}"
             versionNameSuffix = "-local"
             enableUnitTestCoverage = true
+            resValue("string", "app_name", "Readylytics Local (${rawHostname.get()})")
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
@@ -227,6 +238,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
     lint {
         abortOnError = true

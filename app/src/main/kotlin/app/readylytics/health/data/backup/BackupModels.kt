@@ -1,5 +1,6 @@
 package app.readylytics.health.data.backup
 
+import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.domain.dashboard.CardConfiguration
@@ -7,7 +8,19 @@ import kotlinx.serialization.Serializable
 
 internal object BackupSchemaPolicy {
     const val MIN_SUPPORTED_VERSION = 5
-    const val MAX_SUPPORTED_VERSION = 7
+
+    // Tracks HealthDatabase.DATABASE_VERSION directly (both are compile-time constants, so this
+    // const-folds) instead of hardcoding a literal that must be remembered on every schema bump.
+    // LocalBackupManager always stamps a fresh backup's schemaVersion with the current
+    // DATABASE_VERSION, so "max supported" and "current DB version" must never drift apart.
+    const val MAX_SUPPORTED_VERSION = HealthDatabase.DATABASE_VERSION
+
+    // Fixed historical fact: heart-rate/HRV records adopted the current sourceRecordId-based
+    // entity format at the external v6->v7 SQLCipher migration (V7DatabaseMigrator). This does
+    // NOT move as MAX_SUPPORTED_VERSION grows with later schema bumps (e.g. this task's v7->v8)
+    // — do not couple it to MAX_SUPPORTED_VERSION or a backup produced at any version >= 7 will
+    // be mis-decoded via the legacy id-suffix path once a later DATABASE_VERSION ships.
+    const val CURRENT_RECORD_FORMAT_MIN_VERSION = 7
 
     fun requireSupported(version: Int) {
         require(version in MIN_SUPPORTED_VERSION..MAX_SUPPORTED_VERSION) {

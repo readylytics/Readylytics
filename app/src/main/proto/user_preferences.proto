@@ -225,6 +225,11 @@ message UserPreferencesProto {
     // setting. DASHBOARD_CARD_DISPLAY_MODE_UNSET (proto3 zero value) = never applied;
     // resolves to null at the domain read boundary.
     DashboardCardDisplayModeProto last_global_display_mode = 81;
+
+    // User-configurable "elevated" deviation threshold for the body temperature baseline
+    // insight, in degrees Celsius. Not read by any scoring formula. Unset (proto3 zero value
+    // via `optional` presence check) resolves to SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS.
+    optional float body_temp_elevated_threshold_celsius = 82;
 }
 
 enum TrimpMethodProto {

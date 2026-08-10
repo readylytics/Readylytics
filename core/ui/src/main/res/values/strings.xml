@@ -76,12 +76,10 @@
     <string name="tooltip_readiness">Preparation for stress based on recent load &amp;
         recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
     <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent
-        training load to your baseline.\n\n• 0.8–1.3: In your normal range — sweet spot\n• 1.3–1.5:
-        Load increasing; linear decay begins\n• 1.5–2.0: Overtraining; high injury risk\n• &gt;2.0:
-        Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe
-        under-training</string>
+        training load to your baseline.\n\n• &lt;0.5: Poor\n• 0.5–&lt;0.8: Warning\n• 0.8–1.3: Optimal\n• &gt;1.3–1.5: Neutral\n• &gt;1.5–2.0:
+        Warning\n• &gt;2.0: Poor</string>
     <string name="card_title_readiness">Readiness</string>
-    <string name="card_title_strain_ratio">Strain ratio</string>
+    <string name="card_title_strain_ratio">Strain Ratio</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_mmHg">mmHg</string>
     <string name="unit_ms">ms</string>
@@ -89,6 +87,8 @@
     <string name="unit_steps">steps</string>
     <string name="unit_kg">kg</string>
     <string name="unit_lbs">lbs</string>
+    <string name="unit_celsius">°C</string>
+    <string name="unit_fahrenheit">°F</string>
     <string name="label_average">Average</string>
     <string name="label_normal_limit">Normal Limit</string>
     <string name="label_min">Min</string>
@@ -102,6 +102,7 @@
     <string name="label_hrv">HRV</string>
     <string name="label_steps">Steps</string>
     <string name="label_spo2">SpO2</string>
+    <string name="label_body_temperature">Body temperature</string>
     <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
         your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
@@ -125,6 +126,8 @@
     <string name="card_efficiency_format">%1$s%%</string>
     <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
     <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.</string>
+    <string name="tooltip_vitals_body_temperature" formatted="false">Average sleeping body temperature last night, compared to your 14-day baseline.</string>
+    <string name="body_temperature_calibrating">Calibrating</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>

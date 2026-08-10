@@ -3,6 +3,7 @@ package app.readylytics.health.data.healthconnect
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -12,6 +13,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -43,6 +45,7 @@ internal enum class FakeOp {
     BodyFat,
     BloodPressure,
     OxygenSaturation,
+    BodyTemperature,
     Discovery,
 }
 
@@ -82,6 +85,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             HealthPermission.getReadPermission(BodyFatRecord::class),
             HealthPermission.getReadPermission(BloodPressureRecord::class),
             HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+            HealthPermission.getReadPermission(BodyTemperatureRecord::class),
         )
 
     override val allPermissions: Set<String> = requiredPermissions + optionalPermissions
@@ -103,6 +107,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     val bodyFatCount: MutableMap<Instant, Int> = mutableMapOf()
     val bpCount: MutableMap<Instant, Int> = mutableMapOf()
     val spo2Count: MutableMap<Instant, Int> = mutableMapOf()
+    val bodyTemperatureCount: MutableMap<Instant, Int> = mutableMapOf()
 
     /** Synthetic steps keyed by sample timestamp. Each entry is one StepsRecord. */
     val stepsByInstant: MutableMap<Instant, Long> = mutableMapOf()
@@ -267,6 +272,17 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             stubList(totalInRange(spo2Count, from, to)) { index -> placeholderOxygen(index) }
         }
 
+    override suspend fun readBodyTemperatureRecords(
+        from: Instant,
+        to: Instant,
+    ): List<DomainBodyTemperatureRecord> =
+        runOptional(FakeOp.BodyTemperature) {
+            stubList(totalInRange(bodyTemperatureCount, from, to)) { index -> placeholderBodyTemperature(index) }
+        }
+
+    override suspend fun hasBodyTemperaturePermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
+
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays
         return try {
@@ -404,6 +420,14 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             id = "spo2-$index",
             time = PLACEHOLDER_TIME,
             percentage = 0.98f,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderBodyTemperature(index: Int): DomainBodyTemperatureRecord =
+        DomainBodyTemperatureRecord(
+            id = "body-temp-$index",
+            time = PLACEHOLDER_TIME,
+            celsius = 36.8f,
             deviceName = PLACEHOLDER_DEVICE,
         )
 

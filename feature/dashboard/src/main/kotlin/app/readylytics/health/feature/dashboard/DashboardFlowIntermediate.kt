@@ -4,23 +4,27 @@ import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.ZoneId
@@ -40,6 +44,7 @@ data class DashboardBasicInputs(
     val circadianResult: CircadianConsistencyResult?,
     val rasSummaries: List<DailySummary>,
     val dismissedInsightTypes: Set<InsightType> = emptySet(),
+    val bodyTempBaseline: Float? = null,
 )
 
 /**
@@ -87,6 +92,7 @@ fun createDashboardBasicInputsFlow(
     settingsRepository: UserPreferencesReader,
     circadianRepository: CircadianConsistencyRepository,
     insightDismissalRepository: InsightDismissalRepository,
+    bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
 ): Flow<DashboardBasicInputs> =
     combine(selectedDate, settingsRepository.userPreferences) { date, prefs -> date to prefs }
         .flatMapLatest { (date, prefs) ->
@@ -119,13 +125,16 @@ fun createDashboardBasicInputsFlow(
                 insightDismissalRepository
                     .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
 
+            val bodyTempBaselineFlow = bodyTemperatureBaselineProvider.observeBaseline(date)
+
             // Combine all basic inputs
             combine(
                 summaryFlow,
                 circadianRepository.resultFor(date),
                 rasBreakdownFlow,
                 dismissalFlow,
-            ) { summary, circadian, rasSummaries, dismissed ->
+                bodyTempBaselineFlow,
+            ) { summary, circadian, rasSummaries, dismissed, bodyTempBaseline ->
                 DashboardBasicInputs(
                     selectedDate = date,
                     summary = summary,
@@ -133,6 +142,7 @@ fun createDashboardBasicInputsFlow(
                     circadianResult = circadian,
                     rasSummaries = rasSummaries,
                     dismissedInsightTypes = dismissed,
+                    bodyTempBaseline = bodyTempBaseline,
                 )
             }
         }
@@ -152,6 +162,7 @@ fun createDashboardCardStateFlow(
     cardManagementDelegate: CardManagementDelegate,
     cardConfigRepository: CardConfigurationRepository,
     dailySummaryRepository: DailySummaryRepository,
+    healthConnectRepository: HealthConnectRepository,
 ): Flow<DashboardCardState> {
     val zoneId = ZoneId.systemDefault()
 
@@ -171,12 +182,24 @@ fun createDashboardCardStateFlow(
                         .toEpochMilli(),
             )
         },
-    ) { isManaging, pendingConfig, cardConfig, session ->
+        // One-shot check, not re-polled -- relies on DashboardViewModel.uiState's
+        // WhileSubscribed(5_000) sharing policy naturally restarting this flow after a
+        // permission-grant round trip (navigating to the Health Connect permission screen and
+        // back always takes > 5s). If that sharing policy ever changes, this needs an explicit
+        // refresh trigger.
+        flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
+    ) { isManaging, pendingConfig, cardConfig, session, bodyTempPermissionGranted ->
+        fun List<CardConfiguration>.filteredForPermission(): List<CardConfiguration> =
+            if (bodyTempPermissionGranted) {
+                this
+            } else {
+                filter { it.cardId != CardId.BODY_TEMPERATURE }
+            }
         DashboardCardState(
             isManagingCards = isManaging,
-            cardConfiguration = cardConfig,
+            cardConfiguration = cardConfig.filteredForPermission(),
             lastSleepSession = session,
-            pendingConfiguration = pendingConfig,
+            pendingConfiguration = pendingConfig?.filteredForPermission(),
         )
     }
 }

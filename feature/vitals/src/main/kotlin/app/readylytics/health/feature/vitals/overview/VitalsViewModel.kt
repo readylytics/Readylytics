@@ -5,17 +5,18 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.model.Baselines
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.scoring.HrvBaselineProvider
-import app.readylytics.health.domain.scoring.RhrBaselineProvider
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,9 +29,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -38,7 +40,7 @@ import javax.inject.Inject
 @Immutable
 data class VitalsUiState(
     val latestSummary: DailySummary? = null,
-    val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList()),
+    val chartSeries: VitalsChartSeries = VitalsChartSeries(emptyList(), emptyList(), emptyList(), emptyList()),
     val presentation: VitalsPresentationState = VitalsPresentationState.empty(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
@@ -59,6 +61,27 @@ private data class VitalsContentState(
     val rangeStartMs: Long,
 )
 
+private data class DatedMetrics(
+    val date: LocalDate,
+    val metrics: DailyMetrics?,
+)
+
+private data class DatedBodyTemperatureBaseline(
+    val date: LocalDate,
+    val baseline: Float?,
+)
+
+private data class VitalsChartPreferences(
+    val scoringZone: ZoneId,
+    val unitSystem: UnitSystem,
+)
+
+private data class VitalsPresentationInputs(
+    val preferences: UserPreferences,
+    val metrics: DatedMetrics,
+    val bodyTemperatureBaseline: DatedBodyTemperatureBaseline,
+)
+
 @HiltViewModel
 class VitalsViewModel
     @Inject
@@ -69,8 +92,7 @@ class VitalsViewModel
         private val selectedDateRepository: SelectedDateStore,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
-        private val hrvBaselineProvider: HrvBaselineProvider,
-        private val rhrBaselineProvider: RhrBaselineProvider,
+        private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
@@ -79,15 +101,50 @@ class VitalsViewModel
             )
         val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()
 
-        private val baselinesFlow =
+        @OptIn(ExperimentalCoroutinesApi::class)
+        private val selectedMetricsFlow =
             selectedDateRepository.selectedDate
-                .map { date ->
-                    Baselines(
-                        hrv = hrvBaselineProvider.getRoundedHrvBaseline(date)?.toFloat(),
-                        rhr = rhrBaselineProvider.getRoundedRhrBaseline(date),
-                    )
+                .flatMapLatest { date ->
+                    dailyMetricsRepository
+                        .observeByDate(date)
+                        .map { metrics -> DatedMetrics(date = date, metrics = metrics) }
+                        .onStart { emit(DatedMetrics(date = date, metrics = null)) }
                 }.distinctUntilChanged()
                 .flowOn(ioDispatcher)
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        private val bodyTemperatureBaselineFlow =
+            selectedDateRepository.selectedDate
+                .flatMapLatest { date ->
+                    bodyTemperatureBaselineProvider
+                        .observeBaseline(date)
+                        .map { baseline -> DatedBodyTemperatureBaseline(date = date, baseline = baseline) }
+                        .onStart { emit(DatedBodyTemperatureBaseline(date = date, baseline = null)) }
+                }.distinctUntilChanged()
+                .flowOn(ioDispatcher)
+
+        private val presentationInputsFlow =
+            combine(
+                settingsRepo.userPreferences,
+                selectedMetricsFlow,
+                bodyTemperatureBaselineFlow,
+            ) { prefs, metrics, bodyTemp ->
+                VitalsPresentationInputs(
+                    preferences = prefs,
+                    metrics = metrics,
+                    bodyTemperatureBaseline = bodyTemp,
+                )
+            }.distinctUntilChanged()
+                .flowOn(ioDispatcher)
+
+        private val chartPreferencesFlow =
+            settingsRepo.userPreferences
+                .map { prefs ->
+                    VitalsChartPreferences(
+                        scoringZone = prefs.scoringZone(),
+                        unitSystem = prefs.unitSystem,
+                    )
+                }.distinctUntilChanged()
 
         private val selectionFlow =
             combine(_selectedRange, selectedDateRepository.selectedDate, ::VitalsSelection)
@@ -95,55 +152,46 @@ class VitalsViewModel
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val contentFlow =
-            selectionFlow
+            combine(selectionFlow, chartPreferencesFlow) { selection, chartPrefs -> selection to chartPrefs }
                 .flatMapLatest { selection ->
-                    val fromMs = selection.range.fromMs(selection.date)
-                    val startDayMs = fromMs.truncateToDayMs()
-                    val zoneId = ZoneId.systemDefault()
-                    val startDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
-                    val selectedMidnightMs =
-                        selection
-                            .date
-                            .atStartOfDay(zoneId)
-                            .toInstant()
-                            .toEpochMilli()
+                    val (vitalsSelection, chartPrefs) = selection
+                    val window =
+                        resolveVitalsRangeWindow(
+                            range = vitalsSelection.range,
+                            selectedDate = vitalsSelection.date,
+                            scoringZone = chartPrefs.scoringZone,
+                        )
                     val latestFlow =
-                        if (selection.date == LocalDate.now(zoneId)) {
-                            val todayMs =
-                                LocalDate
-                                    .now(zoneId)
-                                    .atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli()
-                            dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
+                        if (window.isToday) {
+                            dailySummaryRepository.observeSince(window.selectedMidnightMs).map { it.firstOrNull() }
                         } else {
-                            dailySummaryRepository.observeByDate(selectedMidnightMs)
+                            dailySummaryRepository.observeByDate(window.selectedMidnightMs)
                         }
 
                     combine(
                         latestFlow,
-                        dailySummaryRepository.observeSince(fromMs),
+                        dailySummaryRepository.observeSince(window.fromMs),
                     ) { latest, summaries ->
                         VitalsContentState(
                             latestSummary = latest,
-                            chartSeries = buildVitalsChartSeries(summaries, startDate, selection.range.days),
-                            selection = selection,
-                            rangeStartMs = startDayMs,
+                            chartSeries =
+                                buildVitalsChartSeries(
+                                    summaries,
+                                    window.startDate,
+                                    vitalsSelection.range.days,
+                                    chartPrefs.unitSystem,
+                                    endDate = vitalsSelection.date,
+                                ),
+                            selection = vitalsSelection,
+                            rangeStartMs = window.fromMs,
                         )
                     }.distinctUntilChanged()
                 }.flowOn(ioDispatcher)
-
-        private val presentationFlow =
-            combine(settingsRepo.userPreferences, baselinesFlow) { prefs, baselines ->
-                buildVitalsPresentationState(
-                    baselines = baselines,
-                    hrvOptimalThreshold = prefs.hrvOptimalThreshold,
-                    hrvWarningThreshold = prefs.hrvWarningThreshold,
-                    rhrOptimalThreshold = prefs.rhrOptimalThreshold,
-                    rhrWarningThreshold = prefs.rhrWarningThreshold,
+                .shareIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    replay = 1,
                 )
-            }.distinctUntilChanged()
-                .flowOn(ioDispatcher)
 
         val uiState: StateFlow<VitalsUiState> =
             // isLoading now means "true first-load, no data yet" (skeleton). isRefreshing tracks
@@ -157,13 +205,24 @@ class VitalsViewModel
             // skeleton and tearing down/rebuilding the Vico charts once per day.
             combine(
                 contentFlow,
-                presentationFlow,
+                presentationInputsFlow,
                 foregroundSyncController.isSyncing,
-            ) { content, presentation, isSyncing ->
+            ) { content, inputs, isSyncing ->
+                val presentation =
+                    buildVitalsPresentationState(
+                        metrics = inputs.metrics.takeIf { it.date == content.selection.date }?.metrics,
+                        summary = content.latestSummary,
+                        prefs = inputs.preferences,
+                        bodyTemperatureBaselineCelsius =
+                            inputs.bodyTemperatureBaseline
+                                .takeIf { it.date == content.selection.date }
+                                ?.baseline,
+                    )
                 val hasHistoricalData =
                     content.chartSeries.hrv.any { it.value != null } ||
                         content.chartSeries.rhr.any { it.value != null } ||
-                        content.chartSeries.spo2.any { it.value != null }
+                        content.chartSeries.spo2.any { it.value != null } ||
+                        content.chartSeries.bodyTemp.any { it.value != null }
                 VitalsUiState(
                     latestSummary = content.latestSummary,
                     chartSeries = content.chartSeries,

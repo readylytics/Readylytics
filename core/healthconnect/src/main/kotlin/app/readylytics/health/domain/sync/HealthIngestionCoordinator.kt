@@ -67,6 +67,8 @@ class HealthIngestionCoordinator
                 val bloodPressureRecords =
                     retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) }
                 val spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) }
+                val bodyTemperatureRecords =
+                    retryWithBackoff { hcRepo.readBodyTemperatureRecords(windowStart, windowEnd) }
                 // Raw steps records aren't used for the daily total (StepCountFetcher's
                 // aggregate/device-filtered reads are) -- persisted purely so a later
                 // changes-path deletion can resolve its own date range (HC-005).
@@ -77,7 +79,8 @@ class HealthIngestionCoordinator
                 logD("HealthIngestionCoordinator") {
                     "Bulk HC fetch complete: sleep=${sleepInputs.size} exercise=${exerciseRecords.size} " +
                         "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} " +
-                        "bp=${bloodPressureRecords.size} spo2=${spo2Records.size}"
+                        "bp=${bloodPressureRecords.size} spo2=${spo2Records.size} " +
+                        "bodyTemp=${bodyTemperatureRecords.size}"
                 }
 
                 val workoutInputs = exerciseRecords.map { WorkoutMapper.mapExerciseSession(it) }
@@ -158,10 +161,26 @@ class HealthIngestionCoordinator
                         deviceFor(HealthDataType.OXYGEN_SATURATION),
                     ) { it.deviceName }
 
+                val bodyTemperatureInputs =
+                    bodyTemperatureRecords.map { record ->
+                        BodyTemperatureInput(
+                            id = "${record.id}_${record.time.toEpochMilli()}",
+                            timestampMs = record.time.toEpochMilli(),
+                            celsius = record.celsius,
+                            deviceName = record.deviceName,
+                        )
+                    }
+                val filteredBodyTemperature =
+                    DeviceSourceFilter.filterToDevice(
+                        bodyTemperatureInputs,
+                        deviceFor(HealthDataType.BODY_TEMPERATURE),
+                    ) { it.deviceName }
+
                 logD("HealthIngestionCoordinator") {
                     "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
                         "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} " +
-                        "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size}"
+                        "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size} " +
+                        "bodyTemp=${filteredBodyTemperature.size}"
                 }
 
                 // Only persist stages whose parent session survived device filtering. Stages carry a
@@ -204,6 +223,7 @@ class HealthIngestionCoordinator
                         bodyFatSamples = filteredBodyFat,
                         bloodPressureSamples = filteredBloodPressure,
                         oxygenSaturationSamples = filteredSpo2,
+                        bodyTemperatureSamples = filteredBodyTemperature,
                         stepRecords = stepRecordInputs,
                     ),
                 )

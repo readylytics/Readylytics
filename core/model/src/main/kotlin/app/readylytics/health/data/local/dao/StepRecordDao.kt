@@ -10,6 +10,15 @@ interface StepRecordDao {
     @Upsert
     suspend fun upsertAll(records: List<StepRecordEntity>)
 
+    @Query(
+        "SELECT * FROM step_records WHERE startTime >= :fromMs ORDER BY startTime ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<StepRecordEntity>
+
     @Query("SELECT * FROM step_records WHERE id = :id")
     suspend fun getById(id: String): StepRecordEntity?
 

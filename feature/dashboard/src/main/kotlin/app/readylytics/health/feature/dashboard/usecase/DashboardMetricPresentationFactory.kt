@@ -15,12 +15,22 @@ import app.readylytics.health.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
+import app.readylytics.health.domain.model.assessHrv
+import app.readylytics.health.domain.model.assessRhr
+import app.readylytics.health.domain.model.assessSpo2
+import app.readylytics.health.domain.model.circadianConsistencyStatus
+import app.readylytics.health.domain.model.normalizedSleepEfficiencyPercent
+import app.readylytics.health.domain.model.scoreStatus
+import app.readylytics.health.domain.model.sleepEfficiencyStatus
+import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
+import app.readylytics.health.domain.util.UnitConverter
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -32,6 +42,7 @@ class DashboardMetricPresentationFactory
     constructor(
         private val resourceProvider: ResourceProvider,
         private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
+        private val bodyTemperatureBaselineCalculator: BodyTemperatureBaselineCalculator,
     ) {
         // Human-readable, TalkBack-friendly accessibilityDescription wiring for all 15 dashboard metric
         // cards (Sleep Score, Readiness, Weight, Body Fat, Sleep Duration, HRV, Sleep RHR, Resting HR,
@@ -75,50 +86,19 @@ class DashboardMetricPresentationFactory
                 unavailableReasonText(reason),
             )
 
-        private fun scoreStatus(value: Float?): MetricStatus =
+        // Deliberately not POOR/OPTIMAL: elevated body temperature is a deviation flag, not a
+        // "good/bad" score.
+        private fun bodyTempStatus(
+            value: Float?,
+            baseline: Float?,
+            thresholdCelsius: Float,
+        ): MetricStatus =
             when {
                 value == null -> MetricStatus.CALIBRATING
-                value < 40f -> MetricStatus.POOR
-                value < 60f -> MetricStatus.WARNING
-                value < 85f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
-        private fun sleepEfficiencyStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 70f -> MetricStatus.POOR
-                value < 80f -> MetricStatus.WARNING
-                value < 85f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
-        private fun spo2Status(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 90f -> MetricStatus.POOR
-                value < 95f -> MetricStatus.WARNING
-                value < 98f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
-        private fun circadianStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 40f -> MetricStatus.POOR
-                value < 60f -> MetricStatus.WARNING
-                value < 80f -> MetricStatus.NEUTRAL
-                else -> MetricStatus.OPTIMAL
-            }
-
-        private fun strainStatus(value: Float?): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                value < 0.5f -> MetricStatus.POOR
-                value < 0.8f -> MetricStatus.WARNING
-                value < 1.3f -> MetricStatus.OPTIMAL
-                value < 1.5f -> MetricStatus.WARNING
-                else -> MetricStatus.POOR
+                baseline == null -> MetricStatus.NEUTRAL
+                bodyTemperatureBaselineCalculator.isElevated(value, baseline, thresholdCelsius) ->
+                    MetricStatus.WARNING
+                else -> MetricStatus.NEUTRAL
             }
 
         fun build(
@@ -129,6 +109,7 @@ class DashboardMetricPresentationFactory
             circadianResult: CircadianConsistencyResult?,
             heartRateSummary: HeartRateDaySummary?,
             todayStrainIncrease: Float? = null,
+            bodyTempBaseline: Float? = null,
         ): Map<CardId, UniversalMetricPresentation> {
             val map = mutableMapOf<CardId, UniversalMetricPresentation>()
 
@@ -138,6 +119,21 @@ class DashboardMetricPresentationFactory
                 resourceProvider.getString(CoreUiR.string.score_maximum)
 
             val m = if (summary != null) DailyMetricsMapper.toMetrics(summary, preferences) else null
+            val hrvAssessment =
+                assessHrv(
+                    value = summary?.nocturnalHrv,
+                    baseline = m?.hrvBaselineRounded,
+                    optimalRatio = preferences.hrvOptimalThreshold,
+                    warningRatio = preferences.hrvWarningThreshold,
+                )
+            val rhrAssessment =
+                assessRhr(
+                    value = summary?.restingHeartRate,
+                    baseline = m?.rhrBaselineRounded,
+                    optimalRatio = preferences.rhrOptimalThreshold,
+                    warningRatio = preferences.rhrWarningThreshold,
+                )
+            val spo2Assessment = assessSpo2(summary?.avgSleepingSpo2)
 
             map.putAll(
                 DashboardRecoveryMetricPresentationFactory(resourceProvider).build(
@@ -145,6 +141,8 @@ class DashboardMetricPresentationFactory
                     metrics = m,
                     preferences = preferences,
                     lastSleepSession = lastSleepSession,
+                    hrvAssessment = hrvAssessment,
+                    rhrAssessment = rhrAssessment,
                 ),
             )
 
@@ -155,7 +153,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     100f,
                 )
-            val sleepScoreStatus = scoreStatus(summary?.sleepScore)
+            val sleepScoreStatus = summary?.sleepScore.scoreStatus()
             val sleepScoreTitle =
                 resourceProvider.getString(DashboardR.string.card_title_sleep_score)
             val sleepScoreValueText = m?.sleepScoreRounded?.toString() ?: unavailableValueText
@@ -187,7 +185,7 @@ class DashboardMetricPresentationFactory
                     LoadSourceSelector.selectReadiness(it, preferences.strainLoadSourceMode)
                 }
             val readinessVisual = UniversalMetricScalePreparer.score(readinessScore, 0f, 100f)
-            val readinessStatus = scoreStatus(readinessScore)
+            val readinessStatus = readinessScore.scoreStatus()
             val readinessTitle = resourceProvider.getString(CoreUiR.string.card_title_readiness)
             val readinessValueText = m?.readinessRounded?.toString() ?: unavailableValueText
             val readinessDescription =
@@ -327,11 +325,8 @@ class DashboardMetricPresentationFactory
 
             // 10. SLEEP EFFICIENCY
             val efficiency = lastSleepSession?.efficiency
-            val efficiencyPercent =
-                efficiency?.let { value ->
-                    if (value in 0f..1f) value * 100f else value
-                }
-            val effStatus = sleepEfficiencyStatus(efficiencyPercent)
+            val efficiencyPercent = efficiency.normalizedSleepEfficiencyPercent()?.takeIf { it.isFinite() }
+            val effStatus = efficiencyPercent.sleepEfficiencyStatus()
 
             val effValText =
                 if (efficiencyPercent == null) {
@@ -373,9 +368,9 @@ class DashboardMetricPresentationFactory
                 )
 
             // 11. OXYGEN SATURATION
-            val spo2 = summary?.avgSleepingSpo2
+            val spo2 = spo2Assessment.value
             val roundedSpo2 = spo2?.roundToInt()
-            val oxygenStatus = spo2Status(spo2)
+            val oxygenStatus = spo2Assessment.status
             val spo2Visual =
                 UniversalMetricScalePreparer.score(
                     spo2,
@@ -456,7 +451,61 @@ class DashboardMetricPresentationFactory
                     visual = UniversalMetricVisual.ValueOnly,
                 )
 
-            // 13. HEART RATE
+            // 13. BODY TEMPERATURE
+            val bodyTempCelsius = summary?.avgSleepingBodyTemp
+            val unitSystem = preferences.unitSystem
+            val bodyTempDisplay =
+                bodyTempCelsius?.let { UnitConverter.celsiusToDisplayTemperature(it, unitSystem) }
+            val bodyTempUnitLabel =
+                if (unitSystem == UnitSystem.IMPERIAL) {
+                    resourceProvider.getString(CoreUiR.string.unit_fahrenheit)
+                } else {
+                    resourceProvider.getString(CoreUiR.string.unit_celsius)
+                }
+            val bodyTempStatus =
+                bodyTempStatus(bodyTempCelsius, bodyTempBaseline, preferences.bodyTempElevatedThresholdCelsius)
+            val bodyTempTitle = resourceProvider.getString(DashboardR.string.card_title_body_temperature)
+            val bodyTempValueText =
+                bodyTempDisplay?.let { "%.1f".format(it) } ?: unavailableValueText
+            val bodyTempSecondaryText =
+                when {
+                    bodyTempCelsius == null -> null
+                    bodyTempBaseline == null -> resourceProvider.getString(CoreUiR.string.body_temperature_calibrating)
+                    else -> {
+                        val deltaCelsius = bodyTempCelsius - bodyTempBaseline
+                        val deltaDisplay = UnitConverter.celsiusDeltaToDisplayDelta(deltaCelsius, unitSystem)
+                        val sign = if (deltaDisplay >= 0f) "+" else ""
+                        "$sign%.1f°".format(deltaDisplay)
+                    }
+                }
+            val bodyTempVisual =
+                UniversalMetricScalePreparer.score(
+                    bodyTempDisplay,
+                    UnitConverter.celsiusToDisplayTemperature(35.5f, unitSystem),
+                    UnitConverter.celsiusToDisplayTemperature(39f, unitSystem),
+                )
+            val bodyTempDescription =
+                bodyTempVisual.unavailableReason?.let { reason ->
+                    unavailableDescription(bodyTempTitle, reason)
+                } ?: resourceProvider.getString(
+                    DashboardR.string.semantics_value_note_format,
+                    bodyTempTitle,
+                    bodyTempValueText,
+                    classificationText(bodyTempStatus),
+                )
+            map[CardId.BODY_TEMPERATURE] =
+                UniversalMetricPresentation(
+                    title = bodyTempTitle,
+                    valueText = bodyTempValueText,
+                    unitText = bodyTempUnitLabel,
+                    secondaryText = bodyTempSecondaryText,
+                    status = bodyTempStatus,
+                    tooltip = resourceProvider.getString(CoreUiR.string.tooltip_vitals_body_temperature),
+                    accessibilityDescription = bodyTempDescription,
+                    visual = bodyTempVisual,
+                )
+
+            // 14. HEART RATE
             val hrTitle =
                 resourceProvider.getString(
                     DashboardR.string.card_title_heart_rate,
@@ -490,7 +539,7 @@ class DashboardMetricPresentationFactory
                     visual = UniversalMetricVisual.ValueOnly,
                 )
 
-            // 14. CIRCADIAN
+            // 15. CIRCADIAN
             val circReady = circadianResult as? app.readylytics.health.domain.scoring.CircadianConsistencyResult.Ready
             val circTitle =
                 resourceProvider.getString(
@@ -504,7 +553,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     100f,
                 )
-            val circStatus = circadianStatus(circReady?.score)
+            val circStatus = circReady?.score.circadianConsistencyStatus()
             val circadianDescription =
                 circVisual.unavailableReason?.let { reason ->
                     unavailableDescription(circTitle, reason)
@@ -527,7 +576,7 @@ class DashboardMetricPresentationFactory
                     visual = circVisual,
                 )
 
-            // 15. STRAIN RATIO
+            // 16. STRAIN RATIO
             val strainTitle =
                 resourceProvider.getString(
                     CoreUiR.string.card_title_strain_ratio,
@@ -551,7 +600,7 @@ class DashboardMetricPresentationFactory
                     0f,
                     2f,
                 )
-            val strainStatus = strainStatus(m?.strainRatioRaw)
+            val strainStatus = m?.strainRatioRaw?.strainRatioStatus() ?: MetricStatus.CALIBRATING
             val strainDescription =
                 strainVisual.unavailableReason?.let { reason ->
                     unavailableDescription(strainTitle, reason)

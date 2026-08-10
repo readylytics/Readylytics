@@ -290,6 +290,12 @@ class LocalBackupManager
             val hrvDao = healthDatabase.hrvDao()
             val workoutDao = healthDatabase.workoutDao()
             val dailySummaryDao = healthDatabase.dailySummaryDao()
+            val weightRecordDao = healthDatabase.weightRecordDao()
+            val bodyFatRecordDao = healthDatabase.bodyFatRecordDao()
+            val bloodPressureRecordDao = healthDatabase.bloodPressureRecordDao()
+            val oxygenSaturationRecordDao = healthDatabase.oxygenSaturationRecordDao()
+            val bodyTemperatureRecordDao = healthDatabase.bodyTemperatureRecordDao()
+            val stepRecordDao = healthDatabase.stepRecordDao()
 
             val writer = outputStream.bufferedWriter()
             writer.write("{\n")
@@ -303,6 +309,12 @@ class LocalBackupManager
                     "hrvRecords" to hrvDao.count(),
                     "workouts" to workoutDao.count(),
                     "dailySummaries" to dailySummaryDao.count(),
+                    "weightRecords" to weightRecordDao.count(),
+                    "bodyFatRecords" to bodyFatRecordDao.count(),
+                    "bloodPressureRecords" to bloodPressureRecordDao.count(),
+                    "oxygenSaturationRecords" to oxygenSaturationRecordDao.count(),
+                    "bodyTemperatureRecords" to bodyTemperatureRecordDao.count(),
+                    "stepRecords" to stepRecordDao.count(),
                 )
 
             writer.write("  \"rowCounts\": ${json.encodeToString(rowCounts)},\n")
@@ -383,6 +395,96 @@ class LocalBackupManager
                     first = false
                 }
                 offset += 100
+            }
+            writer.write("\n  ],\n")
+
+            writer.write("  \"weightRecords\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = weightRecordDao.getPaged(0, 100, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 100
+            }
+            writer.write("\n  ],\n")
+
+            writer.write("  \"bodyFatRecords\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = bodyFatRecordDao.getPaged(0, 100, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 100
+            }
+            writer.write("\n  ],\n")
+
+            writer.write("  \"bloodPressureRecords\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = bloodPressureRecordDao.getPaged(0, 100, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 100
+            }
+            writer.write("\n  ],\n")
+
+            writer.write("  \"oxygenSaturationRecords\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = oxygenSaturationRecordDao.getPaged(0, 100, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 100
+            }
+            writer.write("\n  ],\n")
+
+            writer.write("  \"bodyTemperatureRecords\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = bodyTemperatureRecordDao.getPaged(0, 100, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 100
+            }
+            writer.write("\n  ],\n")
+
+            writer.write("  \"stepRecords\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = stepRecordDao.getPaged(0, 500, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 500
             }
             writer.write("\n  ]\n")
 

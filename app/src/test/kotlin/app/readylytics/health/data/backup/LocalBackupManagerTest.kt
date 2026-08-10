@@ -275,6 +275,57 @@ class LocalBackupManagerTest {
         }
 
     @Test
+    fun createBackup_exportsRawVitalsTables() =
+        runTest {
+            db.weightRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                        id = "w1",
+                        timestampMs = 1000L,
+                        weightKg = 70.5f,
+                    ),
+                ),
+            )
+            db.bodyTemperatureRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity(
+                        id = "bt1",
+                        timestampMs = 1000L,
+                        celsius = 36.8f,
+                    ),
+                ),
+            )
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val json = JSONObject(backupJson)
+
+            assertEquals(1, json.getJSONObject("rowCounts").getInt("weightRecords"))
+            assertEquals(1, json.getJSONObject("rowCounts").getInt("bodyTemperatureRecords"))
+            assertEquals(0, json.getJSONObject("rowCounts").getInt("stepRecords"))
+            assertEquals("w1", json.getJSONArray("weightRecords").getJSONObject(0).getString("id"))
+            assertEquals(
+                36.8,
+                json.getJSONArray("bodyTemperatureRecords").getJSONObject(0).getDouble("celsius"),
+                0.01,
+            )
+            assertEquals(0, json.getJSONArray("bodyFatRecords").length())
+            assertEquals(0, json.getJSONArray("bloodPressureRecords").length())
+            assertEquals(0, json.getJSONArray("oxygenSaturationRecords").length())
+            assertEquals(0, json.getJSONArray("stepRecords").length())
+        }
+
+    @Test
     fun createBackup_prunesFilesOlderThan7Days() =
         runTest {
             backupDir.mkdirs()

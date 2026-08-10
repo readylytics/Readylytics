@@ -68,5 +68,7 @@ object DashboardCardCatalog {
                 DashboardCardSpec(CardId.BLOOD_PRESSURE, DashboardCardDisplayMode.VALUE, ONLY_VALUE),
             CardId.OXYGEN_SATURATION to
                 DashboardCardSpec(CardId.OXYGEN_SATURATION, DashboardCardDisplayMode.VALUE, ALL_MODES),
+            CardId.BODY_TEMPERATURE to
+                DashboardCardSpec(CardId.BODY_TEMPERATURE, DashboardCardDisplayMode.VALUE, ALL_MODES),
         )
 }

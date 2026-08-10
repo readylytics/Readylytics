@@ -6,6 +6,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
@@ -32,7 +33,12 @@ class GetDashboardDataUseCaseTest {
         every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"
         useCase =
             GetDashboardDataUseCase(
-                factory = DashboardMetricPresentationFactory(resourceProvider, getWorkoutMetricsUseCase),
+                factory =
+                    DashboardMetricPresentationFactory(
+                        resourceProvider,
+                        getWorkoutMetricsUseCase,
+                        BodyTemperatureBaselineCalculator(),
+                    ),
             )
     }
 

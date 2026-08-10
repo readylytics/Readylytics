@@ -42,6 +42,7 @@ class HealthChangeSynchronizerImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val stepRecordDao = mockk<StepRecordDao>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
@@ -75,6 +76,7 @@ class HealthChangeSynchronizerImplTest {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
                 stepRecordDao = stepRecordDao,
             )
     }
@@ -572,6 +574,7 @@ class HealthChangeSynchronizerImplTest {
         coEvery { tokenStore.get(HealthDataType.BODY_FAT) } returns "bodyfat-token"
         coEvery { tokenStore.get(HealthDataType.BLOOD_PRESSURE) } returns "bp-token"
         coEvery { tokenStore.get(HealthDataType.OXYGEN_SATURATION) } returns "spo2-token"
+        coEvery { tokenStore.get(HealthDataType.BODY_TEMPERATURE) } returns "bodytemp-token"
         coEvery { tokenStore.get(HealthDataType.STEPS) } returns "steps-token"
     }
 
@@ -601,6 +604,7 @@ class HealthChangeSynchronizerImplTest {
             HealthDataType.BODY_FAT -> "bodyfat-token"
             HealthDataType.BLOOD_PRESSURE -> "bp-token"
             HealthDataType.OXYGEN_SATURATION -> "spo2-token"
+            HealthDataType.BODY_TEMPERATURE -> "bodytemp-token"
             HealthDataType.STEPS -> "steps-token"
         }
 

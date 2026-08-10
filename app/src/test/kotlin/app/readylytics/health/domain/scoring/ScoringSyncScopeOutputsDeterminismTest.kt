@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -187,6 +188,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
         val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+        val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
 
         every { settingsRepo.userPreferences } returns flowOf(prefs)
 
@@ -280,6 +282,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         coEvery { bodyFatRecordDao.getLatestUpTo(any()) } returns null
         coEvery { bloodPressureRecordDao.getLatestUpTo(any()) } returns null
         coEvery { oxygenSaturationRecordDao.getByTimeRange(any(), any()) } returns emptyList()
+        coEvery { bodyTemperatureRecordDao.getByTimeRange(any(), any()) } returns emptyList()
 
         val scoringCalculator =
             CompositeScoringCalculator(
@@ -336,6 +339,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 scoringHistoryRepository = scoringHistoryRepository,
                 defaultDispatcher = UnconfinedTestDispatcher(),

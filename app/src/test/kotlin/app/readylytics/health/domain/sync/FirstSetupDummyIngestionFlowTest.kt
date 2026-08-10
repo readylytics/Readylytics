@@ -3,6 +3,7 @@ package app.readylytics.health.domain.sync
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -120,6 +121,7 @@ class FirstSetupDummyIngestionFlowTest {
                     bodyFatSamples = emptyList(),
                     bloodPressureSamples = emptyList(),
                     oxygenSaturationSamples = listOf(),
+                    bodyTemperatureSamples = emptyList(),
                     stepRecords = emptyList(),
                 )
             assertEquals(expectedBatch, batch)
@@ -362,6 +364,13 @@ class FirstSetupDummyIngestionFlowTest {
             from: Instant,
             to: Instant,
         ): List<DomainOxygenSaturationRecord> = emptyList()
+
+        override suspend fun readBodyTemperatureRecords(
+            from: Instant,
+            to: Instant,
+        ): List<DomainBodyTemperatureRecord> = emptyList()
+
+        override suspend fun hasBodyTemperaturePermission(): Boolean = false
 
         private companion object {
             val sleepStart: Instant = Instant.parse("2026-06-28T22:00:00Z")

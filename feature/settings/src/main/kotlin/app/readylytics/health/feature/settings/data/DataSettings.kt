@@ -400,4 +400,5 @@ private fun HealthDataType.labelRes(): Int =
         HealthDataType.HEART_RATE -> R.string.data_type_heart_rate
         HealthDataType.HRV -> R.string.data_type_hrv
         HealthDataType.OXYGEN_SATURATION -> R.string.data_type_oxygen_saturation
+        HealthDataType.BODY_TEMPERATURE -> R.string.data_type_body_temperature
     }

@@ -9,6 +9,8 @@ object UnitConverter {
     const val LBS_TO_KG = 0.453592f
     const val CM_TO_INCHES = 0.393701f
     const val INCHES_TO_CM = 2.54f
+    const val CELSIUS_TO_FAHRENHEIT_MULTIPLIER = 9f / 5f
+    const val CELSIUS_TO_FAHRENHEIT_OFFSET = 32f
 
     // Height conversions - returns raw values and format info for UI layer to apply i18n
     data class HeightDisplay(
@@ -55,5 +57,25 @@ object UnitConverter {
             weightKg == null -> WeightDisplay("—", "")
             unitSystem == UnitSystem.METRIC -> WeightDisplay("${weightKg.toInt()}", "unit_metric_kg")
             else -> WeightDisplay("${(weightKg * KG_TO_LBS).toInt()}", "unit_imperial_lbs")
+        }
+
+    /** Absolute temperature conversion (applies the 32° offset for imperial). */
+    fun celsiusToDisplayTemperature(
+        celsius: Float,
+        unitSystem: UnitSystem,
+    ): Float =
+        when (unitSystem) {
+            UnitSystem.METRIC -> celsius
+            UnitSystem.IMPERIAL -> celsius * CELSIUS_TO_FAHRENHEIT_MULTIPLIER + CELSIUS_TO_FAHRENHEIT_OFFSET
+        }
+
+    /** Temperature *difference* conversion (no offset — a 1°C delta is an 1.8°F delta). */
+    fun celsiusDeltaToDisplayDelta(
+        celsiusDelta: Float,
+        unitSystem: UnitSystem,
+    ): Float =
+        when (unitSystem) {
+            UnitSystem.METRIC -> celsiusDelta
+            UnitSystem.IMPERIAL -> celsiusDelta * CELSIUS_TO_FAHRENHEIT_MULTIPLIER
         }
 }

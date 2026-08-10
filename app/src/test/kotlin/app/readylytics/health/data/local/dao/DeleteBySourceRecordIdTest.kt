@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
@@ -26,6 +27,7 @@ class DeleteBySourceRecordIdTest {
     private lateinit var bodyFatDao: BodyFatRecordDao
     private lateinit var bloodPressureDao: BloodPressureRecordDao
     private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
+    private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
 
     @Before
     fun setup() {
@@ -42,6 +44,7 @@ class DeleteBySourceRecordIdTest {
         bodyFatDao = database.bodyFatRecordDao()
         bloodPressureDao = database.bloodPressureRecordDao()
         oxygenSaturationDao = database.oxygenSaturationRecordDao()
+        bodyTemperatureDao = database.bodyTemperatureRecordDao()
     }
 
     @After
@@ -161,5 +164,27 @@ class DeleteBySourceRecordIdTest {
             )
             assertEquals(2, oxygenSaturationDao.deleteBySourceRecordId("hc-record"))
             assertEquals(listOf("hc-record2_1000"), oxygenSaturationDao.getSince(0).map { it.id })
+        }
+
+    @Test
+    fun `body temperature source record methods protect prefix collisions`() =
+        runTest {
+            bodyTemperatureDao.upsertAll(
+                listOf(
+                    BodyTemperatureRecordEntity("hc-record_1000", 1000L, 36.6f),
+                    BodyTemperatureRecordEntity("hc-record_2000", 2000L, 36.7f),
+                    BodyTemperatureRecordEntity("hc-record2_1000", 3000L, 36.8f),
+                ),
+            )
+
+            assertEquals(
+                listOf("hc-record_1000", "hc-record_2000"),
+                bodyTemperatureDao.getBySourceRecordId("hc-record").map { it.id },
+            )
+            assertEquals(2, bodyTemperatureDao.deleteBySourceRecordId("hc-record"))
+            assertEquals(
+                listOf("hc-record2_1000"),
+                bodyTemperatureDao.getByTimeRange(0, Long.MAX_VALUE).map { it.id },
+            )
         }
 }

@@ -7,6 +7,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.util.ResourceProvider
 import io.mockk.every
 import io.mockk.mockk
@@ -54,6 +55,7 @@ class DashboardRecoveryMetricPresentationFactoryTest {
             DashboardMetricPresentationFactory(
                 resourceProvider,
                 mockk<GetWorkoutMetricsUseCase>(relaxed = true),
+                BodyTemperatureBaselineCalculator(),
             )
 
         every {
@@ -106,6 +108,8 @@ class DashboardRecoveryMetricPresentationFactoryTest {
                 nocturnalHrv = 40,
                 hrvBaseline = 80,
                 restingHeartRate = 72,
+                rhrBpm = 60f,
+                baselineCalculatedAtDate = date,
                 restingHrRatio = 1.2f,
                 isCalibrating = false,
                 totalRasWorkoutOnly = 60f,
@@ -154,6 +158,7 @@ class DashboardRecoveryMetricPresentationFactoryTest {
                     hrvMuMssd = ln(50.0).toFloat(),
                     restingHeartRate = 60,
                     rhrBpm = 65f,
+                    baselineCalculatedAtDate = date,
                     isCalibrating = false,
                 ),
                 preferences,

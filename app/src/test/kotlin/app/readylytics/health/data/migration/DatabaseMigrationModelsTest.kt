@@ -88,7 +88,7 @@ class DatabaseMigrationModelsTest {
 
     @Test
     fun `migration metadata does not make unsupported versions resumable`() {
-        listOf(0, 8).forEach { version ->
+        listOf(0, DatabaseReadinessGate.CURRENT_DATABASE_VERSION + 1).forEach { version ->
             assertEquals(
                 DatabaseReadiness.Failed("Unsupported database version: $version"),
                 inspect(version = version, hasMigrationMetadata = true),
@@ -98,9 +98,10 @@ class DatabaseMigrationModelsTest {
 
     @Test
     fun `unsupported database version fails closed`() {
+        val unsupportedVersion = DatabaseReadinessGate.CURRENT_DATABASE_VERSION + 1
         assertEquals(
-            DatabaseReadiness.Failed("Unsupported database version: 8"),
-            inspect(version = 8),
+            DatabaseReadiness.Failed("Unsupported database version: $unsupportedVersion"),
+            inspect(version = unsupportedVersion),
         )
     }
 

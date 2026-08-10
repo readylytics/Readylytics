@@ -19,11 +19,10 @@ fun rhrZoneBands(
     neutralMax: Float,
     warningMax: Float,
 ): List<ZoneBand> =
-    listOf(
-        ZoneBand(Double.NEGATIVE_INFINITY, optimalMax.toDouble(), HealthZone.OPTIMAL),
-        ZoneBand(optimalMax.toDouble(), neutralMax.toDouble(), HealthZone.NEUTRAL),
-        ZoneBand(neutralMax.toDouble(), warningMax.toDouble(), HealthZone.WARNING),
-        ZoneBand(warningMax.toDouble(), Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
+    rhrZoneBandsForThresholds(
+        optimalMax = optimalMax.toDouble(),
+        warningMax = neutralMax.toDouble(),
+        poorMax = warningMax.toDouble(),
     )
 
 // BMI chart bands are presentation metadata derived from the canonical assessment seam.
@@ -101,17 +100,10 @@ fun hrvZoneBands(
     neutralMin: Float,
     warningMin: Float,
 ): List<ZoneBand> =
-    listOf(
-        ZoneBand(Double.NEGATIVE_INFINITY, warningMin.toDouble(), HealthZone.CRITICAL),
-        ZoneBand(warningMin.toDouble(), neutralMin.toDouble(), HealthZone.WARNING),
-        ZoneBand(neutralMin.toDouble(), optimalMin.toDouble(), HealthZone.NEUTRAL),
-        ZoneBand(optimalMin.toDouble(), Double.POSITIVE_INFINITY, HealthZone.OPTIMAL),
+    hrvZoneBandsForThresholds(
+        optimalMin = optimalMin.toDouble(),
+        warningMin = neutralMin.toDouble(),
+        poorMin = warningMin.toDouble(),
     )
 
-fun spo2ZoneBands(): List<ZoneBand> =
-    listOf(
-        ZoneBand(Double.NEGATIVE_INFINITY, 90.0, HealthZone.CRITICAL),
-        ZoneBand(90.0, 95.0, HealthZone.WARNING),
-        ZoneBand(95.0, 98.0, HealthZone.NEUTRAL),
-        ZoneBand(98.0, Double.POSITIVE_INFINITY, HealthZone.OPTIMAL),
-    )
+fun spo2ZoneBands(): List<ZoneBand> = spo2ReferenceZoneBands()
