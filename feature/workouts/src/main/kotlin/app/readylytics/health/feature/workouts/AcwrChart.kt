@@ -29,9 +29,13 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.DeltaDirection
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.PeriodAverageSummaryRow
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.feature.workouts.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -67,7 +71,12 @@ internal fun AcwrChartCard(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
+    granularity: TrendGranularity = TrendGranularity.DAILY,
+    trimpPeriodSummary: PeriodAverageSummary? = null,
+    strainRatioPeriodSummary: PeriodAverageSummary? = null,
 ) {
+    val trimpColor = MaterialTheme.colorScheme.primary
+    val ratioColor = MaterialTheme.colorScheme.tertiary
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -90,6 +99,32 @@ internal fun AcwrChartCard(
                     scrollState = scrollState,
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
+                    granularity = granularity,
+                )
+            }
+
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            AcwrChartLegends(
+                trimpColor = trimpColor,
+                ratioColor = ratioColor,
+            )
+
+            trimpPeriodSummary?.let { summary ->
+                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                PeriodAverageSummaryRow(
+                    summary = summary,
+                    unit = "",
+                    decimalPlaces = 0,
+                    direction = DeltaDirection.NEUTRAL,
+                )
+            }
+            strainRatioPeriodSummary?.let { summary ->
+                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+                PeriodAverageSummaryRow(
+                    summary = summary,
+                    unit = "",
+                    decimalPlaces = 0,
+                    direction = DeltaDirection.NEUTRAL,
                 )
             }
         }
@@ -106,6 +141,7 @@ private fun AcwrChart(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
+    granularity: TrendGranularity = TrendGranularity.DAILY,
 ) {
     // Selection state is keyed on the data inputs so it clears automatically when the
     // chart range or underlying data changes, preventing stale coordinates and values.
@@ -169,8 +205,6 @@ private fun AcwrChart(
         }
 
     // ── Colours & Vico style helpers ─────────────────────────────────────────
-    val ratioColor = MaterialTheme.colorScheme.tertiary
-    val trimpColor = MaterialTheme.colorScheme.primary
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
@@ -263,7 +297,7 @@ private fun AcwrChart(
             (ceil(dataMax / 0.5) * 0.5).coerceAtLeast(2.0)
         }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
 
     LaunchedEffect(trimpPoints, ratioPoints) {
         modelProducer.runTransaction {
@@ -288,16 +322,16 @@ private fun AcwrChart(
         }
     }
 
-    val dotComponent = rememberShapeComponent(fill = Fill(ratioColor), shape = CircleShape)
+    val dotComponent = rememberShapeComponent(fill = Fill(MaterialTheme.colorScheme.tertiary), shape = CircleShape)
     val ratioLine =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(Fill(ratioColor)),
+            fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.tertiary)),
             areaFill =
                 LineCartesianLayer.AreaFill.single(
                     Fill(
                         brush =
                             Brush.verticalGradient(
-                                colors = listOf(ratioColor.copy(alpha = 0.3f), ratioColor.copy(alpha = 0.0f)),
+                                colors = listOf(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.0f)),
                             ),
                     ),
                 ),
@@ -313,7 +347,7 @@ private fun AcwrChart(
             columnProvider =
                 ColumnCartesianLayer.ColumnProvider.series(
                     rememberLineComponent(
-                        fill = Fill(trimpColor),
+                        fill = Fill(MaterialTheme.colorScheme.primary),
                         thickness = 8.dp,
                         shape = CircleShape,
                     ),
@@ -380,9 +414,12 @@ private fun AcwrChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(
-                                    rangeDays,
-                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                remember(rangeDays, trimpPoints, ratioPoints, granularity) {
+                                    val offsets = if (granularity == TrendGranularity.DAILY) emptyList()
+                                    else (trimpPoints.map { it.dayOffset } + ratioPoints.map { it.dayOffset })
+                                        .distinct().sorted()
+                                    ChartDefaults.itemPlacerForRangeDays(rangeDays, offsets)
+                                },
                             guideline = guidelineComponent,
                         ),
                     marker = invisibleMarker,
@@ -410,8 +447,8 @@ private fun AcwrChart(
 
         AcwrChartOverlay(
             selectedState = overlayState,
-            trimpColor = trimpColor,
-            ratioColor = ratioColor,
+            trimpColor = MaterialTheme.colorScheme.primary,
+            ratioColor = MaterialTheme.colorScheme.tertiary,
             layerBounds = layerBounds,
             chartHeight = chartHeight,
             modifier = Modifier.fillMaxWidth(),
@@ -426,13 +463,6 @@ private fun AcwrChart(
             )
         }
     }
-
-    // ── Legends (below chart) ─────────────────────────────────────────────────
-    Spacer(Modifier.height(MaterialTheme.spacing.small))
-    AcwrChartLegends(
-        trimpColor = trimpColor,
-        ratioColor = ratioColor,
-    )
 }
 
 @Composable

@@ -26,6 +26,7 @@ import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.MetricTooltip
@@ -284,6 +285,9 @@ fun WorkoutStatsSection(
                     scrollState = scrollState,
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
+                    granularity = uiState.selectedRange.granularity,
+                    trimpPeriodSummary = uiState.trimpPeriodSummary,
+                    strainRatioPeriodSummary = uiState.strainRatioPeriodSummary,
                     modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },
