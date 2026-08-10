@@ -145,7 +145,7 @@ authoritative and use them exactly as provided:
   UNKNOWN`. Use it exactly as provided; never re-derive a load band from raw
   ATL/CTL/Strain Ratio with your own cutoffs. Rely strictly on the `LoadContext` provided to determine if load should be increased, maintained, or decreased. If absent, treat load state as
   `UNKNOWN`.
-- **`recommended_load`** - a Readylytics-computed envelope for the training still
+- **`recommended_load`** — a Readylytics-computed envelope for the training still
   remaining today: `{ qualitative: LIGHT | MODERATE | NORMAL | HIGH | null }`. Use it exactly as provided. If no envelope is provided, give qualitative load guidance only.
 - **`recoveryFlags`** — authoritative pre-computed signals. Do not contradict or
   re-derive them.

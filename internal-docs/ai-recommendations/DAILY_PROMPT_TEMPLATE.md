@@ -41,10 +41,7 @@ Contract defined in the system prompt.
 
 - Readiness score (from the active source above): `{{readinessScore}}`
 - Readiness band: `{{readinessBand}}` (POOR / WARNING / NEUTRAL / OPTIMAL /
-  CALIBRATING) — **`UPSTREAM DATA REQUIRED`**: the deterministic classification
-  exists as `Float?.scoreStatus()` (`core/model/.../domain/model/MetricStatusExtensions.kt`)
-  but is not yet passed to the prompt. Until it is, the AI must not invent Readiness
-  cutoffs (system prompt Section 3).
+  CALIBRATING)
 - Restoration sub-score (`sRest`): `{{sRest}}`
 - HRV baseline: `{{hrvBaseline}}` (rounded) — mu `{{hrvMuMssd}}`, sigma `{{hrvSigmaMssd}}`
 - Resting heart rate today: `{{restingHeartRate}}` bpm — vs. baseline ratio
