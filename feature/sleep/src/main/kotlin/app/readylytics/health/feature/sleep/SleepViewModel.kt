@@ -5,7 +5,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.preferences.scoringZone
@@ -66,6 +68,9 @@ data class SleepUiState(
     val trendDays: List<SleepTrendDay> = emptyList(),
     val trendRangeStartMs: Long = 0,
     val trendScoringZoneId: ZoneId = ZoneId.systemDefault(),
+    val trendStartOffsetSummary: PeriodAverageSummary? = null,
+    val trendDurationSpanSummary: PeriodAverageSummary? = null,
+    val trendActualDurationSummary: PeriodAverageSummary? = null,
     val goalSleepHours: Float = SettingsDefaults.GOAL_SLEEP_HOURS,
     val sleepTimeGaugeData: SleepTimeGaugeData =
         buildSleepTimeGaugeData(
@@ -81,6 +86,9 @@ private data class SleepTrendData(
     val durationSpanPoints: List<DailyDataPoint>,
     val actualDurationPoints: List<DailyDataPoint>,
     val trendDays: List<SleepTrendDay>,
+    val startOffsetSummary: PeriodAverageSummary? = null,
+    val durationSpanSummary: PeriodAverageSummary? = null,
+    val actualDurationSummary: PeriodAverageSummary? = null,
 )
 
 // Only these preference fields are consumed by the inner pipeline; projecting them through
@@ -300,11 +308,25 @@ class SleepViewModel
                                     actualDurationPoints.add(DailyDataPoint(dayOffset, null))
                                 }
                             }
+                            val trendEndDate = rangeStart.plusDays(range.days.toLong() - 1)
+                            val (bucketedStart, startSummary) = startOffsetPoints.aggregateByRange(
+                                range.granularity, rangeStart, trendEndDate, range.days, valueDecimalPlaces = 1,
+                            )
+                            val (bucketedSpan, spanSummary) = durationSpanPoints.aggregateByRange(
+                                range.granularity, rangeStart, trendEndDate, range.days, valueDecimalPlaces = 1,
+                            )
+                            val (bucketedDuration, durationSummary) = actualDurationPoints.aggregateByRange(
+                                range.granularity, rangeStart, trendEndDate, range.days, valueDecimalPlaces = 1,
+                            )
+
                             SleepTrendData(
-                                startOffsetPoints = startOffsetPoints,
-                                durationSpanPoints = durationSpanPoints,
-                                actualDurationPoints = actualDurationPoints,
+                                startOffsetPoints = bucketedStart,
+                                durationSpanPoints = bucketedSpan,
+                                actualDurationPoints = bucketedDuration,
                                 trendDays = trendDays,
+                                startOffsetSummary = startSummary,
+                                durationSpanSummary = spanSummary,
+                                actualDurationSummary = durationSummary,
                             )
                         }
 
@@ -344,6 +366,9 @@ class SleepViewModel
                             trendDays = trendData.trendDays,
                             trendRangeStartMs = visibleRangeStartMs,
                             trendScoringZoneId = scoringZoneId,
+                            trendStartOffsetSummary = trendData.startOffsetSummary,
+                            trendDurationSpanSummary = trendData.durationSpanSummary,
+                            trendActualDurationSummary = trendData.actualDurationSummary,
                             goalSleepHours = prefs.goalSleepHours,
                             sleepTimeGaugeData =
                                 buildSleepTimeGaugeData(
