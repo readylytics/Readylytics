@@ -21,4 +21,6 @@ sealed interface DashboardEvent {
     ) : DashboardEvent
 
     data object RestoreInsights : DashboardEvent
+
+    data object RequestDailyPromptCopy : DashboardEvent
 }

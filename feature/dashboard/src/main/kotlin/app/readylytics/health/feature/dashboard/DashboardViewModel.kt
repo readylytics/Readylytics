@@ -35,11 +35,14 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
+import app.readylytics.health.domain.airecommendation.DailyPromptFormatter
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -72,6 +75,7 @@ class DashboardViewModel
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
         private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
+        private val getDailyPromptDataUseCase: GetDailyPromptDataUseCase,
         private val clock: Clock,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
@@ -329,8 +333,24 @@ class DashboardViewModel
                         insightDismissalRepository.restoreAllForDate(dateMs)
                     }
                 }
+                DashboardEvent.RequestDailyPromptCopy -> {
+                    viewModelScope.launch {
+                        try {
+                            _dailyPromptText.value = generateDailyPrompt(LocalDate.now(clock))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            app.readylytics.health.domain.util
+                                .logE(TAG, e) { "Failed to generate daily prompt" }
+                            _errorMessage.value = UiText.StringRes(R.string.ai_recommendation_copy_failed)
+                        }
+                    }
+                }
             }
         }
+
+        internal suspend fun generateDailyPrompt(today: LocalDate): String =
+            DailyPromptFormatter.format(getDailyPromptDataUseCase.execute(today))
 
         fun onRefresh() {
             viewModelScope.launch {
@@ -352,6 +372,13 @@ class DashboardViewModel
 
         private val _errorMessage = MutableStateFlow<UiText?>(null)
         val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
+
+        private val _dailyPromptText = MutableStateFlow<String?>(null)
+        val dailyPromptText: StateFlow<String?> = _dailyPromptText.asStateFlow()
+
+        fun clearDailyPromptText() {
+            _dailyPromptText.value = null
+        }
 
         companion object {
             internal const val TAG = "DashboardViewModel"

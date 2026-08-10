@@ -8,11 +8,9 @@ import org.junit.Test
 import java.time.LocalDate
 
 class DailyPromptFormatterTest {
-    private val formatter = DailyPromptFormatter()
-
     @Test
     fun `format includes all populated sections and repeated blocks`() {
-        val text = formatter.format(populatedPromptData())
+        val text = DailyPromptFormatter.format(populatedPromptData())
 
         listOf("## A.", "## B.", "## C.", "## D.", "## E.", "## F.", "## G.", "## H.").forEach { header ->
             assertTrue("Missing $header", text.contains(header))
@@ -26,7 +24,7 @@ class DailyPromptFormatterTest {
 
     @Test
     fun `format renders explicit unavailable values rather than unresolved tokens`() {
-        val text = formatter.format(emptyPromptData())
+        val text = DailyPromptFormatter.format(emptyPromptData())
 
         assertTrue(text.contains("insufficient data"))
         assertFalse(text.contains("{{"))
@@ -37,7 +35,7 @@ class DailyPromptFormatterTest {
 
     @Test
     fun `format renders calibration and missing flags without numeric fabrication`() {
-        val text = formatter.format(calibratingPromptData())
+        val text = DailyPromptFormatter.format(calibratingPromptData())
 
         assertTrue(text.contains("CALIBRATING"))
         assertTrue(text.contains("Calibration"))
@@ -46,7 +44,7 @@ class DailyPromptFormatterTest {
 
     @Test
     fun `format renders no-workout and no-active-flag cases`() {
-        val text = formatter.format(emptyPromptData())
+        val text = DailyPromptFormatter.format(emptyPromptData())
 
         assertTrue(text.contains("no workouts yesterday"))
         assertTrue(text.contains("no active recovery flags"))

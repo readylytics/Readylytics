@@ -9,7 +9,7 @@ import java.util.Locale
  * dependency and never emits unresolved `{{placeholder}}` tokens: unavailable values render as
  * "insufficient data" and empty lists render as explicit markers.
  */
-class DailyPromptFormatter {
+object DailyPromptFormatter {
     fun format(data: DailyPromptData): String {
         val sb = StringBuilder()
         sb.appendLine("Today's data for ${data.date} — generate a training recommendation per the Output Contract defined in the system prompt.")
@@ -193,7 +193,5 @@ class DailyPromptFormatter {
         return if (formatted.contains('.')) formatted.trimEnd('0').trimEnd('.') else formatted
     }
 
-    private companion object {
-        const val INSUFFICIENT_DATA = "insufficient data"
-    }
+    private const val INSUFFICIENT_DATA = "insufficient data"
 }

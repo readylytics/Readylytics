@@ -28,8 +28,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,8 +62,6 @@ fun DashboardRoute(
     onNavigateToBloodPressure: () -> Unit = {},
     onNavigateToVitals: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
-    onCopySetupPrompt: () -> Unit = {},
-    onCopyDailyPrompt: () -> Unit = {},
     insightDetail: @Composable (() -> Unit)? = null,
     insightsCard: @Composable (
         DashboardUiState,
@@ -77,10 +77,23 @@ fun DashboardRoute(
     val resolvedError = errorMessage.resolveOrNull()
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
+    val copiedMessage = stringResource(R.string.ai_recommendation_copied_snackbar)
+    val setupPrompt = stringResource(R.string.ai_init_prompt)
+    val dailyPromptText by viewModel.dailyPromptText.collectAsStateWithLifecycle()
 
     LaunchedEffect(errorMessage) {
         if (resolvedError != null) {
             snackbarHostState.showSnackbar(resolvedError)
+        }
+    }
+
+    LaunchedEffect(dailyPromptText) {
+        dailyPromptText?.let { prompt ->
+            clipboardManager.setText(AnnotatedString(prompt))
+            snackbarHostState.showSnackbar(copiedMessage)
+            viewModel.clearDailyPromptText()
         }
     }
 
@@ -111,8 +124,11 @@ fun DashboardRoute(
         onDismissInsight = { viewModel.onEvent(DashboardEvent.DismissInsight(it)) },
         onRestoreInsights = { viewModel.onEvent(DashboardEvent.RestoreInsights) },
         onOpenInsight = onOpenInsight,
-        onCopySetupPrompt = onCopySetupPrompt,
-        onCopyDailyPrompt = onCopyDailyPrompt,
+        onCopySetupPrompt = {
+            clipboardManager.setText(AnnotatedString(setupPrompt))
+            scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+        },
+        onCopyDailyPrompt = { viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy) },
         insightDetail = insightDetail,
         insightsCard = insightsCard,
     )

@@ -1,6 +1,10 @@
 package app.readylytics.health.feature.dashboard
 
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.airecommendation.DailyPromptData
+import app.readylytics.health.domain.airecommendation.LoadStatePromptData
+import app.readylytics.health.domain.airecommendation.TodayPromptData
+import app.readylytics.health.domain.airecommendation.WorkoutPatternSummary
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -14,6 +18,7 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
@@ -22,6 +27,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,10 +40,16 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
@@ -53,6 +65,7 @@ class DashboardViewModelTest {
     private lateinit var heartRateRepository: HeartRateRepository
     private lateinit var insightDismissalRepository: InsightDismissalRepository
     private lateinit var observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase
+    private lateinit var getDailyPromptDataUseCase: GetDailyPromptDataUseCase
     private lateinit var viewModel: DashboardViewModel
 
     @Before
@@ -70,6 +83,7 @@ class DashboardViewModelTest {
         heartRateRepository = mockk(relaxed = true)
         insightDismissalRepository = mockk(relaxed = true)
         observeDashboardStrainIncreaseUseCase = mockk(relaxed = true)
+        getDailyPromptDataUseCase = mockk(relaxed = true)
 
         viewModel =
             DashboardViewModel(
@@ -84,6 +98,7 @@ class DashboardViewModelTest {
                 heartRateRepository = heartRateRepository,
                 insightDismissalRepository = insightDismissalRepository,
                 observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                getDailyPromptDataUseCase = getDailyPromptDataUseCase,
                 clock = java.time.Clock.systemDefaultZone(),
                 defaultDispatcher = testDispatcher,
             )
@@ -130,6 +145,69 @@ class DashboardViewModelTest {
     fun validateSelectedDate_futureDate_fails() {
         val result = viewModel.validateSelectedDate(LocalDate.now().plusDays(1))
         assert(result.isFailure) { "Future date should be invalid" }
+    }
+
+    @Test
+    fun `request daily prompt emits formatted text for today`() = runTest {
+        val fixedClock =
+            java.time.Clock.fixed(Instant.parse("2026-08-09T12:00:00Z"), ZoneOffset.UTC)
+        viewModel =
+            DashboardViewModel(
+                dailySummaryRepository = dailySummaryRepository,
+                getDashboardDataUseCase = getDashboardDataUseCase,
+                foregroundSyncController = foregroundSyncController,
+                selectedDateRepository = selectedDateRepository,
+                settingsRepo = settingsRepo,
+                cardConfigRepository = cardConfigRepository,
+                circadianRepo = circadianRepo,
+                dailyMetricCache = dailyMetricCache,
+                heartRateRepository = heartRateRepository,
+                insightDismissalRepository = insightDismissalRepository,
+                observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                clock = fixedClock,
+                defaultDispatcher = testDispatcher,
+            )
+        coEvery { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) } returns promptData()
+
+        viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.dailyPromptText.value)
+        assertTrue(viewModel.dailyPromptText.value!!.contains("Today's data for 2026-08-09"))
+        coVerify(exactly = 1) { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) }
+    }
+
+    @Test
+    fun `clear daily prompt returns state to null`() = runTest {
+        viewModel.clearDailyPromptText()
+
+        assertNull(viewModel.dailyPromptText.value)
+    }
+
+    @Test
+    fun `daily prompt failure exposes error and emits no text`() = runTest {
+        coEvery { getDailyPromptDataUseCase.execute(any()) } throws IOException("boom")
+
+        viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
+        advanceUntilIdle()
+
+        assertNull(viewModel.dailyPromptText.value)
+        assertNotNull(viewModel.errorMessage.value)
+    }
+
+    @Test
+    fun `daily prompt cancellation is rethrown`() = runTest {
+        coEvery { getDailyPromptDataUseCase.execute(any()) } throws CancellationException("cancelled")
+
+        var thrown: Throwable? = null
+        try {
+            viewModel.generateDailyPrompt(LocalDate.of(2026, 8, 9))
+        } catch (e: CancellationException) {
+            thrown = e
+        }
+
+        assertTrue(thrown is CancellationException)
     }
 
     @Test
@@ -222,6 +300,7 @@ class DashboardViewModelTest {
                     heartRateRepository = heartRateRepository,
                     insightDismissalRepository = insightDismissalRepository,
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
                     clock = java.time.Clock.systemDefaultZone(),
                     defaultDispatcher = testDispatcher,
                 )
@@ -258,4 +337,52 @@ class DashboardViewModelTest {
         awakeMinutes = awakeMinutes,
         sleepScore = 85f,
     )
+
+    private fun promptData(): DailyPromptData =
+        DailyPromptData(
+            date = LocalDate.of(2026, 8, 9),
+            physiologyProfile = null,
+            calibrationPhase = null,
+            baselineObservationCount = null,
+            isCalibrating = true,
+            activeTrainingLoadSource = "Workout only",
+            everydayLoadConfidence = null,
+            today =
+                TodayPromptData(
+                    readinessScore = null,
+                    restorationScore = null,
+                    hrvBaseline = null,
+                    hrvMuMssd = null,
+                    hrvSigmaMssd = null,
+                    restingHeartRate = null,
+                    restingHrRatio = null,
+                    rhrSigma = null,
+                    nocturnalHrv = null,
+                    zLnHrv = null,
+                    zRhr = null,
+                    baselineCalculatedAtDate = null,
+                ),
+            yesterdaySleep = null,
+            yesterdayWorkouts = emptyList(),
+            loadState =
+                LoadStatePromptData(
+                    acuteLoad = null,
+                    chronicLoad = null,
+                    strainRatio = null,
+                    loadScore = null,
+                    totalRasWorkoutOnly = null,
+                    totalRasEverydayHr = null,
+                    everydayCoverageMinutes = null,
+                ),
+            activeRecoveryFlags = emptyList(),
+            workoutPattern =
+                WorkoutPatternSummary(
+                    lookbackMonths = 3,
+                    totalWorkoutsInWindow = 0,
+                    exerciseTypeBreakdown = emptyList(),
+                    restDaysPerWeekAverage = 7f,
+                    mostRecentRestDayGapDays = 0,
+                    currentConsecutiveTrainingDayStreak = 0,
+                ),
+        )
 }
