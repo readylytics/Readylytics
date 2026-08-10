@@ -72,7 +72,10 @@ internal fun resolveHorseshoeGaugeGeometry(
 }
 
 // The active arc is stroked with a round cap that overhangs its end angle by roughly
-// `activeStrokeWidthPx / 2 / radius` radians. Converted to the same 0..1 fraction-of-sweep units
+// Fraction of the gauge's sweep that the active arc's round cap overhangs past its end center.
+// The cap overhangs `activeStrokeWidthPx / 2` along the arc; as a fraction of the sweep this is
+// (activeStrokeWidthPx / 2) / (radius * sweepRadians), i.e. the shared roundCapOverhangFraction
+// with the arc length as the total. Converted to the same 0..1 fraction-of-sweep units
 // as tickFractions/progressToDraw so ticks that fall inside that overhang can be hidden (ticks are
 // drawn after the fill and would otherwise render on top of it).
 internal fun arcTickCapCoverageFraction(
@@ -81,8 +84,8 @@ internal fun arcTickCapCoverageFraction(
     sweepAngle: Float,
 ): Float {
     if (activeStrokeWidthPx <= 0f || radius <= 0f || sweepAngle <= 0f) return 0f
-    val overhangRadians = activeStrokeWidthPx / 2f / radius
-    return Math.toDegrees(overhangRadians.toDouble()).toFloat() / sweepAngle
+    val sweepRadians = Math.toRadians(sweepAngle.toDouble()).toFloat()
+    return roundCapOverhangFraction(activeStrokeWidthPx, radius * sweepRadians)
 }
 
 /**

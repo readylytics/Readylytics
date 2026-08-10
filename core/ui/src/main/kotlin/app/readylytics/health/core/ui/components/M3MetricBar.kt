@@ -36,13 +36,21 @@ internal fun fillEndCenterX(
     return (width * progress).coerceIn(half, (width - half).coerceAtLeast(half))
 }
 
+// Shared geometry primitive: the fraction of a track's total length/sweep that a round stroke cap
+// overhangs past its center (strokeWidth / 2 of it). Used by M3MetricBar's linear track and
+// M3MetricGauge's angular arc so both hide ticks that would otherwise render on top of the fill.
+internal fun roundCapOverhangFraction(
+    strokeWidth: Float,
+    totalLength: Float,
+): Float = if (strokeWidth > 0f && totalLength > 0f) (strokeWidth / 2f) / totalLength else 0f
+
 // Fraction of the bar width the fill's round cap overhangs past its center. Zero progress or a
 // zero-width canvas (early/collapsing composition frame) must yield 0f, never Infinity.
 internal fun capCoverageFraction(
     progress: Float,
     width: Float,
     strokeWidth: Float,
-): Float = if (progress > 0f && width > 0f) (strokeWidth / 2f) / width else 0f
+): Float = if (progress > 0f) roundCapOverhangFraction(strokeWidth, width) else 0f
 
 // The value marker dot is strictly opt-in: legacy callers (StepsCard, RasWeeklyBar) render a bare
 // track+fill+ticks and must not draw a marker by default.

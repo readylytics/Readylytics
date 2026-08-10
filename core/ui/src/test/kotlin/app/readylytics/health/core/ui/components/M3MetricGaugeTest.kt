@@ -82,8 +82,14 @@ class M3MetricGaugeTest {
         val radius = 60f
         val stroke = 12f
         val coverage = arcTickCapCoverageFraction(stroke, radius, sweep)
-        // Semi-stroke over the radius, converted to a small fraction of the sweep.
-        assertEquals(Math.toDegrees((stroke / 2f / radius).toDouble()).toFloat() / sweep, coverage)
+        // Semi-stroke over the radius, converted to a small fraction of the sweep. The shared
+        // roundCapOverhangFraction computes the same value as (stroke/2)/(radius*sweepRadians);
+        // tolerance absorbs float-arithmetic rounding vs the degree-converted reference.
+        assertEquals(
+            Math.toDegrees((stroke / 2f / radius).toDouble()).toFloat() / sweep,
+            coverage,
+            1e-4f,
+        )
         assertTrue(coverage in 0.01f..0.05f)
         // A tick at 0.2 is within `coverage` of progress 0.18 and must be hidden, mirroring how the
         // gauge filters its ticks against progressToDraw + capCoverageFraction.

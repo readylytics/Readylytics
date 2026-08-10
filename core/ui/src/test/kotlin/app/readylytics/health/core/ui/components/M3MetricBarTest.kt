@@ -66,6 +66,14 @@ class M3MetricBarTest {
     }
 
     @Test
+    fun roundCapOverhangFraction_isHalfStrokeWidthOverTotalLength() {
+        assertEquals(0.025f, roundCapOverhangFraction(10f, 200f))
+        assertEquals(0.0f, roundCapOverhangFraction(0f, 200f))
+        assertEquals(0.0f, roundCapOverhangFraction(10f, 0f))
+        assertEquals(0.0f, roundCapOverhangFraction(10f, -1f))
+    }
+
+    @Test
     fun shouldDrawValueMarker_requiresOptInAndNonZeroProgress() {
         assertFalse(shouldDrawValueMarker(showMarker = false, progressFraction = 0.5f, progressToDraw = 0.5f))
         assertFalse(shouldDrawValueMarker(showMarker = true, progressFraction = null, progressToDraw = 0.0f))
