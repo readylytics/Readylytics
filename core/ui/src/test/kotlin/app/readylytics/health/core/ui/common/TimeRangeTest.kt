@@ -30,4 +30,22 @@ class TimeRangeTest {
         // We expect 6 days diff so that we have offsets 0, 1, 2, 3, 4, 5, 6 (7 days total)
         assertEquals(6L, diffDays)
     }
+
+    @Test
+    fun `TWELVE_MONTHS is a 360 day range labeled 360D`() {
+        assertEquals(360, TimeRange.TWELVE_MONTHS.days)
+        assertEquals("360D", TimeRange.TWELVE_MONTHS.label)
+    }
+
+    @Test
+    fun `short ranges map to daily granularity`() {
+        assertEquals(TrendGranularity.DAILY, TimeRange.SEVEN_DAYS.granularity)
+        assertEquals(TrendGranularity.DAILY, TimeRange.THIRTY_DAYS.granularity)
+    }
+
+    @Test
+    fun `six months maps to monthly and twelve months maps to quarterly granularity`() {
+        assertEquals(TrendGranularity.MONTHLY, TimeRange.SIX_MONTHS.granularity)
+        assertEquals(TrendGranularity.QUARTERLY, TimeRange.TWELVE_MONTHS.granularity)
+    }
 }

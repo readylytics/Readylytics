@@ -36,6 +36,10 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.DeltaDirection
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -57,6 +61,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -96,6 +101,7 @@ fun TrendChart(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.fixed(2f)
                     }
                 },
@@ -104,6 +110,11 @@ fun TrendChart(
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
     parentScrollInProgress: () -> Boolean = { false },
+    granularity: TrendGranularity = TrendGranularity.DAILY,
+    periodSummary: PeriodAverageSummary? = null,
+    // Whether an increase is favourable for [periodSummary]'s metric (e.g. HRV) or not (e.g. RHR);
+    // drives the summary delta arrow color. [DeltaDirection.NEUTRAL] keeps the arrow neutral.
+    deltaDirection: DeltaDirection = DeltaDirection.HIGHER_IS_BETTER,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -170,7 +181,11 @@ fun TrendChart(
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
+
+    // Resolved in composable scope so the format string can be used inside the non-composable
+    // marker listener below; resource strings must never be built as Kotlin literals.
+    val quarterTemplate = stringResource(R.string.period_label_quarter)
 
     LaunchedEffect(renderData.validPoints) {
         modelProducer.runTransaction {
@@ -249,7 +264,11 @@ fun TrendChart(
             val nextTooltip =
                 DataPointTooltipData(
                     valueText = valueText,
-                    dateText = ChartUtils.formatTooltipDate(date),
+                    dateText =
+                        formatTrendTooltipDate(
+                            granularity,
+                            date,
+                        ) { quarter -> String.format(Locale.getDefault(), quarterTemplate, quarter) },
                     offset =
                         androidx.compose.ui.unit
                             .IntOffset(canvasX.toInt(), canvasY.toInt()),
@@ -314,9 +333,17 @@ fun TrendChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(
-                                    rangeDays,
-                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                remember(rangeDays, renderData.validPoints) {
+                                    ChartDefaults.itemPlacerForRangeDays(
+                                        rangeDays = rangeDays,
+                                        pointOffsets =
+                                            if (granularity == TrendGranularity.DAILY) {
+                                                emptyList()
+                                            } else {
+                                                renderData.validPoints.map(DailyDataPoint::dayOffset)
+                                            },
+                                    )
+                                },
                             guideline = guidelineComponent,
                         ),
                     decorations = decorations,
@@ -353,6 +380,16 @@ fun TrendChart(
             color = baselineColor,
             decimalPlaces = baselineDecimalPlaces,
             unavailableValueLabel = baselineUnavailableLabel,
+        )
+    }
+
+    if (periodSummary != null) {
+        Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
+        PeriodAverageSummaryRow(
+            summary = periodSummary,
+            unit = baselineUnit,
+            decimalPlaces = baselineDecimalPlaces,
+            direction = deltaDirection,
         )
     }
 }
@@ -428,9 +465,29 @@ internal fun formatTrendTooltipValue(
 ): String {
     if (value == null) return "—"
     val formatted =
-        if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
+        if (decimalPlaces == 0) {
+            value.roundToInt().toString()
+        } else {
+            String.format(Locale.getDefault(), "%.${decimalPlaces}f", value)
+        }
     return if (hideUnit) formatted else "$formatted $unit"
 }
+
+/**
+ * Tooltip date line: [DAILY] keeps the short date format; bucketed [MONTHLY]/[QUARTERLY] points
+ * show the containing period label (e.g. "Juli" / "Q3") instead of a mid-month calendar date.
+ * The quarterly label comes from the caller (a `strings.xml` resource), keeping this pure.
+ */
+fun formatTrendTooltipDate(
+    granularity: TrendGranularity,
+    date: java.time.LocalDate,
+    quarterLabel: (Int) -> String,
+): String =
+    if (granularity == TrendGranularity.DAILY) {
+        ChartUtils.formatTooltipDate(date)
+    } else {
+        periodLabelFor(granularity, date, quarterLabel)
+    }
 
 internal fun formatBaselineLegendText(
     value: Float?,

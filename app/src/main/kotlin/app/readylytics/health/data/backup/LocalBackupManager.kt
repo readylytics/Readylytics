@@ -16,6 +16,8 @@ import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -303,19 +305,23 @@ class LocalBackupManager
             writer.write("  \"exportedAt\": \"${Instant.now()}\",\n")
 
             val rowCounts =
-                mapOf(
-                    "sleepSessions" to sleepSessionDao.count(),
-                    "heartRateRecords" to heartRateDao.count(),
-                    "hrvRecords" to hrvDao.count(),
-                    "workouts" to workoutDao.count(),
-                    "dailySummaries" to dailySummaryDao.count(),
-                    "weightRecords" to weightRecordDao.count(),
-                    "bodyFatRecords" to bodyFatRecordDao.count(),
-                    "bloodPressureRecords" to bloodPressureRecordDao.count(),
-                    "oxygenSaturationRecords" to oxygenSaturationRecordDao.count(),
-                    "bodyTemperatureRecords" to bodyTemperatureRecordDao.count(),
-                    "stepRecords" to stepRecordDao.count(),
-                )
+                coroutineScope {
+                    val counts =
+                        listOf(
+                            "sleepSessions" to async { sleepSessionDao.count() },
+                            "heartRateRecords" to async { heartRateDao.count() },
+                            "hrvRecords" to async { hrvDao.count() },
+                            "workouts" to async { workoutDao.count() },
+                            "dailySummaries" to async { dailySummaryDao.count() },
+                            "weightRecords" to async { weightRecordDao.count() },
+                            "bodyFatRecords" to async { bodyFatRecordDao.count() },
+                            "bloodPressureRecords" to async { bloodPressureRecordDao.count() },
+                            "oxygenSaturationRecords" to async { oxygenSaturationRecordDao.count() },
+                            "bodyTemperatureRecords" to async { bodyTemperatureRecordDao.count() },
+                            "stepRecords" to async { stepRecordDao.count() },
+                        )
+                    counts.associate { (key, deferred) -> key to deferred.await() }
+                }
 
             writer.write("  \"rowCounts\": ${json.encodeToString(rowCounts)},\n")
 

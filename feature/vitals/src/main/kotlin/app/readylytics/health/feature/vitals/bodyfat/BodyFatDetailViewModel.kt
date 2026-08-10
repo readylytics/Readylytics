@@ -4,8 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.common.bucketBy
+import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
@@ -49,6 +53,7 @@ data class BodyFatDetailUiState(
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val dailyBodyFat: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
+    val periodSummary: PeriodAverageSummary? = null,
     val bodyFatDisplay: String? = null,
     val historyItems: List<BodyFatHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
@@ -118,13 +123,26 @@ class BodyFatDetailViewModel
                                 ).toInt()
                         }
 
-                    val dailyBodyFat =
+                    val startDate = rangeStart.atZone(zoneId).toLocalDate()
+                    val dailyBodyFatRaw =
                         recordsByDay
                             .map { (dayOffset, dayRecords) ->
                                 val avgBodyFat = dayRecords.map { it.bodyFatPercent }.average().toFloat()
                                 DailyDataPoint(dayOffset, avgBodyFat)
                             }.sortedBy { it.dayOffset }
-                            .padToRange(range.days)
+
+                    val dailyBodyFat =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            dailyBodyFatRaw.padToRange(range.days)
+                        } else {
+                            dailyBodyFatRaw.bucketBy(range.granularity, startDate, selectedDate, valueDecimalPlaces = 1)
+                        }
+                    val periodSummary =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            null
+                        } else {
+                            buildPeriodAverageSummary(dailyBodyFat, range.granularity, startDate)
+                        }
 
                     val latestAssessment =
                         latest?.let {
@@ -201,6 +219,7 @@ class BodyFatDetailViewModel
                         selectedRange = range,
                         dailyBodyFat = dailyBodyFat,
                         rangeStartMs = rangeStart.toEpochMilli(),
+                        periodSummary = periodSummary,
                         bodyFatDisplay = latest?.bodyFatPercent?.let { MetricFormatter.formatBodyFatNumericOnly(it) },
                         historyItems = historyItems,
                         isLoading = false,

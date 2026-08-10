@@ -3,6 +3,7 @@ package app.readylytics.health.feature.sleep
 import androidx.compose.ui.unit.IntOffset
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DateFormatUtils
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import java.text.DateFormat
 import java.time.ZoneId
@@ -16,6 +17,9 @@ internal data class SleepTrendTooltipStrings(
     val bedtimeFormat: String,
     val napsHeading: String,
     val napItemFormat: String,
+    val avgDurationFormat: String,
+    val avgBedtimeFormat: String,
+    val quarterLabelFormat: String,
 )
 
 internal fun buildSleepTrendTooltipData(
@@ -25,7 +29,30 @@ internal fun buildSleepTrendTooltipData(
     clockFormatter: DateFormat,
     strings: SleepTrendTooltipStrings,
     locale: Locale = Locale.getDefault(),
+    granularity: TrendGranularity = TrendGranularity.DAILY,
+    periodLabels: List<String> = emptyList(),
 ): DataPointTooltipData {
+    if (granularity != TrendGranularity.DAILY) {
+        val periodLabel = periodLabels.getOrElse(selectedState.dayOffset) { "" }
+        val duration =
+            DateFormatUtils.formatSleepDuration(
+                ((selectedState.actualDurationValue ?: 0f) * 60f).roundToInt(),
+            )
+        val avgDurationText = String.format(locale, strings.avgDurationFormat, duration)
+        val avgBedtimeText = buildAvgBedtimeString(selectedState.startOffsetValue, locale)
+
+        return DataPointTooltipData(
+            valueText = periodLabel,
+            dateText = avgDurationText,
+            preDateLines = listOf(avgBedtimeText),
+            offset =
+                IntOffset(
+                    selectedState.canvasX.toInt(),
+                    (selectedState.lineCanvasY ?: selectedState.barCanvasYTop ?: 0f).toInt(),
+                ),
+        )
+    }
+
     val scoringClockFormatter =
         (clockFormatter.clone() as DateFormat).apply {
             timeZone = TimeZone.getTimeZone(scoringZoneId)
@@ -74,4 +101,25 @@ internal fun buildSleepTrendTooltipData(
                 (selectedState.lineCanvasY ?: selectedState.barCanvasYTop ?: 0f).toInt(),
             ),
     )
+}
+
+private fun buildAvgBedtimeString(
+    startOffsetValue: Float?,
+    locale: Locale,
+): String {
+    if (startOffsetValue == null) return "—"
+    val totalHours = 12f + startOffsetValue
+    val hour =
+        (totalHours.toInt() % 24).let {
+            if (it == 0) {
+                12
+            } else if (it > 12) {
+                it - 12
+            } else {
+                it
+            }
+        }
+    val minute = ((totalHours - totalHours.toInt()) * 60).roundToInt()
+    val amPm = if (totalHours.toInt() % 24 >= 12) "PM" else "AM"
+    return String.format(locale, "%d:%02d %s", hour, minute, amPm)
 }

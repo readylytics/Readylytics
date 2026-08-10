@@ -4,8 +4,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.ui.R
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -19,7 +23,9 @@ import com.patrykandpatrick.vico.compose.common.component.LineComponent
 import com.patrykandpatrick.vico.compose.common.component.TextComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import java.time.Instant
 import java.time.ZoneId
+import java.util.Locale
 
 object ChartDefaults {
     @Composable
@@ -55,6 +61,34 @@ object ChartDefaults {
             CartesianValueFormatter { _, value, _ -> labels.label(value) }
         }
 
+    /**
+     * Granularity-aware x-axis formatter. [DAILY] delegates to [rememberDayOffsetFormatter];
+     * [MONTHLY] and [QUARTERLY] resolve each day offset to its calendar date in [zoneId] and
+     * format the containing period via [periodLabelFor].
+     */
+    @Composable
+    fun rememberPeriodFormatter(
+        rangeStartMs: Long,
+        granularity: TrendGranularity,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): CartesianValueFormatter {
+        if (granularity == TrendGranularity.DAILY) {
+            return rememberDayOffsetFormatter(rangeStartMs, zoneId)
+        }
+        // Resolved outside remember{} so the format string can be used inside the non-composable
+        // formatter lambda; resource strings must never be built as Kotlin literals.
+        val quarterTemplate = stringResource(R.string.period_label_quarter)
+        return remember(rangeStartMs, granularity, zoneId, quarterTemplate) {
+            val baseDate = Instant.ofEpochMilli(rangeStartMs).atZone(zoneId).toLocalDate()
+            CartesianValueFormatter { _, value, _ ->
+                periodLabelFor(
+                    granularity,
+                    baseDate.plusDays(value.toLong()),
+                ) { quarter -> String.format(Locale.getDefault(), quarterTemplate, quarter) }
+            }
+        }
+    }
+
     @Composable
     fun rememberChartState(
         rangeDays: Int,
@@ -79,6 +113,7 @@ object ChartDefaults {
                             when (rangeDays) {
                                 30 -> Zoom.fixed(6f)
                                 180 -> Zoom.fixed(25f)
+                                360 -> Zoom.fixed(45f)
                                 else -> Zoom.fixed(2f)
                             }
                         },
@@ -87,13 +122,37 @@ object ChartDefaults {
         }
 
     /**
-     * The returned placer is stateful: it owns a [DayOffsetTickCalculator] holding per-instance
-     * candidate and single-entry result caches. Callers must scope it to a single chart via
-     * `remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) }` — constructing it
-     * inline on every recomposition silently discards the caching (no test failure, no visual
-     * difference, just the optimization evaporating).
+     * Single tick source for all Vico horizontal axes. With [pointOffsets] non-empty (bucketed
+     * monthly/quarterly charts) it places one tick per actual plotted point offset. With empty
+     * [pointOffsets] (daily charts) it delegates to [DayOffsetTickCalculator], which owns the
+     * zoom-aware spacing/caching for `0..rangeDays-1` domains.
      */
-    fun itemPlacerForRangeDays(rangeDays: Int): HorizontalAxis.ItemPlacer {
+    internal fun tickValuesFor(
+        rangeDays: Int,
+        pointOffsets: List<Int>,
+        visibleXRange: ClosedFloatingPointRange<Double>,
+    ): List<Double> =
+        if (pointOffsets.isEmpty()) {
+            DayOffsetTickCalculator(rangeDays).values(visibleXRange)
+        } else {
+            pointOffsets
+                .sorted()
+                .distinct()
+                .map { it.toDouble() }
+                .filter { it in visibleXRange }
+        }
+
+    /**
+     * The returned placer is stateful: the daily branch owns a [DayOffsetTickCalculator] holding
+     * per-instance candidate and single-entry result caches. Callers must scope it to a single chart
+     * via `remember(rangeDays, pointOffsets) { ChartDefaults.itemPlacerForRangeDays(...) }` —
+     * constructing it inline on every recomposition silently discards the caching (no test failure,
+     * no visual difference, just the optimization evaporating).
+     */
+    fun itemPlacerForRangeDays(
+        rangeDays: Int,
+        pointOffsets: List<Int> = emptyList(),
+    ): HorizontalAxis.ItemPlacer {
         val basePlacer =
             HorizontalAxis.ItemPlacer.aligned(
                 spacing = { 1 },
@@ -101,11 +160,18 @@ object ChartDefaults {
             )
 
         // Per-instance caches are safe here: Vico measures and draws on a single thread, this placer
-        // is scoped to one chart via remember(rangeDays) at every call site, and Vico only iterates
-        // the returned list (HorizontalAxis.kt:184-185 and :294-295 in Vico 3.2.3) -- it never mutates
-        // it, so handing the same cached instance to getLabelValues, getLineValues, and consecutive
-        // frames is safe. A single frame asks three times with the same visible range.
-        val ticks = DayOffsetTickCalculator(rangeDays)
+        // is scoped to one chart via remember(rangeDays, pointOffsets) at every call site, and Vico
+        // only iterates the returned list (HorizontalAxis.kt:184-185 and :294-295 in Vico 3.2.3) --
+        // it never mutates it, so handing the same cached instance to getLabelValues, getLineValues,
+        // and consecutive frames is safe. A single frame asks three times with the same visible range.
+        // The bucketed branch has no cache: its point-offset list is already the tick list.
+        val dailyTicks = if (pointOffsets.isEmpty()) DayOffsetTickCalculator(rangeDays) else null
+        val pointTicks =
+            if (pointOffsets.isEmpty()) {
+                null
+            } else {
+                pointOffsets.sorted().distinct().map { it.toDouble() }
+            }
 
         return object : HorizontalAxis.ItemPlacer by basePlacer {
             override fun getLabelValues(
@@ -113,14 +179,24 @@ object ChartDefaults {
                 visibleXRange: ClosedFloatingPointRange<Double>,
                 fullXRange: ClosedFloatingPointRange<Double>,
                 maxLabelWidth: Float,
-            ): List<Double> = ticks.values(visibleXRange)
+            ): List<Double> =
+                if (pointTicks != null) {
+                    pointTicks.filter { it in visibleXRange }
+                } else {
+                    requireNotNull(dailyTicks).values(visibleXRange)
+                }
 
             override fun getLineValues(
                 context: CartesianDrawingContext,
                 visibleXRange: ClosedFloatingPointRange<Double>,
                 fullXRange: ClosedFloatingPointRange<Double>,
                 maxLabelWidth: Float,
-            ): List<Double> = ticks.values(visibleXRange)
+            ): List<Double> =
+                if (pointTicks != null) {
+                    pointTicks.filter { it in visibleXRange }
+                } else {
+                    requireNotNull(dailyTicks).values(visibleXRange)
+                }
         }
     }
 }

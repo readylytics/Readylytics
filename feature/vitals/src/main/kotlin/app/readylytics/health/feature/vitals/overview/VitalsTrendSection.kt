@@ -12,6 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
+import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
@@ -66,6 +67,9 @@ internal fun VitalsTrendSection(
                         zoomState = chartZoomState,
                         zoneBands = presentation.hrv.zoneBands,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.hrvPeriodSummary,
+                        deltaDirection = DeltaDirection.HIGHER_IS_BETTER,
                     )
                 }
             },
@@ -100,6 +104,9 @@ internal fun VitalsTrendSection(
                         zoomState = chartZoomState,
                         zoneBands = presentation.rhr.zoneBands,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.rhrPeriodSummary,
+                        deltaDirection = DeltaDirection.LOWER_IS_BETTER,
                     )
                 }
             },
@@ -139,6 +146,9 @@ internal fun VitalsTrendSection(
                         minYOverride = 90.0,
                         maxYOverride = 100.0,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.spo2PeriodSummary,
+                        deltaDirection = DeltaDirection.HIGHER_IS_BETTER,
                     )
                 }
             },
@@ -185,6 +195,9 @@ internal fun VitalsTrendSection(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         parentScrollInProgress = parentScrollInProgress,
+                        granularity = chartInputs.selectedRange.granularity,
+                        periodSummary = chartSeries.bodyTempPeriodSummary,
+                        deltaDirection = DeltaDirection.NEUTRAL,
                     )
                 }
             },

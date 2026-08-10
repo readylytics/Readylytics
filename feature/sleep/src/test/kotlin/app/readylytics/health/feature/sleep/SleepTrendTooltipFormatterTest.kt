@@ -65,6 +65,9 @@ class SleepTrendTooltipFormatterTest {
                         bedtimeFormat = "Bedtime: %1\$s - %2\$s",
                         napsHeading = "Naps:",
                         napItemFormat = "• %1\$s – %2\$s (%3\$s)",
+                        avgDurationFormat = "Avg. Duration: %1\$s",
+                        avgBedtimeFormat = "Avg. Bedtime: %1\$s",
+                        quarterLabelFormat = "Q%d",
                     ),
                 locale = Locale.US,
             )
