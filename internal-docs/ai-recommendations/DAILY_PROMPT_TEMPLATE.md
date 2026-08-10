@@ -43,6 +43,7 @@ Contract defined in the system prompt.
 - Readiness band: `{{readinessBand}}` (POOR / WARNING / NEUTRAL / OPTIMAL /
   CALIBRATING)
 - Permitted recommendation ceiling: `{{permittedRecommendation}}`
+- Recommended action: `{{recommendedAction}}` (REST / ACTIVE_RECOVERY / TRAIN / null)
 - Restoration sub-score (`sRest`): `{{sRest}}`
 - HRV baseline: `{{hrvBaseline}}` (rounded) — mu `{{hrvMuMssd}}`, sigma `{{hrvSigmaMssd}}`
 - Resting heart rate today: `{{restingHeartRate}}` bpm — vs. baseline ratio

@@ -38,6 +38,7 @@ class GetDailyPromptDataUseCase
         private val preferencesReader: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val patternSummaryUseCase: ComputeWorkoutPatternSummaryUseCase,
+        private val recommendedLoadCalculator: RecommendedLoadCalculator,
     ) {
         suspend fun execute(today: LocalDate): DailyPromptData {
             val preferences = preferencesReader.userPreferences.first()
@@ -145,13 +146,14 @@ class GetDailyPromptDataUseCase
                 yesterdaySleep = yesterdaySummary?.let(::mapYesterdaySleep),
                 yesterdayWorkouts = workoutBlocks,
                 loadState =
-                    todaySummary?.let { mapLoadState(it, sourceMode) }
+                    todaySummary?.let { mapLoadState(it, sourceMode, todayTrimp) }
                         ?: LoadStatePromptData(
                             acuteLoad = null,
                             chronicLoad = null,
                             strainRatio = null,
                             loadScore = null,
                             loadContext = null,
+                            recommendedLoad = null,
                             totalRasWorkoutOnly = null,
                             totalRasEverydayHr = null,
                             everydayCoverageMinutes = null,
@@ -183,6 +185,7 @@ class GetDailyPromptDataUseCase
                 status = metricStatus,
                 flags = summary.recoveryFlags.toList(),
             )
+            val recommendedAction = permittedRecommendation.takeIf { it != PermittedRecommendation.UNKNOWN }
 
             return TodayPromptData(
                 readinessScore = readinessScore,
@@ -203,6 +206,7 @@ class GetDailyPromptDataUseCase
                 todayTrainingMinutes = todayTrainingMinutes,
                 dataCurrentUntil = dataCurrentUntil,
                 permittedRecommendation = permittedRecommendation,
+                recommendedAction = recommendedAction,
             )
         }
 
@@ -217,17 +221,24 @@ class GetDailyPromptDataUseCase
                 avgSleepingSpo2 = summary.avgSleepingSpo2,
             )
 
-        private fun mapLoadState(summary: DailySummary, mode: LoadSourceMode): LoadStatePromptData =
-            LoadStatePromptData(
+        private fun mapLoadState(
+            summary: DailySummary,
+            mode: LoadSourceMode,
+            todayTrimp: Float?,
+        ): LoadStatePromptData {
+            val loadContext = LoadSourceSelector.selectStrainRatio(summary, mode)?.toLoadContext()
+            return LoadStatePromptData(
                 acuteLoad = LoadSourceSelector.selectAtl(summary, mode),
                 chronicLoad = LoadSourceSelector.selectCtl(summary, mode),
                 strainRatio = LoadSourceSelector.selectStrainRatio(summary, mode),
                 loadScore = LoadSourceSelector.selectLoadScore(summary, mode),
-                loadContext = LoadSourceSelector.selectStrainRatio(summary, mode)?.toLoadContext()?.name,
+                loadContext = loadContext?.name,
+                recommendedLoad = recommendedLoadCalculator.compute(loadContext, todayTrimp),
                 totalRasWorkoutOnly = summary.totalRasWorkoutOnly,
                 totalRasEverydayHr = summary.totalRasEverydayHr,
                 everydayCoverageMinutes = summary.everydayCoverageMinutes,
             )
+        }
 
         private fun sourceName(mode: LoadSourceMode): String =
             when (mode) {

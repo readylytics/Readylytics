@@ -46,6 +46,7 @@ data class TodayPromptData(
     val todayTrainingMinutes: Int? = null,
     val dataCurrentUntil: String? = null,
     val permittedRecommendation: PermittedRecommendation = PermittedRecommendation.UNKNOWN,
+    val recommendedAction: PermittedRecommendation? = null,
 )
 
 data class YesterdaySleepPromptData(
@@ -73,6 +74,7 @@ data class LoadStatePromptData(
     val strainRatio: Float?,
     val loadScore: Float?,
     val loadContext: String? = null,
+    val recommendedLoad: String? = null,
     val totalRasWorkoutOnly: Float?,
     val totalRasEverydayHr: Float?,
     val everydayCoverageMinutes: Int?,

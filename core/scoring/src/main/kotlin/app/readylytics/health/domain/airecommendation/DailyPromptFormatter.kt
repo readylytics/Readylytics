@@ -51,6 +51,7 @@ object DailyPromptFormatter {
         appendLine("- Readiness score (from the active source above): ${numberOrUnavailable(today.readinessScore)}")
         appendLine("- Readiness band: ${orUnavailable(today.readinessBand)}")
         appendLine("- Permitted recommendation ceiling: ${today.permittedRecommendation.name}")
+        appendLine("- Recommended action: ${orUnavailable(today.recommendedAction?.name)}")
         appendLine("- Restoration sub-score (sRest): ${numberOrUnavailable(today.restorationScore)}")
         appendLine(
             "- HRV baseline: ${intOrUnavailable(today.hrvBaseline)} ms — mu ${numberOrUnavailable(today.hrvMuMssd)}, " +
@@ -149,6 +150,7 @@ object DailyPromptFormatter {
                 "${intOrUnavailable(load.everydayCoverageMinutes)} minutes",
         )
         appendLine("- Load context: ${orUnavailable(load.loadContext)}")
+        appendLine("- Recommended load for remaining training today: ${orUnavailable(load.recommendedLoad)}")
         appendLine()
     }
 

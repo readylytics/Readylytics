@@ -13,6 +13,7 @@ import app.readylytics.health.domain.model.PermittedRecommendation
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.domain.scoring.WorkoutLoadClassifier
 import app.readylytics.health.domain.scoring.WorkoutLoadLevel
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -35,6 +36,7 @@ class GetDailyPromptDataUseCaseTest {
     private val preferencesReader = mockk<UserPreferencesReader>()
     private val getWorkoutDisplayMetricsUseCase = mockk<GetWorkoutDisplayMetricsUseCase>()
     private val patternSummaryUseCase = ComputeWorkoutPatternSummaryUseCase()
+    private val recommendedLoadCalculator = RecommendedLoadCalculator(WorkoutLoadClassifier())
     private val useCase =
         GetDailyPromptDataUseCase(
             dailySummaryRepository = dailySummaryRepository,
@@ -42,6 +44,7 @@ class GetDailyPromptDataUseCaseTest {
             preferencesReader = preferencesReader,
             getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             patternSummaryUseCase = patternSummaryUseCase,
+            recommendedLoadCalculator = recommendedLoadCalculator,
         )
 
     private val today = LocalDate.of(2026, 8, 9)
@@ -105,6 +108,8 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals("SWEET_SPOT", result.loadState.loadContext)
         assertEquals("NEUTRAL", result.today.readinessBand)
         assertEquals(PermittedRecommendation.REST, result.today.permittedRecommendation)
+        assertEquals(PermittedRecommendation.REST, result.today.recommendedAction)
+        assertEquals("NORMAL", result.loadState.recommendedLoad)
     }
 
     @Test
@@ -163,6 +168,8 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals("LOW", result.advisorDataConfidence)
         assertEquals(0, result.today.todayCompletedWorkouts)
         assertNull("todayTrimp not null", result.today.todayTrimp)
+        assertNull("recommendedAction not null", result.today.recommendedAction)
+        assertNull("recommendedLoad not null", result.loadState.recommendedLoad)
         assertNull("todayTrainingMinutes not null", result.today.todayTrainingMinutes)
         assertNotNull("dataCurrentUntil is null", result.today.dataCurrentUntil)
         assertNull("loadContext not null", result.loadState.loadContext)
