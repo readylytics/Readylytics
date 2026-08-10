@@ -467,7 +467,11 @@ internal fun formatTrendTooltipValue(
 ): String {
     if (value == null) return "—"
     val formatted =
-        if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
+        if (decimalPlaces == 0) {
+            value.roundToInt().toString()
+        } else {
+            String.format(Locale.getDefault(), "%.${decimalPlaces}f", value)
+        }
     return if (hideUnit) formatted else "$formatted $unit"
 }
 

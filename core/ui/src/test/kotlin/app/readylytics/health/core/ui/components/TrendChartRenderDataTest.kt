@@ -61,6 +61,13 @@ class TrendChartRenderDataTest {
     }
 
     @Test
+    fun `period value and tooltip value share one formatter`() {
+        // hideUnit=false appends the unit — exactly what PeriodAverageSummaryRow needs.
+        assertEquals("24.5 kg", formatTrendTooltipValue(24.5f, 1, false, "kg"))
+        assertEquals("25 kg", formatTrendTooltipValue(24.5f, 0, false, "kg"))
+    }
+
+    @Test
     fun `tooltip date uses period label for monthly granularity`() {
         val date = LocalDate.of(2026, 7, 15)
         assertEquals("Jul", formatTrendTooltipDate(TrendGranularity.MONTHLY, date) { "Q$it" })

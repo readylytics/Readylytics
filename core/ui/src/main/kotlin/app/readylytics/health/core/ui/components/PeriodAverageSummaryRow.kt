@@ -36,7 +36,13 @@ fun PeriodAverageSummaryRow(
     direction: DeltaDirection = DeltaDirection.HIGHER_IS_BETTER,
 ) {
     val average = summary.average ?: return
-    val valueText = "${formatPeriodValue(average, decimalPlaces)} $unit"
+    val valueText =
+        formatTrendTooltipValue(
+            value = average,
+            decimalPlaces = decimalPlaces,
+            hideUnit = false,
+            unit = unit,
+        )
     val currentRounded = average.roundToInt()
     val previousRounded = summary.previousAverage?.roundToInt()
     val deltaText =
@@ -92,13 +98,3 @@ fun PeriodAverageSummaryRow(
         )
     }
 }
-
-private fun formatPeriodValue(
-    value: Float,
-    decimalPlaces: Int,
-): String =
-    if (decimalPlaces == 0) {
-        value.roundToInt().toString()
-    } else {
-        String.format(Locale.getDefault(), "%.${decimalPlaces}f", value)
-    }
