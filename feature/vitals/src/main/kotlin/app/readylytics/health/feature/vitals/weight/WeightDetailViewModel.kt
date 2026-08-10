@@ -3,9 +3,13 @@ package app.readylytics.health.feature.vitals.weight
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.WeightHistoryItem
+import app.readylytics.health.core.ui.common.bucketBy
+import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
@@ -40,6 +44,7 @@ data class WeightDetailUiState(
     val dailyWeights: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val periodSummary: PeriodAverageSummary? = null,
     val weightDisplay: String? = null,
     val bmiDisplay: String? = null,
     val historyItems: List<WeightHistoryItem> = emptyList(),
@@ -121,7 +126,8 @@ class WeightDetailViewModel
                                 ).toInt()
                         }
 
-                    val dailyWeights =
+                    val startDate = rangeStart.atZone(zoneId).toLocalDate()
+                    val dailyWeightsRaw =
                         recordsByDay
                             .map { (dayOffset, dayRecords) ->
                                 val avgWeight = dayRecords.map { it.weightKg }.average().toFloat()
@@ -133,7 +139,19 @@ class WeightDetailViewModel
                                     }
                                 DailyDataPoint(dayOffset, displayWeight)
                             }.sortedBy { it.dayOffset }
-                            .padToRange(range.days)
+
+                    val dailyWeights =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            dailyWeightsRaw.padToRange(range.days)
+                        } else {
+                            dailyWeightsRaw.bucketBy(range.granularity, startDate, selectedDate, valueDecimalPlaces = 1)
+                        }
+                    val periodSummary =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            null
+                        } else {
+                            buildPeriodAverageSummary(dailyWeights, range.granularity, startDate)
+                        }
 
                     val heightCm = userPrefs.heightCm
                     val bmi =
@@ -206,6 +224,7 @@ class WeightDetailViewModel
                         dailyWeights = dailyWeights,
                         rangeStartMs = rangeStart.toEpochMilli(),
                         unitSystem = userPrefs.unitSystem,
+                        periodSummary = periodSummary,
                         weightDisplay =
                             rawLatestWeight?.let {
                                 MetricFormatter.formatWeightNumericOnly(

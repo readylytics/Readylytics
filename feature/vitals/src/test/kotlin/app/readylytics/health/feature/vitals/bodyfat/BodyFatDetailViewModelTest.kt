@@ -2,6 +2,7 @@ package app.readylytics.health.feature.vitals.bodyfat
 
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
@@ -349,5 +350,61 @@ class BodyFatDetailViewModelTest {
             viewModel.onRangeSelected(TimeRange.THIRTY_DAYS)
             val state = viewModel.uiState.first { it.selectedRange == TimeRange.THIRTY_DAYS }
             assertEquals(TimeRange.THIRTY_DAYS, state.selectedRange)
+        }
+
+    @Test
+    fun `twelve month range buckets body fat into quarterly points`() =
+        runTest {
+            val start = LocalDate.of(2026, 1, 1)
+            selectedDateFlow.value = start
+            val zone = java.time.ZoneId.systemDefault()
+            val records =
+                listOf(
+                    // Q1: two records averaging 20.0
+                    BodyFatRecordEntity(
+                        "q1a",
+                        start
+                            .plusMonths(1)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        19f,
+                    ),
+                    BodyFatRecordEntity(
+                        "q1b",
+                        start
+                            .plusMonths(2)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        21f,
+                    ),
+                    // Q2: one record
+                    BodyFatRecordEntity(
+                        "q2",
+                        start
+                            .plusMonths(4)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        22f,
+                    ),
+                )
+            coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns records
+            coEvery { bodyFatRepository.getLatest() } returns records.last()
+            coEvery { bodyFatRepository.getPrevious(any()) } returns records[1]
+
+            viewModel = createViewModel()
+            viewModel.onRangeSelected(TimeRange.TWELVE_MONTHS)
+
+            val state =
+                viewModel.uiState.first {
+                    it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
+                }
+
+            // Two populated quarters: Q1 avg 20.0, Q2 avg 22.0 (valueDecimalPlaces = 1).
+            assertEquals(2, state.dailyBodyFat.count { it.value != null })
+            assertEquals(listOf(20f, 22f), state.dailyBodyFat.filter { it.value != null }.map { it.value })
+            assertEquals(TrendGranularity.QUARTERLY, state.periodSummary?.granularity)
         }
 }

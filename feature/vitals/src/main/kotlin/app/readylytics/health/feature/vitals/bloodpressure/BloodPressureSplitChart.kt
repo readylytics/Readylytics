@@ -22,19 +22,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
+import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -49,6 +54,7 @@ fun BloodPressureSplitChart(
     rangeStartMs: Long,
     rangeDays: Int,
     modifier: Modifier = Modifier,
+    granularity: TrendGranularity = TrendGranularity.DAILY,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
         rememberVicoZoomState(
@@ -107,12 +113,20 @@ fun BloodPressureSplitChart(
         return
     }
 
+    // Resolved in composable scope so the format string can be used inside the non-composable
+    // onDaySelected lambda below; resource strings must never be built as Kotlin literals.
+    val quarterTemplate = stringResource(R.string.period_label_quarter)
+
     val onDaySelected = { dayOffset: Int, canvasX: Float, canvasY: Float ->
         selectedDayOffset = dayOffset
         selectedCanvasX = canvasX
 
         val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-        val dateString = ChartUtils.formatTooltipDate(date)
+        val dateString =
+            formatTrendTooltipDate(
+                granularity,
+                date,
+            ) { quarter -> String.format(Locale.getDefault(), quarterTemplate, quarter) }
 
         val sysPoint = systolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
         val diaPoint = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
@@ -144,6 +158,7 @@ fun BloodPressureSplitChart(
                 rangeStartMs = rangeStartMs,
                 rangeDays = rangeDays,
                 isDiastolic = false,
+                granularity = granularity,
                 scrollState = scrollState,
                 zoomState = zoomState,
                 modifier = Modifier.fillMaxWidth().height(180.dp),
@@ -159,6 +174,7 @@ fun BloodPressureSplitChart(
                 rangeStartMs = rangeStartMs,
                 rangeDays = rangeDays,
                 isDiastolic = true,
+                granularity = granularity,
                 scrollState = scrollState,
                 zoomState = zoomState,
                 modifier = Modifier.fillMaxWidth().height(180.dp),

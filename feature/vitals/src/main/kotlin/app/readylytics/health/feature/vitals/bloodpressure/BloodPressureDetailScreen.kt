@@ -247,6 +247,7 @@ fun BloodPressureDetailScreen(
                         diastolicPoints = uiState.dailyDiastolic,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
+                        granularity = uiState.selectedRange.granularity,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         parentScrollInProgress = { scrollState.isScrollInProgress },

@@ -478,7 +478,7 @@ internal fun formatTrendTooltipValue(
  * show the containing period label (e.g. "Juli" / "Q3") instead of a mid-month calendar date.
  * The quarterly label comes from the caller (a `strings.xml` resource), keeping this pure.
  */
-internal fun formatTrendTooltipDate(
+fun formatTrendTooltipDate(
     granularity: TrendGranularity,
     date: java.time.LocalDate,
     quarterLabel: (Int) -> String,

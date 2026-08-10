@@ -3,7 +3,11 @@ package app.readylytics.health.feature.vitals.steps
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.bucketBy
+import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -39,6 +43,7 @@ data class StepDetailUiState(
         StepsStatusClassifier.classify(latestSummary?.stepCount, stepGoal),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val rangeStartMs: Long = 0,
+    val periodSummary: PeriodAverageSummary? = null,
     val isLoading: Boolean = true,
 )
 
@@ -70,25 +75,36 @@ class StepDetailViewModel
                         dailySummaryRepository.observeSince(fromMs),
                         settingsRepo.userPreferences,
                     ) { latest, history, prefs ->
-                        val points =
+                        val startDate =
+                            Instant
+                                .ofEpochMilli(startDayMs)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
+                        val rawPoints =
                             history
                                 .filter { it.stepCount != null }
                                 .map { summary ->
                                     val d = summary.date
                                     val dayOffset =
                                         ChronoUnit.DAYS
-                                            .between(
-                                                Instant
-                                                    .ofEpochMilli(
-                                                        startDayMs,
-                                                    ).atZone(ZoneId.systemDefault())
-                                                    .toLocalDate(),
-                                                d,
-                                            ).toInt()
+                                            .between(startDate, d)
+                                            .toInt()
                                     // Allow-listed: chart-axis geometry for plotted step series, not a display metric
                                     DailyDataPoint(dayOffset, summary.stepCount!!.toFloat())
                                 }.sortedBy { it.dayOffset }
-                                .padToRange(range.days)
+
+                        val points =
+                            if (range.granularity == TrendGranularity.DAILY) {
+                                rawPoints.padToRange(range.days)
+                            } else {
+                                rawPoints.bucketBy(range.granularity, startDate, date, valueDecimalPlaces = 0)
+                            }
+                        val periodSummary =
+                            if (range.granularity == TrendGranularity.DAILY) {
+                                null
+                            } else {
+                                buildPeriodAverageSummary(points, range.granularity, startDate)
+                            }
 
                         StepDetailUiState(
                             latestSummary = latest,
@@ -96,6 +112,7 @@ class StepDetailViewModel
                             stepGoal = prefs.stepGoal,
                             selectedRange = range,
                             rangeStartMs = startDayMs,
+                            periodSummary = periodSummary,
                             isLoading = false,
                         )
                     }

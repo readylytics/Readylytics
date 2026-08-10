@@ -1,6 +1,8 @@
 package app.readylytics.health.feature.vitals.weight
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -253,5 +255,64 @@ class WeightDetailViewModelTest {
             assertEquals(BmiStatus.Optimal, statuses[18.5f])
             assertEquals(BmiStatus.Warning, statuses[25f])
             assertEquals(BmiStatus.Poor, statuses[30f])
+        }
+
+    @Test
+    fun `twelve month range buckets daily weights into quarterly points with a period summary`() =
+        runTest {
+            val start = LocalDate.of(2026, 1, 1)
+            selectedDateFlow.value = start
+            val zone = java.time.ZoneId.systemDefault()
+            val records =
+                listOf(
+                    // Q1 (Jan-Mar): two records
+                    WeightRecordEntity(
+                        "q1a",
+                        start
+                            .plusMonths(1)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        70f,
+                    ),
+                    WeightRecordEntity(
+                        "q1b",
+                        start
+                            .plusMonths(2)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        72f,
+                    ),
+                    // Q2 (Apr-Jun): one record
+                    WeightRecordEntity(
+                        "q2",
+                        start
+                            .plusMonths(4)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        71f,
+                    ),
+                )
+            coEvery { weightRepository.getByDateRange(any(), any()) } returns records
+            coEvery { weightRepository.getLatest() } returns records.last()
+            coEvery { weightRepository.getPrevious(any()) } returns records[1]
+
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC))
+
+            viewModel = createViewModel()
+            viewModel.onRangeSelected(TimeRange.TWELVE_MONTHS)
+
+            val state =
+                viewModel.uiState.first {
+                    it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
+                }
+
+            // Only two populated quarters survive bucketing.
+            assertEquals(2, state.dailyWeights.count { it.value != null })
+            assertEquals(listOf(71f, 71f), state.dailyWeights.filter { it.value != null }.map { it.value })
+            assertEquals(TrendGranularity.QUARTERLY, state.periodSummary?.granularity)
         }
 }
