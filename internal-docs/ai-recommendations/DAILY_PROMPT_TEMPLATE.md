@@ -98,10 +98,7 @@ other as secondary context only.)
 - Current load state: `{{loadContext}}` (BELOW_TYPICAL / SWEET_SPOT / ELEVATED / HIGH
   / UNKNOWN)
 - Recommended load envelope for the remaining training today: `{{recommendedLoad}}`
-  (`{ qualitative: LIGHT / MODERATE / NORMAL / HIGH | null, min_trimp, max_trimp }`)
-  — **`UPSTREAM DATA REQUIRED`**: Readylytics does not yet compute a load envelope.
-  Until it does, the AI must give qualitative load guidance only and leave
-  `suggested_trimp_range` null.
+  (`{ qualitative: LIGHT / MODERATE / NORMAL / HIGH | null }`)
 - 7-day RAS total (informational only — never drives Readiness):
   Workout only `{{totalRasWorkoutOnly}}`, Everyday HR `{{totalRasEverydayHr}}`
 - Everyday-load coverage (only relevant if that source is active):
