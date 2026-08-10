@@ -309,15 +309,30 @@ class SleepViewModel
                                 }
                             }
                             val trendEndDate = rangeStart.plusDays(range.days.toLong() - 1)
-                            val (bucketedStart, startSummary) = startOffsetPoints.aggregateByRange(
-                                range.granularity, rangeStart, trendEndDate, range.days, valueDecimalPlaces = 1,
-                            )
-                            val (bucketedSpan, spanSummary) = durationSpanPoints.aggregateByRange(
-                                range.granularity, rangeStart, trendEndDate, range.days, valueDecimalPlaces = 1,
-                            )
-                            val (bucketedDuration, durationSummary) = actualDurationPoints.aggregateByRange(
-                                range.granularity, rangeStart, trendEndDate, range.days, valueDecimalPlaces = 1,
-                            )
+                            val (bucketedStart, startSummary) =
+                                startOffsetPoints.aggregateByRange(
+                                    range.granularity,
+                                    rangeStart,
+                                    trendEndDate,
+                                    range.days,
+                                    valueDecimalPlaces = 1,
+                                )
+                            val (bucketedSpan, spanSummary) =
+                                durationSpanPoints.aggregateByRange(
+                                    range.granularity,
+                                    rangeStart,
+                                    trendEndDate,
+                                    range.days,
+                                    valueDecimalPlaces = 1,
+                                )
+                            val (bucketedDuration, durationSummary) =
+                                actualDurationPoints.aggregateByRange(
+                                    range.granularity,
+                                    rangeStart,
+                                    trendEndDate,
+                                    range.days,
+                                    valueDecimalPlaces = 1,
+                                )
 
                             SleepTrendData(
                                 startOffsetPoints = bucketedStart,

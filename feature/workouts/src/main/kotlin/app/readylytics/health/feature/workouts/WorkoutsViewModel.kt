@@ -302,10 +302,12 @@ class WorkoutsViewModel
                             }
 
                             val trimpForAggregation = dailyTrimp.map { it.copy(value = it.value ?: 0f) }
-                            val (bucketedTrimp, trimpSummary) = trimpForAggregation
-                                .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
-                            val (bucketedStrainRatio, strainSummary) = dailyStrainRatio
-                                .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
+                            val (bucketedTrimp, trimpSummary) =
+                                trimpForAggregation
+                                    .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
+                            val (bucketedStrainRatio, strainSummary) =
+                                dailyStrainRatio
+                                    .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
 
                             val summaryByDate = trimpSummaries.associateBy { it.date }
 

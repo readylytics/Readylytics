@@ -418,14 +418,21 @@ fun SleepTrendChart(
                                 Fill(
                                     brush =
                                         Brush.verticalGradient(
-                                            colors = listOf(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.0f)),
+                                            colors =
+                                                listOf(
+                                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+                                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.0f),
+                                                ),
                                         ),
                                 ),
                             ),
                         pointProvider =
                             LineCartesianLayer.PointProvider.single(
                                 LineCartesianLayer.Point(
-                                    rememberShapeComponent(fill = Fill(MaterialTheme.colorScheme.tertiary), shape = CircleShape),
+                                    rememberShapeComponent(
+                                        fill = Fill(MaterialTheme.colorScheme.tertiary),
+                                        shape = CircleShape,
+                                    ),
                                     6.dp,
                                 ),
                             ),
@@ -483,12 +490,20 @@ fun SleepTrendChart(
                             HorizontalAxis.rememberBottom(
                                 label = labelComponent,
                                 valueFormatter = xAxisFormatter,
-                                itemPlacer = remember(rangeDays, startOffsetPoints, actualDurationPoints, granularity) {
-                                    val offsets = if (granularity == TrendGranularity.DAILY) emptyList()
-                                    else (startOffsetPoints.map { it.dayOffset } + actualDurationPoints.map { it.dayOffset })
-                                        .distinct().sorted()
-                                    ChartDefaults.itemPlacerForRangeDays(rangeDays, offsets)
-                                },
+                                itemPlacer =
+                                    remember(rangeDays, startOffsetPoints, actualDurationPoints, granularity) {
+                                        val offsets =
+                                            if (granularity == TrendGranularity.DAILY) {
+                                                emptyList()
+                                            } else {
+                                                (
+                                                    startOffsetPoints.map { it.dayOffset } +
+                                                        actualDurationPoints.map { it.dayOffset }
+                                                ).distinct()
+                                                    .sorted()
+                                            }
+                                        ChartDefaults.itemPlacerForRangeDays(rangeDays, offsets)
+                                    },
                                 guideline = guidelineComponent,
                             ),
                         endAxis =
@@ -521,9 +536,9 @@ fun SleepTrendChart(
                     data = tooltipState,
                     onDismissRequest = { selectedState = null },
                 )
+            }
         }
     }
-}
 }
 
 @Composable

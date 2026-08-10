@@ -331,7 +331,11 @@ private fun AcwrChart(
                     Fill(
                         brush =
                             Brush.verticalGradient(
-                                colors = listOf(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.0f)),
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.0f),
+                                    ),
                             ),
                     ),
                 ),
@@ -415,9 +419,14 @@ private fun AcwrChart(
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
                                 remember(rangeDays, trimpPoints, ratioPoints, granularity) {
-                                    val offsets = if (granularity == TrendGranularity.DAILY) emptyList()
-                                    else (trimpPoints.map { it.dayOffset } + ratioPoints.map { it.dayOffset })
-                                        .distinct().sorted()
+                                    val offsets =
+                                        if (granularity == TrendGranularity.DAILY) {
+                                            emptyList()
+                                        } else {
+                                            (trimpPoints.map { it.dayOffset } + ratioPoints.map { it.dayOffset })
+                                                .distinct()
+                                                .sorted()
+                                        }
                                     ChartDefaults.itemPlacerForRangeDays(rangeDays, offsets)
                                 },
                             guideline = guidelineComponent,

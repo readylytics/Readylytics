@@ -130,13 +130,17 @@ internal fun buildVitalsChartSeries(
                 }
             }.sortedBy(DailyDataPoint::dayOffset)
 
-    val (hrvPoints, hrvSummary) = realPoints { it.nocturnalHrv?.toFloat() }
-        .aggregateByRange(range.granularity, startDate, endDate, range.days)
-    val (rhrPoints, rhrSummary) = realPoints { it.restingHeartRate?.toFloat() }
-        .aggregateByRange(range.granularity, startDate, endDate, range.days)
-    val (spo2Points, spo2Summary) = realPoints { it.avgSleepingSpo2 }
-        .aggregateByRange(range.granularity, startDate, endDate, range.days)
-    val (bodyTempPoints, bodyTempSummary) = realPoints {
+    val (hrvPoints, hrvSummary) =
+        realPoints { it.nocturnalHrv?.toFloat() }
+            .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (rhrPoints, rhrSummary) =
+        realPoints { it.restingHeartRate?.toFloat() }
+            .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (spo2Points, spo2Summary) =
+        realPoints { it.avgSleepingSpo2 }
+            .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (bodyTempPoints, bodyTempSummary) =
+        realPoints {
             it.avgSleepingBodyTemp?.let { celsius ->
                 UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
             }
