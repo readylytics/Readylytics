@@ -66,6 +66,7 @@ fun BloodPressureSplitChart(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.fixed(2f)
                     }
                 },
