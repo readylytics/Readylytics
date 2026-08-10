@@ -254,9 +254,9 @@ fun BloodPressureDetailScreen(
                         zoomState = chartZoomState,
                         parentScrollInProgress = { scrollState.isScrollInProgress },
                     )
-                    if (uiState.periodSummary != null) {
+                    uiState.periodSummary?.let { summary ->
                         PeriodAverageSummaryRow(
-                            summary = uiState.periodSummary!!,
+                            summary = summary,
                             unit = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
                             decimalPlaces = 0,
                             direction = DeltaDirection.NEUTRAL,

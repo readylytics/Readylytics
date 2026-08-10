@@ -11,10 +11,12 @@ class DiagnosticLogFileExportTest {
         val cacheDir = Files.createTempDirectory("diag").toFile()
         try {
             val file = DiagnosticLogFileExport.write(cacheDir, "line1\nline2\n")
+            val diagnosticDir = requireNotNull(file.parentFile)
+            val diagnosticRoot = requireNotNull(diagnosticDir.parentFile)
 
             assertTrue(file.exists())
-            assertEquals("diagnostic_logs", file.parentFile.name)
-            assertEquals(cacheDir, file.parentFile.parentFile)
+            assertEquals("diagnostic_logs", diagnosticDir.name)
+            assertEquals(cacheDir, diagnosticRoot)
             assertTrue(file.name.startsWith(DiagnosticLogFileExport.FILE_PREFIX))
             assertTrue(file.name.endsWith(".txt"))
             assertEquals("line1\nline2\n", file.readText())

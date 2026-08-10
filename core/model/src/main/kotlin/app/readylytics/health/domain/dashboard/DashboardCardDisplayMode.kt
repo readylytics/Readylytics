@@ -40,6 +40,7 @@ object NullableDashboardCardDisplayModeSerializer : KSerializer<DashboardCardDis
             PrimitiveKind.STRING,
         ).nullable
 
+    @OptIn(ExperimentalSerializationApi::class)
     override fun serialize(
         encoder: Encoder,
         value: DashboardCardDisplayMode?,
@@ -51,6 +52,7 @@ object NullableDashboardCardDisplayModeSerializer : KSerializer<DashboardCardDis
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     override fun deserialize(decoder: Decoder): DashboardCardDisplayMode? {
         if (!decoder.decodeNotNullMark()) {
             decoder.decodeNull()

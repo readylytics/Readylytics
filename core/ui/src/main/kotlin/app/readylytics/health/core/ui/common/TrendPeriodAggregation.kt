@@ -180,7 +180,6 @@ fun List<DailyDataPoint>.padBucketsToRange(
             when (granularity) {
                 TrendGranularity.MONTHLY -> bucketStart.plusMonths(1)
                 TrendGranularity.QUARTERLY -> bucketStart.plusMonths(3)
-                else -> cursor.plusDays(1) // unreachable: DAILY returns early
             }
     }
     return offsets.map { offset -> byOffset[offset] ?: DailyDataPoint(offset, null) }
