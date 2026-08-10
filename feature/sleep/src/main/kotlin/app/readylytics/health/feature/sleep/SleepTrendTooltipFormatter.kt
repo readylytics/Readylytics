@@ -31,25 +31,10 @@ internal fun buildSleepTrendTooltipData(
     strings: SleepTrendTooltipStrings,
     locale: Locale = Locale.getDefault(),
     granularity: TrendGranularity = TrendGranularity.DAILY,
+    periodLabels: List<String> = emptyList(),
 ): DataPointTooltipData {
-    val scoringClockFormatter =
-        (clockFormatter.clone() as DateFormat).apply {
-            timeZone = TimeZone.getTimeZone(scoringZoneId)
-        }
-    val date = ChartUtils.dayOffsetToLocalDate(selectedState.dayOffset, rangeStartMs, scoringZoneId)
-
     if (granularity != TrendGranularity.DAILY) {
-        val periodLabel =
-            when (granularity) {
-                TrendGranularity.MONTHLY -> date.format(DateTimeFormatter.ofPattern("MMM", locale))
-                TrendGranularity.QUARTERLY ->
-                    String.format(
-                        locale,
-                        strings.quarterLabelFormat,
-                        ((date.monthValue - 1) / 3) + 1,
-                    )
-                TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
-            }
+        val periodLabel = periodLabels.getOrElse(selectedState.dayOffset) { "" }
         val duration =
             DateFormatUtils.formatSleepDuration(
                 ((selectedState.actualDurationValue ?: 0f) * 60f).roundToInt(),
@@ -69,6 +54,11 @@ internal fun buildSleepTrendTooltipData(
         )
     }
 
+    val scoringClockFormatter =
+        (clockFormatter.clone() as DateFormat).apply {
+            timeZone = TimeZone.getTimeZone(scoringZoneId)
+        }
+    val date = ChartUtils.dayOffsetToLocalDate(selectedState.dayOffset, rangeStartMs, scoringZoneId)
     val duration =
         DateFormatUtils.formatSleepDuration(
             ((selectedState.actualDurationValue ?: 0f) * 60f).roundToInt(),

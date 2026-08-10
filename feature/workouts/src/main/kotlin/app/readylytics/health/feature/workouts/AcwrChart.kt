@@ -30,6 +30,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -164,27 +165,31 @@ private fun AcwrChart(
     val avgTrimpFormat = stringResource(R.string.acwr_tooltip_avg_trimp_format)
     val avgStrainFormat = stringResource(R.string.acwr_tooltip_avg_strain_format)
 
+    val quarterTemplate = stringResource(CoreUiR.string.period_label_quarter)
+    val periodLabels = remember(trimpPoints, rangeStartMs, granularity, quarterTemplate) {
+        if (granularity == TrendGranularity.DAILY) {
+            emptyList()
+        } else {
+            trimpPoints.map { point ->
+                val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
+                periodLabelFor(granularity, date) { quarter: Int ->
+                    String.format(java.util.Locale.getDefault(), quarterTemplate, quarter)
+                }
+            }
+        }
+    }
+
     // Derive tooltipState directly from selectedState to avoid separate side-effects.
     // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
     val tooltipState =
-        remember(selectedState, rangeStartMs, trimpFormat, strainFormat, avgTrimpFormat, avgStrainFormat, granularity) {
+        remember(selectedState, rangeStartMs, trimpFormat, strainFormat, avgTrimpFormat, avgStrainFormat, granularity, periodLabels) {
             selectedState?.let { s ->
-                val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                 val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
                 val trimpText = s.trimpValue?.let { MetricFormatter.roundTrimp(it).toString() } ?: "—"
                 val strainText = MetricFormatter.formatStrain(s.strainRatioValue)
 
                 if (granularity != TrendGranularity.DAILY) {
-                    val periodLabel =
-                        when (granularity) {
-                            TrendGranularity.MONTHLY ->
-                                date.format(
-                                    java.time.format.DateTimeFormatter
-                                        .ofPattern("MMM", java.util.Locale.getDefault()),
-                                )
-                            TrendGranularity.QUARTERLY -> "Q${((date.monthValue - 1) / 3) + 1}"
-                            TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
-                        }
+                    val periodLabel = periodLabels.getOrElse(s.dayOffset) { "" }
                     DataPointTooltipData(
                         valueText = periodLabel,
                         dateText = avgTrimpFormat.format(trimpText),
@@ -192,6 +197,7 @@ private fun AcwrChart(
                         offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
                     )
                 } else {
+                    val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                     DataPointTooltipData(
                         valueText = trimpFormat.format(trimpText),
                         dateText = strainFormat.format(strainText),
@@ -206,6 +212,20 @@ private fun AcwrChart(
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
+
+    val remappedTrimpPoints = remember(trimpPoints, granularity) {
+        if (granularity == TrendGranularity.DAILY) trimpPoints
+        else trimpPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+    }
+    val remappedRatioPoints = remember(ratioPoints, granularity) {
+        if (granularity == TrendGranularity.DAILY) ratioPoints
+        else ratioPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+    }
+    val xAxisRangeDays = remember(trimpPoints, granularity) {
+        if (granularity == TrendGranularity.DAILY) rangeDays
+        else trimpPoints.size
+    }
+
     val trimpAxisFormatter =
         remember {
             CartesianValueFormatter {
@@ -230,7 +250,7 @@ private fun AcwrChart(
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val trimpRangeProvider =
-        remember(trimpPoints, rangeDays) {
+        remember(remappedTrimpPoints, xAxisRangeDays) {
             object : CartesianLayerRangeProvider {
                 override fun getMinX(
                     minX: Double,
@@ -242,7 +262,7 @@ private fun AcwrChart(
                     minX: Double,
                     maxX: Double,
                     extraStore: ExtraStore,
-                ) = (rangeDays - 1).toDouble()
+                ) = (xAxisRangeDays - 1).toDouble()
 
                 override fun getMaxY(
                     minY: Double,
@@ -259,7 +279,7 @@ private fun AcwrChart(
         }
 
     val ratioRangeProvider =
-        remember(ratioPoints, rangeDays) {
+        remember(remappedRatioPoints, xAxisRangeDays) {
             object : CartesianLayerRangeProvider {
                 override fun getMinX(
                     minX: Double,
@@ -271,7 +291,7 @@ private fun AcwrChart(
                     minX: Double,
                     maxX: Double,
                     extraStore: ExtraStore,
-                ) = (rangeDays - 1).toDouble()
+                ) = (xAxisRangeDays - 1).toDouble()
 
                 override fun getMaxY(
                     minY: Double,
@@ -295,11 +315,20 @@ private fun AcwrChart(
             (ceil(dataMax / 0.5) * 0.5).coerceAtLeast(2.0)
         }
 
-    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
+    val xAxisFormatter =
+        if (granularity == TrendGranularity.DAILY) {
+            ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
+        } else {
+            remember(periodLabels) {
+                CartesianValueFormatter { _, value, _ ->
+                    periodLabels.getOrElse(value.toInt()) { "" }
+                }
+            }
+        }
 
-    LaunchedEffect(trimpPoints, ratioPoints) {
+    LaunchedEffect(remappedTrimpPoints, remappedRatioPoints) {
         modelProducer.runTransaction {
-            val validTrimp = trimpPoints.filter { it.value != null }
+            val validTrimp = remappedTrimpPoints.filter { it.value != null }
             if (validTrimp.isNotEmpty()) {
                 columnModel {
                     series(
@@ -308,7 +337,7 @@ private fun AcwrChart(
                     )
                 }
             }
-            val validRatio = ratioPoints.filter { it.value != null }
+            val validRatio = remappedRatioPoints.filter { it.value != null }
             if (validRatio.isNotEmpty()) {
                 lineModel {
                     series(
@@ -364,8 +393,8 @@ private fun AcwrChart(
     // ── Marker listener bridges Vico touch → Compose state ───────────────────
     val markerVisibilityListener =
         rememberAcwrMarkerVisibilityListener(
-            trimpPoints = trimpPoints,
-            ratioPoints = ratioPoints,
+            trimpPoints = remappedTrimpPoints,
+            ratioPoints = remappedRatioPoints,
             onStateChanged = { selectedState = it },
         )
 
@@ -374,8 +403,8 @@ private fun AcwrChart(
     val trimpTitle = stringResource(R.string.workout_metric_trimp)
     val strainTitle = stringResource(R.string.workout_metric_strain)
     val hasData =
-        remember(trimpPoints, ratioPoints) {
-            trimpPoints.any { it.value != null } || ratioPoints.any { it.value != null }
+        remember(remappedTrimpPoints, remappedRatioPoints) {
+            remappedTrimpPoints.any { it.value != null } || remappedRatioPoints.any { it.value != null }
         }
     val chartModifier =
         if (hasData) {
@@ -416,16 +445,16 @@ private fun AcwrChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(rangeDays, trimpPoints, ratioPoints, granularity) {
+                                remember(xAxisRangeDays, remappedTrimpPoints, granularity) {
                                     val offsets =
                                         if (granularity == TrendGranularity.DAILY) {
                                             emptyList()
                                         } else {
-                                            (trimpPoints.map { it.dayOffset } + ratioPoints.map { it.dayOffset })
-                                                .distinct()
-                                                .sorted()
+                                            remappedTrimpPoints
+                                                .map { it.dayOffset }
+                                                .distinct().sorted()
                                         }
-                                    ChartDefaults.itemPlacerForRangeDays(rangeDays, offsets)
+                                    ChartDefaults.itemPlacerForRangeDays(xAxisRangeDays, offsets)
                                 },
                             guideline = guidelineComponent,
                         ),

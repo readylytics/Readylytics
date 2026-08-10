@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
@@ -249,6 +250,19 @@ fun SleepTrendChart(
             }
         }
 
+    val periodLabels = remember(startOffsetPoints, rangeStartMs, granularity, scoringZoneId, quarterLabelFormat) {
+        if (granularity == TrendGranularity.DAILY) {
+            emptyList()
+        } else {
+            startOffsetPoints.map { point ->
+                val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs, scoringZoneId)
+                periodLabelFor(granularity, date) { quarter ->
+                    String.format(Locale.getDefault(), quarterLabelFormat, quarter)
+                }
+            }
+        }
+    }
+
     val tooltipState =
         remember(
             selectedState,
@@ -263,6 +277,7 @@ fun SleepTrendChart(
             quarterLabelFormat,
             clockFormatter,
             granularity,
+            periodLabels,
         ) {
             selectedState?.let { state ->
                 buildSleepTrendTooltipData(
@@ -281,6 +296,7 @@ fun SleepTrendChart(
                             quarterLabelFormat = quarterLabelFormat,
                         ),
                     granularity = granularity,
+                    periodLabels = periodLabels,
                 )
             }
         }
@@ -288,6 +304,23 @@ fun SleepTrendChart(
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
+
+    val remappedStartPoints = remember(startOffsetPoints, granularity) {
+        if (granularity == TrendGranularity.DAILY) startOffsetPoints
+        else startOffsetPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+    }
+    val remappedSpanPoints = remember(durationSpanPoints, granularity) {
+        if (granularity == TrendGranularity.DAILY) durationSpanPoints
+        else durationSpanPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+    }
+    val remappedActualPoints = remember(actualDurationPoints, granularity) {
+        if (granularity == TrendGranularity.DAILY) actualDurationPoints
+        else actualDurationPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+    }
+    val xAxisRangeDays = remember(startOffsetPoints, granularity) {
+        if (granularity == TrendGranularity.DAILY) rangeDays
+        else startOffsetPoints.size
+    }
 
     val leftAxisFormatter =
         remember {
@@ -314,7 +347,7 @@ fun SleepTrendChart(
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val leftRangeProvider =
-        remember(startOffsetPoints, durationSpanPoints, rangeDays) {
+        remember(remappedStartPoints, remappedSpanPoints, xAxisRangeDays) {
             object : CartesianLayerRangeProvider {
                 override fun getMinX(
                     minX: Double,
@@ -326,15 +359,15 @@ fun SleepTrendChart(
                     minX: Double,
                     maxX: Double,
                     extraStore: ExtraStore,
-                ) = (rangeDays - 1).toDouble()
+                ) = (xAxisRangeDays - 1).toDouble()
 
                 override fun getMinY(
                     minY: Double,
                     maxY: Double,
                     extraStore: ExtraStore,
                 ): Double {
-                    val startVals = startOffsetPoints.mapNotNull { it.value }
-                    val minVal = startVals.minOrNull() ?: 8.0f // default to 8:00 PM (8 hours since Noon)
+                    val startVals = remappedStartPoints.mapNotNull { it.value }
+                    val minVal = startVals.minOrNull() ?: 8.0f
                     return (floor(minVal.toDouble() - 1.0)).coerceAtLeast(0.0)
                 }
 
@@ -344,20 +377,20 @@ fun SleepTrendChart(
                     extraStore: ExtraStore,
                 ): Double {
                     val endVals =
-                        startOffsetPoints
-                            .zip(durationSpanPoints) { start, span ->
+                        remappedStartPoints
+                            .zip(remappedSpanPoints) { start, span ->
                                 val startVal = start.value
                                 val spanVal = span.value
                                 if (startVal != null && spanVal != null) startVal + spanVal else null
                             }.filterNotNull()
-                    val maxVal = endVals.maxOrNull() ?: 20.0f // default to 8:00 AM next day (20 hours since Noon)
+                    val maxVal = endVals.maxOrNull() ?: 20.0f
                     return (ceil(maxVal.toDouble() + 1.0)).coerceAtMost(24.0)
                 }
             }
         }
 
     val rightRangeProvider =
-        remember(actualDurationPoints, rangeDays) {
+        remember(remappedActualPoints, xAxisRangeDays) {
             object : CartesianLayerRangeProvider {
                 override fun getMinX(
                     minX: Double,
@@ -369,7 +402,7 @@ fun SleepTrendChart(
                     minX: Double,
                     maxX: Double,
                     extraStore: ExtraStore,
-                ) = (rangeDays - 1).toDouble()
+                ) = (xAxisRangeDays - 1).toDouble()
 
                 override fun getMinY(
                     minY: Double,
@@ -382,26 +415,35 @@ fun SleepTrendChart(
                     maxY: Double,
                     extraStore: ExtraStore,
                 ): Double {
-                    val vals = actualDurationPoints.mapNotNull { it.value?.toDouble() }
+                    val vals = remappedActualPoints.mapNotNull { it.value?.toDouble() }
                     val maxVal = vals.maxOrNull() ?: 8.0
                     return (ceil(maxVal / 2.0) * 2.0).coerceAtLeast(10.0)
                 }
             }
         }
 
-    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity, scoringZoneId)
-
-    val hasData =
-        remember(startOffsetPoints, durationSpanPoints, actualDurationPoints) {
-            startOffsetPoints.any { it.value != null } ||
-                durationSpanPoints.any { it.value != null } ||
-                actualDurationPoints.any { it.value != null }
+    val xAxisFormatter =
+        if (granularity == TrendGranularity.DAILY) {
+            ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity, scoringZoneId)
+        } else {
+            remember(periodLabels) {
+                CartesianValueFormatter { _, value, _ ->
+                    periodLabels.getOrElse(value.toInt()) { "" }
+                }
+            }
         }
 
-    LaunchedEffect(startOffsetPoints, durationSpanPoints, actualDurationPoints) {
+    val hasData =
+        remember(remappedStartPoints, remappedSpanPoints, remappedActualPoints) {
+            remappedStartPoints.any { it.value != null } ||
+                remappedSpanPoints.any { it.value != null } ||
+                remappedActualPoints.any { it.value != null }
+        }
+
+    LaunchedEffect(remappedStartPoints, remappedSpanPoints, remappedActualPoints) {
         modelProducer.runTransaction {
-            val validStart = startOffsetPoints.filter { it.value != null }
-            val validSpan = durationSpanPoints.filter { it.value != null }
+            val validStart = remappedStartPoints.filter { it.value != null }
+            val validSpan = remappedSpanPoints.filter { it.value != null }
             if (validStart.isNotEmpty() && validSpan.isNotEmpty()) {
                 columnModel {
                     series(
@@ -414,7 +456,7 @@ fun SleepTrendChart(
                     )
                 }
             }
-            val validActual = actualDurationPoints.filter { it.value != null }
+            val validActual = remappedActualPoints.filter { it.value != null }
             if (validActual.isNotEmpty()) {
                 lineModel {
                     series(
@@ -483,9 +525,9 @@ fun SleepTrendChart(
 
     val markerVisibilityListener =
         rememberSleepTrendMarkerVisibilityListener(
-            startOffsetPoints = startOffsetPoints,
-            durationSpanPoints = durationSpanPoints,
-            actualDurationPoints = actualDurationPoints,
+            startOffsetPoints = remappedStartPoints,
+            durationSpanPoints = remappedSpanPoints,
+            actualDurationPoints = remappedActualPoints,
             trendDays = trendDays,
             onStateChanged = { selectedState = it },
         )
@@ -529,18 +571,16 @@ fun SleepTrendChart(
                                 label = labelComponent,
                                 valueFormatter = xAxisFormatter,
                                 itemPlacer =
-                                    remember(rangeDays, startOffsetPoints, actualDurationPoints, granularity) {
+                                    remember(xAxisRangeDays, remappedStartPoints, granularity) {
                                         val offsets =
                                             if (granularity == TrendGranularity.DAILY) {
                                                 emptyList()
                                             } else {
-                                                (
-                                                    startOffsetPoints.map { it.dayOffset } +
-                                                        actualDurationPoints.map { it.dayOffset }
-                                                ).distinct()
-                                                    .sorted()
+                                                remappedStartPoints
+                                                    .map { it.dayOffset }
+                                                    .distinct().sorted()
                                             }
-                                        ChartDefaults.itemPlacerForRangeDays(rangeDays, offsets)
+                                        ChartDefaults.itemPlacerForRangeDays(xAxisRangeDays, offsets)
                                     },
                                 guideline = guidelineComponent,
                             ),
