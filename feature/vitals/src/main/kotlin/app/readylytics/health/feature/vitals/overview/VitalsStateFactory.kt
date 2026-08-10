@@ -4,10 +4,7 @@ import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.common.TrendGranularity
-import app.readylytics.health.core.ui.common.bucketBy
-import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
-import app.readylytics.health.core.ui.common.padToRange
+import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
@@ -133,37 +130,27 @@ internal fun buildVitalsChartSeries(
                 }
             }.sortedBy(DailyDataPoint::dayOffset)
 
-    fun seriesAndSummary(
-        valueDecimalPlaces: Int = 0,
-        value: (DailySummary) -> Float?,
-    ): Pair<List<DailyDataPoint>, PeriodAverageSummary?> {
-        val real = realPoints(value)
-        if (range.granularity == TrendGranularity.DAILY) {
-            return real.padToRange(range.days) to null
-        }
-        val bucketed = real.bucketBy(range.granularity, startDate, endDate, valueDecimalPlaces = valueDecimalPlaces)
-        return bucketed to buildPeriodAverageSummary(bucketed, range.granularity, startDate)
-    }
-
-    val hrv = seriesAndSummary { it.nocturnalHrv?.toFloat() }
-    val rhr = seriesAndSummary { it.restingHeartRate?.toFloat() }
-    val spo2 = seriesAndSummary { it.avgSleepingSpo2 }
-    val bodyTemp =
-        seriesAndSummary(valueDecimalPlaces = 1) {
+    val (hrvPoints, hrvSummary) = realPoints { it.nocturnalHrv?.toFloat() }
+        .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (rhrPoints, rhrSummary) = realPoints { it.restingHeartRate?.toFloat() }
+        .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (spo2Points, spo2Summary) = realPoints { it.avgSleepingSpo2 }
+        .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (bodyTempPoints, bodyTempSummary) = realPoints {
             it.avgSleepingBodyTemp?.let { celsius ->
                 UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
             }
-        }
+        }.aggregateByRange(range.granularity, startDate, endDate, range.days, valueDecimalPlaces = 1)
 
     return VitalsChartSeries(
-        hrv = hrv.first,
-        rhr = rhr.first,
-        spo2 = spo2.first,
-        bodyTemp = bodyTemp.first,
-        hrvPeriodSummary = hrv.second,
-        rhrPeriodSummary = rhr.second,
-        spo2PeriodSummary = spo2.second,
-        bodyTempPeriodSummary = bodyTemp.second,
+        hrv = hrvPoints,
+        rhr = rhrPoints,
+        spo2 = spo2Points,
+        bodyTemp = bodyTempPoints,
+        hrvPeriodSummary = hrvSummary,
+        rhrPeriodSummary = rhrSummary,
+        spo2PeriodSummary = spo2Summary,
+        bodyTempPeriodSummary = bodyTempSummary,
     )
 }
 
