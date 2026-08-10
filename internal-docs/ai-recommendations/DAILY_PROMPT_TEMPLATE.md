@@ -96,8 +96,11 @@ other as secondary context only.)
 - Load Score (0–100): `{{loadScore}}`
 - Current load state: `{{loadContext}}` (BELOW_TYPICAL / SWEET_SPOT / ELEVATED / HIGH
   / UNKNOWN)
-- Recommended load envelope for the remaining training today: `{{recommendedLoad}}`
-  (`{ qualitative: LIGHT / MODERATE / NORMAL / HIGH | null }`)
+- `recommended_load` envelope for the remaining training today:
+  `{{recommendedLoad}}`
+  (serialize the exact object `{ "qualitative": "LIGHT" | "MODERATE" | "NORMAL" |
+  "HIGH" | null }`; keep the object when the value is null, rendering
+  `{ "qualitative": null }`)
 - 7-day RAS total (informational only — never drives Readiness):
   Workout only `{{totalRasWorkoutOnly}}`, Everyday HR `{{totalRasEverydayHr}}`
 - Everyday-load coverage (only relevant if that source is active):
@@ -111,7 +114,8 @@ other as secondary context only.)
 - Latest available data timestamp: `{{dataCurrentUntil}}` (ISO-8601)
 
 The recommendation applies only to **additional** training after the latest available
-data timestamp (system prompt Section 6).
+data timestamp. No completed workouts is valid zero-load activity data, not a missing
+`recommended_load` envelope.
 
 ## F. Active Recovery Flags
 

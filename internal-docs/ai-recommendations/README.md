@@ -32,8 +32,15 @@ the workflow is intentionally offline-first and manual.
   API-key storage, and no in-app AI response rendering. The user pastes the copied
   prompts into an external app of their choice; the output contract is consumed there.
 - **Output contract:** the system prompt requires **strict JSON** (single object,
-  every field present, `null` where unknown). If a provider is later wired up,
-  enforce it with Structured Outputs / JSON Schema rather than natural language alone.
+  every field present, `null` where allowed) and includes an authoritative JSON
+  Schema plus a parseable example. If a provider is later wired up, enforce that
+  schema with Structured Outputs rather than natural language alone.
+- **Recommended-load shape and caveat:** daily data uses
+  `recommended_load: { "qualitative": "LIGHT" | "MODERATE" | "NORMAL" | "HIGH" |
+  null }`. A missing/incomplete envelope makes a `TRAIN` target null and adds a
+  caveat only; it does not change the resolved action or confidence. A day with no
+  completed workouts is different: upstream treats it as zero completed TRIMP and
+  still computes the structured remaining envelope.
 
 ## Data-contract gaps (`OPEN QUESTION` / `UPSTREAM DATA REQUIRED`)
 
@@ -48,7 +55,7 @@ describe:
 | `load_context` (BELOW_TYPICAL/SWEET_SPOT/ELEVATED/HIGH/UNKNOWN) | Current accumulated load state, distinct from recommended session load | `RESOLVED` — `mapLoadState()` sets `loadContext` via `strainRatio.toLoadContext()`; rendered in Section E |
 | `permitted_recommendation_ceiling` (REST/ACTIVE_RECOVERY/TRAIN/UNKNOWN) | Hard ceiling so the AI never invents its own allowed recommendation type | `RESOLVED` — `PermittedRecommendationMapper.resolve()` (`core/model/.../PermittedRecommendationMapper.kt`) + `PermittedRecommendation` enum; rendered in Section B as `today.permittedRecommendation`. Defaults to `UNKNOWN` when no `DailySummary` exists for the day — the system prompt now treats `UNKNOWN` as an effective `REST` ceiling |
 | `recommended_action` (REST/ACTIVE_RECOVERY/TRAIN/null) | The actual upstream recommendation, distinct from a ceiling label | `RESOLVED` — `mapToday()` mirrors `PermittedRecommendationMapper.resolve()` into nullable `today.recommendedAction`; `UNKNOWN` becomes `null`, and Section B renders it explicitly |
-| `recommended_load` envelope (`{qualitative}`) | Deterministic load ceiling so the AI never fabricates a target load | `RESOLVED` — `RecommendedLoadCalculator` derives `{ qualitative: LIGHT/MODERATE/NORMAL/HIGH | null }` from the existing `loadContext` bands and aggregate completed-today TRIMP classification; Section E renders it. `null` is reserved for missing/unknown load-context data, never created by a downgrade |
+| `recommended_load` envelope (`{ "qualitative": value }`) | Deterministic remaining-load target so the AI never fabricates a target load | `RESOLVED` — `RecommendedLoadCalculator` derives the qualitative value from the existing `loadContext` bands and aggregate completed-today TRIMP classification; Section E documents the structured object. An empty workout list contributes zero completed TRIMP and still produces an envelope. Missing/incomplete envelopes are data gaps handled with a caveat only; `qualitative: null` is preserved inside the object |
 | `today_completed_workouts`, `today_trimp`, `today_training_minutes`, `data_current_until` | So the recommendation is for *remaining* training today | `RESOLVED` — computed in `GetDailyPromptDataUseCase.execute()` from `WorkoutRepository.getInRange(todayMidnight, tomorrowMidnight)`; rendered in Section B |
 | `advisor_data_confidence` (LOW/MEDIUM/HIGH) | Deterministic confidence from Readylytics | `RESOLVED` — `resolveAdvisorConfidence()` always populates it (not gated on a `DailySummary` existing); rendered in Section A. The system prompt's prompt-side fallback mapping (Section 7) is now dead code in practice but stays as a documented fallback in case this field is ever absent |
 
