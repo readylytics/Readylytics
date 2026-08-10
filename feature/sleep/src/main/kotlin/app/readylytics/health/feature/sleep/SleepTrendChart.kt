@@ -35,10 +35,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.DeltaDirection
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
+import app.readylytics.health.core.ui.components.PeriodAverageSummaryRow
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.feature.sleep.R
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -82,7 +86,12 @@ fun SleepTrendCard(
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
     scoringZoneId: ZoneId = ZoneId.systemDefault(),
+    startOffsetSummary: PeriodAverageSummary? = null,
+    durationSpanSummary: PeriodAverageSummary? = null,
+    actualDurationSummary: PeriodAverageSummary? = null,
 ) {
+    val barColor = MaterialTheme.colorScheme.primary
+    val lineColor = MaterialTheme.colorScheme.tertiary
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -107,6 +116,38 @@ fun SleepTrendCard(
                 parentScrollInProgress = parentScrollInProgress,
                 scoringZoneId = scoringZoneId,
             )
+
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
+            SleepTrendChartLegends(
+                barColor = barColor,
+                lineColor = lineColor,
+            )
+
+            startOffsetSummary?.let { summary ->
+                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                PeriodAverageSummaryRow(
+                    summary = summary,
+                    unit = "h",
+                    decimalPlaces = 1,
+                    direction = DeltaDirection.NEUTRAL,
+                )
+            }
+            durationSpanSummary?.let { summary ->
+                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+                PeriodAverageSummaryRow(
+                    summary = summary,
+                    unit = "h",
+                    decimalPlaces = 1,
+                )
+            }
+            actualDurationSummary?.let { summary ->
+                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+                PeriodAverageSummaryRow(
+                    summary = summary,
+                    unit = "h",
+                    decimalPlaces = 1,
+                )
+            }
         }
     }
 }
@@ -205,8 +246,6 @@ fun SleepTrendChart(
             }
         }
 
-    val barColor = MaterialTheme.colorScheme.primary
-    val lineColor = MaterialTheme.colorScheme.tertiary
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
@@ -311,7 +350,8 @@ fun SleepTrendChart(
             }
         }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs, scoringZoneId)
+    val granularity = selectedRange.granularity
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity, scoringZoneId)
 
     val hasData =
         remember(startOffsetPoints, durationSpanPoints, actualDurationPoints) {
@@ -357,7 +397,7 @@ fun SleepTrendChart(
                         thickness = 8.dp,
                     ),
                     rememberLineComponent(
-                        fill = Fill(barColor),
+                        fill = Fill(MaterialTheme.colorScheme.primary),
                         thickness = 8.dp,
                         shape = CircleShape,
                     ),
@@ -372,20 +412,20 @@ fun SleepTrendChart(
             lineProvider =
                 LineCartesianLayer.LineProvider.series(
                     LineCartesianLayer.rememberLine(
-                        fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
+                        fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.tertiary)),
                         areaFill =
                             LineCartesianLayer.AreaFill.single(
                                 Fill(
                                     brush =
                                         Brush.verticalGradient(
-                                            colors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f)),
+                                            colors = listOf(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.0f)),
                                         ),
                                 ),
                             ),
                         pointProvider =
                             LineCartesianLayer.PointProvider.single(
                                 LineCartesianLayer.Point(
-                                    rememberShapeComponent(fill = Fill(lineColor), shape = CircleShape),
+                                    rememberShapeComponent(fill = Fill(MaterialTheme.colorScheme.tertiary), shape = CircleShape),
                                     6.dp,
                                 ),
                             ),
@@ -443,7 +483,12 @@ fun SleepTrendChart(
                             HorizontalAxis.rememberBottom(
                                 label = labelComponent,
                                 valueFormatter = xAxisFormatter,
-                                itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                itemPlacer = remember(rangeDays, startOffsetPoints, actualDurationPoints) {
+                                    val offsets = if (granularity == TrendGranularity.DAILY) emptyList()
+                                    else (startOffsetPoints.map { it.dayOffset } + actualDurationPoints.map { it.dayOffset })
+                                        .distinct().sorted()
+                                    ChartDefaults.itemPlacerForRangeDays(rangeDays, offsets)
+                                },
                                 guideline = guidelineComponent,
                             ),
                         endAxis =
@@ -463,8 +508,8 @@ fun SleepTrendChart(
 
             SleepTrendOverlay(
                 selectedState = selectedState,
-                barColor = barColor,
-                lineColor = lineColor,
+                barColor = MaterialTheme.colorScheme.primary,
+                lineColor = MaterialTheme.colorScheme.tertiary,
                 layerBounds = layerBounds,
                 barThicknessDp = 8.dp,
                 chartHeight = chartHeight,
@@ -476,16 +521,9 @@ fun SleepTrendChart(
                     data = tooltipState,
                     onDismissRequest = { selectedState = null },
                 )
-            }
         }
-
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
-
-        SleepTrendChartLegends(
-            barColor = barColor,
-            lineColor = lineColor,
-        )
     }
+}
 }
 
 @Composable
