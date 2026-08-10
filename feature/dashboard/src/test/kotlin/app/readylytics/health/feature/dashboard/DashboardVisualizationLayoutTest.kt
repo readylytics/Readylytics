@@ -675,6 +675,38 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
     }
 
     @Test
+    fun barMode_keepsBarAndDeltaPillInsideCardBounds_longValueAtExtremeFontScale() {
+        val strainSpecification = requireNotNull(DashboardCardCatalog.spec(CardId.STRAIN_RATIO))
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 2.0f),
+            ) {
+                TestTheme {
+                    DashboardMetricCard(
+                        presentation =
+                            presentation.copy(
+                                title = "Strain ratio",
+                                valueText = "1234.56",
+                                unitText = "kg",
+                                secondaryText = "↑ 0.23",
+                                accessibilityDescription = "Strain ratio 1234.56 kg, normal.",
+                            ),
+                        specification = strainSpecification,
+                        requestedMode = DashboardCardDisplayMode.BAR,
+                        isEditing = false,
+                        onModeSelected = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(UNIVERSAL_BAR_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(UNIVERSAL_DELTA_PILL_TAG, useUnmergedTree = true).assertIsDisplayed()
+        assertTagIsInsideCard(UNIVERSAL_BAR_TAG)
+        assertTagIsInsideCard(UNIVERSAL_DELTA_PILL_TAG)
+    }
+
+    @Test
     fun deltaPillTreatment_isLimitedToCardsWhoseSecondaryTextIsARealDelta() {
         listOf(
             CardId.SLEEP_SCORE,
