@@ -79,6 +79,7 @@ data class WorkoutsUiState(
     val yesterdayStrainRatio: Float? = null,
     val yesterdayReadiness: Float? = null,
     val todayStrainIncrease: Float? = null,
+    val isRangeChanging: Boolean = false,
     val trimpPeriodSummary: PeriodAverageSummary? = null,
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
 )
@@ -113,12 +114,14 @@ class WorkoutsViewModel
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
-        private val _selectedRange =
-            MutableStateFlow(
-                savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS,
-            )
+    private val _selectedRange =
+        MutableStateFlow(
+            savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS,
+        )
 
-        val selectedRange = _selectedRange.asStateFlow()
+    val selectedRange = _selectedRange.asStateFlow()
+
+    private val _isRangeChanging = MutableStateFlow(false)
 
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
@@ -448,10 +451,14 @@ class WorkoutsViewModel
                 // padded to displayDayMidnights.size entries (null-valued, never actually empty),
                 // so latestSummary/recentWorkouts are the correct "no data yet" signal here.
                 .combine(foregroundSyncController.isSyncing) { state, syncing ->
+                    _isRangeChanging.value = false
                     state.copy(
                         isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
                         isRefreshing = syncing,
                     )
+                }
+                .combine(_isRangeChanging) { state, isChanging ->
+                    state.copy(isRangeChanging = isChanging)
                 }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
@@ -476,6 +483,7 @@ class WorkoutsViewModel
         fun onRangeSelected(range: TimeRange) {
             _currentPage.value = 1
             _selectedRange.value = range
+            _isRangeChanging.value = true
             savedStateHandle["selectedRange"] = range
         }
 
