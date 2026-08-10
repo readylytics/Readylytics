@@ -61,6 +61,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -182,6 +183,10 @@ fun TrendChart(
 
     val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
 
+    // Resolved in composable scope so the format string can be used inside the non-composable
+    // marker listener below; resource strings must never be built as Kotlin literals.
+    val quarterTemplate = stringResource(R.string.period_label_quarter)
+
     LaunchedEffect(renderData.validPoints) {
         modelProducer.runTransaction {
             lineModel {
@@ -259,7 +264,11 @@ fun TrendChart(
             val nextTooltip =
                 DataPointTooltipData(
                     valueText = valueText,
-                    dateText = formatTrendTooltipDate(granularity, date),
+                    dateText =
+                        formatTrendTooltipDate(
+                            granularity,
+                            date,
+                        ) { quarter -> String.format(Locale.getDefault(), quarterTemplate, quarter) },
                     offset =
                         androidx.compose.ui.unit
                             .IntOffset(canvasX.toInt(), canvasY.toInt()),
@@ -465,15 +474,17 @@ internal fun formatTrendTooltipValue(
 /**
  * Tooltip date line: [DAILY] keeps the short date format; bucketed [MONTHLY]/[QUARTERLY] points
  * show the containing period label (e.g. "Juli" / "Q3") instead of a mid-month calendar date.
+ * The quarterly label comes from the caller (a `strings.xml` resource), keeping this pure.
  */
 internal fun formatTrendTooltipDate(
     granularity: TrendGranularity,
     date: java.time.LocalDate,
+    quarterLabel: (Int) -> String,
 ): String =
     if (granularity == TrendGranularity.DAILY) {
         ChartUtils.formatTooltipDate(date)
     } else {
-        periodLabelFor(granularity, date)
+        periodLabelFor(granularity, date, quarterLabel)
     }
 
 internal fun formatBaselineLegendText(

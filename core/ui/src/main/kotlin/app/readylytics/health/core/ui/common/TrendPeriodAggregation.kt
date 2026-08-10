@@ -10,10 +10,13 @@ import kotlin.math.roundToInt
 /**
  * Latest-bucket-vs-prior-bucket summary for a bucketed trend series.
  * [average] is the latest populated bucket's average, [previousAverage] the bucket before it.
+ * Labels are intentionally not preformatted: [periodStartDate]/[previousPeriodStartDate] carry the
+ * bucket midpoint dates so the UI layer can format them (quarter labels come from `strings.xml`).
  */
 data class PeriodAverageSummary(
-    val periodLabel: String,
-    val previousPeriodLabel: String,
+    val granularity: TrendGranularity,
+    val periodStartDate: LocalDate,
+    val previousPeriodStartDate: LocalDate,
     val average: Float?,
     val previousAverage: Float?,
 )
@@ -49,26 +52,24 @@ private fun bucketLengthDays(
             ChronoUnit.DAYS.between(bucketStart, bucketStart.plusMonths(3)).toInt()
     }
 
+fun quarterNumberFor(date: LocalDate): Int = (date.monthValue - 1) / 3 + 1
+
 /**
  * Display label for the period containing [date]: localized month abbreviation for [MONTHLY],
- * `Qn` for [QUARTERLY], or the ISO date for [DAILY]. Shared by the axis formatter and the
- * period summary builder so both render identical labels.
+ * [quarterLabel] for [QUARTERLY], or the ISO date for [DAILY]. The quarterly label must be
+ * produced by the caller (it carries a `strings.xml` resource), keeping this function pure.
  */
 fun periodLabelFor(
     granularity: TrendGranularity,
     date: LocalDate,
+    quarterLabel: (Int) -> String,
 ): String =
     when (granularity) {
         TrendGranularity.MONTHLY ->
             date.format(DateTimeFormatter.ofPattern("MMM", Locale.getDefault()))
-        TrendGranularity.QUARTERLY -> "Q${(date.monthValue - 1) / 3 + 1}"
+        TrendGranularity.QUARTERLY -> quarterLabel(quarterNumberFor(date))
         TrendGranularity.DAILY -> date.toString()
     }
-
-private fun DailyDataPoint.periodLabel(
-    granularity: TrendGranularity,
-    startDate: LocalDate,
-): String = periodLabelFor(granularity, startDate.plusDays(dayOffset.toLong()))
 
 /**
  * Groups [DailyDataPoint]s by calendar month or quarter (per [granularity]), averages each
@@ -128,8 +129,9 @@ fun buildPeriodAverageSummary(
     val latest = points.last()
     val previous = points[points.lastIndex - 1]
     return PeriodAverageSummary(
-        periodLabel = latest.periodLabel(granularity, startDate),
-        previousPeriodLabel = previous.periodLabel(granularity, startDate),
+        granularity = granularity,
+        periodStartDate = startDate.plusDays(latest.dayOffset.toLong()),
+        previousPeriodStartDate = startDate.plusDays(previous.dayOffset.toLong()),
         average = latest.value,
         previousAverage = previous.value,
     )

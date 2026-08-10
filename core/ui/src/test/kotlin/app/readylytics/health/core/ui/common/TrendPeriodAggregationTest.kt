@@ -176,14 +176,15 @@ class TrendPeriodAggregationTest {
                 startDate = LocalDate.of(2026, 1, 1),
             )
 
-        assertEquals("Feb", summary?.periodLabel)
-        assertEquals("Jan", summary?.previousPeriodLabel)
+        assertEquals(TrendGranularity.MONTHLY, summary?.granularity)
+        assertEquals(LocalDate.of(2026, 2, 14), summary?.periodStartDate)
+        assertEquals(LocalDate.of(2026, 1, 16), summary?.previousPeriodStartDate)
         assertEquals(24f, summary?.average)
         assertEquals(20f, summary?.previousAverage)
     }
 
     @Test
-    fun `quarterly summary uses quarter labels`() {
+    fun `quarterly summary uses bucket midpoint dates`() {
         val summary =
             buildPeriodAverageSummary(
                 points = listOf(DailyDataPoint(44, 10f), DailyDataPoint(135, 20f)),
@@ -191,10 +192,8 @@ class TrendPeriodAggregationTest {
                 startDate = LocalDate.of(2026, 1, 1),
             )
 
-        assertEquals("Q2", summary?.periodLabel)
-        assertEquals("Q1", summary?.previousPeriodLabel)
-        assertEquals(20f, summary?.average)
-        assertEquals(10f, summary?.previousAverage)
+        assertEquals(LocalDate.of(2026, 1, 1).plusDays(135), summary?.periodStartDate)
+        assertEquals(LocalDate.of(2026, 1, 1).plusDays(44), summary?.previousPeriodStartDate)
     }
 
     @Test
@@ -224,18 +223,29 @@ class TrendPeriodAggregationTest {
     }
 
     @Test
-    fun `monthly labels use localized month abbreviations`() {
-        assertEquals("Jan", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 1, 1)))
-        assertEquals("Feb", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 2, 15)))
-        assertEquals("Dec", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 12, 31)))
+    fun `quarterNumberFor returns the calendar quarter`() {
+        assertEquals(1, quarterNumberFor(LocalDate.of(2026, 1, 1)))
+        assertEquals(1, quarterNumberFor(LocalDate.of(2026, 3, 31)))
+        assertEquals(2, quarterNumberFor(LocalDate.of(2026, 4, 1)))
+        assertEquals(3, quarterNumberFor(LocalDate.of(2026, 7, 1)))
+        assertEquals(4, quarterNumberFor(LocalDate.of(2026, 10, 1)))
     }
 
     @Test
-    fun `quarterly labels use quarter numbers`() {
-        assertEquals("Q1", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 1, 1)))
-        assertEquals("Q1", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 3, 31)))
-        assertEquals("Q2", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 4, 1)))
-        assertEquals("Q3", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 7, 1)))
-        assertEquals("Q4", periodLabelFor(TrendGranularity.QUARTERLY, LocalDate.of(2026, 10, 1)))
+    fun `periodLabelFor formats quarterly via the supplied quarterLabel`() {
+        assertEquals(
+            "Q2",
+            periodLabelFor(
+                TrendGranularity.QUARTERLY,
+                LocalDate.of(2026, 4, 1),
+            ) { quarter -> "Q$quarter" },
+        )
+    }
+
+    @Test
+    fun `monthly labels use localized month abbreviations`() {
+        assertEquals("Jan", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 1, 1)) { "Q$it" })
+        assertEquals("Feb", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 2, 15)) { "Q$it" })
+        assertEquals("Dec", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 12, 31)) { "Q$it" })
     }
 }

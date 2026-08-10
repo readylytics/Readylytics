@@ -2,6 +2,7 @@ package app.readylytics.health.feature.vitals.overview
 
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
@@ -232,7 +233,8 @@ class VitalsStateFactoryTest {
 
         assertEquals(listOf(44, 135, 226, 318), series.hrv.map { it.dayOffset })
         assertEquals(listOf(10f, 20f, 30f, 40f), series.hrv.map { it.value })
-        assertEquals("Q4", series.hrvPeriodSummary?.periodLabel)
+        assertEquals(TrendGranularity.QUARTERLY, series.hrvPeriodSummary?.granularity)
+        assertEquals(start.plusDays(318), series.hrvPeriodSummary?.periodStartDate)
         assertEquals(40f, series.hrvPeriodSummary?.average)
         assertEquals(30f, series.hrvPeriodSummary?.previousAverage)
     }
