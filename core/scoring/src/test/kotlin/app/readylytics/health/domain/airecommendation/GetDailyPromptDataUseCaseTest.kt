@@ -9,6 +9,7 @@ import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.model.PermittedRecommendation
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
@@ -103,7 +104,7 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals("HIGH", result.advisorDataConfidence)
         assertEquals("SWEET_SPOT", result.loadState.loadContext)
         assertEquals("NEUTRAL", result.today.readinessBand)
-        assertEquals("REST", result.today.permittedRecommendation)
+        assertEquals(PermittedRecommendation.REST, result.today.permittedRecommendation)
     }
 
     @Test

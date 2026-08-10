@@ -15,6 +15,7 @@ import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.model.PermittedRecommendation
 import app.readylytics.health.domain.scoring.ScoringConstants
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -181,7 +182,7 @@ class GetDailyPromptDataUseCase
             val permittedRecommendation = PermittedRecommendationMapper.resolve(
                 status = metricStatus,
                 flags = summary.recoveryFlags.toList(),
-            ).name
+            )
 
             return TodayPromptData(
                 readinessScore = readinessScore,

@@ -50,7 +50,7 @@ object DailyPromptFormatter {
         appendLine("## B. Today's Readiness & Baselines")
         appendLine("- Readiness score (from the active source above): ${numberOrUnavailable(today.readinessScore)}")
         appendLine("- Readiness band: ${orUnavailable(today.readinessBand)}")
-        appendLine("- Permitted recommendation ceiling: ${orUnavailable(today.permittedRecommendation)}")
+        appendLine("- Permitted recommendation ceiling: ${today.permittedRecommendation.name}")
         appendLine("- Restoration sub-score (sRest): ${numberOrUnavailable(today.restorationScore)}")
         appendLine(
             "- HRV baseline: ${intOrUnavailable(today.hrvBaseline)} ms — mu ${numberOrUnavailable(today.hrvMuMssd)}, " +

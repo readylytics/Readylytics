@@ -2,6 +2,7 @@ package app.readylytics.health.domain.airecommendation
 
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.repository.WorkoutData
+import app.readylytics.health.domain.model.PermittedRecommendation
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -87,7 +88,7 @@ class DailyPromptFormatterTest {
                     todayTrimp = 100f,
                     todayTrainingMinutes = 60,
                     dataCurrentUntil = "12:00 PM",
-                    permittedRecommendation = "TRAIN",
+                    permittedRecommendation = PermittedRecommendation.TRAIN,
                 ),
             yesterdaySleep =
                 YesterdaySleepPromptData(

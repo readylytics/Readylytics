@@ -2,6 +2,7 @@ package app.readylytics.health.domain.airecommendation
 
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.repository.WorkoutData
+import app.readylytics.health.domain.model.PermittedRecommendation
 import java.time.LocalDate
 
 /**
@@ -44,7 +45,7 @@ data class TodayPromptData(
     val todayTrimp: Float? = null,
     val todayTrainingMinutes: Int? = null,
     val dataCurrentUntil: String? = null,
-    val permittedRecommendation: String? = null,
+    val permittedRecommendation: PermittedRecommendation = PermittedRecommendation.UNKNOWN,
 )
 
 data class YesterdaySleepPromptData(
