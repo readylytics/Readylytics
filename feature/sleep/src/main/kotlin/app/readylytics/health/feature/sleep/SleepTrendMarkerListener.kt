@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
@@ -19,12 +20,19 @@ fun rememberSleepTrendMarkerVisibilityListener(
     durationSpanPoints: List<DailyDataPoint>,
     actualDurationPoints: List<DailyDataPoint>,
     trendDays: List<SleepTrendDay>,
+    granularity: TrendGranularity,
     onStateChanged: (SleepTrendSelectedState) -> Unit,
 ): CartesianMarkerVisibilityListener {
     val startOffsetMap = remember(startOffsetPoints) { startOffsetPoints.associateBy { it.dayOffset } }
     val durationSpanMap = remember(durationSpanPoints) { durationSpanPoints.associateBy { it.dayOffset } }
     val actualDurationMap = remember(actualDurationPoints) { actualDurationPoints.associateBy { it.dayOffset } }
-    val trendDayMap = remember(trendDays) { trendDays.associateBy { it.dayOffset } }
+    val trendDayMap = remember(trendDays, granularity) {
+        if (granularity == TrendGranularity.DAILY) {
+            trendDays.associateBy { it.dayOffset }
+        } else {
+            trendDays.mapIndexed { i, day -> day.copy(dayOffset = i) }.associateBy { it.dayOffset }
+        }
+    }
 
     val currentOnStateChanged = rememberUpdatedState(onStateChanged)
     val currentTrendDayMap = rememberUpdatedState(trendDayMap)

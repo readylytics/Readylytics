@@ -530,6 +530,7 @@ fun SleepTrendChart(
             durationSpanPoints = remappedSpanPoints,
             actualDurationPoints = remappedActualPoints,
             trendDays = trendDays,
+            granularity = granularity,
             onStateChanged = { selectedState = it },
         )
 

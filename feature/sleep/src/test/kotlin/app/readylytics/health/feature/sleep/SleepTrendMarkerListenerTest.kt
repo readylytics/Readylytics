@@ -3,6 +3,7 @@ package app.readylytics.health.feature.sleep
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.domain.scoring.sleep.SleepTrendNap
 import com.patrykandpatrick.vico.compose.cartesian.data.ColumnCartesianLayerModel
@@ -59,6 +60,7 @@ class SleepTrendMarkerListenerTest {
                                 naps = naps,
                             ),
                         ),
+                    granularity = TrendGranularity.DAILY,
                     onStateChanged = { selectedState = it },
                 )
         }
@@ -119,6 +121,7 @@ class SleepTrendMarkerListenerTest {
                                 naps = emptyList(),
                             ),
                         ),
+                    granularity = TrendGranularity.DAILY,
                     onStateChanged = { selectedState = it },
                 )
         }
