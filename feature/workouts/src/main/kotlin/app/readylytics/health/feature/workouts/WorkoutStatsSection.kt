@@ -61,6 +61,7 @@ private fun RasSummaryValueTextStyle.asTextStyle(): TextStyle =
 @Composable
 fun WorkoutStatsSection(
     uiState: WorkoutsUiState,
+    selectedRange: TimeRange,
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
     rangeDays: Int = uiState.selectedRange.days,
@@ -252,7 +253,7 @@ fun WorkoutStatsSection(
         ) {
             TimeRange.entries.forEachIndexed { index, range ->
                 SegmentedButton(
-                    selected = uiState.selectedRange == range,
+                    selected = selectedRange == range,
                     onClick = { onRangeSelected(range) },
                     enabled = !uiState.isLoading && !uiState.isRangeChanging,
                     shape =
@@ -268,7 +269,7 @@ fun WorkoutStatsSection(
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         CardLoader(
-            isLoading = uiState.isLoading,
+            isLoading = uiState.isLoading || uiState.isRangeChanging,
             skeleton = {
                 SkeletonCard(
                     height = 312.dp,
@@ -290,15 +291,8 @@ fun WorkoutStatsSection(
                         scrollState = scrollState,
                         zoomState = zoomState,
                         parentScrollInProgress = parentScrollInProgress,
-                        granularity = uiState.selectedRange.granularity,
+                        granularity = selectedRange.granularity,
                     )
-                    if (uiState.isRangeChanging) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp,
-                        )
-                    }
                 }
             },
         )
