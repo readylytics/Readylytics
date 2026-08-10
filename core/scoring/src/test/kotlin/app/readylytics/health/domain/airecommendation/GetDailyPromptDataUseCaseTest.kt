@@ -166,6 +166,24 @@ class GetDailyPromptDataUseCaseTest {
         assertNull("loadContext not null", result.loadState.loadContext)
     }
 
+    @Test
+    fun `execute aggregates todays workouts into today block`() = runTest {
+        coEvery { dailySummaryRepository.getByDate(any()) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
+        
+        val w1 = workoutData("w1").copy(trimp = 50f, durationMinutes = 30, endTime = todayMidnight + 1000L)
+        val w2 = workoutData("w2").copy(trimp = 70f, durationMinutes = 40, endTime = todayMidnight + 2000L)
+        coEvery { workoutRepository.getInRange(todayMidnight, tomorrowMidnight) } returns listOf(w1, w2)
+
+        val result = useCase.execute(today)
+
+        assertEquals(2, result.today.todayCompletedWorkouts)
+        assertEquals(120f, result.today.todayTrimp)
+        assertEquals(70, result.today.todayTrainingMinutes)
+        assertEquals(java.time.Instant.ofEpochMilli(todayMidnight + 2000L).toString(), result.today.dataCurrentUntil)
+    }
+
     private fun summary(
         date: LocalDate,
         readinessEverydayHr: Float? = null,

@@ -69,13 +69,13 @@ class GetDailyPromptDataUseCase
 
             val todaysWorkouts = workoutRepository.getInRange(todayMidnight, tomorrowMidnight)
             val todayCompletedWorkouts = todaysWorkouts.size
-            val todayTrimp = todaysWorkouts.mapNotNull { it.trimp }.sum().takeIf { todaysWorkouts.isNotEmpty() }
+            val todayTrimp = todaysWorkouts.mapNotNull { it.trimp }.takeIf { it.isNotEmpty() }?.sum()
             val todayTrainingMinutes = todaysWorkouts.sumOf { it.durationMinutes }.takeIf { todaysWorkouts.isNotEmpty() }
             val dataCurrentUntil =
                 if (todaysWorkouts.isNotEmpty()) {
                     Instant.ofEpochMilli(todaysWorkouts.maxOf { it.endTime }).toString()
                 } else {
-                    Instant.now().toString()
+                    today.atTime(java.time.LocalTime.MAX).atZone(zoneId).toInstant().toString()
                 }
 
             val isEverydaySourceLowConfidence =
@@ -86,7 +86,7 @@ class GetDailyPromptDataUseCase
                     it == RecoveryFlag.HRV_MISSING || it == RecoveryFlag.STAGES_MISSING
                 } ?: false
             val phase =
-                todaySummary?.snapshotCalibrationPhase?.let { enumValueOf<CalibrationPhase>(it.uppercase()) }
+                todaySummary?.snapshotCalibrationPhase?.let { runCatching { enumValueOf<CalibrationPhase>(it.uppercase()) }.getOrNull() }
                     ?: CalibrationPhase.CALIBRATION
             val advisorConf =
                 resolveAdvisorConfidence(phase, hasMajorMissingSignals, isEverydaySourceLowConfidence).name
