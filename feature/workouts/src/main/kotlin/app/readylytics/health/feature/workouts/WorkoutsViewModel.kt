@@ -115,14 +115,14 @@ class WorkoutsViewModel
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
-    private val _selectedRange =
-        MutableStateFlow(
-            savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS,
-        )
+        private val _selectedRange =
+            MutableStateFlow(
+                savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS,
+            )
 
-    val selectedRange = _selectedRange.asStateFlow()
+        val selectedRange = _selectedRange.asStateFlow()
 
-    private val _isRangeChanging = MutableStateFlow(false)
+        private val isRangeChangingState = MutableStateFlow(false)
 
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
@@ -312,12 +312,25 @@ class WorkoutsViewModel
                             val (bucketedStrainRatio, strainSummary) =
                                 dailyStrainRatio
                                     .aggregateByRange(
-                                        range.granularity, displayStartDayDate, date, range.days,
+                                        range.granularity,
+                                        displayStartDayDate,
+                                        date,
+                                        range.days,
                                         valueDecimalPlaces = 2,
                                     )
 
-                            val paddedTrimp = bucketedTrimp.padBucketsToRange(range.granularity, displayStartDayDate, date)
-                            val paddedStrain = bucketedStrainRatio.padBucketsToRange(range.granularity, displayStartDayDate, date)
+                            val paddedTrimp =
+                                bucketedTrimp.padBucketsToRange(
+                                    range.granularity,
+                                    displayStartDayDate,
+                                    date,
+                                )
+                            val paddedStrain =
+                                bucketedStrainRatio.padBucketsToRange(
+                                    range.granularity,
+                                    displayStartDayDate,
+                                    date,
+                                )
 
                             val summaryByDate = trimpSummaries.associateBy { it.date }
 
@@ -453,7 +466,7 @@ class WorkoutsViewModel
                     // chosen range at this point -- set by CombinedParams.range on pipeline restart).
                     // Previously this was in the isSyncing combine, which re-emitted on every sync
                     // toggle and could hide the spinner before flatMapLatest finished recomputing.
-                    _isRangeChanging.value = false
+                    isRangeChangingState.value = false
                     state
                 }
                 // isSyncing is merged in after the heavy pipeline instead of inside it (mirrors
@@ -468,8 +481,7 @@ class WorkoutsViewModel
                         isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
                         isRefreshing = syncing,
                     )
-                }
-                .combine(_isRangeChanging) { state, isChanging ->
+                }.combine(isRangeChangingState) { state, isChanging ->
                     state.copy(isRangeChanging = isChanging)
                 }.flowOn(defaultDispatcher)
                 .stateIn(
@@ -495,7 +507,7 @@ class WorkoutsViewModel
         fun onRangeSelected(range: TimeRange) {
             _currentPage.value = 1
             _selectedRange.value = range
-            _isRangeChanging.value = true
+            isRangeChangingState.value = true
             savedStateHandle["selectedRange"] = range
         }
 

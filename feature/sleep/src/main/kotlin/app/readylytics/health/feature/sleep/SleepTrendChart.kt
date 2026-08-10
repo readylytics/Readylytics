@@ -250,18 +250,19 @@ fun SleepTrendChart(
             }
         }
 
-    val periodLabels = remember(startOffsetPoints, rangeStartMs, granularity, scoringZoneId, quarterLabelFormat) {
-        if (granularity == TrendGranularity.DAILY) {
-            emptyList()
-        } else {
-            startOffsetPoints.map { point ->
-                val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs, scoringZoneId)
-                periodLabelFor(granularity, date) { quarter ->
-                    String.format(Locale.getDefault(), quarterLabelFormat, quarter)
+    val periodLabels =
+        remember(startOffsetPoints, rangeStartMs, granularity, scoringZoneId, quarterLabelFormat) {
+            if (granularity == TrendGranularity.DAILY) {
+                emptyList()
+            } else {
+                startOffsetPoints.map { point ->
+                    val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs, scoringZoneId)
+                    periodLabelFor(granularity, date) { quarter ->
+                        String.format(Locale.getDefault(), quarterLabelFormat, quarter)
+                    }
                 }
             }
         }
-    }
 
     val tooltipState =
         remember(
@@ -305,22 +306,38 @@ fun SleepTrendChart(
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
 
-    val remappedStartPoints = remember(startOffsetPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) startOffsetPoints
-        else startOffsetPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
-    }
-    val remappedSpanPoints = remember(durationSpanPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) durationSpanPoints
-        else durationSpanPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
-    }
-    val remappedActualPoints = remember(actualDurationPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) actualDurationPoints
-        else actualDurationPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
-    }
-    val xAxisRangeDays = remember(startOffsetPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) rangeDays
-        else startOffsetPoints.size
-    }
+    val remappedStartPoints =
+        remember(startOffsetPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                startOffsetPoints
+            } else {
+                startOffsetPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+            }
+        }
+    val remappedSpanPoints =
+        remember(durationSpanPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                durationSpanPoints
+            } else {
+                durationSpanPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+            }
+        }
+    val remappedActualPoints =
+        remember(actualDurationPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                actualDurationPoints
+            } else {
+                actualDurationPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+            }
+        }
+    val xAxisRangeDays =
+        remember(startOffsetPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                rangeDays
+            } else {
+                startOffsetPoints.size
+            }
+        }
 
     val leftAxisFormatter =
         remember {
@@ -580,7 +597,8 @@ fun SleepTrendChart(
                                             } else {
                                                 remappedStartPoints
                                                     .map { it.dayOffset }
-                                                    .distinct().sorted()
+                                                    .distinct()
+                                                    .sorted()
                                             }
                                         ChartDefaults.itemPlacerForRangeDays(xAxisRangeDays, offsets)
                                     },

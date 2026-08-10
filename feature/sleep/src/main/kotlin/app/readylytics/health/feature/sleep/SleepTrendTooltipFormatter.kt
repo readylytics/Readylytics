@@ -7,7 +7,6 @@ import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import java.text.DateFormat
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone

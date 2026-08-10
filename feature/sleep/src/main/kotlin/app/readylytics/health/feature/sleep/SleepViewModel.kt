@@ -335,9 +335,19 @@ class SleepViewModel
                                     valueDecimalPlaces = 1,
                                 )
 
-                            val paddedStart = bucketedStart.padBucketsToRange(range.granularity, rangeStart, trendEndDate)
+                            val paddedStart =
+                                bucketedStart.padBucketsToRange(
+                                    range.granularity,
+                                    rangeStart,
+                                    trendEndDate,
+                                )
                             val paddedSpan = bucketedSpan.padBucketsToRange(range.granularity, rangeStart, trendEndDate)
-                            val paddedDuration = bucketedDuration.padBucketsToRange(range.granularity, rangeStart, trendEndDate)
+                            val paddedDuration =
+                                bucketedDuration.padBucketsToRange(
+                                    range.granularity,
+                                    rangeStart,
+                                    trendEndDate,
+                                )
 
                             SleepTrendData(
                                 startOffsetPoints = paddedStart,

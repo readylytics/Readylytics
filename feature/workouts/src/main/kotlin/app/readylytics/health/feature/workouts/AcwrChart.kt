@@ -166,23 +166,33 @@ private fun AcwrChart(
     val avgStrainFormat = stringResource(R.string.acwr_tooltip_avg_strain_format)
 
     val quarterTemplate = stringResource(CoreUiR.string.period_label_quarter)
-    val periodLabels = remember(trimpPoints, rangeStartMs, granularity, quarterTemplate) {
-        if (granularity == TrendGranularity.DAILY) {
-            emptyList()
-        } else {
-            trimpPoints.map { point ->
-                val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
-                periodLabelFor(granularity, date) { quarter: Int ->
-                    String.format(java.util.Locale.getDefault(), quarterTemplate, quarter)
+    val periodLabels =
+        remember(trimpPoints, rangeStartMs, granularity, quarterTemplate) {
+            if (granularity == TrendGranularity.DAILY) {
+                emptyList()
+            } else {
+                trimpPoints.map { point ->
+                    val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
+                    periodLabelFor(granularity, date) { quarter: Int ->
+                        String.format(java.util.Locale.getDefault(), quarterTemplate, quarter)
+                    }
                 }
             }
         }
-    }
 
     // Derive tooltipState directly from selectedState to avoid separate side-effects.
     // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
     val tooltipState =
-        remember(selectedState, rangeStartMs, trimpFormat, strainFormat, avgTrimpFormat, avgStrainFormat, granularity, periodLabels) {
+        remember(
+            selectedState,
+            rangeStartMs,
+            trimpFormat,
+            strainFormat,
+            avgTrimpFormat,
+            avgStrainFormat,
+            granularity,
+            periodLabels,
+        ) {
             selectedState?.let { s ->
                 val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
                 val trimpText = s.trimpValue?.let { MetricFormatter.roundTrimp(it).toString() } ?: "—"
@@ -213,18 +223,30 @@ private fun AcwrChart(
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
 
-    val remappedTrimpPoints = remember(trimpPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) trimpPoints
-        else trimpPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
-    }
-    val remappedRatioPoints = remember(ratioPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) ratioPoints
-        else ratioPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
-    }
-    val xAxisRangeDays = remember(trimpPoints, granularity) {
-        if (granularity == TrendGranularity.DAILY) rangeDays
-        else trimpPoints.size
-    }
+    val remappedTrimpPoints =
+        remember(trimpPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                trimpPoints
+            } else {
+                trimpPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+            }
+        }
+    val remappedRatioPoints =
+        remember(ratioPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                ratioPoints
+            } else {
+                ratioPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+            }
+        }
+    val xAxisRangeDays =
+        remember(trimpPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                rangeDays
+            } else {
+                trimpPoints.size
+            }
+        }
 
     val trimpAxisFormatter =
         remember {
@@ -453,7 +475,8 @@ private fun AcwrChart(
                                         } else {
                                             remappedTrimpPoints
                                                 .map { it.dayOffset }
-                                                .distinct().sorted()
+                                                .distinct()
+                                                .sorted()
                                         }
                                     ChartDefaults.itemPlacerForRangeDays(xAxisRangeDays, offsets)
                                 },
