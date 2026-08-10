@@ -856,6 +856,48 @@ DashboardCardFactory (single CardId.INSIGHTS slot with AnimatedContent)
 - **Dismiss:** User clicks close button on `InsightCard` → emits `DashboardEvent.DismissInsight` → launches coroutine → `InsightDismissalDao.dismiss(InsightDismissalEntity)` → persists dismissal to database, immediately triggering flow update; if more active insights remain, the single insight slot rotates to the next queued insight.
 - **Restore:** When all active insights for the selected date are dismissed, the same `CardId.INSIGHTS` slot renders the slim rerun card. User taps it → emits `DashboardEvent.RestoreInsights` → launches coroutine → `InsightDismissalDao.restoreAllForDate(dateMs)` → deletes all dismissals for date, immediately restoring the first queued insight.
 
+### 3.6 AI Recommendation prompt export (manual copy-to-external-AI-chat)
+
+An offline-first dashboard card (`AiRecommendationCard`, `CardId.AI_RECOMMENDATION`) lets the user
+copy a static setup prompt and a populated daily prompt to paste into an external AI chat app. There
+is no in-app LLM/network call. The daily prompt is generated on demand from persisted data only —
+no score is recomputed (see the scoring section for how the underlying columns are produced).
+
+```
+Room DAO
+  │  DailySummaryDao.getByDate / getSince
+  │  WorkoutDao.getWorkoutsInRange (bounded epoch range)
+  ▼
+GetDailyPromptDataUseCase (core/scoring/.../domain/airecommendation/)
+  │  today's + yesterday's persisted DailySummary rows
+  │  yesterday workouts via WorkoutRepository.getInRange([yesterdayMidnight, todayMidnight))
+  │  pattern workouts via WorkoutRepository.getInRange([today−3mo, tomorrowMidnight))
+  │  per-workout GetWorkoutDisplayMetricsUseCase (same path the Workouts screens use)
+  │  active Training Load source via UserPreferencesReader.strainLoadSourceMode
+  ▼
+DailyPromptData (pure) → DailyPromptFormatter.format(...)  (pure, stable English, Sections A–H)
+  ▼
+DashboardViewModel.dailyPromptText (one-shot StateFlow<String?>)   [DashboardEvent.RequestDailyPromptCopy]
+  ▼
+DashboardRoute → LocalClipboardManager.setText + SnackbarHostState  (setup prompt is copied
+  synchronously from the static `R.string.ai_init_prompt` resource)
+```
+
+Key behaviors:
+- `WorkoutRepository.getInRange(fromMs, toMs)` is a thin delegation to
+  `WorkoutDao.getWorkoutsInRange` (added for this feature; bounded, no schema change).
+- The prompt labels which Training Load source is active; `LoadSourceSelector` projects the
+  active-source ATL/CTL/ratio/load/readiness columns. RAS totals are informational only.
+- `ComputeWorkoutPatternSummaryUseCase` (Section G) groups the three-month window by exercise type
+  (frequency, avg TRIMP, avg duration, preferred weekdays) and computes rest-day average, rest-day
+  gap, and current training streak. Workout day boundaries resolve in UTC.
+- The formatter is pure Kotlin; unavailable values render as "insufficient data", never fabricated.
+  UI copy on the card itself is localized via `feature/dashboard` resources; the prompt text itself
+  is stable English to stay machine-parseable and comparable with the template docs.
+- Default card presence: `AI_RECOMMENDATION` is in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS`;
+  `CardConfigurationRepositoryImpl` appends missing defaults once, visibly, after the highest stored
+  position for existing installs.
+
 ---
 
 Keep this document synchronized with the source.

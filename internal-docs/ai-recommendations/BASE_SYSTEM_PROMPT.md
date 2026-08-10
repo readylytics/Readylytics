@@ -1,7 +1,8 @@
 # Readylytics Training Advisor — Base System Prompt
 
-Status: prompt-content design only. No integration code exists yet — see `README.md`
-in this directory for scope and next steps.
+Status: implemented as a manual copy-to-external-AI-chat workflow. Source of truth for
+the in-app `ai_init_prompt` string resource; see `README.md` in this directory for
+scope and integration details.
 
 This file is the **system prompt**: static persona, vocabulary, and output-contract
 content sent once per session/conversation. It does not contain per-day data — that

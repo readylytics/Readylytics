@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard
 
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.airecommendation.DailyPromptData
+import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.domain.airecommendation.LoadStatePromptData
 import app.readylytics.health.domain.airecommendation.TodayPromptData
 import app.readylytics.health.domain.airecommendation.WorkoutPatternSummary
@@ -18,7 +19,6 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
@@ -148,67 +148,71 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun `request daily prompt emits formatted text for today`() = runTest {
-        val fixedClock =
-            java.time.Clock.fixed(Instant.parse("2026-08-09T12:00:00Z"), ZoneOffset.UTC)
-        viewModel =
-            DashboardViewModel(
-                dailySummaryRepository = dailySummaryRepository,
-                getDashboardDataUseCase = getDashboardDataUseCase,
-                foregroundSyncController = foregroundSyncController,
-                selectedDateRepository = selectedDateRepository,
-                settingsRepo = settingsRepo,
-                cardConfigRepository = cardConfigRepository,
-                circadianRepo = circadianRepo,
-                dailyMetricCache = dailyMetricCache,
-                heartRateRepository = heartRateRepository,
-                insightDismissalRepository = insightDismissalRepository,
-                observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
-                getDailyPromptDataUseCase = getDailyPromptDataUseCase,
-                clock = fixedClock,
-                defaultDispatcher = testDispatcher,
-            )
-        coEvery { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) } returns promptData()
+    fun `request daily prompt emits formatted text for today`() =
+        runTest {
+            val fixedClock =
+                java.time.Clock.fixed(Instant.parse("2026-08-09T12:00:00Z"), ZoneOffset.UTC)
+            viewModel =
+                DashboardViewModel(
+                    dailySummaryRepository = dailySummaryRepository,
+                    getDashboardDataUseCase = getDashboardDataUseCase,
+                    foregroundSyncController = foregroundSyncController,
+                    selectedDateRepository = selectedDateRepository,
+                    settingsRepo = settingsRepo,
+                    cardConfigRepository = cardConfigRepository,
+                    circadianRepo = circadianRepo,
+                    dailyMetricCache = dailyMetricCache,
+                    heartRateRepository = heartRateRepository,
+                    insightDismissalRepository = insightDismissalRepository,
+                    observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                    clock = fixedClock,
+                    defaultDispatcher = testDispatcher,
+                )
+            coEvery { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) } returns promptData()
 
-        viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
-        advanceUntilIdle()
+            viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
+            advanceUntilIdle()
 
-        assertNotNull(viewModel.dailyPromptText.value)
-        assertTrue(viewModel.dailyPromptText.value!!.contains("Today's data for 2026-08-09"))
-        coVerify(exactly = 1) { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) }
-    }
-
-    @Test
-    fun `clear daily prompt returns state to null`() = runTest {
-        viewModel.clearDailyPromptText()
-
-        assertNull(viewModel.dailyPromptText.value)
-    }
-
-    @Test
-    fun `daily prompt failure exposes error and emits no text`() = runTest {
-        coEvery { getDailyPromptDataUseCase.execute(any()) } throws IOException("boom")
-
-        viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
-        advanceUntilIdle()
-
-        assertNull(viewModel.dailyPromptText.value)
-        assertNotNull(viewModel.errorMessage.value)
-    }
-
-    @Test
-    fun `daily prompt cancellation is rethrown`() = runTest {
-        coEvery { getDailyPromptDataUseCase.execute(any()) } throws CancellationException("cancelled")
-
-        var thrown: Throwable? = null
-        try {
-            viewModel.generateDailyPrompt(LocalDate.of(2026, 8, 9))
-        } catch (e: CancellationException) {
-            thrown = e
+            assertNotNull(viewModel.dailyPromptText.value)
+            assertTrue(viewModel.dailyPromptText.value!!.contains("Today's data for 2026-08-09"))
+            coVerify(exactly = 1) { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) }
         }
 
-        assertTrue(thrown is CancellationException)
-    }
+    @Test
+    fun `clear daily prompt returns state to null`() =
+        runTest {
+            viewModel.clearDailyPromptText()
+
+            assertNull(viewModel.dailyPromptText.value)
+        }
+
+    @Test
+    fun `daily prompt failure exposes error and emits no text`() =
+        runTest {
+            coEvery { getDailyPromptDataUseCase.execute(any()) } throws IOException("boom")
+
+            viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
+            advanceUntilIdle()
+
+            assertNull(viewModel.dailyPromptText.value)
+            assertNotNull(viewModel.errorMessage.value)
+        }
+
+    @Test
+    fun `daily prompt cancellation is rethrown`() =
+        runTest {
+            coEvery { getDailyPromptDataUseCase.execute(any()) } throws CancellationException("cancelled")
+
+            var thrown: Throwable? = null
+            try {
+                viewModel.generateDailyPrompt(LocalDate.of(2026, 8, 9))
+            } catch (e: CancellationException) {
+                thrown = e
+            }
+
+            assertTrue(thrown is CancellationException)
+        }
 
     @Test
     fun toggleCardManagement_togglesState() {

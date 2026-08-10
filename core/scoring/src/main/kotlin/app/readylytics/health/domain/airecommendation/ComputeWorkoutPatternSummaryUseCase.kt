@@ -7,6 +7,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import javax.inject.Inject
 
 /**
  * Pure aggregation of the AI recommendation prompt's "Typical Workout Pattern" section (Section G).
@@ -15,7 +16,9 @@ import java.time.temporal.ChronoUnit
  * for this personalization summary. Calendar-day presence is used for rest-day and streak
  * calculations: any day in the window without at least one included workout counts as a rest day.
  */
-class ComputeWorkoutPatternSummaryUseCase {
+class ComputeWorkoutPatternSummaryUseCase
+    @Inject
+    constructor() {
     fun execute(
         workouts: List<WorkoutData>,
         today: LocalDate,

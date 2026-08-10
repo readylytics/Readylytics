@@ -1,7 +1,8 @@
 # Readylytics Training Advisor — Daily Prompt Template
 
-Status: prompt-content design only. No integration code exists yet — see `README.md`
-in this directory for scope and next steps.
+Status: implemented as a manual copy-to-external-AI-chat workflow. Source of truth for
+the `DailyPromptFormatter` output; see `README.md` in this directory for scope and
+integration details.
 
 This is the **per-day user-turn prompt**. It assumes `BASE_SYSTEM_PROMPT.md` is
 already loaded as the system prompt for the conversation. `{{placeholder}}` values are

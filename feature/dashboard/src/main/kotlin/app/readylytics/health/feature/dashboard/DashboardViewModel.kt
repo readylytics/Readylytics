@@ -8,6 +8,8 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.di.DefaultDispatcher
+import app.readylytics.health.domain.airecommendation.DailyPromptFormatter
+import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
@@ -35,8 +37,6 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
-import app.readylytics.health.domain.airecommendation.DailyPromptFormatter
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
