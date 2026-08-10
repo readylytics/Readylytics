@@ -269,43 +269,46 @@ fun WorkoutStatsSection(
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         CardLoader(
-            isLoading = uiState.isLoading,
+            isLoading = uiState.isLoading || uiState.isRangeChanging,
             skeleton = {
-                SkeletonCard(
-                    height = 312.dp,
+                Card(
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                )
-            },
-            content = {
-                Box(
-                    modifier =
-                        Modifier
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .fillMaxWidth()
-                            .height(220.dp),
-                    contentAlignment = Alignment.Center,
+                    shape = MaterialTheme.shapes.large,
                 ) {
-                    if (uiState.isRangeChanging) {
-                        CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp,
+                    Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+                        Text(
+                            text = stringResource(R.string.acwr_training_load),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    } else {
-                        AcwrChartCard(
-                            trimpPoints = uiState.dailyTrimp,
-                            ratioPoints = uiState.dailyStrainRatio,
-                            rangeStartMs = uiState.rangeStartMs,
-                            rangeDays = rangeDays,
-                            scrollState = scrollState,
-                            zoomState = zoomState,
-                            parentScrollInProgress = parentScrollInProgress,
-                            granularity = selectedRange.granularity,
-                        )
+                        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(220.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp,
+                            )
+                        }
                     }
                 }
+            },
+            content = {
+                AcwrChartCard(
+                    trimpPoints = uiState.dailyTrimp,
+                    ratioPoints = uiState.dailyStrainRatio,
+                    rangeStartMs = uiState.rangeStartMs,
+                    rangeDays = rangeDays,
+                    scrollState = scrollState,
+                    zoomState = zoomState,
+                    parentScrollInProgress = parentScrollInProgress,
+                    granularity = selectedRange.granularity,
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                )
             },
         )
 
