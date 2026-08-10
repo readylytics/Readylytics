@@ -149,9 +149,9 @@ fun SleepTrendCard(
                         if (deltaMinutes != null && deltaMinutes != 0) {
                             val sign = if (deltaMinutes > 0) "+" else ""
                             val absMin = kotlin.math.abs(deltaMinutes)
-                            "$sign${absMin}min"
+                            stringResource(R.string.sleep_trend_avg_delta_minutes_format, sign, absMin)
                         } else {
-                            "—"
+                            stringResource(R.string.sleep_trend_avg_delta_no_change)
                         }
 
                     Row(

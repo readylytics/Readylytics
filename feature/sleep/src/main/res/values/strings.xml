@@ -40,4 +40,7 @@
     <string name="card_title_nap_count">Naps Today</string>
     <string name="tooltip_nap_duration">Total supplemental sleep duration for this wake-day. Only sessions above the minimum counted duration threshold are included.</string>
     <string name="tooltip_nap_count">Number of naps or supplemental sleep sessions counted for this wake-day. Sessions shorter than the minimum counted duration setting are excluded.</string>
+
+    <string name="sleep_trend_avg_delta_minutes_format">%1$s%2$dmin</string>
+    <string name="sleep_trend_avg_delta_no_change">—</string>
 </resources>
