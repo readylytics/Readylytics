@@ -4,9 +4,12 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.util.Locale
 
 class WeightDriftTrainingLoadRuleTest {
     private val rule = WeightDriftTrainingLoadRule()
@@ -26,7 +29,6 @@ class WeightDriftTrainingLoadRuleTest {
 
     @Test
     fun `fires when weight drift exceeds threshold and strain ratio is high`() {
-        // delta = 1, percent = 1/80 = 0.0125 -- need > 0.02, adjust weight
         val finding =
             rule.evaluate(
                 context(
@@ -35,9 +37,9 @@ class WeightDriftTrainingLoadRuleTest {
                 ),
             )
 
-        // delta = 2, percent = 2/80 = 0.025 > 0.02
+        // delta = 2, percent = 2/80 x 100 = 2.5 > 2.0
         assertEquals(InsightType.WEIGHT_DRIFT_TRAINING_LOAD, finding?.type)
-        assertEquals(InsightParams.WeightDrift(deltaKg = 2f, percent = 0.025f), finding?.params)
+        assertEquals(InsightParams.WeightDrift(deltaKg = 2f, percent = 2.5f), finding?.params)
     }
 
     @Test
@@ -57,7 +59,7 @@ class WeightDriftTrainingLoadRuleTest {
 
     @Test
     fun `does not fire when percent drift is at threshold`() {
-        // delta = 1.6, percent = 1.6 / 80 = 0.02 (exactly threshold)
+        // delta = 1.6, percent = 1.6 / 80 x 100 = 2.0 (exactly threshold)
         assertNull(
             rule.evaluate(
                 context(
@@ -88,9 +90,9 @@ class WeightDriftTrainingLoadRuleTest {
                 ),
             )
 
-        // delta = -2, percent = abs(-2)/80 = 0.025 > 0.02
+        // delta = -2, percent = abs(-2)/80 x 100 = 2.5 > 2.0
         assertEquals(InsightType.WEIGHT_DRIFT_TRAINING_LOAD, finding?.type)
-        assertEquals(InsightParams.WeightDrift(deltaKg = -2f, percent = 0.025f), finding?.params)
+        assertEquals(InsightParams.WeightDrift(deltaKg = -2f, percent = 2.5f), finding?.params)
     }
 
     @Test
@@ -102,7 +104,26 @@ class WeightDriftTrainingLoadRuleTest {
             )
         val finding = rule.evaluate(context(todayWeightKg = 82f, recentDays = recentDays))
 
-        // baseline should be the oldest (80f), delta = 2, percent = 0.025
-        assertEquals(InsightParams.WeightDrift(deltaKg = 2f, percent = 0.025f), finding?.params)
+        // baseline should be the oldest (80f), delta = 2, percent = 2.5
+        assertEquals(InsightParams.WeightDrift(deltaKg = 2f, percent = 2.5f), finding?.params)
+    }
+
+    @Test
+    fun `percent param formats as a real percentage through the presentation path`() {
+        val finding =
+            rule.evaluate(
+                context(
+                    todayWeightKg = 82f,
+                    recentDays = listOf(dailySummary(date = today.minusDays(6), weightKg = 80f)),
+                ),
+            )
+        val params = finding?.params as InsightParams.WeightDrift
+
+        val body =
+            "Your weight has changed by %1$.1f kg (%2$.1f%%) over the past week while your training load is high"
+        val rendered = String.format(Locale.US, body, params.deltaKg, params.percent)
+
+        assertTrue("expected a real percentage, got: $rendered", rendered.contains("(2.5%)"))
+        assertFalse("fraction scale would render 0.0%, got: $rendered", rendered.contains("0.0%"))
     }
 }

@@ -22,7 +22,7 @@ object InsightConstants {
     const val HRV_DECLINE_STREAK_DAYS = 3
     const val STEP_GOAL_SHORTFALL_RATIO = 0.7f
     const val RAS_WEEKLY_TARGET = 150f
-    const val WEIGHT_DRIFT_PERCENT_THRESHOLD = 0.02f
+    const val WEIGHT_DRIFT_PERCENT_THRESHOLD = 2.0f // was 0.02f (fraction scale)
     const val MIN_BP_BASELINE_SAMPLES = 3
 
     // The step shortfall insight only fires once we're within this many
