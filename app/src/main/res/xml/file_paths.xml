@@ -6,4 +6,7 @@
     <cache-path
         name="logcat_capture"
         path="logcat_capture/" />
+    <cache-path
+        name="diagnostic_logs"
+        path="diagnostic_logs/" />
 </paths>

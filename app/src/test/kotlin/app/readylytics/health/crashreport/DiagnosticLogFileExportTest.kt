@@ -1,24 +1,25 @@
 package app.readylytics.health.crashreport
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
+import java.nio.file.Files
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class DiagnosticLogFileExportTest {
-    @get:Rule
-    val tempFolder = TemporaryFolder()
-
     @Test
-    fun `write creates diagnostic text file in supplied directory`() {
-        val directory = tempFolder.newFolder("cache")
+    fun `write creates file inside the declared diagnostic_logs subfolder`() {
+        val cacheDir = Files.createTempDirectory("diag").toFile()
+        try {
+            val file = DiagnosticLogFileExport.write(cacheDir, "line1\nline2\n")
 
-        val file = DiagnosticLogFileExport.write(directory, "redacted log")
-
-        assertTrue(file.name.startsWith("readylytics_diagnostics_"))
-        assertTrue(file.name.endsWith(".txt"))
-        assertEquals("redacted log", file.readText())
-        assertEquals(directory.canonicalPath, file.parentFile?.canonicalPath)
+            assertTrue(file.exists())
+            assertEquals("diagnostic_logs", file.parentFile.name)
+            assertEquals(cacheDir, file.parentFile.parentFile)
+            assertTrue(file.name.startsWith(DiagnosticLogFileExport.FILE_PREFIX))
+            assertTrue(file.name.endsWith(".txt"))
+            assertEquals("line1\nline2\n", file.readText())
+        } finally {
+            cacheDir.deleteRecursively()
+        }
     }
 }
