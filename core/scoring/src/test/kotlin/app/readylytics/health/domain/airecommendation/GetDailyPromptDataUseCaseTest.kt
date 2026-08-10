@@ -109,7 +109,7 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals("NEUTRAL", result.today.readinessBand)
         assertEquals(PermittedRecommendation.REST, result.today.permittedRecommendation)
         assertEquals(PermittedRecommendation.REST, result.today.recommendedAction)
-        assertEquals("NORMAL", result.loadState.recommendedLoad)
+        assertEquals(RecommendedLoadPromptData(qualitative = "NORMAL"), result.loadState.recommendedLoad)
     }
 
     @Test
@@ -167,7 +167,7 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals(0, result.workoutPattern.totalWorkoutsInWindow)
         assertEquals("LOW", result.advisorDataConfidence)
         assertEquals(0, result.today.todayCompletedWorkouts)
-        assertNull("todayTrimp not null", result.today.todayTrimp)
+        assertEquals(0f, result.today.todayTrimp)
         assertNull("recommendedAction not null", result.today.recommendedAction)
         assertNull("recommendedLoad not null", result.loadState.recommendedLoad)
         assertNull("todayTrainingMinutes not null", result.today.todayTrainingMinutes)
@@ -177,7 +177,8 @@ class GetDailyPromptDataUseCaseTest {
 
     @Test
     fun `execute aggregates todays workouts into today block`() = runTest {
-        coEvery { dailySummaryRepository.getByDate(any()) } returns null
+        coEvery { dailySummaryRepository.getByDate(todayMidnight) } returns summary(today)
+        coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
         coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
         coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
 
@@ -191,6 +192,21 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals(120f, result.today.todayTrimp)
         assertEquals(70, result.today.todayTrainingMinutes)
         assertEquals(java.time.Instant.ofEpochMilli(todayMidnight + 2000L).toString(), result.today.dataCurrentUntil)
+        assertEquals(RecommendedLoadPromptData(qualitative = "LIGHT"), result.loadState.recommendedLoad)
+    }
+
+    @Test
+    fun `execute treats no today workouts as known zero load`() = runTest {
+        coEvery { dailySummaryRepository.getByDate(todayMidnight) } returns summary(today)
+        coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
+
+        val result = useCase.execute(today)
+
+        assertEquals(0, result.today.todayCompletedWorkouts)
+        assertEquals(0f, result.today.todayTrimp)
+        assertEquals(RecommendedLoadPromptData(qualitative = "NORMAL"), result.loadState.recommendedLoad)
     }
 
     @Test

@@ -123,7 +123,7 @@ class DailyPromptFormatterTest {
                     strainRatio = 1.06f,
                     loadScore = 88f,
                     loadContext = "MAINTAINING",
-                    recommendedLoad = "NORMAL",
+                    recommendedLoad = RecommendedLoadPromptData(qualitative = "NORMAL"),
                     totalRasWorkoutOnly = 350f,
                     totalRasEverydayHr = 410f,
                     everydayCoverageMinutes = 120,

@@ -72,7 +72,7 @@ class GetDailyPromptDataUseCase
 
             val todaysWorkouts = workoutRepository.getInRange(todayMidnight, tomorrowMidnight)
             val todayCompletedWorkouts = todaysWorkouts.size
-            val todayTrimp = todaysWorkouts.mapNotNull { it.trimp }.takeIf { it.isNotEmpty() }?.sum()
+            val todayTrimp = todaysWorkouts.sumOf { it.trimp.toDouble() }.toFloat()
             val todayTrainingMinutes = todaysWorkouts.sumOf { it.durationMinutes }.takeIf { todaysWorkouts.isNotEmpty() }
             val dataCurrentUntil =
                 if (todaysWorkouts.isNotEmpty()) {
@@ -235,7 +235,10 @@ class GetDailyPromptDataUseCase
                 strainRatio = LoadSourceSelector.selectStrainRatio(summary, mode),
                 loadScore = LoadSourceSelector.selectLoadScore(summary, mode),
                 loadContext = loadContext?.name,
-                recommendedLoad = recommendedLoadCalculator.compute(loadContext, todayTrimp),
+                recommendedLoad =
+                    recommendedLoadCalculator
+                        .compute(loadContext, todayTrimp)
+                        ?.let(::RecommendedLoadPromptData),
                 totalRasWorkoutOnly = summary.totalRasWorkoutOnly,
                 totalRasEverydayHr = summary.totalRasEverydayHr,
                 everydayCoverageMinutes = summary.everydayCoverageMinutes,

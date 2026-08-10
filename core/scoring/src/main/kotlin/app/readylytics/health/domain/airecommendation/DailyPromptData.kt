@@ -74,10 +74,14 @@ data class LoadStatePromptData(
     val strainRatio: Float?,
     val loadScore: Float?,
     val loadContext: String? = null,
-    val recommendedLoad: String? = null,
+    val recommendedLoad: RecommendedLoadPromptData? = null,
     val totalRasWorkoutOnly: Float?,
     val totalRasEverydayHr: Float?,
     val everydayCoverageMinutes: Int?,
+)
+
+data class RecommendedLoadPromptData(
+    val qualitative: String?,
 )
 
 data class RecoveryFlagPrompt(

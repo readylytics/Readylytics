@@ -38,17 +38,30 @@ class RecommendedLoadCalculatorTest {
             )
 
         expectedByTodayTrimp.forEach { (todayTrimp, expected) ->
-            assertEquals(expected, calculator.compute(LoadContext.BELOW_TYPICAL, todayTrimp))
+            assertEquals(
+                expected,
+                calculator.compute(LoadContext.BELOW_TYPICAL, todayTrimp),
+            )
         }
     }
 
     @Test
     fun `compute floors a very hard completed load at light`() {
-        assertEquals("LIGHT", calculator.compute(LoadContext.BELOW_TYPICAL, todayTrimp = 200f))
+        assertEquals(
+            "LIGHT",
+            calculator.compute(LoadContext.BELOW_TYPICAL, todayTrimp = 200f),
+        )
     }
 
     @Test
     fun `compute treats missing completed training as zero`() {
-        assertEquals("HIGH", calculator.compute(LoadContext.BELOW_TYPICAL, todayTrimp = null))
+        assertEquals(
+            "HIGH",
+            calculator.compute(LoadContext.BELOW_TYPICAL, todayTrimp = 0f),
+        )
+        assertEquals(
+            "HIGH",
+            calculator.compute(LoadContext.BELOW_TYPICAL, todayTrimp = null),
+        )
     }
 }

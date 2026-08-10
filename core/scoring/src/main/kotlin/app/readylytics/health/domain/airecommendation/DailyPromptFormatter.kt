@@ -150,7 +150,10 @@ object DailyPromptFormatter {
                 "${intOrUnavailable(load.everydayCoverageMinutes)} minutes",
         )
         appendLine("- Load context: ${orUnavailable(load.loadContext)}")
-        appendLine("- Recommended load for remaining training today: ${orUnavailable(load.recommendedLoad)}")
+        appendLine(
+            "- Recommended load for remaining training today: " +
+                "${orUnavailable(load.recommendedLoad?.qualitative)}",
+        )
         appendLine()
     }
 
