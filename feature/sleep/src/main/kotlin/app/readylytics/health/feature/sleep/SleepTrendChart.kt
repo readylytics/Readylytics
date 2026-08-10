@@ -309,13 +309,23 @@ fun SleepTrendChart(
         if (granularity == TrendGranularity.DAILY) startOffsetPoints
         else startOffsetPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
     }
-    val remappedSpanPoints = remember(durationSpanPoints, granularity) {
+    val remappedSpanPoints = remember(durationSpanPoints, granularity, startOffsetPoints) {
         if (granularity == TrendGranularity.DAILY) durationSpanPoints
-        else durationSpanPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+        else {
+            val spanByOffset = durationSpanPoints.associateBy { it.dayOffset }
+            startOffsetPoints.mapIndexed { i, p ->
+                spanByOffset[p.dayOffset]?.copy(dayOffset = i) ?: DailyDataPoint(i, null)
+            }
+        }
     }
-    val remappedActualPoints = remember(actualDurationPoints, granularity) {
+    val remappedActualPoints = remember(actualDurationPoints, granularity, startOffsetPoints) {
         if (granularity == TrendGranularity.DAILY) actualDurationPoints
-        else actualDurationPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+        else {
+            val actualByOffset = actualDurationPoints.associateBy { it.dayOffset }
+            startOffsetPoints.mapIndexed { i, p ->
+                actualByOffset[p.dayOffset]?.copy(dayOffset = i) ?: DailyDataPoint(i, null)
+            }
+        }
     }
     val xAxisRangeDays = remember(startOffsetPoints, granularity) {
         if (granularity == TrendGranularity.DAILY) rangeDays
@@ -427,8 +437,9 @@ fun SleepTrendChart(
             ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity, scoringZoneId)
         } else {
             remember(periodLabels) {
+                val fallback = periodLabels.firstOrNull().orEmpty()
                 CartesianValueFormatter { _, value, _ ->
-                    periodLabels.getOrElse(value.toInt()) { "" }
+                    periodLabels.getOrElse(value.toInt()) { fallback }
                 }
             }
         }

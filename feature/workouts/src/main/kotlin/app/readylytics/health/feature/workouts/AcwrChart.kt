@@ -217,9 +217,16 @@ private fun AcwrChart(
         if (granularity == TrendGranularity.DAILY) trimpPoints
         else trimpPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
     }
-    val remappedRatioPoints = remember(ratioPoints, granularity) {
+    val remappedRatioPoints = remember(ratioPoints, granularity, trimpPoints) {
         if (granularity == TrendGranularity.DAILY) ratioPoints
-        else ratioPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+        else {
+            val trimpByOffset = trimpPoints.associateBy { it.dayOffset }
+            val ratioByOffset = ratioPoints.associateBy { it.dayOffset }
+            val allOffsets = trimpPoints.map { it.dayOffset }.sorted()
+            allOffsets.mapIndexed { i, offset ->
+                ratioByOffset[offset]?.copy(dayOffset = i) ?: DailyDataPoint(i, null)
+            }
+        }
     }
     val xAxisRangeDays = remember(trimpPoints, granularity) {
         if (granularity == TrendGranularity.DAILY) rangeDays
@@ -320,8 +327,9 @@ private fun AcwrChart(
             ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
         } else {
             remember(periodLabels) {
+                val fallback = periodLabels.firstOrNull().orEmpty()
                 CartesianValueFormatter { _, value, _ ->
-                    periodLabels.getOrElse(value.toInt()) { "" }
+                    periodLabels.getOrElse(value.toInt()) { fallback }
                 }
             }
         }
