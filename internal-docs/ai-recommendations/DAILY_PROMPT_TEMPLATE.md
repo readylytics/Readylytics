@@ -35,9 +35,7 @@ Contract defined in the system prompt.
   (Workout only / Everyday heart-rate load)
 - Everyday-load confidence (only meaningful if the source above is Everyday
   heart-rate load): `{{everydayLoadConfidence}}` (None / Low / Medium / High)
-- Advisor data confidence: `{{advisorDataConfidence}}` (LOW / MEDIUM / HIGH) —
-  **`UPSTREAM DATA REQUIRED`**: Readylytics does not yet emit this; the system prompt
-  applies a deterministic mapping (Section 7) until it does.
+- Advisor data confidence: `{{advisorDataConfidence}}` (LOW / MEDIUM / HIGH)
 
 ## B. Today's Readiness & Baselines
 
@@ -98,9 +96,7 @@ other as secondary context only.)
   prompt's Terminology rules): `{{strainRatio}}`
 - Load Score (0–100): `{{loadScore}}`
 - Current load state: `{{loadContext}}` (BELOW_TYPICAL / SWEET_SPOT / ELEVATED / HIGH
-  / UNKNOWN) — **`UPSTREAM DATA REQUIRED`**: the deterministic classification exists
-  as `Float.strainRatioStatus()` but is not yet passed to the prompt. Until it is,
-  treat load state as `UNKNOWN` (system prompt Section 3).
+  / UNKNOWN)
 - Recommended load envelope for the remaining training today: `{{recommendedLoad}}`
   (`{ qualitative: LIGHT / MODERATE / NORMAL / HIGH | null, min_trimp, max_trimp }`)
   — **`UPSTREAM DATA REQUIRED`**: Readylytics does not yet compute a load envelope.
@@ -112,9 +108,6 @@ other as secondary context only.)
   `{{everydayCoverageMinutes}}` minutes
 
 ## E.1 Training Already Completed Today
-
-**`UPSTREAM DATA REQUIRED`**: these fields are not yet emitted by the data layer.
-Until they are, the AI must assume no today-training data and must not fabricate it.
 
 - Workouts completed today: `{{todayCompletedWorkouts}}`
 - TRIMP accumulated today: `{{todayTrimp}}`
