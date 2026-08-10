@@ -158,6 +158,7 @@ fun UniversalBarRenderer(
             trackColor = trackColor,
             markerColor = presentation.status.containerColor(),
             barHeight = universalBarTrackThickness,
+            showMarker = true,
             animateProgress = false,
             modifier =
                 Modifier

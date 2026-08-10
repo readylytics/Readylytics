@@ -11,6 +11,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -61,6 +63,14 @@ class M3MetricBarTest {
         assertEquals(0f, capCoverageFraction(0f, 0f, 10f))
         // Normal case: (strokeWidth / 2) / width.
         assertEquals(0.025f, capCoverageFraction(0.5f, 200f, 10f))
+    }
+
+    @Test
+    fun shouldDrawValueMarker_requiresOptInAndNonZeroProgress() {
+        assertFalse(shouldDrawValueMarker(showMarker = false, progressFraction = 0.5f, progressToDraw = 0.5f))
+        assertFalse(shouldDrawValueMarker(showMarker = true, progressFraction = null, progressToDraw = 0.0f))
+        assertFalse(shouldDrawValueMarker(showMarker = true, progressFraction = 0.5f, progressToDraw = 0.0f))
+        assertTrue(shouldDrawValueMarker(showMarker = true, progressFraction = 0.5f, progressToDraw = 0.5f))
     }
 
     @Test
