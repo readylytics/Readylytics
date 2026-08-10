@@ -483,7 +483,7 @@ fun SleepTrendChart(
                             HorizontalAxis.rememberBottom(
                                 label = labelComponent,
                                 valueFormatter = xAxisFormatter,
-                                itemPlacer = remember(rangeDays, startOffsetPoints, actualDurationPoints) {
+                                itemPlacer = remember(rangeDays, startOffsetPoints, actualDurationPoints, granularity) {
                                     val offsets = if (granularity == TrendGranularity.DAILY) emptyList()
                                     else (startOffsetPoints.map { it.dayOffset } + actualDurationPoints.map { it.dayOffset })
                                         .distinct().sorted()

@@ -5,7 +5,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -77,6 +79,8 @@ data class WorkoutsUiState(
     val yesterdayStrainRatio: Float? = null,
     val yesterdayReadiness: Float? = null,
     val todayStrainIncrease: Float? = null,
+    val trimpPeriodSummary: PeriodAverageSummary? = null,
+    val strainRatioPeriodSummary: PeriodAverageSummary? = null,
 )
 
 private data class WorkoutFlowData(
@@ -297,6 +301,12 @@ class WorkoutsViewModel
                                 dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                             }
 
+                            val trimpForAggregation = dailyTrimp.map { it.copy(value = it.value ?: 0f) }
+                            val (bucketedTrimp, trimpSummary) = trimpForAggregation
+                                .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
+                            val (bucketedStrainRatio, strainSummary) = dailyStrainRatio
+                                .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
+
                             val summaryByDate = trimpSummaries.associateBy { it.date }
 
                             val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
@@ -400,8 +410,8 @@ class WorkoutsViewModel
                             WorkoutsUiState(
                                 latestSummary = latest,
                                 latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
-                                dailyTrimp = dailyTrimp,
-                                dailyStrainRatio = dailyStrainRatio,
+                                dailyTrimp = bucketedTrimp,
+                                dailyStrainRatio = bucketedStrainRatio,
                                 recentWorkouts = paginatedItems,
                                 selectedRange = range,
                                 selectedDate = date,
@@ -419,6 +429,8 @@ class WorkoutsViewModel
                                 yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
                                 yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
                                 todayStrainIncrease = todayStrainIncrease,
+                                trimpPeriodSummary = trimpSummary,
+                                strainRatioPeriodSummary = strainSummary,
                             ).also { emit(it) }
                         }
                     }
