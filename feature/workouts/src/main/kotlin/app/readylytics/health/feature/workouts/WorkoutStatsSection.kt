@@ -281,23 +281,28 @@ fun WorkoutStatsSection(
             },
             content = {
                 Box(
-                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
+                            .fillMaxWidth()
+                            .height(220.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    AcwrChartCard(
-                        trimpPoints = uiState.dailyTrimp,
-                        ratioPoints = uiState.dailyStrainRatio,
-                        rangeStartMs = uiState.rangeStartMs,
-                        rangeDays = rangeDays,
-                        scrollState = scrollState,
-                        zoomState = zoomState,
-                        parentScrollInProgress = parentScrollInProgress,
-                        granularity = selectedRange.granularity,
-                    )
                     if (uiState.isRangeChanging) {
                         CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center),
                             color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 2.dp,
+                        )
+                    } else {
+                        AcwrChartCard(
+                            trimpPoints = uiState.dailyTrimp,
+                            ratioPoints = uiState.dailyStrainRatio,
+                            rangeStartMs = uiState.rangeStartMs,
+                            rangeDays = rangeDays,
+                            scrollState = scrollState,
+                            zoomState = zoomState,
+                            parentScrollInProgress = parentScrollInProgress,
+                            granularity = selectedRange.granularity,
                         )
                     }
                 }
