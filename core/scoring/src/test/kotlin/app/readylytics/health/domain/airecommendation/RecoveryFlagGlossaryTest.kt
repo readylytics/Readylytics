@@ -25,7 +25,7 @@ class RecoveryFlagGlossaryTest {
             RecoveryFlagGlossary.explain(RecoveryFlag.STRONG_RECOVERY_SIGNAL),
         )
         assertEquals(
-            "your HRV/RHR pattern resembles early signs of illness or high stress",
+            "your overnight recovery signals are unusually different from your normal baseline",
             RecoveryFlagGlossary.explain(RecoveryFlag.ILLNESS_ONSET),
         )
         assertEquals(

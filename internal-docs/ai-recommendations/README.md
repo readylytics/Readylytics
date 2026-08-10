@@ -31,3 +31,28 @@ the workflow is intentionally offline-first and manual.
 - **No AI-provider integration:** there is no HTTP client wired to an LLM provider, no
   API-key storage, and no in-app AI response rendering. The user pastes the copied
   prompts into an external app of their choice; the output contract is consumed there.
+- **Output contract:** the system prompt requires **strict JSON** (single object,
+  every field present, `null` where unknown). If a provider is later wired up,
+  enforce it with Structured Outputs / JSON Schema rather than natural language alone.
+
+## Data-contract gaps (`OPEN QUESTION` / `UPSTREAM DATA REQUIRED`)
+
+The revised system prompt expects Readylytics to supply derived states rather than
+letting the LLM reconstruct them. These fields are declared in the system prompt and
+daily template but are **not yet emitted** by the data layer. They are deterministic
+data-assembly additions, not scoring changes:
+
+| Expected field | Purpose | Status |
+|---|---|---|
+| `readiness_band` (POOR/WARNING/NEUTRAL/OPTIMAL/CALIBRATING) | Readylytics' own Readiness classification so the AI never invents cutoffs | `UPSTREAM DATA REQUIRED` — mapping exists as `Float?.scoreStatus()` (`core/model/.../MetricStatusExtensions.kt`), not yet passed to the prompt |
+| `load_context` (BELOW_TYPICAL/SWEET_SPOT/ELEVATED/HIGH/UNKNOWN) | Current accumulated load state, distinct from recommended session load | `UPSTREAM DATA REQUIRED` — mapping exists as `Float.strainRatioStatus()`, not yet passed to the prompt |
+| `recommended_load` envelope (`{qualitative, min_trimp, max_trimp}`) | Deterministic load target so the AI never fabricates TRIMP ranges | `UPSTREAM DATA REQUIRED` — no envelope computation exists |
+| `today_completed_workouts`, `today_trimp`, `today_training_minutes`, `data_current_until` | So the recommendation is for *remaining* training today | `UPSTREAM DATA REQUIRED` — not yet fetched/emitted |
+| `advisor_data_confidence` (LOW/MEDIUM/HIGH) | Deterministic confidence from Readylytics | `UPSTREAM DATA REQUIRED` — until provided, the system prompt applies a prompt-side deterministic mapping (calibration phase + data completeness + everyday-load coverage) |
+
+**OPEN QUESTION:** the in-app `ai_init_prompt` string resource
+(`feature/dashboard/src/main/res/values/strings.xml`) is synchronized with
+`BASE_SYSTEM_PROMPT.md`. The daily prompt's implemented formatter still emits the
+original field set; the new fields above are contract additions the data layer must
+supply before the daily prompt can fully exercise the revised system prompt.
+

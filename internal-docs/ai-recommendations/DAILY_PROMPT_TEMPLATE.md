@@ -4,6 +4,12 @@ Status: implemented as a manual copy-to-external-AI-chat workflow. Source of tru
 the `DailyPromptFormatter` output; see `README.md` in this directory for scope and
 integration details.
 
+Fields marked **`UPSTREAM DATA REQUIRED`** are part of the input contract the system
+prompt expects but are **not yet emitted** by the data layer
+(`GetDailyPromptDataUseCase` / `DailyPromptFormatter`). They are declared here so the
+prompt and data contract stay aligned; implementing them is a separate data-layer
+task, not a scoring change.
+
 This is the **per-day user-turn prompt**. It assumes `BASE_SYSTEM_PROMPT.md` is
 already loaded as the system prompt for the conversation. `{{placeholder}}` values are
 filled in per request; field names are taken verbatim from `DailySummary`
@@ -29,10 +35,18 @@ Contract defined in the system prompt.
   (Workout only / Everyday heart-rate load)
 - Everyday-load confidence (only meaningful if the source above is Everyday
   heart-rate load): `{{everydayLoadConfidence}}` (None / Low / Medium / High)
+- Advisor data confidence: `{{advisorDataConfidence}}` (LOW / MEDIUM / HIGH) —
+  **`UPSTREAM DATA REQUIRED`**: Readylytics does not yet emit this; the system prompt
+  applies a deterministic mapping (Section 7) until it does.
 
 ## B. Today's Readiness & Baselines
 
 - Readiness score (from the active source above): `{{readinessScore}}`
+- Readiness band: `{{readinessBand}}` (POOR / WARNING / NEUTRAL / OPTIMAL /
+  CALIBRATING) — **`UPSTREAM DATA REQUIRED`**: the deterministic classification
+  exists as `Float?.scoreStatus()` (`core/model/.../domain/model/MetricStatusExtensions.kt`)
+  but is not yet passed to the prompt. Until it is, the AI must not invent Readiness
+  cutoffs (system prompt Section 3).
 - Restoration sub-score (`sRest`): `{{sRest}}`
 - HRV baseline: `{{hrvBaseline}}` (rounded) — mu `{{hrvMuMssd}}`, sigma `{{hrvSigmaMssd}}`
 - Resting heart rate today: `{{restingHeartRate}}` bpm — vs. baseline ratio
@@ -83,10 +97,32 @@ other as secondary context only.)
 - Strain Ratio (ATL ÷ CTL — internal term, describe qualitatively per the system
   prompt's Terminology rules): `{{strainRatio}}`
 - Load Score (0–100): `{{loadScore}}`
+- Current load state: `{{loadContext}}` (BELOW_TYPICAL / SWEET_SPOT / ELEVATED / HIGH
+  / UNKNOWN) — **`UPSTREAM DATA REQUIRED`**: the deterministic classification exists
+  as `Float.strainRatioStatus()` but is not yet passed to the prompt. Until it is,
+  treat load state as `UNKNOWN` (system prompt Section 3).
+- Recommended load envelope for the remaining training today: `{{recommendedLoad}}`
+  (`{ qualitative: LIGHT / MODERATE / NORMAL / HIGH | null, min_trimp, max_trimp }`)
+  — **`UPSTREAM DATA REQUIRED`**: Readylytics does not yet compute a load envelope.
+  Until it does, the AI must give qualitative load guidance only and leave
+  `suggested_trimp_range` null.
 - 7-day RAS total (informational only — never drives Readiness):
   Workout only `{{totalRasWorkoutOnly}}`, Everyday HR `{{totalRasEverydayHr}}`
 - Everyday-load coverage (only relevant if that source is active):
   `{{everydayCoverageMinutes}}` minutes
+
+## E.1 Training Already Completed Today
+
+**`UPSTREAM DATA REQUIRED`**: these fields are not yet emitted by the data layer.
+Until they are, the AI must assume no today-training data and must not fabricate it.
+
+- Workouts completed today: `{{todayCompletedWorkouts}}`
+- TRIMP accumulated today: `{{todayTrimp}}`
+- Training minutes today: `{{todayTrainingMinutes}}`
+- Latest available data timestamp: `{{dataCurrentUntil}}` (ISO-8601)
+
+The recommendation applies only to **additional** training after the latest available
+data timestamp (system prompt Section 6).
 
 ## F. Active Recovery Flags
 
@@ -94,17 +130,18 @@ other as secondary context only.)
 - `{{flagName}}` — {{plainEnglishGloss}}
   (e.g. `OVERREACHING` — "training load has risen faster than your fitness can
   currently absorb"; `STRONG_RECOVERY_SIGNAL` — "your recovery markers are notably
-  above your personal norm today"; `ILLNESS_ONSET` — "your HRV/RHR pattern resembles
-  early signs of illness or high stress"; `REST_DAY_SUCCESS` — "yesterday's rest day
-  is showing up as a recovery benefit today")
+  above your personal norm today"; `ILLNESS_ONSET` — "your overnight recovery signals
+  are unusually different from your normal baseline"; `REST_DAY_SUCCESS` —
+  "yesterday's rest day is showing up as a recovery benefit today")
 {{/each}}
 
 If no flags are active: `{{noFlagsActive: true}}`.
 
 ## G. Typical Workout Pattern (last {{lookbackMonths}} months)
 
-No aggregation exists yet for this in the app — this section defines the data shape a
-future caller would need to supply; treat it as best-effort personalization context.
+Aggregation is implemented by `ComputeWorkoutPatternSummaryUseCase`
+(`core/scoring/.../domain/airecommendation/`) over the three-month lookback window;
+treat it as best-effort personalization context.
 
 - Total workouts in window: `{{totalWorkoutsInWindow}}`
 
@@ -125,6 +162,8 @@ call.
 
 ## H. Task
 
-Using the data above, produce today's recommendation in the exact structure defined
-in the system prompt's Output Contract. Cite the specific fields above (by the values
-given, e.g. "Load Score of {{loadScore}}") that drove your rationale.
+Using the data above, produce today's recommendation in the exact structure defined in
+the system prompt's Output Contract — a single strict JSON object with every field
+present (`null` where unknown). Cite the specific fields above (by the values given,
+e.g. "Readiness band of NEUTRAL" or "Load Score of {{loadScore}}") that drove your
+rationale.

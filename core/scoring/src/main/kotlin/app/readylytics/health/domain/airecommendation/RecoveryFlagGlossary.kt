@@ -15,7 +15,7 @@ object RecoveryFlagGlossary {
             RecoveryFlag.STRONG_RECOVERY_SIGNAL to
                 "your recovery markers are notably above your personal norm today",
             RecoveryFlag.ILLNESS_ONSET to
-                "your HRV/RHR pattern resembles early signs of illness or high stress",
+                "your overnight recovery signals are unusually different from your normal baseline",
             RecoveryFlag.NADIR_DELAYED to
                 "your overnight HRV low point arrived later than usual",
             RecoveryFlag.CALIBRATING to
