@@ -20,6 +20,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -99,6 +100,9 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals("Everyday heart-rate load", result.activeTrainingLoadSource)
         assertEquals(80f, result.today.readinessScore)
         assertEquals(RecoveryFlag.ILLNESS_ONSET, result.activeRecoveryFlags.single().flagName)
+        assertEquals("HIGH", result.advisorDataConfidence)
+        assertEquals("SWEET_SPOT", result.loadState.loadContext)
+        assertEquals("NEUTRAL", result.today.readinessBand)
     }
 
     @Test
@@ -149,11 +153,17 @@ class GetDailyPromptDataUseCaseTest {
 
         val result = useCase.execute(today)
 
-        assertTrue(result.yesterdayWorkouts.isEmpty())
-        assertNull(result.yesterdaySleep)
-        assertNull(result.today.readinessScore)
-        assertTrue(result.activeRecoveryFlags.isEmpty())
+        assertTrue("yesterdayWorkouts not empty", result.yesterdayWorkouts.isEmpty())
+        assertNull("yesterdaySleep not null", result.yesterdaySleep)
+        assertNull("readinessScore not null", result.today.readinessScore)
+        assertTrue("activeRecoveryFlags not empty", result.activeRecoveryFlags.isEmpty())
         assertEquals(0, result.workoutPattern.totalWorkoutsInWindow)
+        assertEquals("LOW", result.advisorDataConfidence)
+        assertEquals(0, result.today.todayCompletedWorkouts)
+        assertNull("todayTrimp not null", result.today.todayTrimp)
+        assertNull("todayTrainingMinutes not null", result.today.todayTrainingMinutes)
+        assertNotNull("dataCurrentUntil is null", result.today.dataCurrentUntil)
+        assertNull("loadContext not null", result.loadState.loadContext)
     }
 
     private fun summary(

@@ -1,15 +1,22 @@
 package app.readylytics.health.domain.airecommendation
 
+import app.readylytics.health.domain.model.CalibrationPhase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.domain.model.RecoveryFlag
+import app.readylytics.health.domain.model.resolveAdvisorConfidence
+import app.readylytics.health.domain.model.scoreStatus
+import app.readylytics.health.domain.model.toLoadContext
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringConstants
 import kotlinx.coroutines.flow.first
+import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -59,6 +66,31 @@ class GetDailyPromptDataUseCase
             val historicalSummaries = dailySummaryRepository.getSince(historicalStart)
 
             val sourceMode = preferences.strainLoadSourceMode
+
+            val todaysWorkouts = workoutRepository.getInRange(todayMidnight, tomorrowMidnight)
+            val todayCompletedWorkouts = todaysWorkouts.size
+            val todayTrimp = todaysWorkouts.mapNotNull { it.trimp }.sum().takeIf { todaysWorkouts.isNotEmpty() }
+            val todayTrainingMinutes = todaysWorkouts.sumOf { it.durationMinutes }.takeIf { todaysWorkouts.isNotEmpty() }
+            val dataCurrentUntil =
+                if (todaysWorkouts.isNotEmpty()) {
+                    Instant.ofEpochMilli(todaysWorkouts.maxOf { it.endTime }).toString()
+                } else {
+                    Instant.now().toString()
+                }
+
+            val isEverydaySourceLowConfidence =
+                sourceMode == LoadSourceMode.EVERYDAY_HEART_RATE &&
+                    todaySummary?.everydayLoadConfidence == LoadCoverageConfidence.LOW.name
+            val hasMajorMissingSignals =
+                todaySummary?.recoveryFlags?.any {
+                    it == RecoveryFlag.HRV_MISSING || it == RecoveryFlag.STAGES_MISSING
+                } ?: false
+            val phase =
+                todaySummary?.snapshotCalibrationPhase?.let { enumValueOf<CalibrationPhase>(it.uppercase()) }
+                    ?: CalibrationPhase.CALIBRATION
+            val advisorConf =
+                resolveAdvisorConfidence(phase, hasMajorMissingSignals, isEverydaySourceLowConfidence).name
+
             val workoutBlocks =
                 yesterdayWorkouts.map { workout ->
                     val metrics =
@@ -86,9 +118,9 @@ class GetDailyPromptDataUseCase
                 isCalibrating = todaySummary?.isCalibrating ?: false,
                 activeTrainingLoadSource = sourceName(sourceMode),
                 everydayLoadConfidence = todaySummary?.everydayLoadConfidence,
-                advisorDataConfidence = null,
+                advisorDataConfidence = advisorConf,
                 today =
-                    todaySummary?.let { mapToday(it, sourceMode) }
+                    todaySummary?.let { mapToday(it, sourceMode, todayCompletedWorkouts, todayTrimp, todayTrainingMinutes, dataCurrentUntil) }
                         ?: TodayPromptData(
                             readinessScore = null,
                             readinessBand = null,
@@ -103,10 +135,10 @@ class GetDailyPromptDataUseCase
                             zLnHrv = null,
                             zRhr = null,
                             baselineCalculatedAtDate = null,
-                            todayCompletedWorkouts = 0,
-                            todayTrimp = null,
-                            todayTrainingMinutes = null,
-                            dataCurrentUntil = null,
+                            todayCompletedWorkouts = todayCompletedWorkouts,
+                            todayTrimp = todayTrimp,
+                            todayTrainingMinutes = todayTrainingMinutes,
+                            dataCurrentUntil = dataCurrentUntil,
                         ),
                 yesterdaySleep = yesterdaySummary?.let(::mapYesterdaySleep),
                 yesterdayWorkouts = workoutBlocks,
@@ -135,10 +167,17 @@ class GetDailyPromptDataUseCase
             )
         }
 
-        private fun mapToday(summary: DailySummary, mode: LoadSourceMode): TodayPromptData =
+        private fun mapToday(
+            summary: DailySummary,
+            mode: LoadSourceMode,
+            todayCompletedWorkouts: Int,
+            todayTrimp: Float?,
+            todayTrainingMinutes: Int?,
+            dataCurrentUntil: String?
+        ): TodayPromptData =
             TodayPromptData(
                 readinessScore = LoadSourceSelector.selectReadiness(summary, mode),
-                readinessBand = null,
+                readinessBand = LoadSourceSelector.selectReadiness(summary, mode)?.scoreStatus()?.name,
                 restorationScore = summary.sRest,
                 hrvBaseline = summary.hrvBaseline,
                 hrvMuMssd = summary.hrvMuMssd,
@@ -150,10 +189,10 @@ class GetDailyPromptDataUseCase
                 zLnHrv = summary.zLnHrv,
                 zRhr = summary.zRhr,
                 baselineCalculatedAtDate = summary.baselineCalculatedAtDate,
-                todayCompletedWorkouts = 0,
-                todayTrimp = null,
-                todayTrainingMinutes = null,
-                dataCurrentUntil = null,
+                todayCompletedWorkouts = todayCompletedWorkouts,
+                todayTrimp = todayTrimp,
+                todayTrainingMinutes = todayTrainingMinutes,
+                dataCurrentUntil = dataCurrentUntil,
             )
 
         private fun mapYesterdaySleep(summary: DailySummary): YesterdaySleepPromptData =
@@ -173,7 +212,7 @@ class GetDailyPromptDataUseCase
                 chronicLoad = LoadSourceSelector.selectCtl(summary, mode),
                 strainRatio = LoadSourceSelector.selectStrainRatio(summary, mode),
                 loadScore = LoadSourceSelector.selectLoadScore(summary, mode),
-                loadContext = null,
+                loadContext = LoadSourceSelector.selectStrainRatio(summary, mode)?.toLoadContext()?.name,
                 totalRasWorkoutOnly = summary.totalRasWorkoutOnly,
                 totalRasEverydayHr = summary.totalRasEverydayHr,
                 everydayCoverageMinutes = summary.everydayCoverageMinutes,
