@@ -20,6 +20,13 @@ class DailyPromptFormatterTest {
         assertTrue(text.contains("Monday, Wednesday"))
         assertTrue(text.contains("78"))
         assertTrue(text.contains("435"))
+        assertTrue(text.contains("Advisor data confidence: HIGH"))
+        assertTrue(text.contains("Readiness band: OPTIMAL"))
+        assertTrue(text.contains("Today completed workouts: 1"))
+        assertTrue(text.contains("Today TRIMP: 100"))
+        assertTrue(text.contains("Today training minutes: 60"))
+        assertTrue(text.contains("Data current until: 12:00 PM"))
+        assertTrue(text.contains("Load context: MAINTAINING"))
     }
 
     @Test
@@ -59,11 +66,11 @@ class DailyPromptFormatterTest {
             isCalibrating = false,
             activeTrainingLoadSource = "Workout only",
             everydayLoadConfidence = "High",
-            advisorDataConfidence = null,
+            advisorDataConfidence = "HIGH",
             today =
                 TodayPromptData(
                     readinessScore = 78f,
-                    readinessBand = null,
+                    readinessBand = "OPTIMAL",
                     restorationScore = 0.82f,
                     hrvBaseline = 45,
                     hrvMuMssd = 44.2f,
@@ -75,10 +82,10 @@ class DailyPromptFormatterTest {
                     zLnHrv = 0.1f,
                     zRhr = 0.2f,
                     baselineCalculatedAtDate = LocalDate.of(2026, 7, 15),
-                    todayCompletedWorkouts = 0,
-                    todayTrimp = null,
-                    todayTrainingMinutes = null,
-                    dataCurrentUntil = null,
+                    todayCompletedWorkouts = 1,
+                    todayTrimp = 100f,
+                    todayTrainingMinutes = 60,
+                    dataCurrentUntil = "12:00 PM",
                 ),
             yesterdaySleep =
                 YesterdaySleepPromptData(
@@ -107,7 +114,7 @@ class DailyPromptFormatterTest {
                     chronicLoad = 80f,
                     strainRatio = 1.06f,
                     loadScore = 88f,
-                    loadContext = null,
+                    loadContext = "MAINTAINING",
                     totalRasWorkoutOnly = 350f,
                     totalRasEverydayHr = 410f,
                     everydayCoverageMinutes = 120,

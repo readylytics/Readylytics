@@ -41,6 +41,7 @@ object DailyPromptFormatter {
             "- Everyday-load confidence (only meaningful if the source above is Everyday heart-rate load): " +
                 "${orUnavailable(data.everydayLoadConfidence)}",
         )
+        appendLine("- Advisor data confidence: ${orUnavailable(data.advisorDataConfidence)}")
         appendLine()
     }
 
@@ -48,6 +49,7 @@ object DailyPromptFormatter {
         val today = data.today
         appendLine("## B. Today's Readiness & Baselines")
         appendLine("- Readiness score (from the active source above): ${numberOrUnavailable(today.readinessScore)}")
+        appendLine("- Readiness band: ${orUnavailable(today.readinessBand)}")
         appendLine("- Restoration sub-score (sRest): ${numberOrUnavailable(today.restorationScore)}")
         appendLine(
             "- HRV baseline: ${intOrUnavailable(today.hrvBaseline)} ms — mu ${numberOrUnavailable(today.hrvMuMssd)}, " +
@@ -63,6 +65,10 @@ object DailyPromptFormatter {
                 "HRV ${numberOrUnavailable(today.zLnHrv)}, RHR ${numberOrUnavailable(today.zRhr)}",
         )
         appendLine("- Baseline last (re)calculated: ${dateOrUnavailable(today.baselineCalculatedAtDate)}")
+        appendLine("- Today completed workouts: ${today.todayCompletedWorkouts}")
+        appendLine("- Today TRIMP: ${numberOrUnavailable(today.todayTrimp)}")
+        appendLine("- Today training minutes: ${intOrUnavailable(today.todayTrainingMinutes)}")
+        appendLine("- Data current until: ${orUnavailable(today.dataCurrentUntil)}")
         appendLine()
     }
 
@@ -141,6 +147,7 @@ object DailyPromptFormatter {
             "- Everyday-load coverage (only relevant if that source is active): " +
                 "${intOrUnavailable(load.everydayCoverageMinutes)} minutes",
         )
+        appendLine("- Load context: ${orUnavailable(load.loadContext)}")
         appendLine()
     }
 
