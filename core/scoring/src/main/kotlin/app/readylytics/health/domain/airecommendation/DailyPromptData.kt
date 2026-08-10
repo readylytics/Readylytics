@@ -44,6 +44,7 @@ data class TodayPromptData(
     val todayTrimp: Float? = null,
     val todayTrainingMinutes: Int? = null,
     val dataCurrentUntil: String? = null,
+    val permittedRecommendation: String? = null,
 )
 
 data class YesterdaySleepPromptData(

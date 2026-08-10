@@ -22,6 +22,7 @@ class DailyPromptFormatterTest {
         assertTrue(text.contains("435"))
         assertTrue(text.contains("Advisor data confidence: HIGH"))
         assertTrue(text.contains("Readiness band: OPTIMAL"))
+        assertTrue(text.contains("Permitted recommendation ceiling: TRAIN"))
         assertTrue(text.contains("Today completed workouts: 1"))
         assertTrue(text.contains("Today TRIMP: 100"))
         assertTrue(text.contains("Today training minutes: 60"))
@@ -86,6 +87,7 @@ class DailyPromptFormatterTest {
                     todayTrimp = 100f,
                     todayTrainingMinutes = 60,
                     dataCurrentUntil = "12:00 PM",
+                    permittedRecommendation = "TRAIN",
                 ),
             yesterdaySleep =
                 YesterdaySleepPromptData(

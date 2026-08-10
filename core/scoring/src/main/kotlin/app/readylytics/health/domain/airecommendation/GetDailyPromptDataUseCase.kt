@@ -3,6 +3,7 @@ package app.readylytics.health.domain.airecommendation
 import app.readylytics.health.domain.model.CalibrationPhase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.domain.model.PermittedRecommendationMapper
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.model.resolveAdvisorConfidence
 import app.readylytics.health.domain.model.scoreStatus
@@ -174,10 +175,17 @@ class GetDailyPromptDataUseCase
             todayTrimp: Float?,
             todayTrainingMinutes: Int?,
             dataCurrentUntil: String?
-        ): TodayPromptData =
-            TodayPromptData(
-                readinessScore = LoadSourceSelector.selectReadiness(summary, mode),
-                readinessBand = LoadSourceSelector.selectReadiness(summary, mode)?.scoreStatus()?.name,
+        ): TodayPromptData {
+            val readinessScore = LoadSourceSelector.selectReadiness(summary, mode)
+            val metricStatus = readinessScore.scoreStatus()
+            val permittedRecommendation = PermittedRecommendationMapper.resolve(
+                status = metricStatus,
+                flags = summary.recoveryFlags.toList(),
+            ).name
+
+            return TodayPromptData(
+                readinessScore = readinessScore,
+                readinessBand = metricStatus.name,
                 restorationScore = summary.sRest,
                 hrvBaseline = summary.hrvBaseline,
                 hrvMuMssd = summary.hrvMuMssd,
@@ -193,7 +201,9 @@ class GetDailyPromptDataUseCase
                 todayTrimp = todayTrimp,
                 todayTrainingMinutes = todayTrainingMinutes,
                 dataCurrentUntil = dataCurrentUntil,
+                permittedRecommendation = permittedRecommendation,
             )
+        }
 
         private fun mapYesterdaySleep(summary: DailySummary): YesterdaySleepPromptData =
             YesterdaySleepPromptData(

@@ -103,6 +103,7 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals("HIGH", result.advisorDataConfidence)
         assertEquals("SWEET_SPOT", result.loadState.loadContext)
         assertEquals("NEUTRAL", result.today.readinessBand)
+        assertEquals("REST", result.today.permittedRecommendation)
     }
 
     @Test
