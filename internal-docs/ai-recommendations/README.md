@@ -38,21 +38,22 @@ the workflow is intentionally offline-first and manual.
 ## Data-contract gaps (`OPEN QUESTION` / `UPSTREAM DATA REQUIRED`)
 
 The revised system prompt expects Readylytics to supply derived states rather than
-letting the LLM reconstruct them. These fields are declared in the system prompt and
-daily template but are **not yet emitted** by the data layer. They are deterministic
-data-assembly additions, not scoring changes:
+letting the LLM reconstruct them. Status below reflects the actual wiring in
+`GetDailyPromptDataUseCase` / `DailyPromptFormatter`, not just what the templates
+describe:
 
 | Expected field | Purpose | Status |
 |---|---|---|
-| `readiness_band` (POOR/WARNING/NEUTRAL/OPTIMAL/CALIBRATING) | Readylytics' own Readiness classification so the AI never invents cutoffs | `UPSTREAM DATA REQUIRED` — mapping exists as `Float?.scoreStatus()` (`core/model/.../MetricStatusExtensions.kt`), not yet passed to the prompt |
-| `load_context` (BELOW_TYPICAL/SWEET_SPOT/ELEVATED/HIGH/UNKNOWN) | Current accumulated load state, distinct from recommended session load | `UPSTREAM DATA REQUIRED` — mapping exists as `Float.strainRatioStatus()`, not yet passed to the prompt |
-| `recommended_load` envelope (`{qualitative, min_trimp, max_trimp}`) | Deterministic load target so the AI never fabricates TRIMP ranges | `UPSTREAM DATA REQUIRED` — no envelope computation exists |
-| `today_completed_workouts`, `today_trimp`, `today_training_minutes`, `data_current_until` | So the recommendation is for *remaining* training today | `UPSTREAM DATA REQUIRED` — not yet fetched/emitted |
-| `advisor_data_confidence` (LOW/MEDIUM/HIGH) | Deterministic confidence from Readylytics | `UPSTREAM DATA REQUIRED` — until provided, the system prompt applies a prompt-side deterministic mapping (calibration phase + data completeness + everyday-load coverage) |
+| `readiness_band` (POOR/WARNING/NEUTRAL/OPTIMAL/CALIBRATING) | Readylytics' own Readiness classification so the AI never invents cutoffs | `RESOLVED` — `GetDailyPromptDataUseCase.mapToday()` sets `readinessBand = metricStatus.name` via `Float?.scoreStatus()`; rendered in Section B |
+| `load_context` (BELOW_TYPICAL/SWEET_SPOT/ELEVATED/HIGH/UNKNOWN) | Current accumulated load state, distinct from recommended session load | `RESOLVED` — `mapLoadState()` sets `loadContext` via `strainRatio.toLoadContext()`; rendered in Section E |
+| `permitted_recommendation_ceiling` (REST/ACTIVE_RECOVERY/TRAIN/UNKNOWN) | Hard ceiling so the AI never invents its own allowed recommendation type | `RESOLVED` — `PermittedRecommendationMapper.resolve()` (`core/model/.../PermittedRecommendationMapper.kt`) + `PermittedRecommendation` enum; rendered in Section B as `today.permittedRecommendation`. Defaults to `UNKNOWN` when no `DailySummary` exists for the day — the system prompt now treats `UNKNOWN` as an effective `REST` ceiling |
+| `recommended_load` envelope (`{qualitative}`) | Deterministic load ceiling so the AI never fabricates a target load | `UPSTREAM DATA REQUIRED` — still no field on `DailyPromptData` and no computation; not rendered by `DailyPromptFormatter`. This is the one remaining gap from this list. Shape corrected to `{ qualitative: LIGHT/MODERATE/NORMAL/HIGH | null }` (matches `DAILY_PROMPT_TEMPLATE.md`'s `{{recommendedLoad}}`) — drop the earlier `min_trimp`/`max_trimp` idea, the system prompt never wants the AI reasoning about raw TRIMP ranges |
+| `today_completed_workouts`, `today_trimp`, `today_training_minutes`, `data_current_until` | So the recommendation is for *remaining* training today | `RESOLVED` — computed in `GetDailyPromptDataUseCase.execute()` from `WorkoutRepository.getInRange(todayMidnight, tomorrowMidnight)`; rendered in Section B |
+| `advisor_data_confidence` (LOW/MEDIUM/HIGH) | Deterministic confidence from Readylytics | `RESOLVED` — `resolveAdvisorConfidence()` always populates it (not gated on a `DailySummary` existing); rendered in Section A. The system prompt's prompt-side fallback mapping (Section 7) is now dead code in practice but stays as a documented fallback in case this field is ever absent |
 
-**OPEN QUESTION:** the in-app `ai_init_prompt` string resource
-(`feature/dashboard/src/main/res/values/strings.xml`) is synchronized with
-`BASE_SYSTEM_PROMPT.md`. The daily prompt's implemented formatter still emits the
-original field set; the new fields above are contract additions the data layer must
-supply before the daily prompt can fully exercise the revised system prompt.
+**Remaining gap:** `recommended_load` is the only field above not yet wired end-to-end.
+Everything else the revised system prompt (`BASE_SYSTEM_PROMPT.md`, synced to the
+in-app `ai_init_prompt` string resource in
+`feature/dashboard/src/main/res/values/strings.xml`) depends on is already emitted by
+`DailyPromptFormatter`.
 
