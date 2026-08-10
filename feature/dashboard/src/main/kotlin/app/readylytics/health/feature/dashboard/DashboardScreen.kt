@@ -60,6 +60,8 @@ fun DashboardRoute(
     onNavigateToBloodPressure: () -> Unit = {},
     onNavigateToVitals: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
+    onCopySetupPrompt: () -> Unit = {},
+    onCopyDailyPrompt: () -> Unit = {},
     insightDetail: @Composable (() -> Unit)? = null,
     insightsCard: @Composable (
         DashboardUiState,
@@ -109,6 +111,8 @@ fun DashboardRoute(
         onDismissInsight = { viewModel.onEvent(DashboardEvent.DismissInsight(it)) },
         onRestoreInsights = { viewModel.onEvent(DashboardEvent.RestoreInsights) },
         onOpenInsight = onOpenInsight,
+        onCopySetupPrompt = onCopySetupPrompt,
+        onCopyDailyPrompt = onCopyDailyPrompt,
         insightDetail = insightDetail,
         insightsCard = insightsCard,
     )
@@ -144,6 +148,8 @@ fun DashboardScreen(
     onDismissInsight: (InsightType) -> Unit = {},
     onRestoreInsights: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
+    onCopySetupPrompt: () -> Unit = {},
+    onCopyDailyPrompt: () -> Unit = {},
     insightDetail: @Composable (() -> Unit)? = null,
     insightsCard: @Composable (
         DashboardUiState,
@@ -264,6 +270,8 @@ fun DashboardScreen(
                                     onRestoreInsights = onRestoreInsights,
                                     onOpenInsight = onOpenInsight,
                                     onCardDisplayModeChanged = onCardDisplayModeChanged,
+                                    onCopySetupPrompt = onCopySetupPrompt,
+                                    onCopyDailyPrompt = onCopyDailyPrompt,
                                     insightsCard = insightsCard,
                                 ),
                             )

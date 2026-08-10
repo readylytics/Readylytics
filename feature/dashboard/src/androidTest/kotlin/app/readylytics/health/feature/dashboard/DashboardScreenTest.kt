@@ -544,4 +544,88 @@ class DashboardScreenTest {
             .assertWidthIsAtLeast(48.dp)
             .assertHeightIsAtLeast(48.dp)
     }
+
+    // -------------------------------------------------------------------------
+    // AI Recommendation dashboard card: renders and invokes copy callbacks.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun aiRecommendationCard_rendersTitleAndBothCopyButtons() {
+        val uiState =
+            createTestUiState().copy(
+                cardConfigurations =
+                    listOf(
+                        CardConfiguration(
+                            cardId = CardId.AI_RECOMMENDATION,
+                            isVisible = true,
+                            position = 0,
+                        ),
+                    ),
+            )
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = uiState,
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithText(string(R.string.ai_recommendation_card_title))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText(string(R.string.ai_recommendation_copy_setup_button))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText(string(R.string.ai_recommendation_copy_daily_button))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun aiRecommendationCard_copyButtonsInvokeCallbacks() {
+        var setupClicks = 0
+        var dailyClicks = 0
+        val uiState =
+            createTestUiState().copy(
+                cardConfigurations =
+                    listOf(
+                        CardConfiguration(
+                            cardId = CardId.AI_RECOMMENDATION,
+                            isVisible = true,
+                            position = 0,
+                        ),
+                    ),
+            )
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = uiState,
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+                onCopySetupPrompt = { setupClicks++ },
+                onCopyDailyPrompt = { dailyClicks++ },
+            )
+        }
+
+        composeRule
+            .onNodeWithText(string(R.string.ai_recommendation_copy_setup_button))
+            .performClick()
+        composeRule
+            .onNodeWithText(string(R.string.ai_recommendation_copy_daily_button))
+            .performClick()
+
+        assertEquals(1, setupClicks)
+        assertEquals(1, dailyClicks)
+    }
 }
