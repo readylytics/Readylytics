@@ -34,10 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.PeriodAverageSummaryRow
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.domain.model.BloodPressureStatus
@@ -247,10 +249,19 @@ fun BloodPressureDetailScreen(
                         diastolicPoints = uiState.dailyDiastolic,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
+                        granularity = uiState.selectedRange.granularity,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         parentScrollInProgress = { scrollState.isScrollInProgress },
                     )
+                    uiState.periodSummary?.let { summary ->
+                        PeriodAverageSummaryRow(
+                            summary = summary,
+                            unit = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
+                            decimalPlaces = 0,
+                            direction = DeltaDirection.NEUTRAL,
+                        )
+                    }
                 }
             }
 

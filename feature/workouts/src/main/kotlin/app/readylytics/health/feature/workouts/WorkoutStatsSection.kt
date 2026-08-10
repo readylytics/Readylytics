@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -58,6 +60,7 @@ private fun RasSummaryValueTextStyle.asTextStyle(): TextStyle =
 @Composable
 fun WorkoutStatsSection(
     uiState: WorkoutsUiState,
+    selectedRange: TimeRange,
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
     rangeDays: Int = uiState.selectedRange.days,
@@ -74,6 +77,7 @@ fun WorkoutStatsSection(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.Content
                     }
                 },
@@ -249,9 +253,9 @@ fun WorkoutStatsSection(
         ) {
             TimeRange.entries.forEachIndexed { index, range ->
                 SegmentedButton(
-                    selected = uiState.selectedRange == range,
+                    selected = selectedRange == range,
                     onClick = { onRangeSelected(range) },
-                    enabled = !uiState.isLoading,
+                    enabled = !uiState.isLoading && !uiState.isRangeChanging,
                     shape =
                         SegmentedButtonDefaults.itemShape(
                             index = index,
@@ -265,15 +269,33 @@ fun WorkoutStatsSection(
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         CardLoader(
-            isLoading = uiState.isLoading,
+            isLoading = uiState.isLoading || uiState.isRangeChanging,
             skeleton = {
-                SkeletonCard(
-                    height = 312.dp,
+                Card(
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                )
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+                        Text(
+                            text = stringResource(R.string.acwr_training_load),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(220.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
+                }
             },
             content = {
                 AcwrChartCard(
@@ -284,6 +306,7 @@ fun WorkoutStatsSection(
                     scrollState = scrollState,
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
+                    granularity = selectedRange.granularity,
                     modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },

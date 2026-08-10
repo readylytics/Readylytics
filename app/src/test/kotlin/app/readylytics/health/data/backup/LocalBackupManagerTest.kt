@@ -326,6 +326,57 @@ class LocalBackupManagerTest {
         }
 
     @Test
+    fun createBackup_parallelRowCounts_areCompleteAndAccurate() =
+        runTest {
+            db.weightRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                        id = "w1",
+                        timestampMs = 1000L,
+                        weightKg = 70.5f,
+                    ),
+                ),
+            )
+            db.stepRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                        id = "s1",
+                        startTime = 1000L,
+                        endTime = 2000L,
+                        count = 5000L,
+                    ),
+                ),
+            )
+
+            val result = manager.createBackup()
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val rowCounts = JSONObject(backupJson).getJSONObject("rowCounts")
+
+            // Seeded tables.
+            assertEquals(1, rowCounts.getInt("weightRecords"))
+            assertEquals(1, rowCounts.getInt("stepRecords"))
+            // Empty tables must still appear, counted correctly, in the parallel block.
+            assertEquals(0, rowCounts.getInt("sleepSessions"))
+            assertEquals(0, rowCounts.getInt("heartRateRecords"))
+            assertEquals(0, rowCounts.getInt("hrvRecords"))
+            assertEquals(0, rowCounts.getInt("workouts"))
+            assertEquals(0, rowCounts.getInt("dailySummaries"))
+            assertEquals(0, rowCounts.getInt("bodyFatRecords"))
+            assertEquals(0, rowCounts.getInt("bloodPressureRecords"))
+            assertEquals(0, rowCounts.getInt("oxygenSaturationRecords"))
+            assertEquals(0, rowCounts.getInt("bodyTemperatureRecords"))
+        }
+
+    @Test
     fun createBackup_prunesFilesOlderThan7Days() =
         runTest {
             backupDir.mkdirs()

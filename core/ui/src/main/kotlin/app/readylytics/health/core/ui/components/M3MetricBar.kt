@@ -36,13 +36,29 @@ internal fun fillEndCenterX(
     return (width * progress).coerceIn(half, (width - half).coerceAtLeast(half))
 }
 
+// Shared geometry primitive: the fraction of a track's total length/sweep that a round stroke cap
+// overhangs past its center (strokeWidth / 2 of it). Used by M3MetricBar's linear track and
+// M3MetricGauge's angular arc so both hide ticks that would otherwise render on top of the fill.
+internal fun roundCapOverhangFraction(
+    strokeWidth: Float,
+    totalLength: Float,
+): Float = if (strokeWidth > 0f && totalLength > 0f) (strokeWidth / 2f) / totalLength else 0f
+
 // Fraction of the bar width the fill's round cap overhangs past its center. Zero progress or a
 // zero-width canvas (early/collapsing composition frame) must yield 0f, never Infinity.
 internal fun capCoverageFraction(
     progress: Float,
     width: Float,
     strokeWidth: Float,
-): Float = if (progress > 0f && width > 0f) (strokeWidth / 2f) / width else 0f
+): Float = if (progress > 0f) roundCapOverhangFraction(strokeWidth, width) else 0f
+
+// The value marker dot is strictly opt-in: legacy callers (StepsCard, RasWeeklyBar) render a bare
+// track+fill+ticks and must not draw a marker by default.
+internal fun shouldDrawValueMarker(
+    showMarker: Boolean,
+    progressFraction: Float?,
+    progressToDraw: Float,
+): Boolean = showMarker && progressFraction != null && progressToDraw > 0f
 
 @Composable
 fun M3MetricBar(
@@ -54,6 +70,7 @@ fun M3MetricBar(
     barHeight: Dp = MaterialTheme.dimens.metricTrackThickness,
     markerColor: Color = activeColor,
     markerDiameter: Dp = MaterialTheme.dimens.metricGaugeMarkerDiameter,
+    showMarker: Boolean = false,
     animateProgress: Boolean = true,
 ) {
     val clamped = progressFraction?.coerceIn(0f, 1f) ?: 0f
@@ -115,8 +132,9 @@ fun M3MetricBar(
             )
         }
         // Value marker dot sitting exactly at the visual end of the fill's rounded cap, mirroring
-        // the gauge's marker (drawn last, on top of track/fill/ticks).
-        if (progressFraction != null && progressToDraw > 0f) {
+        // the gauge's marker (drawn last, on top of track/fill/ticks). Strictly opt-in via
+        // [showMarker] so pre-existing callers never render it by accident.
+        if (shouldDrawValueMarker(showMarker, progressFraction, progressToDraw)) {
             drawCircle(
                 color = markerColor,
                 radius = markerDiameter.toPx() / 2f,

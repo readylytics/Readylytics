@@ -5,7 +5,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.aggregateByRange
+import app.readylytics.health.core.ui.common.padBucketsToRange
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -77,6 +80,9 @@ data class WorkoutsUiState(
     val yesterdayStrainRatio: Float? = null,
     val yesterdayReadiness: Float? = null,
     val todayStrainIncrease: Float? = null,
+    val isRangeChanging: Boolean = false,
+    val trimpPeriodSummary: PeriodAverageSummary? = null,
+    val strainRatioPeriodSummary: PeriodAverageSummary? = null,
 )
 
 private data class WorkoutFlowData(
@@ -115,6 +121,8 @@ class WorkoutsViewModel
             )
 
         val selectedRange = _selectedRange.asStateFlow()
+
+        private val isRangeChangingState = MutableStateFlow(false)
 
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
@@ -297,6 +305,33 @@ class WorkoutsViewModel
                                 dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                             }
 
+                            val trimpForAggregation = dailyTrimp.map { it.copy(value = it.value ?: 0f) }
+                            val (bucketedTrimp, trimpSummary) =
+                                trimpForAggregation
+                                    .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
+                            val (bucketedStrainRatio, strainSummary) =
+                                dailyStrainRatio
+                                    .aggregateByRange(
+                                        range.granularity,
+                                        displayStartDayDate,
+                                        date,
+                                        range.days,
+                                        valueDecimalPlaces = 2,
+                                    )
+
+                            val paddedTrimp =
+                                bucketedTrimp.padBucketsToRange(
+                                    range.granularity,
+                                    displayStartDayDate,
+                                    date,
+                                )
+                            val paddedStrain =
+                                bucketedStrainRatio.padBucketsToRange(
+                                    range.granularity,
+                                    displayStartDayDate,
+                                    date,
+                                )
+
                             val summaryByDate = trimpSummaries.associateBy { it.date }
 
                             val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
@@ -400,8 +435,8 @@ class WorkoutsViewModel
                             WorkoutsUiState(
                                 latestSummary = latest,
                                 latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
-                                dailyTrimp = dailyTrimp,
-                                dailyStrainRatio = dailyStrainRatio,
+                                dailyTrimp = paddedTrimp,
+                                dailyStrainRatio = paddedStrain,
                                 recentWorkouts = paginatedItems,
                                 selectedRange = range,
                                 selectedDate = date,
@@ -419,10 +454,21 @@ class WorkoutsViewModel
                                 yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
                                 yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
                                 todayStrainIncrease = todayStrainIncrease,
+                                trimpPeriodSummary = trimpSummary,
+                                strainRatioPeriodSummary = strainSummary,
                             ).also { emit(it) }
                         }
                     }
                 }.distinctUntilChanged()
+                .map { state ->
+                    // Reset the range-change spinner only once the pipeline actually emits for the
+                    // newly-selected range (selectedRange field in the state already reflects the
+                    // chosen range at this point -- set by CombinedParams.range on pipeline restart).
+                    // Previously this was in the isSyncing combine, which re-emitted on every sync
+                    // toggle and could hide the spinner before flatMapLatest finished recomputing.
+                    isRangeChangingState.value = false
+                    state
+                }
                 // isSyncing is merged in after the heavy pipeline instead of inside it (mirrors
                 // DashboardViewModel.kt:104-113) so a sync toggle only triggers a cheap copy, not a
                 // full pipeline restart (Room re-subscriptions, EMA series, N+1 HR-sample loop).
@@ -435,6 +481,8 @@ class WorkoutsViewModel
                         isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
                         isRefreshing = syncing,
                     )
+                }.combine(isRangeChangingState) { state, isChanging ->
+                    state.copy(isRangeChanging = isChanging)
                 }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
@@ -459,6 +507,7 @@ class WorkoutsViewModel
         fun onRangeSelected(range: TimeRange) {
             _currentPage.value = 1
             _selectedRange.value = range
+            isRangeChangingState.value = true
             savedStateHandle["selectedRange"] = range
         }
 

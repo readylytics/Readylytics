@@ -1,6 +1,8 @@
 package app.readylytics.health.feature.vitals.overview
 
+import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
@@ -43,7 +45,8 @@ class VitalsStateFactoryTest {
                 summary(date = start, hrv = 40, rhr = null, spo2 = 94.4),
             )
 
-        val result = buildVitalsChartSeries(summaries, start, rangeDays = 7, unitSystem = UnitSystem.METRIC)
+        val result =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.SEVEN_DAYS, unitSystem = UnitSystem.METRIC)
 
         assertEquals(7, result.hrv.size)
         assertEquals(40f, result.hrv[0].value)
@@ -137,11 +140,11 @@ class VitalsStateFactoryTest {
             buildVitalsChartSeries(
                 summaries = listOf(DailySummary(date = start, avgSleepingSpo2 = 97.6f)),
                 startDate = start,
-                rangeDays = 1,
+                range = TimeRange.SEVEN_DAYS,
                 unitSystem = UnitSystem.METRIC,
             )
 
-        assertEquals(97.6f, series.spo2.single().value)
+        assertEquals(97.6f, series.spo2[0].value)
     }
 
     @Test
@@ -154,13 +157,14 @@ class VitalsStateFactoryTest {
                 DailySummary(date = startDate.plusDays(2), avgSleepingBodyTemp = 37.1f),
             )
 
-        val metricSeries = buildVitalsChartSeries(summaries, startDate, rangeDays = 3, unitSystem = UnitSystem.METRIC)
+        val metricSeries =
+            buildVitalsChartSeries(summaries, startDate, range = TimeRange.SEVEN_DAYS, unitSystem = UnitSystem.METRIC)
         assertEquals(36.5f, metricSeries.bodyTemp[0].value)
         assertEquals(null, metricSeries.bodyTemp[1].value)
         assertEquals(37.1f, metricSeries.bodyTemp[2].value)
 
         val imperialSeries =
-            buildVitalsChartSeries(summaries, startDate, rangeDays = 3, unitSystem = UnitSystem.IMPERIAL)
+            buildVitalsChartSeries(summaries, startDate, range = TimeRange.SEVEN_DAYS, unitSystem = UnitSystem.IMPERIAL)
         assertEquals(
             UnitConverter.celsiusToDisplayTemperature(36.5f, UnitSystem.IMPERIAL),
             imperialSeries.bodyTemp[0].value,
@@ -189,6 +193,119 @@ class VitalsStateFactoryTest {
             UnitConverter.celsiusToDisplayTemperature(36.7f, UnitSystem.IMPERIAL),
             imperialState.baselineBodyTemp,
         )
+    }
+
+    @Test
+    fun `six months buckets hrv series into monthly averages with summary`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val summaries =
+            listOf(
+                summary(date = start, hrv = 20),
+                summary(date = start.plusDays(31), hrv = 24),
+                summary(date = start.plusDays(59), hrv = 28),
+                summary(date = start.plusDays(90), hrv = 32),
+                summary(date = start.plusDays(120), hrv = 36),
+                summary(date = start.plusDays(151), hrv = 40),
+            )
+
+        val series =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.SIX_MONTHS, unitSystem = UnitSystem.METRIC)
+
+        assertEquals(listOf(15, 44, 74, 104, 135, 165), series.hrv.map { it.dayOffset })
+        assertEquals(listOf(20f, 24f, 28f, 32f, 36f, 40f), series.hrv.map { it.value })
+        assertEquals(40f, series.hrvPeriodSummary?.average)
+        assertEquals(36f, series.hrvPeriodSummary?.previousAverage)
+    }
+
+    @Test
+    fun `twelve months buckets series into quarterly averages`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val summaries =
+            listOf(
+                summary(date = start, hrv = 10),
+                summary(date = start.plusDays(90), hrv = 20),
+                summary(date = start.plusDays(181), hrv = 30),
+                summary(date = start.plusDays(273), hrv = 40),
+            )
+
+        val series =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.TWELVE_MONTHS, unitSystem = UnitSystem.METRIC)
+
+        assertEquals(listOf(44, 135, 226, 318), series.hrv.map { it.dayOffset })
+        assertEquals(listOf(10f, 20f, 30f, 40f), series.hrv.map { it.value })
+        assertEquals(TrendGranularity.QUARTERLY, series.hrvPeriodSummary?.granularity)
+        assertEquals(start.plusDays(318), series.hrvPeriodSummary?.periodStartDate)
+        assertEquals(40f, series.hrvPeriodSummary?.average)
+        assertEquals(30f, series.hrvPeriodSummary?.previousAverage)
+    }
+
+    @Test
+    fun `monthly buckets skip months without data`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val summaries =
+            listOf(
+                summary(date = start, hrv = 10),
+                summary(date = start.plusDays(59), hrv = 50),
+            )
+
+        val series =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.SIX_MONTHS, unitSystem = UnitSystem.METRIC)
+
+        assertEquals(listOf(15, 74), series.hrv.map { it.dayOffset })
+    }
+
+    @Test
+    fun `single populated bucket yields no period summary`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val summaries = listOf(summary(date = start, hrv = 20))
+
+        val series =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.SIX_MONTHS, unitSystem = UnitSystem.METRIC)
+
+        assertEquals(listOf(DailyDataPoint(15, 20f)), series.hrv)
+        assertNull(series.hrvPeriodSummary)
+    }
+
+    @Test
+    fun `all four metrics bucket together with independent averages`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val summaries =
+            listOf(
+                DailySummary(
+                    date = start,
+                    nocturnalHrv = 20,
+                    restingHeartRate = 51,
+                    avgSleepingSpo2 = 94.4f,
+                    avgSleepingBodyTemp = 36.5f,
+                    isCalibrating = false,
+                ),
+                DailySummary(
+                    date = start.plusDays(31),
+                    nocturnalHrv = 24,
+                    restingHeartRate = 53,
+                    avgSleepingSpo2 = 96.6f,
+                    avgSleepingBodyTemp = 37.1f,
+                    isCalibrating = false,
+                ),
+            )
+
+        val series =
+            buildVitalsChartSeries(summaries, start, range = TimeRange.SIX_MONTHS, unitSystem = UnitSystem.METRIC)
+
+        assertEquals(listOf(15, 44), series.hrv.map { it.dayOffset })
+        assertEquals(listOf(15, 44), series.rhr.map { it.dayOffset })
+        assertEquals(listOf(15, 44), series.spo2.map { it.dayOffset })
+        assertEquals(listOf(15, 44), series.bodyTemp.map { it.dayOffset })
+
+        assertEquals(listOf(20f, 24f), series.hrv.map { it.value })
+        assertEquals(listOf(51f, 53f), series.rhr.map { it.value })
+        assertEquals(listOf(94f, 97f), series.spo2.map { it.value })
+        assertEquals(listOf(36.5f, 37.1f), series.bodyTemp.map { it.value })
+
+        assertEquals(24f, series.hrvPeriodSummary?.average)
+        assertEquals(53f, series.rhrPeriodSummary?.average)
+        assertEquals(97f, series.spo2PeriodSummary?.average)
+        assertEquals(37.1f, series.bodyTempPeriodSummary?.average)
     }
 
     private fun summary(

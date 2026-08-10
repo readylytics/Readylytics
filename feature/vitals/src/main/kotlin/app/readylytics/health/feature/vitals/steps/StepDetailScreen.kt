@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
@@ -184,6 +185,9 @@ fun StepDetailScreen(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         parentScrollInProgress = { scrollState.isScrollInProgress },
+                        granularity = uiState.selectedRange.granularity,
+                        periodSummary = uiState.periodSummary,
+                        deltaDirection = DeltaDirection.HIGHER_IS_BETTER,
                     )
                 }
             }

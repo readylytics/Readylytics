@@ -230,6 +230,65 @@ class BloodPressureDetailViewModelTest {
             assertEquals(TimeRange.THIRTY_DAYS, state.selectedRange)
         }
 
+    @Test
+    fun `twelve month range buckets systolic and diastolic into quarterly points`() =
+        runTest {
+            val start = LocalDate.of(2026, 1, 1)
+            selectedDateFlow.value = start
+            val zone = java.time.ZoneId.systemDefault()
+            val records =
+                listOf(
+                    // Q1: two records
+                    bloodPressureEntity(
+                        systolic = 118,
+                        diastolic = 78,
+                        timestampMs =
+                            start
+                                .plusMonths(1)
+                                .atStartOfDay(zone)
+                                .toInstant()
+                                .toEpochMilli(),
+                    ),
+                    bloodPressureEntity(
+                        systolic = 122,
+                        diastolic = 82,
+                        timestampMs =
+                            start
+                                .plusMonths(2)
+                                .atStartOfDay(zone)
+                                .toInstant()
+                                .toEpochMilli(),
+                    ),
+                    // Q2: one record
+                    bloodPressureEntity(
+                        systolic = 120,
+                        diastolic = 80,
+                        timestampMs =
+                            start
+                                .plusMonths(4)
+                                .atStartOfDay(zone)
+                                .toInstant()
+                                .toEpochMilli(),
+                    ),
+                )
+            coEvery { repository.getByDateRange(any(), any()) } returns records
+            coEvery { repository.getLatest() } returns records.last()
+
+            viewModel = createViewModel()
+            viewModel.onRangeSelected(TimeRange.TWELVE_MONTHS)
+
+            val state =
+                viewModel.uiState.first {
+                    it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
+                }
+
+            // Two populated quarters: systolic Q1 avg 120, Q2 120; diastolic Q1 avg 80, Q2 80.
+            assertEquals(2, state.dailySystolic.count { it.value != null })
+            assertEquals(2, state.dailyDiastolic.count { it.value != null })
+            assertEquals(listOf(120f, 120f), state.dailySystolic.filter { it.value != null }.map { it.value })
+            assertEquals(listOf(80f, 80f), state.dailyDiastolic.filter { it.value != null }.map { it.value })
+        }
+
     // --- helpers ---
 
     private fun bloodPressureEntity(

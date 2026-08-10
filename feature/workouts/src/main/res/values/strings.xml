@@ -67,6 +67,8 @@
     <string name="acwr_legend_strain_ratio">Strain Ratio</string>
     <string name="acwr_tooltip_trimp_format">TRIMP: %1$s</string>
     <string name="acwr_tooltip_strain_format">Strain: %1$s</string>
+    <string name="acwr_tooltip_avg_trimp_format">Avg. TRIMP: %1$s</string>
+    <string name="acwr_tooltip_avg_strain_format">Avg. Strain: %1$s</string>
     <string name="message_no_hr_data">No HR data available</string>
     <string name="label_minutes">Minutes</string>
     <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>

@@ -129,4 +129,33 @@ class StepDetailViewModelTest {
             val nullCount = state.dailySteps.count { it.value == null }
             assertEquals(6, nullCount)
         }
+
+    @Test
+    fun `twelve month range buckets steps into quarterly points`() =
+        runTest {
+            val start = LocalDate.of(2026, 1, 1)
+            selectedDateFlow.value = start
+            val summaries =
+                listOf(
+                    DailySummary(date = start.plusDays(0), stepCount = 9000),
+                    DailySummary(date = start.plusDays(1), stepCount = 11000),
+                    DailySummary(date = start.plusDays(100), stepCount = 8000),
+                )
+
+            every { repository.observeByDate(any()) } returns MutableStateFlow(summaries.last())
+            every { repository.observeSince(any()) } returns MutableStateFlow(summaries)
+
+            viewModel = createViewModel()
+            viewModel.onRangeSelected(TimeRange.TWELVE_MONTHS)
+
+            val state =
+                viewModel.uiState.first {
+                    it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
+                }
+
+            // Two populated quarters (Q1: avg 10000, Q2: avg 8000); valueDecimalPlaces = 0.
+            assertEquals(2, state.dailySteps.count { it.value != null })
+            val values = state.dailySteps.filter { it.value != null }.map { it.value }
+            assertEquals(listOf(10000f, 8000f), values)
+        }
 }

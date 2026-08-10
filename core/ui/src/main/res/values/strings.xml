@@ -94,6 +94,8 @@
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
     <string name="label_avg">Avg</string>
+    <string name="period_summary_vs">vs %1$s</string>
+    <string name="period_label_quarter">Q%1$d</string>
     <string name="label_timeline">Timeline</string>
     <string name="label_zone_breakdown">Zone Breakdown</string>
     <string name="label_trends">Trends</string>

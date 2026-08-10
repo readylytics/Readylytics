@@ -178,7 +178,7 @@ class VitalsViewModel
                                 buildVitalsChartSeries(
                                     summaries,
                                     window.startDate,
-                                    vitalsSelection.range.days,
+                                    vitalsSelection.range,
                                     chartPrefs.unitSystem,
                                     endDate = vitalsSelection.date,
                                 ),

@@ -2,8 +2,9 @@ package app.readylytics.health.feature.vitals.overview
 
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.common.padToRange
+import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
@@ -25,6 +26,10 @@ data class VitalsChartSeries(
     val rhr: List<DailyDataPoint>,
     val spo2: List<DailyDataPoint>,
     val bodyTemp: List<DailyDataPoint>,
+    val hrvPeriodSummary: PeriodAverageSummary? = null,
+    val rhrPeriodSummary: PeriodAverageSummary? = null,
+    val spo2PeriodSummary: PeriodAverageSummary? = null,
+    val bodyTempPeriodSummary: PeriodAverageSummary? = null,
 )
 
 internal data class VitalsRangeWindow(
@@ -112,11 +117,11 @@ fun VitalsUiState.chartInputs(): VitalsChartInputs =
 internal fun buildVitalsChartSeries(
     summaries: List<DailySummary>,
     startDate: LocalDate,
-    rangeDays: Int,
+    range: TimeRange,
     unitSystem: UnitSystem,
-    endDate: LocalDate = startDate.plusDays(rangeDays.toLong() - 1),
+    endDate: LocalDate = startDate.plusDays(range.days.toLong() - 1),
 ): VitalsChartSeries {
-    fun points(value: (DailySummary) -> Float?): List<DailyDataPoint> =
+    fun realPoints(value: (DailySummary) -> Float?): List<DailyDataPoint> =
         summaries
             .filter { it.date in startDate..endDate }
             .mapNotNull { summary ->
@@ -124,18 +129,32 @@ internal fun buildVitalsChartSeries(
                     DailyDataPoint(ChronoUnit.DAYS.between(startDate, summary.date).toInt(), it)
                 }
             }.sortedBy(DailyDataPoint::dayOffset)
-            .padToRange(rangeDays)
+
+    val (hrvPoints, hrvSummary) =
+        realPoints { it.nocturnalHrv?.toFloat() }
+            .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (rhrPoints, rhrSummary) =
+        realPoints { it.restingHeartRate?.toFloat() }
+            .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (spo2Points, spo2Summary) =
+        realPoints { it.avgSleepingSpo2 }
+            .aggregateByRange(range.granularity, startDate, endDate, range.days)
+    val (bodyTempPoints, bodyTempSummary) =
+        realPoints {
+            it.avgSleepingBodyTemp?.let { celsius ->
+                UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
+            }
+        }.aggregateByRange(range.granularity, startDate, endDate, range.days, valueDecimalPlaces = 1)
 
     return VitalsChartSeries(
-        hrv = points { it.nocturnalHrv?.toFloat() },
-        rhr = points { it.restingHeartRate?.toFloat() },
-        spo2 = points { it.avgSleepingSpo2 },
-        bodyTemp =
-            points {
-                it.avgSleepingBodyTemp?.let { celsius ->
-                    UnitConverter.celsiusToDisplayTemperature(celsius, unitSystem)
-                }
-            },
+        hrv = hrvPoints,
+        rhr = rhrPoints,
+        spo2 = spo2Points,
+        bodyTemp = bodyTempPoints,
+        hrvPeriodSummary = hrvSummary,
+        rhrPeriodSummary = rhrSummary,
+        spo2PeriodSummary = spo2Summary,
+        bodyTempPeriodSummary = bodyTempSummary,
     )
 }
 
