@@ -26,12 +26,11 @@ private data class Bucket(
     val points: List<DailyDataPoint>,
 )
 
-private fun DailyDataPoint.bucketStart(
+private fun bucketStartForDate(
+    date: LocalDate,
     granularity: TrendGranularity,
-    startDate: LocalDate,
-): LocalDate {
-    val date = startDate.plusDays(dayOffset.toLong())
-    return when (granularity) {
+): LocalDate =
+    when (granularity) {
         TrendGranularity.DAILY -> date
         TrendGranularity.MONTHLY -> date.withDayOfMonth(1)
         TrendGranularity.QUARTERLY -> {
@@ -39,7 +38,23 @@ private fun DailyDataPoint.bucketStart(
             date.withDayOfMonth(1).withMonth(quarterStartMonth)
         }
     }
+
+private fun bucketMidpointOffset(
+    bucketStart: LocalDate,
+    granularity: TrendGranularity,
+    startDate: LocalDate,
+    endDate: LocalDate?,
+): Int {
+    val length = bucketLengthDays(bucketStart, granularity)
+    val midpoint = bucketStart.plusDays(((length - 1) / 2).toLong())
+    val mid = endDate?.let { midpoint.coerceIn(startDate, it) } ?: midpoint
+    return ChronoUnit.DAYS.between(startDate, mid).toInt()
 }
+
+private fun DailyDataPoint.bucketStart(
+    granularity: TrendGranularity,
+    startDate: LocalDate,
+): LocalDate = bucketStartForDate(startDate.plusDays(dayOffset.toLong()), granularity)
 
 private fun bucketLengthDays(
     bucketStart: LocalDate,
@@ -98,16 +113,13 @@ fun List<DailyDataPoint>.bucketBy(
             .sortedBy(Bucket::start)
 
     return buckets.map { bucket ->
-        val length = bucketLengthDays(bucket.start, granularity)
-        val midpoint = bucket.start.plusDays(((length - 1) / 2).toLong())
-        val mid = endDate?.let { midpoint.coerceIn(startDate, it) } ?: midpoint
         val average =
             bucket.points
                 .mapNotNull(DailyDataPoint::value)
                 .average()
                 .toFloat()
                 .roundToDecimalPlaces(valueDecimalPlaces)
-        DailyDataPoint(ChronoUnit.DAYS.between(startDate, mid).toInt(), average)
+        DailyDataPoint(bucketMidpointOffset(bucket.start, granularity, startDate, endDate), average)
     }
 }
 
@@ -161,23 +173,15 @@ fun List<DailyDataPoint>.padBucketsToRange(
     val offsets = mutableListOf<Int>()
     var cursor = startDate
     while (!cursor.isAfter(endDate)) {
-        val bucketStart = when (granularity) {
-            TrendGranularity.MONTHLY -> cursor.withDayOfMonth(1)
-            TrendGranularity.QUARTERLY -> {
-                val qm = ((cursor.monthValue - 1) / 3) * 3 + 1
-                cursor.withDayOfMonth(1).withMonth(qm)
-            }
-            else -> cursor
-        }
-        val length = bucketLengthDays(bucketStart, granularity)
-        val midpoint = bucketStart.plusDays(((length - 1) / 2).toLong()).coerceIn(startDate, endDate)
-        val offset = ChronoUnit.DAYS.between(startDate, midpoint).toInt()
+        val bucketStart = bucketStartForDate(cursor, granularity)
+        val offset = bucketMidpointOffset(bucketStart, granularity, startDate, endDate)
         if (offset !in offsets) offsets.add(offset)
-        cursor = when (granularity) {
-            TrendGranularity.MONTHLY -> bucketStart.plusMonths(1)
-            TrendGranularity.QUARTERLY -> bucketStart.plusMonths(3)
-            else -> cursor.plusDays(1)
-        }
+        cursor =
+            when (granularity) {
+                TrendGranularity.MONTHLY -> bucketStart.plusMonths(1)
+                TrendGranularity.QUARTERLY -> bucketStart.plusMonths(3)
+                else -> cursor.plusDays(1) // unreachable: DAILY returns early
+            }
     }
     return offsets.map { offset -> byOffset[offset] ?: DailyDataPoint(offset, null) }
 }
