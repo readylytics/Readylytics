@@ -131,22 +131,27 @@ fun SleepTrendCard(
                     val durationText = DateFormatUtils.formatSleepDuration(avgMinutes)
 
                     val quarterTemplate = stringResource(CoreUiR.string.period_label_quarter)
-                    val periodLabel = periodLabelFor(summary.granularity, summary.periodStartDate) { quarter ->
-                        String.format(Locale.getDefault(), quarterTemplate, quarter)
-                    }
+                    val periodLabel =
+                        periodLabelFor(summary.granularity, summary.periodStartDate) { quarter ->
+                            String.format(Locale.getDefault(), quarterTemplate, quarter)
+                        }
                     val avgLabel = stringResource(CoreUiR.string.label_avg)
 
-                    val previousLabel = periodLabelFor(summary.granularity, summary.previousPeriodStartDate) { quarter ->
-                        String.format(Locale.getDefault(), quarterTemplate, quarter)
-                    }
+                    val previousLabel =
+                        periodLabelFor(summary.granularity, summary.previousPeriodStartDate) { quarter ->
+                            String.format(Locale.getDefault(), quarterTemplate, quarter)
+                        }
                     val previousLabelText = stringResource(CoreUiR.string.period_summary_vs, previousLabel)
 
                     val deltaMinutes = prev?.let { ((avg - it) * 60f).roundToInt() }
-                    val deltaText = if (deltaMinutes != null && deltaMinutes != 0) {
-                        val sign = if (deltaMinutes > 0) "+" else ""
-                        val absMin = kotlin.math.abs(deltaMinutes)
-                        "$sign${absMin}min"
-                    } else "—"
+                    val deltaText =
+                        if (deltaMinutes != null && deltaMinutes != 0) {
+                            val sign = if (deltaMinutes > 0) "+" else ""
+                            val absMin = kotlin.math.abs(deltaMinutes)
+                            "$sign${absMin}min"
+                        } else {
+                            "—"
+                        }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

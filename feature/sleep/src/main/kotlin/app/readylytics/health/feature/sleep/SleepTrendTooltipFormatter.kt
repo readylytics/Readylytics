@@ -39,14 +39,21 @@ internal fun buildSleepTrendTooltipData(
     val date = ChartUtils.dayOffsetToLocalDate(selectedState.dayOffset, rangeStartMs, scoringZoneId)
 
     if (granularity != TrendGranularity.DAILY) {
-        val periodLabel = when (granularity) {
-            TrendGranularity.MONTHLY -> date.format(DateTimeFormatter.ofPattern("MMM", locale))
-            TrendGranularity.QUARTERLY -> String.format(locale, strings.quarterLabelFormat, ((date.monthValue - 1) / 3) + 1)
-            TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
-        }
-        val duration = DateFormatUtils.formatSleepDuration(
-            ((selectedState.actualDurationValue ?: 0f) * 60f).roundToInt(),
-        )
+        val periodLabel =
+            when (granularity) {
+                TrendGranularity.MONTHLY -> date.format(DateTimeFormatter.ofPattern("MMM", locale))
+                TrendGranularity.QUARTERLY ->
+                    String.format(
+                        locale,
+                        strings.quarterLabelFormat,
+                        ((date.monthValue - 1) / 3) + 1,
+                    )
+                TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
+            }
+        val duration =
+            DateFormatUtils.formatSleepDuration(
+                ((selectedState.actualDurationValue ?: 0f) * 60f).roundToInt(),
+            )
         val avgDurationText = String.format(locale, strings.avgDurationFormat, duration)
         val avgBedtimeText = buildAvgBedtimeString(selectedState.startOffsetValue, locale)
 
@@ -107,10 +114,22 @@ internal fun buildSleepTrendTooltipData(
     )
 }
 
-private fun buildAvgBedtimeString(startOffsetValue: Float?, locale: Locale): String {
+private fun buildAvgBedtimeString(
+    startOffsetValue: Float?,
+    locale: Locale,
+): String {
     if (startOffsetValue == null) return "—"
     val totalHours = 12f + startOffsetValue
-    val hour = (totalHours.toInt() % 24).let { if (it == 0) 12 else if (it > 12) it - 12 else it }
+    val hour =
+        (totalHours.toInt() % 24).let {
+            if (it == 0) {
+                12
+            } else if (it > 12) {
+                it - 12
+            } else {
+                it
+            }
+        }
     val minute = ((totalHours - totalHours.toInt()) * 60).roundToInt()
     val amPm = if (totalHours.toInt() % 24 >= 12) "PM" else "AM"
     return String.format(locale, "%d:%02d %s", hour, minute, amPm)

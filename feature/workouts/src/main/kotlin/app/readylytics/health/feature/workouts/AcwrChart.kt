@@ -103,7 +103,6 @@ internal fun AcwrChartCard(
                 trimpColor = trimpColor,
                 ratioColor = ratioColor,
             )
-
         }
     }
 }
@@ -176,11 +175,16 @@ private fun AcwrChart(
                 val strainText = MetricFormatter.formatStrain(s.strainRatioValue)
 
                 if (granularity != TrendGranularity.DAILY) {
-                    val periodLabel = when (granularity) {
-                        TrendGranularity.MONTHLY -> date.format(java.time.format.DateTimeFormatter.ofPattern("MMM", java.util.Locale.getDefault()))
-                        TrendGranularity.QUARTERLY -> "Q${((date.monthValue - 1) / 3) + 1}"
-                        TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
-                    }
+                    val periodLabel =
+                        when (granularity) {
+                            TrendGranularity.MONTHLY ->
+                                date.format(
+                                    java.time.format.DateTimeFormatter
+                                        .ofPattern("MMM", java.util.Locale.getDefault()),
+                                )
+                            TrendGranularity.QUARTERLY -> "Q${((date.monthValue - 1) / 3) + 1}"
+                            TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
+                        }
                     DataPointTooltipData(
                         valueText = periodLabel,
                         dateText = avgTrimpFormat.format(trimpText),
