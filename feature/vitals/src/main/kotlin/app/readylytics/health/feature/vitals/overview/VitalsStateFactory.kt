@@ -4,21 +4,30 @@ import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.aggregateByRange
+import app.readylytics.health.core.ui.common.bucketBy
+import app.readylytics.health.core.ui.common.bucketLengthDays
+import app.readylytics.health.core.ui.common.bucketStartForDate
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.BucketZoneBands
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.PersonalBaselineAssessment
 import app.readylytics.health.domain.model.Spo2Assessment
+import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.model.assessHrv
 import app.readylytics.health.domain.model.assessRhr
 import app.readylytics.health.domain.model.assessSpo2
+import app.readylytics.health.domain.model.hrvZoneBandsForBaseline
+import app.readylytics.health.domain.model.rhrZoneBandsForBaseline
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.util.UnitConverter
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import kotlin.math.roundToInt
 
 @Immutable
 data class VitalsChartSeries(
@@ -30,6 +39,14 @@ data class VitalsChartSeries(
     val rhrPeriodSummary: PeriodAverageSummary? = null,
     val spo2PeriodSummary: PeriodAverageSummary? = null,
     val bodyTempPeriodSummary: PeriodAverageSummary? = null,
+    val historicalRhrBaseline: List<DailyDataPoint> = emptyList(),
+    val historicalHrvBaseline: List<DailyDataPoint> = emptyList(),
+    val historicalRhrBaselineAverage: Int? = null,
+    val historicalHrvBaselineAverage: Int? = null,
+    val historicalRhrZoneBands: List<ZoneBand> = emptyList(),
+    val historicalHrvZoneBands: List<ZoneBand> = emptyList(),
+    val historicalRhrBucketZoneBands: List<BucketZoneBands> = emptyList(),
+    val historicalHrvBucketZoneBands: List<BucketZoneBands> = emptyList(),
 )
 
 internal data class VitalsRangeWindow(
@@ -119,6 +136,12 @@ internal fun buildVitalsChartSeries(
     startDate: LocalDate,
     range: TimeRange,
     unitSystem: UnitSystem,
+    rhrBaselineOverride: Float? = null,
+    hrvBaselineOverride: Float? = null,
+    rhrOptimalThreshold: Float = 1.1f,
+    rhrWarningThreshold: Float = 1.3f,
+    hrvOptimalThreshold: Float = 1.1f,
+    hrvWarningThreshold: Float = 1.1f,
     endDate: LocalDate = startDate.plusDays(range.days.toLong() - 1),
 ): VitalsChartSeries {
     fun realPoints(value: (DailySummary) -> Float?): List<DailyDataPoint> =
@@ -146,6 +169,99 @@ internal fun buildVitalsChartSeries(
             }
         }.aggregateByRange(range.granularity, startDate, endDate, range.days, valueDecimalPlaces = 1)
 
+    val rawRhrBaseline: List<DailyDataPoint>? =
+        if (range.granularity == TrendGranularity.DAILY) {
+            null
+        } else {
+            realPoints { summary ->
+                DailyMetricsMapper.rhrBaselineRounded(summary, rhrBaselineOverride)?.toFloat()
+            }
+        }
+    val rawHrvBaseline: List<DailyDataPoint>? =
+        if (range.granularity == TrendGranularity.DAILY) {
+            null
+        } else {
+            realPoints { summary ->
+                DailyMetricsMapper.hrvBaselineRounded(summary, hrvBaselineOverride)?.toFloat()
+            }
+        }
+
+    val historicalRhrBaseline = rawRhrBaseline?.bucketBy(range.granularity, startDate, endDate) ?: emptyList()
+    val historicalHrvBaseline = rawHrvBaseline?.bucketBy(range.granularity, startDate, endDate) ?: emptyList()
+
+    val historicalRhrBaselineAverage: Int? =
+        rawRhrBaseline
+            ?.mapNotNull { it.value }
+            ?.takeIf { it.isNotEmpty() }
+            ?.average()
+            ?.roundToInt()
+    val historicalHrvBaselineAverage: Int? =
+        rawHrvBaseline
+            ?.mapNotNull { it.value }
+            ?.takeIf { it.isNotEmpty() }
+            ?.average()
+            ?.roundToInt()
+    val historicalRhrZoneBands: List<ZoneBand> =
+        historicalRhrBaselineAverage?.let {
+            rhrZoneBandsForBaseline(it, rhrOptimalThreshold, rhrWarningThreshold)
+        } ?: emptyList()
+    val historicalHrvZoneBands: List<ZoneBand> =
+        historicalHrvBaselineAverage?.let {
+            hrvZoneBandsForBaseline(it, hrvOptimalThreshold, hrvWarningThreshold)
+        } ?: emptyList()
+
+    // bucket.dayOffset is the bucket MIDPOINT (see bucketMidpointOffset), not the bucket start,
+    // so the true bucket boundary is re-derived via bucketStartForDate rather than used directly.
+    val rangeEndOffsetExclusive = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
+    val historicalRhrBucketZoneBands: List<BucketZoneBands> =
+        if (range.granularity == TrendGranularity.DAILY) {
+            emptyList()
+        } else {
+            historicalRhrBaseline.mapNotNull { bucket ->
+                bucket.value?.roundToInt()?.let { baseline ->
+                    val bucketStart =
+                        bucketStartForDate(startDate.plusDays(bucket.dayOffset.toLong()), range.granularity)
+                    val startOffset =
+                        ChronoUnit.DAYS
+                            .between(startDate, bucketStart)
+                            .toInt()
+                            .coerceAtLeast(0)
+                    val endOffset =
+                        (startOffset + bucketLengthDays(bucketStart, range.granularity))
+                            .coerceAtMost(rangeEndOffsetExclusive)
+                    BucketZoneBands(
+                        startDayOffset = startOffset,
+                        endDayOffset = endOffset,
+                        bands = rhrZoneBandsForBaseline(baseline, rhrOptimalThreshold, rhrWarningThreshold),
+                    )
+                }
+            }
+        }
+    val historicalHrvBucketZoneBands: List<BucketZoneBands> =
+        if (range.granularity == TrendGranularity.DAILY) {
+            emptyList()
+        } else {
+            historicalHrvBaseline.mapNotNull { bucket ->
+                bucket.value?.roundToInt()?.let { baseline ->
+                    val bucketStart =
+                        bucketStartForDate(startDate.plusDays(bucket.dayOffset.toLong()), range.granularity)
+                    val startOffset =
+                        ChronoUnit.DAYS
+                            .between(startDate, bucketStart)
+                            .toInt()
+                            .coerceAtLeast(0)
+                    val endOffset =
+                        (startOffset + bucketLengthDays(bucketStart, range.granularity))
+                            .coerceAtMost(rangeEndOffsetExclusive)
+                    BucketZoneBands(
+                        startDayOffset = startOffset,
+                        endDayOffset = endOffset,
+                        bands = hrvZoneBandsForBaseline(baseline, hrvOptimalThreshold, hrvWarningThreshold),
+                    )
+                }
+            }
+        }
+
     return VitalsChartSeries(
         hrv = hrvPoints,
         rhr = rhrPoints,
@@ -155,6 +271,14 @@ internal fun buildVitalsChartSeries(
         rhrPeriodSummary = rhrSummary,
         spo2PeriodSummary = spo2Summary,
         bodyTempPeriodSummary = bodyTempSummary,
+        historicalRhrBaseline = historicalRhrBaseline,
+        historicalHrvBaseline = historicalHrvBaseline,
+        historicalRhrBaselineAverage = historicalRhrBaselineAverage,
+        historicalHrvBaselineAverage = historicalHrvBaselineAverage,
+        historicalRhrZoneBands = historicalRhrZoneBands,
+        historicalHrvZoneBands = historicalHrvZoneBands,
+        historicalRhrBucketZoneBands = historicalRhrBucketZoneBands,
+        historicalHrvBucketZoneBands = historicalHrvBucketZoneBands,
     )
 }
 

@@ -24,6 +24,7 @@ import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -55,7 +56,6 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -174,7 +174,8 @@ fun SingleBloodPressureChart(
     val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
     // Resolved in composable scope so the format string can be used inside the non-composable
     // marker listener below; resource strings must never be built as Kotlin literals.
-    val quarterTemplate = stringResource(R.string.period_label_quarter)
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+    val weekRangeTemplate = stringResource(R.string.tooltip_week_range)
 
     LaunchedEffect(points) {
         modelProducer.runTransaction {
@@ -230,7 +231,9 @@ fun SingleBloodPressureChart(
                 formatTrendTooltipDate(
                     granularity,
                     date,
-                ) { quarter -> String.format(Locale.getDefault(), quarterTemplate, quarter) }
+                    ordinalLabel,
+                    weekRangeTemplate,
+                )
             val value = points.firstOrNull { it.dayOffset == dayOffset }?.value
             val valueText = value?.let { "${it.roundToInt()} mmHg" } ?: "—"
             if (showTooltip) {

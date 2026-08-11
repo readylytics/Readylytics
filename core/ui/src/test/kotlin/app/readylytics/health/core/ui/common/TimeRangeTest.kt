@@ -44,8 +44,8 @@ class TimeRangeTest {
     }
 
     @Test
-    fun `six months maps to monthly and twelve months maps to quarterly granularity`() {
+    fun `six months maps to monthly and twelve months maps to eight week granularity`() {
         assertEquals(TrendGranularity.MONTHLY, TimeRange.SIX_MONTHS.granularity)
-        assertEquals(TrendGranularity.QUARTERLY, TimeRange.TWELVE_MONTHS.granularity)
+        assertEquals(TrendGranularity.EIGHT_WEEK, TimeRange.TWELVE_MONTHS.granularity)
     }
 }

@@ -353,16 +353,16 @@ class BodyFatDetailViewModelTest {
         }
 
     @Test
-    fun `twelve month range buckets body fat into quarterly points`() =
+    fun `twelve month range buckets body fat into eight week points`() =
         runTest {
             val start = LocalDate.of(2026, 1, 1)
             selectedDateFlow.value = start
             val zone = java.time.ZoneId.systemDefault()
             val records =
                 listOf(
-                    // Q1: two records averaging 20.0
+                    // Octad 1 (weeks 1-8): one record
                     BodyFatRecordEntity(
-                        "q1a",
+                        "o1",
                         start
                             .plusMonths(1)
                             .atStartOfDay(zone)
@@ -370,8 +370,9 @@ class BodyFatDetailViewModelTest {
                             .toEpochMilli(),
                         19f,
                     ),
+                    // Octad 2 (weeks 9-16): one record
                     BodyFatRecordEntity(
-                        "q1b",
+                        "o2",
                         start
                             .plusMonths(2)
                             .atStartOfDay(zone)
@@ -379,9 +380,9 @@ class BodyFatDetailViewModelTest {
                             .toEpochMilli(),
                         21f,
                     ),
-                    // Q2: one record
+                    // Octad 3 (weeks 17-24): one record
                     BodyFatRecordEntity(
-                        "q2",
+                        "o3",
                         start
                             .plusMonths(4)
                             .atStartOfDay(zone)
@@ -402,9 +403,9 @@ class BodyFatDetailViewModelTest {
                     it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
                 }
 
-            // Two populated quarters: Q1 avg 20.0, Q2 avg 22.0 (valueDecimalPlaces = 1).
-            assertEquals(2, state.dailyBodyFat.count { it.value != null })
-            assertEquals(listOf(20f, 22f), state.dailyBodyFat.filter { it.value != null }.map { it.value })
-            assertEquals(TrendGranularity.QUARTERLY, state.periodSummary?.granularity)
+            // Three populated octads: 19.0, 21.0, 22.0 (valueDecimalPlaces = 1).
+            assertEquals(3, state.dailyBodyFat.count { it.value != null })
+            assertEquals(listOf(19f, 21f, 22f), state.dailyBodyFat.filter { it.value != null }.map { it.value })
+            assertEquals(TrendGranularity.EIGHT_WEEK, state.periodSummary?.granularity)
         }
 }
