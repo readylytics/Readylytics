@@ -119,6 +119,7 @@ fun TrendChart(
     // Whether an increase is favourable for [periodSummary]'s metric (e.g. HRV) or not (e.g. RHR);
     // drives the summary delta arrow color. [DeltaDirection.NEUTRAL] keeps the arrow neutral.
     deltaDirection: DeltaDirection = DeltaDirection.HIGHER_IS_BETTER,
+    historicalBaseline: List<DailyDataPoint>? = null,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -152,7 +153,13 @@ fun TrendChart(
         }
     }
 
-    val resolvedBaselineLabel = baselineLabel ?: stringResource(R.string.label_baseline)
+    val resolvedBaselineLabel =
+        baselineLabel
+            ?: if (!historicalBaseline.isNullOrEmpty()) {
+                stringResource(R.string.label_historical_baseline)
+            } else {
+                stringResource(R.string.label_baseline)
+            }
 
     if (renderData.validPoints.isEmpty()) {
         EmptyChartPlaceholder(modifier = modifier)
@@ -192,13 +199,19 @@ fun TrendChart(
     val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
     val weekRangeTemplate = stringResource(R.string.tooltip_week_range)
 
-    LaunchedEffect(renderData.validPoints) {
+    LaunchedEffect(renderData.validPoints, historicalBaseline) {
         modelProducer.runTransaction {
             lineModel {
                 series(
                     x = renderData.validPoints.map(DailyDataPoint::dayOffset),
                     y = renderData.validPoints.map { requireNotNull(it.value).toDouble() },
                 )
+                if (!historicalBaseline.isNullOrEmpty()) {
+                    series(
+                        x = historicalBaseline.map(DailyDataPoint::dayOffset),
+                        y = historicalBaseline.map { requireNotNull(it.value).toDouble() },
+                    )
+                }
             }
         }
     }
@@ -237,6 +250,11 @@ fun TrendChart(
                     LineCartesianLayer.Point(dotComponent, 6.dp),
                 ),
             interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
+        )
+
+    val historicalBaselineLine =
+        LineCartesianLayer.rememberLine(
+            fill = LineCartesianLayer.LineFill.single(Fill(baselineColor)),
         )
 
     val extendedColors = LocalExtendedColors.current
@@ -283,7 +301,14 @@ fun TrendChart(
             }
         }
 
-    val lineProvider = remember(line) { LineCartesianLayer.LineProvider.series(line) }
+    val lineProvider =
+        remember(line, historicalBaselineLine, historicalBaseline) {
+            if (!historicalBaseline.isNullOrEmpty()) {
+                LineCartesianLayer.LineProvider.series(line, historicalBaselineLine)
+            } else {
+                LineCartesianLayer.LineProvider.series(line)
+            }
+        }
 
     val startAxisValueFormatter =
         remember(axisDecimalPlaces) {
@@ -298,10 +323,11 @@ fun TrendChart(
 
     val baselineLineComponent = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp)
     val decorations =
-        remember(zoneBandDecoration, shouldShowBaseline, baselineValue, baselineLineComponent) {
+        remember(zoneBandDecoration, shouldShowBaseline, baselineValue, baselineLineComponent, historicalBaseline) {
+            val hasHistoricalBaseline = !historicalBaseline.isNullOrEmpty()
             listOfNotNull(
                 zoneBandDecoration,
-                if (shouldShowBaseline) {
+                if (shouldShowBaseline && !hasHistoricalBaseline) {
                     HorizontalLine(
                         y = { baselineValue.toDouble() },
                         line = baselineLineComponent,
