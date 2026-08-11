@@ -34,12 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.PeriodAverageSummaryRow
+import app.readylytics.health.core.ui.components.LabeledPeriodAverage
+import app.readylytics.health.core.ui.components.PeriodAverageSummaryGroup
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.domain.model.BloodPressureStatus
@@ -254,12 +254,24 @@ fun BloodPressureDetailScreen(
                         zoomState = chartZoomState,
                         parentScrollInProgress = { scrollState.isScrollInProgress },
                     )
-                    uiState.periodSummary?.let { summary ->
-                        PeriodAverageSummaryRow(
-                            summary = summary,
+                    val systolicSummary = uiState.systolicPeriodSummary
+                    val diastolicSummary = uiState.diastolicPeriodSummary
+                    if (systolicSummary != null && diastolicSummary != null) {
+                        PeriodAverageSummaryGroup(
+                            primary =
+                                LabeledPeriodAverage(
+                                    label = stringResource(R.string.label_systolic),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    summary = systolicSummary,
+                                ),
+                            secondary =
+                                LabeledPeriodAverage(
+                                    label = stringResource(R.string.label_diastolic),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    summary = diastolicSummary,
+                                ),
                             unit = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
                             decimalPlaces = 0,
-                            direction = DeltaDirection.NEUTRAL,
                         )
                     }
                 }
