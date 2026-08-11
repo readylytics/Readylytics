@@ -18,6 +18,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import app.readylytics.health.core.designsystem.dimens
 
+/**
+ * Goal-style bars/gauges (RAS, Steps) fill only this fraction of their track/arc at the goal or
+ * max value, leaving headroom in the remaining width/sweep to visually show overshoot past goal.
+ */
+const val GOAL_FILL_CAP_FRACTION: Float = 0.75f
+
 internal val METRIC_BAR_TICK_FRACTIONS: List<Float> = listOf(0.2f, 0.4f, 0.6f, 0.8f)
 
 internal fun visibleTickFractions(

@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.ui.common.DateFormatUtils
+import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
@@ -201,7 +202,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
             UniversalMetricScalePreparer.score(
                 value,
                 0f,
-                100f,
+                100f / GOAL_FILL_CAP_FRACTION,
             )
         val title = resourceProvider.getString(DashboardR.string.card_title_ras_daily)
         val valueText = metrics?.rasRounded?.toString() ?: "—"

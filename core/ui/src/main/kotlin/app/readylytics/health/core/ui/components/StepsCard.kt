@@ -81,12 +81,14 @@ private fun StepsCardContent(
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
         val count = stepCount ?: 0
-        val max = stepGoal / 0.75f
+        val max = stepGoal / GOAL_FILL_CAP_FRACTION
         M3MetricBar(
             progressFraction = (count.toFloat() / max.coerceAtLeast(1f)).coerceIn(0f, 1f),
             activeColor = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.secondaryContainer,
             barHeight = MaterialTheme.dimens.miniBarHeight,
+            markerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            showMarker = true,
             animateProgress = false,
             modifier = Modifier.fillMaxWidth(),
         )
