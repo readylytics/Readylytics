@@ -16,6 +16,10 @@ This document is self-contained: it does not assume the reader has seen any prio
 conversation. It cites exact files, functions, and current code so it can be handed directly
 to an implementer.
 
+**§9 addendum** extends scope beyond RHR/HRV: it changes the shared `TrendGranularity` bucket
+size for the 360D range, which is infrastructure also used by Weight, Steps, BodyFat, Blood
+Pressure, Sleep, and Workouts (ACWR) trend charts — not just the vitals baseline work above.
+
 ---
 
 ## 1. Problem
@@ -673,3 +677,178 @@ series(...) }` + `LineCartesianLayer.LineProvider.series(line1, line2)` in isola
      whole-range average, not today's value; a data-sparse or fresh-install account shows
      "Calibrating" rather than a fabricated line.
 3. `./gradlew lintRelease` at the end, per `.claude/CLAUDE.md`.
+
+---
+
+## 9. Addendum: 360D bucket size — quarterly → 8-week (ISO week) buckets
+
+**Why:** `TrendGranularity.QUARTERLY` (the 360D range's bucket size) produces only 4 data
+points across a full year — too coarse for a meaningful trend line, including the historical
+baseline line from §4. Reducing the bucket to 8 weeks yields ~6–7 points/year instead, while
+staying large enough to average out day-to-day noise.
+
+**Naming, agreed:**
+- Chart x-axis ticks and the `PeriodAverageSummaryRow` period labels (the short form, same role
+  "Q3" plays today): **`"Wk 9"`** — new string resource `label_week_short` = `"Wk %1$d"`
+  (mirrors the existing `period_label_quarter` = `"Q%1$d"`, `core/ui/src/main/res/values/strings.xml:98`-ish).
+- Tooltip (richer form, since an 8-week span is less immediately legible than a quarter):
+  **`"Weeks 9–16"`** — new string resource `tooltip_week_range` = `"Weeks %1$d–%2$d"`.
+- The week number is the real **ISO week-of-week-based-year** (`java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR`),
+  not an arbitrary bucket index — see bucket-anchoring rationale below.
+
+### 9.1 Enum: replace, don't add
+
+`core/ui/src/main/kotlin/app/readylytics/health/core/ui/common/TimeRange.kt`:
+
+```kotlin
+enum class TrendGranularity { DAILY, MONTHLY, QUARTERLY }   // current
+enum class TrendGranularity { DAILY, MONTHLY, EIGHT_WEEK }  // proposed
+
+enum class TimeRange(val days: Int, val label: String, val granularity: TrendGranularity) {
+    SEVEN_DAYS(7, "7D", TrendGranularity.DAILY),
+    THIRTY_DAYS(30, "30D", TrendGranularity.DAILY),
+    SIX_MONTHS(180, "180D", TrendGranularity.MONTHLY),
+    TWELVE_MONTHS(360, "360D", TrendGranularity.EIGHT_WEEK),   // was QUARTERLY
+}
+```
+
+`TWELVE_MONTHS`/360D is the **only** `TimeRange` that ever maps to this granularity, so this is
+a straight rename/replace, not an addition — keeping `QUARTERLY` alongside `EIGHT_WEEK` would
+leave permanently dead code. Because `TrendGranularity` is branched on via **exhaustive `when`
+blocks** everywhere it's consumed, the Kotlin compiler will flag every remaining `QUARTERLY`
+reference as a compile error the moment the enum value is renamed — this makes the refactor
+mechanical and hard to leave incomplete.
+
+### 9.2 Bucket anchoring: real calendar ISO weeks, not a rolling window
+
+`bucketStartForDate` in `TrendPeriodAggregation.kt` currently derives each bucket from the date
+alone (`date.withDayOfMonth(1)` for MONTHLY, calendar-quarter start for QUARTERLY) — bucket
+membership is calendar-fixed: a given day always lands in the same bucket regardless of which
+date range is currently being viewed. The 8-week buckets must keep this property (otherwise
+"Wk 9" wouldn't correspond to a real ISO week 9, and a day's bucket would shift depending on
+which day you happen to view the chart):
+
+```kotlin
+import java.time.temporal.IsoFields
+
+private fun eightWeekBucketStart(date: LocalDate): LocalDate {
+    val weekBasedYear = date.get(IsoFields.WEEK_BASED_YEAR)
+    val isoWeek = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+    val octadFirstWeek = ((isoWeek - 1) / 8) * 8 + 1
+    return date
+        .with(IsoFields.WEEK_BASED_YEAR, weekBasedYear.toLong())
+        .with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, octadFirstWeek.toLong())
+        .with(java.time.DayOfWeek.MONDAY)
+}
+```
+
+**Partial trailing bucket:** an ISO week-based year has 52 or 53 weeks, neither divisible by 8,
+so the last octad of each week-based-year is short (4 or 5 weeks = 28 or 35 days, not 56).
+`bucketLengthDays` needs a real per-bucket calculation for `EIGHT_WEEK` (e.g. days until the
+next week-based-year's week 1 Monday, capped at 56) rather than a fixed constant — this mirrors
+how `MONTHLY`'s `bucketStart.lengthOfMonth()` already varies per calendar month, so it's not a
+new category of edge case, just a new instance of the existing pattern. This also means
+`bucketMidpointOffset` (which already clamps bucket midpoints to the selected date range) needs
+no changes — it consumes whatever `bucketLengthDays` returns.
+
+### 9.3 Consolidate the repeated label-callback boilerplate
+
+Seven production files independently repeat the same pattern today (resolve the
+`period_label_quarter` string resource, then build a `{ quarter -> String.format(...) }`
+lambda) to pass into `periodLabelFor`: `core/ui/.../components/TrendCharts.kt:188`,
+`core/ui/.../components/PeriodAverageSummaryRow.kt:67`, `core/ui/.../components/ChartDefaults.kt:80`,
+`feature/vitals/.../bloodpressure/BloodPressureSplitChart.kt:119`,
+`feature/vitals/.../bloodpressure/SingleBloodPressureChart.kt:177`,
+`feature/workouts/.../AcwrChart.kt:168`, `feature/sleep/.../SleepTrendChart.kt:134`. Example of
+the repeated shape (`PeriodAverageSummaryRow.kt:67-75`):
+
+```kotlin
+val quarterTemplate = stringResource(R.string.period_label_quarter)
+val periodLabel =
+    periodLabelFor(summary.granularity, summary.periodStartDate) { quarter ->
+        String.format(Locale.getDefault(), quarterTemplate, quarter)
+    }
+```
+
+Rather than bolting a second, near-identical `weekTemplate` lambda onto all seven sites,
+extract one shared composable helper (new function in `core/ui/.../common/TrendPeriodAggregation.kt`
+or an adjacent file) that resolves the correct template for whichever granularity it's given:
+
+```kotlin
+@Composable
+fun rememberPeriodOrdinalLabel(granularity: TrendGranularity): (Int) -> String {
+    val quarterTemplate = stringResource(R.string.period_label_quarter)   // "Q%1$d"
+    val weekTemplate = stringResource(R.string.label_week_short)          // "Wk %1$d"
+    val template = if (granularity == TrendGranularity.EIGHT_WEEK) weekTemplate else quarterTemplate
+    return remember(template) { ordinal -> String.format(Locale.getDefault(), template, ordinal) }
+}
+```
+
+Each of the seven call sites collapses to `val ordinalLabel = rememberPeriodOrdinalLabel(granularity)`
+— a net reduction in code even though a new granularity is being added. `periodLabelFor` itself
+gets an `EIGHT_WEEK` branch (replacing `QUARTERLY`) that extracts the real ISO week number via
+`date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)` and calls the (renamed) `ordinalLabel` callback —
+`quarterNumberFor` is deleted, since ISO week extraction replaces its one caller.
+
+### 9.4 Tooltip week range ("Weeks 9–16")
+
+Only three production sites call `formatTrendTooltipDate` for the actual tooltip text:
+`TrendCharts.kt`, `BloodPressureSplitChart.kt`, `SingleBloodPressureChart.kt` (Sleep and
+Workouts/ACWR have their own separate tooltip formatters — `SleepTrendTooltipFormatter.kt`'s
+`quarterLabelFormat` field and ACWR's inline logic — and are **not** touched by this specific
+richer-tooltip change; they'll keep showing the short "Wk 9" form in tooltips unless someone
+separately decides to extend them, which is not required here).
+
+Extend `formatTrendTooltipDate` with one more resolved-string parameter (mirroring how
+`ordinalLabel` is already resolved by the caller and passed in) so it can build the range text
+for `EIGHT_WEEK` using the bucket's real length:
+
+```kotlin
+fun formatTrendTooltipDate(
+    granularity: TrendGranularity,
+    date: LocalDate,
+    ordinalLabel: (Int) -> String,
+    weekRangeTemplate: String,   // new: resolved "Weeks %1$d–%2$d" from the caller
+): String =
+    when (granularity) {
+        TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
+        TrendGranularity.EIGHT_WEEK -> {
+            val startWeek = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+            val endWeek = startWeek + (bucketLengthDays(date, TrendGranularity.EIGHT_WEEK) / 7) - 1
+            String.format(Locale.getDefault(), weekRangeTemplate, startWeek, endWeek)
+        }
+        else -> periodLabelFor(granularity, date, ordinalLabel)
+    }
+```
+
+The three call sites add one line each: `val weekRangeTemplate = stringResource(R.string.tooltip_week_range)`.
+
+### 9.5 Tests to update
+
+- `core/ui/src/test/kotlin/app/readylytics/health/core/ui/common/TimeRangeTest.kt:49` —
+  `TWELVE_MONTHS.granularity` assertion: `QUARTERLY` → `EIGHT_WEEK`.
+- `core/ui/src/test/kotlin/app/readylytics/health/core/ui/common/TrendPeriodAggregationTest.kt` —
+  replace the `QUARTERLY` cases (bucket boundaries at lines ~65/191, `quarterNumberFor` coverage
+  at ~226–231, `periodLabelFor` quarterly formatting at ~235–241) with `EIGHT_WEEK` equivalents:
+  real ISO-week octad boundaries, the partial trailing-bucket length (year-end short bucket),
+  `periodLabelFor`'s "Wk N" output, and the new tooltip week-range helper's "Weeks N–M" output
+  including the partial-bucket case (e.g. "Weeks 49–52").
+- `core/ui/src/test/kotlin/app/readylytics/health/core/ui/components/TrendChartRenderDataTest.kt:82`,
+  `feature/vitals/src/test/kotlin/app/readylytics/health/feature/vitals/weight/WeightDetailViewModelTest.kt:316`,
+  `feature/vitals/src/test/kotlin/app/readylytics/health/feature/vitals/bodyfat/BodyFatDetailViewModelTest.kt:408`,
+  `feature/vitals/src/test/kotlin/app/readylytics/health/feature/vitals/overview/VitalsStateFactoryTest.kt:236`
+  — each asserts `granularity == TrendGranularity.QUARTERLY`; update the expected value to
+  `EIGHT_WEEK`.
+
+### 9.6 Interaction with §3–§4 (RHR/HRV historical baseline)
+
+**No baseline-specific code changes are needed.** `buildVitalsChartSeries`'s historical-baseline
+series (§4.1) only branches on `granularity == TrendGranularity.DAILY` vs. not, delegating all
+bucketing to `bucketBy(range.granularity, ...)` generically — once `TrendGranularity.EIGHT_WEEK`
+exists and `bucketBy` handles it (§9.2), the 360D historical baseline line automatically gets
+8-week resolution for free. The zone-band whole-range average (§4.1) doesn't depend on
+granularity at all (it's a flat average over every raw day in the selected range), so it's
+entirely unaffected by this addendum. Sequencing-wise, either half of this plan (§1–§8 baseline
+work, or §9 granularity work) can be implemented first without blocking the other; implementing
+§9 first means §4's manual verification pass already exercises 8-week buckets instead of
+quarterly ones.
