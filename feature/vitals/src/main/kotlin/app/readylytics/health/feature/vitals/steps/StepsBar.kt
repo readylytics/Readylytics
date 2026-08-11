@@ -258,7 +258,11 @@ fun StepsBar(
                     drawCircle(
                         color = markerColor,
                         radius = markerRadiusPx,
-                        center = Offset(fillWidth, barHeight / 2f),
+                        center =
+                            Offset(
+                                fillWidth.coerceIn(markerRadiusPx, totalWidth - markerRadiusPx),
+                                barHeight / 2f,
+                            ),
                     )
                 }
 
