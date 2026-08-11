@@ -4,21 +4,27 @@ import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.aggregateByRange
+import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.PersonalBaselineAssessment
 import app.readylytics.health.domain.model.Spo2Assessment
+import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.model.assessHrv
 import app.readylytics.health.domain.model.assessRhr
 import app.readylytics.health.domain.model.assessSpo2
+import app.readylytics.health.domain.model.hrvZoneBandsForBaseline
+import app.readylytics.health.domain.model.rhrZoneBandsForBaseline
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.util.UnitConverter
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import kotlin.math.roundToInt
 
 @Immutable
 data class VitalsChartSeries(
@@ -30,6 +36,12 @@ data class VitalsChartSeries(
     val rhrPeriodSummary: PeriodAverageSummary? = null,
     val spo2PeriodSummary: PeriodAverageSummary? = null,
     val bodyTempPeriodSummary: PeriodAverageSummary? = null,
+    val historicalRhrBaseline: List<DailyDataPoint> = emptyList(),
+    val historicalHrvBaseline: List<DailyDataPoint> = emptyList(),
+    val historicalRhrBaselineAverage: Int? = null,
+    val historicalHrvBaselineAverage: Int? = null,
+    val historicalRhrZoneBands: List<ZoneBand> = emptyList(),
+    val historicalHrvZoneBands: List<ZoneBand> = emptyList(),
 )
 
 internal data class VitalsRangeWindow(
@@ -119,6 +131,12 @@ internal fun buildVitalsChartSeries(
     startDate: LocalDate,
     range: TimeRange,
     unitSystem: UnitSystem,
+    rhrBaselineOverride: Float? = null,
+    hrvBaselineOverride: Float? = null,
+    rhrOptimalThreshold: Float = 1.1f,
+    rhrWarningThreshold: Float = 1.3f,
+    hrvOptimalThreshold: Float = 1.1f,
+    hrvWarningThreshold: Float = 1.1f,
     endDate: LocalDate = startDate.plusDays(range.days.toLong() - 1),
 ): VitalsChartSeries {
     fun realPoints(value: (DailySummary) -> Float?): List<DailyDataPoint> =
@@ -146,6 +164,56 @@ internal fun buildVitalsChartSeries(
             }
         }.aggregateByRange(range.granularity, startDate, endDate, range.days, valueDecimalPlaces = 1)
 
+    val historicalRhrBaseline =
+        if (range.granularity == TrendGranularity.DAILY) {
+            emptyList()
+        } else {
+            val raw =
+                realPoints { summary ->
+                    DailyMetricsMapper.rhrBaselineRounded(summary, rhrBaselineOverride)?.toFloat()
+                }
+            raw.bucketBy(range.granularity, startDate, endDate)
+        }
+    val historicalHrvBaseline =
+        if (range.granularity == TrendGranularity.DAILY) {
+            emptyList()
+        } else {
+            val raw =
+                realPoints { summary ->
+                    DailyMetricsMapper.hrvBaselineRounded(summary, hrvBaselineOverride)?.toFloat()
+                }
+            raw.bucketBy(range.granularity, startDate, endDate)
+        }
+
+    val historicalRhrBaselineAverage: Int? =
+        if (range.granularity == TrendGranularity.DAILY) {
+            null
+        } else {
+            realPoints { DailyMetricsMapper.rhrBaselineRounded(it, rhrBaselineOverride)?.toFloat() }
+                .mapNotNull { it.value }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+                ?.roundToInt()
+        }
+    val historicalHrvBaselineAverage: Int? =
+        if (range.granularity == TrendGranularity.DAILY) {
+            null
+        } else {
+            realPoints { DailyMetricsMapper.hrvBaselineRounded(it, hrvBaselineOverride)?.toFloat() }
+                .mapNotNull { it.value }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+                ?.roundToInt()
+        }
+    val historicalRhrZoneBands: List<ZoneBand> =
+        historicalRhrBaselineAverage?.let {
+            rhrZoneBandsForBaseline(it, rhrOptimalThreshold, rhrWarningThreshold)
+        } ?: emptyList()
+    val historicalHrvZoneBands: List<ZoneBand> =
+        historicalHrvBaselineAverage?.let {
+            hrvZoneBandsForBaseline(it, hrvOptimalThreshold, hrvWarningThreshold)
+        } ?: emptyList()
+
     return VitalsChartSeries(
         hrv = hrvPoints,
         rhr = rhrPoints,
@@ -155,6 +223,12 @@ internal fun buildVitalsChartSeries(
         rhrPeriodSummary = rhrSummary,
         spo2PeriodSummary = spo2Summary,
         bodyTempPeriodSummary = bodyTempSummary,
+        historicalRhrBaseline = historicalRhrBaseline,
+        historicalHrvBaseline = historicalHrvBaseline,
+        historicalRhrBaselineAverage = historicalRhrBaselineAverage,
+        historicalHrvBaselineAverage = historicalHrvBaselineAverage,
+        historicalRhrZoneBands = historicalRhrZoneBands,
+        historicalHrvZoneBands = historicalHrvZoneBands,
     )
 }
 

@@ -2,6 +2,8 @@ package app.readylytics.health.feature.vitals.overview
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
@@ -257,7 +259,71 @@ class VitalsViewModelTest {
         }
 
     @Test
-    fun `preference emission updates presentation without rebuilding chart series`() =
+    fun `threshold preference emission updates presentation and rebuilds chart series`() =
+        runTest {
+            var observeSinceCalls = 0
+            every { dailySummaryRepository.observeSince(any()) } answers {
+                observeSinceCalls += 1
+                summaries
+            }
+            val today = LocalDate.now()
+            summaries.value =
+                listOf(
+                    DailySummary(
+                        date = today,
+                        nocturnalHrv = 42,
+                        restingHeartRate = 51,
+                        avgSleepingSpo2 = 96f,
+                        rhrBpm = 51f,
+                        hrvMuMssd = 3.7f,
+                        baselineCalculatedAtDate = today,
+                        isCalibrating = false,
+                    ),
+                    DailySummary(
+                        date = today.minusDays(1),
+                        nocturnalHrv = 40,
+                        restingHeartRate = 49,
+                        avgSleepingSpo2 = 95f,
+                        rhrBpm = 49f,
+                        hrvMuMssd = 3.6f,
+                        baselineCalculatedAtDate = today.minusDays(1),
+                        isCalibrating = false,
+                    ),
+                )
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                viewModel.onRangeSelected(TimeRange.SIX_MONTHS)
+                advanceUntilIdle()
+                val before = viewModel.uiState.value
+                val beforeObserveSinceCalls = observeSinceCalls
+                assertFalse(before.isLoading)
+                assertEquals(MetricStatus.NEUTRAL, before.presentation.hrv.status)
+                assertTrue(before.chartSeries.historicalHrvZoneBands.isNotEmpty())
+                settingsRepo.emitHrvThresholds(optimal = 0.95f, warning = 0.85f)
+                advanceUntilIdle()
+                val after = viewModel.uiState.value
+
+                assertEquals(MetricStatus.OPTIMAL, after.presentation.hrv.status)
+                assertTrue(
+                    "HRV thresholds feed historical zone bands, so they must re-query chart data",
+                    observeSinceCalls > beforeObserveSinceCalls,
+                )
+                assertTrue(before.chartSeries.hrv !== after.chartSeries.hrv)
+                assertTrue(before.chartSeries.rhr !== after.chartSeries.rhr)
+                assertTrue(before.chartSeries.spo2 !== after.chartSeries.spo2)
+                assertTrue(before.chartSeries.bodyTemp !== after.chartSeries.bodyTemp)
+                assertTrue(
+                    "zone bands must recompute from the new thresholds",
+                    before.chartSeries.historicalHrvZoneBands != after.chartSeries.historicalHrvZoneBands,
+                )
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `chart-irrelevant preference emission does not rebuild chart series`() =
         runTest {
             var observeSinceCalls = 0
             every { dailySummaryRepository.observeSince(any()) } answers {
@@ -271,12 +337,10 @@ class VitalsViewModelTest {
                 val before = viewModel.uiState.value
                 val beforeObserveSinceCalls = observeSinceCalls
                 assertFalse(before.isLoading)
-                assertEquals(MetricStatus.NEUTRAL, before.presentation.hrv.status)
-                settingsRepo.emitHrvThresholds(optimal = 0.95f, warning = 0.85f)
+                settingsRepo.emitAppTheme(AppTheme.LIGHT)
                 advanceUntilIdle()
                 val after = viewModel.uiState.value
 
-                assertEquals(MetricStatus.OPTIMAL, after.presentation.hrv.status)
                 assertEquals(beforeObserveSinceCalls, observeSinceCalls)
                 assertSame(before.chartSeries.hrv, after.chartSeries.hrv)
                 assertSame(before.chartSeries.rhr, after.chartSeries.rhr)
@@ -577,6 +641,10 @@ class VitalsViewModelTest {
                     hrvOptimalThreshold = optimal,
                     hrvWarningThreshold = warning,
                 )
+        }
+
+        fun emitAppTheme(appTheme: AppTheme) {
+            preferences.value = preferences.value.copy(appTheme = appTheme)
         }
 
         fun emitUnitSystem(unitSystem: UnitSystem) {

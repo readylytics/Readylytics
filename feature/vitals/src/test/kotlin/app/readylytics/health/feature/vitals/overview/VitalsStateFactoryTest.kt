@@ -12,6 +12,7 @@ import app.readylytics.health.domain.util.UnitConverter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
@@ -307,6 +308,108 @@ class VitalsStateFactoryTest {
         assertEquals(97f, series.spo2PeriodSummary?.average)
         assertEquals(37.1f, series.bodyTempPeriodSummary?.average)
     }
+
+    @Test
+    fun `DAILY range produces empty historical baseline series`() {
+        val summaries =
+            listOf(
+                dailySummary(date = LocalDate.of(2026, 1, 1), rhrBpm = 60f, hrvMuMssd = 3.8f),
+            )
+        val result =
+            buildVitalsChartSeries(summaries, LocalDate.of(2026, 1, 1), TimeRange.SEVEN_DAYS, UnitSystem.METRIC)
+
+        assertTrue(result.historicalRhrBaseline.isEmpty())
+        assertTrue(result.historicalHrvBaseline.isEmpty())
+        assertTrue(result.historicalRhrZoneBands.isEmpty())
+        assertTrue(result.historicalHrvZoneBands.isEmpty())
+        assertNull(result.historicalRhrBaselineAverage)
+        assertNull(result.historicalHrvBaselineAverage)
+    }
+
+    @Test
+    fun `historical baseline averages only frozen days per bucket`() {
+        val frozen =
+            dailySummary(
+                date = LocalDate.of(2026, 1, 1),
+                rhrBpm = 62f,
+                hrvMuMssd = 3.9f,
+                baselineCalculatedAt = LocalDate.of(2026, 1, 1),
+            )
+        val frozen2 =
+            dailySummary(
+                date = LocalDate.of(2026, 1, 15),
+                rhrBpm = 58f,
+                hrvMuMssd = 4.0f,
+                baselineCalculatedAt = LocalDate.of(2026, 1, 15),
+            )
+        val unfrozen =
+            dailySummary(
+                date = LocalDate.of(2026, 1, 20),
+                rhrBpm = 70f,
+                hrvMuMssd = 3.5f,
+                baselineCalculatedAt = null,
+            )
+        val summaries = listOf(frozen, frozen2, unfrozen)
+        val result =
+            buildVitalsChartSeries(summaries, LocalDate.of(2026, 1, 1), TimeRange.SIX_MONTHS, UnitSystem.METRIC)
+
+        val rhrBaseline = result.historicalRhrBaseline
+        assertTrue("Expected populated RHR baseline, got empty", rhrBaseline.isNotEmpty())
+        val avgValue = rhrBaseline.first().value!!
+        assertTrue("Expected frozen-day average ~60, got $avgValue", avgValue in 59f..61f)
+        assertEquals(60, result.historicalRhrBaselineAverage)
+    }
+
+    @Test
+    fun `historical zone bands empty when no frozen baselines`() {
+        val summaries =
+            listOf(
+                dailySummary(date = LocalDate.of(2026, 1, 1), rhrBpm = null, hrvMuMssd = null),
+            )
+        val result =
+            buildVitalsChartSeries(summaries, LocalDate.of(2026, 1, 1), TimeRange.SIX_MONTHS, UnitSystem.METRIC)
+
+        assertTrue(result.historicalRhrZoneBands.isEmpty())
+        assertTrue(result.historicalHrvZoneBands.isEmpty())
+        assertNull(result.historicalRhrBaselineAverage)
+        assertNull(result.historicalHrvBaselineAverage)
+    }
+
+    @Test
+    fun `historical baseline honors override when no frozen days`() {
+        val summaries =
+            listOf(
+                dailySummary(date = LocalDate.of(2026, 1, 1), rhrBpm = null, hrvMuMssd = null),
+            )
+        val result =
+            buildVitalsChartSeries(
+                summaries,
+                LocalDate.of(2026, 1, 1),
+                TimeRange.SIX_MONTHS,
+                UnitSystem.METRIC,
+                rhrBaselineOverride = 62f,
+                hrvBaselineOverride = 41f,
+            )
+
+        assertEquals(62, result.historicalRhrBaselineAverage)
+        assertEquals(41, result.historicalHrvBaselineAverage)
+        assertTrue(result.historicalRhrZoneBands.isNotEmpty())
+        assertTrue(result.historicalHrvZoneBands.isNotEmpty())
+    }
+
+    private fun dailySummary(
+        date: LocalDate,
+        rhrBpm: Float? = null,
+        hrvMuMssd: Float? = null,
+        baselineCalculatedAt: LocalDate? = null,
+    ): DailySummary =
+        DailySummary(
+            date = date,
+            rhrBpm = rhrBpm,
+            hrvMuMssd = hrvMuMssd,
+            baselineCalculatedAtDate = baselineCalculatedAt,
+            isCalibrating = false,
+        )
 
     private fun summary(
         date: LocalDate,
