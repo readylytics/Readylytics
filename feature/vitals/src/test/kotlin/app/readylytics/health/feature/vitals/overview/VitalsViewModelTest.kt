@@ -300,6 +300,8 @@ class VitalsViewModelTest {
                 assertFalse(before.isLoading)
                 assertEquals(MetricStatus.NEUTRAL, before.presentation.hrv.status)
                 assertTrue(before.chartSeries.historicalHrvZoneBands.isNotEmpty())
+                assertTrue(before.chartSeries.historicalHrvBucketZoneBands.isNotEmpty())
+                assertTrue(before.chartSeries.historicalRhrBucketZoneBands.isNotEmpty())
                 settingsRepo.emitHrvThresholds(optimal = 0.95f, warning = 0.85f)
                 advanceUntilIdle()
                 val after = viewModel.uiState.value
@@ -316,6 +318,11 @@ class VitalsViewModelTest {
                 assertTrue(
                     "zone bands must recompute from the new thresholds",
                     before.chartSeries.historicalHrvZoneBands != after.chartSeries.historicalHrvZoneBands,
+                )
+                assertTrue(
+                    "per-bucket zone bands must recompute from the new thresholds",
+                    before.chartSeries.historicalHrvBucketZoneBands !=
+                        after.chartSeries.historicalHrvBucketZoneBands,
                 )
             } finally {
                 collector.cancel()

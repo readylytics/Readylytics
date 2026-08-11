@@ -71,6 +71,7 @@ internal fun VitalsTrendSection(
                             chartSeries.historicalHrvZoneBands.takeIf { it.isNotEmpty() }
                                 ?: presentation.hrv.zoneBands,
                         historicalBaseline = chartSeries.historicalHrvBaseline.takeIf { it.isNotEmpty() },
+                        bucketZoneBands = chartSeries.historicalHrvBucketZoneBands.takeIf { it.isNotEmpty() },
                         parentScrollInProgress = parentScrollInProgress,
                         granularity = chartInputs.selectedRange.granularity,
                         periodSummary = chartSeries.hrvPeriodSummary,
@@ -113,6 +114,7 @@ internal fun VitalsTrendSection(
                             chartSeries.historicalRhrZoneBands.takeIf { it.isNotEmpty() }
                                 ?: presentation.rhr.zoneBands,
                         historicalBaseline = chartSeries.historicalRhrBaseline.takeIf { it.isNotEmpty() },
+                        bucketZoneBands = chartSeries.historicalRhrBucketZoneBands.takeIf { it.isNotEmpty() },
                         parentScrollInProgress = parentScrollInProgress,
                         granularity = chartInputs.selectedRange.granularity,
                         periodSummary = chartSeries.rhrPeriodSummary,

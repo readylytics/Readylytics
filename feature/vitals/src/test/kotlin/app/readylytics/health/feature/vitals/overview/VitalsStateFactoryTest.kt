@@ -322,6 +322,8 @@ class VitalsStateFactoryTest {
         assertTrue(result.historicalHrvBaseline.isEmpty())
         assertTrue(result.historicalRhrZoneBands.isEmpty())
         assertTrue(result.historicalHrvZoneBands.isEmpty())
+        assertTrue(result.historicalRhrBucketZoneBands.isEmpty())
+        assertTrue(result.historicalHrvBucketZoneBands.isEmpty())
         assertNull(result.historicalRhrBaselineAverage)
         assertNull(result.historicalHrvBaselineAverage)
     }
@@ -358,6 +360,15 @@ class VitalsStateFactoryTest {
         val avgValue = rhrBaseline.first().value!!
         assertTrue("Expected frozen-day average ~60, got $avgValue", avgValue in 59f..61f)
         assertEquals(60, result.historicalRhrBaselineAverage)
+        assertTrue(
+            "Expected per-bucket RHR zone bands, got empty",
+            result.historicalRhrBucketZoneBands.isNotEmpty(),
+        )
+        assertEquals(1, result.historicalRhrBucketZoneBands.size)
+        assertEquals(
+            rhrBaseline.first().dayOffset,
+            result.historicalRhrBucketZoneBands.first().startDayOffset,
+        )
     }
 
     @Test
@@ -371,6 +382,8 @@ class VitalsStateFactoryTest {
 
         assertTrue(result.historicalRhrZoneBands.isEmpty())
         assertTrue(result.historicalHrvZoneBands.isEmpty())
+        assertTrue(result.historicalRhrBucketZoneBands.isEmpty())
+        assertTrue(result.historicalHrvBucketZoneBands.isEmpty())
         assertNull(result.historicalRhrBaselineAverage)
         assertNull(result.historicalHrvBaselineAverage)
     }
@@ -395,6 +408,8 @@ class VitalsStateFactoryTest {
         assertEquals(41, result.historicalHrvBaselineAverage)
         assertTrue(result.historicalRhrZoneBands.isNotEmpty())
         assertTrue(result.historicalHrvZoneBands.isNotEmpty())
+        assertTrue(result.historicalRhrBucketZoneBands.isNotEmpty())
+        assertTrue(result.historicalHrvBucketZoneBands.isNotEmpty())
     }
 
     private fun dailySummary(

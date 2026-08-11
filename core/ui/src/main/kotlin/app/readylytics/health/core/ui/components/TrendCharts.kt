@@ -43,6 +43,8 @@ import app.readylytics.health.core.ui.common.bucketLengthDays
 import app.readylytics.health.core.ui.common.bucketStartForDate
 import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
+import app.readylytics.health.domain.model.BucketZoneBands
+import app.readylytics.health.domain.model.HealthZone
 import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -111,6 +113,7 @@ fun TrendChart(
                 },
         ),
     zoneBands: List<ZoneBand>? = null,
+    bucketZoneBands: List<BucketZoneBands>? = null,
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
     parentScrollInProgress: () -> Boolean = { false },
@@ -262,9 +265,28 @@ fun TrendChart(
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val chartZoneBands = zoneBands ?: emptyList()
     val colors = rememberZoneBandColors(chartZoneBands, extendedColors, primaryContainer, errorContainer)
+    val zoneColor =
+        remember(extendedColors, primaryContainer, errorContainer) {
+            { zone: HealthZone ->
+                when (zone) {
+                    HealthZone.OPTIMAL -> primaryContainer.copy(alpha = ChartZoneAlphas.HIGH)
+                    HealthZone.NEUTRAL -> extendedColors.neutralContainer.copy(alpha = ChartZoneAlphas.RESTING)
+                    HealthZone.WARNING -> extendedColors.warningContainer.copy(alpha = ChartZoneAlphas.HIGH)
+                    HealthZone.CRITICAL -> errorContainer.copy(alpha = ChartZoneAlphas.HIGH)
+                }
+            }
+        }
     val zoneBandDecoration =
-        remember(chartZoneBands, colors, minY, maxY) {
-            ZoneBandDecoration(chartZoneBands, colors, minY, maxY)
+        remember(chartZoneBands, colors, minY, maxY, bucketZoneBands, rangeDays, zoneColor) {
+            ZoneBandDecoration(
+                zoneBands = chartZoneBands,
+                bandColors = colors,
+                minY = minY,
+                maxY = maxY,
+                bucketZoneBands = bucketZoneBands,
+                rangeDays = rangeDays,
+                zoneColor = zoneColor,
+            )
         }
 
     val markerVisibilityListener =
@@ -323,7 +345,14 @@ fun TrendChart(
 
     val baselineLineComponent = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp)
     val decorations =
-        remember(zoneBandDecoration, shouldShowBaseline, baselineValue, baselineLineComponent, historicalBaseline) {
+        remember(
+            zoneBandDecoration,
+            shouldShowBaseline,
+            baselineValue,
+            baselineLineComponent,
+            historicalBaseline,
+            bucketZoneBands,
+        ) {
             val hasHistoricalBaseline = !historicalBaseline.isNullOrEmpty()
             listOfNotNull(
                 zoneBandDecoration,
