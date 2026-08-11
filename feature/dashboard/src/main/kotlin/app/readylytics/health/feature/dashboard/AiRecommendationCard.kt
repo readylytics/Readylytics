@@ -36,7 +36,7 @@ fun AiRecommendationCard(
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.outlinedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ),
         border = BorderStroke(MaterialTheme.dimens.borderThin, MaterialTheme.colorScheme.outlineVariant),
     ) {

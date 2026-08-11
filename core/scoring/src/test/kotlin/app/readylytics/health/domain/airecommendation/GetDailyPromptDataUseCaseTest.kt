@@ -16,6 +16,7 @@ import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.WorkoutLoadClassifier
 import app.readylytics.health.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.domain.scoring.components.Phase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -78,15 +79,16 @@ class GetDailyPromptDataUseCaseTest {
     }
 
     @Test
-    fun `execute queries yesterday and lookback workouts with bounded epoch ranges`() = runTest {
+    fun `execute queries the pattern workout window once and derives day subsets in memory`() = runTest {
         coEvery { dailySummaryRepository.getByDate(any()) } returns null
         coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
         coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
 
         useCase.execute(today)
 
-        coVerify(exactly = 1) { workoutRepository.getInRange(yesterdayMidnight, todayMidnight) }
         coVerify(exactly = 1) { workoutRepository.getInRange(lookbackStartMidnight, tomorrowMidnight) }
+        coVerify(exactly = 0) { workoutRepository.getInRange(yesterdayMidnight, todayMidnight) }
+        coVerify(exactly = 0) { workoutRepository.getInRange(todayMidnight, tomorrowMidnight) }
     }
 
     @Test
@@ -105,6 +107,7 @@ class GetDailyPromptDataUseCaseTest {
         assertEquals("Everyday heart-rate load", result.activeTrainingLoadSource)
         assertEquals(80f, result.today.readinessScore)
         assertEquals(RecoveryFlag.ILLNESS_ONSET, result.activeRecoveryFlags.single().flagName)
+        assertEquals(Phase.MATURE.displayName, result.calibrationPhase)
         assertEquals("HIGH", result.advisorDataConfidence)
         assertEquals("SWEET_SPOT", result.loadState.loadContext)
         assertEquals("NEUTRAL", result.today.readinessBand)
@@ -173,8 +176,7 @@ class GetDailyPromptDataUseCaseTest {
         coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
         coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
         val workouts = listOf(workoutData("w1"), workoutData("w2"))
-        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
-        coEvery { workoutRepository.getInRange(yesterdayMidnight, todayMidnight) } returns workouts
+        coEvery { workoutRepository.getInRange(lookbackStartMidnight, tomorrowMidnight) } returns workouts
         coEvery { getWorkoutDisplayMetricsUseCase.execute(any(), any(), any(), any()) } returns
             displayMetrics()
 
@@ -191,8 +193,8 @@ class GetDailyPromptDataUseCaseTest {
         coEvery { dailySummaryRepository.getByDate(todayMidnight) } returns summary(today)
         coEvery { dailySummaryRepository.getByDate(yesterdayMidnight) } returns null
         coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-        coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
-        coEvery { workoutRepository.getInRange(yesterdayMidnight, todayMidnight) } returns listOf(workoutData("w1"))
+        coEvery { workoutRepository.getInRange(lookbackStartMidnight, tomorrowMidnight) } returns
+            listOf(workoutData("w1"))
         coEvery { getWorkoutDisplayMetricsUseCase.execute(any(), any(), any(), any()) } returns
             displayMetrics()
 
@@ -236,9 +238,22 @@ class GetDailyPromptDataUseCaseTest {
         coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
         coEvery { workoutRepository.getInRange(any(), any()) } returns emptyList()
 
-        val w1 = workoutData("w1").copy(trimp = 50f, durationMinutes = 30, endTime = todayMidnight + 1000L)
-        val w2 = workoutData("w2").copy(trimp = 70f, durationMinutes = 40, endTime = todayMidnight + 2000L)
-        coEvery { workoutRepository.getInRange(todayMidnight, tomorrowMidnight) } returns listOf(w1, w2)
+        val w1 =
+            workoutData("w1").copy(
+                startTime = todayMidnight + 1000L,
+                endTime = todayMidnight + 1000L,
+                trimp = 50f,
+                durationMinutes = 30,
+            )
+        val w2 =
+            workoutData("w2").copy(
+                startTime = todayMidnight + 2000L,
+                endTime = todayMidnight + 2000L,
+                trimp = 70f,
+                durationMinutes = 40,
+            )
+        coEvery { workoutRepository.getInRange(lookbackStartMidnight, tomorrowMidnight) } returns
+            listOf(w1, w2)
 
         val result = useCase.execute(today)
 
@@ -308,7 +323,7 @@ class GetDailyPromptDataUseCaseTest {
             rhrSigma = 0.9f,
             baselineCalculatedAtDate = LocalDate.of(2026, 7, 15),
             snapshotProfile = "Active",
-            snapshotCalibrationPhase = "Mature",
+            snapshotCalibrationPhase = Phase.MATURE.name,
             baselineObservationCount = 60,
             trimpWorkoutOnly = 100f,
             trimpEverydayHr = 110f,

@@ -982,13 +982,16 @@ Key behaviors:
   active-source ATL/CTL/ratio/load/readiness columns. RAS totals are informational only.
 - `GetDailyPromptDataUseCase` parses the persisted everyday coverage confidence once and only
   when Everyday heart-rate load is the selected source, then passes the typed value to
-  `resolveAdvisorConfidence`. `LOW` coverage caps an otherwise high advisor confidence at
-  medium; `NONE` coverage lowers it one level with a low floor. Absent, medium, and high coverage
-  leave the calibration/recovery-signal confidence unchanged. Workout-only prompts pass no
-  everyday coverage confidence.
+  `resolveAdvisorConfidence`. Base confidence derives from the calibration `Phase` × whether today
+  is missing HRV or sleep-stage signals: Low during Calibration/Early Baseline, Medium (or Low if
+  signals are missing) once Maturing, and High (or Medium if signals are missing) once Mature.
+  `LOW` coverage caps an otherwise high advisor confidence at medium; `NONE` coverage lowers it one
+  level with a low floor. Absent, medium, and high coverage leave the calibration/recovery-signal
+  confidence unchanged. Workout-only prompts pass no everyday coverage confidence.
 - `ComputeWorkoutPatternSummaryUseCase` (Section G) groups the three-month window by exercise type
   (frequency, avg TRIMP, avg duration, preferred weekdays) and computes rest-day average, rest-day
-  gap, and current training streak. Workout day boundaries resolve in UTC.
+  gap, and current training streak. Workout day boundaries resolve in the user's configured
+  scoring zone (`preferences.scoringZone()`), matching every other date-boundary computation.
 - The formatter is pure Kotlin; unavailable values render as "insufficient data", never fabricated.
   UI copy on the card itself is localized via `feature/dashboard` resources; the prompt text itself
   is stable English to stay machine-parseable and comparable with the template docs.

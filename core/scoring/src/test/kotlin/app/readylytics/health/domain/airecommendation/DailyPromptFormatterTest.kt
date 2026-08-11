@@ -83,6 +83,50 @@ class DailyPromptFormatterTest {
         assertTrue(text.contains("no active recovery flags"))
     }
 
+    @Test
+    fun `format rounds TRIMP to integer and strain ratio to two decimals`() {
+        val data =
+            populatedPromptData().copy(
+                today =
+                    populatedPromptData().today.copy(
+                        todayTrimp = 100.6f,
+                        dataCurrentUntil = "12:00 PM",
+                    ),
+                yesterdayWorkouts =
+                    listOf(
+                        populatedPromptData().yesterdayWorkouts.single().copy(
+                            workout = populatedPromptData().yesterdayWorkouts.single().workout.copy(trimp = 99.5f),
+                            modelTrimp = 98.4f,
+                        ),
+                    ),
+                loadState =
+                    populatedPromptData().loadState.copy(strainRatio = 1.065f),
+            )
+
+        val text = DailyPromptFormatter.format(data)
+
+        assertTrue(text.contains("Today TRIMP: 101"))
+        assertTrue(text.contains("TRIMP: 100 (model TRIMP 98 when present)"))
+        assertTrue(text.contains("Strain Ratio (ATL ÷ CTL — internal term, describe qualitatively): 1.07"))
+    }
+
+    @Test
+    fun `format renders zero TRIMP as zero not insufficient data`() {
+        val data =
+            populatedPromptData().copy(
+                today =
+                    populatedPromptData().today.copy(
+                        todayTrimp = 0f,
+                        dataCurrentUntil = "12:00 PM",
+                    ),
+            )
+
+        val text = DailyPromptFormatter.format(data)
+
+        assertTrue(text.contains("Today TRIMP: 0"))
+        assertFalse(text.contains("Today TRIMP: insufficient data"))
+    }
+
     private fun populatedPromptData(): DailyPromptData =
         DailyPromptData(
             date = LocalDate.of(2026, 8, 9),
@@ -166,7 +210,6 @@ class DailyPromptFormatterTest {
                                 frequencyPerWeek = 0.5f,
                                 averageTrimp = 120f,
                                 averageDurationMinutes = 45f,
-                                averageLoadClassification = null,
                                 preferredDaysOfWeek = listOf("Monday", "Wednesday"),
                             ),
                         ),
@@ -233,7 +276,7 @@ class DailyPromptFormatterTest {
 
     private fun calibratingPromptData(): DailyPromptData =
         emptyPromptData().copy(
-            calibrationPhase = "Calibration",
+            calibrationPhase = "Calibrating",
             baselineObservationCount = 3,
             activeRecoveryFlags =
                 listOf(

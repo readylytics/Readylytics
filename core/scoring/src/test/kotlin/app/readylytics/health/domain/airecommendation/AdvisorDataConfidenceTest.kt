@@ -1,18 +1,19 @@
-package app.readylytics.health.domain.model
+package app.readylytics.health.domain.airecommendation
 
 import app.readylytics.health.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.domain.scoring.components.Phase
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AdvisorDataConfidenceTest {
     @Test
     fun `resolve uses calibration and recovery signal base confidence`() {
-        assertEquals(AdvisorDataConfidence.LOW, resolveAdvisorConfidence(CalibrationPhase.CALIBRATION, false, null))
-        assertEquals(AdvisorDataConfidence.LOW, resolveAdvisorConfidence(CalibrationPhase.EARLY_BASELINE, false, null))
-        assertEquals(AdvisorDataConfidence.MEDIUM, resolveAdvisorConfidence(CalibrationPhase.MATURING, false, null))
-        assertEquals(AdvisorDataConfidence.LOW, resolveAdvisorConfidence(CalibrationPhase.MATURING, true, null))
-        assertEquals(AdvisorDataConfidence.HIGH, resolveAdvisorConfidence(CalibrationPhase.MATURE, false, null))
-        assertEquals(AdvisorDataConfidence.MEDIUM, resolveAdvisorConfidence(CalibrationPhase.MATURE, true, null))
+        assertEquals(AdvisorDataConfidence.LOW, resolveAdvisorConfidence(Phase.CALIBRATION, false, null))
+        assertEquals(AdvisorDataConfidence.LOW, resolveAdvisorConfidence(Phase.EARLY_BASELINE, false, null))
+        assertEquals(AdvisorDataConfidence.MEDIUM, resolveAdvisorConfidence(Phase.MATURING, false, null))
+        assertEquals(AdvisorDataConfidence.LOW, resolveAdvisorConfidence(Phase.MATURING, true, null))
+        assertEquals(AdvisorDataConfidence.HIGH, resolveAdvisorConfidence(Phase.MATURE, false, null))
+        assertEquals(AdvisorDataConfidence.MEDIUM, resolveAdvisorConfidence(Phase.MATURE, true, null))
     }
 
     @Test
@@ -20,7 +21,7 @@ class AdvisorDataConfidenceTest {
         listOf(null, LoadCoverageConfidence.MEDIUM, LoadCoverageConfidence.HIGH).forEach { coverage ->
             assertEquals(
                 AdvisorDataConfidence.HIGH,
-                resolveAdvisorConfidence(CalibrationPhase.MATURE, false, coverage),
+                resolveAdvisorConfidence(Phase.MATURE, false, coverage),
             )
         }
     }
@@ -29,7 +30,7 @@ class AdvisorDataConfidenceTest {
     fun `resolve low everyday coverage caps high confidence at medium`() {
         assertEquals(
             AdvisorDataConfidence.MEDIUM,
-            resolveAdvisorConfidence(CalibrationPhase.MATURE, false, LoadCoverageConfidence.LOW),
+            resolveAdvisorConfidence(Phase.MATURE, false, LoadCoverageConfidence.LOW),
         )
     }
 
@@ -37,15 +38,15 @@ class AdvisorDataConfidenceTest {
     fun `resolve none everyday coverage downgrades one level with a low floor`() {
         assertEquals(
             AdvisorDataConfidence.MEDIUM,
-            resolveAdvisorConfidence(CalibrationPhase.MATURE, false, LoadCoverageConfidence.NONE),
+            resolveAdvisorConfidence(Phase.MATURE, false, LoadCoverageConfidence.NONE),
         )
         assertEquals(
             AdvisorDataConfidence.LOW,
-            resolveAdvisorConfidence(CalibrationPhase.MATURING, false, LoadCoverageConfidence.NONE),
+            resolveAdvisorConfidence(Phase.MATURING, false, LoadCoverageConfidence.NONE),
         )
         assertEquals(
             AdvisorDataConfidence.LOW,
-            resolveAdvisorConfidence(CalibrationPhase.CALIBRATION, false, LoadCoverageConfidence.NONE),
+            resolveAdvisorConfidence(Phase.CALIBRATION, false, LoadCoverageConfidence.NONE),
         )
     }
 
@@ -60,12 +61,12 @@ class AdvisorDataConfidenceTest {
         ).forEach { (coverage, expectedConfidence) ->
             assertEquals(
                 expectedConfidence,
-                resolveAdvisorConfidence(CalibrationPhase.MATURE, true, coverage),
+                resolveAdvisorConfidence(Phase.MATURE, true, coverage),
             )
         }
         assertEquals(
             AdvisorDataConfidence.LOW,
-            resolveAdvisorConfidence(CalibrationPhase.MATURING, true, LoadCoverageConfidence.NONE),
+            resolveAdvisorConfidence(Phase.MATURING, true, LoadCoverageConfidence.NONE),
         )
     }
 }

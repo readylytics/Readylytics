@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 class ComputeWorkoutPatternSummaryUseCaseTest {
@@ -15,12 +16,12 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
     @Test
     fun `default lookback is three months and reported back`() {
         assertEquals(3, ScoringConstants.AiRecommendation.LOOKBACK_MONTHS)
-        assertEquals(3, useCase.execute(emptyList(), today).lookbackMonths)
+        assertEquals(3, useCase.execute(emptyList(), today, ZoneOffset.UTC).lookbackMonths)
     }
 
     @Test
     fun `empty history produces zero counts and zero streak`() {
-        val result = useCase.execute(emptyList(), today)
+        val result = useCase.execute(emptyList(), today, ZoneOffset.UTC)
 
         assertEquals(0, result.totalWorkoutsInWindow)
         assertEquals(0, result.currentConsecutiveTrainingDayStreak)
@@ -32,7 +33,7 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
     fun `workouts outside lookback window are excluded`() {
         val beforeWindow = workoutOn(LocalDate.of(2026, 5, 8), trimp = 100f)
 
-        val result = useCase.execute(listOf(beforeWindow), today)
+        val result = useCase.execute(listOf(beforeWindow), today, ZoneOffset.UTC)
 
         assertEquals(0, result.totalWorkoutsInWindow)
     }
@@ -41,14 +42,14 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
     fun `workout exactly on window start is included`() {
         val onStart = workoutOn(LocalDate.of(2026, 5, 9), trimp = 50f)
 
-        val result = useCase.execute(listOf(onStart), today)
+        val result = useCase.execute(listOf(onStart), today, ZoneOffset.UTC)
 
         assertEquals(1, result.totalWorkoutsInWindow)
     }
 
     @Test
     fun `workout on today is included`() {
-        val result = useCase.execute(listOf(workoutOn(today, trimp = 50f)), today)
+        val result = useCase.execute(listOf(workoutOn(today, trimp = 50f)), today, ZoneOffset.UTC)
 
         assertEquals(1, result.totalWorkoutsInWindow)
     }
@@ -59,7 +60,7 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
         val runWednesday = workoutOn(LocalDate.of(2026, 8, 5), exerciseType = "Run", trimp = 200f, duration = 50)
         val cycleTuesday = workoutOn(LocalDate.of(2026, 8, 4), exerciseType = "Cycle", trimp = 150f, duration = 60)
 
-        val result = useCase.execute(listOf(runMonday, runWednesday, cycleTuesday), today)
+        val result = useCase.execute(listOf(runMonday, runWednesday, cycleTuesday), today, ZoneOffset.UTC)
 
         assertEquals(3, result.totalWorkoutsInWindow)
         assertEquals(listOf("Run", "Cycle"), result.exerciseTypeBreakdown.map { it.exerciseType })
@@ -80,7 +81,7 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
         val monday2 = workoutOn(LocalDate.of(2026, 7, 13), exerciseType = "Run", trimp = 100f)
         val wednesday = workoutOn(LocalDate.of(2026, 7, 8), exerciseType = "Run", trimp = 100f)
 
-        val result = useCase.execute(listOf(monday1, monday2, wednesday), today)
+        val result = useCase.execute(listOf(monday1, monday2, wednesday), today, ZoneOffset.UTC)
 
         assertEquals(listOf("Monday", "Wednesday"), result.exerciseTypeBreakdown.single().preferredDaysOfWeek)
     }
@@ -94,6 +95,7 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
                     workoutOn(LocalDate.of(2026, 8, 8), trimp = 100f),
                 ),
                 today,
+                ZoneOffset.UTC,
             )
 
         assertEquals(0, result.mostRecentRestDayGapDays)
@@ -111,6 +113,7 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
                     workoutOn(monday, trimp = 100f),
                 ),
                 monday,
+                ZoneOffset.UTC,
             )
 
         assertEquals(3, result.mostRecentRestDayGapDays)
@@ -119,14 +122,14 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
 
     @Test
     fun `all days without workouts produce full rest-day average`() {
-        val result = useCase.execute(emptyList(), today)
+        val result = useCase.execute(emptyList(), today, ZoneOffset.UTC)
 
         assertEquals(7f, result.restDaysPerWeekAverage, 0.001f)
     }
 
     @Test
     fun `rest-day average scales with a single training day`() {
-        val result = useCase.execute(listOf(workoutOn(today, trimp = 50f)), today)
+        val result = useCase.execute(listOf(workoutOn(today, trimp = 50f)), today, ZoneOffset.UTC)
 
         val windowDays = 93
         val expected = (windowDays - 1).toFloat() / windowDays * 7f
@@ -143,10 +146,67 @@ class ComputeWorkoutPatternSummaryUseCaseTest {
                     workoutOn(LocalDate.of(2026, 8, 5), exerciseType = "Run", trimp = 50f),
                 ),
                 today,
+                ZoneOffset.UTC,
             )
 
         assertEquals(listOf("cycle", "Run"), result.exerciseTypeBreakdown.map { it.exerciseType })
     }
+
+    @Test
+    fun `day bucketing follows the caller's zone, not UTC`() {
+        val la = ZoneId.of("America/Los_Angeles")
+
+        val lateEveningLocal = LocalDate.of(2026, 8, 9).atTime(20, 0)
+
+        val crossesUtc = lateEveningLocal.atZone(la).toInstant().toEpochMilli()
+
+        val result =
+            useCase.execute(
+                listOf(workoutAt(crossesUtc, trimp = 100f)),
+                today,
+                la,
+            )
+
+        assertEquals(1, result.totalWorkoutsInWindow)
+        assertEquals(1, result.currentConsecutiveTrainingDayStreak)
+        assertEquals(1, result.mostRecentRestDayGapDays)
+    }
+
+    @Test
+    fun `UTC bucketing would misclassify a late evening workout in a west-of-UTC zone`() {
+        val la = ZoneId.of("America/Los_Angeles")
+
+        val lateEveningLocal = LocalDate.of(2026, 8, 9).atTime(20, 0)
+
+        val crossesUtc = lateEveningLocal.atZone(la).toInstant().toEpochMilli()
+
+        val resultUtc = useCase.execute(listOf(workoutAt(crossesUtc, trimp = 100f)), today, ZoneOffset.UTC)
+        val resultLa = useCase.execute(listOf(workoutAt(crossesUtc, trimp = 100f)), today, la)
+
+        assertEquals(0, resultUtc.currentConsecutiveTrainingDayStreak)
+        assertEquals(1, resultLa.currentConsecutiveTrainingDayStreak)
+    }
+
+    private fun workoutAt(
+        epochMillis: Long,
+        trimp: Float = 100f,
+        exerciseType: String = "Run",
+        duration: Int = 45,
+    ): WorkoutData =
+        WorkoutData(
+            id = "$exerciseType-$epochMillis-$trimp-$duration",
+            startTime = epochMillis,
+            endTime = epochMillis + 60_000L,
+            exerciseType = exerciseType,
+            durationMinutes = duration,
+            zone1Minutes = 0f,
+            zone2Minutes = 0f,
+            zone3Minutes = 0f,
+            zone4Minutes = 0f,
+            zone5Minutes = 0f,
+            trimp = trimp,
+            avgHr = 140f,
+        )
 
     private fun workoutOn(
         date: LocalDate,

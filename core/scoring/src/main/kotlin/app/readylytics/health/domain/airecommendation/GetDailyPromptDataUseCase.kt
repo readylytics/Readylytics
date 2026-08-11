@@ -1,11 +1,9 @@
 package app.readylytics.health.domain.airecommendation
 
-import app.readylytics.health.domain.model.CalibrationPhase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.PermittedRecommendationMapper
 import app.readylytics.health.domain.model.RecoveryFlag
-import app.readylytics.health.domain.model.resolveAdvisorConfidence
 import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.model.toLoadContext
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -17,6 +15,10 @@ import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.model.PermittedRecommendation
 import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.components.Phase
+import app.readylytics.health.domain.util.toMidnightEpochMilli
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate
@@ -40,37 +42,35 @@ class GetDailyPromptDataUseCase
         private val patternSummaryUseCase: ComputeWorkoutPatternSummaryUseCase,
         private val recommendedLoadCalculator: RecommendedLoadCalculator,
     ) {
-        suspend fun execute(today: LocalDate): DailyPromptData {
+        suspend fun execute(today: LocalDate): DailyPromptData = coroutineScope {
             val preferences = preferencesReader.userPreferences.first()
             val zoneId = preferences.scoringZone()
-            val todayMidnight = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val todayMidnight = today.toMidnightEpochMilli(zoneId)
             val yesterday = today.minusDays(1)
-            val yesterdayMidnight = yesterday.atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val tomorrowMidnight = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val yesterdayMidnight = yesterday.toMidnightEpochMilli(zoneId)
+            val tomorrowMidnight = today.plusDays(1).toMidnightEpochMilli(zoneId)
             val lookbackStart =
                 today.minusMonths(ScoringConstants.AiRecommendation.LOOKBACK_MONTHS.toLong())
-            val lookbackStartMidnight =
-                lookbackStart.atStartOfDay(zoneId).toInstant().toEpochMilli()
-
-            val todaySummary = dailySummaryRepository.getByDate(todayMidnight)
-            val yesterdaySummary = dailySummaryRepository.getByDate(yesterdayMidnight)
-
-            val yesterdayWorkouts =
-                workoutRepository.getInRange(yesterdayMidnight, todayMidnight)
-            val patternWorkouts =
-                workoutRepository.getInRange(lookbackStartMidnight, tomorrowMidnight)
-
+            val lookbackStartMidnight = lookbackStart.toMidnightEpochMilli(zoneId)
             val historicalStart =
-                yesterday
-                    .minusDays(ScoringConstants.CHRONIC_DAYS)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val historicalSummaries = dailySummaryRepository.getSince(historicalStart)
-
+                yesterday.minusDays(ScoringConstants.CHRONIC_DAYS).toMidnightEpochMilli(zoneId)
             val sourceMode = preferences.strainLoadSourceMode
 
-            val todaysWorkouts = workoutRepository.getInRange(todayMidnight, tomorrowMidnight)
+            val todaySummaryDeferred = async { dailySummaryRepository.getByDate(todayMidnight) }
+            val yesterdaySummaryDeferred = async { dailySummaryRepository.getByDate(yesterdayMidnight) }
+            val patternWorkoutsDeferred =
+                async { workoutRepository.getInRange(lookbackStartMidnight, tomorrowMidnight) }
+            val historicalSummariesDeferred = async { dailySummaryRepository.getSince(historicalStart) }
+
+            val todaySummary = todaySummaryDeferred.await()
+            val yesterdaySummary = yesterdaySummaryDeferred.await()
+            val patternWorkouts = patternWorkoutsDeferred.await()
+            val historicalSummaries = historicalSummariesDeferred.await()
+
+            val yesterdayWorkouts =
+                patternWorkouts.filter { it.startTime in yesterdayMidnight until todayMidnight }
+            val todaysWorkouts =
+                patternWorkouts.filter { it.startTime in todayMidnight until tomorrowMidnight }
             val todayCompletedWorkouts = todaysWorkouts.size
             val todayTrimp = todaysWorkouts.sumOf { it.trimp.toDouble() }.toFloat()
             val todayTrainingMinutes = todaysWorkouts.sumOf { it.durationMinutes }.takeIf { todaysWorkouts.isNotEmpty() }
@@ -95,9 +95,10 @@ class GetDailyPromptDataUseCase
                 todaySummary?.recoveryFlags?.any {
                     it == RecoveryFlag.HRV_MISSING || it == RecoveryFlag.STAGES_MISSING
                 } ?: false
-            val phase =
-                todaySummary?.snapshotCalibrationPhase?.let { runCatching { enumValueOf<CalibrationPhase>(it.uppercase()) }.getOrNull() }
-                    ?: CalibrationPhase.CALIBRATION
+            val phase: Phase =
+                todaySummary?.snapshotCalibrationPhase
+                    ?.let { runCatching { enumValueOf<Phase>(it.uppercase()) }.getOrNull() }
+                    ?: Phase.CALIBRATION
             val advisorConf =
                 resolveAdvisorConfidence(phase, hasMajorMissingSignals, everydayLoadConfidence).name
 
@@ -119,11 +120,11 @@ class GetDailyPromptDataUseCase
                     )
                 }
 
-            return DailyPromptData(
+            DailyPromptData(
                 date = today,
                 physiologyProfile =
                     todaySummary?.snapshotProfile ?: preferences.physiologyProfile.name,
-                calibrationPhase = todaySummary?.snapshotCalibrationPhase,
+                calibrationPhase = phase.displayName,
                 baselineObservationCount = todaySummary?.baselineObservationCount,
                 isCalibrating = todaySummary?.isCalibrating ?: false,
                 activeTrainingLoadSource = sourceName(sourceMode),
@@ -174,7 +175,7 @@ class GetDailyPromptDataUseCase
                             )
                         }?.sortedBy { it.flagName.name }
                         ?: emptyList(),
-                workoutPattern = patternSummaryUseCase.execute(patternWorkouts, today),
+                workoutPattern = patternSummaryUseCase.execute(patternWorkouts, today, zoneId),
             )
         }
 

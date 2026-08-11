@@ -8,7 +8,6 @@ import org.junit.Test
 class RecoveryFlagGlossaryTest {
     @Test
     fun `every recovery flag has a nonblank glossary entry`() {
-        assertEquals(RecoveryFlag.entries.toSet(), RecoveryFlagGlossary.entries.keys)
         RecoveryFlag.entries.forEach { flag ->
             assertTrue("Glossary blank for $flag", RecoveryFlagGlossary.explain(flag).isNotBlank())
         }

@@ -15,8 +15,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -50,6 +52,14 @@ import app.readylytics.health.domain.model.InsightType
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+private data class ColoredSnackbarVisuals(
+    override val message: String,
+    val isError: Boolean,
+    override val actionLabel: String? = null,
+    override val withDismissAction: Boolean = false,
+    override val duration: SnackbarDuration = SnackbarDuration.Short,
+) : SnackbarVisuals
+
 @Composable
 fun DashboardRoute(
     onNavigateToSleep: () -> Unit,
@@ -82,21 +92,19 @@ fun DashboardRoute(
     val clipboardManager = LocalClipboard.current
     val copiedMessage = stringResource(R.string.ai_recommendation_copied_snackbar)
     val setupPrompt = stringResource(R.string.ai_init_prompt)
+    val clipLabel = stringResource(R.string.ai_recommendation_clip_label)
     val dailyPromptText by viewModel.dailyPromptText.collectAsStateWithLifecycle()
-    val snackbarIsError = remember { mutableStateOf(true) }
 
     LaunchedEffect(errorMessage) {
         if (resolvedError != null) {
-            snackbarIsError.value = true
-            snackbarHostState.showSnackbar(resolvedError)
+            snackbarHostState.showSnackbar(ColoredSnackbarVisuals(resolvedError, isError = true))
         }
     }
 
     LaunchedEffect(dailyPromptText) {
         dailyPromptText?.let { prompt ->
-            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("Copied Text", prompt)))
-            snackbarIsError.value = false
-            snackbarHostState.showSnackbar(copiedMessage)
+            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText(clipLabel, prompt.text)))
+            snackbarHostState.showSnackbar(ColoredSnackbarVisuals(copiedMessage, isError = false))
             viewModel.clearDailyPromptText()
         }
     }
@@ -104,7 +112,6 @@ fun DashboardRoute(
     DashboardScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
-        snackbarIsError = { snackbarIsError.value },
         onRefresh = viewModel::onRefresh,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
@@ -131,9 +138,8 @@ fun DashboardRoute(
         onOpenInsight = onOpenInsight,
         onCopySetupPrompt = {
             scope.launch {
-                clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("Copied Text", setupPrompt)))
-                snackbarIsError.value = false
-                snackbarHostState.showSnackbar(copiedMessage)
+                clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText(clipLabel, setupPrompt)))
+                snackbarHostState.showSnackbar(ColoredSnackbarVisuals(copiedMessage, isError = false))
             }
         },
         onCopyDailyPrompt = { viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy) },
@@ -155,7 +161,6 @@ fun DashboardScreen(
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit,
     modifier: Modifier = Modifier,
-    snackbarIsError: () -> Boolean = { true },
     onNavigateToHeartRate: () -> Unit = {},
     onNavigateToHrv: () -> Unit = {},
     onNavigateToWeight: () -> Unit = {},
@@ -362,16 +367,17 @@ fun DashboardScreen(
                         bottom = if (uiState.isManagingCards) 88.dp else MaterialTheme.spacing.pageBottom,
                     ),
             snackbar = { data ->
+                val isError = (data.visuals as? ColoredSnackbarVisuals)?.isError == true
                 Snackbar(
                     data,
                     containerColor =
-                        if (snackbarIsError()) {
+                        if (isError) {
                             MaterialTheme.colorScheme.errorContainer
                         } else {
                             MaterialTheme.colorScheme.inverseSurface
                         },
                     contentColor =
-                        if (snackbarIsError()) {
+                        if (isError) {
                             MaterialTheme.colorScheme.onErrorContainer
                         } else {
                             MaterialTheme.colorScheme.inverseOnSurface

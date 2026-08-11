@@ -180,12 +180,92 @@ class DashboardViewModelTest {
                     defaultDispatcher = testDispatcher,
                 )
             coEvery { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) } returns promptData()
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = "UTC"))
 
             viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
             advanceUntilIdle()
 
             assertNotNull(viewModel.dailyPromptText.value)
-            assertTrue(viewModel.dailyPromptText.value!!.contains("Today's data for 2026-08-09"))
+            assertTrue(
+                viewModel.dailyPromptText.value!!
+                    .text
+                    .contains("Today's data for 2026-08-09"),
+            )
+            coVerify(exactly = 1) { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) }
+        }
+
+    @Test
+    fun `repeated prompt copy requests emit distinct values even with identical text`() =
+        runTest {
+            val fixedClock =
+                java.time.Clock.fixed(Instant.parse("2026-08-09T12:00:00Z"), ZoneOffset.UTC)
+            viewModel =
+                DashboardViewModel(
+                    dailySummaryRepository = dailySummaryRepository,
+                    getDashboardDataUseCase = getDashboardDataUseCase,
+                    foregroundSyncController = foregroundSyncController,
+                    selectedDateRepository = selectedDateRepository,
+                    settingsRepo = settingsRepo,
+                    cardConfigRepository = cardConfigRepository,
+                    circadianRepo = circadianRepo,
+                    dailyMetricCache = dailyMetricCache,
+                    heartRateRepository = heartRateRepository,
+                    insightDismissalRepository = insightDismissalRepository,
+                    observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                    bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+                    healthConnectRepository = healthConnectRepository,
+                    clock = fixedClock,
+                    defaultDispatcher = testDispatcher,
+                )
+            coEvery { getDailyPromptDataUseCase.execute(any()) } returns promptData()
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = "UTC"))
+
+            viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
+            viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
+            advanceUntilIdle()
+
+            val second = viewModel.dailyPromptText.value
+            assertNotNull(second)
+            assertTrue(second!!.requestId == 1)
+        }
+
+    @Test
+    fun `request daily prompt resolves today in the scoring zone, not the device clock zone`() =
+        runTest {
+            val fixedClock =
+                java.time.Clock.fixed(Instant.parse("2026-08-10T03:00:00Z"), ZoneOffset.UTC)
+            val scoringZone = "America/Los_Angeles"
+            viewModel =
+                DashboardViewModel(
+                    dailySummaryRepository = dailySummaryRepository,
+                    getDashboardDataUseCase = getDashboardDataUseCase,
+                    foregroundSyncController = foregroundSyncController,
+                    selectedDateRepository = selectedDateRepository,
+                    settingsRepo = settingsRepo,
+                    cardConfigRepository = cardConfigRepository,
+                    circadianRepo = circadianRepo,
+                    dailyMetricCache = dailyMetricCache,
+                    heartRateRepository = heartRateRepository,
+                    insightDismissalRepository = insightDismissalRepository,
+                    observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    getDailyPromptDataUseCase = getDailyPromptDataUseCase,
+                    bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+                    healthConnectRepository = healthConnectRepository,
+                    clock = fixedClock,
+                    defaultDispatcher = testDispatcher,
+                )
+            coEvery { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) } returns promptData()
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(scoringZoneId = scoringZone))
+
+            viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy)
+            advanceUntilIdle()
+
+            val localDay = LocalDate.now(fixedClock.withZone(ZoneId.of(scoringZone)))
+            assertEquals(LocalDate.of(2026, 8, 9), localDay)
             coVerify(exactly = 1) { getDailyPromptDataUseCase.execute(LocalDate.of(2026, 8, 9)) }
         }
 

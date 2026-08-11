@@ -94,7 +94,6 @@ data class ExerciseTypePattern(
     val frequencyPerWeek: Float,
     val averageTrimp: Float?,
     val averageDurationMinutes: Float?,
-    val averageLoadClassification: String?,
     val preferredDaysOfWeek: List<String>,
 )
 

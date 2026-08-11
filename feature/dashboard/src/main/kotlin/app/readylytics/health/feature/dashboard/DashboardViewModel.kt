@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
@@ -346,7 +347,9 @@ class DashboardViewModel
                 DashboardEvent.RequestDailyPromptCopy -> {
                     viewModelScope.launch {
                         try {
-                            _dailyPromptText.value = generateDailyPrompt(LocalDate.now(clock))
+                            val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                            val text = generateDailyPrompt(LocalDate.now(clock.withZone(zoneId)))
+                            _dailyPromptText.value = PromptRequest(text, promptRequestSeq++)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -360,7 +363,9 @@ class DashboardViewModel
         }
 
         internal suspend fun generateDailyPrompt(today: LocalDate): String =
-            DailyPromptFormatter.format(getDailyPromptDataUseCase.execute(today))
+            withContext(defaultDispatcher) {
+                DailyPromptFormatter.format(getDailyPromptDataUseCase.execute(today))
+            }
 
         fun onRefresh() {
             viewModelScope.launch {
@@ -383,8 +388,9 @@ class DashboardViewModel
         private val _errorMessage = MutableStateFlow<UiText?>(null)
         val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
-        private val _dailyPromptText = MutableStateFlow<String?>(null)
-        val dailyPromptText: StateFlow<String?> = _dailyPromptText.asStateFlow()
+        private var promptRequestSeq = 0
+        private val _dailyPromptText = MutableStateFlow<PromptRequest?>(null)
+        val dailyPromptText: StateFlow<PromptRequest?> = _dailyPromptText.asStateFlow()
 
         fun clearDailyPromptText() {
             _dailyPromptText.value = null
@@ -394,6 +400,12 @@ class DashboardViewModel
             internal const val TAG = "DashboardViewModel"
         }
     }
+
+/** A single "copy today's prompt" request, made distinguishable by a monotonic [requestId]. */
+data class PromptRequest(
+    val text: String,
+    val requestId: Int,
+)
 
 @Immutable
 data class DashboardUiState(

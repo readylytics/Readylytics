@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.airecommendation
 
+import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.repository.WorkoutData
 import java.util.Locale
 
@@ -68,7 +69,7 @@ object DailyPromptFormatter {
         )
         appendLine("- Baseline last (re)calculated: ${dateOrUnavailable(today.baselineCalculatedAtDate)}")
         appendLine("- Today completed workouts: ${today.todayCompletedWorkouts}")
-        appendLine("- Today TRIMP: ${numberOrUnavailable(today.todayTrimp)}")
+        appendLine("- Today TRIMP: ${trimpOrUnavailable(today.todayTrimp)}")
         appendLine("- Today training minutes: ${intOrUnavailable(today.todayTrainingMinutes)}")
         appendLine("- Data current until: ${orUnavailable(today.dataCurrentUntil)}")
         appendLine()
@@ -110,7 +111,7 @@ object DailyPromptFormatter {
                     "${workout.avgHr.toInt()} bpm",
             )
             appendLine(
-                "- TRIMP: ${number(workout.trimp)} (model TRIMP ${numberOrUnavailable(workoutBlock.modelTrimp)} when present)",
+                "- TRIMP: ${trimpOrUnavailable(workout.trimp)} (model TRIMP ${trimpOrUnavailable(workoutBlock.modelTrimp)} when present)",
             )
             appendLine(
                 "- HR zone breakdown (minutes): zone 1 ${zoneMinutes(workout.zone1Minutes)}, " +
@@ -137,7 +138,7 @@ object DailyPromptFormatter {
         appendLine("- Chronic Load (CTL, 42-day EMA of TRIMP): ${numberOrUnavailable(load.chronicLoad)}")
         appendLine(
             "- Strain Ratio (ATL ÷ CTL — internal term, describe qualitatively): " +
-                "${numberOrUnavailable(load.strainRatio)}",
+                "${load.strainRatio?.let(MetricFormatter::formatStrain) ?: INSUFFICIENT_DATA}",
         )
         appendLine("- Load Score (0–100): ${numberOrUnavailable(load.loadScore)}")
         appendLine(
@@ -181,9 +182,8 @@ object DailyPromptFormatter {
         pattern.exerciseTypeBreakdown.forEach { typePattern ->
             appendLine(
                 "- ${typePattern.exerciseType}: ${number(typePattern.frequencyPerWeek)}/week, " +
-                    "avg TRIMP ${numberOrUnavailable(typePattern.averageTrimp)}, " +
+                    "avg TRIMP ${trimpOrUnavailable(typePattern.averageTrimp)}, " +
                     "avg duration ${numberOrUnavailable(typePattern.averageDurationMinutes)} min, " +
-                    "usual load ${orUnavailable(typePattern.averageLoadClassification)}, " +
                     "typically on ${typePattern.preferredDaysOfWeek.joinToString(", ")}",
             )
         }
@@ -196,6 +196,9 @@ object DailyPromptFormatter {
     private fun orUnavailable(value: String?): String = value ?: INSUFFICIENT_DATA
 
     private fun intOrUnavailable(value: Int?): String = value?.toString() ?: INSUFFICIENT_DATA
+
+    private fun trimpOrUnavailable(value: Float?): String =
+        value?.let { MetricFormatter.roundTrimp(it).toString() } ?: INSUFFICIENT_DATA
 
     private fun dateOrUnavailable(value: java.time.LocalDate?): String = value?.toString() ?: INSUFFICIENT_DATA
 
