@@ -38,6 +38,7 @@ import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Golden regression lock (WP-01 of the architecture/HC/scoring remediation plan): seeds ~2 years
@@ -103,7 +104,7 @@ class GoldenFixtureWalkForwardTest {
 
     @Test
     fun `walk-forward recompute matches golden fixture`() =
-        runTest {
+        runTest(timeout = 10.minutes) {
             val prefs =
                 UserPreferences(
                     scoringZoneId = zoneId.id,
