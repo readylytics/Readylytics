@@ -93,6 +93,11 @@ object DailyMetricsMapper {
         prefs: UserPreferences,
     ): Int? = deriveRhrBaselineRaw(summary, prefs)?.roundToInt()
 
+    fun rhrBaselineRounded(
+        summary: DailySummary,
+        rhrBaselineOverride: Float?,
+    ): Int? = acceptedRhrSnapshotRaw(summary)?.roundToInt() ?: rhrBaselineOverride?.roundToInt()
+
     private fun acceptedRhrSnapshotRaw(summary: DailySummary): Float? =
         summary.rhrBpm.takeIf { summary.baselineCalculatedAtDate != null }
 
@@ -108,6 +113,14 @@ object DailyMetricsMapper {
     ): Int? =
         summary.hrvMuMssd?.let { exp(it).roundToInt() }
             ?: prefs.hrvBaselineOverride?.roundToInt()
+            ?: summary.hrvBaseline
+
+    fun hrvBaselineRounded(
+        summary: DailySummary,
+        hrvBaselineOverride: Float?,
+    ): Int? =
+        summary.hrvMuMssd?.let { exp(it).roundToInt() }
+            ?: hrvBaselineOverride?.roundToInt()
             ?: summary.hrvBaseline
 
     private fun diff(

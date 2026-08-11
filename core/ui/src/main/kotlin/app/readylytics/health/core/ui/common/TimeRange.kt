@@ -6,7 +6,7 @@ import java.time.ZoneId
 enum class TrendGranularity {
     DAILY,
     MONTHLY,
-    QUARTERLY,
+    EIGHT_WEEK,
 }
 
 enum class TimeRange(
@@ -17,7 +17,7 @@ enum class TimeRange(
     SEVEN_DAYS(7, "7D", TrendGranularity.DAILY),
     THIRTY_DAYS(30, "30D", TrendGranularity.DAILY),
     SIX_MONTHS(180, "180D", TrendGranularity.MONTHLY),
-    TWELVE_MONTHS(360, "360D", TrendGranularity.QUARTERLY),
+    TWELVE_MONTHS(360, "360D", TrendGranularity.EIGHT_WEEK),
     ;
 
     fun fromMs(baseDate: LocalDate): Long {

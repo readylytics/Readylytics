@@ -4,12 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -25,7 +24,6 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import java.time.Instant
 import java.time.ZoneId
-import java.util.Locale
 
 object ChartDefaults {
     @Composable
@@ -63,7 +61,7 @@ object ChartDefaults {
 
     /**
      * Granularity-aware x-axis formatter. [DAILY] delegates to [rememberDayOffsetFormatter];
-     * [MONTHLY] and [QUARTERLY] resolve each day offset to its calendar date in [zoneId] and
+     * [MONTHLY] and [EIGHT_WEEK] resolve each day offset to its calendar date in [zoneId] and
      * format the containing period via [periodLabelFor].
      */
     @Composable
@@ -75,16 +73,13 @@ object ChartDefaults {
         if (granularity == TrendGranularity.DAILY) {
             return rememberDayOffsetFormatter(rangeStartMs, zoneId)
         }
-        // Resolved outside remember{} so the format string can be used inside the non-composable
-        // formatter lambda; resource strings must never be built as Kotlin literals.
-        val quarterTemplate = stringResource(R.string.period_label_quarter)
-        return remember(rangeStartMs, granularity, zoneId, quarterTemplate) {
+        // Resolved outside remember{} so the formatter lambda can capture it; resource strings
+        // must never be built as Kotlin literals.
+        val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+        return remember(rangeStartMs, granularity, zoneId, ordinalLabel) {
             val baseDate = Instant.ofEpochMilli(rangeStartMs).atZone(zoneId).toLocalDate()
             CartesianValueFormatter { _, value, _ ->
-                periodLabelFor(
-                    granularity,
-                    baseDate.plusDays(value.toLong()),
-                ) { quarter -> String.format(Locale.getDefault(), quarterTemplate, quarter) }
+                periodLabelFor(granularity, baseDate.plusDays(value.toLong()), ordinalLabel)
             }
         }
     }

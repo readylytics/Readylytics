@@ -148,6 +148,48 @@ class VitalAssessmentTest {
         assertEquals(MetricStatus.CALIBRATING, summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))
     }
 
+    @Test
+    fun `rhrZoneBandsForBaseline matches assessRhr zone bands`() {
+        val baseline = 60
+        val optimalRatio = 1.1f
+        val warningRatio = 1.3f
+        val assessment = assessRhr(65, baseline, optimalRatio, warningRatio)
+        val direct = rhrZoneBandsForBaseline(baseline, optimalRatio, warningRatio)
+        assertEquals(assessment.zoneBands?.size, direct.size)
+        assessment.zoneBands?.zip(direct)?.forEachIndexed { i, (a, b) ->
+            assertEquals("Band $i lowerBound mismatch", a.lowerBound, b.lowerBound, 0.001)
+            assertEquals("Band $i upperBound mismatch", a.upperBound, b.upperBound, 0.001)
+            assertEquals("Band $i zone mismatch", a.zone, b.zone)
+        }
+    }
+
+    @Test
+    fun `hrvZoneBandsForBaseline matches assessHrv zone bands`() {
+        val baseline = 41
+        val optimalRatio = 1.1f
+        val warningRatio = 0.6f
+        val assessment = assessHrv(45, baseline, optimalRatio, warningRatio)
+        val direct = hrvZoneBandsForBaseline(baseline, optimalRatio, warningRatio)
+        assertEquals(assessment.zoneBands?.size, direct.size)
+        assessment.zoneBands?.zip(direct)?.forEachIndexed { i, (a, b) ->
+            assertEquals("Band $i lowerBound mismatch", a.lowerBound, b.lowerBound, 0.001)
+            assertEquals("Band $i upperBound mismatch", a.upperBound, b.upperBound, 0.001)
+            assertEquals("Band $i zone mismatch", a.zone, b.zone)
+        }
+    }
+
+    @Test
+    fun `rhrZoneBandsForBaseline computes four bands for zero baseline`() {
+        val bands = rhrZoneBandsForBaseline(0, 1.1f, 1.3f)
+        assertEquals(4, bands.size)
+    }
+
+    @Test
+    fun `hrvZoneBandsForBaseline computes four bands for zero baseline`() {
+        val bands = hrvZoneBandsForBaseline(0, 1.1f, 0.6f)
+        assertEquals(4, bands.size)
+    }
+
     private fun List<ZoneBand>.zoneAt(value: Double): HealthZone =
         single { band ->
             val aboveMinimum =

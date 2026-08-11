@@ -74,6 +74,12 @@ private data class DatedBodyTemperatureBaseline(
 private data class VitalsChartPreferences(
     val scoringZone: ZoneId,
     val unitSystem: UnitSystem,
+    val rhrBaselineOverride: Float?,
+    val hrvBaselineOverride: Float?,
+    val rhrOptimalThreshold: Float,
+    val rhrWarningThreshold: Float,
+    val hrvOptimalThreshold: Float,
+    val hrvWarningThreshold: Float,
 )
 
 private data class VitalsPresentationInputs(
@@ -143,6 +149,12 @@ class VitalsViewModel
                     VitalsChartPreferences(
                         scoringZone = prefs.scoringZone(),
                         unitSystem = prefs.unitSystem,
+                        rhrBaselineOverride = prefs.rhrBaselineOverride,
+                        hrvBaselineOverride = prefs.hrvBaselineOverride,
+                        rhrOptimalThreshold = prefs.rhrOptimalThreshold,
+                        rhrWarningThreshold = prefs.rhrWarningThreshold,
+                        hrvOptimalThreshold = prefs.hrvOptimalThreshold,
+                        hrvWarningThreshold = prefs.hrvWarningThreshold,
                     )
                 }.distinctUntilChanged()
 
@@ -180,6 +192,12 @@ class VitalsViewModel
                                     window.startDate,
                                     vitalsSelection.range,
                                     chartPrefs.unitSystem,
+                                    rhrBaselineOverride = chartPrefs.rhrBaselineOverride,
+                                    hrvBaselineOverride = chartPrefs.hrvBaselineOverride,
+                                    rhrOptimalThreshold = chartPrefs.rhrOptimalThreshold,
+                                    rhrWarningThreshold = chartPrefs.rhrWarningThreshold,
+                                    hrvOptimalThreshold = chartPrefs.hrvOptimalThreshold,
+                                    hrvWarningThreshold = chartPrefs.hrvWarningThreshold,
                                     endDate = vitalsSelection.date,
                                 ),
                             selection = vitalsSelection,
