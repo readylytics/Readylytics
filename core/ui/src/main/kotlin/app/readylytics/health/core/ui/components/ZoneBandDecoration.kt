@@ -69,8 +69,38 @@ class ZoneBandDecoration(
         bounds: androidx.compose.ui.geometry.Rect,
         range: Double,
     ) {
-        fun xForDayOffset(offset: Int): Float =
-            bounds.left + bounds.width * (offset.toFloat() / (rangeDays - 1))
+        for (run in groupContiguousBuckets(buckets)) {
+            drawSmoothRun(context, run, bounds, range)
+        }
+    }
+
+    /**
+     * Splits [buckets] into runs of calendar-contiguous entries (each bucket's start immediately
+     * follows the previous one's end). A dropped/uncalibrated month leaves a gap in
+     * [BucketZoneBands] (see `bucketBy`, which omits empty buckets rather than fabricating a
+     * value), so smoothing must not bridge across it - each run is drawn as its own polygon in
+     * [drawSmoothRun], leaving the gap unpainted.
+     */
+    private fun groupContiguousBuckets(buckets: List<BucketZoneBands>): List<List<BucketZoneBands>> {
+        val runs = mutableListOf<MutableList<BucketZoneBands>>()
+        for (bucket in buckets) {
+            val last = runs.lastOrNull()
+            if (last != null && last.last().endDayOffset == bucket.startDayOffset) {
+                last.add(bucket)
+            } else {
+                runs.add(mutableListOf(bucket))
+            }
+        }
+        return runs
+    }
+
+    private fun drawSmoothRun(
+        context: CartesianDrawingContext,
+        buckets: List<BucketZoneBands>,
+        bounds: androidx.compose.ui.geometry.Rect,
+        range: Double,
+    ) {
+        fun xForDayOffset(offset: Int): Float = bounds.left + bounds.width * (offset.toFloat() / (rangeDays - 1))
 
         val zoneCount = buckets.first().bands.size
 
@@ -78,8 +108,18 @@ class ZoneBandDecoration(
             val path = Path()
             val zone = buckets.first().bands[zoneIndex].zone
 
-            val firstUpper = buckets.first().bands[zoneIndex].upperBound.coerceIn(minY, maxY)
-            val firstLower = buckets.first().bands[zoneIndex].lowerBound.coerceIn(minY, maxY)
+            val firstUpper =
+                buckets
+                    .first()
+                    .bands[zoneIndex]
+                    .upperBound
+                    .coerceIn(minY, maxY)
+            val firstLower =
+                buckets
+                    .first()
+                    .bands[zoneIndex]
+                    .lowerBound
+                    .coerceIn(minY, maxY)
             val firstLeft = xForDayOffset(buckets.first().startDayOffset)
 
             // Top edge — left to right through bucket midpoints
@@ -91,10 +131,20 @@ class ZoneBandDecoration(
             }
             // Right edge — vertical drop
             val lastRight = xForDayOffset(buckets.last().endDayOffset)
-            val lastUpper = buckets.last().bands[zoneIndex].upperBound.coerceIn(minY, maxY)
+            val lastUpper =
+                buckets
+                    .last()
+                    .bands[zoneIndex]
+                    .upperBound
+                    .coerceIn(minY, maxY)
             path.lineTo(lastRight, yToCanvas(lastUpper, bounds, range))
 
-            val lastLower = buckets.last().bands[zoneIndex].lowerBound.coerceIn(minY, maxY)
+            val lastLower =
+                buckets
+                    .last()
+                    .bands[zoneIndex]
+                    .lowerBound
+                    .coerceIn(minY, maxY)
             path.lineTo(lastRight, yToCanvas(lastLower, bounds, range))
 
             // Bottom edge — right to left through bucket midpoints
