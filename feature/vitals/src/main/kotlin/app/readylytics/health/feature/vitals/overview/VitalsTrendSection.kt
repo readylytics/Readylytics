@@ -14,6 +14,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.SkeletonCard
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.domain.preferences.UnitSystem
@@ -68,8 +69,11 @@ internal fun VitalsTrendSection(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         zoneBands =
-                            chartSeries.historicalHrvZoneBands.takeIf { it.isNotEmpty() }
-                                ?: presentation.hrv.zoneBands,
+                            if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                                presentation.hrv.zoneBands
+                            } else {
+                                chartSeries.historicalHrvZoneBands
+                            },
                         historicalBaseline = chartSeries.historicalHrvBaseline.takeIf { it.isNotEmpty() },
                         bucketZoneBands = chartSeries.historicalHrvBucketZoneBands.takeIf { it.isNotEmpty() },
                         parentScrollInProgress = parentScrollInProgress,
@@ -111,8 +115,11 @@ internal fun VitalsTrendSection(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         zoneBands =
-                            chartSeries.historicalRhrZoneBands.takeIf { it.isNotEmpty() }
-                                ?: presentation.rhr.zoneBands,
+                            if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                                presentation.rhr.zoneBands
+                            } else {
+                                chartSeries.historicalRhrZoneBands
+                            },
                         historicalBaseline = chartSeries.historicalRhrBaseline.takeIf { it.isNotEmpty() },
                         bucketZoneBands = chartSeries.historicalRhrBucketZoneBands.takeIf { it.isNotEmpty() },
                         parentScrollInProgress = parentScrollInProgress,

@@ -258,6 +258,7 @@ fun TrendChart(
     val historicalBaselineLine =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(baselineColor)),
+            interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
 
     val extendedColors = LocalExtendedColors.current
@@ -343,6 +344,7 @@ fun TrendChart(
             }
         }
 
+    val hasHistoricalBaseline = !historicalBaseline.isNullOrEmpty()
     val baselineLineComponent = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp)
     val decorations =
         remember(
@@ -350,10 +352,9 @@ fun TrendChart(
             shouldShowBaseline,
             baselineValue,
             baselineLineComponent,
-            historicalBaseline,
+            hasHistoricalBaseline,
             bucketZoneBands,
         ) {
-            val hasHistoricalBaseline = !historicalBaseline.isNullOrEmpty()
             listOfNotNull(
                 zoneBandDecoration,
                 if (shouldShowBaseline && !hasHistoricalBaseline) {
@@ -428,10 +429,10 @@ fun TrendChart(
         }
     }
 
-    if (shouldShowBaseline || baselineUnavailableLabel != null) {
+    if (shouldShowBaseline || baselineUnavailableLabel != null || hasHistoricalBaseline) {
         Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
         BaselineLegend(
-            value = if (shouldShowBaseline) baselineValue else null,
+            value = if (shouldShowBaseline || hasHistoricalBaseline) baselineValue else null,
             unit = baselineUnit,
             label = resolvedBaselineLabel,
             color = baselineColor,

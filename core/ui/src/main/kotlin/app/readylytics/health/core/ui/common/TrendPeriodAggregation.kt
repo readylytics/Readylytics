@@ -32,7 +32,7 @@ private data class Bucket(
     val points: List<DailyDataPoint>,
 )
 
-internal fun bucketStartForDate(
+fun bucketStartForDate(
     date: LocalDate,
     granularity: TrendGranularity,
 ): LocalDate =

@@ -365,10 +365,10 @@ class VitalsStateFactoryTest {
             result.historicalRhrBucketZoneBands.isNotEmpty(),
         )
         assertEquals(1, result.historicalRhrBucketZoneBands.size)
-        assertEquals(
-            rhrBaseline.first().dayOffset,
-            result.historicalRhrBucketZoneBands.first().startDayOffset,
-        )
+        // Zone band must span the true calendar bucket (Jan 1-31 -> offsets 0..31), not the
+        // bucket's midpoint day offset (rhrBaseline.first().dayOffset is the midpoint).
+        assertEquals(0, result.historicalRhrBucketZoneBands.first().startDayOffset)
+        assertEquals(31, result.historicalRhrBucketZoneBands.first().endDayOffset)
     }
 
     @Test
