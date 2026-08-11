@@ -33,12 +33,19 @@ fun assessHrv(
         baseline = baseline,
         statusForRatio = { ratio -> hrvStatusFromRatio(ratio, optimalRatio, warningRatio) },
         zoneBandsForBaseline = { roundedBaseline ->
-            hrvZoneBandsForThresholds(
-                optimalMin = scaledThreshold(roundedBaseline, optimalRatio),
-                warningMin = scaledThreshold(roundedBaseline, warningRatio),
-                poorMin = roundedBaseline * hrvPoorRatio(warningRatio),
-            )
+            hrvZoneBandsForBaseline(roundedBaseline, optimalRatio, warningRatio)
         },
+    )
+
+fun hrvZoneBandsForBaseline(
+    baseline: Int,
+    optimalRatio: Float,
+    warningRatio: Float,
+): List<ZoneBand> =
+    hrvZoneBandsForThresholds(
+        optimalMin = scaledThreshold(baseline, optimalRatio),
+        warningMin = scaledThreshold(baseline, warningRatio),
+        poorMin = baseline * hrvPoorRatio(warningRatio),
     )
 
 fun assessRhr(
@@ -52,12 +59,19 @@ fun assessRhr(
         baseline = baseline,
         statusForRatio = { ratio -> rhrStatusFromRatio(ratio, optimalRatio, warningRatio) },
         zoneBandsForBaseline = { roundedBaseline ->
-            rhrZoneBandsForThresholds(
-                optimalMax = scaledThreshold(roundedBaseline, optimalRatio),
-                warningMax = scaledThreshold(roundedBaseline, warningRatio),
-                poorMax = roundedBaseline * rhrPoorRatio(warningRatio),
-            )
+            rhrZoneBandsForBaseline(roundedBaseline, optimalRatio, warningRatio)
         },
+    )
+
+fun rhrZoneBandsForBaseline(
+    baseline: Int,
+    optimalRatio: Float,
+    warningRatio: Float,
+): List<ZoneBand> =
+    rhrZoneBandsForThresholds(
+        optimalMax = scaledThreshold(baseline, optimalRatio),
+        warningMax = scaledThreshold(baseline, warningRatio),
+        poorMax = baseline * rhrPoorRatio(warningRatio),
     )
 
 fun assessSpo2(value: Float?): Spo2Assessment =

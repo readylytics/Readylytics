@@ -438,13 +438,20 @@ formula:
   derives fixed chart-axis bounds (35.5–39.0 °C, unit-converted). `VitalsTrendSection` renders it as
   a fourth `TrendChart`/`TrendCard` (test tag `BodyTemperatureTrendChart`) with the baseline plotted
   as a reference line, using the same shared Vico chart component as the other Vitals trends — no
-  bespoke chart implementation. All four Vitals trends share one point-construction path
-  (`VitalsStateFactory.buildVitalsChartSeries`): the range selector renders raw daily points for
-  7D/30D, calendar-month averages for 180D, and calendar-quarter averages for 360D, bucketed by the
-  pure-Kotlin `bucketBy`/`buildPeriodAverageSummary` in `core/ui/.../common/TrendPeriodAggregation.kt`.
-  The averaged ranges additionally show a latest-bucket-vs-previous-bucket summary row
-  (`PeriodAverageSummaryRow`) beneath the baseline legend; zone-band and baseline decorations apply
-  unchanged since bucketed points keep the same day-offset x-axis.
+   bespoke chart implementation. All four Vitals trends share one point-construction path
+   (`VitalsStateFactory.buildVitalsChartSeries`): the range selector renders raw daily points for
+   7D/30D, calendar-month averages for 180D, and ISO-week-octad (8-week) averages for 360D,
+   bucketed by the pure-Kotlin `bucketBy`/`buildPeriodAverageSummary` in
+   `core/ui/.../common/TrendPeriodAggregation.kt`. At 180D/360D the RHR/HRV charts additionally
+   plot a muted per-bucket *historical baseline* line (`historicalRhrBaseline`/`historicalHrvBaseline`)
+   derived from each day's frozen baseline (`DailyMetricsMapper.rhrBaselineRounded`/
+   `hrvBaselineRounded`, frozen-only rows, honoring any override), whose whole-range average drives
+   both the legend scalar and the background zone bands (`historicalRhrZoneBands`/
+   `historicalHrvZoneBands`) — the flat today-baseline `HorizontalLine` is replaced by this line
+   whenever historical baseline data is present. The averaged ranges additionally show a
+   latest-bucket-vs-previous-bucket summary row (`PeriodAverageSummaryRow`) beneath the baseline
+   legend; zone-band and baseline decorations apply unchanged since bucketed points keep the same
+   day-offset x-axis.
 
 ---
 

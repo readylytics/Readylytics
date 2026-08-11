@@ -42,6 +42,7 @@ import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
@@ -131,17 +132,12 @@ fun SleepTrendCard(
                     val avgMinutes = (avg * 60f).roundToInt()
                     val durationText = DateFormatUtils.formatSleepDuration(avgMinutes)
 
-                    val quarterTemplate = stringResource(CoreUiR.string.period_label_quarter)
-                    val periodLabel =
-                        periodLabelFor(summary.granularity, summary.periodStartDate) { quarter ->
-                            String.format(Locale.getDefault(), quarterTemplate, quarter)
-                        }
+                    val ordinalLabel = rememberPeriodOrdinalLabel(summary.granularity)
+                    val periodLabel = periodLabelFor(summary.granularity, summary.periodStartDate, ordinalLabel)
                     val avgLabel = stringResource(CoreUiR.string.label_avg)
 
                     val previousLabel =
-                        periodLabelFor(summary.granularity, summary.previousPeriodStartDate) { quarter ->
-                            String.format(Locale.getDefault(), quarterTemplate, quarter)
-                        }
+                        periodLabelFor(summary.granularity, summary.previousPeriodStartDate, ordinalLabel)
                     val previousLabelText = stringResource(CoreUiR.string.period_summary_vs, previousLabel)
 
                     val deltaMinutes = prev?.let { ((avg - it) * 60f).roundToInt() }
@@ -250,16 +246,15 @@ fun SleepTrendChart(
             }
         }
 
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
     val periodLabels =
-        remember(startOffsetPoints, rangeStartMs, granularity, scoringZoneId, quarterLabelFormat) {
+        remember(startOffsetPoints, rangeStartMs, granularity, scoringZoneId, ordinalLabel) {
             if (granularity == TrendGranularity.DAILY) {
                 emptyList()
             } else {
                 startOffsetPoints.map { point ->
                     val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs, scoringZoneId)
-                    periodLabelFor(granularity, date) { quarter ->
-                        String.format(Locale.getDefault(), quarterLabelFormat, quarter)
-                    }
+                    periodLabelFor(granularity, date, ordinalLabel)
                 }
             }
         }

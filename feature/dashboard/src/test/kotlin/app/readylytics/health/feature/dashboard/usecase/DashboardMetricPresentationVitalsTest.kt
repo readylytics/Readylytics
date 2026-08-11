@@ -1,4 +1,5 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.data.preferences.Gender
@@ -417,7 +418,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     fun `ras permits overflow beyond 100`() {
         val cards = factory.build(summary(), preferences(), date, null, null, null)
         val visual = cards.getValue(CardId.RAS_DAILY).visual as UniversalMetricVisual.Score
-        assertEquals(100f, visual.maxValue)
+        assertEquals(100f / GOAL_FILL_CAP_FRACTION, visual.maxValue)
     }
 
     @Test

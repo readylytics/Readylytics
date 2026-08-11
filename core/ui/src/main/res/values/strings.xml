@@ -46,6 +46,7 @@
 
 
     <string name="label_baseline">Baseline</string>
+    <string name="label_historical_baseline">Historical baseline</string>
     <string name="accessibility_drag_to_reorder">Drag to reorder</string>
     <string name="unit_system_label">Unit system</string>
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
@@ -96,6 +97,8 @@
     <string name="label_avg">Avg</string>
     <string name="period_summary_vs">vs %1$s</string>
     <string name="period_label_quarter">Q%1$d</string>
+    <string name="label_week_short">Wk %1$d</string>
+    <string name="tooltip_week_range">Weeks %1$d–%2$d</string>
     <string name="label_timeline">Timeline</string>
     <string name="label_zone_breakdown">Zone Breakdown</string>
     <string name="label_trends">Trends</string>

@@ -31,6 +31,7 @@ import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -165,17 +166,15 @@ private fun AcwrChart(
     val avgTrimpFormat = stringResource(R.string.acwr_tooltip_avg_trimp_format)
     val avgStrainFormat = stringResource(R.string.acwr_tooltip_avg_strain_format)
 
-    val quarterTemplate = stringResource(CoreUiR.string.period_label_quarter)
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
     val periodLabels =
-        remember(trimpPoints, rangeStartMs, granularity, quarterTemplate) {
+        remember(trimpPoints, rangeStartMs, granularity, ordinalLabel) {
             if (granularity == TrendGranularity.DAILY) {
                 emptyList()
             } else {
                 trimpPoints.map { point ->
                     val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
-                    periodLabelFor(granularity, date) { quarter: Int ->
-                        String.format(java.util.Locale.getDefault(), quarterTemplate, quarter)
-                    }
+                    periodLabelFor(granularity, date, ordinalLabel)
                 }
             }
         }

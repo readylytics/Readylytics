@@ -13,6 +13,12 @@ data class ZoneBand(
     val includesMaximum: Boolean = false,
 )
 
+data class BucketZoneBands(
+    val startDayOffset: Int,
+    val endDayOffset: Int,
+    val bands: List<ZoneBand>,
+)
+
 // RHR — lower is better: below optimalMax=OPTIMAL, up to neutralMax=NEUTRAL, up to warningMax=WARNING, above=CRITICAL
 fun rhrZoneBands(
     optimalMax: Float,

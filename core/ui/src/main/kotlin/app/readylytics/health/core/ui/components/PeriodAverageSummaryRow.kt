@@ -17,8 +17,8 @@ import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.assessDeltaOutcome
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.common.resolveOrNull
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -64,15 +64,10 @@ fun PeriodAverageSummaryRow(
             DeltaOutcome.NEUTRAL -> statusColors.neutral
             null -> statusColors.neutral
         }
-    val quarterTemplate = stringResource(R.string.period_label_quarter)
-    val periodLabel =
-        periodLabelFor(summary.granularity, summary.periodStartDate) { quarter ->
-            String.format(Locale.getDefault(), quarterTemplate, quarter)
-        }
+    val ordinalLabel = rememberPeriodOrdinalLabel(summary.granularity)
+    val periodLabel = periodLabelFor(summary.granularity, summary.periodStartDate, ordinalLabel)
     val previousLabel =
-        periodLabelFor(summary.granularity, summary.previousPeriodStartDate) { quarter ->
-            String.format(Locale.getDefault(), quarterTemplate, quarter)
-        }
+        periodLabelFor(summary.granularity, summary.previousPeriodStartDate, ordinalLabel)
     val avgLabel = stringResource(R.string.label_avg)
     val previousLabelText = stringResource(R.string.period_summary_vs, previousLabel)
 

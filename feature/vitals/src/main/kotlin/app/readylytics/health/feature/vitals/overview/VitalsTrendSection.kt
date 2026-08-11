@@ -14,6 +14,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.SkeletonCard
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.domain.preferences.UnitSystem
@@ -61,11 +62,20 @@ internal fun VitalsTrendSection(
                         metricName = stringResource(CoreUiR.string.label_hrv),
                         baselineUnit = stringResource(CoreUiR.string.unit_ms),
                         modifier = Modifier.testTag("HrvTrendChart"),
-                        baseline = presentation.hrv.baseline?.toFloat(),
+                        baseline =
+                            chartSeries.historicalHrvBaselineAverage?.toFloat()
+                                ?: presentation.hrv.baseline?.toFloat(),
                         showBaseline = presentation.hrv.baseline != null,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                        zoneBands = presentation.hrv.zoneBands,
+                        zoneBands =
+                            if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                                presentation.hrv.zoneBands
+                            } else {
+                                chartSeries.historicalHrvZoneBands
+                            },
+                        historicalBaseline = chartSeries.historicalHrvBaseline.takeIf { it.isNotEmpty() },
+                        bucketZoneBands = chartSeries.historicalHrvBucketZoneBands.takeIf { it.isNotEmpty() },
                         parentScrollInProgress = parentScrollInProgress,
                         granularity = chartInputs.selectedRange.granularity,
                         periodSummary = chartSeries.hrvPeriodSummary,
@@ -98,11 +108,20 @@ internal fun VitalsTrendSection(
                         metricName = stringResource(CoreUiR.string.label_rhr),
                         baselineUnit = stringResource(CoreUiR.string.unit_bpm),
                         modifier = Modifier.testTag("RestingHeartRateTrendChart"),
-                        baseline = presentation.rhr.baseline?.toFloat(),
+                        baseline =
+                            chartSeries.historicalRhrBaselineAverage?.toFloat()
+                                ?: presentation.rhr.baseline?.toFloat(),
                         showBaseline = presentation.rhr.baseline != null,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                        zoneBands = presentation.rhr.zoneBands,
+                        zoneBands =
+                            if (chartInputs.selectedRange.granularity == TrendGranularity.DAILY) {
+                                presentation.rhr.zoneBands
+                            } else {
+                                chartSeries.historicalRhrZoneBands
+                            },
+                        historicalBaseline = chartSeries.historicalRhrBaseline.takeIf { it.isNotEmpty() },
+                        bucketZoneBands = chartSeries.historicalRhrBucketZoneBands.takeIf { it.isNotEmpty() },
                         parentScrollInProgress = parentScrollInProgress,
                         granularity = chartInputs.selectedRange.granularity,
                         periodSummary = chartSeries.rhrPeriodSummary,

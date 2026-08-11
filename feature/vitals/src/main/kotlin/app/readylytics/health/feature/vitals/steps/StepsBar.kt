@@ -41,7 +41,9 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.SegmentHitBox
+import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.detectCanvasTap
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.StepsStatusClassifier
@@ -51,7 +53,7 @@ import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreUiR
 
 // stepGoal fills bar to 75% width — mirrors RAS bar design
-private fun barMax(stepGoal: Int): Float = stepGoal / 0.75f
+private fun barMax(stepGoal: Int): Float = stepGoal / GOAL_FILL_CAP_FRACTION
 
 @Composable
 fun StepsBar(
@@ -94,6 +96,8 @@ fun StepsBar(
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val primaryColor = MaterialTheme.colorScheme.primary
+    val markerDiameter = MaterialTheme.dimens.metricGaugeMarkerDiameter
+    val markerColor = status.containerColor()
 
     val prevActionLabel = stringResource(CoreUiR.string.action_previous_point)
     val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
@@ -217,6 +221,13 @@ fun StepsBar(
                 val totalWidth = size.width
                 val barHeight = size.height
                 val radius = barHeight / 2f
+                val markerRadiusPx = markerDiameter.toPx() / 2f
+                val fillWidth =
+                    if (stepCount != null && stepCount > 0) {
+                        (totalWidth * (count.toFloat() / barMax(stepGoal))).coerceAtMost(totalWidth)
+                    } else {
+                        0f
+                    }
 
                 val clipPath =
                     Path().apply {
@@ -235,13 +246,24 @@ fun StepsBar(
                     drawRect(color = trackColor, topLeft = Offset(0f, 0f), size = Size(totalWidth, barHeight))
 
                     if (stepCount != null && stepCount > 0) {
-                        val fillWidth = (totalWidth * (count.toFloat() / barMax(stepGoal))).coerceAtMost(totalWidth)
                         drawRect(
                             color = fillColor,
                             topLeft = Offset(0f, 0f),
                             size = Size(fillWidth, barHeight),
                         )
                     }
+                }
+
+                if (stepCount != null && stepCount > 0) {
+                    drawCircle(
+                        color = markerColor,
+                        radius = markerRadiusPx,
+                        center =
+                            Offset(
+                                fillWidth.coerceIn(markerRadiusPx, totalWidth - markerRadiusPx),
+                                barHeight / 2f,
+                            ),
+                    )
                 }
 
                 drawRoundRect(

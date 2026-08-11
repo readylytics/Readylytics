@@ -20,14 +20,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.M3MetricBar
+import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
 import app.readylytics.health.feature.workouts.R
 
 // 100 RAS fills 75% of the bar width
-private const val BAR_MAX = 100f / 0.75f
+private const val BAR_MAX = 100f / GOAL_FILL_CAP_FRACTION
 
 @Composable
 fun RasWeeklyBar(
@@ -56,6 +58,8 @@ fun RasWeeklyBar(
             activeColor = fillColor,
             trackColor = trackColor,
             barHeight = MaterialTheme.dimens.miniBarHeight,
+            markerColor = status.containerColor(),
+            showMarker = true,
             animateProgress = false,
             modifier =
                 Modifier
