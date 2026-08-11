@@ -112,7 +112,7 @@ internal class DayOffsetTickCalculator(
             if (maxVal - lastValue < minSeparation) {
                 // removeAt would throw IndexOutOfBoundsException on an empty visibleValues, but
                 // that is unreachable today: the zoomed-out early return and the minSeparation
-                // branch only ever see daily ranges. Bucketed (MONTHLY/QUARTERLY) charts route
+                // branch only ever see daily ranges. Bucketed (MONTHLY/EIGHT_WEEK) charts route
                 // through ChartDefaults.tickValuesFor's point-offset path, so DayOffsetTickCalculator
                 // never receives rangeDays=360. The invariant is re-checked by the rangeDays=360
                 // golden test in DayOffsetTickCalculatorTest.

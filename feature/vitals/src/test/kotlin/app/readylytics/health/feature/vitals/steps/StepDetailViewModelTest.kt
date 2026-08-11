@@ -131,7 +131,7 @@ class StepDetailViewModelTest {
         }
 
     @Test
-    fun `twelve month range buckets steps into quarterly points`() =
+    fun `twelve month range buckets steps into eight week points`() =
         runTest {
             val start = LocalDate.of(2026, 1, 1)
             selectedDateFlow.value = start
@@ -153,7 +153,7 @@ class StepDetailViewModelTest {
                     it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
                 }
 
-            // Two populated quarters (Q1: avg 10000, Q2: avg 8000); valueDecimalPlaces = 0.
+            // Two populated octads (octad 1: avg 10000, octad 2: avg 8000); valueDecimalPlaces = 0.
             assertEquals(2, state.dailySteps.count { it.value != null })
             val values = state.dailySteps.filter { it.value != null }.map { it.value }
             assertEquals(listOf(10000f, 8000f), values)

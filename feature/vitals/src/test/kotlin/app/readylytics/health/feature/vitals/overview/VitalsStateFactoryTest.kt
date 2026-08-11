@@ -218,7 +218,7 @@ class VitalsStateFactoryTest {
     }
 
     @Test
-    fun `twelve months buckets series into quarterly averages`() {
+    fun `twelve months buckets series into eight week averages`() {
         val start = LocalDate.of(2026, 1, 1)
         val summaries =
             listOf(
@@ -231,10 +231,10 @@ class VitalsStateFactoryTest {
         val series =
             buildVitalsChartSeries(summaries, start, range = TimeRange.TWELVE_MONTHS, unitSystem = UnitSystem.METRIC)
 
-        assertEquals(listOf(44, 135, 226, 318), series.hrv.map { it.dayOffset })
+        assertEquals(listOf(24, 80, 192, 248), series.hrv.map { it.dayOffset })
         assertEquals(listOf(10f, 20f, 30f, 40f), series.hrv.map { it.value })
-        assertEquals(TrendGranularity.QUARTERLY, series.hrvPeriodSummary?.granularity)
-        assertEquals(start.plusDays(318), series.hrvPeriodSummary?.periodStartDate)
+        assertEquals(TrendGranularity.EIGHT_WEEK, series.hrvPeriodSummary?.granularity)
+        assertEquals(start.plusDays(248), series.hrvPeriodSummary?.periodStartDate)
         assertEquals(40f, series.hrvPeriodSummary?.average)
         assertEquals(30f, series.hrvPeriodSummary?.previousAverage)
     }

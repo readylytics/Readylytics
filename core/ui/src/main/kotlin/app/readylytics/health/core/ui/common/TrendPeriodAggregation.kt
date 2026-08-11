@@ -1,8 +1,14 @@
 package app.readylytics.health.core.ui.common
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.ui.R
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.temporal.IsoFields
 import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -26,16 +32,21 @@ private data class Bucket(
     val points: List<DailyDataPoint>,
 )
 
-private fun bucketStartForDate(
+internal fun bucketStartForDate(
     date: LocalDate,
     granularity: TrendGranularity,
 ): LocalDate =
     when (granularity) {
         TrendGranularity.DAILY -> date
         TrendGranularity.MONTHLY -> date.withDayOfMonth(1)
-        TrendGranularity.QUARTERLY -> {
-            val quarterStartMonth = ((date.monthValue - 1) / 3) * 3 + 1
-            date.withDayOfMonth(1).withMonth(quarterStartMonth)
+        TrendGranularity.EIGHT_WEEK -> {
+            val weekBasedYear = date.get(IsoFields.WEEK_BASED_YEAR)
+            val isoWeek = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+            val octadFirstWeek = ((isoWeek - 1) / 8) * 8 + 1
+            date
+                .with(IsoFields.WEEK_BASED_YEAR, weekBasedYear.toLong())
+                .with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, octadFirstWeek.toLong())
+                .with(DayOfWeek.MONDAY)
         }
     }
 
@@ -56,33 +67,40 @@ private fun DailyDataPoint.bucketStart(
     startDate: LocalDate,
 ): LocalDate = bucketStartForDate(startDate.plusDays(dayOffset.toLong()), granularity)
 
-private fun bucketLengthDays(
+fun bucketLengthDays(
     bucketStart: LocalDate,
     granularity: TrendGranularity,
 ): Int =
     when (granularity) {
         TrendGranularity.DAILY -> 1
         TrendGranularity.MONTHLY -> bucketStart.lengthOfMonth()
-        TrendGranularity.QUARTERLY ->
-            ChronoUnit.DAYS.between(bucketStart, bucketStart.plusMonths(3)).toInt()
+        TrendGranularity.EIGHT_WEEK -> {
+            val nextYearStart =
+                bucketStart
+                    .with(IsoFields.WEEK_BASED_YEAR, bucketStart.get(IsoFields.WEEK_BASED_YEAR) + 1L)
+                    .with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, 1)
+                    .with(DayOfWeek.MONDAY)
+            ChronoUnit.DAYS
+                .between(bucketStart, nextYearStart)
+                .toInt()
+                .coerceAtMost(56)
+        }
     }
-
-fun quarterNumberFor(date: LocalDate): Int = (date.monthValue - 1) / 3 + 1
 
 /**
  * Display label for the period containing [date]: localized month abbreviation for [MONTHLY],
- * [quarterLabel] for [QUARTERLY], or the ISO date for [DAILY]. The quarterly label must be
+ * [ordinalLabel] for [EIGHT_WEEK], or the ISO date for [DAILY]. The ordinal label must be
  * produced by the caller (it carries a `strings.xml` resource), keeping this function pure.
  */
 fun periodLabelFor(
     granularity: TrendGranularity,
     date: LocalDate,
-    quarterLabel: (Int) -> String,
+    ordinalLabel: (Int) -> String,
 ): String =
     when (granularity) {
         TrendGranularity.MONTHLY ->
             date.format(DateTimeFormatter.ofPattern("MMM", Locale.getDefault()))
-        TrendGranularity.QUARTERLY -> quarterLabel(quarterNumberFor(date))
+        TrendGranularity.EIGHT_WEEK -> ordinalLabel(date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))
         TrendGranularity.DAILY -> date.toString()
     }
 
@@ -179,8 +197,24 @@ fun List<DailyDataPoint>.padBucketsToRange(
         cursor =
             when (granularity) {
                 TrendGranularity.MONTHLY -> bucketStart.plusMonths(1)
-                TrendGranularity.QUARTERLY -> bucketStart.plusMonths(3)
+                TrendGranularity.EIGHT_WEEK -> bucketStart.plusWeeks(8)
             }
     }
     return offsets.map { offset -> byOffset[offset] ?: DailyDataPoint(offset, null) }
+}
+
+/**
+ * Resolves the ordinal period label formatter for [granularity] from `strings.xml`: "Wk %1$d"
+ * for [TrendGranularity.EIGHT_WEEK], "Q%1$d" otherwise. Keeps the label template resolution
+ * out of the seven call sites that previously repeated the same `stringResource` + `String.format`
+ * boilerplate.
+ */
+@Composable
+fun rememberPeriodOrdinalLabel(granularity: TrendGranularity): (Int) -> String {
+    val quarterTemplate = stringResource(R.string.period_label_quarter)
+    val weekTemplate = stringResource(R.string.label_week_short)
+    val template = if (granularity == TrendGranularity.EIGHT_WEEK) weekTemplate else quarterTemplate
+    return remember(template) {
+        { ordinal: Int -> String.format(Locale.getDefault(), template, ordinal) }
+    }
 }

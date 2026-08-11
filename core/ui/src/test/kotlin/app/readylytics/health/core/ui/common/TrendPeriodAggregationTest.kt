@@ -1,8 +1,11 @@
 package app.readylytics.health.core.ui.common
 
+import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 class TrendPeriodAggregationTest {
@@ -48,21 +51,21 @@ class TrendPeriodAggregationTest {
     }
 
     @Test
-    fun `quarterly bucket averages partial trailing bucket`() {
+    fun `eight week bucket averages partial trailing bucket`() {
         val points =
             listOf(
-                DailyDataPoint(0, 10f), // Q1
-                DailyDataPoint(89, 20f), // Q1 last day
-                DailyDataPoint(90, 30f), // Q2 first day
-                DailyDataPoint(99, 50f), // Q2 partial
+                DailyDataPoint(0, 10f), // Octad 1 (weeks 1-8)
+                DailyDataPoint(30, 20f), // Octad 1 last day
+                DailyDataPoint(55, 30f), // Octad 2 (weeks 9-16) first day
+                DailyDataPoint(79, 50f), // Octad 2 partial
             )
 
         assertEquals(
             listOf(
-                DailyDataPoint(44, 15f), // Q1 midpoint offset
-                DailyDataPoint(135, 40f), // Q2 midpoint offset
+                DailyDataPoint(24, 15f), // Octad 1 midpoint offset (Jan 25)
+                DailyDataPoint(80, 40f), // Octad 2 midpoint offset (Mar 22)
             ),
-            points.bucketBy(TrendGranularity.QUARTERLY, LocalDate.of(2026, 1, 1)),
+            points.bucketBy(TrendGranularity.EIGHT_WEEK, LocalDate.of(2026, 1, 1)),
         )
     }
 
@@ -184,16 +187,16 @@ class TrendPeriodAggregationTest {
     }
 
     @Test
-    fun `quarterly summary uses bucket midpoint dates`() {
+    fun `eight week summary uses bucket midpoint dates`() {
         val summary =
             buildPeriodAverageSummary(
-                points = listOf(DailyDataPoint(44, 10f), DailyDataPoint(135, 20f)),
-                granularity = TrendGranularity.QUARTERLY,
+                points = listOf(DailyDataPoint(24, 10f), DailyDataPoint(80, 20f)),
+                granularity = TrendGranularity.EIGHT_WEEK,
                 startDate = LocalDate.of(2026, 1, 1),
             )
 
-        assertEquals(LocalDate.of(2026, 1, 1).plusDays(135), summary?.periodStartDate)
-        assertEquals(LocalDate.of(2026, 1, 1).plusDays(44), summary?.previousPeriodStartDate)
+        assertEquals(LocalDate.of(2026, 1, 1).plusDays(80), summary?.periodStartDate)
+        assertEquals(LocalDate.of(2026, 1, 1).plusDays(24), summary?.previousPeriodStartDate)
     }
 
     @Test
@@ -223,23 +226,68 @@ class TrendPeriodAggregationTest {
     }
 
     @Test
-    fun `quarterNumberFor returns the calendar quarter`() {
-        assertEquals(1, quarterNumberFor(LocalDate.of(2026, 1, 1)))
-        assertEquals(1, quarterNumberFor(LocalDate.of(2026, 3, 31)))
-        assertEquals(2, quarterNumberFor(LocalDate.of(2026, 4, 1)))
-        assertEquals(3, quarterNumberFor(LocalDate.of(2026, 7, 1)))
-        assertEquals(4, quarterNumberFor(LocalDate.of(2026, 10, 1)))
+    fun `eight week bucket start anchors to ISO week octad Monday`() {
+        val date = LocalDate.of(2026, 2, 25) // mid-week
+        val start = bucketStartForDate(date, TrendGranularity.EIGHT_WEEK)
+        assertEquals(LocalDate.of(2026, 2, 23), start) // Week 9 Monday of 2026
+        assertEquals(DayOfWeek.MONDAY, start.dayOfWeek)
     }
 
     @Test
-    fun `periodLabelFor formats quarterly via the supplied quarterLabel`() {
-        assertEquals(
-            "Q2",
-            periodLabelFor(
-                TrendGranularity.QUARTERLY,
-                LocalDate.of(2026, 4, 1),
-            ) { quarter -> "Q$quarter" },
-        )
+    fun `eight week full octad is 56 days`() {
+        val start = LocalDate.of(2026, 2, 23) // Week 9 Monday
+        assertEquals(56, bucketLengthDays(start, TrendGranularity.EIGHT_WEEK))
+    }
+
+    @Test
+    fun `eight week trailing bucket is shorter for non-divisible years`() {
+        // 2026 has 53 ISO weeks. Week 49 octad (last) = weeks 49-53 = 5 weeks.
+        // Week 49 Monday 2026 = Nov 30.
+        val start = LocalDate.of(2026, 11, 30)
+        val startAdjusted = bucketStartForDate(start, TrendGranularity.EIGHT_WEEK)
+        val length = bucketLengthDays(startAdjusted, TrendGranularity.EIGHT_WEEK)
+        assertTrue("Trailing bucket should be < 56 days, got $length", length < 56)
+        assertEquals(35, length)
+    }
+
+    @Test
+    fun `periodLabelFor EIGHT_WEEK shows ISO week number`() {
+        val date = LocalDate.of(2026, 2, 25)
+        val label = periodLabelFor(TrendGranularity.EIGHT_WEEK, date) { "Wk $it" }
+        assertEquals("Wk 9", label)
+    }
+
+    @Test
+    fun `periodLabelFor EIGHT_WEEK shows the date week for mid octad dates`() {
+        val date = LocalDate.of(2026, 3, 10) // week 11, mid octad (weeks 9-16)
+        val label = periodLabelFor(TrendGranularity.EIGHT_WEEK, date) { "Wk $it" }
+        assertEquals("Wk 11", label)
+    }
+
+    @Test
+    fun `formatTrendTooltipDate EIGHT_WEEK shows week range`() {
+        val date = LocalDate.of(2026, 2, 25)
+        val result =
+            formatTrendTooltipDate(
+                TrendGranularity.EIGHT_WEEK,
+                date,
+                { "Wk $it" },
+                "Weeks %1\$d–%2\$d",
+            )
+        assertEquals("Weeks 9–16", result)
+    }
+
+    @Test
+    fun `formatTrendTooltipDate EIGHT_WEEK shows week range anchored to octad for mid octad dates`() {
+        val date = LocalDate.of(2026, 3, 10) // week 11, mid octad (weeks 9-16)
+        val result =
+            formatTrendTooltipDate(
+                TrendGranularity.EIGHT_WEEK,
+                date,
+                { "Wk $it" },
+                "Weeks %1\$d–%2\$d",
+            )
+        assertEquals("Weeks 9–16", result)
     }
 
     @Test

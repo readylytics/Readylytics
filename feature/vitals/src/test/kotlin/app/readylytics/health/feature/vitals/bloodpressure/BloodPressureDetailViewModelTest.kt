@@ -231,14 +231,14 @@ class BloodPressureDetailViewModelTest {
         }
 
     @Test
-    fun `twelve month range buckets systolic and diastolic into quarterly points`() =
+    fun `twelve month range buckets systolic and diastolic into eight week points`() =
         runTest {
             val start = LocalDate.of(2026, 1, 1)
             selectedDateFlow.value = start
             val zone = java.time.ZoneId.systemDefault()
             val records =
                 listOf(
-                    // Q1: two records
+                    // Octad 1 (weeks 1-8): one record
                     bloodPressureEntity(
                         systolic = 118,
                         diastolic = 78,
@@ -249,6 +249,7 @@ class BloodPressureDetailViewModelTest {
                                 .toInstant()
                                 .toEpochMilli(),
                     ),
+                    // Octad 2 (weeks 9-16): one record
                     bloodPressureEntity(
                         systolic = 122,
                         diastolic = 82,
@@ -259,7 +260,7 @@ class BloodPressureDetailViewModelTest {
                                 .toInstant()
                                 .toEpochMilli(),
                     ),
-                    // Q2: one record
+                    // Octad 3 (weeks 17-24): one record
                     bloodPressureEntity(
                         systolic = 120,
                         diastolic = 80,
@@ -282,11 +283,11 @@ class BloodPressureDetailViewModelTest {
                     it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
                 }
 
-            // Two populated quarters: systolic Q1 avg 120, Q2 120; diastolic Q1 avg 80, Q2 80.
-            assertEquals(2, state.dailySystolic.count { it.value != null })
-            assertEquals(2, state.dailyDiastolic.count { it.value != null })
-            assertEquals(listOf(120f, 120f), state.dailySystolic.filter { it.value != null }.map { it.value })
-            assertEquals(listOf(80f, 80f), state.dailyDiastolic.filter { it.value != null }.map { it.value })
+            // Three populated octads, one record each.
+            assertEquals(3, state.dailySystolic.count { it.value != null })
+            assertEquals(3, state.dailyDiastolic.count { it.value != null })
+            assertEquals(listOf(118f, 122f, 120f), state.dailySystolic.filter { it.value != null }.map { it.value })
+            assertEquals(listOf(78f, 82f, 80f), state.dailyDiastolic.filter { it.value != null }.map { it.value })
         }
 
     // --- helpers ---

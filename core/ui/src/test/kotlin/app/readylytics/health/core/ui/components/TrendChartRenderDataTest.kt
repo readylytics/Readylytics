@@ -70,18 +70,20 @@ class TrendChartRenderDataTest {
     @Test
     fun `tooltip date uses period label for monthly granularity`() {
         val date = LocalDate.of(2026, 7, 15)
-        assertEquals("Jul", formatTrendTooltipDate(TrendGranularity.MONTHLY, date) { "Q$it" })
+        assertEquals("Jul", formatTrendTooltipDate(TrendGranularity.MONTHLY, date, { "Q$it" }))
     }
 
     @Test
-    fun `tooltip date uses quarter label for quarterly granularity`() {
+    fun `tooltip date uses week range for eight week granularity`() {
         val date = LocalDate.of(2026, 7, 5)
         assertEquals(
-            "Q3",
+            "Weeks 25–32",
             formatTrendTooltipDate(
-                TrendGranularity.QUARTERLY,
+                TrendGranularity.EIGHT_WEEK,
                 date,
-            ) { quarter -> "Q$quarter" },
+                { week -> "Wk$week" },
+                "Weeks %1\$d–%2\$d",
+            ),
         )
     }
 
@@ -90,7 +92,7 @@ class TrendChartRenderDataTest {
         val date = LocalDate.of(2026, 7, 15)
         assertEquals(
             ChartUtils.formatTooltipDate(date),
-            formatTrendTooltipDate(TrendGranularity.DAILY, date) { "Q$it" },
+            formatTrendTooltipDate(TrendGranularity.DAILY, date, { "Q$it" }),
         )
     }
 

@@ -39,7 +39,10 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.bucketLengthDays
+import app.readylytics.health.core.ui.common.bucketStartForDate
 import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -61,6 +64,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import java.time.temporal.IsoFields
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -185,7 +189,8 @@ fun TrendChart(
 
     // Resolved in composable scope so the format string can be used inside the non-composable
     // marker listener below; resource strings must never be built as Kotlin literals.
-    val quarterTemplate = stringResource(R.string.period_label_quarter)
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+    val weekRangeTemplate = stringResource(R.string.tooltip_week_range)
 
     LaunchedEffect(renderData.validPoints) {
         modelProducer.runTransaction {
@@ -265,10 +270,7 @@ fun TrendChart(
                 DataPointTooltipData(
                     valueText = valueText,
                     dateText =
-                        formatTrendTooltipDate(
-                            granularity,
-                            date,
-                        ) { quarter -> String.format(Locale.getDefault(), quarterTemplate, quarter) },
+                        formatTrendTooltipDate(granularity, date, ordinalLabel, weekRangeTemplate),
                     offset =
                         androidx.compose.ui.unit
                             .IntOffset(canvasX.toInt(), canvasY.toInt()),
@@ -474,19 +476,25 @@ internal fun formatTrendTooltipValue(
 }
 
 /**
- * Tooltip date line: [DAILY] keeps the short date format; bucketed [MONTHLY]/[QUARTERLY] points
- * show the containing period label (e.g. "Juli" / "Q3") instead of a mid-month calendar date.
- * The quarterly label comes from the caller (a `strings.xml` resource), keeping this pure.
+ * Tooltip date line: [DAILY] keeps the short date format; bucketed [MONTHLY]/[EIGHT_WEEK] points
+ * show the containing period label (e.g. "Juli" / "Wk 9" / "Q3") instead of a mid-month calendar date.
+ * The ordinal and week-range labels come from the caller (a `strings.xml` resource), keeping this pure.
  */
 fun formatTrendTooltipDate(
     granularity: TrendGranularity,
     date: java.time.LocalDate,
-    quarterLabel: (Int) -> String,
+    ordinalLabel: (Int) -> String,
+    weekRangeTemplate: String = "",
 ): String =
-    if (granularity == TrendGranularity.DAILY) {
-        ChartUtils.formatTooltipDate(date)
-    } else {
-        periodLabelFor(granularity, date, quarterLabel)
+    when (granularity) {
+        TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
+        TrendGranularity.EIGHT_WEEK -> {
+            val bucketStart = bucketStartForDate(date, TrendGranularity.EIGHT_WEEK)
+            val startWeek = bucketStart.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+            val endWeek = startWeek + (bucketLengthDays(bucketStart, TrendGranularity.EIGHT_WEEK) / 7) - 1
+            String.format(Locale.getDefault(), weekRangeTemplate, startWeek, endWeek)
+        }
+        else -> periodLabelFor(granularity, date, ordinalLabel)
     }
 
 internal fun formatBaselineLegendText(

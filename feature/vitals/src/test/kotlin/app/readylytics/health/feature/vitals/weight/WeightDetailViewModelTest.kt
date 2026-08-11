@@ -258,16 +258,16 @@ class WeightDetailViewModelTest {
         }
 
     @Test
-    fun `twelve month range buckets daily weights into quarterly points with a period summary`() =
+    fun `twelve month range buckets daily weights into eight week points with a period summary`() =
         runTest {
             val start = LocalDate.of(2026, 1, 1)
             selectedDateFlow.value = start
             val zone = java.time.ZoneId.systemDefault()
             val records =
                 listOf(
-                    // Q1 (Jan-Mar): two records
+                    // Octad 1 (weeks 1-8): one record
                     WeightRecordEntity(
-                        "q1a",
+                        "o1",
                         start
                             .plusMonths(1)
                             .atStartOfDay(zone)
@@ -275,8 +275,9 @@ class WeightDetailViewModelTest {
                             .toEpochMilli(),
                         70f,
                     ),
+                    // Octad 2 (weeks 9-16): one record
                     WeightRecordEntity(
-                        "q1b",
+                        "o2",
                         start
                             .plusMonths(2)
                             .atStartOfDay(zone)
@@ -284,9 +285,9 @@ class WeightDetailViewModelTest {
                             .toEpochMilli(),
                         72f,
                     ),
-                    // Q2 (Apr-Jun): one record
+                    // Octad 3 (weeks 17-24): one record
                     WeightRecordEntity(
-                        "q2",
+                        "o3",
                         start
                             .plusMonths(4)
                             .atStartOfDay(zone)
@@ -310,9 +311,9 @@ class WeightDetailViewModelTest {
                     it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
                 }
 
-            // Only two populated quarters survive bucketing.
-            assertEquals(2, state.dailyWeights.count { it.value != null })
-            assertEquals(listOf(71f, 71f), state.dailyWeights.filter { it.value != null }.map { it.value })
-            assertEquals(TrendGranularity.QUARTERLY, state.periodSummary?.granularity)
+            // Only three populated octads survive bucketing.
+            assertEquals(3, state.dailyWeights.count { it.value != null })
+            assertEquals(listOf(70f, 72f, 71f), state.dailyWeights.filter { it.value != null }.map { it.value })
+            assertEquals(TrendGranularity.EIGHT_WEEK, state.periodSummary?.granularity)
         }
 }
