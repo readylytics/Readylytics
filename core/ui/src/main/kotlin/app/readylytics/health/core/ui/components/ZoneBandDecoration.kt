@@ -3,6 +3,8 @@ package app.readylytics.health.core.ui.components
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
 import app.readylytics.health.domain.model.BucketZoneBands
 import app.readylytics.health.domain.model.HealthZone
 import app.readylytics.health.domain.model.ZoneBand
@@ -15,8 +17,9 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
  *
  * Two modes:
  * - **Flat:** a single set of [zoneBands] colored by indexed [bandColors], drawn full-width.
- * - **Per-bucket:** [bucketZoneBands] provides per-month/octad bands with x-axis clamping,
- *   colored via [zoneColor] lookup on each band's [HealthZone].
+ * - **Per-bucket:** [bucketZoneBands] provides per-month/octad bands. Each zone level is drawn
+ *   as a single smooth polygon through bucket midpoints so the bands flow continuously with
+ *   the baseline line instead of appearing as disconnected steps.
  */
 class ZoneBandDecoration(
     private val zoneBands: List<ZoneBand>,
@@ -35,7 +38,7 @@ class ZoneBandDecoration(
         if (bucketZoneBands.isNullOrEmpty()) {
             drawFlat(context, zoneBands, bandColors, bounds, range)
         } else {
-            drawPerBucket(context, bucketZoneBands, bounds, range)
+            drawSmoothPerBucket(context, bucketZoneBands, bounds, range)
         }
     }
 
@@ -60,30 +63,63 @@ class ZoneBandDecoration(
         }
     }
 
-    private fun drawPerBucket(
+    private fun drawSmoothPerBucket(
         context: CartesianDrawingContext,
         buckets: List<BucketZoneBands>,
         bounds: androidx.compose.ui.geometry.Rect,
         range: Double,
     ) {
-        for (bucket in buckets) {
-            val left = bounds.left + bounds.width * (bucket.startDayOffset.toFloat() / (rangeDays - 1))
-            val right = bounds.left + bounds.width * (bucket.endDayOffset.toFloat() / (rangeDays - 1))
-            if (right <= left) continue
-            bucket.bands.forEach { band ->
-                drawBandRect(
-                    context,
-                    band.lowerBound,
-                    band.upperBound,
-                    zoneColor(band.zone),
-                    left,
-                    right,
-                    bounds,
-                    range,
-                )
+        fun xForDayOffset(offset: Int): Float =
+            bounds.left + bounds.width * (offset.toFloat() / (rangeDays - 1))
+
+        val zoneCount = buckets.first().bands.size
+
+        for (zoneIndex in 0 until zoneCount) {
+            val path = Path()
+            val zone = buckets.first().bands[zoneIndex].zone
+
+            val firstUpper = buckets.first().bands[zoneIndex].upperBound.coerceIn(minY, maxY)
+            val firstLower = buckets.first().bands[zoneIndex].lowerBound.coerceIn(minY, maxY)
+            val firstLeft = xForDayOffset(buckets.first().startDayOffset)
+
+            // Top edge — left to right through bucket midpoints
+            path.moveTo(firstLeft, yToCanvas(firstUpper, bounds, range))
+            for (i in buckets.indices) {
+                val centerX = xForDayOffset((buckets[i].startDayOffset + buckets[i].endDayOffset) / 2)
+                val upperY = yToCanvas(buckets[i].bands[zoneIndex].upperBound.coerceIn(minY, maxY), bounds, range)
+                path.lineTo(centerX, upperY)
             }
+            // Right edge — vertical drop
+            val lastRight = xForDayOffset(buckets.last().endDayOffset)
+            val lastUpper = buckets.last().bands[zoneIndex].upperBound.coerceIn(minY, maxY)
+            path.lineTo(lastRight, yToCanvas(lastUpper, bounds, range))
+
+            val lastLower = buckets.last().bands[zoneIndex].lowerBound.coerceIn(minY, maxY)
+            path.lineTo(lastRight, yToCanvas(lastLower, bounds, range))
+
+            // Bottom edge — right to left through bucket midpoints
+            for (i in buckets.indices.reversed()) {
+                val centerX = xForDayOffset((buckets[i].startDayOffset + buckets[i].endDayOffset) / 2)
+                val lowerY = yToCanvas(buckets[i].bands[zoneIndex].lowerBound.coerceIn(minY, maxY), bounds, range)
+                path.lineTo(centerX, lowerY)
+            }
+            // Left edge — close back to start
+            path.lineTo(firstLeft, yToCanvas(firstLower, bounds, range))
+            path.close()
+
+            context.mutableDrawScope.drawPath(
+                path = path,
+                color = zoneColor(zone),
+                style = Fill,
+            )
         }
     }
+
+    private fun yToCanvas(
+        dataY: Double,
+        bounds: androidx.compose.ui.geometry.Rect,
+        range: Double,
+    ): Float = bounds.top + bounds.height * (1f - ((dataY - minY) / range).toFloat())
 
     private fun drawBandRect(
         context: CartesianDrawingContext,
@@ -98,9 +134,8 @@ class ZoneBandDecoration(
         val clampedLower = lowerBound.coerceIn(minY, maxY)
         val clampedUpper = upperBound.coerceIn(minY, maxY)
         if (clampedLower >= clampedUpper) return
-        // Y=0 is top of canvas; higher data values -> smaller canvas Y
-        val topY = bounds.top + bounds.height * (1f - ((clampedUpper - minY) / range).toFloat())
-        val bottomY = bounds.top + bounds.height * (1f - ((clampedLower - minY) / range).toFloat())
+        val topY = yToCanvas(clampedUpper, bounds, range)
+        val bottomY = yToCanvas(clampedLower, bounds, range)
         context.mutableDrawScope.drawRect(
             color = color,
             topLeft = Offset(left, topY),
