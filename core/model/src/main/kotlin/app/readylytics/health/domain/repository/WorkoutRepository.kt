@@ -32,7 +32,7 @@ interface WorkoutRepository {
         offset: Int,
     ): List<WorkoutData>
 
-    suspend fun countInRange(fromMs: Long, toMs: Long): Int
+    suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
 
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>
 }

@@ -174,11 +174,11 @@ class WorkoutRepositoryImplTest {
         }
 
     @Test
-    fun `countInRange delegates to DAO`() =
+    fun `countByTimeRange delegates to DAO`() =
         runTest {
             results["countByTimeRange"] = 7
 
-            assertEquals(7, repository.countInRange(100L, 500L))
+            assertEquals(7, repository.countByTimeRange(100L, 500L))
         }
 
     @Suppress("UNCHECKED_CAST")

@@ -84,7 +84,7 @@ class WorkoutsViewModelTest {
         workoutRepository =
             mockk {
                 coEvery { getEarliestWorkoutTimestamp() } returns null
-                coEvery { countInRange(any(), any()) } answers {
+                coEvery { countByTimeRange(any(), any()) } answers {
                     workoutCount
                         ?: workouts.count {
                             it.startTime >= firstArg<Long>() && it.startTime < secondArg<Long>()
@@ -909,12 +909,12 @@ class WorkoutsViewModelTest {
 
             // The heavy pipeline (paged history reads, tenure derivation, EMA series) must not
             // restart on a sync toggle -- only the cheap isLoading/isRefreshing merge should run.
-            // getInRangePaged/countInRange run once per pipeline body, so an exactly-once
+            // getInRangePaged/countByTimeRange run once per pipeline body, so an exactly-once
             // verification proves the body did not re-run; getEarliestWorkoutTimestamp proves the
             // WORKOUT_ONLY tenure derivation did not re-run, and assertSame proves the emitted
             // items were not recomputed.
             coVerify(exactly = 1) { workoutRepository.getInRangePaged(any(), any(), any(), any()) }
-            coVerify(exactly = 1) { workoutRepository.countInRange(any(), any()) }
+            coVerify(exactly = 1) { workoutRepository.countByTimeRange(any(), any()) }
             coVerify(exactly = 1) { workoutRepository.getEarliestWorkoutTimestamp() }
             assertSame(stateBeforeToggle.recentWorkouts, stateAfterToggle.recentWorkouts)
 

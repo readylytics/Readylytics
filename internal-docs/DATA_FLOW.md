@@ -521,7 +521,7 @@ screen (which supplies no window and self-fetches).
 combines the selected range/date with a `_currentPage` flow and reads
 `BloodPressureRepository.getByDateRangePaged`/`countByDateRange` for the visible page, keeping
 the full-range query only for the chart series. `WorkoutsViewModel` scopes the history page to
-`[displayFromMs, selectedDayEndMs)` via `WorkoutRepository.getInRangePaged`/`countInRange`
+`[displayFromMs, selectedDayEndMs)` via `WorkoutRepository.getInRangePaged`/`countByTimeRange`
 (`WorkoutDao.getPagedInRange`, newest-first `ORDER BY startTime DESC, id DESC`); the full 42-day
 daily-summary flows stay subscribed for charts/scoring and are what re-drive the page after a
 sync, since workout history is no longer a reactive `observeSince` flow. The `WORKOUT_ONLY`

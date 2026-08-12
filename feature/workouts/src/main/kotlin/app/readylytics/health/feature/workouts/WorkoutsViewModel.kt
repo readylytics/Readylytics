@@ -331,7 +331,7 @@ class WorkoutsViewModel
                             // user can see. Newest-first order and the stable id tiebreak come
                             // from the DAO's SQL, not an in-memory sort.
                             val pageSize = 10
-                            val totalItems = workoutRepository.countInRange(displayFromMs, selectedDayEndMs)
+                            val totalItems = workoutRepository.countByTimeRange(displayFromMs, selectedDayEndMs)
                             val totalPages = maxOf(1, (totalItems + pageSize - 1) / pageSize)
                             val clampedPage = page.coerceIn(1, totalPages)
                             val pageWorkouts =
