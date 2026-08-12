@@ -424,6 +424,37 @@ class WorkoutsViewModelTest {
         }
 
     @Test
+    fun `previous press reaches page 1 with no dead press when count shrinks to two pages`() =
+        runTest(testDispatcher) {
+            workouts.addAll(workoutPageFixtures(25))
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 3 }
+            assertEquals(3, viewModel.currentPage.value)
+
+            // A resync/cleanup shrinks the range to 15 items (two pages) and re-emits the
+            // daily-summary flow. The pipeline clamps the displayed page to 2 while the raw
+            // _currentPage stays 3.
+            workoutCount = 15
+            summariesFlow.value = listOf(DailySummary(date = LocalDate.now(), trimpWorkoutOnly = 0f))
+            viewModel.uiState.first { it.totalPages == 2 }
+            assertEquals(2, viewModel.uiState.value.currentPage)
+            assertEquals(3, viewModel.currentPage.value)
+
+            viewModel.onPreviousPage()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, viewModel.uiState.value.currentPage)
+
+            collectJob.cancel()
+        }
+
+    @Test
     fun `display metrics are computed only for visible page rows`() =
         runTest(testDispatcher) {
             // Yesterday's workouts: inside the display window but outside the selected (today)

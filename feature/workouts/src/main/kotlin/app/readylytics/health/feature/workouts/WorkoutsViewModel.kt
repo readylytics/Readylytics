@@ -545,15 +545,17 @@ class WorkoutsViewModel
         }
 
         fun onNextPage() {
+            val current = uiState.value.currentPage
             val totalPages = uiState.value.totalPages
-            if (_currentPage.value < totalPages) {
-                _currentPage.value += 1
+            if (current < totalPages) {
+                _currentPage.value = current + 1
             }
         }
 
         fun onPreviousPage() {
-            if (_currentPage.value > 1) {
-                _currentPage.value -= 1
+            val current = uiState.value.currentPage
+            if (current > 1) {
+                _currentPage.value = current - 1
             }
         }
     }
