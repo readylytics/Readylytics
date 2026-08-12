@@ -23,8 +23,22 @@
     <string name="onboarding_appearance_label">Appearance</string>
     <string name="onboarding_units_label">Measurement units</string>
     <string name="onboarding_hc_permissions_label">Health Connect permissions</string>
-    <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV,
-        and Exercise data from Health Connect to calculate your scores.</string>
+    <string name="onboarding_hc_permissions_desc">This app needs access to the following data from
+        Health Connect to calculate your scores:</string>
+    <string name="onboarding_hc_permission_sleep">Sleep</string>
+    <string name="onboarding_hc_permission_heart_rate">Heart Rate</string>
+    <string name="onboarding_hc_permission_hrv">Heart Rate Variability (HRV)</string>
+    <string name="onboarding_hc_permission_exercise">Exercise</string>
+    <string name="onboarding_hc_permission_steps">Steps</string>
+    <string name="onboarding_hc_permission_history">Historical Data Access</string>
+    <string name="onboarding_hc_permission_weight">Weight</string>
+    <string name="onboarding_hc_permission_body_fat">Body Fat</string>
+    <string name="onboarding_hc_permission_blood_pressure">Blood Pressure</string>
+    <string name="onboarding_hc_permission_oxygen_saturation">Oxygen Saturation</string>
+    <string name="onboarding_hc_permission_body_temperature">Body Temperature</string>
+    <string name="onboarding_required_permissions_label">Required</string>
+    <string name="onboarding_optional_permissions_label">Optional (dashboard cards will be hidden if not granted)</string>
+    <string name="onboarding_missing_permissions_label">Missing permissions:</string>
     <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_open_hc_settings">Open Health Connect Settings</string>
@@ -38,7 +52,7 @@
     <string name="onboarding_permissions_required_title">Permissions needed</string>
     <string name="onboarding_permissions_required_message">Readylytics needs Health Connect
         permissions to continue. Grant access to finish setting up your restored data.</string>
-    <string name="onboarding_grant_permissions_retry">Grant Permissions</string>
+    <string name="onboarding_recheck_permissions">Recheck Permissions</string>
     <string name="privacy_rationale_title">Privacy &amp; Health Data</string>
     <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate
         variability, and exercise data from Health Connect solely to compute your personal recovery

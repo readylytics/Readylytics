@@ -49,6 +49,22 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// On API 34+ (platform-integrated Health Connect) a permission-denied call throws
+// android.health.connect.HealthConnectException, which wraps the real SecurityException as its
+// cause rather than extending it -- so a plain `catch (e: SecurityException)` misses it and the
+// call is treated as a fatal error instead of "permission not granted". Shared by every Health
+// Connect call site in this module (module-internal visibility) that needs to tell the two apart.
+internal fun Throwable.asHealthConnectSecurityCause(): SecurityException? {
+    var current: Throwable? = this
+    var depth = 0
+    while (current != null && depth < 10) {
+        if (current is SecurityException) return current
+        current = current.cause
+        depth++
+    }
+    return null
+}
+
 @Singleton
 class HealthConnectRepositoryImpl
     @Inject
@@ -62,7 +78,6 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(HeartRateRecord::class),
                 HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
                 HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-                HealthPermission.getReadPermission(StepsRecord::class),
             )
 
         override val requiredPermissions: Set<String> =
@@ -71,6 +86,7 @@ class HealthConnectRepositoryImpl
 
         override val optionalPermissions: Set<String> =
             setOf(
+                HealthPermission.getReadPermission(StepsRecord::class),
                 HealthPermission.getReadPermission(WeightRecord::class),
                 HealthPermission.getReadPermission(BodyFatRecord::class),
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
@@ -145,15 +161,35 @@ class HealthConnectRepositoryImpl
             }
 
         override suspend fun hasBodyTemperaturePermission(): Boolean =
+            hasPermission<BodyTemperatureRecord>("body temperature")
+
+        override suspend fun hasStepsPermission(): Boolean =
+            hasPermission<StepsRecord>("steps")
+
+        override suspend fun hasWeightPermission(): Boolean =
+            hasPermission<WeightRecord>("weight")
+
+        override suspend fun hasBodyFatPermission(): Boolean =
+            hasPermission<BodyFatRecord>("body fat")
+
+        override suspend fun hasBloodPressurePermission(): Boolean =
+            hasPermission<BloodPressureRecord>("blood pressure")
+
+        override suspend fun hasOxygenSaturationPermission(): Boolean =
+            hasPermission<OxygenSaturationRecord>("oxygen saturation")
+
+        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> hasPermission(
+            label: String,
+        ): Boolean =
             withContext(ioDispatcher) {
                 if (!isAvailable()) return@withContext false
                 try {
                     client.permissionController
                         .getGrantedPermissions()
-                        .contains(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
+                        .contains(HealthPermission.getReadPermission(T::class))
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
-                        "Failed to check body temperature permission"
+                        "Failed to check $label permission"
                     }
                     false
                 }
@@ -192,12 +228,18 @@ class HealthConnectRepositoryImpl
                     onPage(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)
-            } catch (e: SecurityException) {
-                throw HealthConnectPermissionRevokedException(
-                    cause = e,
-                    operation = "read",
-                    recordType = T::class.simpleName,
-                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val securityCause = e.asHealthConnectSecurityCause()
+                if (securityCause != null) {
+                    throw HealthConnectPermissionRevokedException(
+                        cause = securityCause,
+                        operation = "read",
+                        recordType = T::class.simpleName,
+                    )
+                }
+                throw e
             }
         }
 
@@ -263,7 +305,17 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<DomainStepsRecord> =
             withContext(ioDispatcher) {
-                readAllPages<StepsRecord>(from, to).map { it.toDomain() }
+                try {
+                    readAllPages<StepsRecord>(from, to).map { it.toDomain() }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps record permission not granted"
+                    }
+                    emptyList()
+                }
             }
 
         override suspend fun readSteps(
@@ -271,14 +323,24 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): Long =
             withContext(ioDispatcher) {
-                val result =
-                    client.aggregate(
-                        AggregateRequest(
-                            metrics = setOf(StepsRecord.COUNT_TOTAL),
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
-                    )
-                result[StepsRecord.COUNT_TOTAL] ?: 0L
+                try {
+                    val result =
+                        client.aggregate(
+                            AggregateRequest(
+                                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                timeRangeFilter = TimeRangeFilter.between(from, to),
+                            ),
+                        )
+                    result[StepsRecord.COUNT_TOTAL] ?: 0L
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps permission not granted"
+                    }
+                    0L
+                }
             }
 
         override suspend fun readDailyStepTotals(
@@ -305,12 +367,8 @@ class HealthConnectRepositoryImpl
                             val total = group.result[StepsRecord.COUNT_TOTAL] ?: return@mapNotNull null
                             group.startTime.toLocalDate() to total
                         }.toMap()
-                } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(
-                        cause = e,
-                        operation = "readGroupByPeriod",
-                        recordType = StepsRecord::class.simpleName,
-                    )
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: UnsupportedOperationException) {
                     // HC-003: defensive fallback -- if a provider doesn't support grouped-by-period
                     // aggregation, fall back to one per-day aggregate call. Slower, but correct.
@@ -318,6 +376,12 @@ class HealthConnectRepositoryImpl
                         "aggregateGroupByPeriod unsupported; falling back to per-day step aggregate"
                     }
                     readDailyStepTotalsPerDay(from, to, zoneId)
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps permission not granted"
+                    }
+                    emptyMap()
                 }
             }
 

@@ -73,7 +73,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
             HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-            HealthPermission.getReadPermission(StepsRecord::class),
         )
 
     override val requiredPermissions: Set<String> =
@@ -81,6 +80,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     override val optionalPermissions: Set<String> =
         setOf(
+            HealthPermission.getReadPermission(StepsRecord::class),
             HealthPermission.getReadPermission(WeightRecord::class),
             HealthPermission.getReadPermission(BodyFatRecord::class),
             HealthPermission.getReadPermission(BloodPressureRecord::class),
@@ -204,7 +204,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<DomainStepsRecord> {
-        translateCritical(FakeOp.Steps)
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return emptyList()
+        if (error != null) throw error
         val count = stepsByInstant.keys.count { inRange(it, from, to) }
         return stubList(count) { index -> placeholderSteps(index) }
     }
@@ -213,7 +215,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): Long {
-        translateCritical(FakeOp.Steps)
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return 0L
+        if (error != null) throw error
         return stepsByInstant
             .filterKeys { inRange(it, from, to) }
             .values
@@ -224,21 +228,16 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
         zoneId: ZoneId,
-    ): Map<LocalDate, Long> =
-        try {
-            errors[FakeOp.Steps]?.let { throw it }
-            stepsByInstant
-                .filterKeys { inRange(it, from, to) }
-                .entries
-                .groupBy { it.key.atZone(zoneId).toLocalDate() }
-                .mapValues { (_, list) -> list.sumOf { it.value } }
-        } catch (e: SecurityException) {
-            throw HealthConnectPermissionRevokedException(e)
-        } catch (e: HealthConnectPermissionRevokedException) {
-            throw e
-        } catch (_: Exception) {
-            emptyMap()
-        }
+    ): Map<LocalDate, Long> {
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return emptyMap()
+        if (error != null) throw error
+        return stepsByInstant
+            .filterKeys { inRange(it, from, to) }
+            .entries
+            .groupBy { it.key.atZone(zoneId).toLocalDate() }
+            .mapValues { (_, list) -> list.sumOf { it.value } }
+    }
 
     override suspend fun readWeightRecords(
         from: Instant,
@@ -282,6 +281,21 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     override suspend fun hasBodyTemperaturePermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
+
+    override suspend fun hasStepsPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(StepsRecord::class))
+
+    override suspend fun hasWeightPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(WeightRecord::class))
+
+    override suspend fun hasBodyFatPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BodyFatRecord::class))
+
+    override suspend fun hasBloodPressurePermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BloodPressureRecord::class))
+
+    override suspend fun hasOxygenSaturationPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(OxygenSaturationRecord::class))
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays

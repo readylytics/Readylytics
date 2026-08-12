@@ -69,6 +69,8 @@ fun OnboardingScreen(
     restoreState: OnboardingRestoreState,
     onRestoreBackupClick: (uri: Uri, password: String) -> Unit,
     onDismissRestoreError: () -> Unit,
+    requiredPermissions: Set<String>,
+    optionalPermissions: Set<String>,
     modifier: Modifier = Modifier,
 ) {
     var step by rememberSaveable { mutableIntStateOf(0) }
@@ -93,6 +95,8 @@ fun OnboardingScreen(
                         onRetentionSetupComplete(retentionDays)
                     },
                     onOpenSettingsClick = onOpenSettingsClick,
+                    requiredPermissions = requiredPermissions,
+                    optionalPermissions = optionalPermissions,
                 )
             else ->
                 ProfileSetupScreen(
@@ -221,9 +225,10 @@ private fun WelcomeScreen(
 
 @Composable
 fun PermissionsRequiredScreen(
-    onGrantPermissionsClick: () -> Unit,
+    onRecheckPermissionsClick: () -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    missingPermissions: Set<String> = emptySet(),
 ) {
     Column(
         modifier =
@@ -249,19 +254,33 @@ fun PermissionsRequiredScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        val missingLabelRes = missingPermissions.mapNotNull { healthPermissionLabelRes(it) }
+        if (missingLabelRes.isNotEmpty()) {
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+            Text(
+                text = stringResource(R.string.onboarding_missing_permissions_label),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+            missingLabelRes.forEach { labelRes ->
+                PermissionBulletRow(stringResource(labelRes), modifier = Modifier.fillMaxWidth())
+            }
+        }
+
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
         Button(
-            onClick = onGrantPermissionsClick,
+            onClick = onOpenSettingsClick,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.onboarding_grant_permissions_retry))
+            Text(stringResource(R.string.onboarding_open_hc_settings))
         }
 
         Spacer(Modifier.height(MaterialTheme.spacing.small))
 
-        TextButton(onClick = onOpenSettingsClick) {
-            Text(stringResource(R.string.onboarding_open_hc_settings))
+        TextButton(onClick = onRecheckPermissionsClick) {
+            Text(stringResource(R.string.onboarding_recheck_permissions))
         }
     }
 }

@@ -372,6 +372,16 @@ class FirstSetupDummyIngestionFlowTest {
 
         override suspend fun hasBodyTemperaturePermission(): Boolean = false
 
+        override suspend fun hasStepsPermission(): Boolean = true
+
+        override suspend fun hasWeightPermission(): Boolean = false
+
+        override suspend fun hasBodyFatPermission(): Boolean = false
+
+        override suspend fun hasBloodPressurePermission(): Boolean = false
+
+        override suspend fun hasOxygenSaturationPermission(): Boolean = false
+
         private companion object {
             val sleepStart: Instant = Instant.parse("2026-06-28T22:00:00Z")
             val sleepEnd: Instant = Instant.parse("2026-06-29T06:00:00Z")

@@ -92,9 +92,16 @@ class DashboardViewModel
             }
 
         private val cardManagementDelegate =
-            CardManagementDelegate(cardConfigRepository, viewModelScope) {
-                healthConnectRepository.hasBodyTemperaturePermission()
-            }
+            CardManagementDelegate(
+                cardConfigRepository,
+                viewModelScope,
+                hasBodyTemperaturePermission = { healthConnectRepository.hasBodyTemperaturePermission() },
+                hasStepsPermission = { healthConnectRepository.hasStepsPermission() },
+                hasWeightPermission = { healthConnectRepository.hasWeightPermission() },
+                hasBodyFatPermission = { healthConnectRepository.hasBodyFatPermission() },
+                hasBloodPressurePermission = { healthConnectRepository.hasBloodPressurePermission() },
+                hasOxygenSaturationPermission = { healthConnectRepository.hasOxygenSaturationPermission() },
+            )
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
