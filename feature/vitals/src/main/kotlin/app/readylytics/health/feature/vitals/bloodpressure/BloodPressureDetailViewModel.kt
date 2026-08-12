@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -61,22 +62,14 @@ class BloodPressureDetailViewModel
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
         private val currentPageFlow = MutableStateFlow(1)
         private val healthMetricsService = HealthMetricsService()
-        private var lastSelectedDate: LocalDate? = null
 
         val uiState: StateFlow<BloodPressureDetailUiState> =
             combine(
                 selectedRangeFlow,
-                selectedDateRepository.selectedDate,
+                selectedDateRepository.selectedDate.onEach { currentPageFlow.value = 1 },
                 currentPageFlow,
             ) { range, selectedDate, page ->
                 withContext(ioDispatcher) {
-                    var actualPage = page
-                    if (lastSelectedDate != null && lastSelectedDate != selectedDate) {
-                        currentPageFlow.value = 1
-                        actualPage = 1
-                    }
-                    lastSelectedDate = selectedDate
-
                     val zoneId = ZoneId.systemDefault()
                     val rangeStart =
                         selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
@@ -95,7 +88,7 @@ class BloodPressureDetailViewModel
                             rangeEnd.toEpochMilli(),
                         )
                     val totalPages = maxOf(1, (totalCount + PAGE_SIZE - 1) / PAGE_SIZE)
-                    val clampedPage = actualPage.coerceIn(1, totalPages)
+                    val clampedPage = page.coerceIn(1, totalPages)
                     val offset = (clampedPage - 1) * PAGE_SIZE
 
                     val pagedRecords =
@@ -224,15 +217,16 @@ class BloodPressureDetailViewModel
         }
 
         fun onNextPage() {
+            val current = uiState.value.currentPage
             val totalPages = uiState.value.totalPages
-            if (currentPageFlow.value < totalPages) {
-                currentPageFlow.value += 1
+            if (current < totalPages) {
+                currentPageFlow.value = current + 1
             }
         }
 
         fun onPreviousPage() {
-            val prev = currentPageFlow.value - 1
-            currentPageFlow.value = if (prev < 1) 1 else prev
+            val current = uiState.value.currentPage
+            currentPageFlow.value = maxOf(1, current - 1)
         }
 
         companion object {

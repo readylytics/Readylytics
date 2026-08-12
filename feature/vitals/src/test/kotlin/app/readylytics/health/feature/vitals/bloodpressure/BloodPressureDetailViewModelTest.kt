@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.vitals.bloodpressure
 
-import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.BloodPressureRecord
@@ -13,10 +12,11 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -70,18 +70,19 @@ class BloodPressureDetailViewModelTest {
             }
     }
 
-    private fun createViewModel(): BloodPressureDetailViewModel =
-        BloodPressureDetailViewModel(
-            bloodPressureRepository = repository,
-            selectedDateRepository = selectedDateRepo,
-            ioDispatcher = testDispatcher,
-        )
+    private fun TestScope.createViewModel(): BloodPressureDetailViewModel {
+        val vm =
+            BloodPressureDetailViewModel(
+                bloodPressureRepository = repository,
+                selectedDateRepository = selectedDateRepo,
+                ioDispatcher = testDispatcher,
+            )
+        backgroundScope.launch { vm.uiState.collect {} }
+        return vm
+    }
 
     @After
     fun tearDown() {
-        if (::viewModel.isInitialized) {
-            viewModel.viewModelScope.cancel()
-        }
         Dispatchers.resetMain()
     }
 
@@ -258,6 +259,7 @@ class BloodPressureDetailViewModelTest {
             coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
                 listOf(bloodPressureEntity(120, 80))
             viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
 
             viewModel.onNextPage()
             var state = viewModel.uiState.first { it.currentPage == 2 }
@@ -275,6 +277,7 @@ class BloodPressureDetailViewModelTest {
             coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
                 listOf(bloodPressureEntity(120, 80))
             viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
 
             viewModel.onNextPage()
             var state = viewModel.uiState.first { it.currentPage == 2 }
@@ -299,6 +302,7 @@ class BloodPressureDetailViewModelTest {
             coEvery { repository.countByDateRange(any(), any()) } returns 15
 
             viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
             viewModel.onNextPage()
 
             val pageTwo = viewModel.uiState.first { it.currentPage == 2 }
@@ -316,16 +320,20 @@ class BloodPressureDetailViewModelTest {
                 listOf(bloodPressureEntity(120, 80))
 
             viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
 
             viewModel.onNextPage()
             viewModel.uiState.first { it.currentPage == 2 }
             viewModel.onNextPage()
             val state3 = viewModel.uiState.first { it.currentPage == 3 }
             assertEquals(3, state3.currentPage)
+            assertEquals(3, state3.totalPages)
 
-            // Now simulate new data where count drops to 15 (2 pages max). The real view model would only re-eval if something triggers it,
-            // but we can just use the state flow directly in combination with another test trigger, or assume real app has flow observing DB.
-            // Since this test double isn't reactive, we'll just test that `onPreviousPage` doesn't underflow.
+            countFlow.value = 5
+            viewModel.onPreviousPage()
+            val clampedState = viewModel.uiState.first { it.totalPages == 1 }
+            assertEquals(1, clampedState.currentPage)
+            assertEquals(1, clampedState.totalPages)
         }
 
     @Test
@@ -335,17 +343,17 @@ class BloodPressureDetailViewModelTest {
             coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
                 listOf(bloodPressureEntity(120, 80))
             viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
 
             viewModel.onNextPage()
-            viewModel.uiState.first { it.currentPage == 2 }
+            viewModel.uiState.first { !it.isLoading && it.currentPage == 2 }
 
             viewModel.onPreviousPage()
-            var state = viewModel.uiState.first { it.currentPage == 1 }
+            var state = viewModel.uiState.first { !it.isLoading && it.currentPage == 1 }
             assertEquals(1, state.currentPage)
 
             viewModel.onPreviousPage()
-            state = viewModel.uiState.first { it.currentPage == 1 }
-            assertEquals(1, state.currentPage)
+            assertEquals(1, viewModel.uiState.value.currentPage)
         }
 
     // --- onRangeSelected ---
