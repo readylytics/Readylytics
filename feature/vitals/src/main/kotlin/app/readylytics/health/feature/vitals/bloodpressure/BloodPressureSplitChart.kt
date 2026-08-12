@@ -41,6 +41,7 @@ import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import kotlin.math.roundToInt
+import app.readylytics.health.feature.vitals.R as VitalsR
 
 /**
  * A split‑view blood pressure chart that displays systolic and diastolic series in two stacked charts.
@@ -203,7 +204,7 @@ fun BloodPressureSplitChart(
                 )
                 Spacer(Modifier.width(MaterialTheme.spacing.small))
                 Text(
-                    text = "Systolic",
+                    text = stringResource(VitalsR.string.label_systolic),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -217,7 +218,7 @@ fun BloodPressureSplitChart(
                 )
                 Spacer(Modifier.width(MaterialTheme.spacing.small))
                 Text(
-                    text = "Diastolic",
+                    text = stringResource(VitalsR.string.label_diastolic),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.tertiaryContainer,
                 )
