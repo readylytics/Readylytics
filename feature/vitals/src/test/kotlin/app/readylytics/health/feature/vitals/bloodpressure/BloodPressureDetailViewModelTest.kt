@@ -27,6 +27,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 private fun BloodPressureRecordEntity(
     id: String,
@@ -288,6 +289,20 @@ class BloodPressureDetailViewModelTest {
             assertEquals(3, state.dailyDiastolic.count { it.value != null })
             assertEquals(listOf(118f, 122f, 120f), state.dailySystolic.filter { it.value != null }.map { it.value })
             assertEquals(listOf(78f, 82f, 80f), state.dailyDiastolic.filter { it.value != null }.map { it.value })
+            assertEquals(120, state.systolicPeriodSummary?.average?.roundToInt())
+            assertEquals(80, state.diastolicPeriodSummary?.average?.roundToInt())
+        }
+
+    @Test
+    fun `daily granularity range has null period summaries`() =
+        runTest {
+            viewModel = createViewModel()
+            val state =
+                viewModel.uiState.first {
+                    it.selectedRange == TimeRange.SEVEN_DAYS && !it.isLoading
+                }
+            assertNull(state.systolicPeriodSummary)
+            assertNull(state.diastolicPeriodSummary)
         }
 
     // --- helpers ---

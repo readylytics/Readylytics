@@ -38,7 +38,8 @@ data class BloodPressureDetailUiState(
     val dailySystolic: List<DailyDataPoint> = emptyList(),
     val dailyDiastolic: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
-    val periodSummary: PeriodAverageSummary? = null,
+    val systolicPeriodSummary: PeriodAverageSummary? = null,
+    val diastolicPeriodSummary: PeriodAverageSummary? = null,
     val bloodPressureDisplay: String? = null,
     val systolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val diastolicStatus: MetricStatus = MetricStatus.CALIBRATING,
@@ -115,11 +116,17 @@ class BloodPressureDetailViewModel
                         } else {
                             diastolicRaw.bucketBy(range.granularity, startDate, selectedDate, valueDecimalPlaces = 0)
                         }
-                    val periodSummary =
+                    val systolicPeriodSummary =
                         if (range.granularity == TrendGranularity.DAILY) {
                             null
                         } else {
                             buildPeriodAverageSummary(dailySystolic, range.granularity, startDate)
+                        }
+                    val diastolicPeriodSummary =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            null
+                        } else {
+                            buildPeriodAverageSummary(dailyDiastolic, range.granularity, startDate)
                         }
 
                     val latestSystolic = latest?.systolicMmHg
@@ -165,7 +172,8 @@ class BloodPressureDetailViewModel
                         dailySystolic = dailySystolic,
                         dailyDiastolic = dailyDiastolic,
                         rangeStartMs = rangeStart.toEpochMilli(),
-                        periodSummary = periodSummary,
+                        systolicPeriodSummary = systolicPeriodSummary,
+                        diastolicPeriodSummary = diastolicPeriodSummary,
                         bloodPressureDisplay = bloodPressureDisplay,
                         systolicStatus = systolicStatus,
                         diastolicStatus = diastolicStatus,
