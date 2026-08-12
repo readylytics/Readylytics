@@ -109,7 +109,6 @@ fun OnboardingRoute(
         Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             if (permissionsDenied) {
                 PermissionsRequiredScreen(
-                    onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
                     onOpenSettingsClick = {
                         val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
                         runCatching { context.startActivity(intent) }
