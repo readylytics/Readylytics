@@ -49,6 +49,14 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// On API 34+ (platform-integrated Health Connect) a permission-denied call throws
+// android.health.connect.HealthConnectException, which wraps the real SecurityException as its
+// cause rather than extending it -- so a plain `catch (e: SecurityException)` misses it and the
+// call is treated as a fatal error instead of "permission not granted". Shared by every Health
+// Connect call site in this module (module-internal visibility) that needs to tell the two apart.
+internal fun Throwable.asHealthConnectSecurityCause(): SecurityException? =
+    this as? SecurityException ?: cause as? SecurityException
+
 @Singleton
 class HealthConnectRepositoryImpl
     @Inject
@@ -192,12 +200,18 @@ class HealthConnectRepositoryImpl
                     onPage(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)
-            } catch (e: SecurityException) {
-                throw HealthConnectPermissionRevokedException(
-                    cause = e,
-                    operation = "read",
-                    recordType = T::class.simpleName,
-                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val securityCause = e.asHealthConnectSecurityCause()
+                if (securityCause != null) {
+                    throw HealthConnectPermissionRevokedException(
+                        cause = securityCause,
+                        operation = "read",
+                        recordType = T::class.simpleName,
+                    )
+                }
+                throw e
             }
         }
 
@@ -299,7 +313,10 @@ class HealthConnectRepositoryImpl
                             ),
                         )
                     result[StepsRecord.COUNT_TOTAL] ?: 0L
-                } catch (e: SecurityException) {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
                         "Steps permission not granted"
                     }
@@ -331,11 +348,8 @@ class HealthConnectRepositoryImpl
                             val total = group.result[StepsRecord.COUNT_TOTAL] ?: return@mapNotNull null
                             group.startTime.toLocalDate() to total
                         }.toMap()
-                } catch (e: SecurityException) {
-                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Steps permission not granted"
-                    }
-                    emptyMap()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: UnsupportedOperationException) {
                     // HC-003: defensive fallback -- if a provider doesn't support grouped-by-period
                     // aggregation, fall back to one per-day aggregate call. Slower, but correct.
@@ -343,6 +357,12 @@ class HealthConnectRepositoryImpl
                         "aggregateGroupByPeriod unsupported; falling back to per-day step aggregate"
                     }
                     readDailyStepTotalsPerDay(from, to, zoneId)
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps permission not granted"
+                    }
+                    emptyMap()
                 }
             }
 

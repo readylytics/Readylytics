@@ -147,12 +147,26 @@ class HealthChangeSynchronizerImpl
             }
         }
 
+        // Optional data types (weight, body fat, BP, SpO2, body temperature, steps) may lack
+        // permission -- a permission-denied getChangesToken call must not abort the whole resync,
+        // it just means that type gets no baseline token (mirrors the read-side degrade pattern).
         override suspend fun captureChangesTokens(): Map<HealthDataType, String> =
-            HealthDataType.entries.associateWith { dataType ->
-                client.getChangesToken(
-                    ChangesTokenRequest(recordTypes = recordClassesFor(dataType)),
-                )
-            }
+            HealthDataType.entries.mapNotNull { dataType ->
+                try {
+                    dataType to
+                        client.getChangesToken(
+                            ChangesTokenRequest(recordTypes = recordClassesFor(dataType)),
+                        )
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    logD("HealthChangeSynchronizer") {
+                        "Changes token skipped for $dataType: permission not granted"
+                    }
+                    null
+                }
+            }.toMap()
 
         private suspend fun processChangesPage(
             dataType: HealthDataType,
