@@ -296,4 +296,72 @@ class TrendPeriodAggregationTest {
         assertEquals("Feb", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 2, 15)) { "Q$it" })
         assertEquals("Dec", periodLabelFor(TrendGranularity.MONTHLY, LocalDate.of(2026, 12, 31)) { "Q$it" })
     }
+
+    @Test
+    fun `allBucketOffsets returns all period midpoints for monthly`() {
+        val offsets =
+            allBucketOffsets(
+                TrendGranularity.MONTHLY,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 6, 30),
+            )
+        assertEquals(listOf(15, 44, 74, 104, 135, 165), offsets)
+    }
+
+    @Test
+    fun `allBucketOffsets returns all period midpoints for eight week`() {
+        val offsets =
+            allBucketOffsets(
+                TrendGranularity.EIGHT_WEEK,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 6, 30),
+            )
+        assertEquals(listOf(24, 80, 136, 180), offsets)
+    }
+
+    @Test
+    fun `allBucketOffsets returns empty for daily`() {
+        val offsets =
+            allBucketOffsets(
+                TrendGranularity.DAILY,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 7),
+            )
+        assertEquals(emptyList<Int>(), offsets)
+    }
+
+    @Test
+    fun `padBucketsToRange fills all period positions`() {
+        val points =
+            listOf(
+                DailyDataPoint(15, 20f), // January
+                DailyDataPoint(104, 40f), // April -- February and March missing
+            )
+        val padded =
+            points.padBucketsToRange(
+                TrendGranularity.MONTHLY,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 6, 30),
+            )
+        assertEquals(
+            listOf(
+                DailyDataPoint(15, 20f),
+                DailyDataPoint(44, null),
+                DailyDataPoint(74, null),
+                DailyDataPoint(104, 40f),
+                DailyDataPoint(135, null),
+                DailyDataPoint(165, null),
+            ),
+            padded,
+        )
+    }
+
+    @Test
+    fun `padBucketsToRange returns original list for daily`() {
+        val points = listOf(DailyDataPoint(0, 5f))
+        assertEquals(
+            points,
+            points.padBucketsToRange(TrendGranularity.DAILY, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1)),
+        )
+    }
 }

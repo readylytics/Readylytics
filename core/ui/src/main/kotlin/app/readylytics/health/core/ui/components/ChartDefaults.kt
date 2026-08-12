@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.allBucketOffsets
 import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
@@ -24,8 +25,52 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import java.time.Instant
 import java.time.ZoneId
+import kotlin.math.roundToInt
 
 object ChartDefaults {
+    /**
+     * Maximum number of x-axis ticks rendered on the 360D (EIGHT_WEEK) range. Capping keeps the dense
+     * 8-week labels from crowding into truncation; surplus periods are dropped via an evenly-spaced
+     * subsample (see [subsampleTicks]). 180D (MONTHLY) is intentionally NOT capped so every month is
+     * labelled.
+     */
+    const val MAX_X_AXIS_TICKS: Int = 4
+
+    /**
+     * Generic remembered x-axis item placer for trend charts over a [rangeDays] window starting at
+     * [rangeStartMs], bucketed per [granularity].
+     *
+     * DAILY charts delegate to the zoom-aware [DayOffsetTickCalculator]. Bucketed charts place one
+     * candidate tick per calendar period via [allBucketOffsets]; the 360D (EIGHT_WEEK) range caps
+     * the rendered count to [MAX_X_AXIS_TICKS] with equal spacing, while 180D (MONTHLY) keeps every
+     * period. [explicitPointOffsets] overrides the derived candidates for charts whose x-domain is
+     * remapped to compact indices (sleep/workouts).
+     */
+    @Composable
+    fun rememberTrendAxisItemPlacer(
+        rangeDays: Int,
+        granularity: TrendGranularity,
+        rangeStartMs: Long,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        explicitPointOffsets: List<Int>? = null,
+    ): HorizontalAxis.ItemPlacer =
+        remember(rangeDays, granularity, rangeStartMs, zoneId, explicitPointOffsets) {
+            val pointOffsets =
+                explicitPointOffsets
+                    ?: if (granularity == TrendGranularity.DAILY) {
+                        emptyList()
+                    } else {
+                        val startDate = Instant.ofEpochMilli(rangeStartMs).atZone(zoneId).toLocalDate()
+                        val endDate = startDate.plusDays((rangeDays - 1).toLong())
+                        allBucketOffsets(granularity, startDate, endDate)
+                    }
+            itemPlacerForRangeDays(
+                rangeDays = rangeDays,
+                pointOffsets = pointOffsets,
+                maxTicks = if (granularity == TrendGranularity.EIGHT_WEEK) MAX_X_AXIS_TICKS else Int.MAX_VALUE,
+            )
+        }
+
     @Composable
     fun labelTextComponent(): TextComponent =
         rememberTextComponent(
@@ -143,10 +188,15 @@ object ChartDefaults {
      * via `remember(rangeDays, pointOffsets) { ChartDefaults.itemPlacerForRangeDays(...) }` —
      * constructing it inline on every recomposition silently discards the caching (no test failure,
      * no visual difference, just the optimization evaporating).
+     *
+     * [maxTicks] caps the number of bucketed x-axis ticks. When the visible tick list exceeds it,
+     * the list is subsampled evenly (first and last preserved) so labels never crowd into truncation
+     * on dense ranges like 360D. DAILY charts ignore it (they already own zoom-aware spacing).
      */
     fun itemPlacerForRangeDays(
         rangeDays: Int,
         pointOffsets: List<Int> = emptyList(),
+        maxTicks: Int = Int.MAX_VALUE,
     ): HorizontalAxis.ItemPlacer {
         val basePlacer =
             HorizontalAxis.ItemPlacer.aligned(
@@ -168,6 +218,13 @@ object ChartDefaults {
                 pointOffsets.sorted().distinct().map { it.toDouble() }
             }
 
+        fun bounded(visibleTicks: List<Double>): List<Double> =
+            if (pointTicks == null || visibleTicks.size <= maxTicks) {
+                visibleTicks
+            } else {
+                subsampleTicks(visibleTicks, maxTicks)
+            }
+
         return object : HorizontalAxis.ItemPlacer by basePlacer {
             override fun getLabelValues(
                 context: CartesianDrawingContext,
@@ -176,7 +233,7 @@ object ChartDefaults {
                 maxLabelWidth: Float,
             ): List<Double> =
                 if (pointTicks != null) {
-                    pointTicks.filter { it in visibleXRange }
+                    bounded(pointTicks.filter { it in visibleXRange })
                 } else {
                     requireNotNull(dailyTicks).values(visibleXRange)
                 }
@@ -188,10 +245,28 @@ object ChartDefaults {
                 maxLabelWidth: Float,
             ): List<Double> =
                 if (pointTicks != null) {
-                    pointTicks.filter { it in visibleXRange }
+                    bounded(pointTicks.filter { it in visibleXRange })
                 } else {
                     requireNotNull(dailyTicks).values(visibleXRange)
                 }
         }
+    }
+
+    /**
+     * Caps [ticks] to [maxTicks] by distributing them evenly across the span in *value* (day-offset)
+     * space, always preserving the first and last so the axis keeps its start/end anchors. Input must
+     * be sorted ascending; when [ticks] already fits within the cap it is returned unchanged.
+     *
+     * Distributing by value (not by index) matters because bucket midpoints are not uniformly
+     * spaced — EIGHT_WEEK octads can be 56 or 35 days long — so an index-based subsample would leave
+     * visibly uneven gaps. Rounded to whole day offsets so labels map to clean dates.
+     */
+    internal fun subsampleTicks(
+        ticks: List<Double>,
+        maxTicks: Int,
+    ): List<Double> {
+        if (ticks.size <= maxTicks) return ticks
+        val step = (ticks.last() - ticks.first()) / (maxTicks - 1)
+        return List(maxTicks) { index -> (ticks.first() + index * step).roundToInt().toDouble() }
     }
 }

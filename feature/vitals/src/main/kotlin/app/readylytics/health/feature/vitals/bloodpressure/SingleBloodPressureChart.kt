@@ -297,17 +297,11 @@ fun SingleBloodPressureChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(rangeDays, points) {
-                                    ChartDefaults.itemPlacerForRangeDays(
-                                        rangeDays = rangeDays,
-                                        pointOffsets =
-                                            if (granularity == TrendGranularity.DAILY) {
-                                                emptyList()
-                                            } else {
-                                                points.filter { it.value != null }.map { it.dayOffset }
-                                            },
-                                    )
-                                },
+                                ChartDefaults.rememberTrendAxisItemPlacer(
+                                    rangeDays = rangeDays,
+                                    granularity = granularity,
+                                    rangeStartMs = rangeStartMs,
+                                ),
                             guideline = guidelineComponent,
                         ),
                     decorations = decorations,

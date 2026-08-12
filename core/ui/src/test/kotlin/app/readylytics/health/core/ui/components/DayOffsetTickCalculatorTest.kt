@@ -247,4 +247,28 @@ class DayOffsetTickCalculatorTest {
         assertEquals(referenceValues(180, rangeOne), secondOne)
         assertEquals(referenceValues(180, rangeTwo), secondTwo)
     }
+
+    @Test
+    fun `subsampleTicks keeps list unchanged when within cap`() {
+        val ticks = listOf(20.0, 76.0, 118.0)
+        assertEquals(ticks, ChartDefaults.subsampleTicks(ticks, maxTicks = 5))
+    }
+
+    @Test
+    fun `subsampleTicks caps to maxTicks preserving first and last`() {
+        // 360D EIGHT_WEEK bucket midpoints observed on device.
+        val ticks = listOf(20.0, 76.0, 118.0, 160.0, 216.0, 272.0, 328.0, 359.0)
+        val result = ChartDefaults.subsampleTicks(ticks, maxTicks = ChartDefaults.MAX_X_AXIS_TICKS)
+        assertEquals(ChartDefaults.MAX_X_AXIS_TICKS, result.size)
+        assertEquals(20.0, result.first())
+        assertEquals(359.0, result.last())
+        assertEquals(result.toSortedSet().toList(), result)
+    }
+
+    @Test
+    fun `subsampleTicks spreads evenly across dense ticks`() {
+        val ticks = (0..359).map { it.toDouble() }
+        val result = ChartDefaults.subsampleTicks(ticks, maxTicks = 4)
+        assertEquals(listOf(0.0, 120.0, 239.0, 359.0), result)
+    }
 }
