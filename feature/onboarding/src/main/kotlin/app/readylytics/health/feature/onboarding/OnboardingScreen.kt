@@ -224,6 +224,7 @@ fun PermissionsRequiredScreen(
     onGrantPermissionsClick: () -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    missingPermissions: Set<String> = emptySet(),
 ) {
     Column(
         modifier =
@@ -248,6 +249,20 @@ fun PermissionsRequiredScreen(
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        val missingLabelRes = missingPermissions.mapNotNull { healthPermissionLabelRes(it) }
+        if (missingLabelRes.isNotEmpty()) {
+            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+            Text(
+                text = stringResource(R.string.onboarding_missing_permissions_label),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+            missingLabelRes.forEach { labelRes ->
+                PermissionBulletRow(stringResource(labelRes), modifier = Modifier.fillMaxWidth())
+            }
+        }
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
