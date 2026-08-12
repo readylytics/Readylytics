@@ -221,7 +221,7 @@ private fun WelcomeScreen(
 
 @Composable
 fun PermissionsRequiredScreen(
-    onGrantPermissionsClick: () -> Unit,
+    onRecheckPermissionsClick: () -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     missingPermissions: Set<String> = emptySet(),
@@ -275,8 +275,8 @@ fun PermissionsRequiredScreen(
 
         Spacer(Modifier.height(MaterialTheme.spacing.small))
 
-        TextButton(onClick = onGrantPermissionsClick) {
-            Text(stringResource(R.string.onboarding_grant_permissions_retry))
+        TextButton(onClick = onRecheckPermissionsClick) {
+            Text(stringResource(R.string.onboarding_recheck_permissions))
         }
     }
 }

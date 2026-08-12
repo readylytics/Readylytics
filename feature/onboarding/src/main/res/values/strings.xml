@@ -45,7 +45,7 @@
     <string name="onboarding_permissions_required_title">Permissions needed</string>
     <string name="onboarding_permissions_required_message">Readylytics needs Health Connect
         permissions to continue. Grant access to finish setting up your restored data.</string>
-    <string name="onboarding_grant_permissions_retry">Grant Permissions</string>
+    <string name="onboarding_recheck_permissions">Recheck Permissions</string>
     <string name="privacy_rationale_title">Privacy &amp; Health Data</string>
     <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate
         variability, and exercise data from Health Connect solely to compute your personal recovery
