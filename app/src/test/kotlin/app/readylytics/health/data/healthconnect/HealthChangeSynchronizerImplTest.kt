@@ -92,6 +92,7 @@ class HealthChangeSynchronizerImplTest {
     fun `applyPendingChanges does not request full resync when token missing and permission not granted`() =
         runTest {
             coEvery { tokenStore.get(any()) } returns null
+            coEvery { client.permissionController.getGrantedPermissions() } returns emptySet()
 
             val outcome = synchronizer.applyPendingChanges()
 
