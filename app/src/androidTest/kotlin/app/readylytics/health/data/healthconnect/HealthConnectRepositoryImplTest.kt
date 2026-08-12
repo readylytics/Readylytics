@@ -408,12 +408,15 @@ class HealthConnectRepositoryImplTest {
         }
 
     @Test
-    fun readDailyStepTotals_swallowsGenericException() =
-        runBlocking {
-            fake.stepsByInstant[t1] = 100L
-            fake.errors[FakeOp.Steps] = IllegalStateException("bad")
-            assertEquals(emptyMap<LocalDate, Long>(), repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()))
+    fun readDailyStepTotals_propagatesGenericException() {
+        fake.stepsByInstant[t1] = 100L
+        fake.errors[FakeOp.Steps] = IllegalStateException("bad")
+        // HC-008: transient IO errors must propagate (for retryWithBackoff), not be
+        // indistinguishable from "user has no data".
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()) }
         }
+    }
 
     // ---------- weight (optional) ----------
 

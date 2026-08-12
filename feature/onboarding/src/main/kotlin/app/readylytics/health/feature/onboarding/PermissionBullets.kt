@@ -53,8 +53,17 @@ internal fun healthPermissionLabelRes(permission: String): Int? =
         "android.permission.health.READ_HEALTH_DATA_HISTORY" -> R.string.onboarding_hc_permission_history
         HealthPermission.getReadPermission(WeightRecord::class) -> R.string.onboarding_hc_permission_weight
         HealthPermission.getReadPermission(BodyFatRecord::class) -> R.string.onboarding_hc_permission_body_fat
-        HealthPermission.getReadPermission(BloodPressureRecord::class) -> R.string.onboarding_hc_permission_blood_pressure
-        HealthPermission.getReadPermission(OxygenSaturationRecord::class) -> R.string.onboarding_hc_permission_oxygen_saturation
-        HealthPermission.getReadPermission(BodyTemperatureRecord::class) -> R.string.onboarding_hc_permission_body_temperature
+        HealthPermission.getReadPermission(
+            BloodPressureRecord::class,
+        ),
+        -> R.string.onboarding_hc_permission_blood_pressure
+        HealthPermission.getReadPermission(
+            OxygenSaturationRecord::class,
+        ),
+        -> R.string.onboarding_hc_permission_oxygen_saturation
+        HealthPermission.getReadPermission(
+            BodyTemperatureRecord::class,
+        ),
+        -> R.string.onboarding_hc_permission_body_temperature
         else -> null
     }
