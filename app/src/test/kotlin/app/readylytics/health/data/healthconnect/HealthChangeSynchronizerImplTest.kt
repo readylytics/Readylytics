@@ -2,8 +2,10 @@ package app.readylytics.health.data.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
@@ -87,13 +89,13 @@ class HealthChangeSynchronizerImplTest {
     }
 
     @Test
-    fun `applyPendingChanges returns requiresFullResync if token is missing`() =
+    fun `applyPendingChanges does not request full resync when token missing and permission not granted`() =
         runTest {
             coEvery { tokenStore.get(any()) } returns null
 
             val outcome = synchronizer.applyPendingChanges()
 
-            assertTrue(outcome.requiresFullResync)
+            assertFalse(outcome.requiresFullResync)
             assertTrue(outcome.affectedDates.isEmpty())
         }
 
@@ -563,6 +565,62 @@ class HealthChangeSynchronizerImplTest {
             } finally {
                 TimeZone.setDefault(originalZone)
             }
+        }
+
+    @Test
+    fun `applyPendingChanges skips a data type whose permission is not granted, continues for others`() =
+        runTest {
+            // Seed tokens for all types EXCEPT steps
+            coEvery { tokenStore.get(any()) } answers {
+                val dt = firstArg<HealthDataType>()
+                if (dt == HealthDataType.STEPS) null else "token-for-$dt"
+            }
+
+            // Simulate: heart_rate permission is granted, steps permission is NOT granted
+            val grantedPermissions =
+                setOf(
+                    HealthPermission.getReadPermission(HeartRateRecord::class),
+                )
+            val permissionController = mockk<PermissionController>(relaxed = true)
+            coEvery { permissionController.getGrantedPermissions() } returns grantedPermissions
+            every { client.permissionController } returns permissionController
+
+            // Set up a real change for the heart rate type (which HAS a token + permission)
+            val sampleTime = Instant.parse("2026-06-20T09:00:00Z")
+            val record =
+                mockk<HeartRateRecord>(relaxed = true) {
+                    every { metadata.id } returns "hr-record"
+                    every { metadata.device } returns null
+                    every { metadata.dataOrigin.packageName } returns "pkg"
+                    every { startTime } returns sampleTime
+                    every { endTime } returns sampleTime
+                    every { samples } returns
+                        listOf(
+                            mockk {
+                                every { time } returns sampleTime
+                                every { beatsPerMinute } returns 63L
+                            },
+                        )
+                }
+            val change =
+                mockk<UpsertionChange>(relaxed = true) {
+                    every { this@mockk.record } returns record
+                }
+            val response =
+                mockk<ChangesResponse>(relaxed = true) {
+                    every { changesTokenExpired } returns false
+                    every { changes } returns listOf(change)
+                    every { nextChangesToken } returns "next-hr"
+                    every { hasMore } returns false
+                }
+            coEvery { client.getChanges(any()) } returns response
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            // Should NOT request full resync (skipped STEPS, processed HEART_RATE)
+            assertFalse(outcome.requiresFullResync)
+            assertTrue(outcome.affectedDates.isNotEmpty())
+            assertEquals("next-hr", outcome.nextTokens[HealthDataType.HEART_RATE])
         }
 
     private fun seedTokens() {

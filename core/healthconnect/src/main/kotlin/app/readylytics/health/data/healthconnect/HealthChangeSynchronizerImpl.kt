@@ -11,6 +11,7 @@ import androidx.health.connect.client.records.BodyFatRecord as HealthConnectBody
 import androidx.health.connect.client.records.HeartRateRecord as HealthConnectHeartRateRecord
 import androidx.health.connect.client.records.WeightRecord as HealthConnectWeightRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
+import androidx.health.connect.client.permission.HealthPermission
 import app.readylytics.health.data.local.dao.*
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
@@ -70,11 +71,27 @@ class HealthChangeSynchronizerImpl
             val affectedDates = mutableSetOf<LocalDate>()
             val nextTokens = mutableMapOf<HealthDataType, String>()
 
+            val grantedPermissions: Set<String> =
+                try {
+                    client.permissionController.getGrantedPermissions()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptySet()
+                }
+
             for (dataType in HealthDataType.entries) {
                 val token = tokenStore.get(dataType)
                 if (token.isNullOrBlank()) {
-                    logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
-                    return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
+                    val typePermissions = recordClassesFor(dataType).map {
+                        HealthPermission.getReadPermission(it)
+                    }
+                    if (typePermissions.any { it in grantedPermissions }) {
+                        logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
+                        return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
+                    }
+                    logD("HealthChangeSynchronizer") { "Skipping $dataType: permission not granted" }
+                    continue
                 }
 
                 try {
