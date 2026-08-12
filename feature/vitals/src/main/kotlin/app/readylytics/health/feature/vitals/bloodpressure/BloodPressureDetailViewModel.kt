@@ -85,8 +85,7 @@ class BloodPressureDetailViewModel
                     } else {
                         current
                     }
-                }
-                .filterNotNull()
+                }.filterNotNull()
                 .distinctUntilChanged()
                 .map { params -> withContext(ioDispatcher) { buildState(params) } }
                 .stateIn(

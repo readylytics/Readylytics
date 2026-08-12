@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface BloodPressureRepository {
     suspend fun getByDateRange(fromMs: Long, toMs: Long): List<BloodPressureRecord>
-    
+
     suspend fun getByDateRangePaged(
         fromMs: Long,
         toMs: Long,
