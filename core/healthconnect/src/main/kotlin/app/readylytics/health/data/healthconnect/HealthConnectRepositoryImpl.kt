@@ -54,8 +54,16 @@ import javax.inject.Singleton
 // cause rather than extending it -- so a plain `catch (e: SecurityException)` misses it and the
 // call is treated as a fatal error instead of "permission not granted". Shared by every Health
 // Connect call site in this module (module-internal visibility) that needs to tell the two apart.
-internal fun Throwable.asHealthConnectSecurityCause(): SecurityException? =
-    this as? SecurityException ?: cause as? SecurityException
+internal fun Throwable.asHealthConnectSecurityCause(): SecurityException? {
+    var current: Throwable? = this
+    var depth = 0
+    while (current != null && depth < 10) {
+        if (current is SecurityException) return current
+        current = current.cause
+        depth++
+    }
+    return null
+}
 
 @Singleton
 class HealthConnectRepositoryImpl
