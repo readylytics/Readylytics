@@ -67,6 +67,7 @@ class SyncViewModel
 
         val userPreferences = settingsRepo.userPreferences
         val requiredPermissions = hcRepo.requiredPermissions
+        val optionalPermissions = hcRepo.optionalPermissions
         val allPermissions = hcRepo.allPermissions
         val isSyncing = foregroundSyncController.isSyncing
         val recalcProgress = foregroundSyncController.recalcProgress

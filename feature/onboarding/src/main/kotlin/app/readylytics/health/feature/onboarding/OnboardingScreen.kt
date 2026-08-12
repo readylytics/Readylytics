@@ -69,7 +69,8 @@ fun OnboardingScreen(
     restoreState: OnboardingRestoreState,
     onRestoreBackupClick: (uri: Uri, password: String) -> Unit,
     onDismissRestoreError: () -> Unit,
-    permissions: Set<String>,
+    requiredPermissions: Set<String>,
+    optionalPermissions: Set<String>,
     modifier: Modifier = Modifier,
 ) {
     var step by rememberSaveable { mutableIntStateOf(0) }
@@ -94,7 +95,8 @@ fun OnboardingScreen(
                         onRetentionSetupComplete(retentionDays)
                     },
                     onOpenSettingsClick = onOpenSettingsClick,
-                    permissions = permissions,
+                    requiredPermissions = requiredPermissions,
+                    optionalPermissions = optionalPermissions,
                 )
             else ->
                 ProfileSetupScreen(

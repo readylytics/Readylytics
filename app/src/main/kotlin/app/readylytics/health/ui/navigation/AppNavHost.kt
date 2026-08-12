@@ -205,6 +205,7 @@ fun AppNavHost(
                 userPreferencesFlow = viewModel.userPreferences,
                 allPermissions = viewModel.allPermissions,
                 requiredPermissions = viewModel.requiredPermissions,
+                optionalPermissions = viewModel.optionalPermissions,
                 isSyncing = isSyncing,
                 isSyncError = isSyncError,
                 syncError = syncError,

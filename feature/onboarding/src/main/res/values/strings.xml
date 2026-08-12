@@ -31,6 +31,13 @@
     <string name="onboarding_hc_permission_exercise">Exercise</string>
     <string name="onboarding_hc_permission_steps">Steps</string>
     <string name="onboarding_hc_permission_history">Historical Data Access</string>
+    <string name="onboarding_hc_permission_weight">Weight</string>
+    <string name="onboarding_hc_permission_body_fat">Body Fat</string>
+    <string name="onboarding_hc_permission_blood_pressure">Blood Pressure</string>
+    <string name="onboarding_hc_permission_oxygen_saturation">Oxygen Saturation</string>
+    <string name="onboarding_hc_permission_body_temperature">Body Temperature</string>
+    <string name="onboarding_required_permissions_label">Required</string>
+    <string name="onboarding_optional_permissions_label">Optional (dashboard cards will be hidden if not granted)</string>
     <string name="onboarding_missing_permissions_label">Missing permissions:</string>
     <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
     <string name="onboarding_next">Next</string>

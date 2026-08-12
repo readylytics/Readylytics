@@ -28,7 +28,8 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 fun RetentionSetupScreen(
     onContinueClick: (retentionDays: Int) -> Unit,
     onOpenSettingsClick: () -> Unit,
-    permissions: Set<String>,
+    requiredPermissions: Set<String>,
+    optionalPermissions: Set<String>,
     modifier: Modifier = Modifier,
 ) {
     var retentionDays by remember { mutableIntStateOf(SettingsDefaults.RETENTION_DAYS) }
@@ -87,9 +88,32 @@ fun RetentionSetupScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
             )
+
             Spacer(Modifier.height(MaterialTheme.spacing.small))
-            permissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
+
+            Text(
+                text = stringResource(R.string.onboarding_required_permissions_label),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+            requiredPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
                 PermissionBulletRow(stringResource(labelRes))
+            }
+
+            if (optionalPermissions.isNotEmpty()) {
+                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                Text(
+                    text = stringResource(R.string.onboarding_optional_permissions_label),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+                optionalPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
+                    PermissionBulletRow(stringResource(labelRes))
+                }
             }
         }
 

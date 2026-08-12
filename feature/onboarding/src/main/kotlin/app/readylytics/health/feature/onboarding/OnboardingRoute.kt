@@ -28,6 +28,7 @@ fun OnboardingRoute(
     userPreferencesFlow: Flow<app.readylytics.health.domain.preferences.UserPreferences>,
     allPermissions: Set<String>,
     requiredPermissions: Set<String>,
+    optionalPermissions: Set<String>,
     isSyncing: Boolean = false,
     isSyncError: Boolean = false,
     syncError: String? = null,
@@ -181,6 +182,7 @@ fun OnboardingRoute(
         restoreState = restoreState,
         onRestoreBackupClick = restoreViewModel::restore,
         onDismissRestoreError = restoreViewModel::dismissError,
-        permissions = permissions,
+        requiredPermissions = requiredPermissions,
+        optionalPermissions = optionalPermissions,
     )
 }

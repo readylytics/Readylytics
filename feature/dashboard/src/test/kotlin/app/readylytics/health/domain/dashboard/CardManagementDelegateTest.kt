@@ -359,7 +359,7 @@ class CardManagementDelegateTest {
             // must still gate what actually reaches the repository on the injected permission check,
             // independent of what createDashboardCardStateFlow filters for display.
             val gatedDelegate =
-                CardManagementDelegate(repository, delegateScope) { false }
+                CardManagementDelegate(repository, delegateScope, hasBodyTemperaturePermission = { false })
 
             gatedDelegate.enterEditMode(sampleConfigs)
             gatedDelegate.onResetToDefaults()
@@ -378,7 +378,7 @@ class CardManagementDelegateTest {
     fun `reset then save persists body temperature when permission is granted`() =
         testScope.runTest {
             val grantedDelegate =
-                CardManagementDelegate(repository, delegateScope) { true }
+                CardManagementDelegate(repository, delegateScope, hasBodyTemperaturePermission = { true })
 
             grantedDelegate.enterEditMode(sampleConfigs)
             grantedDelegate.onResetToDefaults()

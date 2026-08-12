@@ -161,15 +161,35 @@ class HealthConnectRepositoryImpl
             }
 
         override suspend fun hasBodyTemperaturePermission(): Boolean =
+            hasPermission<BodyTemperatureRecord>("body temperature")
+
+        override suspend fun hasStepsPermission(): Boolean =
+            hasPermission<StepsRecord>("steps")
+
+        override suspend fun hasWeightPermission(): Boolean =
+            hasPermission<WeightRecord>("weight")
+
+        override suspend fun hasBodyFatPermission(): Boolean =
+            hasPermission<BodyFatRecord>("body fat")
+
+        override suspend fun hasBloodPressurePermission(): Boolean =
+            hasPermission<BloodPressureRecord>("blood pressure")
+
+        override suspend fun hasOxygenSaturationPermission(): Boolean =
+            hasPermission<OxygenSaturationRecord>("oxygen saturation")
+
+        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> hasPermission(
+            label: String,
+        ): Boolean =
             withContext(ioDispatcher) {
                 if (!isAvailable()) return@withContext false
                 try {
                     client.permissionController
                         .getGrantedPermissions()
-                        .contains(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
+                        .contains(HealthPermission.getReadPermission(T::class))
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
-                        "Failed to check body temperature permission"
+                        "Failed to check $label permission"
                     }
                     false
                 }

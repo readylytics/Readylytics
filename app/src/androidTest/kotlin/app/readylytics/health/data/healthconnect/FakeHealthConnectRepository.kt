@@ -282,6 +282,21 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun hasBodyTemperaturePermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
 
+    override suspend fun hasStepsPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(StepsRecord::class))
+
+    override suspend fun hasWeightPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(WeightRecord::class))
+
+    override suspend fun hasBodyFatPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BodyFatRecord::class))
+
+    override suspend fun hasBloodPressurePermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BloodPressureRecord::class))
+
+    override suspend fun hasOxygenSaturationPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(OxygenSaturationRecord::class))
+
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays
         return try {

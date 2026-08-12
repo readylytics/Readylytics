@@ -166,6 +166,18 @@ fun createDashboardCardStateFlow(
 ): Flow<DashboardCardState> {
     val zoneId = ZoneId.systemDefault()
 
+    // Combine optional HC permission checks into a single flow of grant flags.
+    // The individual combine overloads top out at 5 flows, so we pre-combine
+    // the 6 optional permission checks into a list before joining the main combine.
+    val permissionGrants: Flow<List<Boolean>> = combine(
+        flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
+        flow { emit(healthConnectRepository.hasStepsPermission()) },
+        flow { emit(healthConnectRepository.hasWeightPermission()) },
+        flow { emit(healthConnectRepository.hasBodyFatPermission()) },
+        flow { emit(healthConnectRepository.hasBloodPressurePermission()) },
+        flow { emit(healthConnectRepository.hasOxygenSaturationPermission()) },
+    ) { results -> results.toList() }
+
     return combine(
         cardManagementDelegate.isManagingCards,
         cardManagementDelegate.pendingConfigs,
@@ -182,19 +194,29 @@ fun createDashboardCardStateFlow(
                         .toEpochMilli(),
             )
         },
-        // One-shot check, not re-polled -- relies on DashboardViewModel.uiState's
+        // One-shot checks, not re-polled -- relies on DashboardViewModel.uiState's
         // WhileSubscribed(5_000) sharing policy naturally restarting this flow after a
         // permission-grant round trip (navigating to the Health Connect permission screen and
         // back always takes > 5s). If that sharing policy ever changes, this needs an explicit
         // refresh trigger.
-        flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
-    ) { isManaging, pendingConfig, cardConfig, session, bodyTempPermissionGranted ->
-        fun List<CardConfiguration>.filteredForPermission(): List<CardConfiguration> =
-            if (bodyTempPermissionGranted) {
-                this
-            } else {
-                filter { it.cardId != CardId.BODY_TEMPERATURE }
-            }
+        permissionGrants,
+    ) { isManaging, pendingConfig, cardConfig, session, grants ->
+        val bodyTempGranted = grants[0]
+        val stepsGranted = grants[1]
+        val weightGranted = grants[2]
+        val bodyFatGranted = grants[3]
+        val bpGranted = grants[4]
+        val spo2Granted = grants[5]
+        fun List<CardConfiguration>.filteredForPermission(): List<CardConfiguration> {
+            var list = this
+            if (!bodyTempGranted) list = list.filter { it.cardId != CardId.BODY_TEMPERATURE }
+            if (!stepsGranted) list = list.filter { it.cardId != CardId.STEPS }
+            if (!weightGranted) list = list.filter { it.cardId != CardId.WEIGHT }
+            if (!bodyFatGranted) list = list.filter { it.cardId != CardId.BODY_FAT }
+            if (!bpGranted) list = list.filter { it.cardId != CardId.BLOOD_PRESSURE }
+            if (!spo2Granted) list = list.filter { it.cardId != CardId.OXYGEN_SATURATION }
+            return list
+        }
         DashboardCardState(
             isManagingCards = isManaging,
             cardConfiguration = cardConfig.filteredForPermission(),
