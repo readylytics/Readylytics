@@ -204,7 +204,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<DomainStepsRecord> {
-        translateCritical(FakeOp.Steps)
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return emptyList()
+        if (error != null) throw error
         val count = stepsByInstant.keys.count { inRange(it, from, to) }
         return stubList(count) { index -> placeholderSteps(index) }
     }
@@ -213,7 +215,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): Long {
-        translateCritical(FakeOp.Steps)
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return 0L
+        if (error != null) throw error
         return stepsByInstant
             .filterKeys { inRange(it, from, to) }
             .values
