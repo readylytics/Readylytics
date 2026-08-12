@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.vitals.bloodpressure
 
+import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.BloodPressureRecord
@@ -12,6 +13,8 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -286,6 +289,36 @@ class BloodPressureDetailViewModelTest {
             selectedDateRepo.updateSelectedDate(LocalDate.now().minusDays(1))
             state = viewModel.uiState.first { it.currentPage == 1 }
             assertEquals(1, state.currentPage)
+        }
+
+    @Test
+    fun `page persists across re-subscription after WhileSubscribed timeout`() =
+        runTest(testDispatcher) {
+            coEvery { repository.countByDateRange(any(), any()) } returns 25
+            coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(bloodPressureEntity(120, 80))
+
+            viewModel =
+                BloodPressureDetailViewModel(
+                    bloodPressureRepository = repository,
+                    selectedDateRepository = selectedDateRepo,
+                    ioDispatcher = testDispatcher,
+                )
+
+            val job1 = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { !it.isLoading }
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+
+            job1.cancel()
+            testScheduler.advanceUntilIdle()
+
+            val job2 = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+            assertEquals(2, viewModel.uiState.value.currentPage)
+            job2.cancel()
+
+            viewModel.viewModelScope.coroutineContext[Job]?.cancelAndJoin()
         }
 
     @Test
