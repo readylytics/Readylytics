@@ -45,6 +45,8 @@ data class BloodPressureDetailUiState(
     val diastolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val bloodPressureStatus: BloodPressureStatus? = null,
     val historyItems: List<BloodPressureHistoryItem> = emptyList(),
+    val currentPage: Int = 1,
+    val totalPages: Int = 1,
     val isLoading: Boolean = true,
 )
 
@@ -57,14 +59,24 @@ class BloodPressureDetailViewModel
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        private val currentPageFlow = MutableStateFlow(1)
         private val healthMetricsService = HealthMetricsService()
+        private var lastSelectedDate: LocalDate? = null
 
         val uiState: StateFlow<BloodPressureDetailUiState> =
             combine(
                 selectedRangeFlow,
                 selectedDateRepository.selectedDate,
-            ) { range, selectedDate ->
+                currentPageFlow,
+            ) { range, selectedDate, page ->
                 withContext(ioDispatcher) {
+                    var actualPage = page
+                    if (lastSelectedDate != null && lastSelectedDate != selectedDate) {
+                        currentPageFlow.value = 1
+                        actualPage = 1
+                    }
+                    lastSelectedDate = selectedDate
+
                     val zoneId = ZoneId.systemDefault()
                     val rangeStart =
                         selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
@@ -76,6 +88,23 @@ class BloodPressureDetailViewModel
                             rangeEnd.toEpochMilli(),
                         )
                     val latest = bloodPressureRepository.getLatest()
+
+                    val totalCount =
+                        bloodPressureRepository.countByDateRange(
+                            rangeStart.toEpochMilli(),
+                            rangeEnd.toEpochMilli(),
+                        )
+                    val totalPages = maxOf(1, (totalCount + PAGE_SIZE - 1) / PAGE_SIZE)
+                    val clampedPage = actualPage.coerceIn(1, totalPages)
+                    val offset = (clampedPage - 1) * PAGE_SIZE
+
+                    val pagedRecords =
+                        bloodPressureRepository.getByDateRangePaged(
+                            rangeStart.toEpochMilli(),
+                            rangeEnd.toEpochMilli(),
+                            PAGE_SIZE,
+                            offset,
+                        )
 
                     val recordsByDay =
                         records.groupBy { record ->
@@ -149,8 +178,7 @@ class BloodPressureDetailViewModel
                         }
 
                     val historyItems =
-                        records
-                            .sortedByDescending { it.time }
+                        pagedRecords
                             .map { record ->
                                 BloodPressureHistoryItem(
                                     timestampMs = record.time.toEpochMilli(),
@@ -179,6 +207,8 @@ class BloodPressureDetailViewModel
                         diastolicStatus = diastolicStatus,
                         bloodPressureStatus = bloodPressureStatus,
                         historyItems = historyItems,
+                        currentPage = clampedPage,
+                        totalPages = totalPages,
                         isLoading = false,
                     )
                 }
@@ -190,5 +220,22 @@ class BloodPressureDetailViewModel
 
         fun onRangeSelected(range: TimeRange) {
             selectedRangeFlow.value = range
+            currentPageFlow.value = 1
+        }
+
+        fun onNextPage() {
+            val totalPages = uiState.value.totalPages
+            if (currentPageFlow.value < totalPages) {
+                currentPageFlow.value += 1
+            }
+        }
+
+        fun onPreviousPage() {
+            val prev = currentPageFlow.value - 1
+            currentPageFlow.value = if (prev < 1) 1 else prev
+        }
+
+        companion object {
+            private const val PAGE_SIZE = 10
         }
     }
