@@ -59,6 +59,7 @@ private val FULL_WIDTH_CARDS =
     setOf(
         CardId.STEPS,
         CardId.INSIGHTS,
+        CardId.AI_RECOMMENDATION,
     )
 
 /**

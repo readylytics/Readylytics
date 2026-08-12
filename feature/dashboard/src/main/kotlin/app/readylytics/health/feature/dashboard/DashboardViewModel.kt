@@ -8,6 +8,8 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.di.DefaultDispatcher
+import app.readylytics.health.domain.airecommendation.DailyPromptFormatter
+import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
@@ -42,6 +44,7 @@ import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,6 +56,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
@@ -74,6 +78,7 @@ class DashboardViewModel
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
         private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
+        private val getDailyPromptDataUseCase: GetDailyPromptDataUseCase,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         private val healthConnectRepository: HealthConnectRepository,
         private val clock: Clock,
@@ -339,8 +344,28 @@ class DashboardViewModel
                         insightDismissalRepository.restoreAllForDate(dateMs)
                     }
                 }
+                DashboardEvent.RequestDailyPromptCopy -> {
+                    viewModelScope.launch {
+                        try {
+                            val zoneId = settingsRepo.userPreferences.first().scoringZone()
+                            val text = generateDailyPrompt(LocalDate.now(clock.withZone(zoneId)))
+                            _dailyPromptText.value = PromptRequest(text, promptRequestSeq++)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            app.readylytics.health.domain.util
+                                .logE(TAG, e) { "Failed to generate daily prompt" }
+                            _errorMessage.value = UiText.StringRes(R.string.ai_recommendation_copy_failed)
+                        }
+                    }
+                }
             }
         }
+
+        internal suspend fun generateDailyPrompt(today: LocalDate): String =
+            withContext(defaultDispatcher) {
+                DailyPromptFormatter.format(getDailyPromptDataUseCase.execute(today))
+            }
 
         fun onRefresh() {
             viewModelScope.launch {
@@ -363,10 +388,24 @@ class DashboardViewModel
         private val _errorMessage = MutableStateFlow<UiText?>(null)
         val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
+        private var promptRequestSeq = 0
+        private val _dailyPromptText = MutableStateFlow<PromptRequest?>(null)
+        val dailyPromptText: StateFlow<PromptRequest?> = _dailyPromptText.asStateFlow()
+
+        fun clearDailyPromptText() {
+            _dailyPromptText.value = null
+        }
+
         companion object {
             internal const val TAG = "DashboardViewModel"
         }
     }
+
+/** A single "copy today's prompt" request, made distinguishable by a monotonic [requestId]. */
+data class PromptRequest(
+    val text: String,
+    val requestId: Int,
+)
 
 @Immutable
 data class DashboardUiState(

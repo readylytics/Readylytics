@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard
 
+import android.content.ClipData
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,8 +15,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -28,6 +31,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -46,6 +51,14 @@ import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.model.InsightType
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+
+private data class ColoredSnackbarVisuals(
+    override val message: String,
+    val isError: Boolean,
+    override val actionLabel: String? = null,
+    override val withDismissAction: Boolean = false,
+    override val duration: SnackbarDuration = SnackbarDuration.Short,
+) : SnackbarVisuals
 
 @Composable
 fun DashboardRoute(
@@ -75,10 +88,24 @@ fun DashboardRoute(
     val resolvedError = errorMessage.resolveOrNull()
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboard.current
+    val copiedMessage = stringResource(R.string.ai_recommendation_copied_snackbar)
+    val setupPrompt = stringResource(R.string.ai_init_prompt)
+    val clipLabel = stringResource(R.string.ai_recommendation_clip_label)
+    val dailyPromptText by viewModel.dailyPromptText.collectAsStateWithLifecycle()
 
     LaunchedEffect(errorMessage) {
         if (resolvedError != null) {
-            snackbarHostState.showSnackbar(resolvedError)
+            snackbarHostState.showSnackbar(ColoredSnackbarVisuals(resolvedError, isError = true))
+        }
+    }
+
+    LaunchedEffect(dailyPromptText) {
+        dailyPromptText?.let { prompt ->
+            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText(clipLabel, prompt.text)))
+            snackbarHostState.showSnackbar(ColoredSnackbarVisuals(copiedMessage, isError = false))
+            viewModel.clearDailyPromptText()
         }
     }
 
@@ -109,6 +136,13 @@ fun DashboardRoute(
         onDismissInsight = { viewModel.onEvent(DashboardEvent.DismissInsight(it)) },
         onRestoreInsights = { viewModel.onEvent(DashboardEvent.RestoreInsights) },
         onOpenInsight = onOpenInsight,
+        onCopySetupPrompt = {
+            scope.launch {
+                clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText(clipLabel, setupPrompt)))
+                snackbarHostState.showSnackbar(ColoredSnackbarVisuals(copiedMessage, isError = false))
+            }
+        },
+        onCopyDailyPrompt = { viewModel.onEvent(DashboardEvent.RequestDailyPromptCopy) },
         insightDetail = insightDetail,
         insightsCard = insightsCard,
     )
@@ -144,6 +178,8 @@ fun DashboardScreen(
     onDismissInsight: (InsightType) -> Unit = {},
     onRestoreInsights: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
+    onCopySetupPrompt: () -> Unit = {},
+    onCopyDailyPrompt: () -> Unit = {},
     insightDetail: @Composable (() -> Unit)? = null,
     insightsCard: @Composable (
         DashboardUiState,
@@ -264,6 +300,8 @@ fun DashboardScreen(
                                     onRestoreInsights = onRestoreInsights,
                                     onOpenInsight = onOpenInsight,
                                     onCardDisplayModeChanged = onCardDisplayModeChanged,
+                                    onCopySetupPrompt = onCopySetupPrompt,
+                                    onCopyDailyPrompt = onCopyDailyPrompt,
                                     insightsCard = insightsCard,
                                 ),
                             )
@@ -329,10 +367,21 @@ fun DashboardScreen(
                         bottom = if (uiState.isManagingCards) 88.dp else MaterialTheme.spacing.pageBottom,
                     ),
             snackbar = { data ->
+                val isError = (data.visuals as? ColoredSnackbarVisuals)?.isError == true
                 Snackbar(
                     data,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    containerColor =
+                        if (isError) {
+                            MaterialTheme.colorScheme.errorContainer
+                        } else {
+                            MaterialTheme.colorScheme.inverseSurface
+                        },
+                    contentColor =
+                        if (isError) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.inverseOnSurface
+                        },
                 )
             },
         )

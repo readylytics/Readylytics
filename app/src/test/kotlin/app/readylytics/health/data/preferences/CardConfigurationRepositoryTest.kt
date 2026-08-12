@@ -150,6 +150,64 @@ class CardConfigurationRepositoryTest {
         }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun init_appendsAiRecommendationOnceVisiblyAtEnd() =
+        runTest {
+            val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
+            coEvery { dataStore.updateData(capture(capturedUpdate)) } returns
+                CardConfigurationsProto.getDefaultInstance()
+
+            val existingProto =
+                CardConfigurationsProto
+                    .newBuilder()
+                    .addDashboardCards(cardProto(CardId.SLEEP_SCORE.name, position = 4))
+                    .build()
+
+            val testScope = TestScope(testScheduler)
+            CardConfigurationRepositoryImpl(dataStore, testScope)
+            testScope.advanceUntilIdle()
+
+            val updatedProto = capturedUpdate.captured(existingProto)
+
+            val aiCards = updatedProto.dashboardCardsList.filter { it.cardId == CardId.AI_RECOMMENDATION.name }
+            assertEquals(1, aiCards.size)
+            assertTrue(aiCards.single().isVisible)
+            assertEquals(CardId.AI_RECOMMENDATION.name, updatedProto.dashboardCardsList.last().cardId)
+        }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun init_appendDoesNotDuplicateAiRecommendationOnRepeatedInit() =
+        runTest {
+            val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
+            coEvery { dataStore.updateData(capture(capturedUpdate)) } returns
+                CardConfigurationsProto.getDefaultInstance()
+
+            // First init appends all missing defaults, including AI_RECOMMENDATION.
+            val firstProto =
+                CardConfigurationsProto
+                    .newBuilder()
+                    .addDashboardCards(cardProto(CardId.SLEEP_SCORE.name, position = 0))
+                    .build()
+            val testScope = TestScope(testScheduler)
+            CardConfigurationRepositoryImpl(dataStore, testScope)
+            testScope.advanceUntilIdle()
+            val afterFirst = capturedUpdate.captured(firstProto)
+            assertEquals(1, afterFirst.dashboardCardsList.count { it.cardId == CardId.AI_RECOMMENDATION.name })
+
+            // Second init sees the appended card already present, so it appends nothing.
+            val secondScope = TestScope(testScheduler)
+            CardConfigurationRepositoryImpl(dataStore, secondScope)
+            secondScope.advanceUntilIdle()
+            val afterSecond = capturedUpdate.captured(afterFirst)
+            assertEquals(
+                afterFirst.dashboardCardsCount,
+                afterSecond.dashboardCardsCount,
+            )
+            assertEquals(1, afterSecond.dashboardCardsList.count { it.cardId == CardId.AI_RECOMMENDATION.name })
+        }
+
+    @Test
     fun defaultDashboardCards_includeSingleInsightsSlot() {
         val insightCards =
             SettingsDefaults.DEFAULT_DASHBOARD_CARDS
