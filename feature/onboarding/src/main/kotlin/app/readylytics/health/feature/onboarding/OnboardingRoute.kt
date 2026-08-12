@@ -51,6 +51,7 @@ fun OnboardingRoute(
     val permissions = remember { allPermissions }
 
     var permissionsDenied by rememberSaveable { mutableStateOf(false) }
+    var missingPermissions by rememberSaveable { mutableStateOf(setOf<String>()) }
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
@@ -71,6 +72,7 @@ fun OnboardingRoute(
                     "OnboardingRoute",
                 ) { "User denied some required permissions: $missing" }
                 permissionsDenied = true
+                missingPermissions = missing
                 onPermissionsDenied()
             }
         }
@@ -94,7 +96,7 @@ fun OnboardingRoute(
     val skipToPermissions = userPrefs?.isBirthdayConfigured == true && !profileJustSaved
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
-    if (skipToPermissions || isSyncing || isSyncError) {
+    if (skipToPermissions || isSyncing || isSyncError || permissionsDenied) {
         LaunchedEffect(Unit) {
             if (skipToPermissions && !autoLaunchTriggered) {
                 autoLaunchTriggered = true
@@ -112,6 +114,7 @@ fun OnboardingRoute(
                         val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
                         runCatching { context.startActivity(intent) }
                     },
+                    missingPermissions = missingPermissions,
                 )
             } else {
                 if (isSyncError) {
