@@ -181,5 +181,6 @@ fun OnboardingRoute(
         restoreState = restoreState,
         onRestoreBackupClick = restoreViewModel::restore,
         onDismissRestoreError = restoreViewModel::dismissError,
+        permissions = permissions,
     )
 }

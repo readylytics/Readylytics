@@ -28,6 +28,7 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 fun RetentionSetupScreen(
     onContinueClick: (retentionDays: Int) -> Unit,
     onOpenSettingsClick: () -> Unit,
+    permissions: Set<String>,
     modifier: Modifier = Modifier,
 ) {
     var retentionDays by remember { mutableIntStateOf(SettingsDefaults.RETENTION_DAYS) }
@@ -87,10 +88,9 @@ fun RetentionSetupScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(MaterialTheme.spacing.small))
-            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_sleep))
-            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_heart_rate))
-            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_hrv))
-            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_exercise))
+            permissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
+                PermissionBulletRow(stringResource(labelRes))
+            }
         }
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
