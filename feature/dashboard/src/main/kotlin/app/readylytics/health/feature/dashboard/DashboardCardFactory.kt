@@ -97,6 +97,8 @@ fun buildCardDataMap(
     onRestoreInsights: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
     onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
+    onCopySetupPrompt: () -> Unit = {},
+    onCopyDailyPrompt: () -> Unit = {},
     insightsCard: @Composable (
         DashboardUiState,
         Boolean,
@@ -343,6 +345,13 @@ fun buildCardDataMap(
             isLoading = isLoading,
             onClick = onNavigateToVitals,
             onCardDisplayModeChanged = onCardDisplayModeChanged,
+        )
+    }
+
+    cardMap[CardId.AI_RECOMMENDATION] = {
+        AiRecommendationCard(
+            onCopySetupPrompt = onCopySetupPrompt,
+            onCopyDailyPrompt = onCopyDailyPrompt,
         )
     }
 

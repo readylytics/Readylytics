@@ -13,7 +13,8 @@ class CardConfigurationsSerializerTest {
     fun defaultValue_hasCorrectDashboardDefaults() {
         val defaultValue = CardConfigurationsSerializer.defaultValue
 
-        // SettingsDefaults.DEFAULT_DASHBOARD_CARDS has 10 cards by default
+        // SettingsDefaults.DEFAULT_DASHBOARD_CARDS drives the default value; the assertion is a
+        // lower bound so adding a future default card does not break this test.
         assertTrue(defaultValue.dashboardCardsCount >= 10)
         assertEquals(CardId.SLEEP_SCORE.name, defaultValue.getDashboardCards(0).cardId)
         assertTrue(defaultValue.getDashboardCards(0).isVisible)

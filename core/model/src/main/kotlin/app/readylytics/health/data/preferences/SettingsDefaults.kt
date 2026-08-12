@@ -124,6 +124,7 @@ object SettingsDefaults {
             CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = true, position = 15),
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
             CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
+            CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
         )
 }
 

@@ -955,6 +955,57 @@ DashboardCardFactory (single CardId.INSIGHTS slot with AnimatedContent)
 - **Dismiss:** User clicks close button on `InsightCard` → emits `DashboardEvent.DismissInsight` → launches coroutine → `InsightDismissalDao.dismiss(InsightDismissalEntity)` → persists dismissal to database, immediately triggering flow update; if more active insights remain, the single insight slot rotates to the next queued insight.
 - **Restore:** When all active insights for the selected date are dismissed, the same `CardId.INSIGHTS` slot renders the slim rerun card. User taps it → emits `DashboardEvent.RestoreInsights` → launches coroutine → `InsightDismissalDao.restoreAllForDate(dateMs)` → deletes all dismissals for date, immediately restoring the first queued insight.
 
+### 3.6 AI Recommendation prompt export (manual copy-to-external-AI-chat)
+
+An offline-first dashboard card (`AiRecommendationCard`, `CardId.AI_RECOMMENDATION`) lets the user
+copy a static setup prompt and a populated daily prompt to paste into an external AI chat app. There
+is no in-app LLM/network call. The daily prompt is generated on demand from persisted data only —
+no score is recomputed (see the scoring section for how the underlying columns are produced).
+
+```
+Room DAO
+  │  DailySummaryDao.getByDate / getSince
+  │  WorkoutDao.getWorkoutsInRange (bounded epoch range)
+  ▼
+GetDailyPromptDataUseCase (core/scoring/.../domain/airecommendation/)
+  │  today's + yesterday's persisted DailySummary rows
+  │  yesterday workouts via WorkoutRepository.getInRange([yesterdayMidnight, todayMidnight))
+  │  pattern workouts via WorkoutRepository.getInRange([today−3mo, tomorrowMidnight))
+  │  per-workout GetWorkoutDisplayMetricsUseCase (same path the Workouts screens use)
+  │  active Training Load source via UserPreferencesReader.strainLoadSourceMode
+  ▼
+DailyPromptData (pure) → DailyPromptFormatter.format(...)  (pure, stable English, Sections A–H)
+  ▼
+DashboardViewModel.dailyPromptText (one-shot StateFlow<String?>)   [DashboardEvent.RequestDailyPromptCopy]
+  ▼
+DashboardRoute → LocalClipboardManager.setText + SnackbarHostState  (setup prompt is copied
+  synchronously from the static `R.string.ai_init_prompt` resource)
+```
+
+Key behaviors:
+- `WorkoutRepository.getInRange(fromMs, toMs)` is a thin delegation to
+  `WorkoutDao.getWorkoutsInRange` (added for this feature; bounded, no schema change).
+- The prompt labels which Training Load source is active; `LoadSourceSelector` projects the
+  active-source ATL/CTL/ratio/load/readiness columns. RAS totals are informational only.
+- `GetDailyPromptDataUseCase` parses the persisted everyday coverage confidence once and only
+  when Everyday heart-rate load is the selected source, then passes the typed value to
+  `resolveAdvisorConfidence`. Base confidence derives from the calibration `Phase` × whether today
+  is missing HRV or sleep-stage signals: Low during Calibration/Early Baseline, Medium (or Low if
+  signals are missing) once Maturing, and High (or Medium if signals are missing) once Mature.
+  `LOW` coverage caps an otherwise high advisor confidence at medium; `NONE` coverage lowers it one
+  level with a low floor. Absent, medium, and high coverage leave the calibration/recovery-signal
+  confidence unchanged. Workout-only prompts pass no everyday coverage confidence.
+- `ComputeWorkoutPatternSummaryUseCase` (Section G) groups the three-month window by exercise type
+  (frequency, avg TRIMP, avg duration, preferred weekdays) and computes rest-day average, rest-day
+  gap, and current training streak. Workout day boundaries resolve in the user's configured
+  scoring zone (`preferences.scoringZone()`), matching every other date-boundary computation.
+- The formatter is pure Kotlin; unavailable values render as "insufficient data", never fabricated.
+  UI copy on the card itself is localized via `feature/dashboard` resources; the prompt text itself
+  is stable English to stay machine-parseable and comparable with the template docs.
+- Default card presence: `AI_RECOMMENDATION` is in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS`;
+  `CardConfigurationRepositoryImpl` appends missing defaults once, visibly, after the highest stored
+  position for existing installs.
+
 ---
 
 Keep this document synchronized with the source.
