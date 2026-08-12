@@ -40,8 +40,8 @@ data class LabeledPeriodAverage(
 
 /**
  * Two-metric variant of [PeriodAverageSummaryRow]: one shared period header
- * (e.g. "Aug Avg:") followed by one labeled, color-coded line per metric, and a single
- * trailing "vs Jul" caption. Renders nothing if either metric has no average yet.
+ * (e.g. "Avg Aug vs Jul:") followed by one labeled, color-coded line per metric.
+ * Renders nothing if either metric has no average yet.
  */
 @Composable
 fun PeriodAverageSummaryGroup(
@@ -122,16 +122,11 @@ fun PeriodAverageSummaryGroup(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall)) {
         Text(
-            text = "$periodLabel $avgLabel:",
+            text = "$avgLabel $periodLabel $previousLabelText:",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         MetricRow(primary, primaryAverage)
         MetricRow(secondary, secondaryAverage)
-        Text(
-            text = previousLabelText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
