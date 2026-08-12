@@ -32,7 +32,7 @@ interface BloodPressureRecordDao {
     suspend fun getSince(fromMs: Long): List<BloodPressureRecordEntity>
 
     @Query(
-        "SELECT * FROM blood_pressure_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+        "SELECT * FROM blood_pressure_records WHERE timestampMs >= :startMs AND timestampMs < :endMs " +
             "ORDER BY timestampMs ASC",
     )
     suspend fun getByTimeRange(
