@@ -43,6 +43,18 @@ class CrashReportViewModelTest {
         assertEquals(1, store.deleteCallCount)
     }
 
+    @Test
+    fun clearReportHidesPromptAndDeletesReport() {
+        val store = FakeCrashReportStore(hasReport = true)
+        val viewModel = CrashReportViewModel(store)
+
+        viewModel.clearReport()
+
+        assertFalse(viewModel.showPrompt.value)
+        assertFalse(viewModel.hasReport.value)
+        assertEquals(1, store.deleteCallCount)
+    }
+
     private class FakeCrashReportStore(
         private var hasReport: Boolean,
     ) : CrashReportStore {
