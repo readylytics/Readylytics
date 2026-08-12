@@ -67,10 +67,13 @@ class PhysiologySettingsViewModelTest {
     }
 
     @Test
-    fun onEvent_birthdayValid_updatesUserProfileActions() {
+    fun onEvent_birthdayValid_delegatesWithoutSchedulingAnotherRecompute() {
         val birthDate = LocalDate.of(1990, 6, 15)
+
         viewModel.onEvent(SettingsEvent.BirthdayChanged(date = birthDate))
-        coVerify(timeout = 1000) { userUseCase.updateBirthday(birthDate) }
+
+        coVerify(timeout = 1000, exactly = 1) { userUseCase.updateBirthday(birthDate) }
+        coVerify(timeout = 1000, exactly = 0) { healthDataRefresh.refreshHistorical() }
     }
 
     @Test

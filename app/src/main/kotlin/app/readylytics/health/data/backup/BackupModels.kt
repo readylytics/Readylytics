@@ -1,7 +1,34 @@
 package app.readylytics.health.data.backup
 
+import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import kotlinx.serialization.Serializable
+
+internal object BackupSchemaPolicy {
+    const val MIN_SUPPORTED_VERSION = 5
+
+    // Tracks HealthDatabase.DATABASE_VERSION directly (both are compile-time constants, so this
+    // const-folds) instead of hardcoding a literal that must be remembered on every schema bump.
+    // LocalBackupManager always stamps a fresh backup's schemaVersion with the current
+    // DATABASE_VERSION, so "max supported" and "current DB version" must never drift apart.
+    const val MAX_SUPPORTED_VERSION = HealthDatabase.DATABASE_VERSION
+
+    // Fixed historical fact: heart-rate/HRV records adopted the current sourceRecordId-based
+    // entity format at the external v6->v7 SQLCipher migration (V7DatabaseMigrator). This does
+    // NOT move as MAX_SUPPORTED_VERSION grows with later schema bumps (e.g. this task's v7->v8)
+    // — do not couple it to MAX_SUPPORTED_VERSION or a backup produced at any version >= 7 will
+    // be mis-decoded via the legacy id-suffix path once a later DATABASE_VERSION ships.
+    const val CURRENT_RECORD_FORMAT_MIN_VERSION = 7
+
+    fun requireSupported(version: Int) {
+        require(version in MIN_SUPPORTED_VERSION..MAX_SUPPORTED_VERSION) {
+            "Unsupported backup schema version $version; supported range is " +
+                "$MIN_SUPPORTED_VERSION..$MAX_SUPPORTED_VERSION"
+        }
+    }
+}
 
 @Serializable
 data class BackupManifest(
@@ -9,6 +36,58 @@ data class BackupManifest(
     val exportedAt: String,
     val rowCounts: Map<String, Int>,
 )
+
+@Serializable
+internal data class LegacyHeartRateRecordBackup(
+    val id: String,
+    val timestampMs: Long,
+    val beatsPerMinute: Int,
+    val recordType: String,
+    val sessionId: String? = null,
+    val deviceName: String? = null,
+) {
+    fun toCurrent() =
+        HeartRateRecordEntity(
+            sourceRecordId = legacySourceRecordId(id, timestampMs),
+            timestampMs = timestampMs,
+            beatsPerMinute = beatsPerMinute,
+            recordType = recordType,
+            sessionId = sessionId,
+            deviceName = deviceName,
+        )
+}
+
+@Serializable
+internal data class LegacyHrvRecordBackup(
+    val id: String,
+    val timestampMs: Long,
+    val rmssdMs: Float,
+    val recordType: String,
+    val sessionId: String? = null,
+    val deviceName: String? = null,
+) {
+    fun toCurrent() =
+        HrvRecordEntity(
+            sourceRecordId = legacySourceRecordId(id, timestampMs),
+            timestampMs = timestampMs,
+            rmssdMs = rmssdMs,
+            recordType = recordType,
+            sessionId = sessionId,
+            deviceName = deviceName,
+        )
+}
+
+internal fun legacySourceRecordId(
+    id: String,
+    timestampMs: Long,
+): String {
+    val suffix = "_$timestampMs"
+    return if (id.endsWith(suffix) && id.length > suffix.length) {
+        id.dropLast(suffix.length)
+    } else {
+        id
+    }
+}
 
 @Serializable
 data class UserPreferencesBackup(

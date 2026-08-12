@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.circadianConsistencyStatus
 import app.readylytics.health.domain.preferences.SettingsDefaults
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
@@ -41,13 +42,7 @@ fun CircadianConsistencyResult.toStatus(): MetricStatus =
     when (this) {
         is CircadianConsistencyResult.Calibrating -> MetricStatus.CALIBRATING
         is CircadianConsistencyResult.MissingData -> MetricStatus.NO_DATA
-        is CircadianConsistencyResult.Ready ->
-            when {
-                score >= 80f -> MetricStatus.OPTIMAL
-                score >= 60f -> MetricStatus.NEUTRAL
-                score >= 40f -> MetricStatus.WARNING
-                else -> MetricStatus.POOR
-            }
+        is CircadianConsistencyResult.Ready -> score.circadianConsistencyStatus()
     }
 
 fun Int.toTimeString(): String {

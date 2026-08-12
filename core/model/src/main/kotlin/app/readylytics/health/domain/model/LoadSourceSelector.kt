@@ -3,6 +3,7 @@ package app.readylytics.health.domain.model
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import java.time.LocalDate
 
 /**
  * Pure projection of the dual-variant (`*WorkoutOnly`/`*EverydayHr`) columns on [DailySummary]
@@ -83,6 +84,22 @@ object LoadSourceSelector {
             LoadSourceMode.WORKOUT_ONLY -> summary.totalRasWorkoutOnly
             LoadSourceMode.EVERYDAY_HEART_RATE -> summary.totalRasEverydayHr
         }
+
+    /**
+     * Earliest date with usable [LoadSourceMode.EVERYDAY_HEART_RATE] data, derived from
+     * [summaries] already being observed by the caller rather than a separate DB round trip.
+     * Sound because daily summaries exist densely (one row per calendar day the app has
+     * ingested), so a caller-fetched window is a safe proxy for true earliest history — unlike
+     * workout events, which are sparse and require an unbounded DB query for correct tenure
+     * (see `WorkoutRepository.getEarliestWorkoutTimestamp`, used directly by
+     * [LoadSourceMode.WORKOUT_ONLY] callers instead of this function). Only counts rows whose
+     * everyday-HR TRIMP has actually been computed — a row that exists but hasn't been
+     * backfilled yet (see [needsRecalc]) isn't usable data.
+     */
+    fun selectEarliestDataDate(summaries: List<DailySummary>): LocalDate? =
+        summaries
+            .filter { selectTrimp(it, LoadSourceMode.EVERYDAY_HEART_RATE) != null }
+            .minOfOrNull { it.date }
 
     /**
      * True when the user selected [LoadSourceMode.EVERYDAY_HEART_RATE] for strain/load or RAS,

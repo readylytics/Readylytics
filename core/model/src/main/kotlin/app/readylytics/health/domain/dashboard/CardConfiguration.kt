@@ -23,6 +23,8 @@ enum class CardId {
     BODY_FAT,
     BLOOD_PRESSURE,
     OXYGEN_SATURATION,
+    AI_RECOMMENDATION,
+    BODY_TEMPERATURE,
     INSIGHTS,
 }
 
@@ -31,4 +33,6 @@ data class CardConfiguration(
     val cardId: CardId,
     val isVisible: Boolean = true,
     val position: Int = 0,
+    @Serializable(with = NullableDashboardCardDisplayModeSerializer::class)
+    val requestedDisplayMode: DashboardCardDisplayMode? = null,
 )

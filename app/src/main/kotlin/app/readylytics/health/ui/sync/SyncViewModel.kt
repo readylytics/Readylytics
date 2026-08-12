@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 sealed interface SyncUiState {
     data object CheckingPermissions : SyncUiState
@@ -66,6 +67,7 @@ class SyncViewModel
 
         val userPreferences = settingsRepo.userPreferences
         val requiredPermissions = hcRepo.requiredPermissions
+        val optionalPermissions = hcRepo.optionalPermissions
         val allPermissions = hcRepo.allPermissions
         val isSyncing = foregroundSyncController.isSyncing
         val recalcProgress = foregroundSyncController.recalcProgress
@@ -115,7 +117,7 @@ class SyncViewModel
                         .logE("SyncViewModel", e) { "Manual sync failed" }
                     _uiState.update {
                         SyncUiState.Error(
-                            UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                            UiText.StringRes(CoreUiR.string.error_sync_failed),
                         )
                     }
                 }
@@ -200,7 +202,7 @@ class SyncViewModel
                             .logE("SyncViewModel", e) { "Foreground sync failed" }
                         _uiState.update {
                             SyncUiState.Error(
-                                UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                                UiText.StringRes(CoreUiR.string.error_sync_failed),
                             )
                         }
                     }
@@ -232,7 +234,7 @@ class SyncViewModel
                         "Initial sync failed"
                     }
                     _uiState.update {
-                        SyncUiState.Error(UiText.StringRes(app.readylytics.health.R.string.error_sync_failed))
+                        SyncUiState.Error(UiText.StringRes(CoreUiR.string.error_sync_failed))
                     }
                 }
             }
@@ -284,7 +286,7 @@ class SyncViewModel
                     }
                     _uiState.update {
                         SyncUiState.Error(
-                            UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                            UiText.StringRes(CoreUiR.string.error_sync_failed),
                         )
                     }
                     return
@@ -299,7 +301,7 @@ class SyncViewModel
                 is PermissionStatus.Granted -> {
                     _uiState.update {
                         SyncUiState.Error(
-                            UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                            UiText.StringRes(CoreUiR.string.error_sync_failed),
                         )
                     }
                 }

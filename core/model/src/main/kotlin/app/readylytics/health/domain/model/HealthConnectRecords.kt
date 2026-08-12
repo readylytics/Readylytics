@@ -53,7 +53,9 @@ data class DomainExerciseSessionRecord(
 )
 
 data class DomainStepsRecord(
+    val id: String,
     val startTime: Instant,
+    val endTime: Instant,
     val count: Long,
     val deviceName: String,
 )
@@ -84,5 +86,12 @@ data class DomainOxygenSaturationRecord(
     val id: String,
     val time: Instant,
     val percentage: Float,
+    val deviceName: String,
+)
+
+data class DomainBodyTemperatureRecord(
+    val id: String,
+    val time: Instant,
+    val celsius: Float,
     val deviceName: String,
 )

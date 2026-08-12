@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring.sleep
 
-import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.util.mean
 import javax.inject.Inject
@@ -18,7 +18,7 @@ class CurrentNightHrvResolver
         )
 
         suspend fun resolve(
-            session: SleepSessionEntity,
+            session: SleepSession,
             currentSessionIds: Set<String> = setOf(session.id),
         ): HrvResult {
             var samples =

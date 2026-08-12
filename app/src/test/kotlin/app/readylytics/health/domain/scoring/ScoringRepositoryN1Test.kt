@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -31,12 +32,15 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScoringRepositoryN1Test {
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var sleepSessionDao: SleepSessionDao
@@ -88,6 +92,8 @@ class ScoringRepositoryN1Test {
         coEvery { weightRecordDao.getLatestUpTo(any()) } returns null
         coEvery { bodyFatRecordDao.getLatestUpTo(any()) } returns null
         coEvery { bloodPressureRecordDao.getLatestUpTo(any()) } returns null
+        // SCORE-001: computeDailySummary now writes modelTrimp back onto touched workout rows.
+        coEvery { workoutDao.upsertAll(any()) } returns Unit
 
         every { settingsRepo.userPreferences } returns
             MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE))
@@ -118,6 +124,8 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
         coEvery { heartRateDao.getMinHrInRange(any(), any()) } returns 50
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+        // PERF-006/WP-21: everyday-HR load now reads SQL-bucketed rows instead of raw getByTimeRange rows.
+        coEvery { heartRateDao.getMinuteBuckets(any(), any()) } returns emptyList()
         coEvery { heartRateDao.getMinHrTimestamp(any()) } returns null
         coEvery { heartRateDao.getSleepHrSampleCount(any()) } returns 300
         coEvery { heartRateDao.getSleepHrSampleAtOffset(any(), any()) } returns 50
@@ -149,8 +157,7 @@ class ScoringRepositoryN1Test {
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer,
-                dailySummaryDao,
-                heartRateDao,
+                scoringHistoryRepository,
                 scoringCalculator,
                 scoringConfigFactory,
                 encryptionManager,
@@ -161,6 +168,7 @@ class ScoringRepositoryN1Test {
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+        val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
 
         repo =
             ScoringRepositoryImpl(
@@ -170,6 +178,8 @@ class ScoringRepositoryN1Test {
                 settingsRepo = settingsRepo,
                 scoringCalculator = scoringCalculator,
                 baselineComputer = baselineComputer,
+                buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
+                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
@@ -178,8 +188,10 @@ class ScoringRepositoryN1Test {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 scoringHistoryRepository = scoringHistoryRepository,
+                defaultDispatcher = UnconfinedTestDispatcher(),
             )
     }
 
@@ -322,8 +334,9 @@ class ScoringRepositoryN1Test {
     fun `batch fetch replaces per-session getMinHrInRange calls`() =
         runTest {
             repo.computeAndPersistDailySummary(LocalDate.now())
-            // One full-day HR batch for load, one or more projection batches for sleep-baseline math.
-            coVerify(atLeast = 1) { heartRateDao.getByTimeRange(any(), any()) }
+            // One SQL-bucketed HR fetch for everyday-HR load (PERF-006/WP-21), one or more
+            // projection batches for sleep-baseline math.
+            coVerify(atLeast = 1) { heartRateDao.getMinuteBuckets(any(), any()) }
             coVerify(atLeast = 1) { heartRateDao.getSleepHrProjectionForSessions(any()) }
             coVerify(exactly = 0) { heartRateDao.getMinHrInRange(any(), any()) }
         }

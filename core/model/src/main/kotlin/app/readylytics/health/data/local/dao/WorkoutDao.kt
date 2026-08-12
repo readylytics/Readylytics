@@ -13,6 +13,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_records WHERE id = :id")
     suspend fun getById(id: String): WorkoutRecordEntity?
 
+    @Query("SELECT modelTrimp FROM workout_records WHERE id = :id")
+    suspend fun getModelTrimpById(id: String): Float?
+
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
     fun _observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>>
 
@@ -47,9 +50,11 @@ interface WorkoutDao {
     ): Float?
 
     @Query(
-        "SELECT startTime AS timestampMs, trimp AS trimp FROM workout_records " +
+        // SCORE-001: prefer the user-selected-model TRIMP once a row has been touched by a
+        // walk-forward recompute; fall back to the zone-weighted value for rows not yet backfilled.
+        "SELECT startTime AS timestampMs, COALESCE(modelTrimp, trimp) AS trimp FROM workout_records " +
             "WHERE startTime >= :fromMs AND startTime < :toMs " +
-            "AND trimp IS NOT NULL ORDER BY startTime ASC, id ASC",
+            "AND COALESCE(modelTrimp, trimp) IS NOT NULL ORDER BY startTime ASC, id ASC",
     )
     suspend fun getTrimpPoints(
         fromMs: Long,

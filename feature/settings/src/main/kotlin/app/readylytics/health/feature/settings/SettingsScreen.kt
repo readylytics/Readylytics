@@ -65,6 +65,7 @@ import app.readylytics.health.feature.settings.data.SyncSettingsSection
 import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private fun openOssLicenses(
     context: Context,
@@ -95,6 +96,7 @@ fun SettingsRoute(
     localBackupViewModel: LocalBackupViewModel = hiltViewModel(),
     syncViewModel: SyncSettingsViewModel = hiltViewModel(),
     uiViewModel: UISettingsViewModel = hiltViewModel(),
+    dashboardCardsViewModel: DashboardCardsSettingsViewModel = hiltViewModel(),
     crashReportViewModel: CrashReportSettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
     onSendIssueReport: (IssueReportRequest) -> Unit = {},
@@ -106,6 +108,7 @@ fun SettingsRoute(
     val localBackupState by localBackupViewModel.uiState.collectAsStateWithLifecycle()
     val syncState by syncViewModel.uiState.collectAsStateWithLifecycle()
     val uiState by uiViewModel.uiState.collectAsStateWithLifecycle()
+    val dashboardCardsState by dashboardCardsViewModel.uiState.collectAsStateWithLifecycle()
     val hasCrashReport by crashReportViewModel.hasCrashReport.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -142,6 +145,7 @@ fun SettingsRoute(
         localBackupState = localBackupState,
         syncState = syncState,
         uiState = uiState,
+        dashboardCardsState = dashboardCardsState,
         onThresholdEvent = thresholdViewModel::onEvent,
         onSleepEvent = sleepViewModel::onEvent,
         onPhysiologyEvent = physiologyViewModel::onEvent,
@@ -149,6 +153,7 @@ fun SettingsRoute(
         onLocalBackupEvent = localBackupViewModel::onEvent,
         onSyncEvent = syncViewModel::onEvent,
         onUIEvent = uiViewModel::onEvent,
+        onDashboardCardsEvent = dashboardCardsViewModel::onEvent,
         onNavigateToAbout = onNavigateToAbout,
         onNavigateToLicenses = {
             openOssLicenses(context, licensesTitle)
@@ -177,6 +182,7 @@ fun SettingsScreen(
     localBackupState: LocalBackupState,
     syncState: SyncSettingsState,
     uiState: UIState,
+    dashboardCardsState: DashboardCardsSettingsState,
     onThresholdEvent: (SettingsEvent) -> Unit,
     onSleepEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
@@ -184,6 +190,7 @@ fun SettingsScreen(
     onLocalBackupEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
+    onDashboardCardsEvent: (SettingsEvent) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToAbout: () -> Unit = {},
     onNavigateToLicenses: () -> Unit = {},
@@ -402,8 +409,8 @@ fun SettingsScreen(
                         Column {
                             AppThemeItem(uiState = uiState, onEvent = onUIEvent)
                             SettingsToggleItem(
-                                label = stringResource(R.string.onboarding_dynamic_color_label),
-                                description = stringResource(R.string.onboarding_dynamic_color_desc),
+                                label = stringResource(CoreUiR.string.onboarding_dynamic_color_label),
+                                description = stringResource(CoreUiR.string.onboarding_dynamic_color_desc),
                                 checked = uiState.dynamicColorEnabled,
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )
@@ -499,6 +506,11 @@ fun SettingsScreen(
                                     Modifier.fillMaxWidth().padding(
                                         horizontal = MaterialTheme.spacing.pageHorizontal,
                                     ),
+                            )
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
+                            DashboardCardsSettingsSection(
+                                uiState = dashboardCardsState,
+                                onEvent = onDashboardCardsEvent,
                             )
                         }
                     }

@@ -1,10 +1,15 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.aggregateByRange
+import app.readylytics.health.core.ui.common.padBucketsToRange
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
@@ -12,21 +17,20 @@ import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.domain.scoring.calculateDailyStrainIncrease
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,11 +48,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 data class WorkoutDisplayItem(
@@ -59,6 +61,7 @@ data class WorkoutDisplayItem(
     val classification: WorkoutLoadClassification?,
 )
 
+@Immutable
 data class WorkoutsUiState(
     val latestSummary: DailySummary? = null,
     val latestMetrics: DailyMetrics? = null,
@@ -71,11 +74,15 @@ data class WorkoutsUiState(
     val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayRasScore: Float? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val currentPage: Int = 1,
     val totalPages: Int = 1,
     val yesterdayStrainRatio: Float? = null,
     val yesterdayReadiness: Float? = null,
     val todayStrainIncrease: Float? = null,
+    val isRangeChanging: Boolean = false,
+    val trimpPeriodSummary: PeriodAverageSummary? = null,
+    val strainRatioPeriodSummary: PeriodAverageSummary? = null,
 )
 
 private data class WorkoutFlowData(
@@ -89,7 +96,6 @@ private data class WorkoutFlowData(
 private data class CombinedParams(
     val range: TimeRange,
     val date: LocalDate,
-    val isSyncing: Boolean,
     val page: Int,
 )
 
@@ -107,6 +113,7 @@ class WorkoutsViewModel
         private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
             MutableStateFlow(
@@ -115,17 +122,23 @@ class WorkoutsViewModel
 
         val selectedRange = _selectedRange.asStateFlow()
 
+        private val isRangeChangingState = MutableStateFlow(false)
+
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
+
+        private val boundaryPreferences =
+            settingsRepo.userPreferences
+                .map { it.scoringZone() to it.strainLoadSourceMode }
+                .distinctUntilChanged()
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
-                foregroundSyncController.isSyncing,
                 _currentPage,
-            ) { range, date, isSyncing, page -> CombinedParams(range, date, isSyncing, page) }
+            ) { range, date, page -> CombinedParams(range, date, page) }
                 .scan(null as CombinedParams?) { prev, current ->
                     if (prev != null && (prev.range != current.range || prev.date != current.date)) {
                         _currentPage.value = 1
@@ -135,27 +148,36 @@ class WorkoutsViewModel
                     }
                 }.filterNotNull()
                 .distinctUntilChanged()
-                .flatMapLatest { params ->
+                .combine(boundaryPreferences) { params, boundary -> params to boundary }
+                .flatMapLatest { (params, boundary) ->
                     val range = params.range
                     val date = params.date
-                    val isSyncing = params.isSyncing
                     val page = params.page
-                    val earliestWorkoutMs = workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
-                    val zoneId = ZoneId.systemDefault()
-                    val earliestLocalDate =
-                        if (earliestWorkoutMs > 0) {
-                            Instant.ofEpochMilli(earliestWorkoutMs).atZone(zoneId).toLocalDate()
-                        } else {
-                            null
-                        }
+                    val zoneId = boundary.first
 
-                    val displayFromMs = range.fromMs(date)
-                    val displayStartDayMs = displayFromMs.truncateToDayMs()
+                    val displayStartDayDate = date.minusDays(range.days.toLong() - 1)
+                    val displayStartDayMs =
+                        displayStartDayDate
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    val displayFromMs = displayStartDayMs
                     // Fetch extra history so chronic (42-day) window is valid from day 1 of the range.
-                    val fetchFromMs = displayStartDayMs - TimeUnit.DAYS.toMillis(ScoringConstants.CHRONIC_DAYS)
+                    val fetchFromMs =
+                        displayStartDayDate
+                            .minusDays(ScoringConstants.CHRONIC_DAYS)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
 
                     val selectedMidnightMs =
                         date
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    val selectedDayEndMs =
+                        date
+                            .plusDays(1)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
@@ -191,10 +213,19 @@ class WorkoutsViewModel
                         flow {
                             val (latest, allWorkouts, trimpSummaries, rasSummaries, prefs) = data
 
+                            val earliestLocalDate =
+                                when (prefs.strainLoadSourceMode) {
+                                    LoadSourceMode.WORKOUT_ONLY ->
+                                        workoutRepository.getEarliestWorkoutTimestamp()?.let {
+                                            Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
+                                        }
+                                    LoadSourceMode.EVERYDAY_HEART_RATE ->
+                                        LoadSourceSelector.selectEarliestDataDate(trimpSummaries)
+                                }
+
                             val filteredWorkouts =
                                 allWorkouts.filter {
-                                    it.startTime <
-                                        selectedMidnightMs + TimeUnit.DAYS.toMillis(1)
+                                    it.startTime < selectedDayEndMs
                                 }
                             val trimpByDate: Map<LocalDate, Float> =
                                 trimpSummaries.associate { summary ->
@@ -214,7 +245,7 @@ class WorkoutsViewModel
 
                             val displayDayMidnights =
                                 buildList<Long> {
-                                    var current = Instant.ofEpochMilli(displayStartDayMs).atZone(zoneId).toLocalDate()
+                                    var current = displayStartDayDate
                                     val end = date
                                     while (!current.isAfter(end)) {
                                         add(current.atStartOfDay(zoneId).toInstant().toEpochMilli())
@@ -222,12 +253,6 @@ class WorkoutsViewModel
                                     }
                                 }
 
-                            val displayStartDayDate =
-                                Instant
-                                    .ofEpochMilli(
-                                        displayStartDayMs,
-                                    ).atZone(zoneId)
-                                    .toLocalDate()
                             val ctlSeries =
                                 scoringCalculator.computeCtlEmaSeries(
                                     trimpByDate,
@@ -280,27 +305,41 @@ class WorkoutsViewModel
                                 dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                             }
 
+                            val trimpForAggregation = dailyTrimp.map { it.copy(value = it.value ?: 0f) }
+                            val (bucketedTrimp, trimpSummary) =
+                                trimpForAggregation
+                                    .aggregateByRange(range.granularity, displayStartDayDate, date, range.days)
+                            val (bucketedStrainRatio, strainSummary) =
+                                dailyStrainRatio
+                                    .aggregateByRange(
+                                        range.granularity,
+                                        displayStartDayDate,
+                                        date,
+                                        range.days,
+                                        valueDecimalPlaces = 2,
+                                    )
+
+                            val paddedTrimp =
+                                bucketedTrimp.padBucketsToRange(
+                                    range.granularity,
+                                    displayStartDayDate,
+                                    date,
+                                )
+                            val paddedStrain =
+                                bucketedStrainRatio.padBucketsToRange(
+                                    range.granularity,
+                                    displayStartDayDate,
+                                    date,
+                                )
+
                             val summaryByDate = trimpSummaries.associateBy { it.date }
 
                             val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
 
-                            // Batch load HR samples for all recent workouts
+                            // Batch load HR samples for all recent workouts: one getByTimeRange
+                            // per span-bounded cluster instead of one per workout (F10).
                             val samplesByWorkoutId =
-                                mutableMapOf<
-                                    String,
-                                    List<ComputeWorkoutTrimpUseCase.HeartRateSample>,
-                                >()
-                            for (workout in recentWorkouts) {
-                                val samples = heartRateRepository.getByTimeRange(workout.startTime, workout.endTime)
-                                samplesByWorkoutId[workout.id] =
-                                    samples.map {
-                                        app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-                                            .HeartRateSample(
-                                                timestamp = java.time.Instant.ofEpochMilli(it.timestampMs),
-                                                bpm = it.beatsPerMinute,
-                                            )
-                                    }
-                            }
+                                fetchHeartRateSamplesByWorkout(recentWorkouts, heartRateRepository)
 
                             val recentItems =
                                 recentWorkouts
@@ -311,6 +350,8 @@ class WorkoutsViewModel
                                             getWorkoutDisplayMetricsUseCase.execute(
                                                 workout = workout,
                                                 samples = samples,
+                                                preferences = prefs,
+                                                historicalSummaries = trimpSummaries,
                                             )
 
                                         WorkoutDisplayItem(
@@ -347,45 +388,55 @@ class WorkoutsViewModel
                                 }
 
                             val todayStrainIncrease =
-                                if (dataTenureDaysForDate >= 7) {
-                                    if (prefs.strainLoadSourceMode == LoadSourceMode.WORKOUT_ONLY) {
+                                when (prefs.strainLoadSourceMode) {
+                                    LoadSourceMode.WORKOUT_ONLY -> {
                                         // Sum the already-rounded per-workout gains shown in History so the
                                         // card total always exactly matches the rows below it.
-                                        val selectedDayEndMs =
-                                            date
-                                                .plusDays(
-                                                    1,
-                                                ).atStartOfDay(zoneId)
-                                                .toInstant()
-                                                .toEpochMilli()
-                                        recentItems
-                                            .filter {
-                                                it.workout.startTime in selectedMidnightMs until selectedDayEndMs
-                                            }.sumOf { it.gainedStrain.toDouble() }
-                                            .toFloat()
-                                    } else {
-                                        val trimpByDateWithout = trimpByDate.toMutableMap().apply { put(date, 0f) }
-                                        val ctlWith = ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-                                        val atlWith = atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
-                                        val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
+                                        val workoutOnlyGains =
+                                            recentItems
+                                                .filter {
+                                                    it.workout.startTime in
+                                                        selectedMidnightMs until selectedDayEndMs
+                                                }.map { it.gainedStrain }
+                                        calculateDailyStrainIncrease(
+                                            dataTenureDays = dataTenureDaysForDate,
+                                            loadSourceMode = prefs.strainLoadSourceMode,
+                                            workoutOnlyGains = workoutOnlyGains,
+                                            strainRatioWithDay = null,
+                                            strainRatioWithoutDay = null,
+                                        )
+                                    }
 
+                                    LoadSourceMode.EVERYDAY_HEART_RATE -> {
+                                        val trimpByDateWithout =
+                                            trimpByDate.toMutableMap().apply { put(date, 0f) }
+                                        val ctlWith =
+                                            ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                        val atlWith =
+                                            atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                        val strainRatioWithDay =
+                                            scoringCalculator.computeStrainRatio(atlWith, ctlWith)
                                         val ctlWithout =
                                             scoringCalculator.computeCtlEmaWithDecay(trimpByDateWithout, date)
                                         val atlWithout =
                                             scoringCalculator.computeAtlEmaWithDecay(trimpByDateWithout, date)
-                                        val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
-
-                                        (srWith - srWithout).coerceAtLeast(0f)
+                                        val strainRatioWithoutDay =
+                                            scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
+                                        calculateDailyStrainIncrease(
+                                            dataTenureDays = dataTenureDaysForDate,
+                                            loadSourceMode = prefs.strainLoadSourceMode,
+                                            workoutOnlyGains = emptyList(),
+                                            strainRatioWithDay = strainRatioWithDay,
+                                            strainRatioWithoutDay = strainRatioWithoutDay,
+                                        )
                                     }
-                                } else {
-                                    null
                                 }
 
                             WorkoutsUiState(
                                 latestSummary = latest,
                                 latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
-                                dailyTrimp = dailyTrimp,
-                                dailyStrainRatio = dailyStrainRatio,
+                                dailyTrimp = paddedTrimp,
+                                dailyStrainRatio = paddedStrain,
                                 recentWorkouts = paginatedItems,
                                 selectedRange = range,
                                 selectedDate = date,
@@ -398,16 +449,41 @@ class WorkoutsViewModel
                                             prefs.rasSourceMode,
                                         )
                                     },
-                                isLoading = isSyncing,
                                 currentPage = clampedPage,
                                 totalPages = totalPages,
                                 yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
                                 yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
                                 todayStrainIncrease = todayStrainIncrease,
+                                trimpPeriodSummary = trimpSummary,
+                                strainRatioPeriodSummary = strainSummary,
                             ).also { emit(it) }
                         }
                     }
-                }.flowOn(Dispatchers.Default)
+                }.distinctUntilChanged()
+                .map { state ->
+                    // Reset the range-change spinner only once the pipeline actually emits for the
+                    // newly-selected range (selectedRange field in the state already reflects the
+                    // chosen range at this point -- set by CombinedParams.range on pipeline restart).
+                    // Previously this was in the isSyncing combine, which re-emitted on every sync
+                    // toggle and could hide the spinner before flatMapLatest finished recomputing.
+                    isRangeChangingState.value = false
+                    state
+                }
+                // isSyncing is merged in after the heavy pipeline instead of inside it (mirrors
+                // DashboardViewModel.kt:104-113) so a sync toggle only triggers a cheap copy, not a
+                // full pipeline restart (Room re-subscriptions, EMA series, N+1 HR-sample loop).
+                // isLoading means "true first-load, no data yet" (skeleton); isRefreshing tracks
+                // every sync regardless of data presence. dailyTrimp/dailyStrainRatio are always
+                // padded to displayDayMidnights.size entries (null-valued, never actually empty),
+                // so latestSummary/recentWorkouts are the correct "no data yet" signal here.
+                .combine(foregroundSyncController.isSyncing) { state, syncing ->
+                    state.copy(
+                        isLoading = syncing && (state.latestSummary == null && state.recentWorkouts.isEmpty()),
+                        isRefreshing = syncing,
+                    )
+                }.combine(isRangeChangingState) { state, isChanging ->
+                    state.copy(isRangeChanging = isChanging)
+                }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
@@ -431,6 +507,7 @@ class WorkoutsViewModel
         fun onRangeSelected(range: TimeRange) {
             _currentPage.value = 1
             _selectedRange.value = range
+            isRangeChangingState.value = true
             savedStateHandle["selectedRange"] = range
         }
 

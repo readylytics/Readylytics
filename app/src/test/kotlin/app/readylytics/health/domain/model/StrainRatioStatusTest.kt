@@ -45,5 +45,6 @@ class StrainRatioStatusTest {
     fun testNegativeValues() {
         assertEquals(MetricStatus.CALIBRATING, (-0.5f).strainRatioStatus())
         assertEquals(MetricStatus.CALIBRATING, (-1.0f).strainRatioStatus())
+        assertEquals(MetricStatus.CALIBRATING, Float.NaN.strainRatioStatus())
     }
 }

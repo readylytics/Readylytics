@@ -5,9 +5,13 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.data.backup.LocalBackupManager
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
+import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -21,12 +25,16 @@ class LocalBackupWorkerTest {
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val localBackupManager = mockk<LocalBackupManager>()
+    private val localBackupManagerLazy = mockk<Lazy<LocalBackupManager>>()
+    private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         workerParams = mockk(relaxed = true)
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
+        every { localBackupManagerLazy.get() } returns localBackupManager
+        every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
     }
 
     @Test
@@ -34,7 +42,7 @@ class LocalBackupWorkerTest {
         runBlocking {
             coEvery { localBackupManager.createBackup() } returns Result.success<java.io.File?>(null)
 
-            val worker = LocalBackupWorker(context, workerParams, localBackupManager)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
@@ -46,7 +54,7 @@ class LocalBackupWorkerTest {
             coEvery { localBackupManager.createBackup() } returns
                 Result.failure<java.io.File?>(IOException("Disk full"))
 
-            val worker = LocalBackupWorker(context, workerParams, localBackupManager)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.retry(), result)
@@ -58,7 +66,7 @@ class LocalBackupWorkerTest {
             coEvery { localBackupManager.createBackup() } returns
                 Result.failure<java.io.File?>(RuntimeException("Encryption error"))
 
-            val worker = LocalBackupWorker(context, workerParams, localBackupManager)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(
@@ -66,4 +74,17 @@ class LocalBackupWorkerTest {
                 result,
             )
         }
+
+    @Test
+    fun `doWork retries without resolving Room dependency when database is not ready`() =
+        runBlocking {
+            every { databaseReadinessGate.inspect() } returns DatabaseReadiness.MigrationRequired(5)
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(exactly = 0) { localBackupManagerLazy.get() }
+        }
+
+    private fun createWorker() = LocalBackupWorker(context, workerParams, localBackupManagerLazy, databaseReadinessGate)
 }

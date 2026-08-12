@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -33,8 +32,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
+import app.readylytics.health.core.ui.components.M3MetricBar
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.domain.sync.ResyncPhase
 import app.readylytics.health.domain.sync.fraction
@@ -95,8 +96,14 @@ fun SyncProgressScreen(
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-            LinearProgressIndicator(
-                progress = { progress?.fraction() ?: 0f },
+            M3MetricBar(
+                progressFraction = progress?.fraction(),
+                activeColor = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.secondaryContainer,
+                barHeight = MaterialTheme.dimens.syncProgressBarThickness,
+                markerDiameter = MaterialTheme.dimens.syncProgressBarThickness,
+                showMarker = true,
+                animateProgress = false,
                 modifier = Modifier.fillMaxWidth(),
             )
 

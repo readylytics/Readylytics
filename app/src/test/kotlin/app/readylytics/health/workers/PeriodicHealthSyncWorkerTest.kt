@@ -4,9 +4,12 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.HealthSyncUseCase
+import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -23,7 +26,10 @@ class PeriodicHealthSyncWorkerTest {
     private lateinit var context: Context
     private lateinit var workerParams: WorkerParameters
     private val healthSyncUseCase = mockk<HealthSyncUseCase>()
+    private val healthSyncUseCaseLazy = mockk<Lazy<HealthSyncUseCase>>()
+    private val databaseReadinessGate = mockk<DatabaseReadinessInspector>()
     private val foregroundSyncController = mockk<ForegroundSyncController>(relaxed = true)
+    private val foregroundSyncControllerLazy = mockk<Lazy<ForegroundSyncController>>()
     private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
 
     @Before
@@ -31,6 +37,9 @@ class PeriodicHealthSyncWorkerTest {
         context = ApplicationProvider.getApplicationContext()
         workerParams = mockk(relaxed = true)
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
+        every { healthSyncUseCaseLazy.get() } returns healthSyncUseCase
+        every { foregroundSyncControllerLazy.get() } returns foregroundSyncController
+        every { databaseReadinessGate.inspect() } returns DatabaseReadiness.Ready
     }
 
     @Test
@@ -44,6 +53,9 @@ class PeriodicHealthSyncWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
+            verify(exactly = 1) { foregroundSyncControllerLazy.get() }
+            verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcStarted() }
+            verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcFinished(true) }
         }
 
     @Test
@@ -96,12 +108,25 @@ class PeriodicHealthSyncWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
         }
 
+    @Test
+    fun `doWork retries without resolving Room dependency when database is not ready`() =
+        runBlocking {
+            every { databaseReadinessGate.inspect() } returns DatabaseReadiness.MigrationRequired(6)
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(exactly = 0) { healthSyncUseCaseLazy.get() }
+            verify(exactly = 0) { foregroundSyncControllerLazy.get() }
+        }
+
     private fun createWorker() =
         PeriodicHealthSyncWorker(
             appContext = context,
             params = workerParams,
-            healthSyncUseCase = healthSyncUseCase,
-            foregroundSyncController = foregroundSyncController,
+            healthSyncUseCase = healthSyncUseCaseLazy,
+            foregroundSyncController = foregroundSyncControllerLazy,
             workerScheduler = workerScheduler,
+            databaseReadinessGate = databaseReadinessGate,
         )
 }

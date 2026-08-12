@@ -23,5 +23,7 @@ interface WorkoutRepository {
 
     suspend fun getEarliestWorkoutTimestamp(): Long?
 
+    suspend fun getInRange(fromMs: Long, toMs: Long): List<WorkoutData>
+
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>
 }

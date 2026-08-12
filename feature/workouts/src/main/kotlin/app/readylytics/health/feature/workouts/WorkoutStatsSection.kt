@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -18,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -29,7 +30,6 @@ import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.domain.display.MetricFormatter
@@ -42,6 +42,7 @@ import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import app.readylytics.health.core.ui.R as CoreUiR
 
 internal enum class RasSummaryValueTextStyle {
     TITLE,
@@ -59,6 +60,7 @@ private fun RasSummaryValueTextStyle.asTextStyle(): TextStyle =
 @Composable
 fun WorkoutStatsSection(
     uiState: WorkoutsUiState,
+    selectedRange: TimeRange,
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
     rangeDays: Int = uiState.selectedRange.days,
@@ -75,6 +77,7 @@ fun WorkoutStatsSection(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.Content
                     }
                 },
@@ -82,6 +85,7 @@ fun WorkoutStatsSection(
     parentScrollInProgress: () -> Boolean = { false },
 ) {
     Column(modifier = modifier) {
+        // Note: graphicsLayer{} intentionally omitted for performance (F19)
         CardLoader(
             isLoading = uiState.isLoading,
             skeleton = {
@@ -114,35 +118,36 @@ fun WorkoutStatsSection(
                 ) {
                     val strainRatio = uiState.latestMetrics?.strainRatioRaw
                     val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
-                    val strainTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_strain_ratio)
+                    val strainTooltip = stringResource(CoreUiR.string.tooltip_strain_ratio)
 
                     val strainDelta =
                         if (uiState.todayStrainIncrease != null) {
                             if (uiState.todayStrainIncrease > 0.005f) {
                                 val diffFormatted = MetricFormatter.formatStrain(uiState.todayStrainIncrease)
                                 stringResource(
-                                    app.readylytics.health.core.ui.R.string.delta_up_format,
-                                    stringResource(app.readylytics.health.core.ui.R.string.delta_up),
+                                    CoreUiR.string.delta_up_format,
+                                    stringResource(CoreUiR.string.delta_up),
                                     diffFormatted,
                                 )
                             } else {
-                                stringResource(app.readylytics.health.core.ui.R.string.delta_no_change)
+                                stringResource(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null
                         }
 
-                    M3ScoreGaugeCard(
+                    UniversalWorkoutMetricCard(
                         modifier = Modifier.weight(1f),
-                        title = stringResource(app.readylytics.health.core.ui.R.string.card_title_strain_ratio),
-                        score = strainRatio,
-                        displayText =
-                            uiState.latestMetrics?.strainRatioDisplay ?: stringResource(R.string.delta_no_change),
+                        title = stringResource(CoreUiR.string.card_title_strain_ratio),
+                        rawValue = strainRatio,
+                        valueText =
+                            uiState.latestMetrics?.strainRatioDisplay ?: stringResource(CoreUiR.string.delta_no_change),
                         unitText = "",
-                        maxScore = 2.0f,
+                        maxValue = 2.0f,
                         status = strainStatus,
-                        deltaText = strainDelta,
-                        tooltipDescription = strainTooltip,
+                        secondaryText = strainDelta,
+                        tooltip = strainTooltip,
+                        mode = app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode.GAUGE,
                     )
 
                     val readinessVal = uiState.latestMetrics?.readinessRounded?.toFloat()
@@ -152,16 +157,26 @@ fun WorkoutStatsSection(
                             previousRounded = uiState.yesterdayReadiness?.toInt(),
                         ).resolveOrNull()
 
-                    M3ScoreGaugeCard(
+                    UniversalWorkoutMetricCard(
                         modifier = Modifier.weight(1f),
-                        title = stringResource(app.readylytics.health.core.ui.R.string.card_title_readiness),
-                        score = readinessVal,
-                        displayText =
+                        title = stringResource(CoreUiR.string.card_title_readiness),
+                        status =
+                            readinessVal?.let {
+                                when {
+                                    it >= 85f -> MetricStatus.OPTIMAL
+                                    it >= 60f -> MetricStatus.NEUTRAL
+                                    it >= 40f -> MetricStatus.WARNING
+                                    else -> MetricStatus.POOR
+                                }
+                            } ?: MetricStatus.CALIBRATING,
+                        rawValue = readinessVal,
+                        valueText =
                             uiState.latestMetrics?.readinessRounded?.toString()
-                                ?: stringResource(R.string.delta_no_change),
+                                ?: stringResource(CoreUiR.string.delta_no_change),
                         unitText = "",
-                        deltaText = readinessDelta,
-                        tooltipDescription = stringResource(app.readylytics.health.core.ui.R.string.tooltip_readiness),
+                        secondaryText = readinessDelta,
+                        tooltip = stringResource(CoreUiR.string.tooltip_readiness),
+                        mode = app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode.GAUGE,
                     )
                 }
             },
@@ -183,8 +198,7 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .graphicsLayer { },
+                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                     shape = MaterialTheme.shapes.large,
                 ) {
                     Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
@@ -210,7 +224,7 @@ fun WorkoutStatsSection(
                                     )
                                 }
                                 MetricTooltip(
-                                    description = stringResource(app.readylytics.health.core.ui.R.string.tooltip_ras),
+                                    description = stringResource(CoreUiR.string.tooltip_ras),
                                 )
                             }
                         }
@@ -239,9 +253,9 @@ fun WorkoutStatsSection(
         ) {
             TimeRange.entries.forEachIndexed { index, range ->
                 SegmentedButton(
-                    selected = uiState.selectedRange == range,
+                    selected = selectedRange == range,
                     onClick = { onRangeSelected(range) },
-                    enabled = !uiState.isLoading,
+                    enabled = !uiState.isLoading && !uiState.isRangeChanging,
                     shape =
                         SegmentedButtonDefaults.itemShape(
                             index = index,
@@ -255,15 +269,33 @@ fun WorkoutStatsSection(
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
 
         CardLoader(
-            isLoading = uiState.isLoading,
+            isLoading = uiState.isLoading || uiState.isRangeChanging,
             skeleton = {
-                SkeletonCard(
-                    height = 312.dp,
+                Card(
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                )
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+                        Text(
+                            text = stringResource(R.string.acwr_training_load),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(220.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
+                }
             },
             content = {
                 AcwrChartCard(
@@ -274,10 +306,8 @@ fun WorkoutStatsSection(
                     scrollState = scrollState,
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
-                    modifier =
-                        Modifier
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal)
-                            .graphicsLayer { },
+                    granularity = selectedRange.granularity,
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                 )
             },
         )

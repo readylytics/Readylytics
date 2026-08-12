@@ -3,8 +3,8 @@ package app.readylytics.health.domain.user
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.HeartRateFormulas
+import app.readylytics.health.workers.WorkerScheduler
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.Period
@@ -16,7 +16,7 @@ class UserUseCase
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
-        private val healthSyncUseCase: HealthSyncUseCase,
+        private val workerScheduler: WorkerScheduler,
         private val scoringRepository: ScoringRepository,
     ) : UserProfileActions {
         override suspend fun updateBirthday(date: LocalDate): Result<Unit> =
@@ -30,8 +30,10 @@ class UserUseCase
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(age)
                     settingsRepo.updateMaxHeartRate(maxHr)
-                    healthSyncUseCase.sync()
                 }
+                // Birthday changes age-dependent scoring inputs, and automatic hrMax when enabled.
+                // Queue one durable historical pass after every affected preference has been persisted.
+                workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 Result.success(Unit)
             } catch (e: Exception) {
                 Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")
@@ -43,7 +45,7 @@ class UserUseCase
                 if (prefs.autoCalculateMaxHr) {
                     val maxHr = calculateMaxHeartRate(prefs.age)
                     settingsRepo.updateMaxHeartRate(maxHr)
-                    healthSyncUseCase.sync()
+                    workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
                 Result.success(Unit)
             } catch (e: Exception) {

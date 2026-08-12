@@ -29,7 +29,11 @@ class CrashReportViewModel
             _showPrompt.value = false
         }
 
-        fun consumeReport() {
+        fun consumeReport() = hideAndDeleteReport()
+
+        fun clearReport() = hideAndDeleteReport()
+
+        private fun hideAndDeleteReport() {
             crashReportStore.delete()
             _showPrompt.value = false
             _hasReport.value = false

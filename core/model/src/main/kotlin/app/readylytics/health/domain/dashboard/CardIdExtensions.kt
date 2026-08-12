@@ -21,5 +21,7 @@ fun CardId.displayName(): String =
         CardId.BODY_FAT -> "Body Fat"
         CardId.BLOOD_PRESSURE -> "Blood Pressure"
         CardId.OXYGEN_SATURATION -> "Oxygen Saturation"
+        CardId.AI_RECOMMENDATION -> "AI Training Recommendation"
+        CardId.BODY_TEMPERATURE -> "Body Temperature"
         CardId.INSIGHTS -> "Insights"
     }

@@ -11,8 +11,16 @@ object LegacyCardConfigurationSerializer {
     private const val TAG = "LegacyCardConfigurationSerializer"
 
     // ignoreUnknownKeys=true enables graceful handling of new properties in future app versions
-    // allowing older saved configs to load without errors when app adds new card types
-    private val json = Json { ignoreUnknownKeys = true }
+    // allowing older saved configs to load without errors when app adds new card types.
+    // coerceInputValues=true keeps decoding tolerant when a stored field's value doesn't match
+    // the expected shape (e.g. malformed data), falling back to each property's declared
+    // default rather than rejecting the whole card list. Scoped narrowly to this legacy card
+    // JSON path only; other entity/JSON decoding in the app is intentionally left strict.
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            coerceInputValues = true
+        }
 
     fun serialize(configurations: List<CardConfiguration>): String {
         // Serialize card configurations to JSON string for DataStore persistence

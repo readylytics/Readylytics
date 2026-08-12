@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 
@@ -64,6 +65,10 @@ object SettingsDefaults {
     const val MIN_HRR_TOLERANCE_SECONDS = 15
     const val MAX_HRR_TOLERANCE_SECONDS = 60
     const val HRR_TOLERANCE_SECONDS = 30
+    const val BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 1.0f
+    const val MIN_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 0.25f
+    const val MAX_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS = 1.5f
+    const val BODY_TEMP_ELEVATED_THRESHOLD_STEP_CELSIUS = 0.25f
 
     /**
      * Authoritative runtime value for RAS scaling.
@@ -92,6 +97,8 @@ object SettingsDefaults {
     const val BACKGROUND_SYNC_ENABLED = false
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
     const val DEVICE_CHANGE_NOTICE_DISMISSED = false
+    const val BULK_DISPLAY_MODE_NOTICE_DISMISSED = false
+    val LAST_GLOBAL_DISPLAY_MODE: DashboardCardDisplayMode? = null
 
     const val IS_CUSTOM_PALETTE_ENABLED = false
     const val CUSTOM_SECONDARY_COLOR = 0xFFCCC2DCL
@@ -116,6 +123,8 @@ object SettingsDefaults {
             CardConfiguration(CardId.BLOOD_PRESSURE, isVisible = true, position = 14),
             CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = true, position = 15),
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
+            CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
+            CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
         )
 }
 

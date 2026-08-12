@@ -4,15 +4,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.common.bucketBy
+import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.bodyFatStatus
+import app.readylytics.health.domain.model.ZoneBand
+import app.readylytics.health.domain.model.bodyFatZoneBands
+import app.readylytics.health.domain.model.toMetricStatus
+import app.readylytics.health.domain.preferences.Gender
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.WeightRepository
@@ -26,26 +34,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 data class BodyFatDetailUiState(
     val latestBodyFat: Float? = null,
     val latestDate: LocalDate? = null,
-    val age: Int = 30,
-    val gender: String = "Unknown",
-    val optimalRangeMin: Float = 0f,
-    val optimalRangeMax: Float = 0f,
+    val gender: Gender? = null,
+    val referenceAxisMinimum: Float = 0f,
+    val referenceAxisMaximum: Float = 0f,
+    val referenceMidpoint: Float = 0f,
+    val chartZoneBands: List<ZoneBand> = emptyList(),
     val bodyFatStatus: MetricStatus? = null,
     val averageBodyFat: Float? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val dailyBodyFat: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
+    val periodSummary: PeriodAverageSummary? = null,
     val bodyFatDisplay: String? = null,
-    val optimalRangeDisplay: String? = null,
     val historyItems: List<BodyFatHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
     val deltaBodyFatDisplay: UiText? = null,
@@ -77,7 +86,7 @@ class BodyFatDetailViewModel
 
                     val records = bodyFatRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = bodyFatRepository.getLatest()
-                    val previous = if (latest != null) bodyFatRepository.getPrevious(latest.timestampMs) else null
+                    val previous = latest?.let { bodyFatRepository.getPrevious(it.time.toEpochMilli()) }
                     val deltaBodyFatDisplay =
                         if (latest != null && previous != null) {
                             val diff = latest.bodyFatPercent - previous.bodyFatPercent
@@ -86,7 +95,7 @@ class BodyFatDetailViewModel
                                 diff > 0 ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.StringRes(CoreUiR.string.delta_up),
                                             UiText.RawString(" $formattedDiff"),
                                             UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
@@ -94,12 +103,12 @@ class BodyFatDetailViewModel
                                 diff < 0 ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.StringRes(CoreUiR.string.delta_down),
                                             UiText.RawString(" $formattedDiff"),
                                             UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
                                     )
-                                else -> UiText.StringRes(R.string.delta_no_change)
+                                else -> UiText.StringRes(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null
@@ -110,36 +119,58 @@ class BodyFatDetailViewModel
                             ChronoUnit.DAYS
                                 .between(
                                     rangeStart.atZone(zoneId).toLocalDate(),
-                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                    record.time.atZone(zoneId).toLocalDate(),
                                 ).toInt()
                         }
 
-                    val dailyBodyFat =
+                    val startDate = rangeStart.atZone(zoneId).toLocalDate()
+                    val dailyBodyFatRaw =
                         recordsByDay
                             .map { (dayOffset, dayRecords) ->
                                 val avgBodyFat = dayRecords.map { it.bodyFatPercent }.average().toFloat()
                                 DailyDataPoint(dayOffset, avgBodyFat)
                             }.sortedBy { it.dayOffset }
-                            .padToRange(range.days)
 
-                    val (optimalMin, optimalMax) =
-                        calculateOptimalRange(
-                            userPrefs.age,
-                            userPrefs.gender?.name ?: "Unknown",
-                        )
-                    val status = latest?.bodyFatPercent?.let { bodyFatStatus(it, optimalMax) }
+                    val dailyBodyFat =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            dailyBodyFatRaw.padToRange(range.days)
+                        } else {
+                            dailyBodyFatRaw.bucketBy(range.granularity, startDate, selectedDate, valueDecimalPlaces = 1)
+                        }
+                    val periodSummary =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            null
+                        } else {
+                            buildPeriodAverageSummary(dailyBodyFat, range.granularity, startDate)
+                        }
+
+                    val latestAssessment =
+                        latest?.let {
+                            BodyCompositionAssessment.assessBodyFat(
+                                bodyFatPercent = it.bodyFatPercent,
+                                physiologyProfile = userPrefs.physiologyProfile,
+                                gender = userPrefs.gender,
+                            )
+                        }
+                    val reference =
+                        latestAssessment?.reference
+                            ?: BodyCompositionAssessment.bodyFatReference(
+                                physiologyProfile = userPrefs.physiologyProfile,
+                                gender = userPrefs.gender,
+                            )
+                    val status = latestAssessment?.status?.toMetricStatus()
 
                     val weightByDay =
                         weightRepository
                             .getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
-                            .groupBy { Instant.ofEpochMilli(it.timestampMs).atZone(zoneId).toLocalDate() }
-                            .mapValues { (_, dayRecords) -> dayRecords.maxBy { it.timestampMs } }
+                            .groupBy { it.time.atZone(zoneId).toLocalDate() }
+                            .mapValues { (_, dayRecords) -> dayRecords.maxBy { it.time } }
 
                     val historyItems =
                         records
-                            .sortedByDescending { it.timestampMs }
+                            .sortedByDescending { it.time }
                             .map { record ->
-                                val recordDate = Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate()
+                                val recordDate = record.time.atZone(zoneId).toLocalDate()
                                 val weightKg = weightByDay[recordDate]?.weightKg
                                 val leanMassKg = weightKg?.let { it * (1f - record.bodyFatPercent / 100f) }
                                 val leanMassDisplay =
@@ -150,12 +181,19 @@ class BodyFatDetailViewModel
                                             it * UnitConverter.KG_TO_LBS
                                         }
                                     }
+                                val assessment =
+                                    BodyCompositionAssessment.assessBodyFat(
+                                        bodyFatPercent = record.bodyFatPercent,
+                                        physiologyProfile = userPrefs.physiologyProfile,
+                                        gender = userPrefs.gender,
+                                    )
                                 BodyFatHistoryItem(
-                                    timestampMs = record.timestampMs,
+                                    timestampMs = record.time.toEpochMilli(),
                                     bodyFatPercent = record.bodyFatPercent,
                                     leanMassDisplay = leanMassDisplay,
                                     unitSystem = userPrefs.unitSystem,
-                                    status = bodyFatStatus(record.bodyFatPercent, optimalMax),
+                                    status = assessment.status.toMetricStatus(),
+                                    category = assessment.category,
                                 )
                             }
                     val average =
@@ -170,23 +208,19 @@ class BodyFatDetailViewModel
                         }
                     BodyFatDetailUiState(
                         latestBodyFat = latest?.bodyFatPercent,
-                        latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
-                        age = userPrefs.age,
-                        gender = userPrefs.gender?.name ?: "Unknown",
-                        optimalRangeMin = optimalMin,
-                        optimalRangeMax = optimalMax,
+                        latestDate = latest?.time?.atZone(zoneId)?.toLocalDate(),
+                        gender = userPrefs.gender,
+                        referenceAxisMinimum = reference.axisMinimum,
+                        referenceAxisMaximum = reference.axisMaximum,
+                        referenceMidpoint = reference.referenceMidpoint,
+                        chartZoneBands = bodyFatZoneBands(userPrefs.physiologyProfile, userPrefs.gender),
                         bodyFatStatus = status,
                         averageBodyFat = average,
                         selectedRange = range,
                         dailyBodyFat = dailyBodyFat,
                         rangeStartMs = rangeStart.toEpochMilli(),
+                        periodSummary = periodSummary,
                         bodyFatDisplay = latest?.bodyFatPercent?.let { MetricFormatter.formatBodyFatNumericOnly(it) },
-                        optimalRangeDisplay =
-                            if (optimalMax > 0f) {
-                                "0–${MetricFormatter.formatBodyFat(optimalMax)}"
-                            } else {
-                                null
-                            },
                         historyItems = historyItems,
                         isLoading = false,
                         deltaBodyFatDisplay = deltaBodyFatDisplay,
@@ -200,27 +234,5 @@ class BodyFatDetailViewModel
 
         fun onRangeSelected(range: TimeRange) {
             selectedRangeFlow.value = range
-        }
-
-        private fun calculateOptimalRange(
-            age: Int,
-            genderName: String,
-        ): Pair<Float, Float> {
-            val ageCoerced = age.coerceIn(1, 120)
-            return when (genderName) {
-                "MALE" ->
-                    when {
-                        ageCoerced in 20..40 -> Pair(0f, 19f)
-                        ageCoerced in 41..60 -> Pair(0f, 22f)
-                        else -> Pair(0f, 24f)
-                    }
-                "FEMALE" ->
-                    when {
-                        ageCoerced in 20..40 -> Pair(0f, 32f)
-                        ageCoerced in 41..60 -> Pair(0f, 34f)
-                        else -> Pair(0f, 36f)
-                    }
-                else -> Pair(0f, 30f)
-            }
         }
     }

@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalStatusColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.DateFormatUtils
-import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.WorkoutData
@@ -33,6 +32,7 @@ import app.readylytics.health.feature.workouts.R
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun WorkoutMetricsDisplay(
@@ -54,17 +54,24 @@ fun WorkoutMetricsDisplay(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
             ) {
-                MetricCard(
+                UniversalWorkoutMetricCard(
                     title = stringResource(R.string.workout_metric_training_load),
-                    value = (computedTrimp ?: MetricFormatter.roundTrimp(workout.trimp)).toString(),
+                    valueText = (computedTrimp ?: MetricFormatter.roundTrimp(workout.trimp)).toString(),
                     secondaryText = stringResource(R.string.workout_metric_trimp),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_training_load),
                     modifier = Modifier.weight(1f),
                 )
-                MetricCard(
+                UniversalWorkoutMetricCard(
                     title = stringResource(R.string.workout_metric_avg_pulse),
-                    value = if (workout.avgHr > 0) workout.avgHr.roundToInt().toString() else "--",
+                    valueText =
+                        if (workout.avgHr >
+                            0
+                        ) {
+                            workout.avgHr.roundToInt().toString()
+                        } else {
+                            stringResource(R.string.workout_metric_unavailable)
+                        },
                     secondaryText = stringResource(R.string.workout_metric_bpm),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_avg_pulse),
@@ -76,17 +83,20 @@ fun WorkoutMetricsDisplay(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
             ) {
-                MetricCard(
+                UniversalWorkoutMetricCard(
                     title = stringResource(R.string.workout_metric_gained_strain),
-                    value = gainedStrain?.let { gainedStrainDisplay } ?: "--",
+                    valueText =
+                        gainedStrain?.let { gainedStrainDisplay } ?: stringResource(
+                            R.string.workout_metric_unavailable,
+                        ),
                     secondaryText = stringResource(R.string.workout_metric_strain),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_gained_strain),
                     modifier = Modifier.weight(1f),
                 )
-                MetricCard(
+                UniversalWorkoutMetricCard(
                     title = stringResource(R.string.workout_metric_ras),
-                    value = MetricFormatter.formatRas(ras),
+                    valueText = MetricFormatter.formatRas(ras),
                     secondaryText = stringResource(R.string.workout_metric_points),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_ras),
@@ -98,13 +108,13 @@ fun WorkoutMetricsDisplay(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
             ) {
-                MetricCard(
+                UniversalWorkoutMetricCard(
                     title = stringResource(R.string.workout_metric_overall_load),
-                    value =
+                    valueText =
                         classification
                             ?.finalLoad
                             ?.let { stringResource(R.string.workout_metric_out_of_five, it.score()) }
-                            ?: "--",
+                            ?: stringResource(R.string.workout_metric_unavailable),
                     secondaryText =
                         classification
                             ?.finalLoad
@@ -114,13 +124,13 @@ fun WorkoutMetricsDisplay(
                     tooltip = stringResource(R.string.workout_tooltip_overall_load),
                     modifier = Modifier.weight(1f),
                 )
-                MetricCard(
+                UniversalWorkoutMetricCard(
                     title = stringResource(R.string.workout_metric_intensity),
-                    value =
+                    valueText =
                         classification
                             ?.intensity
                             ?.let { stringResource(R.string.workout_metric_out_of_five, it.score()) }
-                            ?: "--",
+                            ?: stringResource(R.string.workout_metric_unavailable),
                     secondaryText =
                         classification
                             ?.intensity
@@ -180,12 +190,12 @@ private fun ZoneBreakdownCard(workout: WorkoutData) {
     val statusColors = LocalStatusColors.current
     val zones =
         listOf(
-            Triple(stringResource(R.string.hr_zone_n, 5), workout.zone5Minutes, statusColors.poor),
-            Triple(stringResource(R.string.hr_zone_n, 4), workout.zone4Minutes, statusColors.warning),
-            Triple(stringResource(R.string.hr_zone_n, 3), workout.zone3Minutes, statusColors.optimal),
-            Triple(stringResource(R.string.hr_zone_n, 2), workout.zone2Minutes, statusColors.neutral),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 5), workout.zone5Minutes, statusColors.poor),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 4), workout.zone4Minutes, statusColors.warning),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 3), workout.zone3Minutes, statusColors.optimal),
+            Triple(stringResource(CoreUiR.string.hr_zone_n, 2), workout.zone2Minutes, statusColors.neutral),
             Triple(
-                stringResource(R.string.hr_zone_n, 1),
+                stringResource(CoreUiR.string.hr_zone_n, 1),
                 workout.zone1Minutes,
                 MaterialTheme.colorScheme.onSurfaceVariant,
             ),

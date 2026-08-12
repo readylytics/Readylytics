@@ -15,6 +15,7 @@ import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -199,6 +200,7 @@ class LocalBackupManagerTest {
                         cardId = CardId.HRV,
                         isVisible = false,
                         position = 4,
+                        requestedDisplayMode = DashboardCardDisplayMode.BAR,
                     ),
                 )
             coEvery { cardConfigRepo.dashboardCardConfigurations() } returns flowOf(cards)
@@ -227,6 +229,7 @@ class LocalBackupManagerTest {
             assertEquals("HRV", dashboardCards.getJSONObject(1).getString("cardId"))
             assertTrue(!dashboardCards.getJSONObject(1).getBoolean("isVisible"))
             assertEquals(4, dashboardCards.getJSONObject(1).getInt("position"))
+            assertTrue(backupJson.contains("\"requestedDisplayMode\":\"BAR\""))
         }
 
     @Test
@@ -269,6 +272,108 @@ class LocalBackupManagerTest {
             val preferences = JSONObject(backupJson).getJSONObject("preferences")
 
             assertEquals(45, preferences.getInt("hrrToleranceSeconds"))
+        }
+
+    @Test
+    fun createBackup_exportsRawVitalsTables() =
+        runTest {
+            db.weightRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                        id = "w1",
+                        timestampMs = 1000L,
+                        weightKg = 70.5f,
+                    ),
+                ),
+            )
+            db.bodyTemperatureRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity(
+                        id = "bt1",
+                        timestampMs = 1000L,
+                        celsius = 36.8f,
+                    ),
+                ),
+            )
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val json = JSONObject(backupJson)
+
+            assertEquals(1, json.getJSONObject("rowCounts").getInt("weightRecords"))
+            assertEquals(1, json.getJSONObject("rowCounts").getInt("bodyTemperatureRecords"))
+            assertEquals(0, json.getJSONObject("rowCounts").getInt("stepRecords"))
+            assertEquals("w1", json.getJSONArray("weightRecords").getJSONObject(0).getString("id"))
+            assertEquals(
+                36.8,
+                json.getJSONArray("bodyTemperatureRecords").getJSONObject(0).getDouble("celsius"),
+                0.01,
+            )
+            assertEquals(0, json.getJSONArray("bodyFatRecords").length())
+            assertEquals(0, json.getJSONArray("bloodPressureRecords").length())
+            assertEquals(0, json.getJSONArray("oxygenSaturationRecords").length())
+            assertEquals(0, json.getJSONArray("stepRecords").length())
+        }
+
+    @Test
+    fun createBackup_parallelRowCounts_areCompleteAndAccurate() =
+        runTest {
+            db.weightRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                        id = "w1",
+                        timestampMs = 1000L,
+                        weightKg = 70.5f,
+                    ),
+                ),
+            )
+            db.stepRecordDao().upsertAll(
+                listOf(
+                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                        id = "s1",
+                        startTime = 1000L,
+                        endTime = 2000L,
+                        count = 5000L,
+                    ),
+                ),
+            )
+
+            val result = manager.createBackup()
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val rowCounts = JSONObject(backupJson).getJSONObject("rowCounts")
+
+            // Seeded tables.
+            assertEquals(1, rowCounts.getInt("weightRecords"))
+            assertEquals(1, rowCounts.getInt("stepRecords"))
+            // Empty tables must still appear, counted correctly, in the parallel block.
+            assertEquals(0, rowCounts.getInt("sleepSessions"))
+            assertEquals(0, rowCounts.getInt("heartRateRecords"))
+            assertEquals(0, rowCounts.getInt("hrvRecords"))
+            assertEquals(0, rowCounts.getInt("workouts"))
+            assertEquals(0, rowCounts.getInt("dailySummaries"))
+            assertEquals(0, rowCounts.getInt("bodyFatRecords"))
+            assertEquals(0, rowCounts.getInt("bloodPressureRecords"))
+            assertEquals(0, rowCounts.getInt("oxygenSaturationRecords"))
+            assertEquals(0, rowCounts.getInt("bodyTemperatureRecords"))
         }
 
     @Test

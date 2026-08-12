@@ -157,6 +157,24 @@ class SleepAndThresholdSettingsViewModelTest {
         }
 
     @Test
+    fun bodyTempElevatedThreshold_validValue_persisted() =
+        runTest {
+            thresholdViewModel.onEvent(SettingsEvent.BodyTempElevatedThresholdChanged(0.75f))
+            advanceUntilIdle()
+
+            coVerify { thresholdSettings.updateBodyTempElevatedThreshold(0.75f) }
+        }
+
+    @Test
+    fun bodyTempElevatedThreshold_outOfRange_notPersisted() =
+        runTest {
+            thresholdViewModel.onEvent(SettingsEvent.BodyTempElevatedThresholdChanged(2.0f))
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { thresholdSettings.updateBodyTempElevatedThreshold(any()) }
+        }
+
+    @Test
     fun thresholdSettingsViewModel_circadianOverride_persisted() =
         runTest {
             thresholdViewModel.onEvent(SettingsEvent.CircadianThresholdOverrideChanged(30))

@@ -121,6 +121,22 @@ class ProductionReadinessStaticTest {
     }
 
     @Test
+    fun `main activity diagnostics rethrows coroutine cancellation`() {
+        val source = projectFile("app/src/main/kotlin/app/readylytics/health/MainActivity.kt").readText()
+        val cancellationRethrow = source.indexOf("is CancellationException")
+        val genericFailureHandler = source.indexOf("Failed to prepare diagnostic log")
+
+        assertTrue(
+            "MainActivity must import kotlinx.coroutines.CancellationException",
+            source.contains("import kotlinx.coroutines.CancellationException"),
+        )
+        assertTrue(
+            "CancellationException must be rethrown before the generic failure handler",
+            cancellationRethrow >= 0 && genericFailureHandler >= 0 && cancellationRethrow < genericFailureHandler,
+        )
+    }
+
+    @Test
     fun `local backup stages encrypted zip before publishing default backup file`() {
         val source = sourceFile("src/main/kotlin/app/readylytics/health/data/backup/LocalBackupManager.kt").readText()
 
@@ -360,5 +376,43 @@ class ProductionReadinessStaticTest {
                 content.contains("DomainLogger.installSink(SecureFileLogSink(this))") ||
                 content.contains("lateinit var secureLogSink: SecureFileLogSink"),
         )
+    }
+
+    @Test
+    fun `application keeps indirectly Room-backed settings lazy until database Ready`() {
+        val content =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/HealthDashboardApplication.kt",
+            ).readText()
+
+        assertTrue(content.contains("lateinit var settingsRepo: Lazy<SettingsRepository>"))
+        assertFalse(content.contains("lateinit var settingsRepo: SettingsRepository"))
+    }
+
+    @Test
+    fun `non-ready activity content uses a Room-free theme`() {
+        val activity =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/MainActivity.kt",
+            ).readText()
+        val readinessContent =
+            activity
+                .substringAfter("setContent {")
+                .substringBefore("private fun ReadylyticsContent")
+
+        assertTrue(readinessContent.contains("DatabaseReadinessTheme"))
+        assertFalse(readinessContent.contains("FitDashboardTheme {"))
+
+        val theme =
+            projectFile(
+                "app/src/main/kotlin/app/readylytics/health/ui/theme/FitDashboardTheme.kt",
+            ).readText()
+        val readinessTheme =
+            theme
+                .substringAfter("fun DatabaseReadinessTheme")
+                .substringBefore("fun FitDashboardTheme")
+
+        assertTrue(readinessTheme.contains("CoreFitDashboardTheme"))
+        assertFalse(readinessTheme.contains("hiltViewModel"))
     }
 }

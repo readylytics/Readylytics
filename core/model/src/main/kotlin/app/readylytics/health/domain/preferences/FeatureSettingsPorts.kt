@@ -6,6 +6,7 @@ import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
@@ -60,6 +61,7 @@ interface ThresholdSettings {
     suspend fun updateHrvWarningThreshold(value: Float)
     suspend fun updateRhrOptimalThreshold(value: Float)
     suspend fun updateRhrWarningThreshold(value: Float)
+    suspend fun updateBodyTempElevatedThreshold(value: Float)
     suspend fun updateConsistencyThresholdMinutes(minutes: Int)
     suspend fun updateConsistencyEvaluationDays(days: Int)
     suspend fun updateConsistencyBaselineDays(days: Int)
@@ -83,6 +85,8 @@ interface DisplaySettings {
     suspend fun updateBanisterMultiplier(value: Float)
     suspend fun updateChengBeta(value: Float)
     suspend fun updateItrimB(value: Float)
+    suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean)
+    suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?)
 }
 
 interface SyncSettings {

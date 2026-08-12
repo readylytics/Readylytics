@@ -229,22 +229,6 @@ class CardManagementDelegateTest {
         delegate.onReorderCards(sampleConfigs, invalid)
     }
 
-    // --- 8. toggleCardManagement legacy ---
-
-    @Test
-    fun `toggleCardManagement enters when not managing`() {
-        delegate.toggleCardManagement()
-        assertTrue(delegate.isManagingCards.value)
-    }
-
-    @Test
-    fun `toggleCardManagement cancels when already managing`() {
-        delegate.enterEditMode(sampleConfigs)
-        delegate.toggleCardManagement()
-        assertFalse(delegate.isManagingCards.value)
-        assertNull(delegate.pendingConfigs.value)
-    }
-
     // --- 9. State flow aggregation ---
 
     @Test
@@ -368,6 +352,45 @@ class CardManagementDelegateTest {
         }
 
     @Test
+    fun `reset then save strips body temperature from persisted configs when permission is denied`() =
+        testScope.runTest {
+            // Reset to defaults writes the raw SettingsDefaults.DEFAULT_DASHBOARD_CARDS (which
+            // includes BODY_TEMPERATURE, isVisible = true) straight into pendingConfigs. SaveChanges
+            // must still gate what actually reaches the repository on the injected permission check,
+            // independent of what createDashboardCardStateFlow filters for display.
+            val gatedDelegate =
+                CardManagementDelegate(repository, delegateScope, hasBodyTemperaturePermission = { false })
+
+            gatedDelegate.enterEditMode(sampleConfigs)
+            gatedDelegate.onResetToDefaults()
+            gatedDelegate.saveChanges()
+            advanceUntilIdle()
+
+            val expectedPersisted =
+                SettingsDefaults.DEFAULT_DASHBOARD_CARDS.filter { it.cardId != CardId.BODY_TEMPERATURE }
+            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expectedPersisted) }
+            coVerify(exactly = 0) {
+                repository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
+            }
+        }
+
+    @Test
+    fun `reset then save persists body temperature when permission is granted`() =
+        testScope.runTest {
+            val grantedDelegate =
+                CardManagementDelegate(repository, delegateScope, hasBodyTemperaturePermission = { true })
+
+            grantedDelegate.enterEditMode(sampleConfigs)
+            grantedDelegate.onResetToDefaults()
+            grantedDelegate.saveChanges()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) {
+                repository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
+            }
+        }
+
+    @Test
     fun `multiple saves persist each set independently`() =
         testScope.runTest {
             delegate.enterEditMode(sampleConfigs)
@@ -382,4 +405,64 @@ class CardManagementDelegateTest {
             coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(sampleConfigs) }
             coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(secondSet) }
         }
+
+    // --- 12. DisplayModeChanged ---
+
+    @Test
+    fun `changing one mode updates only matching pending card`() {
+        delegate.enterEditMode(sampleConfigs)
+        delegate.onEvent(
+            CardManagementEvent.DisplayModeChanged(
+                CardId.HRV,
+                DashboardCardDisplayMode.BAR,
+            ),
+        )
+        val updated = requireNotNull(delegate.pendingConfigs.value)
+        assertEquals(DashboardCardDisplayMode.BAR, updated.single { it.cardId == CardId.HRV }.requestedDisplayMode)
+        assertNull(updated.single { it.cardId == CardId.READINESS }.requestedDisplayMode)
+    }
+
+    @Test
+    fun `save changes persists the updated display mode`() =
+        testScope.runTest {
+            delegate.enterEditMode(sampleConfigs)
+            delegate.onEvent(
+                CardManagementEvent.DisplayModeChanged(
+                    CardId.HRV,
+                    DashboardCardDisplayMode.BAR,
+                ),
+            )
+            delegate.saveChanges()
+            advanceUntilIdle()
+
+            val expected =
+                sampleConfigs.map {
+                    if (it.cardId == CardId.HRV) it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR) else it
+                }
+            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expected) }
+        }
+
+    @Test
+    fun `cancel changes drops display mode updates without persisting`() =
+        testScope.runTest {
+            delegate.enterEditMode(sampleConfigs)
+            delegate.onEvent(
+                CardManagementEvent.DisplayModeChanged(
+                    CardId.HRV,
+                    DashboardCardDisplayMode.BAR,
+                ),
+            )
+            delegate.cancelChanges()
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
+            assertNull(delegate.pendingConfigs.value)
+        }
+
+    @Test
+    fun `DisplayModeChanged is a no-op when not editing`() {
+        delegate.onEvent(CardManagementEvent.DisplayModeChanged(CardId.HRV, DashboardCardDisplayMode.BAR))
+        assertFalse(delegate.isManagingCards.value)
+        assertNull(delegate.pendingConfigs.value)
+    }
 }

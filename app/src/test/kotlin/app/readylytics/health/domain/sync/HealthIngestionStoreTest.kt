@@ -214,6 +214,20 @@ class HealthIngestionStoreTest {
     }
 
     @Test
+    fun testBodyTemperatureInput() {
+        val input = BodyTemperatureInput(id = "1", timestampMs = 100, celsius = 37f, deviceName = "Thermometer")
+        assertEquals("1", input.id)
+        assertEquals(100, input.timestampMs)
+        assertEquals(37f, input.celsius)
+        assertEquals("Thermometer", input.deviceName)
+
+        val copy = input.copy(id = "2")
+        assertNotEquals(input, copy)
+        assertNotNull(input.toString())
+        assertNotNull(input.hashCode())
+    }
+
+    @Test
     fun testHealthIngestionBatch() {
         val batch =
             HealthIngestionBatch(
@@ -226,6 +240,8 @@ class HealthIngestionStoreTest {
                 bodyFatSamples = emptyList(),
                 bloodPressureSamples = emptyList(),
                 oxygenSaturationSamples = emptyList(),
+                bodyTemperatureSamples = emptyList(),
+                stepRecords = emptyList(),
             )
         assertEquals(0, batch.sleepSessions.size)
         assertEquals(0, batch.sleepStages.size)
@@ -236,6 +252,7 @@ class HealthIngestionStoreTest {
         assertEquals(0, batch.bodyFatSamples.size)
         assertEquals(0, batch.bloodPressureSamples.size)
         assertEquals(0, batch.oxygenSaturationSamples.size)
+        assertEquals(0, batch.bodyTemperatureSamples.size)
 
         val copy = batch.copy(sleepSessions = listOf(mockk()))
         assertNotEquals(batch, copy)

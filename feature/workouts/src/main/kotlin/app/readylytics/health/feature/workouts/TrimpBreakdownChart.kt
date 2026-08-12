@@ -55,6 +55,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private const val TARGET_X_AXIS_LABELS = 6
 
@@ -70,7 +71,7 @@ fun TrimpBreakdownChart(
     ) {
         Column(Modifier.padding(MaterialTheme.spacing.medium)) {
             Text(
-                text = stringResource(app.readylytics.health.core.ui.R.string.heart_rate_title),
+                text = stringResource(CoreUiR.string.heart_rate_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -199,9 +200,9 @@ private fun HrChart(
                 selectedIndex = idx
             },
         )
-    val prevActionLabel = stringResource(R.string.action_previous_point)
-    val nextActionLabel = stringResource(R.string.action_next_point)
-    val clearActionLabel = stringResource(R.string.action_clear_selection)
+    val prevActionLabel = stringResource(CoreUiR.string.action_previous_point)
+    val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
+    val clearActionLabel = stringResource(CoreUiR.string.action_clear_selection)
 
     val customActionsList =
         remember(selectedIndex, chartData) {
@@ -256,7 +257,7 @@ private fun HrChart(
             } else {
                 null
             }
-        } ?: stringResource(R.string.chart_accessibility_no_selection)
+        } ?: stringResource(CoreUiR.string.chart_accessibility_no_selection)
 
     Box(
         modifier =

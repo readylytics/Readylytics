@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import app.readylytics.health.data.preferences.BackupSchedule
 import dagger.Lazy
 import java.util.concurrent.TimeUnit
@@ -27,23 +28,49 @@ class WorkerSchedulerImpl
             const val DATA_CLEANUP_WORK_NAME = WorkerScheduler.DATA_CLEANUP_WORK_NAME
             const val RESYNC_WORK_NAME = WorkerScheduler.RESYNC_WORK_NAME
             const val PERIODIC_SYNC_WORK_NAME = WorkerScheduler.PERIODIC_SYNC_WORK_NAME
+            const val DATABASE_MIGRATION_WORK_NAME = WorkerScheduler.DATABASE_MIGRATION_WORK_NAME
         }
 
-        /**
-         * Enqueues the full historical Health Connect resync as a unique one-time foreground worker.
-         * [ExistingWorkPolicy.KEEP] means a tap while a resync is already running is a no-op rather
-         * than restarting it. Expedited so it starts promptly when the user explicitly requests it.
-         */
-        override fun scheduleResyncWorker() {
+        override fun scheduleDatabaseMigration() {
             val request =
-                OneTimeWorkRequestBuilder<HealthResyncWorker>()
-                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                OneTimeWorkRequestBuilder<DatabaseMigrationWorker>()
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                     .build()
 
             workManager.get().enqueueUniqueWork(
-                RESYNC_WORK_NAME,
+                DATABASE_MIGRATION_WORK_NAME,
                 ExistingWorkPolicy.KEEP,
+                request,
+            )
+        }
+
+        /**
+         * Enqueues the historical Health Connect resync (or, if [recomputeOnly], the SCORE-007
+         * recompute-only pass) as a unique one-time foreground worker. Full resyncs use
+         * [ExistingWorkPolicy.KEEP], while settings changes append a durable successor with
+         * [ExistingWorkPolicy.APPEND_OR_REPLACE]. Rapid settings changes may queue redundant local
+         * passes, but the final queued pass captures the newest preferences without silently losing
+         * a request. Expedited so it starts promptly when explicitly requested.
+         */
+        override fun scheduleResyncWorker(recomputeOnly: Boolean) {
+            val request =
+                OneTimeWorkRequestBuilder<HealthResyncWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .setInputData(
+                        workDataOf(HealthResyncWorker.KEY_RECOMPUTE_ONLY to recomputeOnly),
+                    ).build()
+
+            val existingWorkPolicy =
+                if (recomputeOnly) {
+                    ExistingWorkPolicy.APPEND_OR_REPLACE
+                } else {
+                    ExistingWorkPolicy.KEEP
+                }
+
+            workManager.get().enqueueUniqueWork(
+                RESYNC_WORK_NAME,
+                existingWorkPolicy,
                 request,
             )
         }
@@ -106,8 +133,15 @@ class WorkerSchedulerImpl
          * preserving the unique work identity.
          */
         override fun schedulePeriodicSync(intervalMinutes: Long) {
+            val constraints =
+                Constraints
+                    .Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+
             val request =
                 PeriodicWorkRequestBuilder<PeriodicHealthSyncWorker>(intervalMinutes, TimeUnit.MINUTES)
+                    .setConstraints(constraints)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
                     .build()
 

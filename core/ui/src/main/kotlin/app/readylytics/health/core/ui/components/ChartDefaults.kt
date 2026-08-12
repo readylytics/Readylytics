@@ -6,7 +6,9 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.core.ui.common.DateFormatUtils
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -22,8 +24,6 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 object ChartDefaults {
     @Composable
@@ -47,22 +47,42 @@ object ChartDefaults {
 
     @Composable
     fun rememberDayOffsetFormatter(rangeStartMs: Long): CartesianValueFormatter =
-        remember(rangeStartMs) {
-            val formatter =
-                DateTimeFormatter.ofPattern(
-                    DateFormatUtils.DATE_FORMAT_SHORT,
-                    Locale.getDefault(),
-                )
+        rememberDayOffsetFormatter(rangeStartMs, ZoneId.systemDefault())
 
+    @Composable
+    fun rememberDayOffsetFormatter(
+        rangeStartMs: Long,
+        zoneId: ZoneId,
+    ): CartesianValueFormatter =
+        remember(rangeStartMs, zoneId) {
+            val labels = DayOffsetLabelCache(rangeStartMs, zoneId)
+            CartesianValueFormatter { _, value, _ -> labels.label(value) }
+        }
+
+    /**
+     * Granularity-aware x-axis formatter. [DAILY] delegates to [rememberDayOffsetFormatter];
+     * [MONTHLY] and [EIGHT_WEEK] resolve each day offset to its calendar date in [zoneId] and
+     * format the containing period via [periodLabelFor].
+     */
+    @Composable
+    fun rememberPeriodFormatter(
+        rangeStartMs: Long,
+        granularity: TrendGranularity,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): CartesianValueFormatter {
+        if (granularity == TrendGranularity.DAILY) {
+            return rememberDayOffsetFormatter(rangeStartMs, zoneId)
+        }
+        // Resolved outside remember{} so the formatter lambda can capture it; resource strings
+        // must never be built as Kotlin literals.
+        val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+        return remember(rangeStartMs, granularity, zoneId, ordinalLabel) {
+            val baseDate = Instant.ofEpochMilli(rangeStartMs).atZone(zoneId).toLocalDate()
             CartesianValueFormatter { _, value, _ ->
-                Instant
-                    .ofEpochMilli(rangeStartMs)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-                    .plusDays(value.toLong())
-                    .format(formatter)
+                periodLabelFor(granularity, baseDate.plusDays(value.toLong()), ordinalLabel)
             }
         }
+    }
 
     @Composable
     fun rememberChartState(
@@ -88,6 +108,7 @@ object ChartDefaults {
                             when (rangeDays) {
                                 30 -> Zoom.fixed(6f)
                                 180 -> Zoom.fixed(25f)
+                                360 -> Zoom.fixed(45f)
                                 else -> Zoom.fixed(2f)
                             }
                         },
@@ -95,100 +116,82 @@ object ChartDefaults {
             scrollState to zoomState
         }
 
-    fun itemPlacerForRangeDays(rangeDays: Int): HorizontalAxis.ItemPlacer {
+    /**
+     * Single tick source for all Vico horizontal axes. With [pointOffsets] non-empty (bucketed
+     * monthly/quarterly charts) it places one tick per actual plotted point offset. With empty
+     * [pointOffsets] (daily charts) it delegates to [DayOffsetTickCalculator], which owns the
+     * zoom-aware spacing/caching for `0..rangeDays-1` domains.
+     */
+    internal fun tickValuesFor(
+        rangeDays: Int,
+        pointOffsets: List<Int>,
+        visibleXRange: ClosedFloatingPointRange<Double>,
+    ): List<Double> =
+        if (pointOffsets.isEmpty()) {
+            DayOffsetTickCalculator(rangeDays).values(visibleXRange)
+        } else {
+            pointOffsets
+                .sorted()
+                .distinct()
+                .map { it.toDouble() }
+                .filter { it in visibleXRange }
+        }
+
+    /**
+     * The returned placer is stateful: the daily branch owns a [DayOffsetTickCalculator] holding
+     * per-instance candidate and single-entry result caches. Callers must scope it to a single chart
+     * via `remember(rangeDays, pointOffsets) { ChartDefaults.itemPlacerForRangeDays(...) }` —
+     * constructing it inline on every recomposition silently discards the caching (no test failure,
+     * no visual difference, just the optimization evaporating).
+     */
+    fun itemPlacerForRangeDays(
+        rangeDays: Int,
+        pointOffsets: List<Int> = emptyList(),
+    ): HorizontalAxis.ItemPlacer {
         val basePlacer =
             HorizontalAxis.ItemPlacer.aligned(
                 spacing = { 1 },
                 addExtremeLabelPadding = true,
             )
 
-        return object : HorizontalAxis.ItemPlacer by basePlacer {
-            private fun calculateValues(visibleXRange: ClosedFloatingPointRange<Double>): List<Double> {
-                val visibleDays = visibleXRange.endInclusive - visibleXRange.start
-
-                // If mostly/fully zoomed out, use perfectly spaced 6-label lists to avoid strange jumps
-                if (visibleDays > rangeDays - 2.0) {
-                    val zoomedOutList =
-                        when (rangeDays) {
-                            30 -> listOf(0.0, 6.0, 12.0, 18.0, 24.0, 29.0)
-                            180 -> listOf(0.0, 36.0, 72.0, 108.0, 144.0, 179.0)
-                            else -> null
-                        }
-                    if (zoomedOutList != null) {
-                        val buffer = 0.01
-                        return zoomedOutList.filter {
-                            it in (visibleXRange.start - buffer)..(visibleXRange.endInclusive + buffer)
-                        }
-                    }
-                }
-
-                val spacing =
-                    when {
-                        visibleDays <= 1.1 -> 1
-                        visibleDays <= 3.5 -> 2
-                        visibleDays <= 8.5 -> 2
-                        visibleDays <= 15.5 -> 2
-                        visibleDays <= 35.0 -> 5
-                        visibleDays <= 70.0 -> 10
-                        visibleDays <= 120.0 -> 15
-                        else -> 35
-                    }
-
-                val maxVal = (rangeDays - 1).toDouble()
-                val values = mutableListOf<Double>()
-                var current = 0.0
-                while (current <= maxVal) {
-                    values.add(current)
-                    current += spacing.toDouble()
-                }
-
-                val buffer = 0.01
-                val visibleValues =
-                    values
-                        .filter {
-                            it in (visibleXRange.start - buffer)..(visibleXRange.endInclusive + buffer)
-                        }.toMutableList()
-
-                val firstDay = 0.0
-                if (firstDay in visibleXRange && !visibleValues.contains(firstDay)) {
-                    visibleValues.add(0, firstDay)
-                }
-
-                if (maxVal in visibleXRange && !visibleValues.contains(maxVal)) {
-                    val minSeparation =
-                        when {
-                            visibleDays <= 1.1 -> 0.1
-                            visibleDays <= 3.5 -> 0.1
-                            visibleDays <= 8.5 -> if (visibleDays <= 5.5) 0.5 else 1.1
-                            visibleDays <= 15.5 -> 1.1
-                            visibleDays <= 35.0 -> 4.0
-                            visibleDays <= 70.0 -> 8.0
-                            visibleDays <= 120.0 -> 12.0
-                            else -> 24.0
-                        }
-                    val lastValue = visibleValues.lastOrNull() ?: 0.0
-                    if (maxVal - lastValue < minSeparation) {
-                        visibleValues.removeAt(visibleValues.size - 1)
-                    }
-                    visibleValues.add(maxVal)
-                }
-
-                return visibleValues.sorted()
+        // Per-instance caches are safe here: Vico measures and draws on a single thread, this placer
+        // is scoped to one chart via remember(rangeDays, pointOffsets) at every call site, and Vico
+        // only iterates the returned list (HorizontalAxis.kt:184-185 and :294-295 in Vico 3.2.3) --
+        // it never mutates it, so handing the same cached instance to getLabelValues, getLineValues,
+        // and consecutive frames is safe. A single frame asks three times with the same visible range.
+        // The bucketed branch has no cache: its point-offset list is already the tick list.
+        val dailyTicks = if (pointOffsets.isEmpty()) DayOffsetTickCalculator(rangeDays) else null
+        val pointTicks =
+            if (pointOffsets.isEmpty()) {
+                null
+            } else {
+                pointOffsets.sorted().distinct().map { it.toDouble() }
             }
 
+        return object : HorizontalAxis.ItemPlacer by basePlacer {
             override fun getLabelValues(
                 context: CartesianDrawingContext,
                 visibleXRange: ClosedFloatingPointRange<Double>,
                 fullXRange: ClosedFloatingPointRange<Double>,
                 maxLabelWidth: Float,
-            ): List<Double> = calculateValues(visibleXRange)
+            ): List<Double> =
+                if (pointTicks != null) {
+                    pointTicks.filter { it in visibleXRange }
+                } else {
+                    requireNotNull(dailyTicks).values(visibleXRange)
+                }
 
             override fun getLineValues(
                 context: CartesianDrawingContext,
                 visibleXRange: ClosedFloatingPointRange<Double>,
                 fullXRange: ClosedFloatingPointRange<Double>,
                 maxLabelWidth: Float,
-            ): List<Double> = calculateValues(visibleXRange)
+            ): List<Double> =
+                if (pointTicks != null) {
+                    pointTicks.filter { it in visibleXRange }
+                } else {
+                    requireNotNull(dailyTicks).values(visibleXRange)
+                }
         }
     }
 }

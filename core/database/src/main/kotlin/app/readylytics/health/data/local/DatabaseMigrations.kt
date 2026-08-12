@@ -133,12 +133,51 @@ object DatabaseMigrations {
                 )
             }
         }
-        
+
     private val MIGRATION_4_5 =
         object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE daily_summaries ADD COLUMN supplementalSleepDurationMinutes INTEGER")
                 db.execSQL("ALTER TABLE daily_summaries ADD COLUMN napCount INTEGER")
+            }
+        }
+
+    private val MIGRATION_5_6 =
+        object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                DatabaseUpgradeSql.V5_TO_V6.forEach(db::execSQL)
+            }
+        }
+
+    private val MIGRATION_7_8 =
+        object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `body_temperature_records` (
+                        `id` TEXT NOT NULL,
+                        `timestampMs` INTEGER NOT NULL,
+                        `celsius` REAL NOT NULL,
+                        `deviceName` TEXT,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_body_temperature_records_timestampMs` " +
+                        "ON `body_temperature_records` (`timestampMs`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_body_temperature_records_timestampMs_deviceName` " +
+                        "ON `body_temperature_records` (`timestampMs`, `deviceName`)",
+                )
+            }
+        }
+
+    private val MIGRATION_8_9 =
+        object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE daily_summaries ADD COLUMN avgSleepingBodyTemp REAL")
             }
         }
 
@@ -148,5 +187,8 @@ object DatabaseMigrations {
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_7_8,
+            MIGRATION_8_9,
         )
 }

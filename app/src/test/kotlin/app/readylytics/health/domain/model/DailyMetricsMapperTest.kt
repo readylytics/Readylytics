@@ -1,7 +1,6 @@
 package app.readylytics.health.domain.model
 
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.ScoringConstants
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.math.exp
@@ -18,14 +17,14 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `rhr baseline 60_7 rounds to 61`() {
-        val summary = DailySummary(date = date, rhrBpm = 60.7f)
+        val summary = DailySummary(date = date, rhrBpm = 60.7f, baselineCalculatedAtDate = date)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(61, metrics.rhrBaselineRounded)
     }
 
     @Test
     fun `rhr baseline 72_4 rounds to 72`() {
-        val summary = DailySummary(date = date, rhrBpm = 72.4f)
+        val summary = DailySummary(date = date, rhrBpm = 72.4f, baselineCalculatedAtDate = date)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(72, metrics.rhrBaselineRounded)
     }
@@ -71,6 +70,7 @@ class DailyMetricsMapperTest {
                 hrvMuMssd = 42.1234f,
                 hrvSigmaMssd = 3.5678f,
                 rhrBpm = 58.9f,
+                baselineCalculatedAtDate = date,
             )
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(42.1234f, metrics.hrvBaselineMeanRaw)
@@ -100,7 +100,7 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `rhr baseline reads directly from rhrBpm snapshot`() {
-        val summary = DailySummary(date = date, rhrBpm = 50f)
+        val summary = DailySummary(date = date, rhrBpm = 50f, baselineCalculatedAtDate = date)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(50f, metrics.rhrBaselineRaw)
         assertEquals(50, metrics.rhrBaselineRounded)
@@ -123,11 +123,51 @@ class DailyMetricsMapperTest {
     }
 
     @Test
-    fun `rhr baseline falls back to DEFAULT_RHR_BPM when nothing else available`() {
+    fun `rhr baseline is null when no marked snapshot or override is available`() {
         val noOverridePrefs = UserPreferences(rhrBaselineOverride = null)
         val summary = DailySummary(date = date)
         val metrics = DailyMetricsMapper.toMetrics(summary, noOverridePrefs)
-        assertEquals(ScoringConstants.DEFAULT_RHR_BPM, metrics.rhrBaselineRaw)
+        assertNull(metrics.rhrBaselineRaw)
+        assertNull(metrics.rhrBaselineRounded)
+        assertNull(metrics.rhrSnapshotRaw)
+    }
+
+    @Test
+    fun `calibrating synthetic RHR default is not projected as a personal baseline`() {
+        val noOverridePrefs = UserPreferences(rhrBaselineOverride = null)
+        val summary =
+            DailySummary(
+                date = date,
+                restingHeartRate = 63,
+                rhrBpm = 60f,
+                baselineCalculatedAtDate = null,
+            )
+        val metrics = DailyMetricsMapper.toMetrics(summary, noOverridePrefs)
+
+        assertNull(metrics.rhrBaselineRaw)
+        assertNull(metrics.rhrBaselineRounded)
+        assertNull(metrics.rhrSnapshotRaw)
+        assertNull(metrics.rhrBaselineDiff)
+        assertNull(metrics.rhrBaselineArrow)
+    }
+
+    @Test
+    fun `explicit RHR override wins over calibrating synthetic default`() {
+        val overridePrefs = UserPreferences(rhrBaselineOverride = 54.6f)
+        val summary =
+            DailySummary(
+                date = date,
+                restingHeartRate = 63,
+                rhrBpm = 60f,
+                baselineCalculatedAtDate = null,
+            )
+        val metrics = DailyMetricsMapper.toMetrics(summary, overridePrefs)
+
+        assertEquals(54.6f, metrics.rhrBaselineRaw)
+        assertEquals(55, metrics.rhrBaselineRounded)
+        assertNull(metrics.rhrSnapshotRaw)
+        assertEquals(8, metrics.rhrBaselineDiff)
+        assertEquals(BaselineArrow.UP, metrics.rhrBaselineArrow)
     }
 
     // --- null safety + display formatting ---
@@ -172,7 +212,7 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `baseline arrow and diff reflect measured value relative to baseline`() {
-        val above = DailySummary(date = date, restingHeartRate = 60, rhrBpm = 55f)
+        val above = DailySummary(date = date, restingHeartRate = 60, rhrBpm = 55f, baselineCalculatedAtDate = date)
         val metrics = DailyMetricsMapper.toMetrics(above, prefs)
         assertEquals(BaselineArrow.UP, metrics.rhrBaselineArrow)
         assertEquals(5, metrics.rhrBaselineDiff)

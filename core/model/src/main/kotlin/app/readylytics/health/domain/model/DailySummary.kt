@@ -25,6 +25,7 @@ data class DailySummary(
     val bloodPressureSystolic: Int? = null,
     val bloodPressureDiastolic: Int? = null,
     val avgSleepingSpo2: Float? = null,
+    val avgSleepingBodyTemp: Float? = null,
     val hrvMuMssd: Float? = null,
     val hrvSigmaMssd: Float? = null,
     val rhrBpm: Float? = null,

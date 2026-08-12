@@ -3,6 +3,7 @@ package app.readylytics.health.data.healthconnect
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -12,6 +13,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -43,6 +45,7 @@ internal enum class FakeOp {
     BodyFat,
     BloodPressure,
     OxygenSaturation,
+    BodyTemperature,
     Discovery,
 }
 
@@ -57,7 +60,7 @@ internal enum class FakeOp {
  *   - optional reads (weight, body fat, blood pressure) swallow exceptions and return empty
  *   - reads accept an [Instant] range and filter inclusively at the low bound, exclusively
  *     at the high bound (matching [androidx.health.connect.client.time.TimeRangeFilter.between])
- *   - readSteps aggregates totals; readStepsRange groups by [LocalDate]
+ *   - readSteps aggregates totals; readDailyStepTotals groups by [LocalDate]
  *   - paginated reads loop until exhausted; the fake records the page count served
  *
  * Tests populate the public counters (e.g. [sleepCount]) and the [errors] map to drive
@@ -70,7 +73,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
             HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-            HealthPermission.getReadPermission(StepsRecord::class),
         )
 
     override val requiredPermissions: Set<String> =
@@ -78,10 +80,12 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     override val optionalPermissions: Set<String> =
         setOf(
+            HealthPermission.getReadPermission(StepsRecord::class),
             HealthPermission.getReadPermission(WeightRecord::class),
             HealthPermission.getReadPermission(BodyFatRecord::class),
             HealthPermission.getReadPermission(BloodPressureRecord::class),
             HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+            HealthPermission.getReadPermission(BodyTemperatureRecord::class),
         )
 
     override val allPermissions: Set<String> = requiredPermissions + optionalPermissions
@@ -103,6 +107,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     val bodyFatCount: MutableMap<Instant, Int> = mutableMapOf()
     val bpCount: MutableMap<Instant, Int> = mutableMapOf()
     val spo2Count: MutableMap<Instant, Int> = mutableMapOf()
+    val bodyTemperatureCount: MutableMap<Instant, Int> = mutableMapOf()
 
     /** Synthetic steps keyed by sample timestamp. Each entry is one StepsRecord. */
     val stepsByInstant: MutableMap<Instant, Long> = mutableMapOf()
@@ -161,6 +166,30 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         return stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
     }
 
+    override suspend fun readHeartRateSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+    ) {
+        translateCritical(FakeOp.HeartRate)
+        val total = totalInRange(hrCount, from, to)
+        hrPagesServed = pagesFor(total)
+        stubList(total) { index -> placeholderHeartRate(index) }
+            .chunked(pageSize)
+            .forEach { onPage(it) }
+    }
+
+    override suspend fun readHrvSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHrvRecord>) -> Unit,
+    ) {
+        translateCritical(FakeOp.Hrv)
+        stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
+            .chunked(pageSize)
+            .forEach { onPage(it) }
+    }
+
     override suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
@@ -175,7 +204,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<DomainStepsRecord> {
-        translateCritical(FakeOp.Steps)
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return emptyList()
+        if (error != null) throw error
         val count = stepsByInstant.keys.count { inRange(it, from, to) }
         return stubList(count) { index -> placeholderSteps(index) }
     }
@@ -184,32 +215,29 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): Long {
-        translateCritical(FakeOp.Steps)
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return 0L
+        if (error != null) throw error
         return stepsByInstant
             .filterKeys { inRange(it, from, to) }
             .values
             .sum()
     }
 
-    override suspend fun readStepsRange(
+    override suspend fun readDailyStepTotals(
         from: Instant,
         to: Instant,
-    ): Map<LocalDate, Long> =
-        try {
-            errors[FakeOp.Steps]?.let { throw it }
-            val zone = ZoneId.systemDefault()
-            stepsByInstant
-                .filterKeys { inRange(it, from, to) }
-                .entries
-                .groupBy { it.key.atZone(zone).toLocalDate() }
-                .mapValues { (_, list) -> list.sumOf { it.value } }
-        } catch (e: SecurityException) {
-            throw HealthConnectPermissionRevokedException(e)
-        } catch (e: HealthConnectPermissionRevokedException) {
-            throw e
-        } catch (_: Exception) {
-            emptyMap()
-        }
+        zoneId: ZoneId,
+    ): Map<LocalDate, Long> {
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return emptyMap()
+        if (error != null) throw error
+        return stepsByInstant
+            .filterKeys { inRange(it, from, to) }
+            .entries
+            .groupBy { it.key.atZone(zoneId).toLocalDate() }
+            .mapValues { (_, list) -> list.sumOf { it.value } }
+    }
 
     override suspend fun readWeightRecords(
         from: Instant,
@@ -243,6 +271,32 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             stubList(totalInRange(spo2Count, from, to)) { index -> placeholderOxygen(index) }
         }
 
+    override suspend fun readBodyTemperatureRecords(
+        from: Instant,
+        to: Instant,
+    ): List<DomainBodyTemperatureRecord> =
+        runOptional(FakeOp.BodyTemperature) {
+            stubList(totalInRange(bodyTemperatureCount, from, to)) { index -> placeholderBodyTemperature(index) }
+        }
+
+    override suspend fun hasBodyTemperaturePermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
+
+    override suspend fun hasStepsPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(StepsRecord::class))
+
+    override suspend fun hasWeightPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(WeightRecord::class))
+
+    override suspend fun hasBodyFatPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BodyFatRecord::class))
+
+    override suspend fun hasBloodPressurePermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(BloodPressureRecord::class))
+
+    override suspend fun hasOxygenSaturationPermission(): Boolean =
+        granted.contains(HealthPermission.getReadPermission(OxygenSaturationRecord::class))
+
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays
         return try {
@@ -273,8 +327,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             errors[op]?.let { throw it }
             block()
         } catch (_: SecurityException) {
-            emptyList()
-        } catch (_: Exception) {
             emptyList()
         }
 
@@ -345,7 +397,9 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     private fun placeholderSteps(index: Int): DomainStepsRecord =
         DomainStepsRecord(
+            id = "steps-$index",
             startTime = PLACEHOLDER_TIME.plusSeconds(index.toLong()),
+            endTime = PLACEHOLDER_TIME.plusSeconds(index.toLong() + 1),
             count = 1L,
             deviceName = PLACEHOLDER_DEVICE,
         )
@@ -380,6 +434,14 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             id = "spo2-$index",
             time = PLACEHOLDER_TIME,
             percentage = 0.98f,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderBodyTemperature(index: Int): DomainBodyTemperatureRecord =
+        DomainBodyTemperatureRecord(
+            id = "body-temp-$index",
+            time = PLACEHOLDER_TIME,
+            celsius = 36.8f,
             deviceName = PLACEHOLDER_DEVICE,
         )
 

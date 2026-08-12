@@ -1,11 +1,14 @@
 package app.readylytics.health.feature.vitals.weight
 
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.local.entity.WeightRecordEntity
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.BmiCategory
 import app.readylytics.health.domain.model.BmiStatus
+import app.readylytics.health.domain.model.WeightRecord
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.WeightRepository
 import io.mockk.coEvery
@@ -24,7 +27,15 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
+
+private fun WeightRecordEntity(
+    id: String,
+    timestampMs: Long,
+    weightKg: Float,
+    deviceName: String? = null,
+): WeightRecord = WeightRecord(id, Instant.ofEpochMilli(timestampMs), weightKg, deviceName)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WeightDetailViewModelTest {
@@ -176,7 +187,8 @@ class WeightDetailViewModelTest {
             assertEquals(2_000L, newest.timestampMs)
             assertEquals(79.6f, newest.weightDisplay, 0.01f)
             assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
-            assertEquals(BmiStatus.Neutral, newest.bmiStatus)
+            assertEquals(BmiStatus.Warning, newest.bmiStatus)
+            assertEquals(BmiCategory.OVERWEIGHT, newest.bmiCategory)
 
             val oldest = state.historyItems[1]
             assertEquals(1_000L, oldest.timestampMs)
@@ -215,5 +227,93 @@ class WeightDetailViewModelTest {
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             assertEquals(null, state.historyItems[0].bmiStatus)
+            assertEquals(null, state.historyItems[0].bmiCategory)
+        }
+
+    @Test
+    fun `historyItems use canonical BMI status boundaries`() =
+        runTest {
+            val records =
+                listOf(
+                    WeightRecordEntity("underweight", 1_000L, 18.4f),
+                    WeightRecordEntity("healthy", 2_000L, 18.5f),
+                    WeightRecordEntity("overweight", 3_000L, 25f),
+                    WeightRecordEntity("obesity", 4_000L, 30f),
+                )
+            coEvery { weightRepository.getByDateRange(any(), any()) } returns records
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = 100f))
+            viewModel = createViewModel()
+
+            val statuses =
+                viewModel.uiState
+                    .first { it.historyItems.size == records.size }
+                    .historyItems
+                    .associate { it.weightDisplay to it.bmiStatus }
+
+            assertEquals(BmiStatus.Warning, statuses[18.4f])
+            assertEquals(BmiStatus.Optimal, statuses[18.5f])
+            assertEquals(BmiStatus.Warning, statuses[25f])
+            assertEquals(BmiStatus.Poor, statuses[30f])
+        }
+
+    @Test
+    fun `twelve month range buckets daily weights into eight week points with a period summary`() =
+        runTest {
+            val start = LocalDate.of(2026, 1, 1)
+            selectedDateFlow.value = start
+            val zone = java.time.ZoneId.systemDefault()
+            val records =
+                listOf(
+                    // Octad 1 (weeks 1-8): one record
+                    WeightRecordEntity(
+                        "o1",
+                        start
+                            .plusMonths(1)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        70f,
+                    ),
+                    // Octad 2 (weeks 9-16): one record
+                    WeightRecordEntity(
+                        "o2",
+                        start
+                            .plusMonths(2)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        72f,
+                    ),
+                    // Octad 3 (weeks 17-24): one record
+                    WeightRecordEntity(
+                        "o3",
+                        start
+                            .plusMonths(4)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                        71f,
+                    ),
+                )
+            coEvery { weightRepository.getByDateRange(any(), any()) } returns records
+            coEvery { weightRepository.getLatest() } returns records.last()
+            coEvery { weightRepository.getPrevious(any()) } returns records[1]
+
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC))
+
+            viewModel = createViewModel()
+            viewModel.onRangeSelected(TimeRange.TWELVE_MONTHS)
+
+            val state =
+                viewModel.uiState.first {
+                    it.selectedRange == TimeRange.TWELVE_MONTHS && !it.isLoading
+                }
+
+            // Only three populated octads survive bucketing.
+            assertEquals(3, state.dailyWeights.count { it.value != null })
+            assertEquals(listOf(70f, 72f, 71f), state.dailyWeights.filter { it.value != null }.map { it.value })
+            assertEquals(TrendGranularity.EIGHT_WEEK, state.periodSummary?.granularity)
         }
 }

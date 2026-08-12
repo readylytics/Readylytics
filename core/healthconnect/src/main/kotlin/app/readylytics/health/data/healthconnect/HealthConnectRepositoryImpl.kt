@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -12,12 +13,14 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
@@ -38,9 +41,29 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.Period
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+
+// On API 34+ (platform-integrated Health Connect) a permission-denied call throws
+// android.health.connect.HealthConnectException, which wraps the real SecurityException as its
+// cause rather than extending it -- so a plain `catch (e: SecurityException)` misses it and the
+// call is treated as a fatal error instead of "permission not granted". Shared by every Health
+// Connect call site in this module (module-internal visibility) that needs to tell the two apart.
+internal fun Throwable.asHealthConnectSecurityCause(): SecurityException? {
+    var current: Throwable? = this
+    var depth = 0
+    while (current != null && depth < 10) {
+        if (current is SecurityException) return current
+        current = current.cause
+        depth++
+    }
+    return null
+}
 
 @Singleton
 class HealthConnectRepositoryImpl
@@ -55,7 +78,6 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(HeartRateRecord::class),
                 HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
                 HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-                HealthPermission.getReadPermission(StepsRecord::class),
             )
 
         override val requiredPermissions: Set<String> =
@@ -64,10 +86,12 @@ class HealthConnectRepositoryImpl
 
         override val optionalPermissions: Set<String> =
             setOf(
+                HealthPermission.getReadPermission(StepsRecord::class),
                 HealthPermission.getReadPermission(WeightRecord::class),
                 HealthPermission.getReadPermission(BodyFatRecord::class),
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
                 HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+                HealthPermission.getReadPermission(BodyTemperatureRecord::class),
             )
 
         override val allPermissions: Set<String> =
@@ -103,11 +127,17 @@ class HealthConnectRepositoryImpl
                         }
                         throw e
                     }
-                app.readylytics.health.domain.util.logD(
-                    "HealthConnectRepository",
-                ) { "Granted permissions: $granted" }
-                app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                    "Required permissions: $requiredPermissions"
+                if (app.readylytics.health.core.healthconnect.BuildConfig.DEBUG) {
+                    app.readylytics.health.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "Granted permissions: $granted" }
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Required permissions: $requiredPermissions"
+                    }
+                } else {
+                    app.readylytics.health.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "Granted permissions count: ${granted.size}" }
                 }
 
                 if (granted.containsAll(requiredPermissions)) {
@@ -117,10 +147,51 @@ class HealthConnectRepositoryImpl
                     PermissionStatus.Granted
                 } else {
                     val missing = requiredPermissions - granted
-                    app.readylytics.health.domain.util.logD(
-                        "HealthConnectRepository",
-                    ) { "Missing permissions: $missing" }
+                    if (app.readylytics.health.core.healthconnect.BuildConfig.DEBUG) {
+                        app.readylytics.health.domain.util.logI(
+                            "HealthConnectRepository",
+                        ) { "Missing permissions: $missing" }
+                    } else {
+                        app.readylytics.health.domain.util.logD(
+                            "HealthConnectRepository",
+                        ) { "Missing permissions count: ${missing.size}" }
+                    }
                     PermissionStatus.Missing(missing)
+                }
+            }
+
+        override suspend fun hasBodyTemperaturePermission(): Boolean =
+            hasPermission<BodyTemperatureRecord>("body temperature")
+
+        override suspend fun hasStepsPermission(): Boolean =
+            hasPermission<StepsRecord>("steps")
+
+        override suspend fun hasWeightPermission(): Boolean =
+            hasPermission<WeightRecord>("weight")
+
+        override suspend fun hasBodyFatPermission(): Boolean =
+            hasPermission<BodyFatRecord>("body fat")
+
+        override suspend fun hasBloodPressurePermission(): Boolean =
+            hasPermission<BloodPressureRecord>("blood pressure")
+
+        override suspend fun hasOxygenSaturationPermission(): Boolean =
+            hasPermission<OxygenSaturationRecord>("oxygen saturation")
+
+        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> hasPermission(
+            label: String,
+        ): Boolean =
+            withContext(ioDispatcher) {
+                if (!isAvailable()) return@withContext false
+                try {
+                    client.permissionController
+                        .getGrantedPermissions()
+                        .contains(HealthPermission.getReadPermission(T::class))
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                        "Failed to check $label permission"
+                    }
+                    false
                 }
             }
 
@@ -129,6 +200,20 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<T> {
             val all = mutableListOf<T>()
+            readAllPagesStreaming<T>(from, to) { page -> all.addAll(page) }
+            return all
+        }
+
+        /**
+         * Paged variant of [readAllPages]: invokes [onPage] once per Health Connect page instead of
+         * accumulating every page into one list, so a dense window never holds more than one page
+         * of raw HC records in memory at once (HC-001).
+         */
+        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPagesStreaming(
+            from: Instant,
+            to: Instant,
+            onPage: suspend (List<T>) -> Unit,
+        ) {
             var pageToken: String? = null
             try {
                 do {
@@ -140,117 +225,24 @@ class HealthConnectRepositoryImpl
                                 pageToken = pageToken,
                             ),
                         )
-                    all.addAll(response.records)
+                    onPage(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)
-            } catch (e: SecurityException) {
-                throw HealthConnectPermissionRevokedException(
-                    cause = e,
-                    operation = "read",
-                    recordType = T::class.simpleName,
-                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val securityCause = e.asHealthConnectSecurityCause()
+                if (securityCause != null) {
+                    throw HealthConnectPermissionRevokedException(
+                        cause = securityCause,
+                        operation = "read",
+                        recordType = T::class.simpleName,
+                    )
+                }
+                throw e
             }
-            return all
         }
 
-        private fun SleepSessionRecord.toDomain(): DomainSleepSessionRecord =
-            DomainSleepSessionRecord(
-                id = metadata.id,
-                startTime = startTime,
-                endTime = endTime,
-                startZoneOffsetSeconds = startZoneOffset?.totalSeconds,
-                endZoneOffsetSeconds = endZoneOffset?.totalSeconds,
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-                stages =
-                    stages.map { stage ->
-                        DomainSleepStage(
-                            startTime = stage.startTime,
-                            endTime = stage.endTime,
-                            stageType =
-                                when (stage.stage) {
-                                    SleepSessionRecord.STAGE_TYPE_DEEP -> DomainSleepStageType.DEEP
-                                    SleepSessionRecord.STAGE_TYPE_REM -> DomainSleepStageType.REM
-                                    SleepSessionRecord.STAGE_TYPE_LIGHT,
-                                    SleepSessionRecord.STAGE_TYPE_SLEEPING,
-                                    -> DomainSleepStageType.LIGHT
-                                    SleepSessionRecord.STAGE_TYPE_AWAKE,
-                                    SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
-                                    -> DomainSleepStageType.AWAKE
-                                    else -> DomainSleepStageType.UNKNOWN
-                                },
-                        )
-                    },
-            )
-
-        private fun HeartRateRecord.toDomain(): DomainHeartRateRecord =
-            DomainHeartRateRecord(
-                id = metadata.id,
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-                samples =
-                    samples.map { sample ->
-                        DomainHeartRateSample(
-                            time = sample.time,
-                            beatsPerMinute = sample.beatsPerMinute.toInt(),
-                        )
-                    },
-            )
-
-        private fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
-            DomainHrvRecord(
-                id = metadata.id,
-                time = time,
-                rmssdMs = heartRateVariabilityMillis.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord =
-            DomainExerciseSessionRecord(
-                id = metadata.id,
-                startTime = startTime,
-                endTime = endTime,
-                exerciseType = exerciseType.toString(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun StepsRecord.toDomain(): DomainStepsRecord =
-            DomainStepsRecord(
-                startTime = startTime,
-                count = count,
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun WeightRecord.toDomain(): DomainWeightRecord =
-            DomainWeightRecord(
-                id = metadata.id,
-                time = time,
-                weightKg = weight.inKilograms.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun BodyFatRecord.toDomain(): DomainBodyFatRecord =
-            DomainBodyFatRecord(
-                id = metadata.id,
-                time = time,
-                percentage = percentage.value.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun BloodPressureRecord.toDomain(): DomainBloodPressureRecord =
-            DomainBloodPressureRecord(
-                id = metadata.id,
-                time = time,
-                systolicMmHg = systolic.inMillimetersOfMercury.toInt(),
-                diastolicMmHg = diastolic.inMillimetersOfMercury.toInt(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
-        private fun OxygenSaturationRecord.toDomain(): DomainOxygenSaturationRecord =
-            DomainOxygenSaturationRecord(
-                id = metadata.id,
-                time = time,
-                percentage = percentage.value.toFloat(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
 
         override suspend fun readSleepSessions(
             from: Instant,
@@ -276,6 +268,30 @@ class HealthConnectRepositoryImpl
                 readAllPages<HeartRateVariabilityRmssdRecord>(from, to).map { it.toDomain() }
             }
 
+        override suspend fun readHeartRateSamplesPaged(
+            from: Instant,
+            to: Instant,
+            onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+        ) {
+            withContext(ioDispatcher) {
+                readAllPagesStreaming<HeartRateRecord>(from, to) { page ->
+                    onPage(page.map { it.toDomain() })
+                }
+            }
+        }
+
+        override suspend fun readHrvSamplesPaged(
+            from: Instant,
+            to: Instant,
+            onPage: suspend (List<DomainHrvRecord>) -> Unit,
+        ) {
+            withContext(ioDispatcher) {
+                readAllPagesStreaming<HeartRateVariabilityRmssdRecord>(from, to) { page ->
+                    onPage(page.map { it.toDomain() })
+                }
+            }
+        }
+
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
@@ -289,7 +305,17 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<DomainStepsRecord> =
             withContext(ioDispatcher) {
-                readAllPages<StepsRecord>(from, to).map { it.toDomain() }
+                try {
+                    readAllPages<StepsRecord>(from, to).map { it.toDomain() }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps record permission not granted"
+                    }
+                    emptyList()
+                }
             }
 
         override suspend fun readSteps(
@@ -297,45 +323,88 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): Long =
             withContext(ioDispatcher) {
-                val result =
-                    client.aggregate(
-                        AggregateRequest(
-                            metrics = setOf(StepsRecord.COUNT_TOTAL),
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
-                    )
-                result[StepsRecord.COUNT_TOTAL] ?: 0L
-            }
-
-        override suspend fun readStepsRange(
-            from: Instant,
-            to: Instant,
-        ): Map<java.time.LocalDate, Long> =
-            withContext(ioDispatcher) {
                 try {
-                    val records = readAllPages<StepsRecord>(from, to)
-                    val zoneId = java.time.ZoneId.systemDefault()
-                    records
-                        .groupBy { record ->
-                            record.startTime.atZone(zoneId).toLocalDate()
-                        }.mapValues { (_, dayRecords) ->
-                            dayRecords.sumOf { it.count }
-                        }
-                } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(
-                        cause = e,
-                        operation = "readRange",
-                        recordType = StepsRecord::class.simpleName,
-                    )
+                    val result =
+                        client.aggregate(
+                            AggregateRequest(
+                                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                timeRangeFilter = TimeRangeFilter.between(from, to),
+                            ),
+                        )
+                    result[StepsRecord.COUNT_TOTAL] ?: 0L
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
-                        "Error batch fetching steps"
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps permission not granted"
+                    }
+                    0L
+                }
+            }
+
+        override suspend fun readDailyStepTotals(
+            from: Instant,
+            to: Instant,
+            zoneId: ZoneId,
+        ): Map<LocalDate, Long> =
+            withContext(ioDispatcher) {
+                try {
+                    val response =
+                        client.aggregateGroupByPeriod(
+                            AggregateGroupByPeriodRequest(
+                                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                timeRangeFilter =
+                                    TimeRangeFilter.between(
+                                        LocalDateTime.ofInstant(from, zoneId),
+                                        LocalDateTime.ofInstant(to, zoneId),
+                                    ),
+                                timeRangeSlicer = Period.ofDays(1),
+                            ),
+                        )
+                    response
+                        .mapNotNull { group ->
+                            val total = group.result[StepsRecord.COUNT_TOTAL] ?: return@mapNotNull null
+                            group.startTime.toLocalDate() to total
+                        }.toMap()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: UnsupportedOperationException) {
+                    // HC-003: defensive fallback -- if a provider doesn't support grouped-by-period
+                    // aggregation, fall back to one per-day aggregate call. Slower, but correct.
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "aggregateGroupByPeriod unsupported; falling back to per-day step aggregate"
+                    }
+                    readDailyStepTotalsPerDay(from, to, zoneId)
+                } catch (e: Exception) {
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps permission not granted"
                     }
                     emptyMap()
                 }
             }
+
+        private suspend fun readDailyStepTotalsPerDay(
+            from: Instant,
+            to: Instant,
+            zoneId: ZoneId,
+        ): Map<LocalDate, Long> {
+            val totals = mutableMapOf<LocalDate, Long>()
+            var day = LocalDateTime.ofInstant(from, zoneId).toLocalDate()
+            val endDay = LocalDateTime.ofInstant(to, zoneId).toLocalDate()
+            while (!day.isAfter(endDay)) {
+                val dayStart = day.atStartOfDay(zoneId).toInstant()
+                val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                val boundedStart = maxOf(dayStart, from)
+                val boundedEnd = minOf(dayEnd, to)
+                if (boundedStart.isBefore(boundedEnd)) {
+                    totals[day] = readSteps(boundedStart, boundedEnd)
+                }
+                day = day.plusDays(1)
+            }
+            return totals
+        }
 
         override suspend fun readWeightRecords(
             from: Instant,
@@ -357,10 +426,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading weight records"
                     }
-                    emptyList()
+                    throw e
                 }
             }
 
@@ -384,10 +455,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading body fat records"
                     }
-                    emptyList()
+                    throw e
                 }
             }
 
@@ -411,10 +484,12 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading blood pressure records"
                     }
-                    emptyList()
+                    throw e
                 }
             }
 
@@ -438,10 +513,39 @@ class HealthConnectRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Transient IO/rate-limit errors must propagate so retryWithBackoff can act on
+                    // them, rather than being indistinguishable from "user has no data" (HC-008).
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading oxygen saturation records"
                     }
+                    throw e
+                }
+            }
+
+        override suspend fun readBodyTemperatureRecords(
+            from: Instant,
+            to: Instant,
+        ): List<DomainBodyTemperatureRecord> =
+            withContext(ioDispatcher) {
+                try {
+                    readAllPages<BodyTemperatureRecord>(from, to).map { it.toDomain() }
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Body temperature record permission not granted"
+                    }
                     emptyList()
+                } catch (e: SecurityException) {
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Body temperature record permission not granted"
+                    }
+                    emptyList()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                        "Error reading body temperature records"
+                    }
+                    throw e
                 }
             }
 
@@ -486,6 +590,8 @@ class HealthConnectRepositoryImpl
                             async { readOrEmpty { readBloodPressureRecords(from, to) } }
                         val spo2RecordsDeferred =
                             async { readOrEmpty { readOxygenSaturationRecords(from, to) } }
+                        val bodyTemperatureRecordsDeferred =
+                            async { readOrEmpty { readBodyTemperatureRecords(from, to) } }
 
                         sleepSessionsDeferred.await().forEach { record ->
                             devices.add(record.deviceName)
@@ -522,6 +628,10 @@ class HealthConnectRepositoryImpl
                         }
 
                         spo2RecordsDeferred.await().forEach { record ->
+                            devices.add(record.deviceName)
+                        }
+
+                        bodyTemperatureRecordsDeferred.await().forEach { record ->
                             devices.add(record.deviceName)
                         }
                     }

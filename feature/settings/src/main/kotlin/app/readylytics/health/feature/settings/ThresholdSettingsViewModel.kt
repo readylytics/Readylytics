@@ -42,6 +42,7 @@ class ThresholdSettingsViewModel
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                     rhrWarningThreshold = prefs.rhrWarningThreshold,
+                    bodyTempElevatedThreshold = prefs.bodyTempElevatedThresholdCelsius,
                     consistencyThresholdMinutes = prefs.consistencyThresholdMinutes,
                     consistencyEvaluationDays = prefs.consistencyEvaluationDays,
                     consistencyBaselineDays = prefs.consistencyBaselineDays,
@@ -93,6 +94,12 @@ class ThresholdSettingsViewModel
                     val validation = SettingsValidators.RHR_WARNING_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch { thresholdSettings.updateRhrWarningThreshold(value = event.value) }
+                    }
+                }
+                is SettingsEvent.BodyTempElevatedThresholdChanged -> {
+                    val validation = SettingsValidators.BODY_TEMP_ELEVATED_THRESHOLD_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { thresholdSettings.updateBodyTempElevatedThreshold(value = event.value) }
                     }
                 }
                 is SettingsEvent.ConsistencyThresholdChanged ->

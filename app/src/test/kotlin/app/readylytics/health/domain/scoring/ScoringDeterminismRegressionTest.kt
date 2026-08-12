@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
@@ -9,6 +10,7 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
@@ -19,7 +21,9 @@ import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -39,6 +43,7 @@ import kotlin.test.assertEquals
  *  - [archSubScoreIsNotPreRoundedInsideSleepScore] proves the architecture sub-score is no longer
  *    pre-rounded before entering the weighted sleep-score sum (the actual ±1 toggle source).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScoringDeterminismRegressionTest {
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
@@ -54,6 +59,7 @@ class ScoringDeterminismRegressionTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
@@ -69,6 +75,8 @@ class ScoringDeterminismRegressionTest {
                 settingsRepo,
                 scoringCalculator,
                 baselineComputer,
+                BuildLoadSeriesUseCase(scoringCalculator),
+                AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
@@ -77,8 +85,10 @@ class ScoringDeterminismRegressionTest {
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
+                UnconfinedTestDispatcher(),
             )
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
     }
@@ -118,7 +128,8 @@ class ScoringDeterminismRegressionTest {
             // Run 1: fresh derived state.
             val run1Snapshot = frozenSnapshot(dayMidnightMs, today)
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns run1Snapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns run1Snapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(run1Snapshot, zoneId)
             val run1 = repo.computeDailySummary(today)
 
             // Mutate the "live state" left behind by run 1: poison every derived output that the
@@ -126,7 +137,8 @@ class ScoringDeterminismRegressionTest {
             // engine must ignore these and reproduce run 1 exactly.
             val run2Snapshot = frozenSnapshot(dayMidnightMs, today)
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns run2Snapshot
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns run2Snapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(run2Snapshot, zoneId)
             val run2 = repo.computeDailySummary(today)
 
             // US-03: derived outputs now live in the freshly-recomputed variant columns. The legacy
@@ -182,7 +194,8 @@ class ScoringDeterminismRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozen
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozen
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId) } returns
+                DailySummaryMapper.toDomain(frozen, zoneId)
             // Frozen day: the HRV-window recompute is intentionally skipped.
             coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns null
 

@@ -47,6 +47,8 @@ A 100-point summary of last night's sleep, made of three parts:
 - **Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
 - **Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalizes the skewed distribution of raw HRV data.
 
+If a source provides a sleep session with no stage records, Readylytics uses the raw session span as total sleep duration. Because Architecture is unavailable, the Sleep Score reweights to Duration 75%, Architecture 0%, and Restoration 25%. This differs from suspicious but non-empty stage data: the source supplied stages, but their distribution failed plausibility checks.
+
 **Reading the score**
 
 - **85–100** Excellent. You slept enough, your sleep stages looked balanced, and your autonomic recovery markers were strong.
@@ -189,7 +191,13 @@ and above** minutes contribute TRIMP using the standard per-minute formula.
 - **Confidence** is derived from `coverageMinutes`: 0 → **None**, 1–179 → **Low**,
   180–479 → **Medium**, 480+ → **High**. A day needs at least 180 coverage minutes to be
   a valid everyday-load estimate; below that, Readiness shows a low-confidence indicator
-  whenever the Strain / Training Load source is set to Everyday heart-rate load.
+  whenever the Strain / Training Load source is set to Everyday heart-rate load. For the AI
+  Advisor with that source selected, **Low** coverage caps a high confidence at **Medium**;
+  **None** lowers the base confidence by one level, never below **Low**. The AI Advisor's base
+  confidence starts at **Low** during Calibration/Early Baseline, **Medium** once your baselines
+  are Maturing (or **Low** if HRV or sleep-stage data is missing today), and **High** once Mature
+  (or **Medium** if HRV or sleep-stage data is missing today). Everyday-load coverage can then
+  only lower this, never raise it, per the coverage rule above.
 
 Both source variants are calculated and stored for every day, so switching either
 setting is instant — no recalculation or history rewrite is needed.
@@ -201,6 +209,100 @@ one-time default if you already have workout history — you can change it in Se
 any time.
 
 _Implemented in: `EverydayHeartRateLoadCalculator.kt`, `LoadSourceSelector.kt`, `LoadSourceMode.kt`_
+
+---
+
+## BMI and Body Fat
+
+**BMI (Body Mass Index)** classifies your weight relative to height using WHO-aligned bands:
+
+- **Underweight** — BMI below 18.5
+- **Healthy weight** — 18.5 to 24.9
+- **Overweight** — 25 to 29.9
+- **Obesity** — 30 and above
+
+The Weight card’s BMI reference gauge uses visual anchors of 15, 21.7, and 35 so its midpoint is shown at 21.7. These anchors position the gauge only; they do not change the BMI status bands above.
+
+**Body Fat Percentage** uses continuous, gender-specific bands when your profile records a
+biological sex:
+
+- **Male** — Below essential <2%, Essential 2–5.9%, Athletic 6–13.9%, Fitness 14–17.9%,
+  Acceptable 18–24.9%, Obese 25%+
+- **Female** — Below essential <10%, Essential 10–13.9%, Athletic 14–20.9%, Fitness
+  21–24.9%, Acceptable 25–31.9%, Obese 32%+
+
+If gender is set to **Other**, **Prefer not to say**, or is unset, we show a fixed
+10–30% reference band centered on 20% instead of a gendered scale — values inside the
+band are Optimal, at or below 10% is Neutral, and above 30% is Poor.
+
+The Body Fat card also shows a **reference midpoint** — a target value for your
+physiology profile, used only to position the marker on the gauge, not to change your
+status:
+
+- **Male** — Athlete 9.5%, Active 15.5%, Sedentary 19.5%
+- **Female** — Athlete 17%, Active 22.5%, Sedentary 26.5%
+- **Other / Prefer not to say / unset** — fixed at 20%, independent of profile
+
+**Reading the status.** Optimal (green) and Neutral (informational) describe healthy or
+expected ranges; Warning flags dangerously low essential-fat levels, or a BMI that is either
+underweight or overweight — the same status covers both directions, so check the category
+label (not just the color) to see which one applies; Poor flags the obesity range for BMI or
+body fat.
+
+The status colors on Weight and Body Fat trend charts use these same canonical bands. Visual
+reference anchors and profile markers never redefine a reading’s status.
+
+_Implemented in: `BodyCompositionAssessment.kt`, `BmiService.kt`, `HealthMetricsService.kt`,
+`HealthMetricsCalculator.kt`_
+
+---
+
+## Blood Pressure
+
+The dashboard classifies each blood-pressure reading with an inclusive, component-wise ladder:
+
+- **Optimal** — systolic ≤120 and diastolic ≤80 mmHg
+- **Neutral** — otherwise, systolic ≤129 and diastolic ≤89 mmHg
+- **Warning** — otherwise, systolic ≤139 and diastolic ≤99 mmHg
+- **Poor** — all other readings
+
+For example, 121/80, 120/81, and 129/89 are Neutral, while 130/90 is Warning. This is a
+dashboard status, not a diagnosis.
+
+Blood-pressure trend charts obtain their component reference bands from this same ladder.
+
+_Implemented in: `HealthMetricsService.kt`_
+
+---
+
+## Overnight Oxygen Saturation
+
+The dashboard card uses your overnight average oxygen saturation. Overnight oxygen
+saturation: below 90% Poor; 90–94% Warning; 95–97% Neutral; 98% and above Optimal.
+
+This means an overnight average of 96% is Neutral. The status describes the displayed
+overnight average rather than a scoring-engine calculation.
+
+---
+
+## Body Temperature
+
+The dashboard card and Vitals trend chart show your overnight average body temperature
+(nightly average of Health Connect readings within your sleep-session window). This is an
+**optional metric** — it requires the separate `READ_BODY_TEMPERATURE` Health Connect
+permission, and the card stays hidden until you grant it.
+
+Once you have 14 nights of readings, we show a rolling **14-day baseline** — a plain
+trailing average of your own recent nights. Before that, the card shows "Calibrating"
+instead of a deviation badge. We compare today's reading against that baseline and flag a
+day as elevated when it deviates by at least your configured **elevated-deviation
+threshold** (Settings, default **1.0°C**, adjustable from 0.25°C to 1.5°C) in either
+direction — a wider swing than typical night-to-night noise.
+
+This baseline is intentionally a simple average, not the log-normal statistical model used
+for HRV/RHR — it exists purely to flag a possibly-illness-related change for you to notice.
+**Body temperature does not affect Sleep Score, Load Score, or Readiness in any way.** It is
+a display-only insight, entirely outside the scoring engine.
 
 ---
 

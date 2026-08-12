@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import app.readylytics.health.data.local.dao.AuditEventDao
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
@@ -13,11 +14,13 @@ import app.readylytics.health.data.local.dao.InsightDismissalDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.AuditEventEntity
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
@@ -25,6 +28,7 @@ import app.readylytics.health.data.local.entity.InsightDismissalEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.SleepStageEntity
+import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 
@@ -40,8 +44,10 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
         BodyFatRecordEntity::class,
         BloodPressureRecordEntity::class,
         OxygenSaturationRecordEntity::class,
+        BodyTemperatureRecordEntity::class,
         InsightDismissalEntity::class,
         AuditEventEntity::class,
+        StepRecordEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -67,11 +73,15 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun oxygenSaturationRecordDao(): OxygenSaturationRecordDao
 
+    abstract fun bodyTemperatureRecordDao(): BodyTemperatureRecordDao
+
     abstract fun insightDismissalDao(): InsightDismissalDao
 
     abstract fun auditEventDao(): AuditEventDao
 
+    abstract fun stepRecordDao(): StepRecordDao
+
     companion object {
-        const val DATABASE_VERSION = 5
+        const val DATABASE_VERSION = 9
     }
 }

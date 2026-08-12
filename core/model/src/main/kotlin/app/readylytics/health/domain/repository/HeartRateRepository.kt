@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.repository
 
+import app.readylytics.health.domain.model.HrRangeAggregate
 import kotlinx.coroutines.flow.Flow
 
 data class HeartRateRecordData(
@@ -21,8 +22,6 @@ data class HrvRecordData(
 )
 
 interface HeartRateRepository {
-    fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordData>>
-
     suspend fun getMinHrInRange(
         startTimeMs: Long,
         endTimeMs: Long,
@@ -33,10 +32,18 @@ interface HeartRateRepository {
         endTimeMs: Long,
     ): List<HeartRateRecordData>
 
+    fun observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordData>>
+
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordData>>
 
     fun observeByTimeRange(
         startMs: Long,
         endMs: Long,
     ): Flow<List<HeartRateRecordData>>
+
+    /** PERF-005/WP-23: SQL-aggregated min/max/avg/count observable for day-summary consumers. */
+    fun observeAggregateByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): Flow<HrRangeAggregate?>
 }

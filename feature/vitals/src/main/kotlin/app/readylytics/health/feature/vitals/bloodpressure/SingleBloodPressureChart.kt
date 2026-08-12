@@ -16,11 +16,15 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -28,10 +32,10 @@ import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
+import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
-import app.readylytics.health.core.ui.components.zoneBandColors
-import app.readylytics.health.domain.model.diastolicZoneBands
-import app.readylytics.health.domain.model.systolicZoneBands
+import app.readylytics.health.core.ui.components.rememberZoneBandColors
+import app.readylytics.health.domain.service.HealthMetricsService
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -65,6 +69,7 @@ fun SingleBloodPressureChart(
     rangeDays: Int,
     isDiastolic: Boolean,
     modifier: Modifier = Modifier,
+    granularity: TrendGranularity = TrendGranularity.DAILY,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
         rememberVicoZoomState(
@@ -76,6 +81,7 @@ fun SingleBloodPressureChart(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.fixed(2f)
                     }
                 },
@@ -142,25 +148,34 @@ fun SingleBloodPressureChart(
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val lineColor = if (isDiastolic) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primary
-    val bands =
-        if (isDiastolic) {
-            diastolicZoneBands()
-        } else {
-            app.readylytics.health.domain.model
-                .systolicZoneBands()
+    val healthMetricsService = remember { HealthMetricsService() }
+    val zoneBands =
+        remember(isDiastolic) {
+            if (isDiastolic) {
+                healthMetricsService.diastolicReferenceBands()
+            } else {
+                healthMetricsService.systolicReferenceBands()
+            }
         }
     val colors =
-        zoneBandColors(
-            bands = bands,
+        rememberZoneBandColors(
+            zoneBands = zoneBands,
             extendedColors = extendedColors,
             primaryContainer = primaryContainer,
             errorContainer = errorContainer,
             optimalAlpha = 0.45f,
         )
-    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
+    val zoneBandDecoration =
+        remember(zoneBands, colors, minY, maxY) {
+            ZoneBandDecoration(zoneBands, colors, minY, maxY)
+        }
 
     val modelProducer = remember { CartesianChartModelProducer() }
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
+    // Resolved in composable scope so the format string can be used inside the non-composable
+    // marker listener below; resource strings must never be built as Kotlin literals.
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+    val weekRangeTemplate = stringResource(R.string.tooltip_week_range)
 
     LaunchedEffect(points) {
         modelProducer.runTransaction {
@@ -212,7 +227,13 @@ fun SingleBloodPressureChart(
         rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
             val dayOffset = x.toInt()
             val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-            val dateString = ChartUtils.formatTooltipDate(date)
+            val dateString =
+                formatTrendTooltipDate(
+                    granularity,
+                    date,
+                    ordinalLabel,
+                    weekRangeTemplate,
+                )
             val value = points.firstOrNull { it.dayOffset == dayOffset }?.value
             val valueText = value?.let { "${it.roundToInt()} mmHg" } ?: "—"
             if (showTooltip) {
@@ -275,7 +296,18 @@ fun SingleBloodPressureChart(
                         HorizontalAxis.rememberBottom(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
-                            itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                            itemPlacer =
+                                remember(rangeDays, points) {
+                                    ChartDefaults.itemPlacerForRangeDays(
+                                        rangeDays = rangeDays,
+                                        pointOffsets =
+                                            if (granularity == TrendGranularity.DAILY) {
+                                                emptyList()
+                                            } else {
+                                                points.filter { it.value != null }.map { it.dayOffset }
+                                            },
+                                    )
+                                },
                             guideline = guidelineComponent,
                         ),
                     decorations = decorations,

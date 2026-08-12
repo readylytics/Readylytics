@@ -23,25 +23,27 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.domain.model.bodyFatZoneBands
+import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun BodyFatDetailRoute(
@@ -71,15 +73,7 @@ fun BodyFatDetailScreen(
             key = uiState.selectedRange,
         )
 
-    val bodyFatBands =
-        remember(uiState.age, uiState.gender) {
-            val genderEnum = Gender.entries.firstOrNull { it.name == uiState.gender }
-            if (genderEnum != null && genderEnum != Gender.OTHER && genderEnum != Gender.PREFER_NOT_TO_SAY) {
-                bodyFatZoneBands(uiState.age, genderEnum)
-            } else {
-                null
-            }
-        }
+    val bodyFatBands = uiState.chartZoneBands
 
     Scaffold(
         modifier = modifier,
@@ -90,7 +84,10 @@ fun BodyFatDetailScreen(
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiR.string.back),
+                        )
                     }
                 },
             )
@@ -118,16 +115,16 @@ fun BodyFatDetailScreen(
                                 vertical = MaterialTheme.spacing.pageSectionGapSmall,
                             ),
                 )
-            } else if (uiState.optimalRangeMax > 0f) {
+            } else if (uiState.referenceAxisMaximum > 0f) {
                 val genderStringRes =
-                    when (Gender.entries.find { it.name == uiState.gender }) {
-                        Gender.MALE -> R.string.gender_male
-                        Gender.FEMALE -> R.string.gender_female
-                        Gender.OTHER -> R.string.gender_other
-                        Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
-                        else -> R.string.gender_other
+                    when (uiState.gender) {
+                        Gender.MALE -> CoreUiR.string.gender_male
+                        Gender.FEMALE -> CoreUiR.string.gender_female
+                        Gender.OTHER -> CoreUiR.string.gender_other
+                        Gender.PREFER_NOT_TO_SAY -> CoreUiR.string.gender_prefer_not_to_say
+                        null -> R.string.body_fat_reference_group_unset
                     }
-                M3ScoreGaugeCard(
+                UniversalVitalsMetricCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -136,24 +133,25 @@ fun BodyFatDetailScreen(
                                 vertical = MaterialTheme.spacing.pageSectionGapSmall,
                             ),
                     title = stringResource(R.string.label_body_fat),
-                    score = uiState.latestBodyFat,
-                    displayText = uiState.bodyFatDisplay ?: "—",
-                    unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_percent),
-                    maxScore = uiState.optimalRangeMax * 2f,
-                    status = uiState.bodyFatStatus,
-                    deltaText = uiState.deltaBodyFatDisplay.resolveOrNull(),
-                    tooltipDescription =
+                    rawValue = uiState.latestBodyFat,
+                    valueText = uiState.bodyFatDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                    unitText = stringResource(CoreUiR.string.unit_percent),
+                    maxValue = uiState.referenceAxisMaximum * 2f,
+                    status = uiState.bodyFatStatus ?: MetricStatus.CALIBRATING,
+                    secondaryText = uiState.deltaBodyFatDisplay.resolveOrNull(),
+                    tooltip =
                         stringResource(
                             R.string.tooltip_body_fat_current,
                             uiState.bodyFatDisplay ?: "—",
-                            uiState.optimalRangeDisplay ?: "—",
+                            MetricFormatter.formatBodyFatNumericOnly(uiState.referenceAxisMinimum),
+                            MetricFormatter.formatBodyFatNumericOnly(uiState.referenceAxisMaximum),
+                            MetricFormatter.formatBodyFatNumericOnly(uiState.referenceMidpoint),
                             stringResource(genderStringRes),
-                            uiState.age,
                         ),
                 )
             }
 
-            SectionHeader(title = stringResource(R.string.label_trends))
+            SectionHeader(title = stringResource(CoreUiR.string.label_trends))
             Spacer(Modifier.height(MaterialTheme.spacing.small))
             SingleChoiceSegmentedButtonRow(
                 modifier =
@@ -193,15 +191,18 @@ fun BodyFatDetailScreen(
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
                         metricName = "Body Fat",
-                        baselineUnit = "%",
+                        baselineUnit = stringResource(CoreUiR.string.unit_percent),
                         baseline = uiState.averageBodyFat,
-                        baselineLabel = stringResource(R.string.label_average),
+                        baselineLabel = stringResource(CoreUiR.string.label_average),
                         baselineDecimalPlaces = 1,
                         axisDecimalPlaces = 1,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         zoneBands = bodyFatBands,
                         parentScrollInProgress = { scrollState.isScrollInProgress },
+                        granularity = uiState.selectedRange.granularity,
+                        periodSummary = uiState.periodSummary,
+                        deltaDirection = DeltaDirection.HIGHER_IS_BETTER,
                     )
                 }
             }

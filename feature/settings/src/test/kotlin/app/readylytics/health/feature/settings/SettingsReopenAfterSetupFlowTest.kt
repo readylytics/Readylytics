@@ -4,6 +4,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
@@ -145,6 +146,12 @@ class SettingsReopenAfterSetupFlowTest {
                 override suspend fun updateChengBeta(value: Float) = error("Unexpected call: updateChengBeta")
 
                 override suspend fun updateItrimB(value: Float) = error("Unexpected call: updateItrimB")
+
+                override suspend fun updateBulkDisplayModeNoticeDismissed(dismissed: Boolean) =
+                    error("Unexpected call: updateBulkDisplayModeNoticeDismissed")
+
+                override suspend fun updateLastGlobalDisplayMode(mode: DashboardCardDisplayMode?) =
+                    error("Unexpected call: updateLastGlobalDisplayMode")
             }
 
         private val userProfileActions =
@@ -166,6 +173,8 @@ class SettingsReopenAfterSetupFlowTest {
         private val healthDataRefresh =
             object : HealthDataRefresh {
                 override suspend fun refreshAffectedWindow() = Unit
+
+                override suspend fun refreshHistorical() = Unit
             }
 
         fun seedProfile(

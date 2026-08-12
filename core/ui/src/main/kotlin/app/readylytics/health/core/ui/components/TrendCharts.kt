@@ -36,6 +36,15 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.DeltaDirection
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.bucketLengthDays
+import app.readylytics.health.core.ui.common.bucketStartForDate
+import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
+import app.readylytics.health.domain.model.BucketZoneBands
+import app.readylytics.health.domain.model.HealthZone
 import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -57,6 +66,8 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import java.time.temporal.IsoFields
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -69,6 +80,7 @@ fun TrendChart(
     modifier: Modifier = Modifier,
     baseline: Float? = null,
     baselineLabel: String? = null,
+    baselineUnavailableLabel: String? = null,
     baselineDecimalPlaces: Int = 0,
     axisDecimalPlaces: Int = 0,
     tooltipDecimalPlaces: Int = axisDecimalPlaces,
@@ -95,14 +107,22 @@ fun TrendChart(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.fixed(2f)
                     }
                 },
         ),
     zoneBands: List<ZoneBand>? = null,
+    bucketZoneBands: List<BucketZoneBands>? = null,
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
     parentScrollInProgress: () -> Boolean = { false },
+    granularity: TrendGranularity = TrendGranularity.DAILY,
+    periodSummary: PeriodAverageSummary? = null,
+    // Whether an increase is favourable for [periodSummary]'s metric (e.g. HRV) or not (e.g. RHR);
+    // drives the summary delta arrow color. [DeltaDirection.NEUTRAL] keeps the arrow neutral.
+    deltaDirection: DeltaDirection = DeltaDirection.HIGHER_IS_BETTER,
+    historicalBaseline: List<DailyDataPoint>? = null,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -136,7 +156,13 @@ fun TrendChart(
         }
     }
 
-    val resolvedBaselineLabel = baselineLabel ?: stringResource(R.string.label_baseline)
+    val resolvedBaselineLabel =
+        baselineLabel
+            ?: if (!historicalBaseline.isNullOrEmpty()) {
+                stringResource(R.string.label_historical_baseline)
+            } else {
+                stringResource(R.string.label_baseline)
+            }
 
     if (renderData.validPoints.isEmpty()) {
         EmptyChartPlaceholder(modifier = modifier)
@@ -169,15 +195,26 @@ fun TrendChart(
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
 
-    LaunchedEffect(renderData.validPoints) {
+    // Resolved in composable scope so the format string can be used inside the non-composable
+    // marker listener below; resource strings must never be built as Kotlin literals.
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+    val weekRangeTemplate = stringResource(R.string.tooltip_week_range)
+
+    LaunchedEffect(renderData.validPoints, historicalBaseline) {
         modelProducer.runTransaction {
             lineModel {
                 series(
                     x = renderData.validPoints.map(DailyDataPoint::dayOffset),
                     y = renderData.validPoints.map { requireNotNull(it.value).toDouble() },
                 )
+                if (!historicalBaseline.isNullOrEmpty()) {
+                    series(
+                        x = historicalBaseline.map(DailyDataPoint::dayOffset),
+                        y = historicalBaseline.map { requireNotNull(it.value).toDouble() },
+                    )
+                }
             }
         }
     }
@@ -218,12 +255,40 @@ fun TrendChart(
             interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
 
+    val historicalBaselineLine =
+        LineCartesianLayer.rememberLine(
+            fill = LineCartesianLayer.LineFill.single(Fill(baselineColor)),
+            interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
+        )
+
     val extendedColors = LocalExtendedColors.current
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
-    val bands = zoneBands ?: emptyList()
-    val colors = zoneBandColors(bands, extendedColors, primaryContainer, errorContainer)
-    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
+    val chartZoneBands = zoneBands ?: emptyList()
+    val colors = rememberZoneBandColors(chartZoneBands, extendedColors, primaryContainer, errorContainer)
+    val zoneColor =
+        remember(extendedColors, primaryContainer, errorContainer) {
+            { zone: HealthZone ->
+                when (zone) {
+                    HealthZone.OPTIMAL -> primaryContainer.copy(alpha = ChartZoneAlphas.HIGH)
+                    HealthZone.NEUTRAL -> extendedColors.neutralContainer.copy(alpha = ChartZoneAlphas.RESTING)
+                    HealthZone.WARNING -> extendedColors.warningContainer.copy(alpha = ChartZoneAlphas.HIGH)
+                    HealthZone.CRITICAL -> errorContainer.copy(alpha = ChartZoneAlphas.HIGH)
+                }
+            }
+        }
+    val zoneBandDecoration =
+        remember(chartZoneBands, colors, minY, maxY, bucketZoneBands, rangeDays, zoneColor) {
+            ZoneBandDecoration(
+                zoneBands = chartZoneBands,
+                bandColors = colors,
+                minY = minY,
+                maxY = maxY,
+                bucketZoneBands = bucketZoneBands,
+                rangeDays = rangeDays,
+                zoneColor = zoneColor,
+            )
+        }
 
     val markerVisibilityListener =
         rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
@@ -245,7 +310,8 @@ fun TrendChart(
             val nextTooltip =
                 DataPointTooltipData(
                     valueText = valueText,
-                    dateText = ChartUtils.formatTooltipDate(date),
+                    dateText =
+                        formatTrendTooltipDate(granularity, date, ordinalLabel, weekRangeTemplate),
                     offset =
                         androidx.compose.ui.unit
                             .IntOffset(canvasX.toInt(), canvasY.toInt()),
@@ -258,7 +324,14 @@ fun TrendChart(
             }
         }
 
-    val lineProvider = remember(line) { LineCartesianLayer.LineProvider.series(line) }
+    val lineProvider =
+        remember(line, historicalBaselineLine, historicalBaseline) {
+            if (!historicalBaseline.isNullOrEmpty()) {
+                LineCartesianLayer.LineProvider.series(line, historicalBaselineLine)
+            } else {
+                LineCartesianLayer.LineProvider.series(line)
+            }
+        }
 
     val startAxisValueFormatter =
         remember(axisDecimalPlaces) {
@@ -271,12 +344,20 @@ fun TrendChart(
             }
         }
 
+    val hasHistoricalBaseline = !historicalBaseline.isNullOrEmpty()
     val baselineLineComponent = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp)
     val decorations =
-        remember(zoneBandDecoration, shouldShowBaseline, baselineValue, baselineLineComponent) {
+        remember(
+            zoneBandDecoration,
+            shouldShowBaseline,
+            baselineValue,
+            baselineLineComponent,
+            hasHistoricalBaseline,
+            bucketZoneBands,
+        ) {
             listOfNotNull(
                 zoneBandDecoration,
-                if (shouldShowBaseline) {
+                if (shouldShowBaseline && !hasHistoricalBaseline) {
                     HorizontalLine(
                         y = { baselineValue.toDouble() },
                         line = baselineLineComponent,
@@ -310,9 +391,17 @@ fun TrendChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(
-                                    rangeDays,
-                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                remember(rangeDays, renderData.validPoints) {
+                                    ChartDefaults.itemPlacerForRangeDays(
+                                        rangeDays = rangeDays,
+                                        pointOffsets =
+                                            if (granularity == TrendGranularity.DAILY) {
+                                                emptyList()
+                                            } else {
+                                                renderData.validPoints.map(DailyDataPoint::dayOffset)
+                                            },
+                                    )
+                                },
                             guideline = guidelineComponent,
                         ),
                     decorations = decorations,
@@ -340,26 +429,38 @@ fun TrendChart(
         }
     }
 
-    if (shouldShowBaseline) {
+    if (shouldShowBaseline || baselineUnavailableLabel != null || hasHistoricalBaseline) {
         Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
         BaselineLegend(
-            value = baselineValue,
+            value = if (shouldShowBaseline || hasHistoricalBaseline) baselineValue else null,
             unit = baselineUnit,
             label = resolvedBaselineLabel,
             color = baselineColor,
             decimalPlaces = baselineDecimalPlaces,
+            unavailableValueLabel = baselineUnavailableLabel,
+        )
+    }
+
+    if (periodSummary != null) {
+        Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
+        PeriodAverageSummaryRow(
+            summary = periodSummary,
+            unit = baselineUnit,
+            decimalPlaces = baselineDecimalPlaces,
+            direction = deltaDirection,
         )
     }
 }
 
 @Composable
 fun BaselineLegend(
-    value: Float,
+    value: Float?,
     unit: String,
     color: Color,
     modifier: Modifier = Modifier,
     label: String = "Baseline",
     decimalPlaces: Int = 0,
+    unavailableValueLabel: String? = null,
 ) {
     Row(
         modifier = modifier,
@@ -372,14 +473,17 @@ fun BaselineLegend(
                     .background(color),
         )
         Spacer(Modifier.width(MaterialTheme.spacing.small))
-        val formattedValue =
-            if (decimalPlaces == 0) {
-                value.roundToInt().toString()
-            } else {
-                String.format("%.${decimalPlaces}f", value)
-            }
         Text(
-            text = "$label: $formattedValue $unit",
+            text =
+                requireNotNull(
+                    formatBaselineLegendText(
+                        value = value,
+                        unit = unit,
+                        label = label,
+                        decimalPlaces = decimalPlaces,
+                        unavailableValueLabel = unavailableValueLabel,
+                    ),
+                ),
             style = MaterialTheme.typography.labelSmall,
             color = color,
         )
@@ -419,9 +523,52 @@ internal fun formatTrendTooltipValue(
 ): String {
     if (value == null) return "—"
     val formatted =
-        if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
+        if (decimalPlaces == 0) {
+            value.roundToInt().toString()
+        } else {
+            String.format(Locale.getDefault(), "%.${decimalPlaces}f", value)
+        }
     return if (hideUnit) formatted else "$formatted $unit"
 }
+
+/**
+ * Tooltip date line: [DAILY] keeps the short date format; bucketed [MONTHLY]/[EIGHT_WEEK] points
+ * show the containing period label (e.g. "Juli" / "Wk 9" / "Q3") instead of a mid-month calendar date.
+ * The ordinal and week-range labels come from the caller (a `strings.xml` resource), keeping this pure.
+ */
+fun formatTrendTooltipDate(
+    granularity: TrendGranularity,
+    date: java.time.LocalDate,
+    ordinalLabel: (Int) -> String,
+    weekRangeTemplate: String = "",
+): String =
+    when (granularity) {
+        TrendGranularity.DAILY -> ChartUtils.formatTooltipDate(date)
+        TrendGranularity.EIGHT_WEEK -> {
+            val bucketStart = bucketStartForDate(date, TrendGranularity.EIGHT_WEEK)
+            val startWeek = bucketStart.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+            val endWeek = startWeek + (bucketLengthDays(bucketStart, TrendGranularity.EIGHT_WEEK) / 7) - 1
+            String.format(Locale.getDefault(), weekRangeTemplate, startWeek, endWeek)
+        }
+        else -> periodLabelFor(granularity, date, ordinalLabel)
+    }
+
+internal fun formatBaselineLegendText(
+    value: Float?,
+    unit: String,
+    label: String,
+    decimalPlaces: Int,
+    unavailableValueLabel: String?,
+): String? =
+    when {
+        value != null -> {
+            val formattedValue =
+                if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
+            "$label: $formattedValue $unit"
+        }
+        unavailableValueLabel != null -> "$label: $unavailableValueLabel"
+        else -> null
+    }
 
 internal fun shouldProcessTrendMarker(parentScrollInProgress: Boolean): Boolean = !parentScrollInProgress
 

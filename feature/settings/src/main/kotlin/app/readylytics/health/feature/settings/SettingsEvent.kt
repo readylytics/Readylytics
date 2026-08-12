@@ -7,6 +7,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
@@ -113,6 +114,10 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data class RhrWarningThresholdChanged(
+        val value: Float,
+    ) : SettingsEvent
+
+    data class BodyTempElevatedThresholdChanged(
         val value: Float,
     ) : SettingsEvent
 
@@ -264,4 +269,16 @@ sealed interface SettingsEvent {
     data class RasSourceModeChanged(
         val mode: LoadSourceMode,
     ) : SettingsEvent
+
+    data class DashboardGlobalDisplayModeApplyRequested(
+        val mode: DashboardCardDisplayMode,
+    ) : SettingsEvent
+
+    data class DashboardGlobalDisplayModeConfirmed(
+        val dontShowAgain: Boolean,
+    ) : SettingsEvent
+
+    data object DashboardGlobalDisplayModeDialogDismissed : SettingsEvent
+
+    data object DashboardGlobalDisplayModeResetRequested : SettingsEvent
 }

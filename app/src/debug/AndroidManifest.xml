@@ -1,0 +1,28 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Test-only: two separate OS processes used by
+             SqlCipherKeyManagerCrossProcessRaceTest (app/src/androidTest) to reproduce the real
+             fresh-install cross-process key race (see
+             KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md). Declared here rather than in
+             app/src/androidTest/AndroidManifest.xml because a <service> declared only in the
+             androidTest manifest is packaged as part of the separately-installed test APK; a
+             standalone android:process launch of that APK (as opposed to code loaded into the
+             target app's process via am instrument) does not carry a complete classpath (missing
+             kotlin-stdlib), crashing with NoClassDefFoundError. app/src/debug compiles into the
+             real app APK for the debug build type only; never release or benchmark (benchmark
+             initWith(release) in app/build.gradle.kts), so this still never ships to
+             production. Two distinct subclasses (rather than one class under two entries) so
+             each can be targeted unambiguously by an explicit Intent(context,
+             SubClass::class.java). exported="false" is safe here (unlike the prior
+             androidTest-manifest attempt) because these services now merge into the same
+             package/UID as the app under test, so no cross-package bind is needed. -->
+        <service
+            android:name="app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess1"
+            android:process=":racetest1"
+            android:exported="false" />
+        <service
+            android:name="app.readylytics.health.data.security.racetest.KeyRaceTestServiceProcess2"
+            android:process=":racetest2"
+            android:exported="false" />
+    </application>
+</manifest>

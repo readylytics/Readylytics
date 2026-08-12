@@ -155,6 +155,11 @@ object ScoringConstants {
         const val HARD_MAX = 2.25f           // 1.75 - 2.25
         // Very Hard: > 2.25f
     }
+
+    object AiRecommendation {
+        // Lookback window for the AI prompt's "Typical Workout Pattern" section (Section G).
+        const val LOOKBACK_MONTHS = 3
+    }
 }
 
 enum class WorkoutLoadLevel {

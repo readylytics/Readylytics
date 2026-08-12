@@ -1,9 +1,9 @@
 package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.model.PhysiologyConstants
-import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -23,7 +23,7 @@ interface RhrBaselineProvider {
 class AdaptiveRhrBaselineProvider
     @Inject
     constructor(
-        private val dao: DailySummaryDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
         private val settingsRepository: SettingsRepository,
         private val baselineComputer: BaselineComputer,
     ) : RhrBaselineProvider {
@@ -31,7 +31,7 @@ class AdaptiveRhrBaselineProvider
             val prefs = settingsRepository.userPreferences.first()
             val zone = prefs.scoringZone()
             val dateMs = date.toMidnightEpochMilli(zone)
-            val dbValue = dao.getPreciseRhrBaseline(dateMs)
+            val dbValue = scoringHistoryRepository.getPreciseRhrBaseline(dateMs)
             if (dbValue != null) return dbValue
 
             val override = prefs.rhrBaselineOverride
@@ -51,7 +51,7 @@ class AdaptiveRhrBaselineProvider
             val prefs = settingsRepository.userPreferences.first()
             val zone = prefs.scoringZone()
             val dateMs = date.toMidnightEpochMilli(zone)
-            val dbValue = dao.getRoundedRhrBaseline(dateMs)
+            val dbValue = scoringHistoryRepository.getRoundedRhrBaseline(dateMs)
             if (dbValue != null) return dbValue
 
             val override = prefs.rhrBaselineOverride

@@ -1,5 +1,6 @@
 package app.readylytics.health.docs
 
+import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
@@ -23,6 +24,18 @@ import kotlin.test.assertTrue
  */
 class DocumentationDriftTest {
     private val aboutMd = readRepoFile("ABOUT.md")
+    private val publicAboutMd = readRepoFile("docs/about.md")
+    private val aboutStringsXml = readRepoFile("feature/about/src/main/res/values/strings.xml")
+    private val aboutContributorsSource =
+        readRepoFile("feature/about/src/main/kotlin/app/readylytics/health/feature/about/ContributorsSection.kt")
+    private val aboutScreenSource =
+        readRepoFile("feature/about/src/main/kotlin/app/readylytics/health/feature/about/AboutScreen.kt")
+    private val aboutStageLessResource =
+        Regex(
+            """<string\s+name="about_stage_less_reweight"[^>]*>(.*?)</string>""",
+            RegexOption.DOT_MATCHES_ALL,
+        ).find(aboutStringsXml)?.groupValues?.get(1)
+            ?: error("Missing about_stage_less_reweight resource")
     private val stringsXml =
         listOf(
             "app/src/main/res/values/strings.xml",
@@ -61,6 +74,39 @@ class DocumentationDriftTest {
         assertTrue(aboutMd.contains("Duration (50%)"))
         assertTrue(aboutMd.contains("Architecture (25%)"))
         assertTrue(aboutMd.contains("Restoration (25%)"))
+    }
+
+    @Test
+    fun `stage-less sleep scoring is synchronized across About surfaces`() {
+        val requiredStageLessPhrases =
+            listOf(
+                "raw session span",
+                "Duration 75%",
+                "Architecture 0%",
+                "Restoration 25%",
+            )
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "about_stage_less_reweight" to aboutStageLessResource,
+        )) {
+            for (phrase in requiredStageLessPhrases) {
+                assertTrue(text.contains(phrase), "$surface must contain '$phrase'")
+            }
+        }
+    }
+
+    @Test
+    fun `stage-less About resource is rendered by the About screen`() {
+        assertTrue(
+            aboutContributorsSource.contains("stringResource(R.string.about_stage_less_reweight)"),
+            "ContributorsSection must render about_stage_less_reweight",
+        )
+        assertTrue(
+            aboutScreenSource.contains("item { ContributorsSection() }"),
+            "AboutScreen must include ContributorsSection in its rendered content",
+        )
     }
 
     @Test
@@ -269,6 +315,29 @@ class DocumentationDriftTest {
                 "expected $path to declare minSdk=$minSdk, targetSdk=$targetSdk",
             )
         }
+    }
+
+    @Test
+    fun `HealthDatabase version is reflected in DATA_FLOW md`() {
+        val version = HealthDatabase.DATABASE_VERSION
+
+        assertTrue(
+            dataFlowMd.contains("version = $version"),
+            "expected internal-docs/DATA_FLOW.md to mention Room schema version $version",
+        )
+        assertTrue(
+            dataFlowMd.contains("Room migration chain ends at v6"),
+            "expected internal-docs/DATA_FLOW.md to record that the pre-bridge Room migration " +
+                "chain ends at v6",
+        )
+        // The external SQLCipher migration (V7DatabaseMigrator) only ever bridged v6->v7 — that
+        // is a fixed historical fact, not something that grows with DATABASE_VERSION. Versions
+        // beyond 7 (this one included, via MIGRATION_7_8) are owned by ordinary Room migrations,
+        // so this assertion intentionally checks the fixed "v7", not the current $version.
+        assertTrue(
+            dataFlowMd.contains("external migration owns v7"),
+            "expected internal-docs/DATA_FLOW.md to record that the external migration owns v7",
+        )
     }
 
     @Test

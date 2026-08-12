@@ -3,7 +3,6 @@ package app.readylytics.health.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
-import androidx.room.Index
 import androidx.room.PrimaryKey
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.Diagnostics
@@ -12,10 +11,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
+// DB-002: no explicit `indices` here -- `dateMidnightMs` is already the primary key, so a
+// secondary index on the same single column (present through schema v5) was pure redundancy.
+// Dropped in MIGRATION_5_6.
 @Serializable
 @Entity(
     tableName = "daily_summaries",
-    indices = [Index(value = ["dateMidnightMs"])],
 )
 data class DailySummaryEntity(
     @PrimaryKey val dateMidnightMs: Long,
@@ -54,6 +55,7 @@ data class DailySummaryEntity(
     val bloodPressureSystolic: Int? = null,
     val bloodPressureDiastolic: Int? = null,
     val avgSleepingSpo2: Float? = null,
+    val avgSleepingBodyTemp: Float? = null,
     // Point-in-time baseline snapshots (Task B)
     @ColumnInfo(name = "hrv_mu_mssd")
     val hrvMuMssd: Float? = null,

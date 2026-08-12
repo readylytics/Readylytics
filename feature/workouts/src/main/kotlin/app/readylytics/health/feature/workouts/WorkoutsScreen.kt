@@ -30,8 +30,10 @@ fun WorkoutsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
+    val selectedRange by viewModel.selectedRange.collectAsStateWithLifecycle()
     WorkoutsScreen(
         uiState = uiState,
+        selectedRange = selectedRange,
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
@@ -47,6 +49,7 @@ fun WorkoutsRoute(
 @Composable
 fun WorkoutsScreen(
     uiState: WorkoutsUiState,
+    selectedRange: TimeRange,
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -66,7 +69,7 @@ fun WorkoutsScreen(
         )
 
     Column(modifier = modifier.fillMaxSize()) {
-        ScreenHeaderSection(isLoading = uiState.isLoading) { isDisabled ->
+        ScreenHeaderSection(isLoading = uiState.isRefreshing) { isDisabled ->
             DateSwitcher(
                 selectedDate = uiState.selectedDate,
                 onPreviousDay = onPreviousDay,
@@ -95,6 +98,7 @@ fun WorkoutsScreen(
         ) {
             WorkoutStatsSection(
                 uiState = uiState,
+                selectedRange = selectedRange,
                 onRangeSelected = onRangeSelected,
                 scrollState = chartScrollState,
                 zoomState = chartZoomState,

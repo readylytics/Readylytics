@@ -1,5 +1,6 @@
 package app.readylytics.health.data.preferences
 
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
@@ -89,6 +90,15 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                     SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS,
                 )
             },
+        bodyTempElevatedThresholdCelsius =
+            if (hasBodyTempElevatedThresholdCelsius()) {
+                bodyTempElevatedThresholdCelsius.coerceIn(
+                    SettingsDefaults.MIN_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
+                    SettingsDefaults.MAX_BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
+                )
+            } else {
+                SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS
+            },
         rasScalingFactor = rasScalingFactor,
         stepGoal = stepGoal,
         retentionDaysEnabled = retentionDaysEnabled,
@@ -167,6 +177,14 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             },
         scoringZoneId = scoringZoneId,
         deviceChangeNoticeDismissed = deviceChangeNoticeDismissed,
+        bulkDisplayModeNoticeDismissed = bulkDisplayModeNoticeDismissed,
+        lastGlobalDisplayMode =
+            when (lastGlobalDisplayMode) {
+                DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_VALUE -> DashboardCardDisplayMode.VALUE
+                DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_GAUGE -> DashboardCardDisplayMode.GAUGE
+                DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_BAR -> DashboardCardDisplayMode.BAR
+                else -> null
+            },
         strainLoadSourceMode =
             when (strainLoadSourceMode) {
                 LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY

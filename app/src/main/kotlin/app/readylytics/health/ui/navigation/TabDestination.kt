@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.readylytics.health.R
 import kotlinx.serialization.Serializable
+import app.readylytics.health.core.ui.R as CoreUiR
 
 sealed interface TabDestination {
     val labelRes: Int
@@ -36,7 +37,7 @@ sealed interface TabDestination {
 
     @Serializable
     data object Vitals : TabDestination {
-        override val labelRes = R.string.tab_vitals
+        override val labelRes = CoreUiR.string.tab_vitals
         override val icon = Icons.Outlined.MonitorHeart
         override val selectedIcon = Icons.Filled.MonitorHeart
     }

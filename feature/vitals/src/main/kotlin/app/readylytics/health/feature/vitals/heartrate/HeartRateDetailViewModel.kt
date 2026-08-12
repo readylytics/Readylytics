@@ -7,17 +7,20 @@ import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
+import app.readylytics.health.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -35,7 +38,7 @@ class HeartRateDetailViewModel
         private val clock: Clock,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
-        @OptIn(ExperimentalCoroutinesApi::class)
+        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         val uiState: StateFlow<HeartRateDetailUiState> =
             combine(
                 selectedDateRepository.selectedDate,
@@ -51,7 +54,10 @@ class HeartRateDetailViewModel
                             .toInstant()
                             .toEpochMilli()
 
-                    heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
+                    // PERF-005/WP-23: a resync's 5,000-row ingest batches invalidate this Flow
+                    // repeatedly; sampling renders the latest value every 500 ms during sustained
+                    // invalidations instead of re-mapping/re-classifying every ingest batch.
+                    heartRateRepository.observeByTimeRange(startMs, endMs).sample(500).map { entities ->
                         if (entities.isEmpty()) {
                             return@map HeartRateDetailUiState(
                                 selectedDate = date,
@@ -62,6 +68,7 @@ class HeartRateDetailViewModel
                                 zone2MaxBpm = prefs.zone2MaxBpm,
                                 zone3MaxBpm = prefs.zone3MaxBpm,
                                 zone4MaxBpm = prefs.zone4MaxBpm,
+                                averageStatus = HeartRateStatusClassifier.classify(null),
                             )
                         }
 
@@ -77,11 +84,14 @@ class HeartRateDetailViewModel
                         val bpms = samples.map { it.bpm }
                         val zoneTotals = computeZoneTotals(samples)
 
+                        val averageBpm = bpms.sum() / bpms.size
+
                         HeartRateDetailUiState(
                             samples = samples,
                             minBpm = bpms.min(),
                             maxBpm = bpms.max(),
-                            avgBpm = bpms.sum() / bpms.size,
+                            avgBpm = averageBpm,
+                            averageStatus = HeartRateStatusClassifier.classify(averageBpm),
                             zoneTotals = zoneTotals,
                             selectedDate = date,
                             today = LocalDate.now(clock),

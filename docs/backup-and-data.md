@@ -12,17 +12,18 @@ Readylytics stores everything locally on your device—no cloud account, no data
 
 ## Local encrypted backup
 
-All your settings, preferences, and app configuration can be backed up to a local folder on your device, encrypted with AES-256 (bank-grade security).
+Your supported local records, calculated summaries, and preferences can be backed up to a local folder on your device, encrypted with AES-256 (bank-grade security).
 
 **Find it:** Settings → Data & Backup → Local Backup
 
 **What gets backed up:**
-- All user settings (sleep goal, zones, thresholds, baselines)
-- Readiness configuration (TRIMP model, RAS scaling, load sources)
-- UI preferences (theme, colors, unit system)
-- Backup scheduling and metadata
+- Sleep-session aggregates, including the stored session span and stage totals
+- Heart-rate and HRV records
+- Workout records
+- Calculated daily summaries, including frozen baselines
+- Preferences, including scoring, readiness, UI, backup, and dashboard card configuration (order, visibility, and visualization mode)
 
-**Note:** The app backs up *settings only*, not your Health Connect data. Your raw health data stays synced to Health Connect itself, which you control separately.
+**Not included:** Raw sleep-stage rows, raw step records, weight, body fat, blood pressure, and oxygen-saturation records are not exported by the current local backup format. A backup does not modify or replace the original data managed by Health Connect.
 
 ### Create a backup
 
@@ -49,7 +50,11 @@ Lost your settings after reinstalling the app? Restore them in seconds.
 1. **Go to:** Settings → Data & Backup → Available Backups
 2. **Select the backup** you want to restore.
 3. **Enter the backup password** (if you set one).
-4. **Tap "Restore"** — Settings are restored; the app may restart to apply changes.
+4. **Tap "Restore"** — The supported local records, summaries, and preferences are restored; the app may restart to apply changes.
+
+Backup manifests v5, v6, and v7 all restore into the current v7 entities. When restoring a v5 or v6
+backup, Readylytics normalizes legacy heart-rate and HRV composite IDs to
+`(sourceRecordId, timestampMs)` so records retain their current stable identity.
 
 ### Changing your backup password
 
@@ -66,7 +71,7 @@ The app can store unlimited historical health data, but if you're concerned abou
 **Retention window** (180–1095 days, default 365):
 - Dates older than this window are automatically deleted from the app's local database. State retention applies to every imported health-record table.
 - Does **not** affect Health Connect—your original data stays in Health Connect unless you delete it there.
-- Backups contain only records present in the local database at backup time (archived backups created before pruning may contain older data).
+- Backups contain only supported exported records present in the local database at backup time (archived backups created before pruning may contain older supported records).
 
 **Retention disabled:**
 - Turn off "Enable Data Retention" to keep all historical data indefinitely.

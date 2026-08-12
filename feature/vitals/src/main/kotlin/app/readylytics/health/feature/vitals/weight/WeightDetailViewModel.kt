@@ -3,19 +3,23 @@ package app.readylytics.health.feature.vitals.weight
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.WeightHistoryItem
+import app.readylytics.health.core.ui.common.bucketBy
+import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
-import app.readylytics.health.feature.vitals.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,11 +28,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import app.readylytics.health.core.ui.R as CoreUiR
 
 data class WeightDetailUiState(
     val latestWeight: Float? = null,
@@ -40,6 +44,7 @@ data class WeightDetailUiState(
     val dailyWeights: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val periodSummary: PeriodAverageSummary? = null,
     val weightDisplay: String? = null,
     val bmiDisplay: String? = null,
     val historyItems: List<WeightHistoryItem> = emptyList(),
@@ -72,7 +77,7 @@ class WeightDetailViewModel
 
                     val records = weightRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = weightRepository.getLatest()
-                    val previous = if (latest != null) weightRepository.getPrevious(latest.timestampMs) else null
+                    val previous = latest?.let { weightRepository.getPrevious(it.time.toEpochMilli()) }
                     val deltaWeightDisplay =
                         if (latest != null && previous != null) {
                             val diffKg = latest.weightKg - previous.weightKg
@@ -85,15 +90,15 @@ class WeightDetailViewModel
                                 if (userPrefs.unitSystem ==
                                     UnitSystem.METRIC
                                 ) {
-                                    R.string.unit_kg
+                                    CoreUiR.string.unit_kg
                                 } else {
-                                    R.string.unit_lbs
+                                    CoreUiR.string.unit_lbs
                                 }
                             when {
                                 diffKg > 0f ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.StringRes(CoreUiR.string.delta_up),
                                             UiText.RawString(" $formattedDiff "),
                                             UiText.StringRes(unitRes),
                                         ),
@@ -101,12 +106,12 @@ class WeightDetailViewModel
                                 diffKg < 0f ->
                                     UiText.Compound(
                                         listOf(
-                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.StringRes(CoreUiR.string.delta_down),
                                             UiText.RawString(" $formattedDiff "),
                                             UiText.StringRes(unitRes),
                                         ),
                                     )
-                                else -> UiText.StringRes(R.string.delta_no_change)
+                                else -> UiText.StringRes(CoreUiR.string.delta_no_change)
                             }
                         } else {
                             null
@@ -117,11 +122,12 @@ class WeightDetailViewModel
                             ChronoUnit.DAYS
                                 .between(
                                     rangeStart.atZone(zoneId).toLocalDate(),
-                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                    record.time.atZone(zoneId).toLocalDate(),
                                 ).toInt()
                         }
 
-                    val dailyWeights =
+                    val startDate = rangeStart.atZone(zoneId).toLocalDate()
+                    val dailyWeightsRaw =
                         recordsByDay
                             .map { (dayOffset, dayRecords) ->
                                 val avgWeight = dayRecords.map { it.weightKg }.average().toFloat()
@@ -133,7 +139,19 @@ class WeightDetailViewModel
                                     }
                                 DailyDataPoint(dayOffset, displayWeight)
                             }.sortedBy { it.dayOffset }
-                            .padToRange(range.days)
+
+                    val dailyWeights =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            dailyWeightsRaw.padToRange(range.days)
+                        } else {
+                            dailyWeightsRaw.bucketBy(range.granularity, startDate, selectedDate, valueDecimalPlaces = 1)
+                        }
+                    val periodSummary =
+                        if (range.granularity == TrendGranularity.DAILY) {
+                            null
+                        } else {
+                            buildPeriodAverageSummary(dailyWeights, range.granularity, startDate)
+                        }
 
                     val heightCm = userPrefs.heightCm
                     val bmi =
@@ -155,7 +173,7 @@ class WeightDetailViewModel
                             null
                         }
 
-                    val recordsAscending = records.sortedBy { it.timestampMs }
+                    val recordsAscending = records.sortedBy { it.time }
                     val historyItems =
                         recordsAscending
                             .mapIndexed { index, record ->
@@ -168,17 +186,19 @@ class WeightDetailViewModel
                                         kg * UnitConverter.KG_TO_LBS
                                     }
                                 }
-                                val bmiStatus =
+                                val bmiAssessment =
                                     userPrefs.heightCm?.let { heightCm ->
-                                        HealthMetricsCalculator
-                                            .assessBmi(HealthMetricsCalculator.calculateBmi(record.weightKg, heightCm))
+                                        BodyCompositionAssessment.assessBmi(
+                                            HealthMetricsCalculator.calculateBmi(record.weightKg, heightCm),
+                                        )
                                     }
                                 WeightHistoryItem(
-                                    timestampMs = record.timestampMs,
+                                    timestampMs = record.time.toEpochMilli(),
                                     weightDisplay = toDisplayUnit(record.weightKg),
                                     deltaDisplay = deltaKg?.let(toDisplayUnit),
                                     unitSystem = userPrefs.unitSystem,
-                                    bmiStatus = bmiStatus,
+                                    bmiStatus = bmiAssessment?.status,
+                                    bmiCategory = bmiAssessment?.category,
                                 )
                             }.reversed()
 
@@ -196,7 +216,7 @@ class WeightDetailViewModel
 
                     WeightDetailUiState(
                         latestWeight = latestWeight,
-                        latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
+                        latestDate = latest?.time?.atZone(zoneId)?.toLocalDate(),
                         bmi = bmi,
                         heightCm = userPrefs.heightCm,
                         averageWeight = averageWeight,
@@ -204,6 +224,7 @@ class WeightDetailViewModel
                         dailyWeights = dailyWeights,
                         rangeStartMs = rangeStart.toEpochMilli(),
                         unitSystem = userPrefs.unitSystem,
+                        periodSummary = periodSummary,
                         weightDisplay =
                             rawLatestWeight?.let {
                                 MetricFormatter.formatWeightNumericOnly(

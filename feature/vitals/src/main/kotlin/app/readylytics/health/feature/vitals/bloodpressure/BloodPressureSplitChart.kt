@@ -22,20 +22,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
+import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import kotlin.math.roundToInt
+import app.readylytics.health.feature.vitals.R as VitalsR
 
 /**
  * A split‑view blood pressure chart that displays systolic and diastolic series in two stacked charts.
@@ -49,6 +55,7 @@ fun BloodPressureSplitChart(
     rangeStartMs: Long,
     rangeDays: Int,
     modifier: Modifier = Modifier,
+    granularity: TrendGranularity = TrendGranularity.DAILY,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
         rememberVicoZoomState(
@@ -60,6 +67,7 @@ fun BloodPressureSplitChart(
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
+                        360 -> Zoom.fixed(45f)
                         else -> Zoom.fixed(2f)
                     }
                 },
@@ -107,12 +115,23 @@ fun BloodPressureSplitChart(
         return
     }
 
+    // Resolved in composable scope so the format string can be used inside the non-composable
+    // onDaySelected lambda below; resource strings must never be built as Kotlin literals.
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+    val weekRangeTemplate = stringResource(R.string.tooltip_week_range)
+
     val onDaySelected = { dayOffset: Int, canvasX: Float, canvasY: Float ->
         selectedDayOffset = dayOffset
         selectedCanvasX = canvasX
 
         val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-        val dateString = ChartUtils.formatTooltipDate(date)
+        val dateString =
+            formatTrendTooltipDate(
+                granularity,
+                date,
+                ordinalLabel,
+                weekRangeTemplate,
+            )
 
         val sysPoint = systolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
         val diaPoint = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
@@ -144,6 +163,7 @@ fun BloodPressureSplitChart(
                 rangeStartMs = rangeStartMs,
                 rangeDays = rangeDays,
                 isDiastolic = false,
+                granularity = granularity,
                 scrollState = scrollState,
                 zoomState = zoomState,
                 modifier = Modifier.fillMaxWidth().height(180.dp),
@@ -159,6 +179,7 @@ fun BloodPressureSplitChart(
                 rangeStartMs = rangeStartMs,
                 rangeDays = rangeDays,
                 isDiastolic = true,
+                granularity = granularity,
                 scrollState = scrollState,
                 zoomState = zoomState,
                 modifier = Modifier.fillMaxWidth().height(180.dp),
@@ -183,7 +204,7 @@ fun BloodPressureSplitChart(
                 )
                 Spacer(Modifier.width(MaterialTheme.spacing.small))
                 Text(
-                    text = "Systolic",
+                    text = stringResource(VitalsR.string.label_systolic),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -197,7 +218,7 @@ fun BloodPressureSplitChart(
                 )
                 Spacer(Modifier.width(MaterialTheme.spacing.small))
                 Text(
-                    text = "Diastolic",
+                    text = stringResource(VitalsR.string.label_diastolic),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.tertiaryContainer,
                 )

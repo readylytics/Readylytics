@@ -1,8 +1,11 @@
 package app.readylytics.health.core.ui.components
 
 import androidx.compose.ui.geometry.Offset
+import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
 import org.junit.Test
+import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -55,6 +58,56 @@ class TrendChartRenderDataTest {
         assertEquals("42 ms", formatTrendTooltipValue(42.4f, 0, false, "ms"))
         assertEquals("42.4 %", formatTrendTooltipValue(42.44f, 1, false, "%"))
         assertEquals("42", formatTrendTooltipValue(42f, 0, true, "steps"))
+    }
+
+    @Test
+    fun `period value and tooltip value share one formatter`() {
+        // hideUnit=false appends the unit — exactly what PeriodAverageSummaryRow needs.
+        assertEquals("24.5 kg", formatTrendTooltipValue(24.5f, 1, false, "kg"))
+        assertEquals("25 kg", formatTrendTooltipValue(24.5f, 0, false, "kg"))
+    }
+
+    @Test
+    fun `tooltip date uses period label for monthly granularity`() {
+        val date = LocalDate.of(2026, 7, 15)
+        assertEquals("Jul", formatTrendTooltipDate(TrendGranularity.MONTHLY, date, { "Q$it" }))
+    }
+
+    @Test
+    fun `tooltip date uses week range for eight week granularity`() {
+        val date = LocalDate.of(2026, 7, 5)
+        assertEquals(
+            "Weeks 25–32",
+            formatTrendTooltipDate(
+                TrendGranularity.EIGHT_WEEK,
+                date,
+                { week -> "Wk$week" },
+                "Weeks %1\$d–%2\$d",
+            ),
+        )
+    }
+
+    @Test
+    fun `tooltip date keeps short date format for daily granularity`() {
+        val date = LocalDate.of(2026, 7, 15)
+        assertEquals(
+            ChartUtils.formatTooltipDate(date),
+            formatTrendTooltipDate(TrendGranularity.DAILY, date, { "Q$it" }),
+        )
+    }
+
+    @Test
+    fun `baseline legend identifies calibration when a baseline is unavailable`() {
+        assertEquals(
+            "Baseline: Calibrating",
+            formatBaselineLegendText(
+                value = null,
+                unit = "°C",
+                label = "Baseline",
+                decimalPlaces = 1,
+                unavailableValueLabel = "Calibrating",
+            ),
+        )
     }
 
     @Test

@@ -6,10 +6,16 @@ import android.util.JsonReader
 import android.util.JsonToken
 import androidx.room.withTransaction
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.local.entity.StepRecordEntity
+import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
@@ -33,6 +39,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
@@ -75,43 +82,7 @@ class LocalRestoreManager
                             zipFile.setPassword(password.toCharArray())
                         }
 
-                        val header =
-                            zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
-                                ?: throw IllegalStateException("No JSON file found in backup ZIP")
-
-                        zipFile.getInputStream(header).use { inputStream ->
-                            val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                            var schemaVersion = -1
-                            var exportedAt = ""
-                            var rowCounts = emptyMap<String, Int>()
-
-                            reader.beginObject()
-                            while (reader.hasNext()) {
-                                when (reader.nextName()) {
-                                    "schemaVersion" -> schemaVersion = reader.nextInt()
-                                    "exportedAt" -> exportedAt = reader.nextString()
-                                    "rowCounts" -> {
-                                        val counts = mutableMapOf<String, Int>()
-                                        reader.beginObject()
-                                        while (reader.hasNext()) {
-                                            counts[reader.nextName()] = reader.nextInt()
-                                        }
-                                        reader.endObject()
-                                        rowCounts = counts
-                                    }
-                                    else -> reader.skipValue()
-                                }
-                            }
-                            reader.endObject()
-
-                            if (schemaVersion != HealthDatabase.DATABASE_VERSION) {
-                                throw IllegalStateException(
-                                    "Backup schema version $schemaVersion does not match database version ${HealthDatabase.DATABASE_VERSION}",
-                                )
-                            }
-
-                            BackupManifest(schemaVersion, exportedAt, rowCounts)
-                        }
+                        readManifest(zipFile)
                     } finally {
                         tempZipFile.delete()
                     }
@@ -144,6 +115,7 @@ class LocalRestoreManager
                             zipFile.setPassword(password.toCharArray())
                         }
 
+                        val manifest = readManifest(zipFile)
                         val header =
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
                                 ?: throw IllegalStateException("No JSON file found in backup ZIP")
@@ -152,7 +124,7 @@ class LocalRestoreManager
                         healthDatabase.withTransaction {
                             zipFile.getInputStream(header).use { inputStream ->
                                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                                performStreamingRestore(reader) { parsedPreferences ->
+                                performStreamingRestore(reader, manifest.schemaVersion) { parsedPreferences ->
                                     prefsBackup = parsedPreferences
                                 }
                             }
@@ -212,8 +184,44 @@ class LocalRestoreManager
                 }
             }
 
+        private fun readManifest(zipFile: ZipFile): BackupManifest {
+            val header =
+                zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
+                    ?: throw IllegalStateException("No JSON file found in backup ZIP")
+
+            return zipFile.getInputStream(header).use { inputStream ->
+                val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
+                var schemaVersion = -1
+                var exportedAt = ""
+                var rowCounts = emptyMap<String, Int>()
+
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "schemaVersion" -> schemaVersion = reader.nextInt()
+                        "exportedAt" -> exportedAt = reader.nextString()
+                        "rowCounts" -> {
+                            val counts = mutableMapOf<String, Int>()
+                            reader.beginObject()
+                            while (reader.hasNext()) {
+                                counts[reader.nextName()] = reader.nextInt()
+                            }
+                            reader.endObject()
+                            rowCounts = counts
+                        }
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+
+                BackupSchemaPolicy.requireSupported(schemaVersion)
+                BackupManifest(schemaVersion, exportedAt, rowCounts)
+            }
+        }
+
         private suspend fun performStreamingRestore(
             reader: JsonReader,
+            schemaVersion: Int,
             onPreferencesParsed: (UserPreferencesBackup) -> Unit,
         ) {
             val sleepSessionDao = healthDatabase.sleepSessionDao()
@@ -221,6 +229,12 @@ class LocalRestoreManager
             val hrvDao = healthDatabase.hrvDao()
             val workoutDao = healthDatabase.workoutDao()
             val dailySummaryDao = healthDatabase.dailySummaryDao()
+            val weightRecordDao = healthDatabase.weightRecordDao()
+            val bodyFatRecordDao = healthDatabase.bodyFatRecordDao()
+            val bloodPressureRecordDao = healthDatabase.bloodPressureRecordDao()
+            val oxygenSaturationRecordDao = healthDatabase.oxygenSaturationRecordDao()
+            val bodyTemperatureRecordDao = healthDatabase.bodyTemperatureRecordDao()
+            val stepRecordDao = healthDatabase.stepRecordDao()
 
             // Clear all tables first
             sleepSessionDao.deleteAll()
@@ -254,7 +268,14 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<HeartRateRecordEntity>()
                         while (reader.hasNext()) {
-                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            val row = readNextObjectAsString(reader)
+                            val entity =
+                                if (schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION) {
+                                    json.decodeFromString<HeartRateRecordEntity>(row)
+                                } else {
+                                    json.decodeFromString<LegacyHeartRateRecordBackup>(row).toCurrent()
+                                }
+                            batch.add(entity)
                             if (batch.size >= 500) {
                                 heartRateDao.upsertAll(batch)
                                 batch.clear()
@@ -267,7 +288,14 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<HrvRecordEntity>()
                         while (reader.hasNext()) {
-                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            val row = readNextObjectAsString(reader)
+                            val entity =
+                                if (schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION) {
+                                    json.decodeFromString<HrvRecordEntity>(row)
+                                } else {
+                                    json.decodeFromString<LegacyHrvRecordBackup>(row).toCurrent()
+                                }
+                            batch.add(entity)
                             if (batch.size >= 500) {
                                 hrvDao.upsertAll(batch)
                                 batch.clear()
@@ -302,6 +330,95 @@ class LocalRestoreManager
                         if (batch.isNotEmpty()) dailySummaryDao.upsertAll(batch)
                         reader.endArray()
                     }
+                    // The six raw-vitals tables below predate this key existing in the export
+                    // (see the backup export task). Each one's deleteAll() is scoped inside its
+                    // own branch -- it only fires when the key is actually present -- so restoring
+                    // an older backup that has none of these keys leaves the current local rows
+                    // for these tables untouched instead of silently wiping them.
+                    "weightRecords" -> {
+                        weightRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<WeightRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                weightRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) weightRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "bodyFatRecords" -> {
+                        bodyFatRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<BodyFatRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                bodyFatRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) bodyFatRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "bloodPressureRecords" -> {
+                        bloodPressureRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<BloodPressureRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                bloodPressureRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) bloodPressureRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "oxygenSaturationRecords" -> {
+                        oxygenSaturationRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<OxygenSaturationRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                oxygenSaturationRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) oxygenSaturationRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "bodyTemperatureRecords" -> {
+                        bodyTemperatureRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<BodyTemperatureRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 100) {
+                                bodyTemperatureRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) bodyTemperatureRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "stepRecords" -> {
+                        stepRecordDao.deleteAll()
+                        reader.beginArray()
+                        val batch = mutableListOf<StepRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 500) {
+                                stepRecordDao.upsertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) stepRecordDao.upsertAll(batch)
+                        reader.endArray()
+                    }
                     else -> reader.skipValue()
                 }
             }
@@ -325,7 +442,7 @@ class LocalRestoreManager
                     var first = true
                     while (reader.hasNext()) {
                         if (!first) sb.append(",")
-                        sb.append("\"").append(reader.nextName()).append("\":")
+                        sb.append(json.encodeToString(reader.nextName())).append(":")
                         parseValue(reader, sb)
                         first = false
                     }
@@ -345,20 +462,7 @@ class LocalRestoreManager
                     sb.append("]")
                 }
                 JsonToken.STRING -> {
-                    val s = reader.nextString()
-                    sb.append("\"")
-                    for (i in 0 until s.length) {
-                        val c = s[i]
-                        when (c) {
-                            '\\' -> sb.append("\\\\")
-                            '"' -> sb.append("\\\"")
-                            '\n' -> sb.append("\\n")
-                            '\r' -> sb.append("\\r")
-                            '\t' -> sb.append("\\t")
-                            else -> sb.append(c)
-                        }
-                    }
-                    sb.append("\"")
+                    sb.append(json.encodeToString(reader.nextString()))
                 }
                 JsonToken.NUMBER -> {
                     sb.append(reader.nextString())

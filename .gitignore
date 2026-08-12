@@ -8,6 +8,7 @@ local.properties
 
 # Log/OS Files
 *.log
+.DS_Store
 
 # Android Studio generated files and folders
 captures/
@@ -61,3 +62,8 @@ ktlint
 build-logic/bin/
 .artifacts/
 .codegraph/
+
+# Superpowers SDD scratch workspace
+.superpowers/
+
+.worktrees/

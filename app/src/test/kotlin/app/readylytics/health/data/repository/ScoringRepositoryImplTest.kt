@@ -1,8 +1,11 @@
 package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
@@ -10,8 +13,10 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.*
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -20,6 +25,7 @@ import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScoringRepositoryImplTest {
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
@@ -35,6 +41,7 @@ class ScoringRepositoryImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
@@ -50,6 +57,8 @@ class ScoringRepositoryImplTest {
                 settingsRepo,
                 scoringCalculator,
                 baselineComputer,
+                BuildLoadSeriesUseCase(scoringCalculator),
+                AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
@@ -58,12 +67,14 @@ class ScoringRepositoryImplTest {
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
                 sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
+                UnconfinedTestDispatcher(),
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null
-        coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
+        coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
         coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns emptyList()
         coEvery { sleepSessionDao.countSince(any()) } returns 10
         coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any(), any()) } returns 60f
@@ -136,9 +147,15 @@ class ScoringRepositoryImplTest {
                 )
             } answers {
                 when (thirdArg<LocalDate>()) {
-                    today -> Result.success(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f))
-                    yesterday -> Result.success(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f))
-                    else -> Result.success(DailySummaryEntity(0L))
+                    today ->
+                        Result.success(
+                            DailySummaryMapper.toDomain(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f), zoneId),
+                        )
+                    yesterday ->
+                        Result.success(
+                            DailySummaryMapper.toDomain(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f), zoneId),
+                        )
+                    else -> Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
                 }
             }
 
@@ -164,7 +181,8 @@ class ScoringRepositoryImplTest {
                     baselineCalculatedAtDate = today,
                 )
             coEvery { dailySummaryDao.getByDate(todayMs) } returns existingSummary
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs) } returns existingSummary
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs, zoneId) } returns
+                DailySummaryMapper.toDomain(existingSummary, zoneId)
 
             // Ensure use case returns success
             coEvery {
@@ -183,7 +201,7 @@ class ScoringRepositoryImplTest {
                 )
             } returns
                 Result
-                    .success(existingSummary)
+                    .success(DailySummaryMapper.toDomain(existingSummary, zoneId))
 
             val result = repo.computeDailySummary(today)
 
@@ -228,7 +246,12 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                Result.success(DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f))
+                Result.success(
+                    DailySummaryMapper.toDomain(
+                        DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f),
+                        ZoneId.systemDefault(),
+                    ),
+                )
 
             val result = repo.computeDailySummary(today)
 
@@ -260,7 +283,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                Result.success(DailySummaryEntity(0L))
+                Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), ZoneId.systemDefault()))
 
             val result = repo.computeDailySummary(today)
 
@@ -313,7 +336,7 @@ class ScoringRepositoryImplTest {
                 )
             } returns
                 Result
-                    .success(DailySummaryEntity(0L))
+                    .success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
 
             // Should not throw
             val result = repo.computeDailySummary(today)
@@ -331,7 +354,7 @@ class ScoringRepositoryImplTest {
 
             every { settingsRepo.userPreferences } returns prefsFlow
             coEvery { dailySummaryDao.getByDate(any()) } returns null
-            coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
             coEvery { sleepSessionDao.countSince(any()) } coAnswers {
                 prefsFlow.value = UserPreferences(scoringZoneId = zoneB.id)
                 10
@@ -347,5 +370,151 @@ class ScoringRepositoryImplTest {
                     .toEpochMilli(),
                 entitySlot.captured.dateMidnightMs,
             )
+        }
+
+    @Test
+    fun `computeDailySummary persists modelTrimp per workout using computeWorkoutTrimpUseCase result`() =
+        runTest {
+            // SCORE-001/WP-10: the user-selected-model TRIMP computed per workout must be written
+            // back onto WorkoutRecordEntity.modelTrimp, not just summed into dailyTrimpRaw in memory.
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+            val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            val workout =
+                WorkoutRecordEntity(
+                    id = "w1",
+                    startTime = dayStart + 3_600_000L,
+                    endTime = dayStart + 5_400_000L,
+                    exerciseType = "RUNNING",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 20f,
+                    zone3Minutes = 5f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 40f,
+                    avgHr = 140f,
+                    modelTrimp = null,
+                )
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            every {
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(55f)
+            coEvery {
+                computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
+
+            val workoutSlot = slot<List<WorkoutRecordEntity>>()
+            coEvery { workoutDao.upsertAll(capture(workoutSlot)) } returns Unit
+
+            repo.computeDailySummary(today)
+
+            coVerify(exactly = 1) { workoutDao.upsertAll(any()) }
+            assertEquals(1, workoutSlot.captured.size)
+            assertEquals("w1", workoutSlot.captured.first().id)
+            assertEquals(55f, workoutSlot.captured.first().modelTrimp)
+        }
+
+    @Test
+    fun `computeDailySummary skips workoutDao upsertAll when no workout's modelTrimp changed`() =
+        runTest {
+            // A workout already carrying the freshly computed modelTrimp value shouldn't trigger a
+            // redundant write on every single walk-forward day.
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+            val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            val workout =
+                WorkoutRecordEntity(
+                    id = "w1",
+                    startTime = dayStart + 3_600_000L,
+                    endTime = dayStart + 5_400_000L,
+                    exerciseType = "RUNNING",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 20f,
+                    zone3Minutes = 5f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 40f,
+                    avgHr = 140f,
+                    modelTrimp = 55f,
+                )
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(workout)
+            every {
+                computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(55f)
+            coEvery {
+                computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
+
+            repo.computeDailySummary(today)
+
+            coVerify(exactly = 0) { workoutDao.upsertAll(any()) }
+        }
+
+    @Test
+    fun `computeAndPersistDailySummary averages body temperature samples in sleep session without touching score`() =
+        runTest {
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+
+            val mockSession =
+                SleepSessionEntity(
+                    id = "test_session",
+                    startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
+                    endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
+                    durationMinutes = 450,
+                    efficiency = 85f,
+                    deepSleepMinutes = 90,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 210,
+                    awakeMinutes = 15,
+                )
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
+            coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
+            coEvery { sleepSessionDao.countSince(any()) } returns 7
+
+            coEvery { bodyTemperatureRecordDao.getByTimeRange(any(), any()) } returns
+                listOf(
+                    BodyTemperatureRecordEntity(id = "1", timestampMs = 1L, celsius = 36.4f),
+                    BodyTemperatureRecordEntity(id = "2", timestampMs = 2L, celsius = 36.8f),
+                )
+
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
+                Result.success(
+                    DailySummaryMapper.toDomain(
+                        DailySummaryEntity(0L, sleepScore = 82f),
+                        zoneId,
+                    ),
+                )
+
+            val entitySlot = slot<DailySummaryEntity>()
+            coEvery { dailySummaryDao.upsert(capture(entitySlot)) } returns Unit
+
+            repo.computeAndPersistDailySummary(today, steps = null, prefs = UserPreferences())
+
+            // Averages the two stubbed samples (36.4 + 36.8) / 2 = 36.6.
+            assertEquals(36.6f, entitySlot.captured.avgSleepingBodyTemp!!, 0.01f)
+            // Verifies the "never a scoring input" guarantee: computing this field must not move
+            // the sleep score for an otherwise-identical day.
+            val summaryWithoutBodyTemp = entitySlot.captured.copy(avgSleepingBodyTemp = null)
+            assertEquals(entitySlot.captured.sleepScore, summaryWithoutBodyTemp.sleepScore)
         }
 }

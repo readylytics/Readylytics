@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.vitals.heartrate
 
 import app.readylytics.health.core.ui.model.HrSample
+import app.readylytics.health.domain.model.MetricStatus
 import java.time.LocalDate
 
 data class ZoneTotal(
@@ -14,6 +15,7 @@ data class HeartRateDetailUiState(
     val minBpm: Int? = null,
     val maxBpm: Int? = null,
     val avgBpm: Int? = null,
+    val averageStatus: MetricStatus = MetricStatus.CALIBRATING,
     val zoneTotals: Map<Int, ZoneTotal> = emptyMap(),
     val selectedDate: LocalDate = LocalDate.now(),
     val today: LocalDate = LocalDate.now(),

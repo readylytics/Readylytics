@@ -18,6 +18,7 @@
     <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
     <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" />
     <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE" />
 
     <!-- For backward compatibility with Android 13 and below -->
     <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_SLEEP" />
@@ -29,6 +30,7 @@
     <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_BODY_FAT" />
     <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_BLOOD_PRESSURE" />
     <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_BODY_TEMPERATURE" />
 
     <!-- Required on Android 11+ so the HC package is visible to our app -->
     <queries>

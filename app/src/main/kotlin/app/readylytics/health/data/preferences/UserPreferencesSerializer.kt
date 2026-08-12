@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
@@ -68,6 +69,7 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setCustomSecondaryColor(SettingsDefaults.CUSTOM_SECONDARY_COLOR)
             .setCustomTertiaryColor(SettingsDefaults.CUSTOM_TERTIARY_COLOR)
             .setCustomPrimaryColor(SettingsDefaults.CUSTOM_PRIMARY_COLOR)
+            .setBodyTempElevatedThresholdCelsius(SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS)
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -173,6 +175,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setCustomSecondaryColor(domain.customSecondaryColor)
         .setCustomTertiaryColor(domain.customTertiaryColor)
         .setCustomPrimaryColor(domain.customPrimaryColor)
+        .setBodyTempElevatedThresholdCelsius(domain.bodyTempElevatedThresholdCelsius)
 
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }
@@ -200,6 +203,14 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         when (domain.rasSourceMode) {
             LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
             LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+        },
+    )
+    builder.setLastGlobalDisplayMode(
+        when (domain.lastGlobalDisplayMode) {
+            DashboardCardDisplayMode.VALUE -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_VALUE
+            DashboardCardDisplayMode.GAUGE -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_GAUGE
+            DashboardCardDisplayMode.BAR -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_BAR
+            null -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_UNSET
         },
     )
 

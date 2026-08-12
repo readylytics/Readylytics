@@ -6,6 +6,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import readylytics.buildlogic.DebugInstallIdentity
 
 val releaseSigningEnvironmentVariables =
     listOf(
@@ -52,6 +53,7 @@ abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -111,10 +113,30 @@ val resolvedVersion = computeVersion()
 val computedVersionCode = resolvedVersion.first
 val computedVersionName = resolvedVersion.second
 
+val rawHostname =
+    providers
+        .environmentVariable("COMPUTERNAME")
+        .orElse(providers.environmentVariable("HOSTNAME"))
+        .orElse(providers.systemProperty("user.name"))
+        .orElse("device")
+        .map(DebugInstallIdentity::stripMdnsSuffix)
+val machineIdSegment = rawHostname.map(DebugInstallIdentity::sanitizeMachineId)
+
 kotlin {
     jvmToolchain(17)
     compilerOptions {
         freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    }
+}
+
+composeCompiler {
+    stabilityConfigurationFiles.add(
+        rootProject.layout.projectDirectory.file("compose_compiler_config.conf"),
+    )
+    // Metrics/reports are opt-in via -PenableComposeReports so normal builds pay zero extra I/O cost.
+    if (project.hasProperty("enableComposeReports")) {
+        metricsDestination.set(layout.buildDirectory.dir("compose-metrics"))
+        reportsDestination.set(layout.buildDirectory.dir("compose-metrics"))
     }
 }
 
@@ -159,15 +181,54 @@ android {
             )
         }
         debug {
-            applicationIdSuffix = ".local"
+            applicationIdSuffix = ".local.${machineIdSegment.get()}"
             versionNameSuffix = "-local"
             enableUnitTestCoverage = true
+            resValue("string", "app_name", "Readylytics Local (${rawHostname.get()})")
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
+            applicationIdSuffix = ".macrobenchmark"
             signingConfig = signingConfigs.getByName("debug")
             isDebuggable = false
             matchingFallbacks += listOf("release")
+        }
+        create("nonMinifiedRelease") {
+            initWith(buildTypes.getByName("release"))
+            applicationIdSuffix = ".baselineprofile"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
+    }
+    sourceSets {
+        getByName("benchmark").apply {
+            kotlin.srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
+            baselineProfiles {
+                srcDir("src/release/generated/baselineProfiles")
+            }
+        }
+        configureEach {
+            when (name) {
+                "nonMinifiedRelease" ->
+                    kotlin.apply {
+                        srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
+                        val releaseBenchmarkStubs =
+                            setOf(
+                                project
+                                    .file(
+                                        "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkDataSeeder.kt",
+                                    ).absoluteFile,
+                                project
+                                    .file(
+                                        "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkSemantics.kt",
+                                    ).absoluteFile,
+                            )
+                        (this as com.android.build.gradle.api.AndroidSourceDirectorySet).filter.exclude {
+                            it.file.absoluteFile in releaseBenchmarkStubs
+                        }
+                    }
+                "test" -> kotlin.srcDir("src/profileSeed/kotlin")
+            }
         }
     }
     compileOptions {
@@ -177,6 +238,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
     lint {
         abortOnError = true
@@ -184,6 +246,12 @@ android {
         xmlReport = true
         disable += listOf("GradleDependency", "NewerVersionAvailable")
     }
+}
+
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+    dexLayoutOptimization = true
 }
 
 val verifyReleaseSigningInputs =
@@ -206,7 +274,9 @@ listOf(
 }
 
 room {
-    schemaDirectory("$projectDir/schemas")
+    // HealthDatabase lives in :core:database; its exported schemas are the ones
+    // MigrationTestHelper needs as androidTest assets for tests in this module.
+    schemaDirectory(rootDir.resolve("core/database/schemas").path)
 }
 
 play {
@@ -332,6 +402,7 @@ dependencies {
 
     // Installs the AOT baseline profile generated by BaselineProfileGenerator
     implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":benchmark"))
 
     testImplementation(libs.junit)
     testImplementation(kotlin("test"))
@@ -362,13 +433,15 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test)
     androidTestImplementation(libs.play.services.stats)
     androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.benchmark.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
 tasks.withType<Test>().configureEach {
-    jvmArgs("-Xshare:off")
+    jvmArgs("-Xshare:off", "-Djdk.attach.allowAttachSelf=true")
     systemProperty("robolectric.coverage.enabled", "true")
+    systemProperty("update.golden", providers.systemProperty("update.golden").getOrElse("false"))
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
         excludes = listOf("jdk.internal.*")

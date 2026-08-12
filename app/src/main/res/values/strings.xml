@@ -17,6 +17,23 @@
     <string name="background_sync_channel_name">Background sync</string>
     <string name="background_sync_channel_description">Silent notification shown briefly while
         background Health Connect sync runs.</string>
+    <string name="database_migration_title">Updating your health database</string>
+    <string name="database_migration_description">Readylytics is optimizing locally stored
+        heart-rate history. Keep the app open or let the foreground notification finish.</string>
+    <plurals name="database_migration_progress">
+        <item quantity="one">%1$s of %2$s record</item>
+        <item quantity="other">%1$s of %2$s records</item>
+    </plurals>
+    <string name="database_migration_space_error">More device storage is required. Free at least
+        %1$s, then retry.</string>
+    <string name="database_migration_retry">Retry</string>
+    <string name="database_migration_send_diagnostics">Send diagnostic log</string>
+    <string name="database_migration_diagnostics_error">Could not prepare diagnostic log. Please retry the update.</string>
+    <string name="database_migration_failed">Your existing data is unchanged. Retry the update or
+        export diagnostics before continuing.</string>
+    <string name="database_migration_channel_name">Database updates</string>
+    <string name="database_migration_channel_description">Progress for required local database
+        updates</string>
     <string name="health_connect_unavailable_message">Health Connect is not installed on this
         device.\nInstall it from the Play Store.</string>
 
@@ -47,9 +64,11 @@
     <string name="crash_report_dialog_body">Send a report to help fix it? It only contains the
         error details and basic device info, never your health data. Email is private; a GitHub
         issue is posted publicly.</string>
-    <string name="crash_report_dialog_send_email">Email (private)</string>
-    <string name="crash_report_dialog_send_github">GitHub Issue (public)</string>
+    <string name="crash_report_dialog_send_email">Email</string>
+    <string name="crash_report_dialog_send_github">GitHub Issue</string>
     <string name="crash_report_dialog_dismiss">Not now</string>
+    <string name="crash_report_dialog_send">Send</string>
+    <string name="crash_report_dialog_clear">Clear</string>
 
     <string name="crash_report_too_large_title">Report too large</string>
     <string name="crash_report_too_large_body">This report is too large to open directly in a GitHub
@@ -74,4 +93,3 @@
     <string name="restore_stage_preferences" ns0:ignore="UnusedResources">settings</string>
     <string name="log_share_chooser_title">Download/Share logs</string>
 </resources>
-

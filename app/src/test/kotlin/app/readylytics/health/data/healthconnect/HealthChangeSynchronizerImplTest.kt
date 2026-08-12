@@ -2,8 +2,10 @@ package app.readylytics.health.data.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
@@ -42,6 +44,8 @@ class HealthChangeSynchronizerImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
+    private val stepRecordDao = mockk<StepRecordDao>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -74,6 +78,8 @@ class HealthChangeSynchronizerImplTest {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
+                stepRecordDao = stepRecordDao,
             )
     }
 
@@ -83,13 +89,14 @@ class HealthChangeSynchronizerImplTest {
     }
 
     @Test
-    fun `applyPendingChanges returns requiresFullResync if token is missing`() =
+    fun `applyPendingChanges does not request full resync when token missing and permission not granted`() =
         runTest {
             coEvery { tokenStore.get(any()) } returns null
+            coEvery { client.permissionController.getGrantedPermissions() } returns emptySet()
 
             val outcome = synchronizer.applyPendingChanges()
 
-            assertTrue(outcome.requiresFullResync)
+            assertFalse(outcome.requiresFullResync)
             assertTrue(outcome.affectedDates.isEmpty())
         }
 
@@ -483,6 +490,140 @@ class HealthChangeSynchronizerImplTest {
             }
         }
 
+    @Test
+    fun `applyPendingChanges persists an upserted steps record for later deletion resolution`() =
+        runTest {
+            seedTokens()
+            val recordId = "steps-record"
+            val startTime = Instant.parse("2026-06-21T08:00:00Z")
+            val endTime = Instant.parse("2026-06-21T08:10:00Z")
+            val record =
+                mockk<StepsRecord>(relaxed = true) {
+                    every { metadata.id } returns recordId
+                    every { metadata.device } returns null
+                    every { metadata.dataOrigin.packageName } returns "pkg"
+                    every { this@mockk.startTime } returns startTime
+                    every { this@mockk.endTime } returns endTime
+                    every { count } returns 500L
+                }
+            val change =
+                mockk<UpsertionChange>(relaxed = true) {
+                    every { this@mockk.record } returns record
+                }
+            routeOneChange(dataType = HealthDataType.STEPS, change = change)
+            coEvery { stepRecordDao.getById(recordId) } returns null
+
+            synchronizer.applyPendingChanges()
+
+            coVerify {
+                stepRecordDao.upsertAll(
+                    match { records ->
+                        records.size == 1 &&
+                            records[0].id == recordId &&
+                            records[0].startTime == startTime.toEpochMilli() &&
+                            records[0].endTime == endTime.toEpochMilli() &&
+                            records[0].count == 500L
+                    },
+                )
+            }
+        }
+
+    @Test
+    fun `applyPendingChanges resolves a deleted steps record's dates from the stored raw row`() =
+        runTest {
+            // HC-005: a steps DeletionChange must resolve affected dates from the row
+            // upsertRecord's STEPS branch previously persisted, not emptySet().
+            val originalZone = TimeZone.getDefault()
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+            try {
+                seedTokens()
+                val recordId = "deleted-steps"
+                val storedRow =
+                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                        id = recordId,
+                        startTime = Instant.parse("2026-03-10T22:00:00Z").toEpochMilli(),
+                        endTime = Instant.parse("2026-03-11T00:00:00Z").toEpochMilli(),
+                        count = 200L,
+                        deviceName = "Watch",
+                    )
+                coEvery { stepRecordDao.getById(recordId) } returns storedRow
+                val deletionChange =
+                    mockk<DeletionChange>(relaxed = true) {
+                        every { this@mockk.recordId } returns recordId
+                    }
+                routeOneChange(dataType = HealthDataType.STEPS, change = deletionChange)
+
+                val outcome = synchronizer.applyPendingChanges()
+
+                assertEquals(
+                    setOf(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)),
+                    outcome.affectedDates,
+                )
+                coVerifyOrder {
+                    stepRecordDao.getById(recordId)
+                    stepRecordDao.deleteById(recordId)
+                }
+            } finally {
+                TimeZone.setDefault(originalZone)
+            }
+        }
+
+    @Test
+    fun `applyPendingChanges skips a data type whose permission is not granted, continues for others`() =
+        runTest {
+            // Seed tokens for all types EXCEPT steps
+            coEvery { tokenStore.get(any()) } answers {
+                val dt = firstArg<HealthDataType>()
+                if (dt == HealthDataType.STEPS) null else "token-for-$dt"
+            }
+
+            // Simulate: heart_rate permission is granted, steps permission is NOT granted
+            val grantedPermissions =
+                setOf(
+                    HealthPermission.getReadPermission(HeartRateRecord::class),
+                )
+            val permissionController = mockk<PermissionController>(relaxed = true)
+            coEvery { permissionController.getGrantedPermissions() } returns grantedPermissions
+            every { client.permissionController } returns permissionController
+
+            // Set up a real change for the heart rate type (which HAS a token + permission)
+            val sampleTime = Instant.parse("2026-06-20T09:00:00Z")
+            val record =
+                mockk<HeartRateRecord>(relaxed = true) {
+                    every { metadata.id } returns "hr-record"
+                    every { metadata.device } returns null
+                    every { metadata.dataOrigin.packageName } returns "pkg"
+                    every { startTime } returns sampleTime
+                    every { endTime } returns sampleTime
+                    every { samples } returns
+                        listOf(
+                            mockk {
+                                every { time } returns sampleTime
+                                every { beatsPerMinute } returns 63L
+                            },
+                        )
+                }
+            val change =
+                mockk<UpsertionChange>(relaxed = true) {
+                    every { this@mockk.record } returns record
+                }
+            val response =
+                mockk<ChangesResponse>(relaxed = true) {
+                    every { changesTokenExpired } returns false
+                    every { changes } returns listOf(change)
+                    every { nextChangesToken } returns "next-hr"
+                    every { hasMore } returns false
+                }
+            coEvery { client.getChanges(any()) } returns response
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            // Should NOT request full resync (skipped STEPS, processed HEART_RATE)
+            assertFalse(outcome.requiresFullResync)
+            assertTrue(outcome.affectedDates.isNotEmpty())
+            assertEquals("next-hr", outcome.nextTokens[HealthDataType.HEART_RATE])
+        }
+
     private fun seedTokens() {
         coEvery { tokenStore.get(HealthDataType.SLEEP) } returns "sleep-token"
         coEvery { tokenStore.get(HealthDataType.HEART_RATE) } returns "heart-token"
@@ -492,6 +633,7 @@ class HealthChangeSynchronizerImplTest {
         coEvery { tokenStore.get(HealthDataType.BODY_FAT) } returns "bodyfat-token"
         coEvery { tokenStore.get(HealthDataType.BLOOD_PRESSURE) } returns "bp-token"
         coEvery { tokenStore.get(HealthDataType.OXYGEN_SATURATION) } returns "spo2-token"
+        coEvery { tokenStore.get(HealthDataType.BODY_TEMPERATURE) } returns "bodytemp-token"
         coEvery { tokenStore.get(HealthDataType.STEPS) } returns "steps-token"
     }
 
@@ -521,6 +663,7 @@ class HealthChangeSynchronizerImplTest {
             HealthDataType.BODY_FAT -> "bodyfat-token"
             HealthDataType.BLOOD_PRESSURE -> "bp-token"
             HealthDataType.OXYGEN_SATURATION -> "spo2-token"
+            HealthDataType.BODY_TEMPERATURE -> "bodytemp-token"
             HealthDataType.STEPS -> "steps-token"
         }
 

@@ -2,6 +2,7 @@ package app.readylytics.health.domain.repository
 
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHrvRecord
@@ -22,6 +23,21 @@ class HealthConnectPermissionRevokedException(
             recordType?.let { append("; recordType=$it") }
             cause.message?.takeIf { it.isNotBlank() }?.let { append("; cause=$it") }
         },
+        cause,
+    )
+
+/**
+ * Thrown when a Health Connect ingest window can't be read within its time budget (HC-002).
+ * Deliberately *not* a [kotlinx.coroutines.CancellationException] subtype -- unlike the
+ * [kotlinx.coroutines.TimeoutCancellationException] it's translated from at the `withTimeout` call
+ * site, this must never be confused with cooperative cancellation by any layer above the read.
+ */
+class HealthConnectWindowTimeoutException(
+    val windowStart: java.time.Instant,
+    val windowEnd: java.time.Instant,
+    cause: Throwable,
+) : Exception(
+        "Health Connect window read timed out: $windowStart..$windowEnd",
         cause,
     )
 
@@ -63,6 +79,25 @@ interface HealthConnectRepository {
         to: Instant,
     ): List<DomainHrvRecord>
 
+    /**
+     * Streams heart-rate samples page-by-page instead of materializing the whole [from]..[to]
+     * range in memory (HC-001). [onPage] is invoked once per Health Connect page, in the order
+     * pages are returned; pages are not guaranteed to be globally sorted across page boundaries,
+     * only within Health Connect's own per-page ordering.
+     */
+    suspend fun readHeartRateSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHeartRateRecord>) -> Unit,
+    )
+
+    /** HRV equivalent of [readHeartRateSamplesPaged]. */
+    suspend fun readHrvSamplesPaged(
+        from: Instant,
+        to: Instant,
+        onPage: suspend (List<DomainHrvRecord>) -> Unit,
+    )
+
     suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
@@ -78,9 +113,16 @@ interface HealthConnectRepository {
         to: Instant,
     ): Long
 
-    suspend fun readStepsRange(
+    /**
+     * Daily step totals for [from]..[to], grouped by local calendar day in [zoneId] via Health
+     * Connect's `aggregateGroupByPeriod` (HC-003) -- one grouped call per range instead of one
+     * `readSteps` aggregate call per day. Falls back to the per-day aggregate only if the provider
+     * doesn't support grouped-by-period aggregation.
+     */
+    suspend fun readDailyStepTotals(
         from: Instant,
         to: Instant,
+        zoneId: java.time.ZoneId,
     ): Map<java.time.LocalDate, Long>
 
     suspend fun discoverDevices(windowDays: Int = 2): List<String>
@@ -104,4 +146,27 @@ interface HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<DomainOxygenSaturationRecord>
+
+    suspend fun readBodyTemperatureRecords(
+        from: Instant,
+        to: Instant,
+    ): List<DomainBodyTemperatureRecord>
+
+    /** Whether the optional `READ_BODY_TEMPERATURE` permission is currently granted. */
+    suspend fun hasBodyTemperaturePermission(): Boolean
+
+    /** Whether the optional `READ_STEPS` permission is currently granted. */
+    suspend fun hasStepsPermission(): Boolean
+
+    /** Whether the optional `READ_WEIGHT` permission is currently granted. */
+    suspend fun hasWeightPermission(): Boolean
+
+    /** Whether the optional `READ_BODY_FAT` permission is currently granted. */
+    suspend fun hasBodyFatPermission(): Boolean
+
+    /** Whether the optional `READ_BLOOD_PRESSURE` permission is currently granted. */
+    suspend fun hasBloodPressurePermission(): Boolean
+
+    /** Whether the optional `READ_OXYGEN_SATURATION` permission is currently granted. */
+    suspend fun hasOxygenSaturationPermission(): Boolean
 }

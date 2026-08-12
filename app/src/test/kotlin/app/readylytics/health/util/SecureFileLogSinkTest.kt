@@ -3,8 +3,12 @@ package app.readylytics.health.util
 import android.content.Context
 import android.util.Log
 import app.readylytics.health.data.security.SecureFileStore
+import app.readylytics.health.domain.util.DomainLogSink
+import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
+import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logI
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -14,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -36,6 +41,7 @@ class SecureFileLogSinkTest {
 
         // Mock android.util.Log to prevent RuntimeException during JVM tests
         mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
         every { Log.i(any(), any()) } returns 0
         every { Log.w(any(), any() as String) } returns 0
         every { Log.w(any(), any() as String, any()) } returns 0
@@ -46,6 +52,23 @@ class SecureFileLogSinkTest {
 
     @After
     fun tearDown() {
+        // testDebugIsNotLoggableAndNeverReachesTheFile (and any future test in this class) may
+        // install a SecureFileLogSink backed by this test's TemporaryFolder into the
+        // process-wide DomainLogger singleton. Gradle reuses one JVM across test classes, so a
+        // stale sink left installed would outlive the deleted TemporaryFolder and swallow
+        // IOExceptions for every later test in the module that logs without installing its own
+        // sink. Always restore a no-op sink, even if the test body failed.
+        DomainLogger.installSink(
+            object : DomainLogSink {
+                override fun log(
+                    level: LogLevel,
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                    context: LogContext,
+                ) = Unit
+            },
+        )
         unmockkStatic(Log::class)
     }
 
@@ -71,15 +94,17 @@ class SecureFileLogSinkTest {
 
             sink.readLogsDecrypted()
 
-            val storedContents = secureFileStore.storedContents()
+            val storedContents = secureFileStore.storedContents(File(cacheDir, "logs"))
             val totalBytes = storedContents.values.sumOf { it.toByteArray(Charsets.UTF_8).size.toLong() }
 
             assertTrue("Rotation should never exceed active plus backup slots", storedContents.size <= 3)
             assertTrue(
-                "Each produced slot must stay within configured bound",
-                storedContents.values.all { it.toByteArray(Charsets.UTF_8).size <= 40 },
+                "Lines are never split: every slot ends on a line boundary",
+                storedContents.values.all { it.endsWith("\n") },
             )
-            assertTrue("Total retention must stay within configured bound", totalBytes <= 120L)
+            // A single line larger than a slot occupies its own slot, so the bound is per-line,
+            // not per-byte. Total retention is structural: (maxBackups + 1) slots.
+            assertTrue("Total retention must stay bounded", totalBytes <= 3 * (40L + longestLineBytes(storedContents)))
         }
 
     @Test
@@ -127,6 +152,7 @@ class SecureFileLogSinkTest {
                     maxBackups = 2,
                     encryptStreams = false,
                     coroutineContext = Dispatchers.Unconfined,
+                    flushLineThreshold = 5,
                 )
             sink.log(LogLevel.INFO, "TestTag", "Log 1", null, LogContext("session-1"))
 
@@ -141,7 +167,8 @@ class SecureFileLogSinkTest {
     fun testEncryptedModeDelegatesToSecureFileStore() =
         runBlocking {
             val secureFileStore = FakeSecureFileStore()
-            val sink =
+
+            fun newSink() =
                 SecureFileLogSink(
                     context = mockContext,
                     maxFileSize = 10000L,
@@ -151,15 +178,23 @@ class SecureFileLogSinkTest {
                     secureFileStore = secureFileStore,
                 )
 
+            val sink = newSink()
             for (i in 1..5) {
                 sink.log(LogLevel.INFO, "TestTag", "Encrypted log $i", null, LogContext("session-1"))
             }
+            sink.readLogsDecrypted()
 
-            val content = sink.readLogsDecrypted()
-
-            assertTrue(content.contains("Encrypted log 5"))
             assertTrue("Encrypted write should delegate to helper", secureFileStore.writeCalls.isNotEmpty())
             assertEquals("prod_logs.txt", secureFileStore.writeCalls.last())
+
+            // The first instance hydrates from an active slot that doesn't exist yet, so it never
+            // issues a read (LogSlotStore hydrates once and never re-reads its own in-memory active
+            // buffer). A fresh instance hydrating the slot just written proves the read path also
+            // delegates to the helper.
+            val content = newSink().readLogsDecrypted()
+            for (i in 1..5) {
+                assertTrue(content.contains("Encrypted log $i"))
+            }
             assertTrue("Encrypted read should delegate to helper", secureFileStore.readCalls.contains("prod_logs.txt"))
         }
 
@@ -173,6 +208,7 @@ class SecureFileLogSinkTest {
                     maxBackups = 2,
                     encryptStreams = false,
                     coroutineContext = Dispatchers.Unconfined,
+                    flushLineThreshold = 5,
                 )
             for (i in 1..5) {
                 sink.log(LogLevel.INFO, "TestTag", "Log $i", null, LogContext("session-1"))
@@ -195,7 +231,6 @@ class SecureFileLogSinkTest {
                     parentFile?.mkdirs()
                     writeText("legacy-garbage")
                 }
-            secureFileStore.stubUnreadable(legacyFile)
 
             val sink =
                 SecureFileLogSink(
@@ -213,11 +248,13 @@ class SecureFileLogSinkTest {
 
             val content = sink.readLogsDecrypted()
 
-            assertTrue(content.contains("Fresh log 5"))
+            for (i in 1..5) {
+                assertTrue(content.contains("Fresh log $i"))
+            }
             assertTrue(!content.contains("legacy-garbage"))
             assertTrue(
                 "Unreadable content should be replaced with new readable data",
-                secureFileStore.readableContentFor(legacyFile).contains("Fresh log 1"),
+                secureFileStore.readableContentFor(legacyFile).contains("Fresh log 5"),
             )
         }
 
@@ -297,7 +334,7 @@ class SecureFileLogSinkTest {
         }
 
     @Test
-    fun testFlushAfterTwoSeconds() =
+    fun testFlushAfterInterval() =
         runBlocking {
             val sink =
                 SecureFileLogSink(
@@ -306,19 +343,45 @@ class SecureFileLogSinkTest {
                     maxBackups = 2,
                     encryptStreams = false,
                     coroutineContext = Dispatchers.IO,
+                    flushLineThreshold = 64,
+                    flushIntervalMs = 300L,
                 )
 
             sink.log(LogLevel.INFO, "TestTag", "Timed Log", null, LogContext("session-1"))
 
-            // Initially, it shouldn't be written to disk immediately
             val logFile = File(cacheDir, "logs/prod_logs.txt")
-            delay(200)
+            delay(50)
             assertTrue(!logFile.exists() || logFile.readText().isEmpty())
 
-            // Wait for 2.2 seconds (total 2400ms) to let the flush schedule execute
-            delay(2200)
+            delay(500)
             assertTrue(logFile.exists())
             assertTrue(logFile.readText().contains("Timed Log"))
+        }
+
+    @Test
+    fun testFlushWritesOnlyTheActiveSlot() =
+        runBlocking {
+            val secureFileStore = FakeSecureFileStore()
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10_000L,
+                    maxBackups = 2,
+                    encryptStreams = true,
+                    coroutineContext = Dispatchers.Unconfined,
+                    secureFileStore = secureFileStore,
+                    flushLineThreshold = 2,
+                )
+
+            for (i in 1..6) {
+                sink.log(LogLevel.INFO, "TestTag", "Log $i", null, LogContext("session-1"))
+            }
+
+            assertEquals(
+                "A flush must never touch backup slots",
+                listOf("prod_logs.txt"),
+                secureFileStore.writeCalls.distinct(),
+            )
         }
 
     @Test
@@ -340,22 +403,96 @@ class SecureFileLogSinkTest {
             }
 
             val content = sink.readLogsDecrypted()
-            val totalBytes =
-                secureFileStore.storedContents().values.sumOf {
-                    it
-                        .toByteArray(
-                            Charsets.UTF_8,
-                        ).size
-                        .toLong()
-                }
+            val slots = secureFileStore.storedContents(File(cacheDir, "logs"))
+            val totalBytes = slots.values.sumOf { it.toByteArray(Charsets.UTF_8).size.toLong() }
 
             assertTrue(content.contains("Log 20"))
-            assertTrue(totalBytes <= 160L)
+            assertTrue("Slot count is structurally bounded", slots.size <= 2)
+            assertTrue("Total retention must stay bounded", totalBytes <= 2 * (80L + longestLineBytes(slots)))
         }
 
+    @Test
+    fun testLogSanitization() {
+        val original = "User HR is 120 bpm, HRV 45.2, BP 120/80"
+        val sanitized = SecureFileLogSink.sanitizeLogMessage(original)
+
+        assertFalse("Should redact heart rate", sanitized.contains("120"))
+        assertFalse("Should redact HRV", sanitized.contains("45.2"))
+        assertTrue("Should contain redaction markers", sanitized.contains("***"))
+    }
+
+    @Test
+    fun testLogSanitizationHandlesSeparatorVariants() {
+        val original = "HR=120, HR:118, BPM 150"
+        val sanitized = SecureFileLogSink.sanitizeLogMessage(original)
+
+        assertFalse("Should redact HR=120", sanitized.contains("120"))
+        assertFalse("Should redact HR:118", sanitized.contains("118"))
+        assertFalse("Should redact BPM 150", sanitized.contains("150"))
+    }
+
+    @Test
+    fun testStackTraceRedactsHealthMetrics() =
+        runBlocking {
+            val secureFileStore = FakeSecureFileStore()
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10000L,
+                    maxBackups = 2,
+                    encryptStreams = true,
+                    coroutineContext = Dispatchers.Unconfined,
+                    secureFileStore = secureFileStore,
+                )
+
+            val exception = RuntimeException("Invalid reading: HR is 245")
+            sink.log(LogLevel.ERROR, "ErrorTag", "Validation failed", exception, LogContext("session-1"))
+
+            val content = sink.readLogsDecrypted()
+            assertFalse("Stack trace text should be redacted too", content.contains("245"))
+        }
+
+    @Test
+    fun testDebugIsNotLoggableAndNeverReachesTheFile() =
+        runBlocking {
+            val sink =
+                SecureFileLogSink(
+                    context = mockContext,
+                    maxFileSize = 10_000L,
+                    maxBackups = 2,
+                    encryptStreams = false,
+                    coroutineContext = Dispatchers.Unconfined,
+                )
+
+            assertFalse("Release sink must drop DEBUG", sink.isLoggable(LogLevel.DEBUG, "TestTag"))
+            assertTrue("INFO must still be persisted", sink.isLoggable(LogLevel.INFO, "TestTag"))
+
+            DomainLogger.installSink(sink)
+            logD("TestTag") { "chatty sync detail" }
+            logI("TestTag") { "sync milestone" }
+
+            val content = sink.readLogsDecrypted()
+            assertFalse("DEBUG must not reach the diagnostic file", content.contains("chatty sync detail"))
+            assertTrue("INFO must reach the diagnostic file", content.contains("sync milestone"))
+        }
+
+    private fun longestLineBytes(storedContents: Map<String, String>): Long =
+        storedContents.values
+            .flatMap { it.split("\n") }
+            .maxOfOrNull { it.toByteArray(Charsets.UTF_8).size.toLong() + 1L } ?: 0L
+
+    /**
+     * Content is keyed by a per-write token that is written into the on-disk placeholder, so it
+     * travels with the bytes when [LogSlotStore] renames a slot — exactly like real ciphertext.
+     * Keying by filename does NOT work here: the store always writes the active slot under the same
+     * name and renames it away afterwards, so two seals with no read in between would collide on a
+     * single map entry and the older slot's content would vanish from the fake while its file is
+     * still on disk. (The whole point of F2 is that nothing reads between seals.) Same scheme as
+     * `LogSlotStoreTest.AdAwareSecureFileStore`.
+     */
     private class FakeSecureFileStore : SecureFileStore {
-        private val storedContents = linkedMapOf<String, String>()
-        private val unreadableFiles = mutableSetOf<String>()
+        private val entries = linkedMapOf<String, String>()
+        private var nextToken = 0
         val readCalls = mutableListOf<String>()
         val writeCalls = mutableListOf<String>()
 
@@ -363,9 +500,9 @@ class SecureFileLogSinkTest {
             file: File,
             associatedData: ByteArray,
         ): String {
-            val key = keyFor(file)
-            readCalls += key
-            return if (key in unreadableFiles) "" else storedContents[key].orEmpty()
+            readCalls += file.name
+            val token = tokenOf(file) ?: return ""
+            return entries[token].orEmpty()
         }
 
         override fun writeText(
@@ -373,22 +510,29 @@ class SecureFileLogSinkTest {
             content: String,
             associatedData: ByteArray,
         ) {
-            val key = keyFor(file)
-            writeCalls += key
-            unreadableFiles.remove(key)
-            storedContents[key] = content
+            writeCalls += file.name
+            val token = "t${nextToken++}"
+            entries[token] = content
             file.parentFile?.mkdirs()
-            file.writeText("ciphertext:$key")
+            file.writeText("$CIPHERTEXT_PREFIX$token")
         }
 
-        fun stubUnreadable(file: File) {
-            unreadableFiles += keyFor(file)
+        fun readableContentFor(file: File): String = tokenOf(file)?.let { entries[it] }.orEmpty()
+
+        /** Plaintext of every slot currently present in [directory], keyed by its current filename. */
+        fun storedContents(directory: File): Map<String, String> =
+            directory
+                .listFiles()
+                .orEmpty()
+                .sortedBy { it.name }
+                .mapNotNull { file -> tokenOf(file)?.let { entries[it] }?.let { file.name to it } }
+                .toMap()
+
+        private fun tokenOf(file: File): String? =
+            if (file.exists()) file.readText().removePrefix(CIPHERTEXT_PREFIX) else null
+
+        private companion object {
+            const val CIPHERTEXT_PREFIX = "ciphertext:"
         }
-
-        fun readableContentFor(file: File): String = storedContents[keyFor(file)].orEmpty()
-
-        fun storedContents(): Map<String, String> = storedContents.toMap()
-
-        private fun keyFor(file: File): String = file.name
     }
 }

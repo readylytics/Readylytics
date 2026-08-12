@@ -4,22 +4,27 @@ import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.ZoneId
@@ -39,6 +44,7 @@ data class DashboardBasicInputs(
     val circadianResult: CircadianConsistencyResult?,
     val rasSummaries: List<DailySummary>,
     val dismissedInsightTypes: Set<InsightType> = emptySet(),
+    val bodyTempBaseline: Float? = null,
 )
 
 /**
@@ -86,52 +92,60 @@ fun createDashboardBasicInputsFlow(
     settingsRepository: UserPreferencesReader,
     circadianRepository: CircadianConsistencyRepository,
     insightDismissalRepository: InsightDismissalRepository,
+    bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
 ): Flow<DashboardBasicInputs> =
-    selectedDate.flatMapLatest { date ->
-        val zoneId = ZoneId.systemDefault()
-        val today = LocalDate.now(zoneId)
+    combine(selectedDate, settingsRepository.userPreferences) { date, prefs -> date to prefs }
+        .flatMapLatest { (date, prefs) ->
+            // Every date-range query below must key off the same scoring-zone midnight that
+            // DailySummaryEntity.dateMidnightMs is written with, not the device zone, or the
+            // summary/RAS/dismissal lookups can silently miss or hit the wrong day.
+            val zoneId = prefs.scoringZone()
+            val today = LocalDate.now(zoneId)
 
-        // Select appropriate summary flow based on whether date is today or historical
-        val summaryFlow =
-            if (date == today) {
-                val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
-            } else {
-                val midnightMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                dailySummaryRepository.observeByDate(midnightMs)
+            // Select appropriate summary flow based on whether date is today or historical
+            val summaryFlow =
+                if (date == today) {
+                    val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
+                } else {
+                    val midnightMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    dailySummaryRepository.observeByDate(midnightMs)
+                }
+
+            // RAS breakdown is always 7-day window
+            val rasFromMs =
+                date
+                    .minusDays(6)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
+
+            val dismissalFlow =
+                insightDismissalRepository
+                    .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
+
+            val bodyTempBaselineFlow = bodyTemperatureBaselineProvider.observeBaseline(date)
+
+            // Combine all basic inputs
+            combine(
+                summaryFlow,
+                circadianRepository.resultFor(date),
+                rasBreakdownFlow,
+                dismissalFlow,
+                bodyTempBaselineFlow,
+            ) { summary, circadian, rasSummaries, dismissed, bodyTempBaseline ->
+                DashboardBasicInputs(
+                    selectedDate = date,
+                    summary = summary,
+                    userPreferences = prefs,
+                    circadianResult = circadian,
+                    rasSummaries = rasSummaries,
+                    dismissedInsightTypes = dismissed,
+                    bodyTempBaseline = bodyTempBaseline,
+                )
             }
-
-        // RAS breakdown is always 7-day window
-        val rasFromMs =
-            date
-                .minusDays(6)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
-        val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
-
-        val dismissalFlow =
-            insightDismissalRepository
-                .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
-
-        // Combine all basic inputs
-        combine(
-            summaryFlow,
-            settingsRepository.userPreferences,
-            circadianRepository.resultFor(date),
-            rasBreakdownFlow,
-            dismissalFlow,
-        ) { summary, prefs, circadian, rasSummaries, dismissed ->
-            DashboardBasicInputs(
-                selectedDate = date,
-                summary = summary,
-                userPreferences = prefs,
-                circadianResult = circadian,
-                rasSummaries = rasSummaries,
-                dismissedInsightTypes = dismissed,
-            )
         }
-    }
 
 /**
  * Creates the card state flow.
@@ -148,8 +162,22 @@ fun createDashboardCardStateFlow(
     cardManagementDelegate: CardManagementDelegate,
     cardConfigRepository: CardConfigurationRepository,
     dailySummaryRepository: DailySummaryRepository,
+    healthConnectRepository: HealthConnectRepository,
 ): Flow<DashboardCardState> {
     val zoneId = ZoneId.systemDefault()
+
+    // Combine optional HC permission checks into a single flow of grant flags.
+    // The individual combine overloads top out at 5 flows, so we pre-combine
+    // the 6 optional permission checks into a list before joining the main combine.
+    val permissionGrants: Flow<List<Boolean>> =
+        combine(
+            flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
+            flow { emit(healthConnectRepository.hasStepsPermission()) },
+            flow { emit(healthConnectRepository.hasWeightPermission()) },
+            flow { emit(healthConnectRepository.hasBodyFatPermission()) },
+            flow { emit(healthConnectRepository.hasBloodPressurePermission()) },
+            flow { emit(healthConnectRepository.hasOxygenSaturationPermission()) },
+        ) { results -> results.toList() }
 
     return combine(
         cardManagementDelegate.isManagingCards,
@@ -167,12 +195,35 @@ fun createDashboardCardStateFlow(
                         .toEpochMilli(),
             )
         },
-    ) { isManaging, pendingConfig, cardConfig, session ->
+        // One-shot checks, not re-polled -- relies on DashboardViewModel.uiState's
+        // WhileSubscribed(5_000) sharing policy naturally restarting this flow after a
+        // permission-grant round trip (navigating to the Health Connect permission screen and
+        // back always takes > 5s). If that sharing policy ever changes, this needs an explicit
+        // refresh trigger.
+        permissionGrants,
+    ) { isManaging, pendingConfig, cardConfig, session, grants ->
+        val bodyTempGranted = grants[0]
+        val stepsGranted = grants[1]
+        val weightGranted = grants[2]
+        val bodyFatGranted = grants[3]
+        val bpGranted = grants[4]
+        val spo2Granted = grants[5]
+
+        fun List<CardConfiguration>.filteredForPermission(): List<CardConfiguration> {
+            var list = this
+            if (!bodyTempGranted) list = list.filter { it.cardId != CardId.BODY_TEMPERATURE }
+            if (!stepsGranted) list = list.filter { it.cardId != CardId.STEPS }
+            if (!weightGranted) list = list.filter { it.cardId != CardId.WEIGHT }
+            if (!bodyFatGranted) list = list.filter { it.cardId != CardId.BODY_FAT }
+            if (!bpGranted) list = list.filter { it.cardId != CardId.BLOOD_PRESSURE }
+            if (!spo2Granted) list = list.filter { it.cardId != CardId.OXYGEN_SATURATION }
+            return list
+        }
         DashboardCardState(
             isManagingCards = isManaging,
-            cardConfiguration = cardConfig,
+            cardConfiguration = cardConfig.filteredForPermission(),
             lastSleepSession = session,
-            pendingConfiguration = pendingConfig,
+            pendingConfiguration = pendingConfig?.filteredForPermission(),
         )
     }
 }
@@ -207,33 +258,18 @@ fun createDashboardHrFlow(
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
-            if (entities.isEmpty()) return@map null
-            // entities already sorted ASC by the DAO query; single pass for stats
-            var minBpm = Int.MAX_VALUE
-            var maxBpm = Int.MIN_VALUE
-            var sumBpm = 0
-            for (entity in entities) {
-                val bpm = entity.beatsPerMinute
-                if (bpm < minBpm) minBpm = bpm
-                if (bpm > maxBpm) maxBpm = bpm
-                sumBpm += bpm
+        // PERF-005/WP-23: SQL-aggregated min/max/avg instead of observing every raw row -- a
+        // 5,000-row ingest batch invalidating this Flow re-runs a cheap single-row aggregate
+        // instead of re-materializing and re-mapping the whole day.
+        heartRateRepository.observeAggregateByTimeRange(startMs, endMs).map { aggregate ->
+            aggregate?.let {
+                HeartRateDaySummary(
+                    minBpm = it.minBpm,
+                    maxBpm = it.maxBpm,
+                    // toInt() truncates toward zero, matching the previous sumBpm/entities.size
+                    // integer division exactly (both truncate the same sum/count quotient).
+                    avgBpm = it.avgBpm.toInt(),
+                )
             }
-            val hourlyMap =
-                entities.groupBy { entity ->
-                    ((entity.timestampMs - startMs) / 60_000L).toInt() / 60
-                }
-            val hourly =
-                (0..23).mapNotNull { hour ->
-                    hourlyMap[hour]?.let { group ->
-                        hour to group.sumOf { it.beatsPerMinute } / group.size
-                    }
-                }
-            HeartRateDaySummary(
-                minBpm = minBpm,
-                maxBpm = maxBpm,
-                avgBpm = sumBpm / entities.size,
-                hourlySamples = hourly,
-            )
         }
     }

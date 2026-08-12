@@ -31,29 +31,29 @@ class BmiServiceTest {
     }
 
     @Test
-    fun `classifies BMI as Optimal when under 25`() {
+    fun `classifies BMI as Warning when underweight`() {
+        val result = service.calculateBmi(weight = 50f, height = 175f, units = UnitSystem.METRIC)
+        val status = (result as Result.Success).data.status
+        assertEquals(BmiStatus.Warning, status)
+    }
+
+    @Test
+    fun `classifies BMI as Optimal when healthy weight`() {
         val result = service.calculateBmi(weight = 70f, height = 175f, units = UnitSystem.METRIC)
         val status = (result as Result.Success).data.status
         assertEquals(BmiStatus.Optimal, status)
     }
 
     @Test
-    fun `classifies BMI as Neutral when 25-30`() {
+    fun `classifies BMI as Warning when overweight`() {
         val result = service.calculateBmi(weight = 82f, height = 175f, units = UnitSystem.METRIC)
-        val status = (result as Result.Success).data.status
-        assertEquals(BmiStatus.Neutral, status)
-    }
-
-    @Test
-    fun `classifies BMI as Warning when 30-35`() {
-        val result = service.calculateBmi(weight = 92f, height = 175f, units = UnitSystem.METRIC)
         val status = (result as Result.Success).data.status
         assertEquals(BmiStatus.Warning, status)
     }
 
     @Test
-    fun `classifies BMI as Poor when 35 or above`() {
-        val result = service.calculateBmi(weight = 108f, height = 175f, units = UnitSystem.METRIC)
+    fun `classifies BMI as Poor when obese`() {
+        val result = service.calculateBmi(weight = 92f, height = 175f, units = UnitSystem.METRIC)
         val status = (result as Result.Success).data.status
         assertEquals(BmiStatus.Poor, status)
     }
@@ -100,15 +100,15 @@ class BmiServiceTest {
 
     @Test
     fun `classify function works standalone`() {
+        val underweight = service.classify(17f)
         val optimal = service.classify(24f)
-        val neutral = service.classify(27f)
-        val warning = service.classify(32f)
-        val poor = service.classify(36f)
+        val overweight = service.classify(27f)
+        val obese = service.classify(32f)
 
+        assertEquals(BmiStatus.Warning, underweight)
         assertEquals(BmiStatus.Optimal, optimal)
-        assertEquals(BmiStatus.Neutral, neutral)
-        assertEquals(BmiStatus.Warning, warning)
-        assertEquals(BmiStatus.Poor, poor)
+        assertEquals(BmiStatus.Warning, overweight)
+        assertEquals(BmiStatus.Poor, obese)
     }
 
     @Test
@@ -133,16 +133,16 @@ class BmiServiceTest {
     }
 
     @Test
-    fun `boundary BMI 25 classifies as Neutral not Optimal`() {
+    fun `boundary BMI 25 classifies as Warning not Optimal`() {
         val result = service.calculateBmi(weight = 81.25f, height = 180f, units = UnitSystem.METRIC)
         val status = (result as Result.Success).data.status
-        assertEquals(BmiStatus.Neutral, status)
+        assertEquals(BmiStatus.Warning, status)
     }
 
     @Test
-    fun `boundary BMI 30 classifies as Warning not Neutral`() {
+    fun `boundary BMI 30 classifies as Poor not Warning`() {
         val result = service.calculateBmi(weight = 97.2f, height = 180f, units = UnitSystem.METRIC)
         val status = (result as Result.Success).data.status
-        assertEquals(BmiStatus.Warning, status)
+        assertEquals(BmiStatus.Poor, status)
     }
 }

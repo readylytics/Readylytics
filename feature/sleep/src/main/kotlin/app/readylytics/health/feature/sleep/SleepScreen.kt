@@ -36,17 +36,21 @@ import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.ChartDefaults
-import app.readylytics.health.core.ui.components.CircadianConsistencyCard
-import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
-import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
+import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.deepSleepStatus
 import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
+import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
@@ -135,11 +139,13 @@ fun SleepScreen(
                     modifier = Modifier.weight(1f),
                 )
             } else {
-                M3ScoreGaugeCard(
+                SleepScoreCard(
                     modifier = Modifier.weight(1f),
                     title = stringResource(R.string.sleep_score_gauge_title),
                     score = uiState.latestSummary?.sleepScore,
-                    displayText = uiState.latestMetrics?.sleepScoreRounded?.toString() ?: "—",
+                    displayText =
+                        uiState.latestMetrics?.sleepScoreRounded?.toString()
+                            ?: stringResource(app.readylytics.health.core.ui.R.string.metric_value_unavailable),
                     unitText = "",
                     deltaText =
                         formatRoundedScoreDelta(
@@ -155,16 +161,17 @@ fun SleepScreen(
                         (uiState.goalSleepHours * 60f).toInt().coerceAtLeast(0),
                     )
 
-                M3ScoreGaugeCard(
+                SleepMetricCard(
                     modifier = Modifier.weight(1f),
                     title = stringResource(R.string.sleep_time_gauge_title),
-                    score = sleepTimeGaugeData.progress,
-                    displayText = sleepTimeGaugeData.displayText,
-                    unitText = "",
+                    rawValue = sleepTimeGaugeData.progress,
+                    valueText = sleepTimeGaugeData.gaugeValueText,
+                    unitText = sleepTimeGaugeData.gaugeUnitText,
                     maxScore = 1f,
                     status = sleepTimeGaugeData.status,
                     deltaText = sleepTimeGaugeData.deltaText.resolveOrNull(),
-                    tooltipDescription =
+                    mode = UniversalCardDisplayMode.GAUGE,
+                    tooltip =
                         stringResource(
                             app.readylytics.health.core.ui.R.string.tooltip_sleep_duration,
                             goalText,
@@ -210,6 +217,26 @@ fun SleepScreen(
             }
         }
 
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+
+        if (uiState.isLoading) {
+            SkeletonCard(
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                height = 260.dp,
+            )
+        } else {
+            TrendCard(
+                title = stringResource(R.string.sleep_hr_chart_title),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+            ) {
+                SleepHrChart(
+                    session = singleSessionVisual,
+                    samples = uiState.sleepHrSamples,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
         SectionHeader(
@@ -248,10 +275,13 @@ fun SleepScreen(
                 startOffsetPoints = uiState.trendStartOffsetPoints,
                 durationSpanPoints = uiState.trendDurationSpanPoints,
                 actualDurationPoints = uiState.trendActualDurationPoints,
+                trendDays = uiState.trendDays,
                 rangeStartMs = uiState.trendRangeStartMs,
+                scoringZoneId = uiState.trendScoringZoneId,
                 scrollState = trendScrollState,
                 zoomState = trendZoomState,
                 parentScrollInProgress = { scrollState.isScrollInProgress },
+                actualDurationSummary = uiState.trendActualDurationSummary,
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
             )
         }
@@ -333,29 +363,28 @@ private fun MetricsGrid(
                 val tooltipText =
                     stringResource(app.readylytics.health.core.ui.R.string.tooltip_circadian_score, thresholdMinutes)
 
-                CircadianConsistencyCard(
-                    scoreText = scoreText,
-                    windowText = windowText,
+                SleepMetricCard(
+                    title = stringResource(app.readylytics.health.core.ui.R.string.label_circadian_consistency),
+                    valueText = scoreText,
+                    secondaryText = windowText,
                     status = circadianResult.toStatus(),
-                    tooltipText = tooltipText,
-                    onClick = null,
+                    tooltip = tooltipText,
                 )
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                MetricCard(
+                SleepMetricCard(
                     title = stringResource(app.readylytics.health.core.ui.R.string.card_title_sleep_efficiency),
-                    value =
+                    valueText =
                         session?.let {
                             stringResource(
                                 app.readylytics.health.core.ui.R.string.card_efficiency_format,
                                 it.efficiency.roundToPercentInt(),
                             )
                         }
-                            ?: "—",
+                            ?: stringResource(app.readylytics.health.core.ui.R.string.metric_value_unavailable),
                     secondaryText = stringResource(app.readylytics.health.core.ui.R.string.card_goal_sleep_efficiency),
                     status = efficiencyStatus,
                     tooltip = stringResource(app.readylytics.health.core.ui.R.string.card_tooltip_sleep_efficiency),
-                    onClick = null,
                 )
             }
         }
@@ -364,23 +393,25 @@ private fun MetricsGrid(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                MetricCard(
+                SleepMetricCard(
                     title = stringResource(R.string.card_title_deep_sleep),
-                    value = metrics?.deepSleepPercentDisplay ?: "—",
+                    valueText =
+                        metrics?.deepSleepPercentDisplay
+                            ?: stringResource(app.readylytics.health.core.ui.R.string.metric_value_unavailable),
                     secondaryText = stringResource(R.string.card_target_deep_sleep),
                     status = deepStatus,
                     tooltip = stringResource(R.string.tooltip_deep_sleep),
-                    onClick = null,
                 )
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                MetricCard(
+                SleepMetricCard(
                     title = stringResource(R.string.card_title_rem_sleep),
-                    value = metrics?.remSleepPercentDisplay ?: "—",
+                    valueText =
+                        metrics?.remSleepPercentDisplay
+                            ?: stringResource(app.readylytics.health.core.ui.R.string.metric_value_unavailable),
                     secondaryText = stringResource(R.string.card_target_rem_sleep),
                     status = remStatus,
                     tooltip = stringResource(R.string.tooltip_rem_sleep),
-                    onClick = null,
                 )
             }
         }
@@ -389,25 +420,89 @@ private fun MetricsGrid(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                MetricCard(
+                SleepMetricCard(
                     title = stringResource(R.string.card_title_nap_duration),
-                    value = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0),
+                    valueText = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_duration),
-                    onClick = null,
                 )
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                MetricCard(
+                SleepMetricCard(
                     title = stringResource(R.string.card_title_nap_count),
-                    value = metrics?.napCount?.toString() ?: "0",
+                    valueText = metrics?.napCount?.toString() ?: "0",
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_count),
-                    onClick = null,
                 )
             }
         }
     }
+}
+
+@Composable
+private fun SleepScoreCard(
+    score: Float?,
+    displayText: String,
+    unitText: String,
+    deltaText: String?,
+    tooltipDescription: String,
+    modifier: Modifier = Modifier,
+    title: String,
+) {
+    SleepMetricCard(
+        title = title,
+        rawValue = score,
+        valueText = displayText,
+        unitText = unitText,
+        status = score.scoreStatus(),
+        tooltip = tooltipDescription,
+        deltaText = deltaText,
+        mode = UniversalCardDisplayMode.GAUGE,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun SleepMetricCard(
+    title: String,
+    valueText: String,
+    status: MetricStatus,
+    tooltip: String,
+    modifier: Modifier = Modifier,
+    unitText: String = "",
+    secondaryText: String? = null,
+    rawValue: Float? = null,
+    maxScore: Float = 100f,
+    deltaText: String? = null,
+    mode: UniversalCardDisplayMode = UniversalCardDisplayMode.VALUE,
+    tooltipDescription: String? = null,
+) {
+    val secondary = deltaText ?: secondaryText
+    UniversalMetricCard(
+        presentation =
+            UniversalMetricPresentation(
+                title = title,
+                valueText = valueText,
+                unitText = unitText,
+                secondaryText = secondary,
+                status = status,
+                tooltip = tooltipDescription ?: tooltip,
+                accessibilityDescription = "$title: $valueText",
+                visual =
+                    if (mode == UniversalCardDisplayMode.GAUGE) {
+                        UniversalMetricScalePreparer.score(rawValue, 0f, maxScore)
+                    } else {
+                        UniversalMetricVisual.ValueOnly
+                    },
+            ),
+        specification =
+            UniversalMetricCardSpec(
+                supportedModes = listOf(mode),
+                usesDeltaPill = deltaText != null,
+            ),
+        requestedMode = mode,
+        modifier = modifier,
+    )
 }
 
 @Composable

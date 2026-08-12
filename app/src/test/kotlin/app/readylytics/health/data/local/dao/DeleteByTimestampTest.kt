@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
@@ -35,6 +36,7 @@ class DeleteByTimestampTest {
     private lateinit var bodyFatDao: BodyFatRecordDao
     private lateinit var bloodPressureDao: BloodPressureRecordDao
     private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
+    private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
 
     @Before
     fun setup() {
@@ -53,6 +55,7 @@ class DeleteByTimestampTest {
         bodyFatDao = database.bodyFatRecordDao()
         bloodPressureDao = database.bloodPressureRecordDao()
         oxygenSaturationDao = database.oxygenSaturationRecordDao()
+        bodyTemperatureDao = database.bodyTemperatureRecordDao()
     }
 
     @After
@@ -346,6 +349,28 @@ class DeleteByTimestampTest {
             oxygenSaturationDao.deleteBeforeTimestamp(cutoffTime)
 
             val remaining = oxygenSaturationDao.getSince(0)
+            assertEquals(1, remaining.size)
+            assertEquals("new", remaining[0].id)
+        }
+
+    @Test
+    fun `body temperature delete before timestamp only deletes old records`() =
+        runTest {
+            val now = System.currentTimeMillis()
+            val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+            val newTime = now - (10L * 24 * 60 * 60 * 1000)
+
+            bodyTemperatureDao.upsertAll(
+                listOf(
+                    BodyTemperatureRecordEntity(id = "old", timestampMs = oldTime, celsius = 36.5f),
+                    BodyTemperatureRecordEntity(id = "new", timestampMs = newTime, celsius = 36.9f),
+                ),
+            )
+
+            val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
+            bodyTemperatureDao.deleteBeforeTimestamp(cutoffTime)
+
+            val remaining = bodyTemperatureDao.getByTimeRange(0, now + 1000000)
             assertEquals(1, remaining.size)
             assertEquals("new", remaining[0].id)
         }

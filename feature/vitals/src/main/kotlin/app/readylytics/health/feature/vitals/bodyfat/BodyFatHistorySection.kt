@@ -14,12 +14,14 @@ import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.domain.model.BodyFatCategory
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.vitals.R
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun BodyFatHistorySection(
@@ -27,7 +29,7 @@ fun BodyFatHistorySection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        SectionHeader(title = stringResource(R.string.label_history))
+        SectionHeader(title = stringResource(CoreUiR.string.label_history))
         items.forEach { item ->
             BodyFatHistoryCard(
                 item = item,
@@ -68,14 +70,7 @@ fun BodyFatHistoryCard(
             )
         } ?: stringResource(R.string.body_fat_history_subtitle_no_lean_mass, bodyFatStr)
 
-    val pillLabelRes =
-        when (item.status) {
-            MetricStatus.OPTIMAL -> R.string.body_fat_status_optimal
-            MetricStatus.NEUTRAL -> R.string.body_fat_status_fitness
-            MetricStatus.WARNING -> R.string.body_fat_status_average
-            MetricStatus.POOR -> R.string.body_fat_status_above_range
-            MetricStatus.NO_DATA, MetricStatus.CALIBRATING -> R.string.body_fat_status_calibrating
-        }
+    val pillLabelRes = bodyFatCategoryLabelRes(item.category)
 
     HistoryCardLayout(
         title = stringResource(R.string.body_fat_history_title_format, dateStr),
@@ -85,6 +80,19 @@ fun BodyFatHistoryCard(
         modifier = modifier,
     )
 }
+
+internal fun bodyFatCategoryLabelRes(category: BodyFatCategory): Int =
+    when (category) {
+        BodyFatCategory.BELOW_ESSENTIAL -> R.string.body_fat_category_below_essential
+        BodyFatCategory.ESSENTIAL -> R.string.body_fat_category_essential
+        BodyFatCategory.ATHLETIC -> R.string.body_fat_category_athletic
+        BodyFatCategory.FITNESS -> R.string.body_fat_category_fitness
+        BodyFatCategory.ACCEPTABLE -> R.string.body_fat_category_acceptable
+        BodyFatCategory.OBESE -> R.string.body_fat_category_obese
+        BodyFatCategory.BELOW_REFERENCE -> R.string.body_fat_category_below_reference
+        BodyFatCategory.WITHIN_REFERENCE -> R.string.body_fat_category_within_reference
+        BodyFatCategory.ABOVE_REFERENCE -> R.string.body_fat_category_above_reference
+    }
 
 @Preview(showBackground = true)
 @Composable
@@ -99,6 +107,7 @@ private fun BodyFatHistoryCardPreview() {
                         leanMassDisplay = 67.3f,
                         unitSystem = UnitSystem.METRIC,
                         status = MetricStatus.OPTIMAL,
+                        category = BodyFatCategory.ATHLETIC,
                     ),
                 modifier =
                     Modifier.padding(
@@ -114,6 +123,7 @@ private fun BodyFatHistoryCardPreview() {
                         leanMassDisplay = 64.1f,
                         unitSystem = UnitSystem.METRIC,
                         status = MetricStatus.NEUTRAL,
+                        category = BodyFatCategory.ACCEPTABLE,
                     ),
                 modifier =
                     Modifier.padding(
@@ -129,6 +139,7 @@ private fun BodyFatHistoryCardPreview() {
                         leanMassDisplay = null,
                         unitSystem = UnitSystem.METRIC,
                         status = MetricStatus.POOR,
+                        category = BodyFatCategory.OBESE,
                     ),
                 modifier =
                     Modifier.padding(

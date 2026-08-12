@@ -66,6 +66,7 @@ class WorkoutDetailViewModelTest {
                 settingsRepo = settingsRepository,
                 getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
                 savedStateHandle = SavedStateHandle(),
+                defaultDispatcher = testDispatcher,
             )
     }
 
@@ -225,6 +226,7 @@ class WorkoutDetailViewModelTest {
                     settingsRepo = settingsRepository,
                     getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
                     savedStateHandle = restoredHandle,
+                    defaultDispatcher = testDispatcher,
                 )
 
             advanceUntilIdle()

@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.sleep
 
+import app.readylytics.health.domain.scoring.sleep.SleepTrendNap
+
 /**
  * Selection state for the Sleep Trend Chart.
  *
@@ -11,6 +13,9 @@ package app.readylytics.health.feature.sleep
  * @param barCanvasYTop        The canvas y-coordinate of the top of the visible bar (wake-up time).
  * @param barCanvasYBottom     The canvas y-coordinate of the bottom of the visible bar (bedtime).
  * @param lineCanvasY          The canvas y-coordinate of the line node (actual sleep duration).
+ * @param coreStartTimeMs      The canonical core-sleep start instant.
+ * @param coreEndTimeMs        The canonical core-sleep end instant.
+ * @param naps                 Supplemental sleep intervals for the selected scoring day.
  */
 data class SleepTrendSelectedState(
     val dayOffset: Int,
@@ -21,4 +26,7 @@ data class SleepTrendSelectedState(
     val barCanvasYTop: Float?,
     val barCanvasYBottom: Float?,
     val lineCanvasY: Float?,
+    val coreStartTimeMs: Long? = null,
+    val coreEndTimeMs: Long? = null,
+    val naps: List<SleepTrendNap> = emptyList(),
 )

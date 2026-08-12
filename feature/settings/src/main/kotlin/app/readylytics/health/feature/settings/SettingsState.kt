@@ -10,6 +10,7 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
@@ -22,6 +23,7 @@ data class ThresholdSettingsState(
     val hrvWarningThreshold: Float = SettingsDefaults.HRV_WARNING_THRESHOLD,
     val rhrOptimalThreshold: Float = SettingsDefaults.RHR_OPTIMAL_THRESHOLD,
     val rhrWarningThreshold: Float = SettingsDefaults.RHR_WARNING_THRESHOLD,
+    val bodyTempElevatedThreshold: Float = SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
     val consistencyThresholdMinutes: Int = SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES,
     val consistencyEvaluationDays: Int = SettingsDefaults.CONSISTENCY_EVALUATION_DAYS,
     val consistencyBaselineDays: Int = SettingsDefaults.CONSISTENCY_BASELINE_DAYS,
@@ -125,4 +127,11 @@ data class DataSourceSettingsState(
     val isResyncing: Boolean = false,
     val showDeviceChangeNotice: Boolean = false,
     val isLoadingDevices: Boolean = false,
+)
+
+data class DashboardCardsSettingsState(
+    val showGlobalDisplayModeDialog: Boolean = false,
+    val pendingGlobalDisplayMode: DashboardCardDisplayMode? = null,
+    val pendingIsReset: Boolean = false,
+    val currentGlobalMode: DashboardCardDisplayMode? = null,
 )

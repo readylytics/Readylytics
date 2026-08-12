@@ -2,7 +2,6 @@ package app.readylytics.health.domain.model
 
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.util.UnitConverter
 import java.util.Locale
 import kotlin.math.abs
@@ -26,8 +25,9 @@ object DailyMetricsMapper {
         prefs: UserPreferences,
     ): DailyMetrics {
         val rhrBaselineRaw = deriveRhrBaselineRaw(summary, prefs)
-        val rhrBaselineRounded = rhrBaselineRaw?.roundToInt()
+        val rhrBaselineRounded = rhrBaselineRounded(summary, prefs)
         val hrvBaselineRoundedValue = hrvBaselineRounded(summary, prefs)
+        val rhrSnapshotRaw = acceptedRhrSnapshotRaw(summary)
 
         return DailyMetrics(
             date = summary.date,
@@ -37,7 +37,7 @@ object DailyMetricsMapper {
             rhrBaselineRaw = rhrBaselineRaw,
             hrvBaselineMeanRaw = summary.hrvMuMssd,
             hrvBaselineSdRaw = summary.hrvSigmaMssd,
-            rhrSnapshotRaw = summary.rhrBpm,
+            rhrSnapshotRaw = rhrSnapshotRaw,
             strainRatioRaw = LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode),
             // Rounded display ints
             nocturnalRhrRounded = summary.restingHeartRate,
@@ -56,10 +56,10 @@ object DailyMetricsMapper {
             // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
             hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRoundedValue),
-            restingHrBaselineDiff = diff(summary.restingHeartRate, summary.rhrBpm?.roundToInt()),
+            restingHrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
             rhrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
             hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRoundedValue),
-            restingHrBaselineArrow = arrow(summary.restingHeartRate, summary.rhrBpm?.roundToInt()),
+            restingHrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
             // Display strings
             sleepDurationDisplay = formatSleepDuration(summary.sleepDurationMinutes),
             weightKgDisplay = summary.weightKg?.let { format1(it) },
@@ -85,9 +85,21 @@ object DailyMetricsMapper {
         summary: DailySummary,
         prefs: UserPreferences,
     ): Float? =
-        summary.rhrBpm
+        acceptedRhrSnapshotRaw(summary)
             ?: prefs.rhrBaselineOverride
-            ?: ScoringConstants.DEFAULT_RHR_BPM
+
+    fun rhrBaselineRounded(
+        summary: DailySummary,
+        prefs: UserPreferences,
+    ): Int? = deriveRhrBaselineRaw(summary, prefs)?.roundToInt()
+
+    fun rhrBaselineRounded(
+        summary: DailySummary,
+        rhrBaselineOverride: Float?,
+    ): Int? = acceptedRhrSnapshotRaw(summary)?.roundToInt() ?: rhrBaselineOverride?.roundToInt()
+
+    private fun acceptedRhrSnapshotRaw(summary: DailySummary): Float? =
+        summary.rhrBpm.takeIf { summary.baselineCalculatedAtDate != null }
 
     /**
      * The HRV baseline rounded to whole ms, exactly as shown on the dashboard. Callers
@@ -101,6 +113,14 @@ object DailyMetricsMapper {
     ): Int? =
         summary.hrvMuMssd?.let { exp(it).roundToInt() }
             ?: prefs.hrvBaselineOverride?.roundToInt()
+            ?: summary.hrvBaseline
+
+    fun hrvBaselineRounded(
+        summary: DailySummary,
+        hrvBaselineOverride: Float?,
+    ): Int? =
+        summary.hrvMuMssd?.let { exp(it).roundToInt() }
+            ?: hrvBaselineOverride?.roundToInt()
             ?: summary.hrvBaseline
 
     private fun diff(
@@ -125,6 +145,17 @@ object DailyMetricsMapper {
         val hours = minutes / 60
         val mins = minutes % 60
         return if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
+    }
+
+    /**
+     * Returns hours and minutes as separate strings for split gauge display
+     * (hours on the value line, minutes on the unit line).
+     */
+    fun formatSleepDurationSplit(minutes: Int?): Pair<String, String>? {
+        if (minutes == null) return null
+        val hours = minutes / 60
+        val mins = minutes % 60
+        return "${hours}h" to if (mins > 0) "${mins}m" else ""
     }
 
     private fun formatBloodPressure(

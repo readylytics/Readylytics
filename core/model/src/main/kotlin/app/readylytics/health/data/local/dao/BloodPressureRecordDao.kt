@@ -60,6 +60,15 @@ interface BloodPressureRecordDao {
     @Upsert
     suspend fun upsertAll(records: List<BloodPressureRecordEntity>)
 
+    @Query(
+        "SELECT * FROM blood_pressure_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<BloodPressureRecordEntity>
+
     @Query("DELETE FROM blood_pressure_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
@@ -69,10 +78,11 @@ interface BloodPressureRecordDao {
     @Query("SELECT * FROM blood_pressure_records WHERE id = :id")
     suspend fun getById(id: String): BloodPressureRecordEntity?
 
+    // PERF-003: sargable range predicate instead of substr() -- see HeartRateDao for the rationale.
     @Query(
         "SELECT * FROM blood_pressure_records " +
             "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`') " +
             "ORDER BY timestampMs ASC",
     )
     suspend fun getBySourceRecordId(sourceRecordId: String): List<BloodPressureRecordEntity>
@@ -80,7 +90,7 @@ interface BloodPressureRecordDao {
     @Query(
         "DELETE FROM blood_pressure_records " +
             "WHERE id = :sourceRecordId " +
-            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+            "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`')",
     )
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
 

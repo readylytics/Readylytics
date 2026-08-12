@@ -22,12 +22,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.periodLabelFor
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -54,6 +58,7 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import kotlin.math.ceil
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 internal fun AcwrChartCard(
@@ -65,7 +70,10 @@ internal fun AcwrChartCard(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
+    granularity: TrendGranularity = TrendGranularity.DAILY,
 ) {
+    val trimpColor = MaterialTheme.colorScheme.primary
+    val ratioColor = MaterialTheme.colorScheme.tertiary
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -88,8 +96,15 @@ internal fun AcwrChartCard(
                     scrollState = scrollState,
                     zoomState = zoomState,
                     parentScrollInProgress = parentScrollInProgress,
+                    granularity = granularity,
                 )
             }
+
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            AcwrChartLegends(
+                trimpColor = trimpColor,
+                ratioColor = ratioColor,
+            )
         }
     }
 }
@@ -104,6 +119,7 @@ private fun AcwrChart(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
     parentScrollInProgress: () -> Boolean = { false },
+    granularity: TrendGranularity = TrendGranularity.DAILY,
 ) {
     // Selection state is keyed on the data inputs so it clears automatically when the
     // chart range or underlying data changes, preventing stale coordinates and values.
@@ -147,31 +163,90 @@ private fun AcwrChart(
     // inside the lambda (where Composable calls are not permitted).
     val trimpFormat = stringResource(R.string.acwr_tooltip_trimp_format)
     val strainFormat = stringResource(R.string.acwr_tooltip_strain_format)
+    val avgTrimpFormat = stringResource(R.string.acwr_tooltip_avg_trimp_format)
+    val avgStrainFormat = stringResource(R.string.acwr_tooltip_avg_strain_format)
+
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+    val periodLabels =
+        remember(trimpPoints, rangeStartMs, granularity, ordinalLabel) {
+            if (granularity == TrendGranularity.DAILY) {
+                emptyList()
+            } else {
+                trimpPoints.map { point ->
+                    val date = ChartUtils.dayOffsetToLocalDate(point.dayOffset, rangeStartMs)
+                    periodLabelFor(granularity, date, ordinalLabel)
+                }
+            }
+        }
 
     // Derive tooltipState directly from selectedState to avoid separate side-effects.
     // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
     val tooltipState =
-        remember(selectedState, rangeStartMs, trimpFormat, strainFormat) {
+        remember(
+            selectedState,
+            rangeStartMs,
+            trimpFormat,
+            strainFormat,
+            avgTrimpFormat,
+            avgStrainFormat,
+            granularity,
+            periodLabels,
+        ) {
             selectedState?.let { s ->
-                val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                 val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
                 val trimpText = s.trimpValue?.let { MetricFormatter.roundTrimp(it).toString() } ?: "—"
                 val strainText = MetricFormatter.formatStrain(s.strainRatioValue)
-                DataPointTooltipData(
-                    valueText = trimpFormat.format(trimpText),
-                    dateText = strainFormat.format(strainText),
-                    extraLine = ChartUtils.formatTooltipDate(date),
-                    offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
-                )
+
+                if (granularity != TrendGranularity.DAILY) {
+                    val periodLabel = periodLabels.getOrElse(s.dayOffset) { "" }
+                    DataPointTooltipData(
+                        valueText = periodLabel,
+                        dateText = avgTrimpFormat.format(trimpText),
+                        extraLine = avgStrainFormat.format(strainText),
+                        offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
+                    )
+                } else {
+                    val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
+                    DataPointTooltipData(
+                        valueText = trimpFormat.format(trimpText),
+                        dateText = strainFormat.format(strainText),
+                        extraLine = ChartUtils.formatTooltipDate(date),
+                        offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
+                    )
+                }
             }
         }
 
     // ── Colours & Vico style helpers ─────────────────────────────────────────
-    val ratioColor = MaterialTheme.colorScheme.tertiary
-    val trimpColor = MaterialTheme.colorScheme.primary
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
+
+    val remappedTrimpPoints =
+        remember(trimpPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                trimpPoints
+            } else {
+                trimpPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+            }
+        }
+    val remappedRatioPoints =
+        remember(ratioPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                ratioPoints
+            } else {
+                ratioPoints.mapIndexed { i, p -> p.copy(dayOffset = i) }
+            }
+        }
+    val xAxisRangeDays =
+        remember(trimpPoints, granularity) {
+            if (granularity == TrendGranularity.DAILY) {
+                rangeDays
+            } else {
+                trimpPoints.size
+            }
+        }
+
     val trimpAxisFormatter =
         remember {
             CartesianValueFormatter {
@@ -196,7 +271,7 @@ private fun AcwrChart(
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val trimpRangeProvider =
-        remember(trimpPoints, rangeDays) {
+        remember(remappedTrimpPoints, xAxisRangeDays) {
             object : CartesianLayerRangeProvider {
                 override fun getMinX(
                     minX: Double,
@@ -208,7 +283,7 @@ private fun AcwrChart(
                     minX: Double,
                     maxX: Double,
                     extraStore: ExtraStore,
-                ) = (rangeDays - 1).toDouble()
+                ) = (xAxisRangeDays - 1).toDouble()
 
                 override fun getMaxY(
                     minY: Double,
@@ -225,7 +300,7 @@ private fun AcwrChart(
         }
 
     val ratioRangeProvider =
-        remember(ratioPoints, rangeDays) {
+        remember(remappedRatioPoints, xAxisRangeDays) {
             object : CartesianLayerRangeProvider {
                 override fun getMinX(
                     minX: Double,
@@ -237,7 +312,7 @@ private fun AcwrChart(
                     minX: Double,
                     maxX: Double,
                     extraStore: ExtraStore,
-                ) = (rangeDays - 1).toDouble()
+                ) = (xAxisRangeDays - 1).toDouble()
 
                 override fun getMaxY(
                     minY: Double,
@@ -261,11 +336,21 @@ private fun AcwrChart(
             (ceil(dataMax / 0.5) * 0.5).coerceAtLeast(2.0)
         }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter =
+        if (granularity == TrendGranularity.DAILY) {
+            ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
+        } else {
+            remember(periodLabels) {
+                val fallback = periodLabels.firstOrNull().orEmpty()
+                CartesianValueFormatter { _, value, _ ->
+                    periodLabels.getOrElse(value.toInt()) { fallback }
+                }
+            }
+        }
 
-    LaunchedEffect(trimpPoints, ratioPoints) {
+    LaunchedEffect(remappedTrimpPoints, remappedRatioPoints) {
         modelProducer.runTransaction {
-            val validTrimp = trimpPoints.filter { it.value != null }
+            val validTrimp = remappedTrimpPoints.filter { it.value != null }
             if (validTrimp.isNotEmpty()) {
                 columnModel {
                     series(
@@ -274,7 +359,7 @@ private fun AcwrChart(
                     )
                 }
             }
-            val validRatio = ratioPoints.filter { it.value != null }
+            val validRatio = remappedRatioPoints.filter { it.value != null }
             if (validRatio.isNotEmpty()) {
                 lineModel {
                     series(
@@ -286,16 +371,20 @@ private fun AcwrChart(
         }
     }
 
-    val dotComponent = rememberShapeComponent(fill = Fill(ratioColor), shape = CircleShape)
+    val dotComponent = rememberShapeComponent(fill = Fill(MaterialTheme.colorScheme.tertiary), shape = CircleShape)
     val ratioLine =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(Fill(ratioColor)),
+            fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.tertiary)),
             areaFill =
                 LineCartesianLayer.AreaFill.single(
                     Fill(
                         brush =
                             Brush.verticalGradient(
-                                colors = listOf(ratioColor.copy(alpha = 0.3f), ratioColor.copy(alpha = 0.0f)),
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.0f),
+                                    ),
                             ),
                     ),
                 ),
@@ -311,7 +400,7 @@ private fun AcwrChart(
             columnProvider =
                 ColumnCartesianLayer.ColumnProvider.series(
                     rememberLineComponent(
-                        fill = Fill(trimpColor),
+                        fill = Fill(MaterialTheme.colorScheme.primary),
                         thickness = 8.dp,
                         shape = CircleShape,
                     ),
@@ -326,8 +415,8 @@ private fun AcwrChart(
     // ── Marker listener bridges Vico touch → Compose state ───────────────────
     val markerVisibilityListener =
         rememberAcwrMarkerVisibilityListener(
-            trimpPoints = trimpPoints,
-            ratioPoints = ratioPoints,
+            trimpPoints = remappedTrimpPoints,
+            ratioPoints = remappedRatioPoints,
             onStateChanged = { selectedState = it },
         )
 
@@ -335,7 +424,17 @@ private fun AcwrChart(
     val chartHeight = 220.dp
     val trimpTitle = stringResource(R.string.workout_metric_trimp)
     val strainTitle = stringResource(R.string.workout_metric_strain)
-    Box(modifier = modifier.fillMaxWidth()) {
+    val hasData =
+        remember(remappedTrimpPoints, remappedRatioPoints) {
+            remappedTrimpPoints.any { it.value != null } || remappedRatioPoints.any { it.value != null }
+        }
+    val chartModifier =
+        if (hasData) {
+            modifier.testTag("AcwrChart")
+        } else {
+            modifier
+        }
+    Box(modifier = chartModifier.fillMaxWidth()) {
         CartesianChartHost(
             chart =
                 com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart(
@@ -368,9 +467,18 @@ private fun AcwrChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(
-                                    rangeDays,
-                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                remember(xAxisRangeDays, remappedTrimpPoints, granularity) {
+                                    val offsets =
+                                        if (granularity == TrendGranularity.DAILY) {
+                                            emptyList()
+                                        } else {
+                                            remappedTrimpPoints
+                                                .map { it.dayOffset }
+                                                .distinct()
+                                                .sorted()
+                                        }
+                                    ChartDefaults.itemPlacerForRangeDays(xAxisRangeDays, offsets)
+                                },
                             guideline = guidelineComponent,
                         ),
                     marker = invisibleMarker,
@@ -398,8 +506,8 @@ private fun AcwrChart(
 
         AcwrChartOverlay(
             selectedState = overlayState,
-            trimpColor = trimpColor,
-            ratioColor = ratioColor,
+            trimpColor = MaterialTheme.colorScheme.primary,
+            ratioColor = MaterialTheme.colorScheme.tertiary,
             layerBounds = layerBounds,
             chartHeight = chartHeight,
             modifier = Modifier.fillMaxWidth(),
@@ -414,13 +522,6 @@ private fun AcwrChart(
             )
         }
     }
-
-    // ── Legends (below chart) ─────────────────────────────────────────────────
-    Spacer(Modifier.height(MaterialTheme.spacing.small))
-    AcwrChartLegends(
-        trimpColor = trimpColor,
-        ratioColor = ratioColor,
-    )
 }
 
 @Composable
@@ -430,7 +531,7 @@ private fun EmptyAcwrChartPlaceholder(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(R.string.message_no_data_available),
+            text = stringResource(CoreUiR.string.message_no_data_available),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

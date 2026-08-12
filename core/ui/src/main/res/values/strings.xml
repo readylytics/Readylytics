@@ -3,7 +3,7 @@
     <string name="heart_rate_title">Heart Rate</string>
     <string name="back">Back</string>
 
-    
+
     <string name="action_dismiss">Dismiss</string>
     <string name="accessibility_password_hide">Hide password</string>
     <string name="accessibility_password_show">Show password</string>
@@ -12,7 +12,7 @@
     <string name="gender_other">Other</string>
     <string name="gender_prefer_not_to_say">Prefer not to say</string>
 
-    
+
     <string name="label_gender">Gender</string>
     <string name="onboarding_dynamic_color_label">Dynamic color</string>
     <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android
@@ -27,10 +27,10 @@
     <string name="delta_down">↓</string>
     <string name="delta_no_change">—</string>
 
-    
+
     <string name="action_delete_drop_zone">Drop here to remove</string>
 
-    
+
     <string name="unit_metric_cm">cm</string>
     <string name="label_height">Height</string>
     <string name="label_feet">Feet</string>
@@ -44,8 +44,9 @@
     <string name="error_height_inches">Inches: 0–11</string>
     <string name="error_height_out_of_range">Height out of range (120–250 cm)</string>
 
-    
+
     <string name="label_baseline">Baseline</string>
+    <string name="label_historical_baseline">Historical baseline</string>
     <string name="accessibility_drag_to_reorder">Drag to reorder</string>
     <string name="unit_system_label">Unit system</string>
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
@@ -63,7 +64,7 @@
         80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency
         Window: ±%1$d min grace period before score drops.</string>
     <string name="spo2_calibrating">Calibrating</string>
-    <string name="label_circadian_consistency">Circadian consistency</string>
+    <string name="label_circadian_consistency">Circadian</string>
     <string name="label_circadian_median">Median: %1$s→%2$s</string>
     <string name="chart_accessibility_no_selection">No point selected</string>
     <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
@@ -76,12 +77,10 @@
     <string name="tooltip_readiness">Preparation for stress based on recent load &amp;
         recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
     <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent
-        training load to your baseline.\n\n• 0.8–1.3: In your normal range — sweet spot\n• 1.3–1.5:
-        Load increasing; linear decay begins\n• 1.5–2.0: Overtraining; high injury risk\n• &gt;2.0:
-        Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe
-        under-training</string>
+        training load to your baseline.\n\n• &lt;0.5: Poor\n• 0.5–&lt;0.8: Warning\n• 0.8–1.3: Optimal\n• &gt;1.3–1.5: Neutral\n• &gt;1.5–2.0:
+        Warning\n• &gt;2.0: Poor</string>
     <string name="card_title_readiness">Readiness</string>
-    <string name="card_title_strain_ratio">Strain ratio</string>
+    <string name="card_title_strain_ratio">Strain Ratio</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_mmHg">mmHg</string>
     <string name="unit_ms">ms</string>
@@ -89,11 +88,17 @@
     <string name="unit_steps">steps</string>
     <string name="unit_kg">kg</string>
     <string name="unit_lbs">lbs</string>
+    <string name="unit_celsius">°C</string>
+    <string name="unit_fahrenheit">°F</string>
     <string name="label_average">Average</string>
     <string name="label_normal_limit">Normal Limit</string>
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
     <string name="label_avg">Avg</string>
+    <string name="period_summary_vs">vs %1$s</string>
+    <string name="period_label_quarter">Q%1$d</string>
+    <string name="label_week_short">Wk %1$d</string>
+    <string name="tooltip_week_range">Weeks %1$d–%2$d</string>
     <string name="label_timeline">Timeline</string>
     <string name="label_zone_breakdown">Zone Breakdown</string>
     <string name="label_trends">Trends</string>
@@ -102,6 +107,7 @@
     <string name="label_hrv">HRV</string>
     <string name="label_steps">Steps</string>
     <string name="label_spo2">SpO2</string>
+    <string name="label_body_temperature">Body temperature</string>
     <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
         your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
@@ -118,13 +124,15 @@
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="sleep_duration_minutes_only">%1$dm</string>
     <string name="sleep_duration_hours_only">%1$dh</string>
-    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_title_sleep_efficiency">Sleep Eff.</string>
     <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
     <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
     <string name="insight_rest_day_perfect_sleep">Your night\'s rest was perfect!</string>
     <string name="card_efficiency_format">%1$s%%</string>
     <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
     <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.</string>
+    <string name="tooltip_vitals_body_temperature" formatted="false">Average sleeping body temperature last night, compared to your 14-day baseline.</string>
+    <string name="body_temperature_calibrating">Calibrating</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>
@@ -137,11 +145,11 @@
     <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
     <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
     <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
-    <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
-    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
-    <string name="card_bp_status_neutral">Elevated: 120–129/&lt;80 mmHg</string>
-    <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
-    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
+    <string name="card_tooltip_bp_latest">Latest blood pressure reading.</string>
+    <string name="card_bp_status_optimal">Optimal: \u2264120/80 mmHg</string>
+    <string name="card_bp_status_neutral">Neutral: otherwise \u2264129/89 mmHg</string>
+    <string name="card_bp_status_warning">Warning: otherwise \u2264139/99 mmHg</string>
+    <string name="card_bp_status_poor">Poor: all other readings</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>
     <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>
@@ -175,4 +183,37 @@
     <string name="sync_progress_download_logs">Download Logs</string>
     <string name="sync_progress_logs_empty">No logs available yet</string>
     <string name="sync_progress_continue_in_background">Continue in background</string>
+    <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
+    <string name="resync_notification_preparing">Preparing…</string>
+    <string name="resync_phase_ingest">Fetching Health Connect data (batch %1$d of %2$d)…</string>
+    <string name="resync_phase_prune">Cleaning up local data…</string>
+    <string name="resync_phase_reconcile">Linking sleep and workout sessions…</string>
+    <string name="error_sync_failed">Sync failed</string>
+    <string name="tab_vitals">Vitals</string>
+    <string name="card_title_insights">Insights</string>
+    <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
+    <!-- Dashboard Typed Cards -->
+    <string name="metric_status_optimal">Optimal</string>
+    <string name="metric_status_neutral">Neutral</string>
+    <string name="metric_status_warning">Warning</string>
+    <string name="metric_status_poor">Poor</string>
+    <string name="metric_status_calibrating">Calibrating</string>
+    <string name="metric_value_unavailable">—</string>
+    <string name="score_maximum">100</string>
+    <string name="metric_unavailable_missing_value">No data available</string>
+    <string name="metric_unavailable_missing_target">Target not set</string>
+    <string name="metric_unavailable_baseline_not_ready">Baseline not ready</string>
+    <string name="metric_unavailable_missing_bmi">Missing height for BMI</string>
+    <string name="bmi_secondary_text">BMI: %1$s</string>
+
+
+    <!-- Extracted from Dashboard for UniversalMetricCard -->
+    <string name="menu_content_description_visualization_style">Change visualization style</string>
+    <string name="mode_gauge">Gauge</string>
+    <string name="mode_bar">Bar</string>
+    <string name="mode_value">Value</string>
+    <string name="menu_item_description_mode">Visualization style: %1$s</string>
+    <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
+    <string name="semantics_edit_mode_separator">, %1$s</string>
+
 </resources>
