@@ -138,6 +138,49 @@ class WorkoutRepositoryImplTest {
             assertEquals(1, repository.observeSince(0L).first().size)
         }
 
+    @Test
+    fun `getInRangePaged delegates to DAO and maps entities to domain`() =
+        runTest {
+            val entity =
+                WorkoutRecordEntity(
+                    id = "w5",
+                    startTime = 300L,
+                    endTime = 400L,
+                    exerciseType = "Running",
+                    durationMinutes = 60,
+                    zone1Minutes = 10f,
+                    zone2Minutes = 20f,
+                    zone3Minutes = 15f,
+                    zone4Minutes = 10f,
+                    zone5Minutes = 5f,
+                    trimp = 200f,
+                    avgHr = 160f,
+                    deviceName = "Watch",
+                )
+            results["getPagedInRange"] = listOf(entity)
+
+            val result = repository.getInRangePaged(100L, 500L, 10, 0)
+
+            assertEquals(1, result.size)
+            val mapped = result.first()
+            assertEquals("w5", mapped.id)
+            assertEquals(300L, mapped.startTime)
+            assertEquals(400L, mapped.endTime)
+            assertEquals("Running", mapped.exerciseType)
+            assertEquals(60, mapped.durationMinutes)
+            assertEquals(200f, mapped.trimp)
+            assertEquals(160f, mapped.avgHr)
+            assertEquals("Watch", mapped.deviceName)
+        }
+
+    @Test
+    fun `countInRange delegates to DAO`() =
+        runTest {
+            results["countByTimeRange"] = 7
+
+            assertEquals(7, repository.countInRange(100L, 500L))
+        }
+
     @Suppress("UNCHECKED_CAST")
     private inline fun <reified T> fakeDao(results: MutableMap<String, Any?>): T =
         Proxy.newProxyInstance(T::class.java.classLoader, arrayOf(T::class.java)) { _, method, _ ->

@@ -22,6 +22,17 @@ class WorkoutRepositoryImpl
         override suspend fun getInRange(fromMs: Long, toMs: Long): List<WorkoutData> =
             dao.getWorkoutsInRange(fromMs, toMs).map { mapToDomain(it) }
 
+        override suspend fun getInRangePaged(
+            fromMs: Long,
+            toMs: Long,
+            limit: Int,
+            offset: Int,
+        ): List<WorkoutData> =
+            dao.getPagedInRange(fromMs, toMs, limit, offset).map { mapToDomain(it) }
+
+        override suspend fun countInRange(fromMs: Long, toMs: Long): Int =
+            dao.countByTimeRange(fromMs, toMs)
+
         override fun observeSince(fromMs: Long): Flow<List<WorkoutData>> =
             dao.observeSince(fromMs).map { list ->
                 list.map { mapToDomain(it) }
