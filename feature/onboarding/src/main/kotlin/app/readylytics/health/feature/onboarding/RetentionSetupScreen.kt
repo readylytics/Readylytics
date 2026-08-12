@@ -28,6 +28,8 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 fun RetentionSetupScreen(
     onContinueClick: (retentionDays: Int) -> Unit,
     onOpenSettingsClick: () -> Unit,
+    requiredPermissions: Set<String>,
+    optionalPermissions: Set<String>,
     modifier: Modifier = Modifier,
 ) {
     var retentionDays by remember { mutableIntStateOf(SettingsDefaults.RETENTION_DAYS) }
@@ -76,16 +78,43 @@ fun RetentionSetupScreen(
 
             Text(
                 text = stringResource(R.string.onboarding_hc_permissions_label),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
             Text(
                 text = stringResource(R.string.onboarding_hc_permissions_desc),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+
+            Text(
+                text = stringResource(R.string.onboarding_required_permissions_label),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+            requiredPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
+                PermissionBulletRow(stringResource(labelRes))
+            }
+
+            if (optionalPermissions.isNotEmpty()) {
+                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                Text(
+                    text = stringResource(R.string.onboarding_optional_permissions_label),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+                optionalPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
+                    PermissionBulletRow(stringResource(labelRes))
+                }
+            }
         }
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))

@@ -400,21 +400,23 @@ class HealthConnectRepositoryImplTest {
         }
 
     @Test
-    fun readDailyStepTotals_translatesSecurityException() {
+    fun readDailyStepTotals_returnsEmptyMapOnSecurityException() =
+        runBlocking {
+            fake.stepsByInstant[t1] = 100L
+            fake.errors[FakeOp.Steps] = SecurityException("revoked")
+            assertEquals(emptyMap<LocalDate, Long>(), repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()))
+        }
+
+    @Test
+    fun readDailyStepTotals_propagatesGenericException() {
         fake.stepsByInstant[t1] = 100L
-        fake.errors[FakeOp.Steps] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
+        fake.errors[FakeOp.Steps] = IllegalStateException("bad")
+        // HC-008: transient IO errors must propagate (for retryWithBackoff), not be
+        // indistinguishable from "user has no data".
+        assertThrows(IllegalStateException::class.java) {
             runBlocking { repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()) }
         }
     }
-
-    @Test
-    fun readDailyStepTotals_swallowsGenericException() =
-        runBlocking {
-            fake.stepsByInstant[t1] = 100L
-            fake.errors[FakeOp.Steps] = IllegalStateException("bad")
-            assertEquals(emptyMap<LocalDate, Long>(), repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()))
-        }
 
     // ---------- weight (optional) ----------
 

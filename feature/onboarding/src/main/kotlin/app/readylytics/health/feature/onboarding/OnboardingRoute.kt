@@ -28,6 +28,7 @@ fun OnboardingRoute(
     userPreferencesFlow: Flow<app.readylytics.health.domain.preferences.UserPreferences>,
     allPermissions: Set<String>,
     requiredPermissions: Set<String>,
+    optionalPermissions: Set<String>,
     isSyncing: Boolean = false,
     isSyncError: Boolean = false,
     syncError: String? = null,
@@ -51,6 +52,7 @@ fun OnboardingRoute(
     val permissions = remember { allPermissions }
 
     var permissionsDenied by rememberSaveable { mutableStateOf(false) }
+    var missingPermissions by rememberSaveable { mutableStateOf(setOf<String>()) }
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
@@ -71,6 +73,7 @@ fun OnboardingRoute(
                     "OnboardingRoute",
                 ) { "User denied some required permissions: $missing" }
                 permissionsDenied = true
+                missingPermissions = missing
                 onPermissionsDenied()
             }
         }
@@ -94,7 +97,7 @@ fun OnboardingRoute(
     val skipToPermissions = userPrefs?.isBirthdayConfigured == true && !profileJustSaved
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
-    if (skipToPermissions || isSyncing || isSyncError) {
+    if (skipToPermissions || isSyncing || isSyncError || permissionsDenied) {
         LaunchedEffect(Unit) {
             if (skipToPermissions && !autoLaunchTriggered) {
                 autoLaunchTriggered = true
@@ -107,11 +110,12 @@ fun OnboardingRoute(
         Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             if (permissionsDenied) {
                 PermissionsRequiredScreen(
-                    onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
+                    onRecheckPermissionsClick = { permissionLauncher.launch(permissions) },
                     onOpenSettingsClick = {
                         val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
                         runCatching { context.startActivity(intent) }
                     },
+                    missingPermissions = missingPermissions,
                 )
             } else {
                 if (isSyncError) {
@@ -178,5 +182,7 @@ fun OnboardingRoute(
         restoreState = restoreState,
         onRestoreBackupClick = restoreViewModel::restore,
         onDismissRestoreError = restoreViewModel::dismissError,
+        requiredPermissions = requiredPermissions,
+        optionalPermissions = optionalPermissions,
     )
 }

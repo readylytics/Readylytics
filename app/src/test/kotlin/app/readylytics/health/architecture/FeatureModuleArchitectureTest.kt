@@ -56,11 +56,16 @@ class FeatureModuleArchitectureTest {
                                 // allowed preferences package imports
                             } else if (
                                 prefix == "androidx.health.connect." &&
-                                (source.name == "DataSettings.kt" || source.name == "OnboardingRoute.kt") &&
+                                (
+                                    source.name == "DataSettings.kt" ||
+                                        source.name == "OnboardingRoute.kt" ||
+                                        source.name == "PermissionBullets.kt"
+                                ) &&
                                 (
                                     line.contains("androidx.health.connect.client.PermissionController") ||
                                         line.contains("androidx.health.connect.client.permission.HealthPermission") ||
-                                        line.contains("androidx.health.connect.client.HealthConnectClient")
+                                        line.contains("androidx.health.connect.client.HealthConnectClient") ||
+                                        line.contains("androidx.health.connect.client.records.")
                                 )
                             ) {
                                 // settings permission launcher and onboarding may reference HC classes/constants

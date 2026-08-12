@@ -97,6 +97,11 @@ class DashboardFlowIntermediateTest {
             val healthConnectRepository =
                 mockk<HealthConnectRepository> {
                     coEvery { hasBodyTemperaturePermission() } returns false
+                    coEvery { hasStepsPermission() } returns false
+                    coEvery { hasWeightPermission() } returns false
+                    coEvery { hasBodyFatPermission() } returns false
+                    coEvery { hasBloodPressurePermission() } returns false
+                    coEvery { hasOxygenSaturationPermission() } returns false
                 }
             val cardManagementDelegate = mockCardManagementDelegate()
             val dailySummaryRepository =
@@ -128,6 +133,11 @@ class DashboardFlowIntermediateTest {
             val healthConnectRepository =
                 mockk<HealthConnectRepository> {
                     coEvery { hasBodyTemperaturePermission() } returns true
+                    coEvery { hasStepsPermission() } returns false
+                    coEvery { hasWeightPermission() } returns false
+                    coEvery { hasBodyFatPermission() } returns false
+                    coEvery { hasBloodPressurePermission() } returns false
+                    coEvery { hasOxygenSaturationPermission() } returns false
                 }
             val cardManagementDelegate = mockCardManagementDelegate()
             val dailySummaryRepository =
@@ -163,6 +173,11 @@ class DashboardFlowIntermediateTest {
             val healthConnectRepository =
                 mockk<HealthConnectRepository> {
                     coEvery { hasBodyTemperaturePermission() } returns false
+                    coEvery { hasStepsPermission() } returns false
+                    coEvery { hasWeightPermission() } returns false
+                    coEvery { hasBodyFatPermission() } returns false
+                    coEvery { hasBloodPressurePermission() } returns false
+                    coEvery { hasOxygenSaturationPermission() } returns false
                 }
             val cardManagementDelegate =
                 mockCardManagementDelegate(
