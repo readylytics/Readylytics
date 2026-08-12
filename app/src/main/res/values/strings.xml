@@ -64,9 +64,11 @@
     <string name="crash_report_dialog_body">Send a report to help fix it? It only contains the
         error details and basic device info, never your health data. Email is private; a GitHub
         issue is posted publicly.</string>
-    <string name="crash_report_dialog_send_email">Email (private)</string>
-    <string name="crash_report_dialog_send_github">GitHub Issue (public)</string>
+    <string name="crash_report_dialog_send_email">Email</string>
+    <string name="crash_report_dialog_send_github">GitHub Issue</string>
     <string name="crash_report_dialog_dismiss">Not now</string>
+    <string name="crash_report_dialog_send">Send</string>
+    <string name="crash_report_dialog_clear">Clear</string>
 
     <string name="crash_report_too_large_title">Report too large</string>
     <string name="crash_report_too_large_body">This report is too large to open directly in a GitHub
