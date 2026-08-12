@@ -76,16 +76,21 @@ fun RetentionSetupScreen(
 
             Text(
                 text = stringResource(R.string.onboarding_hc_permissions_label),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
             Text(
                 text = stringResource(R.string.onboarding_hc_permissions_desc),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_sleep))
+            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_heart_rate))
+            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_hrv))
+            PermissionBulletRow(stringResource(R.string.onboarding_hc_permission_exercise))
         }
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
