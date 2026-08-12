@@ -224,21 +224,16 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         from: Instant,
         to: Instant,
         zoneId: ZoneId,
-    ): Map<LocalDate, Long> =
-        try {
-            errors[FakeOp.Steps]?.let { throw it }
-            stepsByInstant
-                .filterKeys { inRange(it, from, to) }
-                .entries
-                .groupBy { it.key.atZone(zoneId).toLocalDate() }
-                .mapValues { (_, list) -> list.sumOf { it.value } }
-        } catch (e: SecurityException) {
-            throw HealthConnectPermissionRevokedException(e)
-        } catch (e: HealthConnectPermissionRevokedException) {
-            throw e
-        } catch (_: Exception) {
-            emptyMap()
-        }
+    ): Map<LocalDate, Long> {
+        val error = errors[FakeOp.Steps]
+        if (error is SecurityException) return emptyMap()
+        if (error != null) throw error
+        return stepsByInstant
+            .filterKeys { inRange(it, from, to) }
+            .entries
+            .groupBy { it.key.atZone(zoneId).toLocalDate() }
+            .mapValues { (_, list) -> list.sumOf { it.value } }
+    }
 
     override suspend fun readWeightRecords(
         from: Instant,
