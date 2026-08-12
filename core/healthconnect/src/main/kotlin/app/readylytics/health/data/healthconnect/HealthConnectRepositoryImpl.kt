@@ -62,7 +62,6 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(HeartRateRecord::class),
                 HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
                 HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-                HealthPermission.getReadPermission(StepsRecord::class),
             )
 
         override val requiredPermissions: Set<String> =
@@ -71,6 +70,7 @@ class HealthConnectRepositoryImpl
 
         override val optionalPermissions: Set<String> =
             setOf(
+                HealthPermission.getReadPermission(StepsRecord::class),
                 HealthPermission.getReadPermission(WeightRecord::class),
                 HealthPermission.getReadPermission(BodyFatRecord::class),
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
@@ -263,7 +263,26 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<DomainStepsRecord> =
             withContext(ioDispatcher) {
-                readAllPages<StepsRecord>(from, to).map { it.toDomain() }
+                try {
+                    readAllPages<StepsRecord>(from, to).map { it.toDomain() }
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps record permission not granted"
+                    }
+                    emptyList()
+                } catch (e: SecurityException) {
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps record permission not granted"
+                    }
+                    emptyList()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                        "Error reading steps records"
+                    }
+                    throw e
+                }
             }
 
         override suspend fun readSteps(
@@ -271,14 +290,21 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): Long =
             withContext(ioDispatcher) {
-                val result =
-                    client.aggregate(
-                        AggregateRequest(
-                            metrics = setOf(StepsRecord.COUNT_TOTAL),
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
-                    )
-                result[StepsRecord.COUNT_TOTAL] ?: 0L
+                try {
+                    val result =
+                        client.aggregate(
+                            AggregateRequest(
+                                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                timeRangeFilter = TimeRangeFilter.between(from, to),
+                            ),
+                        )
+                    result[StepsRecord.COUNT_TOTAL] ?: 0L
+                } catch (e: SecurityException) {
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps permission not granted"
+                    }
+                    0L
+                }
             }
 
         override suspend fun readDailyStepTotals(
@@ -306,11 +332,10 @@ class HealthConnectRepositoryImpl
                             group.startTime.toLocalDate() to total
                         }.toMap()
                 } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(
-                        cause = e,
-                        operation = "readGroupByPeriod",
-                        recordType = StepsRecord::class.simpleName,
-                    )
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps permission not granted"
+                    }
+                    emptyMap()
                 } catch (e: UnsupportedOperationException) {
                     // HC-003: defensive fallback -- if a provider doesn't support grouped-by-period
                     // aggregation, fall back to one per-day aggregate call. Slower, but correct.

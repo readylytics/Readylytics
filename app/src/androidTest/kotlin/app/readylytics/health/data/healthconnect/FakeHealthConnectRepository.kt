@@ -73,7 +73,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
             HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-            HealthPermission.getReadPermission(StepsRecord::class),
         )
 
     override val requiredPermissions: Set<String> =
@@ -81,6 +80,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     override val optionalPermissions: Set<String> =
         setOf(
+            HealthPermission.getReadPermission(StepsRecord::class),
             HealthPermission.getReadPermission(WeightRecord::class),
             HealthPermission.getReadPermission(BodyFatRecord::class),
             HealthPermission.getReadPermission(BloodPressureRecord::class),

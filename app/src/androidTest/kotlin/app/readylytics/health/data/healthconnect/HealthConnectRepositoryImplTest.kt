@@ -400,13 +400,12 @@ class HealthConnectRepositoryImplTest {
         }
 
     @Test
-    fun readDailyStepTotals_translatesSecurityException() {
-        fake.stepsByInstant[t1] = 100L
-        fake.errors[FakeOp.Steps] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()) }
+    fun readDailyStepTotals_returnsEmptyMapOnSecurityException() =
+        runTest {
+            fake.stepsByInstant[t1] = 100L
+            fake.errors[FakeOp.Steps] = SecurityException("revoked")
+            assertEquals(emptyMap<LocalDate, Long>(), repo.readDailyStepTotals(t0, t7, ZoneId.systemDefault()))
         }
-    }
 
     @Test
     fun readDailyStepTotals_swallowsGenericException() =
