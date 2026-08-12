@@ -29,6 +29,7 @@ import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -162,7 +163,7 @@ fun BloodPressureTrendChart(
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, TrendGranularity.DAILY)
 
     LaunchedEffect(systolicPoints, diastolicPoints) {
         modelProducer.runTransaction {
@@ -320,7 +321,16 @@ fun BloodPressureTrendChart(
                             itemPlacer =
                                 remember(
                                     rangeDays,
-                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                    systolicPoints,
+                                    diastolicPoints,
+                                ) {
+                                    val pointOffsets = (systolicPoints + diastolicPoints)
+                                        .filter { it.value != null }
+                                        .map { it.dayOffset }
+                                        .distinct()
+                                        .sorted()
+                                    ChartDefaults.itemPlacerForRangeDays(rangeDays, pointOffsets)
+                                },
                             guideline = guidelineComponent,
                         ),
                     decorations = decorations,
