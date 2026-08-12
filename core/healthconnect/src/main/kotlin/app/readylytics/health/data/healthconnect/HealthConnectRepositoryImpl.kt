@@ -279,23 +279,14 @@ class HealthConnectRepositoryImpl
             withContext(ioDispatcher) {
                 try {
                     readAllPages<StepsRecord>(from, to).map { it.toDomain() }
-                } catch (e: HealthConnectPermissionRevokedException) {
-                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Steps record permission not granted"
-                    }
-                    emptyList()
-                } catch (e: SecurityException) {
-                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Steps record permission not granted"
-                    }
-                    emptyList()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
-                        "Error reading steps records"
+                    if (e.asHealthConnectSecurityCause() == null) throw e
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Steps record permission not granted"
                     }
-                    throw e
+                    emptyList()
                 }
             }
 
