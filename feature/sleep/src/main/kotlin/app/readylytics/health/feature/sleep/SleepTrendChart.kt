@@ -585,8 +585,11 @@ fun SleepTrendChart(
                                 label = labelComponent,
                                 valueFormatter = xAxisFormatter,
                                 itemPlacer =
-                                    remember(xAxisRangeDays, remappedStartPoints, granularity) {
-                                        val offsets =
+                                    ChartDefaults.rememberTrendAxisItemPlacer(
+                                        rangeDays = xAxisRangeDays,
+                                        granularity = granularity,
+                                        rangeStartMs = rangeStartMs,
+                                        explicitPointOffsets =
                                             if (granularity == TrendGranularity.DAILY) {
                                                 emptyList()
                                             } else {
@@ -594,9 +597,8 @@ fun SleepTrendChart(
                                                     .map { it.dayOffset }
                                                     .distinct()
                                                     .sorted()
-                                            }
-                                        ChartDefaults.itemPlacerForRangeDays(xAxisRangeDays, offsets)
-                                    },
+                                            },
+                                    ),
                                 guideline = guidelineComponent,
                             ),
                         endAxis =

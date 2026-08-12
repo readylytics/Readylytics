@@ -467,8 +467,11 @@ private fun AcwrChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(xAxisRangeDays, remappedTrimpPoints, granularity) {
-                                    val offsets =
+                                ChartDefaults.rememberTrendAxisItemPlacer(
+                                    rangeDays = xAxisRangeDays,
+                                    granularity = granularity,
+                                    rangeStartMs = rangeStartMs,
+                                    explicitPointOffsets =
                                         if (granularity == TrendGranularity.DAILY) {
                                             emptyList()
                                         } else {
@@ -476,9 +479,8 @@ private fun AcwrChart(
                                                 .map { it.dayOffset }
                                                 .distinct()
                                                 .sorted()
-                                        }
-                                    ChartDefaults.itemPlacerForRangeDays(xAxisRangeDays, offsets)
-                                },
+                                        },
+                                ),
                             guideline = guidelineComponent,
                         ),
                     marker = invisibleMarker,
