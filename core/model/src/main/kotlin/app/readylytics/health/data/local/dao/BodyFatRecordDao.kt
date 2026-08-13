@@ -72,6 +72,24 @@ interface BodyFatRecordDao {
         offset: Int,
     ): List<BodyFatRecordEntity>
 
+    @Query(
+        """
+        SELECT * FROM body_fat_records
+        WHERE timestampMs >= :fromMs AND timestampMs < :toMs
+        ORDER BY timestampMs DESC, id DESC
+        LIMIT :limit OFFSET :offset
+        """,
+    )
+    suspend fun getPagedByTimeRange(fromMs: Long, toMs: Long, limit: Int, offset: Int): List<BodyFatRecordEntity>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM body_fat_records
+        WHERE timestampMs >= :fromMs AND timestampMs < :toMs
+        """,
+    )
+    suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
+
     @Query("DELETE FROM body_fat_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
