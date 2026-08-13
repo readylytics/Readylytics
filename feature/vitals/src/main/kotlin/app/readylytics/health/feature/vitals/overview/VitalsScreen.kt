@@ -138,6 +138,7 @@ fun VitalsScreen(
                 chartConfigurations = uiState.vitalsChartConfigurations,
                 onCardVisibilityChanged = onToggleVitalsCardVisibility,
                 onChartVisibilityChanged = onToggleChartVisibility,
+                onCardDisplayModeChanged = onVitalsCardDisplayModeChanged,
                 onResetToDefaults = onResetVitalsToDefaults,
                 onDismiss = {
                     scope.launch { sheetState.hide() }

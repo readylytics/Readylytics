@@ -25,8 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.DisplayModeDropdownSelector
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +41,7 @@ fun CardManagementBottomSheet(
     onDismiss: () -> Unit,
     sheetState: SheetState,
     modifier: Modifier = Modifier,
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -77,7 +81,9 @@ fun CardManagementBottomSheet(
 
             val sortedCards = remember(cards) { cards.sortedBy { it.position } }
 
-            LazyColumn {
+            LazyColumn(
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
                 items(
                     items = sortedCards,
                     key = { it.cardId.name },
@@ -86,6 +92,9 @@ fun CardManagementBottomSheet(
                         card = card,
                         onVisibilityChanged = { visible ->
                             onCardVisibilityChanged(card.cardId, visible)
+                        },
+                        onDisplayModeChanged = { mode ->
+                            onCardDisplayModeChanged(card.cardId, mode)
                         },
                         modifier =
                             Modifier
@@ -115,8 +124,10 @@ fun CardManagementBottomSheet(
 private fun CardManagementItem(
     card: CardConfiguration,
     onVisibilityChanged: (Boolean) -> Unit,
+    onDisplayModeChanged: (DashboardCardDisplayMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val spec = DashboardCardCatalog.spec(card.cardId)
     ListItem(
         headlineContent = {
             Text(
@@ -124,6 +135,18 @@ private fun CardManagementItem(
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
+        supportingContent =
+            if (spec != null && spec.supportedModes.size > 1) {
+                {
+                    DisplayModeDropdownSelector(
+                        selectedMode = DashboardCardCatalog.requestedMode(card),
+                        supportedModes = spec.supportedModes,
+                        onModeSelected = onDisplayModeChanged,
+                    )
+                }
+            } else {
+                null
+            },
         trailingContent = {
             Checkbox(
                 checked = card.isVisible,

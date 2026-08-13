@@ -203,6 +203,7 @@ fun DashboardScreen(
             CardManagementBottomSheet(
                 cards = uiState.cardConfigurations,
                 onCardVisibilityChanged = onCardVisibilityChanged,
+                onCardDisplayModeChanged = onCardDisplayModeChanged,
                 onResetToDefaults = onResetToDefaults,
                 onDismiss = {
                     scope.launch { sheetState.hide() }
