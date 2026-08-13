@@ -204,8 +204,13 @@ fun buildSleepMetricCardDataMap(
                     when (circadianResult) {
                         is CircadianConsistencyResult.Calibrating ->
                             stringResource(CoreUiR.string.spo2_calibrating)
-                        is CircadianConsistencyResult.MissingData -> "—"
-                        is CircadianConsistencyResult.Ready -> "${circadianResult.score.roundToPercentInt()}%"
+                        is CircadianConsistencyResult.MissingData ->
+                            stringResource(CoreUiR.string.metric_value_unavailable)
+                        is CircadianConsistencyResult.Ready ->
+                            stringResource(
+                                R.string.sleep_metric_percent_format,
+                                circadianResult.score.roundToPercentInt(),
+                            )
                     }
                 val windowText =
                     when (circadianResult) {
@@ -323,7 +328,10 @@ fun buildSleepMetricCardDataMap(
             @Composable { _: SleepMetricCardConfiguration ->
                 SleepMetricCard(
                     title = stringResource(R.string.card_title_nap_count),
-                    valueText = metrics?.napCount?.toString() ?: "0",
+                    valueText =
+                        metrics?.napCount?.let {
+                            stringResource(R.string.sleep_metric_count_format, it)
+                        } ?: stringResource(R.string.sleep_metric_zero),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_count),
                 )
