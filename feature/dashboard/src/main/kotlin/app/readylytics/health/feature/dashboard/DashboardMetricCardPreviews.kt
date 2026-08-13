@@ -17,6 +17,8 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
+import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
+import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode

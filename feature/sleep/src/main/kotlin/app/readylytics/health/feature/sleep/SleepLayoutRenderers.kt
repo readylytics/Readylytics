@@ -17,7 +17,10 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
+import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
+import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.domain.dashboard.ModeSpec
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.deepSleepStatus
 import app.readylytics.health.domain.model.efficiencyStatus
@@ -28,7 +31,6 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString
 import app.readylytics.health.domain.sleep.SleepCardCatalog
-import app.readylytics.health.domain.dashboard.ModeSpec
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
@@ -401,17 +403,3 @@ private fun SleepMetricCard(
         modifier = modifier,
     )
 }
-
-private fun DashboardCardDisplayMode.toUniversalMode(): UniversalCardDisplayMode =
-    when (this) {
-        DashboardCardDisplayMode.GAUGE -> UniversalCardDisplayMode.GAUGE
-        DashboardCardDisplayMode.BAR -> UniversalCardDisplayMode.BAR
-        DashboardCardDisplayMode.VALUE -> UniversalCardDisplayMode.VALUE
-    }
-
-private fun UniversalCardDisplayMode.toDashboardMode(): DashboardCardDisplayMode =
-    when (this) {
-        UniversalCardDisplayMode.GAUGE -> DashboardCardDisplayMode.GAUGE
-        UniversalCardDisplayMode.BAR -> DashboardCardDisplayMode.BAR
-        UniversalCardDisplayMode.VALUE -> DashboardCardDisplayMode.VALUE
-    }
