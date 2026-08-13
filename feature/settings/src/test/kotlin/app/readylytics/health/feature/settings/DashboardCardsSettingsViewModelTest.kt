@@ -7,6 +7,11 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.domain.sleep.SleepMetricCardId
+import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -53,6 +58,8 @@ class DashboardCardsSettingsViewModelTest {
         val dashboardConfigs: MutableStateFlow<List<CardConfiguration>>,
         val vitalsConfigs: MutableStateFlow<List<CardConfiguration>>,
         val displaySettings: DisplaySettings,
+        val sleepTopCards: MutableStateFlow<List<SleepTopCardConfiguration>>,
+        val sleepMetricCards: MutableStateFlow<List<SleepMetricCardConfiguration>>,
     )
 
     private fun buildViewModel(
@@ -65,6 +72,8 @@ class DashboardCardsSettingsViewModelTest {
             ),
         initialVitalsConfigs: List<CardConfiguration> =
             listOf(CardConfiguration(cardId = CardId.RESTING_HR, requestedDisplayMode = null)),
+        initialSleepTopCards: List<SleepTopCardConfiguration> = emptyList(),
+        initialSleepMetricCards: List<SleepMetricCardConfiguration> = emptyList(),
     ): Harness {
         val prefsFlow =
             MutableStateFlow(
@@ -95,6 +104,21 @@ class DashboardCardsSettingsViewModelTest {
                     vitalsConfigsFlow.value = it.invocation.args[0] as List<CardConfiguration>
                 }
             }
+        val sleepTopCardsFlow = MutableStateFlow(initialSleepTopCards)
+        val sleepMetricCardsFlow = MutableStateFlow(initialSleepMetricCards)
+        val sleepLayoutRepository =
+            mockk<SleepLayoutRepository> {
+                every { sleepTopCardConfigurations() } returns sleepTopCardsFlow
+                every { sleepMetricCardConfigurations() } returns sleepMetricCardsFlow
+                coEvery { updateSleepTopCardConfigurations(any()) } coAnswers {
+                    @Suppress("UNCHECKED_CAST")
+                    sleepTopCardsFlow.value = it.invocation.args[0] as List<SleepTopCardConfiguration>
+                }
+                coEvery { updateSleepMetricCardConfigurations(any()) } coAnswers {
+                    @Suppress("UNCHECKED_CAST")
+                    sleepMetricCardsFlow.value = it.invocation.args[0] as List<SleepMetricCardConfiguration>
+                }
+            }
         val displaySettings = mockk<DisplaySettings>(relaxed = true)
 
         val viewModel =
@@ -103,9 +127,17 @@ class DashboardCardsSettingsViewModelTest {
                 displaySettings,
                 cardConfigurationRepository,
                 vitalsLayoutRepository,
+                sleepLayoutRepository,
             )
         viewModel.sharingStarted = SharingStarted.Lazily
-        return Harness(viewModel, configsFlow, vitalsConfigsFlow, displaySettings)
+        return Harness(
+            viewModel,
+            configsFlow,
+            vitalsConfigsFlow,
+            displaySettings,
+            sleepTopCardsFlow,
+            sleepMetricCardsFlow,
+        )
     }
 
     @Test
@@ -230,6 +262,13 @@ class DashboardCardsSettingsViewModelTest {
                     every { vitalsCardConfigurations() } returns MutableStateFlow(emptyList())
                     coJustRun { updateVitalsCardConfigurations(any()) }
                 }
+            val sleepLayoutRepository =
+                mockk<SleepLayoutRepository> {
+                    every { sleepTopCardConfigurations() } returns MutableStateFlow(emptyList())
+                    every { sleepMetricCardConfigurations() } returns MutableStateFlow(emptyList())
+                    coJustRun { updateSleepTopCardConfigurations(any()) }
+                    coJustRun { updateSleepMetricCardConfigurations(any()) }
+                }
 
             val viewModel =
                 DashboardCardsSettingsViewModel(
@@ -237,6 +276,7 @@ class DashboardCardsSettingsViewModelTest {
                     displaySettings,
                     cardConfigurationRepository,
                     vitalsLayoutRepository,
+                    sleepLayoutRepository,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -408,6 +448,13 @@ class DashboardCardsSettingsViewModelTest {
                     every { vitalsCardConfigurations() } returns MutableStateFlow(emptyList())
                     coJustRun { updateVitalsCardConfigurations(any()) }
                 }
+            val sleepLayoutRepository =
+                mockk<SleepLayoutRepository> {
+                    every { sleepTopCardConfigurations() } returns MutableStateFlow(emptyList())
+                    every { sleepMetricCardConfigurations() } returns MutableStateFlow(emptyList())
+                    coJustRun { updateSleepTopCardConfigurations(any()) }
+                    coJustRun { updateSleepMetricCardConfigurations(any()) }
+                }
 
             val viewModel =
                 DashboardCardsSettingsViewModel(
@@ -415,6 +462,7 @@ class DashboardCardsSettingsViewModelTest {
                     displaySettings,
                     cardConfigurationRepository,
                     vitalsLayoutRepository,
+                    sleepLayoutRepository,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -441,4 +489,100 @@ class DashboardCardsSettingsViewModelTest {
             job.cancel()
         }
     }
+
+    @Test
+    fun `apply also sets sleep top cards and metric cards`() =
+        runTest(testDispatcher) {
+            val harness =
+                buildViewModel(
+                    noticeDismissed = true,
+                    initialSleepTopCards =
+                        listOf(
+                            SleepTopCardConfiguration(SleepTopCardId.SLEEP_SCORE, requestedDisplayMode = null),
+                            SleepTopCardConfiguration(SleepTopCardId.SLEEP_BREAKDOWN_BAR, requestedDisplayMode = null),
+                        ),
+                    initialSleepMetricCards =
+                        listOf(
+                            SleepMetricCardConfiguration(SleepMetricCardId.DEEP_SLEEP, requestedDisplayMode = null),
+                            SleepMetricCardConfiguration(SleepMetricCardId.NAP_DURATION, requestedDisplayMode = null),
+                        ),
+                )
+            val job =
+                backgroundScope.launch(
+                    UnconfinedTestDispatcher(testScheduler),
+                ) { harness.viewModel.uiState.collect() }
+
+            harness.viewModel.onEvent(
+                SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.GAUGE),
+            )
+            advanceUntilIdle()
+
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                harness.sleepTopCards.value
+                    .first { it.cardId == SleepTopCardId.SLEEP_SCORE }
+                    .requestedDisplayMode,
+            )
+            assertNull(
+                harness.sleepTopCards.value
+                    .first { it.cardId == SleepTopCardId.SLEEP_BREAKDOWN_BAR }
+                    .requestedDisplayMode,
+            )
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                harness.sleepMetricCards.value
+                    .first { it.cardId == SleepMetricCardId.DEEP_SLEEP }
+                    .requestedDisplayMode,
+            )
+            assertNull(
+                harness.sleepMetricCards.value
+                    .first { it.cardId == SleepMetricCardId.NAP_DURATION }
+                    .requestedDisplayMode,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun `reset also clears sleep top cards and metric cards`() =
+        runTest(testDispatcher) {
+            val harness =
+                buildViewModel(
+                    noticeDismissed = true,
+                    initialSleepTopCards =
+                        listOf(
+                            SleepTopCardConfiguration(
+                                SleepTopCardId.SLEEP_SCORE,
+                                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+                            ),
+                        ),
+                    initialSleepMetricCards =
+                        listOf(
+                            SleepMetricCardConfiguration(
+                                SleepMetricCardId.DEEP_SLEEP,
+                                requestedDisplayMode = DashboardCardDisplayMode.BAR,
+                            ),
+                        ),
+                )
+            val job =
+                backgroundScope.launch(
+                    UnconfinedTestDispatcher(testScheduler),
+                ) { harness.viewModel.uiState.collect() }
+
+            harness.viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
+            advanceUntilIdle()
+
+            assertNull(
+                harness.sleepTopCards.value
+                    .first { it.cardId == SleepTopCardId.SLEEP_SCORE }
+                    .requestedDisplayMode,
+            )
+            assertNull(
+                harness.sleepMetricCards.value
+                    .first { it.cardId == SleepMetricCardId.DEEP_SLEEP }
+                    .requestedDisplayMode,
+            )
+
+            job.cancel()
+        }
 }

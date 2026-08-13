@@ -8,6 +8,8 @@ import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.SettingsDefaults
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sleep.SleepCardCatalog
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -30,6 +32,7 @@ class DashboardCardsSettingsViewModel
         private val displaySettings: DisplaySettings,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val vitalsLayoutRepository: VitalsLayoutRepository,
+        private val sleepLayoutRepository: SleepLayoutRepository,
     ) : ViewModel() {
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -136,6 +139,15 @@ class DashboardCardsSettingsViewModel
             val updatedVitals = DashboardCardCatalog.applyGlobalDisplayMode(currentVitals, mode)
             vitalsLayoutRepository.updateVitalsCardConfigurations(updatedVitals)
 
+            val currentSleepTopCards = sleepLayoutRepository.sleepTopCardConfigurations().first()
+            sleepLayoutRepository.updateSleepTopCardConfigurations(
+                SleepCardCatalog.applyGlobalTopCardMode(currentSleepTopCards, mode),
+            )
+            val currentSleepMetricCards = sleepLayoutRepository.sleepMetricCardConfigurations().first()
+            sleepLayoutRepository.updateSleepMetricCardConfigurations(
+                SleepCardCatalog.applyGlobalMetricCardMode(currentSleepMetricCards, mode),
+            )
+
             displaySettings.updateLastGlobalDisplayMode(mode)
         }
 
@@ -160,6 +172,17 @@ class DashboardCardsSettingsViewModel
                     config.copy(requestedDisplayMode = vitalsDefaultModes[config.cardId])
                 }
             vitalsLayoutRepository.updateVitalsCardConfigurations(updatedVitals)
+
+            // Sleep defaults carry no explicit mode, so a null-mode reset falls through to the
+            // per-card legacy default (gauge for the score/time top cards, value for metric cards).
+            val currentSleepTopCards = sleepLayoutRepository.sleepTopCardConfigurations().first()
+            sleepLayoutRepository.updateSleepTopCardConfigurations(
+                SleepCardCatalog.resetTopCardModes(currentSleepTopCards),
+            )
+            val currentSleepMetricCards = sleepLayoutRepository.sleepMetricCardConfigurations().first()
+            sleepLayoutRepository.updateSleepMetricCardConfigurations(
+                SleepCardCatalog.resetMetricCardModes(currentSleepMetricCards),
+            )
 
             displaySettings.updateLastGlobalDisplayMode(null)
         }

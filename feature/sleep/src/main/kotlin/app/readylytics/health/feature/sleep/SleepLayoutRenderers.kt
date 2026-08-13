@@ -17,7 +17,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
-import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.deepSleepStatus
@@ -28,6 +27,8 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString
+import app.readylytics.health.domain.sleep.SleepCardCatalog
+import app.readylytics.health.domain.sleep.SleepCardSpec
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
@@ -44,23 +45,32 @@ val SLEEP_TOP_CARD_FULL_WIDTH_IDS: Set<SleepTopCardId> =
         SleepTopCardId.SLEEP_HR_CHART,
     )
 
+private val VALUE_ONLY_MODES = listOf(UniversalCardDisplayMode.VALUE)
+
+private fun supportedModes(spec: SleepCardSpec?): List<UniversalCardDisplayMode> =
+    spec?.supportedModes?.map { it.toUniversalMode() } ?: VALUE_ONLY_MODES
+
 @Composable
 fun rememberSleepTopCardDataMap(
     uiState: SleepUiState,
     singleSessionVisual: SleepSessionData?,
+    onDisplayModeChanged: (SleepTopCardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
 ): Map<SleepTopCardId, @Composable (SleepTopCardConfiguration) -> Unit> =
     remember(uiState, singleSessionVisual) {
-        buildSleepTopCardDataMap(uiState, singleSessionVisual)
+        buildSleepTopCardDataMap(uiState, singleSessionVisual, onDisplayModeChanged)
     }
 
 /** Pure builder — unit-testable without composition. */
 fun buildSleepTopCardDataMap(
     uiState: SleepUiState,
     singleSessionVisual: SleepSessionData?,
-): Map<SleepTopCardId, @Composable (SleepTopCardConfiguration) -> Unit> =
-    mapOf(
+    onDisplayModeChanged: (SleepTopCardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
+): Map<SleepTopCardId, @Composable (SleepTopCardConfiguration) -> Unit> {
+    val isEditing = uiState.isManagingSleepTopCards
+
+    return mapOf(
         SleepTopCardId.SLEEP_SCORE to
-            @Composable { _: SleepTopCardConfiguration ->
+            @Composable { config: SleepTopCardConfiguration ->
                 if (uiState.isLoading) {
                     ScoreDialSkeleton()
                 } else {
@@ -77,6 +87,12 @@ fun buildSleepTopCardDataMap(
                                 previousRounded = uiState.yesterdaySleepScoreRounded,
                             ).resolveOrNull(),
                         tooltipDescription = stringResource(CoreUiR.string.tooltip_sleep_score),
+                        supportedModes = supportedModes(SleepCardCatalog.topCardSpec(config.cardId)),
+                        requestedMode = SleepCardCatalog.requestedTopCardMode(config).toUniversalMode(),
+                        isEditing = isEditing,
+                        onModeSelected = { mode ->
+                            onDisplayModeChanged(config.cardId, mode.toDashboardMode())
+                        },
                     )
                 }
             },
@@ -98,9 +114,12 @@ fun buildSleepTopCardDataMap(
                         maxScore = 1f,
                         status = sleepTimeGaugeData.status,
                         deltaText = sleepTimeGaugeData.deltaText.resolveOrNull(),
-                        mode =
-                            config.requestedDisplayMode?.toUniversalMode()
-                                ?: UniversalCardDisplayMode.GAUGE,
+                        supportedModes = supportedModes(SleepCardCatalog.topCardSpec(config.cardId)),
+                        requestedMode = SleepCardCatalog.requestedTopCardMode(config).toUniversalMode(),
+                        isEditing = isEditing,
+                        onModeSelected = { mode ->
+                            onDisplayModeChanged(config.cardId, mode.toDashboardMode())
+                        },
                         tooltip = stringResource(CoreUiR.string.tooltip_sleep_duration, goalText),
                     )
                 }
@@ -147,15 +166,17 @@ fun buildSleepTopCardDataMap(
                 }
             },
     )
+}
 
 @Composable
 fun rememberSleepMetricCardDataMap(
     uiState: SleepUiState,
     circadianResult: CircadianConsistencyResult,
     singleSessionVisual: SleepSessionData?,
+    onDisplayModeChanged: (SleepMetricCardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
 ): Map<SleepMetricCardId, @Composable (SleepMetricCardConfiguration) -> Unit> =
     remember(uiState, circadianResult, singleSessionVisual) {
-        buildSleepMetricCardDataMap(uiState, circadianResult, singleSessionVisual)
+        buildSleepMetricCardDataMap(uiState, circadianResult, singleSessionVisual, onDisplayModeChanged)
     }
 
 /** Pure builder — unit-testable without composition. */
@@ -163,10 +184,12 @@ fun buildSleepMetricCardDataMap(
     uiState: SleepUiState,
     circadianResult: CircadianConsistencyResult,
     singleSessionVisual: SleepSessionData?,
+    onDisplayModeChanged: (SleepMetricCardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
 ): Map<SleepMetricCardId, @Composable (SleepMetricCardConfiguration) -> Unit> {
     val session = singleSessionVisual
     val summary = uiState.latestSummary
     val metrics = uiState.latestMetrics
+    val isEditing = uiState.isManagingSleepMetricCards
 
     val efficiencyStatus = session?.efficiencyStatus() ?: MetricStatus.NO_DATA
     val deepStatus = summary?.deepSleepStatus() ?: MetricStatus.NO_DATA
@@ -203,6 +226,7 @@ fun buildSleepMetricCardDataMap(
                     }
                 val tooltipText =
                     stringResource(CoreUiR.string.tooltip_circadian_score, thresholdMinutes)
+                val rawValue = (circadianResult as? CircadianConsistencyResult.Ready)?.score
 
                 SleepMetricCard(
                     title = stringResource(CoreUiR.string.label_circadian_consistency),
@@ -210,9 +234,14 @@ fun buildSleepMetricCardDataMap(
                     secondaryText = windowText,
                     status = circadianResult.toStatus(),
                     tooltip = tooltipText,
-                    mode =
-                        config.requestedDisplayMode?.toUniversalMode()
-                            ?: UniversalCardDisplayMode.VALUE,
+                    rawValue = rawValue,
+                    maxScore = 100f,
+                    supportedModes = supportedModes(SleepCardCatalog.metricCardSpec(config.cardId)),
+                    requestedMode = SleepCardCatalog.requestedMetricCardMode(config).toUniversalMode(),
+                    isEditing = isEditing,
+                    onModeSelected = { mode ->
+                        onDisplayModeChanged(config.cardId, mode.toDashboardMode())
+                    },
                 )
             },
         SleepMetricCardId.SLEEP_EFFICIENCY to
@@ -229,9 +258,14 @@ fun buildSleepMetricCardDataMap(
                     secondaryText = stringResource(CoreUiR.string.card_goal_sleep_efficiency),
                     status = efficiencyStatus,
                     tooltip = stringResource(CoreUiR.string.card_tooltip_sleep_efficiency),
-                    mode =
-                        config.requestedDisplayMode?.toUniversalMode()
-                            ?: UniversalCardDisplayMode.VALUE,
+                    rawValue = session?.efficiency,
+                    maxScore = 100f,
+                    supportedModes = supportedModes(SleepCardCatalog.metricCardSpec(config.cardId)),
+                    requestedMode = SleepCardCatalog.requestedMetricCardMode(config).toUniversalMode(),
+                    isEditing = isEditing,
+                    onModeSelected = { mode ->
+                        onDisplayModeChanged(config.cardId, mode.toDashboardMode())
+                    },
                 )
             },
         SleepMetricCardId.DEEP_SLEEP to
@@ -244,9 +278,14 @@ fun buildSleepMetricCardDataMap(
                     secondaryText = stringResource(R.string.card_target_deep_sleep),
                     status = deepStatus,
                     tooltip = stringResource(R.string.tooltip_deep_sleep),
-                    mode =
-                        config.requestedDisplayMode?.toUniversalMode()
-                            ?: UniversalCardDisplayMode.VALUE,
+                    rawValue = summary?.deepSleepPercent,
+                    maxScore = 100f,
+                    supportedModes = supportedModes(SleepCardCatalog.metricCardSpec(config.cardId)),
+                    requestedMode = SleepCardCatalog.requestedMetricCardMode(config).toUniversalMode(),
+                    isEditing = isEditing,
+                    onModeSelected = { mode ->
+                        onDisplayModeChanged(config.cardId, mode.toDashboardMode())
+                    },
                 )
             },
         SleepMetricCardId.REM_SLEEP to
@@ -259,33 +298,32 @@ fun buildSleepMetricCardDataMap(
                     secondaryText = stringResource(R.string.card_target_rem_sleep),
                     status = remStatus,
                     tooltip = stringResource(R.string.tooltip_rem_sleep),
-                    mode =
-                        config.requestedDisplayMode?.toUniversalMode()
-                            ?: UniversalCardDisplayMode.VALUE,
+                    rawValue = summary?.remSleepPercent,
+                    maxScore = 100f,
+                    supportedModes = supportedModes(SleepCardCatalog.metricCardSpec(config.cardId)),
+                    requestedMode = SleepCardCatalog.requestedMetricCardMode(config).toUniversalMode(),
+                    isEditing = isEditing,
+                    onModeSelected = { mode ->
+                        onDisplayModeChanged(config.cardId, mode.toDashboardMode())
+                    },
                 )
             },
         SleepMetricCardId.NAP_DURATION to
-            @Composable { config: SleepMetricCardConfiguration ->
+            @Composable { _: SleepMetricCardConfiguration ->
                 SleepMetricCard(
                     title = stringResource(R.string.card_title_nap_duration),
                     valueText = metrics?.napDurationDisplay ?: DateFormatUtils.formatSleepDuration(0),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_duration),
-                    mode =
-                        config.requestedDisplayMode?.toUniversalMode()
-                            ?: UniversalCardDisplayMode.VALUE,
                 )
             },
         SleepMetricCardId.NAP_COUNT to
-            @Composable { config: SleepMetricCardConfiguration ->
+            @Composable { _: SleepMetricCardConfiguration ->
                 SleepMetricCard(
                     title = stringResource(R.string.card_title_nap_count),
                     valueText = metrics?.napCount?.toString() ?: "0",
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.tooltip_nap_count),
-                    mode =
-                        config.requestedDisplayMode?.toUniversalMode()
-                            ?: UniversalCardDisplayMode.VALUE,
                 )
             },
     )
@@ -300,6 +338,10 @@ private fun SleepScoreCard(
     tooltipDescription: String,
     modifier: Modifier = Modifier,
     title: String,
+    supportedModes: List<UniversalCardDisplayMode> = VALUE_ONLY_MODES,
+    requestedMode: UniversalCardDisplayMode = UniversalCardDisplayMode.VALUE,
+    isEditing: Boolean = false,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit = {},
 ) {
     SleepMetricCard(
         title = title,
@@ -309,7 +351,10 @@ private fun SleepScoreCard(
         status = score.scoreStatus(),
         tooltip = tooltipDescription,
         deltaText = deltaText,
-        mode = UniversalCardDisplayMode.GAUGE,
+        supportedModes = supportedModes,
+        requestedMode = requestedMode,
+        isEditing = isEditing,
+        onModeSelected = onModeSelected,
         modifier = modifier,
     )
 }
@@ -326,7 +371,10 @@ private fun SleepMetricCard(
     rawValue: Float? = null,
     maxScore: Float = 100f,
     deltaText: String? = null,
-    mode: UniversalCardDisplayMode = UniversalCardDisplayMode.VALUE,
+    supportedModes: List<UniversalCardDisplayMode> = VALUE_ONLY_MODES,
+    requestedMode: UniversalCardDisplayMode = UniversalCardDisplayMode.VALUE,
+    isEditing: Boolean = false,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit = {},
     tooltipDescription: String? = null,
 ) {
     val secondary = deltaText ?: secondaryText
@@ -340,19 +388,16 @@ private fun SleepMetricCard(
                 status = status,
                 tooltip = tooltipDescription ?: tooltip,
                 accessibilityDescription = "$title: $valueText",
-                visual =
-                    if (mode == UniversalCardDisplayMode.GAUGE) {
-                        UniversalMetricScalePreparer.score(rawValue, 0f, maxScore)
-                    } else {
-                        UniversalMetricVisual.ValueOnly
-                    },
+                visual = UniversalMetricScalePreparer.score(rawValue, 0f, maxScore),
             ),
         specification =
             UniversalMetricCardSpec(
-                supportedModes = listOf(mode),
+                supportedModes = supportedModes,
                 usesDeltaPill = deltaText != null,
             ),
-        requestedMode = mode,
+        requestedMode = requestedMode,
+        isEditing = isEditing,
+        onModeSelected = onModeSelected,
         modifier = modifier,
     )
 }
@@ -362,4 +407,11 @@ private fun DashboardCardDisplayMode.toUniversalMode(): UniversalCardDisplayMode
         DashboardCardDisplayMode.GAUGE -> UniversalCardDisplayMode.GAUGE
         DashboardCardDisplayMode.BAR -> UniversalCardDisplayMode.BAR
         DashboardCardDisplayMode.VALUE -> UniversalCardDisplayMode.VALUE
+    }
+
+private fun UniversalCardDisplayMode.toDashboardMode(): DashboardCardDisplayMode =
+    when (this) {
+        UniversalCardDisplayMode.GAUGE -> DashboardCardDisplayMode.GAUGE
+        UniversalCardDisplayMode.BAR -> DashboardCardDisplayMode.BAR
+        UniversalCardDisplayMode.VALUE -> DashboardCardDisplayMode.VALUE
     }

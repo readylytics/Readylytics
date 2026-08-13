@@ -133,6 +133,7 @@ fun SleepScreen(
         rememberSleepTopCardDataMap(
             uiState = uiState,
             singleSessionVisual = singleSessionVisual,
+            onDisplayModeChanged = { id, mode -> onSleepTopCardDisplayModeChanged(id, mode) },
         )
 
     val trendChartDataMap: Map<SleepChartId, @Composable (SleepChartConfiguration) -> Unit> =
@@ -272,6 +273,7 @@ fun SleepScreen(
                                 uiState,
                                 circadianConsistency,
                                 singleSessionVisual,
+                                onDisplayModeChanged = { id, mode -> onSleepMetricCardDisplayModeChanged(id, mode) },
                             ),
                         isEditing = uiState.isManagingSleepMetricCards,
                         onItemReorder = onReorderSleepMetricCards,

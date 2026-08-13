@@ -3,7 +3,9 @@ package app.readylytics.health.feature.vitals.overview
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,10 +19,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -32,6 +39,13 @@ import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.core.ui.R as CoreUiR
 
+/**
+ * Unified bottom sheet for customizing the layout of the Vitals tab.
+ *
+ * Visibility toggles and reset-to-defaults for the two sections (cards and trend charts) are
+ * organized into tabs, mirroring the Sleep management sheet. Reordering happens on the screen
+ * via drag-and-drop while in edit mode.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VitalsManagementBottomSheet(
@@ -49,6 +63,8 @@ fun VitalsManagementBottomSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        var selectedTabIndex by remember { mutableIntStateOf(0) }
+
         Column(
             modifier =
                 Modifier
@@ -62,7 +78,7 @@ fun VitalsManagementBottomSheet(
                         .padding(
                             start = MaterialTheme.spacing.pageHorizontal,
                             end = MaterialTheme.spacing.pageHorizontal,
-                            bottom = MaterialTheme.spacing.pageSectionGap,
+                            bottom = MaterialTheme.spacing.small,
                         ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -80,88 +96,51 @@ fun VitalsManagementBottomSheet(
                 }
             }
 
+            PrimaryTabRow(
+                selectedTabIndex = selectedTabIndex,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 },
+                    text = { Text(stringResource(R.string.vitals_management_cards_section_title)) },
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1 },
+                    text = { Text(stringResource(R.string.vitals_management_diagrams_section_title)) },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
             val sortedCards = remember(cardConfigurations) { cardConfigurations.sortedBy { it.position } }
             val sortedCharts = remember(chartConfigurations) { chartConfigurations.sortedBy { it.position } }
 
-            LazyColumn {
-                item {
-                    Text(
-                        text = stringResource(R.string.vitals_management_cards_section_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    start = MaterialTheme.spacing.pageHorizontal,
-                                    end = MaterialTheme.spacing.pageHorizontal,
-                                    bottom = MaterialTheme.spacing.extraSmall,
-                                ),
-                    )
-                }
-                items(
-                    items = sortedCards,
-                    key = { "card_${it.cardId.name}" },
-                ) { card ->
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = stringResource(card.cardId.displayNameResId),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        trailingContent = {
-                            Checkbox(
-                                checked = card.isVisible,
-                                onCheckedChange = { visible ->
+            LazyColumn(
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
+                when (selectedTabIndex) {
+                    0 -> {
+                        items(sortedCards, key = { "card_${it.cardId.name}" }) { card ->
+                            CardManagementItem(
+                                card = card,
+                                onVisibilityChanged = { visible ->
                                     onCardVisibilityChanged(card.cardId, visible)
                                 },
                             )
-                        },
-                        modifier =
-                            Modifier.padding(
-                                vertical = MaterialTheme.spacing.extraSmall,
-                            ),
-                    )
-                }
-                item {
-                    Text(
-                        text = stringResource(R.string.vitals_management_diagrams_section_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    start = MaterialTheme.spacing.pageHorizontal,
-                                    end = MaterialTheme.spacing.pageHorizontal,
-                                    top = MaterialTheme.spacing.pageSectionGap,
-                                    bottom = MaterialTheme.spacing.extraSmall,
-                                ),
-                    )
-                }
-                items(
-                    items = sortedCharts,
-                    key = { "chart_${it.chartId.name}" },
-                ) { chart ->
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = stringResource(chart.chartId.displayNameResId),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        trailingContent = {
-                            Checkbox(
-                                checked = chart.isVisible,
-                                onCheckedChange = { visible ->
+                        }
+                    }
+                    1 -> {
+                        items(sortedCharts, key = { "chart_${it.chartId.name}" }) { chart ->
+                            ChartManagementItem(
+                                chart = chart,
+                                onVisibilityChanged = { visible ->
                                     onChartVisibilityChanged(chart.chartId, visible)
                                 },
                             )
-                        },
-                        modifier =
-                            Modifier.padding(
-                                vertical = MaterialTheme.spacing.extraSmall,
-                            ),
-                    )
+                        }
+                    }
                 }
             }
 
@@ -179,4 +158,50 @@ fun VitalsManagementBottomSheet(
             }
         }
     }
+}
+
+@Composable
+private fun CardManagementItem(
+    card: CardConfiguration,
+    onVisibilityChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        headlineContent = {
+            Text(
+                text = stringResource(card.cardId.displayNameResId),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        trailingContent = {
+            Checkbox(
+                checked = card.isVisible,
+                onCheckedChange = onVisibilityChanged,
+            )
+        },
+        modifier = modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+    )
+}
+
+@Composable
+private fun ChartManagementItem(
+    chart: VitalsChartConfiguration,
+    onVisibilityChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        headlineContent = {
+            Text(
+                text = stringResource(chart.chartId.displayNameResId),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        trailingContent = {
+            Checkbox(
+                checked = chart.isVisible,
+                onCheckedChange = onVisibilityChanged,
+            )
+        },
+        modifier = modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+    )
 }
