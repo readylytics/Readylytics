@@ -98,6 +98,7 @@ fun VitalsScreen(
     earliestDate: java.time.LocalDate? = null,
     onToggleVitalsManagement: () -> Unit = {},
     onCancelVitalsManagement: () -> Unit = {},
+    onManageClick: (() -> Unit)? = null,
     onToggleVitalsCardVisibility: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderVitalsCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
     onVitalsCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
@@ -235,10 +236,7 @@ fun VitalsScreen(
 
                 if (!uiState.isManagingVitalsLayout) {
                     FilledTonalButton(
-                        onClick = {
-                            showVitalsManagement = true
-                            onToggleVitalsManagement()
-                        },
+                        onClick = onToggleVitalsManagement,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -265,6 +263,7 @@ fun VitalsScreen(
             isVisible = uiState.isManagingVitalsLayout,
             onDoneClick = onToggleVitalsManagement,
             onCancelClick = onCancelVitalsManagement,
+            onManageClick = onManageClick ?: { showVitalsManagement = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
     }
