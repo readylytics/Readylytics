@@ -1,4 +1,4 @@
-package app.readylytics.health.feature.dashboard
+package app.readylytics.health.core.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.R
 
 /**
  * Reusable FAB for edit mode toggle that animates in/out based on edit state.

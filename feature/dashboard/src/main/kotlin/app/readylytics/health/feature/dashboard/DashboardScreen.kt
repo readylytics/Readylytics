@@ -42,6 +42,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
+import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.dashboard.DateSwitcher

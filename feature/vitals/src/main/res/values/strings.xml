@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Vitals layout management -->
+    <string name="action_customize">Customize</string>
     <string name="action_done">Done</string>
     <string name="action_reset_to_defaults">Reset to defaults</string>
     <string name="vitals_manage_layout">Customize Vitals</string>
