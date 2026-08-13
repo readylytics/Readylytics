@@ -13,6 +13,10 @@ import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
+import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.domain.workouts.WorkoutChartId
+import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.domain.workouts.WorkoutHistoryId
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -173,6 +177,39 @@ object SettingsDefaults {
             SleepMetricCardConfiguration(SleepMetricCardId.REM_SLEEP, isVisible = true, position = 3),
             SleepMetricCardConfiguration(SleepMetricCardId.NAP_DURATION, isVisible = true, position = 4),
             SleepMetricCardConfiguration(SleepMetricCardId.NAP_COUNT, isVisible = true, position = 5),
+        )
+
+    val DEFAULT_WORKOUT_CARDS =
+        listOf(
+            CardConfiguration(
+                CardId.STRAIN_RATIO,
+                isVisible = true,
+                position = 0,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.READINESS,
+                isVisible = true,
+                position = 1,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.RAS_DAILY,
+                isVisible = true,
+                position = 2,
+                requestedDisplayMode = DashboardCardDisplayMode.VALUE,
+            ),
+        )
+
+    val DEFAULT_WORKOUT_CHARTS =
+        listOf(
+            WorkoutChartConfiguration(WorkoutChartId.ACWR_TRIMP, isVisible = true, position = 0),
+        )
+
+    val DEFAULT_WORKOUT_HISTORY =
+        listOf(
+            WorkoutHistoryConfiguration(WorkoutHistoryId.WORKOUT_LIST, isVisible = true, position = 0),
+            WorkoutHistoryConfiguration(WorkoutHistoryId.STATUS_LEGEND, isVisible = true, position = 1),
         )
 }
 
