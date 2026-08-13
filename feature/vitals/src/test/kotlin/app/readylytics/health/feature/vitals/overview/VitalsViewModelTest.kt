@@ -1,152 +1,32 @@
 package app.readylytics.health.feature.vitals.overview
 
-import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailyMetricsRepository
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.util.UnitConverter
-import io.mockk.coEvery
 import io.mockk.every
-import io.mockk.mockk
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class VitalsViewModelTest {
-    private val testDispatcher = StandardTestDispatcher()
-    private val summaries = MutableStateFlow<List<DailySummary>>(emptyList())
-    private val selectedDateFlow = MutableStateFlow(LocalDate.now())
-    private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
-    private val syncing = MutableStateFlow(false)
-    private val bodyTemperatureBaseline = MutableStateFlow<Float?>(36.5f)
-    private val metricsByDate = mutableMapOf<LocalDate, MutableStateFlow<DailyMetrics?>>()
-    private val customMetricsFlowsByDate = mutableMapOf<LocalDate, Flow<DailyMetrics?>>()
-    private val settingsRepo = FakeUserPreferencesReader()
-
-    private lateinit var viewModel: VitalsViewModel
-
-    private val dailySummaryRepository =
-        mockk<DailySummaryRepository> {
-            every { observeSince(any()) } returns summaries
-            every { observeByDate(any()) } returns MutableStateFlow(null)
-        }
-    private val dailyMetricsRepository =
-        mockk<DailyMetricsRepository> {
-            every { observeByDate(any()) } answers {
-                val date = firstArg<LocalDate>()
-                customMetricsFlowsByDate[date] ?: metricsFlow(date)
-            }
-        }
-    private val selectedDateStore =
-        mockk<SelectedDateStore> {
-            every { selectedDate } returns selectedDateFlow
-            every { earliestDate } returns earliestDateFlow
-            coEvery { updateSelectedDate(any()) } answers {
-                selectedDateFlow.value = firstArg<LocalDate>()
-            }
-            coEvery { resetToToday() } answers {
-                selectedDateFlow.value = LocalDate.now()
-            }
-            coEvery { advanceTodayIfNeeded() } returns Unit
-            coEvery { selectPreviousDay() } answers {
-                selectedDateFlow.value = selectedDateFlow.value.minusDays(1)
-            }
-            coEvery { selectNextDay() } answers {
-                selectedDateFlow.value = selectedDateFlow.value.plusDays(1)
-            }
-        }
-    private val foregroundSyncGateway =
-        mockk<ForegroundSyncGateway> {
-            every { isSyncing } returns syncing
-            every { recalcProgress } returns MutableStateFlow(null)
-            every { syncCompletedEvent } returns MutableSharedFlow()
-            coEvery { evaluateAndSync() } returns Unit
-            coEvery { triggerImmediateSync() } returns Unit
-            coEvery { triggerDailySync() } returns Unit
-        }
-    private val bodyTemperatureBaselineProvider =
-        mockk<BodyTemperatureBaselineProvider> {
-            coEvery { getBaseline(any()) } answers { bodyTemperatureBaseline.value }
-            every { observeBaseline(any()) } returns bodyTemperatureBaseline
-        }
-
-    private fun createViewModel() =
-        VitalsViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            dailyMetricsRepository = dailyMetricsRepository,
-            settingsRepo = settingsRepo,
-            selectedDateRepository = selectedDateStore,
-            foregroundSyncController = foregroundSyncGateway,
-            savedStateHandle = SavedStateHandle(),
-            bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
-            ioDispatcher = testDispatcher,
-        )
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-        settingsRepo.reset()
-        summaries.value =
-            listOf(
-                summary(date = LocalDate.now(), hrv = 42, rhr = 51, spo2 = 96f),
-                summary(date = LocalDate.now().minusDays(1), hrv = 40, rhr = 49, spo2 = 95f),
-            )
-        metricsByDate.clear()
-        customMetricsFlowsByDate.clear()
-        metricsFlow(LocalDate.now()).value =
-            dailyMetrics(
-                date = LocalDate.now(),
-                hrv = 42,
-                rhr = 51,
-                hrvBaselineRounded = 41,
-                rhrBaselineRounded = 48,
-                rhrSnapshotRaw = 48f,
-            )
-        syncing.value = false
-        bodyTemperatureBaseline.value = 36.5f
-    }
-
-    @After
-    fun tearDown() {
-        if (::viewModel.isInitialized) {
-            viewModel.viewModelScope.cancel()
-            testDispatcher.scheduler.advanceUntilIdle()
-        }
-        Dispatchers.resetMain()
-    }
-
+class VitalsViewModelTest : VitalsViewModelTestBase() {
     @Test
     fun `sync change preserves structurally equal chart series`() =
         runTest {
@@ -438,7 +318,7 @@ class VitalsViewModelTest {
             val collector = backgroundScope.launch { viewModel.uiState.collect { emittedStates += it } }
             try {
                 advanceUntilIdle()
-                assertEquals(36.5f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.5f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 selectedDateFlow.value = nextDate
                 advanceUntilIdle()
@@ -448,18 +328,18 @@ class VitalsViewModelTest {
                     emittedStates.any { state ->
                         state.selectedDate == nextDate &&
                             state.latestSummary?.date == nextDate &&
-                            state.presentation.baselineBodyTemp == 36.5f
+                            state.presentation.bodyTemp.baseline == 36.5f
                     },
                 )
 
                 val waitingForBaseline = viewModel.uiState.value
                 assertEquals(nextDate, waitingForBaseline.selectedDate)
-                assertNull(waitingForBaseline.presentation.baselineBodyTemp)
+                assertNull(waitingForBaseline.presentation.bodyTemp.baseline)
 
                 nextDateBaseline.emit(36.1f)
                 advanceUntilIdle()
 
-                assertEquals(36.1f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.1f, viewModel.uiState.value.presentation.bodyTemp.baseline)
             } finally {
                 collector.cancel()
             }
@@ -549,7 +429,7 @@ class VitalsViewModelTest {
                 val after = viewModel.uiState.value
                 assertEquals(
                     UnitConverter.celsiusToDisplayTemperature(36.5f, UnitSystem.IMPERIAL),
-                    after.presentation.baselineBodyTemp,
+                    after.presentation.bodyTemp.baseline,
                 )
                 assertEquals(selectedDate, selectedDateFlow.value)
                 assertSame(before.chartSeries, after.chartSeries)
@@ -577,85 +457,21 @@ class VitalsViewModelTest {
             val collector = backgroundScope.launch { viewModel.uiState.collect() }
             try {
                 advanceUntilIdle()
-                assertEquals(36.2f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.2f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 selectedDateFlow.value = nextDate
                 advanceUntilIdle()
-                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.4f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 initialDateBaseline.value = 37.1f
                 advanceUntilIdle()
-                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.4f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 nextDateBaseline.value = 36.5f
                 advanceUntilIdle()
-                assertEquals(36.5f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.5f, viewModel.uiState.value.presentation.bodyTemp.baseline)
             } finally {
                 collector.cancel()
             }
         }
-
-    private fun summary(
-        date: LocalDate,
-        hrv: Int? = null,
-        rhr: Int? = null,
-        spo2: Float? = null,
-        bodyTemp: Float? = null,
-    ): DailySummary =
-        DailySummary(
-            date = date,
-            nocturnalHrv = hrv,
-            restingHeartRate = rhr,
-            avgSleepingSpo2 = spo2,
-            avgSleepingBodyTemp = bodyTemp,
-            isCalibrating = false,
-        )
-
-    private fun dailyMetrics(
-        date: LocalDate,
-        hrv: Int? = null,
-        rhr: Int? = null,
-        hrvBaselineRounded: Int? = null,
-        rhrBaselineRounded: Int? = null,
-        rhrSnapshotRaw: Float? = null,
-    ): DailyMetrics =
-        DailyMetrics(
-            date = date,
-            nocturnalHrvRounded = hrv,
-            nocturnalRhrRounded = rhr,
-            hrvBaselineRounded = hrvBaselineRounded,
-            rhrBaselineRounded = rhrBaselineRounded,
-            rhrSnapshotRaw = rhrSnapshotRaw,
-        )
-
-    private fun metricsFlow(date: LocalDate): MutableStateFlow<DailyMetrics?> =
-        metricsByDate.getOrPut(date) { MutableStateFlow(null) }
-
-    private class FakeUserPreferencesReader : UserPreferencesReader {
-        private val preferences = MutableStateFlow(UserPreferences())
-        override val userPreferences: Flow<UserPreferences> = preferences
-
-        fun reset() {
-            preferences.value = UserPreferences()
-        }
-
-        fun emitHrvThresholds(
-            optimal: Float,
-            warning: Float,
-        ) {
-            preferences.value =
-                preferences.value.copy(
-                    hrvOptimalThreshold = optimal,
-                    hrvWarningThreshold = warning,
-                )
-        }
-
-        fun emitAppTheme(appTheme: AppTheme) {
-            preferences.value = preferences.value.copy(appTheme = appTheme)
-        }
-
-        fun emitUnitSystem(unitSystem: UnitSystem) {
-            preferences.value = preferences.value.copy(unitSystem = unitSystem)
-        }
-    }
 }

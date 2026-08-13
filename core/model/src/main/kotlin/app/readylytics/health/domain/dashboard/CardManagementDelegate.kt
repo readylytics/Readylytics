@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.dashboard
 
-import app.readylytics.health.domain.preferences.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +20,9 @@ data class CardManagementState(
 )
 
 /**
- * Events that drive the delegate. All side-effects (persisting to repository)
- * flow through the reactive pipeline; no manual viewModelScope.launch is used.
+ * Events that drive the delegate. All side-effects (persisting via the injected
+ * persist lambda) flow through the reactive pipeline; the coroutine scope is
+ * injected.
  */
 sealed interface CardManagementEvent {
     data class EnterEditMode(
@@ -55,18 +55,19 @@ sealed interface CardManagementEvent {
 /**
  * Reactive delegate for card-management state.
  *
- * State derived from MutableStateFlow.combine().stateIn() — no manual
- * viewModelScope.launch. Persistence side effects from SaveChanges flow
- * through flatMapLatest so cancellation is automatic when the parent
- * scope is cancelled (preventing the memory leak from orphaned coroutines).
+ * State derived from MutableStateFlow.combine().stateIn() — launched via the
+ * injected scope. Persistence side effects from SaveChanges flow through
+ * persistTrigger.filterNotNull().collect so cancellation is automatic when
+ * the parent scope is cancelled (preventing the memory leak from orphaned
+ * coroutines).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CardManagementDelegate(
-    private val cardConfigRepository: CardConfigurationRepository,
+    private val defaultConfigurations: List<CardConfiguration>,
+    private val persist: suspend (List<CardConfiguration>) -> Unit,
     private val scope: CoroutineScope,
     // Gates optional-card persistence on Health Connect permissions. Each defaults to
-    // "granted" so every existing 2-arg call site (and its tests) is unaffected; the
-    // dashboard wires the real HealthConnectRepository checks through these.
+    // "granted"; the dashboard wires the real HealthConnectRepository checks through these.
     private val hasBodyTemperaturePermission: suspend () -> Boolean = { true },
     private val hasStepsPermission: suspend () -> Boolean = { true },
     private val hasWeightPermission: suspend () -> Boolean = { true },
@@ -78,13 +79,13 @@ class CardManagementDelegate(
     private val _pendingConfigs = MutableStateFlow<List<CardConfiguration>?>(null)
     private val persistTrigger = MutableStateFlow<List<CardConfiguration>?>(null)
 
-    // Suspend persistence via repository. Called reactively on SaveChanges event.
+    // Suspend persistence via the injected persist lambda. Called reactively on SaveChanges event.
     //
     // This is the single choke point for persistence, regardless of which onEvent path
     // produced `configs` (manual edits, ResetToDefaults, etc.) -- filtering here, rather
     // than only where pendingConfigs is populated, guarantees optional HC cards can never
     // be written with isVisible = true unless the permission is currently granted. Note
-    // this only gates what reaches the repository; the pendingConfigs StateFlow itself
+    // this only gates what reaches persistence; the pendingConfigs StateFlow itself
     // (and therefore the management sheet's live display) is filtered separately by
     // DashboardFlowIntermediate's createDashboardCardStateFlow.
     private suspend fun persistConfigs(configs: List<CardConfiguration>) {
@@ -95,7 +96,7 @@ class CardManagementDelegate(
         if (!hasBodyFatPermission()) toPersist = toPersist.filter { it.cardId != CardId.BODY_FAT }
         if (!hasBloodPressurePermission()) toPersist = toPersist.filter { it.cardId != CardId.BLOOD_PRESSURE }
         if (!hasOxygenSaturationPermission()) toPersist = toPersist.filter { it.cardId != CardId.OXYGEN_SATURATION }
-        cardConfigRepository.updateDashboardCardConfigurations(toPersist)
+        persist(toPersist)
     }
 
     init {
@@ -145,7 +146,7 @@ class CardManagementDelegate(
                 _pendingConfigs.value = null
             }
             CardManagementEvent.ResetToDefaults -> {
-                _pendingConfigs.value = SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+                _pendingConfigs.value = defaultConfigurations
             }
             is CardManagementEvent.ToggleVisibility -> {
                 val base = _pendingConfigs.value ?: event.currentConfigs

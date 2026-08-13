@@ -38,6 +38,7 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
@@ -137,6 +138,8 @@ fun BodyFatDetailScreen(
                                 vertical = MaterialTheme.spacing.pageSectionGapSmall,
                             ),
                     title = stringResource(R.string.label_body_fat),
+                    supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                    requestedMode = UniversalCardDisplayMode.GAUGE,
                     rawValue = uiState.latestBodyFat,
                     valueText = uiState.bodyFatDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = stringResource(CoreUiR.string.unit_percent),

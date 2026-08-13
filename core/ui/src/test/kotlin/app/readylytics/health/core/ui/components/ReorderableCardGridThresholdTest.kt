@@ -50,7 +50,7 @@ class ReorderableCardGridThresholdTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private lateinit var controller: DragController
+    private lateinit var controller: DragController<CardId>
 
     @Before
     fun setUp() {

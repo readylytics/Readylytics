@@ -42,6 +42,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
+import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
@@ -51,6 +52,7 @@ import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.model.InsightType
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private data class ColoredSnackbarVisuals(
     override val message: String,
@@ -169,6 +171,7 @@ fun DashboardScreen(
     onNavigateToVitals: () -> Unit = {},
     onToggleCardManagement: () -> Unit = {},
     onCancelCardManagement: () -> Unit = {},
+    onManageClick: (() -> Unit)? = null,
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
@@ -328,10 +331,7 @@ fun DashboardScreen(
             if (!uiState.isManagingCards) {
                 item(key = "customize_button") {
                     FilledTonalButton(
-                        onClick = {
-                            showCardManagement = true
-                            onToggleCardManagement()
-                        },
+                        onClick = onToggleCardManagement,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -346,7 +346,7 @@ fun DashboardScreen(
                             ),
                     ) {
                         Text(
-                            text = stringResource(R.string.action_customize),
+                            text = stringResource(CoreUiR.string.action_customize),
                             style = MaterialTheme.typography.labelLarge,
                         )
                     }
@@ -390,6 +390,7 @@ fun DashboardScreen(
             isVisible = uiState.isManagingCards,
             onDoneClick = onToggleCardManagement,
             onCancelClick = onCancelCardManagement,
+            onManageClick = onManageClick ?: { showCardManagement = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
 

@@ -17,9 +17,14 @@ internal fun UniversalVitalsMetricCard(
     tooltip: String,
     rawValue: Float?,
     maxValue: Float,
+    supportedModes: List<UniversalCardDisplayMode>,
+    requestedMode: UniversalCardDisplayMode,
     modifier: Modifier = Modifier,
     unitText: String = "",
     secondaryText: String? = null,
+    usesDeltaPill: Boolean = secondaryText != null,
+    isEditing: Boolean = false,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit = {},
     onClick: (() -> Unit)? = null,
 ) {
     UniversalMetricCard(
@@ -36,11 +41,13 @@ internal fun UniversalVitalsMetricCard(
             ),
         specification =
             UniversalMetricCardSpec(
-                supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
-                usesDeltaPill = secondaryText != null,
+                supportedModes = supportedModes,
+                usesDeltaPill = usesDeltaPill,
             ),
-        requestedMode = UniversalCardDisplayMode.GAUGE,
+        requestedMode = requestedMode,
+        isEditing = isEditing,
+        onModeSelected = onModeSelected,
         modifier = modifier,
-        onClick = onClick,
+        onClick = if (isEditing) null else onClick,
     )
 }

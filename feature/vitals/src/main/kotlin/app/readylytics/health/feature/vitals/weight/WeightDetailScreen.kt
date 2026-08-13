@@ -42,6 +42,7 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.MetricStatus
@@ -210,6 +211,8 @@ fun WeightDetailScreen(
                     UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_weight_unit_format, unitLabel),
+                        supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                        requestedMode = UniversalCardDisplayMode.GAUGE,
                         rawValue = uiState.latestWeight,
                         valueText = uiState.weightDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = unitLabel,
@@ -226,6 +229,8 @@ fun WeightDetailScreen(
                     UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_bmi),
+                        supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                        requestedMode = UniversalCardDisplayMode.GAUGE,
                         rawValue = uiState.bmi,
                         valueText = uiState.bmiDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                         unitText = "",

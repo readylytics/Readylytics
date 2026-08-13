@@ -1,0 +1,11 @@
+package app.readylytics.health.domain.vitals
+
+import app.readylytics.health.domain.dashboard.CardConfiguration
+import kotlinx.coroutines.flow.Flow
+
+interface VitalsLayoutRepository {
+    fun vitalsCardConfigurations(): Flow<List<CardConfiguration>>
+    suspend fun updateVitalsCardConfigurations(cards: List<CardConfiguration>)
+    fun vitalsChartConfigurations(): Flow<List<VitalsChartConfiguration>>
+    suspend fun updateVitalsChartConfigurations(charts: List<VitalsChartConfiguration>)
+}

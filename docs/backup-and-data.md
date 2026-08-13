@@ -22,6 +22,7 @@ Your supported local records, calculated summaries, and preferences can be backe
 - Workout records
 - Calculated daily summaries, including frozen baselines
 - Preferences, including scoring, readiness, UI, backup, and dashboard card configuration (order, visibility, and visualization mode)
+- Vitals layout configuration (vitals card order, visibility, and visualization mode; trend diagram order and visibility)
 
 **Not included:** Raw sleep-stage rows, raw step records, weight, body fat, blood pressure, and oxygen-saturation records are not exported by the current local backup format. A backup does not modify or replace the original data managed by Health Connect.
 

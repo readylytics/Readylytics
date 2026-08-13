@@ -42,6 +42,7 @@ import app.readylytics.health.core.ui.components.LabeledPeriodAverage
 import app.readylytics.health.core.ui.components.PeriodAverageSummaryGroup
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
@@ -155,6 +156,8 @@ fun BloodPressureDetailScreen(
                     UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_systolic),
+                        supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                        requestedMode = UniversalCardDisplayMode.GAUGE,
                         rawValue = uiState.latestSystolic?.toFloat(),
                         valueText =
                             uiState.latestSystolic?.toString()
@@ -185,6 +188,8 @@ fun BloodPressureDetailScreen(
                     UniversalVitalsMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.label_diastolic),
+                        supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                        requestedMode = UniversalCardDisplayMode.GAUGE,
                         rawValue = uiState.latestDiastolic?.toFloat(),
                         valueText =
                             uiState.latestDiastolic?.toString()

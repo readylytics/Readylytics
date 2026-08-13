@@ -29,6 +29,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.SettingsDefaults
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
@@ -93,8 +94,9 @@ class DashboardViewModel
 
         private val cardManagementDelegate =
             CardManagementDelegate(
-                cardConfigRepository,
-                viewModelScope,
+                defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                persist = cardConfigRepository::updateDashboardCardConfigurations,
+                scope = viewModelScope,
                 hasBodyTemperaturePermission = { healthConnectRepository.hasBodyTemperaturePermission() },
                 hasStepsPermission = { healthConnectRepository.hasStepsPermission() },
                 hasWeightPermission = { healthConnectRepository.hasWeightPermission() },

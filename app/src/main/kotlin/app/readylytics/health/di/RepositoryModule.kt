@@ -136,4 +136,10 @@ abstract class RepositoryModule {
     abstract fun bindCardConfigurationRepository(
         impl: app.readylytics.health.data.preferences.CardConfigurationRepositoryImpl,
     ): app.readylytics.health.domain.dashboard.CardConfigurationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindVitalsLayoutRepository(
+        impl: app.readylytics.health.data.preferences.VitalsLayoutRepositoryImpl,
+    ): app.readylytics.health.domain.vitals.VitalsLayoutRepository
 }

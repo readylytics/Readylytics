@@ -4,6 +4,7 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import kotlinx.serialization.Serializable
 
 internal object BackupSchemaPolicy {
@@ -154,4 +155,6 @@ data class UserPreferencesBackup(
     val deviceByDataType: Map<String, String>? = null,
     val backupDirectoryUri: String? = null,
     val dashboardCards: List<CardConfiguration>? = null,
+    val vitalsCards: List<CardConfiguration>? = null,
+    val vitalsCharts: List<VitalsChartConfiguration>? = null,
 )

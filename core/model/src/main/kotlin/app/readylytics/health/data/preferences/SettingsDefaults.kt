@@ -5,6 +5,8 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
+import app.readylytics.health.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.domain.vitals.VitalsChartId
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -125,6 +127,22 @@ object SettingsDefaults {
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
             CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
             CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
+        )
+
+    val DEFAULT_VITALS_CARDS =
+        listOf(
+            CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(CardId.HRV, isVisible = true, position = 1, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = false, position = 2, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = false, position = 3, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+        )
+
+    val DEFAULT_VITALS_CHARTS =
+        listOf(
+            VitalsChartConfiguration(VitalsChartId.HRV_TREND, isVisible = true, position = 0),
+            VitalsChartConfiguration(VitalsChartId.RHR_TREND, isVisible = true, position = 1),
+            VitalsChartConfiguration(VitalsChartId.SPO2_TREND, isVisible = true, position = 2),
+            VitalsChartConfiguration(VitalsChartId.BODY_TEMP_TREND, isVisible = true, position = 3),
         )
 }
 

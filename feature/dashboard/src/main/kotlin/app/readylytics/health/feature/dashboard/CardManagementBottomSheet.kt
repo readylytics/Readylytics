@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +69,7 @@ fun CardManagementBottomSheet(
                 IconButton(onClick = onResetToDefaults) {
                     Icon(
                         imageVector = Icons.Outlined.RestartAlt,
-                        contentDescription = stringResource(R.string.action_reset_to_defaults),
+                        contentDescription = stringResource(CoreUiR.string.action_reset_to_defaults),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -104,7 +105,7 @@ fun CardManagementBottomSheet(
                             top = MaterialTheme.spacing.pageSectionGap,
                         ),
             ) {
-                Text(stringResource(R.string.action_done))
+                Text(stringResource(CoreUiR.string.action_done))
             }
         }
     }
