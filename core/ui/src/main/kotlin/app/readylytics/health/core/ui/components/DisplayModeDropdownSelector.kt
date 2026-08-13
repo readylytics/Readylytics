@@ -22,17 +22,16 @@ import app.readylytics.health.core.ui.R
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 
 /**
- * Read-only exposed dropdown for picking a card's visualization mode. Shows only the modes a
- * card actually supports, so single-mode cards (steps, heart rate, blood pressure) never present
- * an empty choice. Used by the dashboard/vitals card-management sheets, mirroring the on-card
- * three-dot menu's option set.
+ * Read-only exposed dropdown for picking a card's visualization mode. Options are "Default"
+ * (null) followed by the card's supported modes. Used by the dashboard/vitals/sleep management
+ * sheets, mirroring the on-card three-dot menu's option set plus a reset-to-default entry.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplayModeDropdownSelector(
-    selectedMode: DashboardCardDisplayMode,
+    selectedMode: DashboardCardDisplayMode?,
     supportedModes: List<DashboardCardDisplayMode>,
-    onModeSelected: (DashboardCardDisplayMode) -> Unit,
+    onModeSelected: (DashboardCardDisplayMode?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -59,6 +58,13 @@ fun DisplayModeDropdownSelector(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.mode_default)) },
+                onClick = {
+                    onModeSelected(null)
+                    expanded = false
+                },
+            )
             supportedModes.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(modeLabel(option)) },
@@ -73,8 +79,9 @@ fun DisplayModeDropdownSelector(
 }
 
 @Composable
-private fun modeLabel(mode: DashboardCardDisplayMode): String =
+private fun modeLabel(mode: DashboardCardDisplayMode?): String =
     when (mode) {
+        null -> stringResource(R.string.mode_default)
         DashboardCardDisplayMode.GAUGE -> stringResource(R.string.mode_gauge)
         DashboardCardDisplayMode.BAR -> stringResource(R.string.mode_bar)
         DashboardCardDisplayMode.VALUE -> stringResource(R.string.mode_value)

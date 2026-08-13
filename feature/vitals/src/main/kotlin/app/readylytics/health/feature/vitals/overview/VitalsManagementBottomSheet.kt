@@ -186,9 +186,9 @@ private fun CardManagementItem(
             if (spec != null && spec.supportedModes.size > 1) {
                 {
                     DisplayModeDropdownSelector(
-                        selectedMode = DashboardCardCatalog.requestedMode(card),
+                        selectedMode = card.requestedDisplayMode,
                         supportedModes = spec.supportedModes,
-                        onModeSelected = onDisplayModeChanged,
+                        onModeSelected = { mode -> if (mode != null) onDisplayModeChanged(mode) },
                     )
                 }
             } else {

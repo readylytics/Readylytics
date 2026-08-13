@@ -219,6 +219,7 @@
     <string name="mode_gauge">Gauge</string>
     <string name="mode_bar">Bar</string>
     <string name="mode_value">Value</string>
+    <string name="mode_default">Default</string>
     <string name="display_mode_label">Display mode</string>
     <string name="menu_item_description_mode">Visualization style: %1$s</string>
     <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
