@@ -35,6 +35,7 @@ internal fun CardId.usesDeltaPill(): Boolean =
         CardId.SLEEP_RHR,
         CardId.RESTING_HR,
         CardId.STRAIN_RATIO,
+        CardId.RAS_DAILY,
         CardId.BODY_TEMPERATURE,
         -> true
         else -> false

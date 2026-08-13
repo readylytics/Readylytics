@@ -23,6 +23,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
+import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -67,6 +68,7 @@ class DashboardViewModelTest {
     private lateinit var heartRateRepository: HeartRateRepository
     private lateinit var insightDismissalRepository: InsightDismissalRepository
     private lateinit var observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase
+    private lateinit var observeDashboardRasIncreaseUseCase: ObserveDashboardRasIncreaseUseCase
     private lateinit var getDailyPromptDataUseCase: GetDailyPromptDataUseCase
     private lateinit var bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider
     private lateinit var healthConnectRepository: HealthConnectRepository
@@ -87,6 +89,7 @@ class DashboardViewModelTest {
         heartRateRepository = mockk(relaxed = true)
         insightDismissalRepository = mockk(relaxed = true)
         observeDashboardStrainIncreaseUseCase = mockk(relaxed = true)
+        observeDashboardRasIncreaseUseCase = mockk(relaxed = true)
         getDailyPromptDataUseCase = mockk(relaxed = true)
         bodyTemperatureBaselineProvider = mockk(relaxed = true)
         healthConnectRepository = mockk(relaxed = true)
@@ -104,6 +107,7 @@ class DashboardViewModelTest {
                 heartRateRepository = heartRateRepository,
                 insightDismissalRepository = insightDismissalRepository,
                 observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                 getDailyPromptDataUseCase = getDailyPromptDataUseCase,
                 bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                 healthConnectRepository = healthConnectRepository,
@@ -173,6 +177,7 @@ class DashboardViewModelTest {
                     heartRateRepository = heartRateRepository,
                     insightDismissalRepository = insightDismissalRepository,
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
@@ -213,6 +218,7 @@ class DashboardViewModelTest {
                     heartRateRepository = heartRateRepository,
                     insightDismissalRepository = insightDismissalRepository,
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
@@ -251,6 +257,7 @@ class DashboardViewModelTest {
                     heartRateRepository = heartRateRepository,
                     insightDismissalRepository = insightDismissalRepository,
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
@@ -396,6 +403,7 @@ class DashboardViewModelTest {
                     heartRateRepository = heartRateRepository,
                     insightDismissalRepository = insightDismissalRepository,
                     observeDashboardStrainIncreaseUseCase = observeDashboardStrainIncreaseUseCase,
+                    observeDashboardRasIncreaseUseCase = observeDashboardRasIncreaseUseCase,
                     getDailyPromptDataUseCase = getDailyPromptDataUseCase,
                     bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
                     healthConnectRepository = healthConnectRepository,
