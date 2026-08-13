@@ -10,11 +10,19 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * Aggregated vitals-chart-management UI state derived purely from upstream flows.
+ */
 data class VitalsChartManagementState(
     val isManagingCharts: Boolean = false,
     val pendingConfigs: List<VitalsChartConfiguration>? = null,
 )
 
+/**
+ * Events that drive the delegate. All side-effects (persisting via the injected
+ * persist lambda) flow through the reactive pipeline; the coroutine scope is
+ * injected.
+ */
 sealed interface VitalsChartManagementEvent {
     data class EnterEditMode(val currentConfigs: List<VitalsChartConfiguration>) : VitalsChartManagementEvent
     data object SaveChanges : VitalsChartManagementEvent
@@ -31,6 +39,21 @@ sealed interface VitalsChartManagementEvent {
     ) : VitalsChartManagementEvent
 }
 
+/**
+ * Reactive delegate for vitals trend-chart management.
+ *
+ * Manages trend-chart visibility (show/hide) and ordering on the vitals tab.
+ * Unlike the dashboard card delegate, it has no display-mode concept — a chart
+ * configuration only carries visibility and position. Both the default set and
+ * persistence are injected: [persist] is a suspend lambda (not a repository),
+ * and [scope] is injected rather than a viewModelScope, keeping the delegate
+ * testable through real coroutine contexts.
+ *
+ * Persistence is only-on-save. Edits accumulate in [pendingConfigs] as a pending
+ * change set while in edit mode; SaveChanges pushes them onto persistTrigger so
+ * the reactive collector can persist them, while CancelChanges discards the
+ * pending set without ever touching persistence.
+ */
 class VitalsChartManagementDelegate(
     private val defaultConfigurations: List<VitalsChartConfiguration>,
     private val persist: suspend (List<VitalsChartConfiguration>) -> Unit,
@@ -41,17 +64,29 @@ class VitalsChartManagementDelegate(
     private val persistTrigger = MutableStateFlow<List<VitalsChartConfiguration>?>(null)
 
     init {
+        // Suspend persistence via the injected persist lambda — the single choke point
+        // reached on SaveChanges. The reactive collector is safe: the only value it can
+        // ever receive is what SaveChanges writes to persistTrigger, so a cancel that
+        // merely clears pendingConfigs (without touching persistTrigger) cannot leak a
+        // write to persistence.
         scope.launch { persistTrigger.filterNotNull().collect { configs -> persist(configs) } }
     }
 
+    /**
+     * Aggregated state — derived via combine().stateIn() from the source flows.
+     */
     val state: StateFlow<VitalsChartManagementState> =
         combine(_isManagingCharts, _pendingConfigs) { managing, pending ->
             VitalsChartManagementState(managing, pending)
         }.stateIn(scope, SharingStarted.Lazily, VitalsChartManagementState())
 
+    /** Convenience projections for existing call sites. */
     val isManagingCharts: StateFlow<Boolean> = _isManagingCharts.asStateFlow()
     val pendingConfigs: StateFlow<List<VitalsChartConfiguration>?> = _pendingConfigs.asStateFlow()
 
+    /**
+     * Single event entry point. All mutations route through here.
+     */
     fun onEvent(event: VitalsChartManagementEvent) {
         when (event) {
             is VitalsChartManagementEvent.EnterEditMode -> {

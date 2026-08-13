@@ -13,7 +13,7 @@ import androidx.compose.ui.geometry.Rect
  * Pure state holder for drag-and-drop reordering logic.
  *
  * Invariants:
- *  V1 — upstream cardConfigurations are ignored while a drag is active (syncFromUpstream no-ops).
+ *  V1 — upstream configurations are ignored while a drag is active (syncFromUpstream no-ops).
  *  V2 — slotBounds are written by the UI in a single shared coordinate space (root-local).
  *  V3 — the dragged card stays anchored to the finger across mid-drag layout shifts:
  *       on swap, dragOffset is pre-compensated by (oldOrigin - newOrigin) so that
@@ -29,7 +29,7 @@ class DragController<T : Any>(
     var pendingOrder: List<T> by mutableStateOf(initialOrder)
         private set
 
-    /** Card currently being dragged, null when idle. */
+    /** Item currently being dragged, null when idle. */
     var draggedCardId: T? by mutableStateOf(null)
         private set
 
@@ -40,7 +40,7 @@ class DragController<T : Any>(
     /** Slot bounds keyed by id. MUST be written in a single coord space (root-local). */
     val slotBounds: SnapshotStateMap<T, Rect> = mutableStateMapOf()
 
-    /** True when the dragged card's center has crossed the delete-zone top edge. */
+    /** True when the dragged item's center has crossed the delete-zone top edge. */
     var hoveringDeleteZone: Boolean by mutableStateOf(false)
         private set
 
