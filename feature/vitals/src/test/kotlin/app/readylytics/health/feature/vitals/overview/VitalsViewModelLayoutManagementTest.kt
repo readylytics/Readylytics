@@ -277,6 +277,31 @@ class VitalsViewModelLayoutManagementTest : VitalsViewModelTestBase() {
         }
 
     @Test
+    fun `vitals card display mode reset to null falls back to default`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+
+                viewModel.onVitalsCardDisplayModeChanged(CardId.HRV, DashboardCardDisplayMode.GAUGE)
+                advanceUntilIdle()
+                viewModel.onVitalsCardDisplayModeChanged(CardId.HRV, null)
+                advanceUntilIdle()
+                assertEquals(
+                    null,
+                    viewModel.uiState.value.vitalsCardConfigurations
+                        .first { it.cardId == CardId.HRV }
+                        .requestedDisplayMode,
+                )
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
     fun `reorder vitals charts updates pending order and persists on save`() =
         runTest {
             viewModel = createViewModel()
