@@ -57,6 +57,8 @@ class SleepViewModelTest {
     private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
     private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
 
+    private val sleepLayoutRepository: app.readylytics.health.domain.sleep.SleepLayoutRepository = mockk(relaxed = true)
+
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))
     private val selectedSummaryFlow = MutableStateFlow<DailySummary?>(null)
     private val selectedMetricsFlow = MutableStateFlow<DailyMetrics?>(null)
@@ -91,6 +93,12 @@ class SleepViewModelTest {
         }
         every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
         every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
+        every { sleepLayoutRepository.sleepTopCardConfigurations() } returns
+            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS)
+        every { sleepLayoutRepository.sleepChartConfigurations() } returns
+            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CHARTS)
+        every { sleepLayoutRepository.sleepMetricCardConfigurations() } returns
+            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS)
     }
 
     @After
@@ -113,6 +121,7 @@ class SleepViewModelTest {
             circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
             savedStateHandle = savedStateHandle,
+            sleepLayoutRepository = sleepLayoutRepository,
             ioDispatcher = testDispatcher,
             defaultDispatcher = testDispatcher,
         )
