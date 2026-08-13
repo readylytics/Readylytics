@@ -181,7 +181,7 @@ class VitalsStateFactoryTest {
                 prefs = prefs(unitSystem = UnitSystem.METRIC),
                 bodyTemperatureBaselineCelsius = 36.7f,
             )
-        assertEquals(36.7f, metricState.baselineBodyTemp)
+        assertEquals(36.7f, metricState.bodyTemp.baseline)
 
         val imperialState =
             buildVitalsPresentationState(
@@ -192,7 +192,7 @@ class VitalsStateFactoryTest {
             )
         assertEquals(
             UnitConverter.celsiusToDisplayTemperature(36.7f, UnitSystem.IMPERIAL),
-            imperialState.baselineBodyTemp,
+            imperialState.bodyTemp.baseline,
         )
     }
 

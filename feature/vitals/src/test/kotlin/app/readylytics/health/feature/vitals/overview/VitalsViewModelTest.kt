@@ -438,7 +438,7 @@ class VitalsViewModelTest {
             val collector = backgroundScope.launch { viewModel.uiState.collect { emittedStates += it } }
             try {
                 advanceUntilIdle()
-                assertEquals(36.5f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.5f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 selectedDateFlow.value = nextDate
                 advanceUntilIdle()
@@ -448,18 +448,18 @@ class VitalsViewModelTest {
                     emittedStates.any { state ->
                         state.selectedDate == nextDate &&
                             state.latestSummary?.date == nextDate &&
-                            state.presentation.baselineBodyTemp == 36.5f
+                            state.presentation.bodyTemp.baseline == 36.5f
                     },
                 )
 
                 val waitingForBaseline = viewModel.uiState.value
                 assertEquals(nextDate, waitingForBaseline.selectedDate)
-                assertNull(waitingForBaseline.presentation.baselineBodyTemp)
+                assertNull(waitingForBaseline.presentation.bodyTemp.baseline)
 
                 nextDateBaseline.emit(36.1f)
                 advanceUntilIdle()
 
-                assertEquals(36.1f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.1f, viewModel.uiState.value.presentation.bodyTemp.baseline)
             } finally {
                 collector.cancel()
             }
@@ -549,7 +549,7 @@ class VitalsViewModelTest {
                 val after = viewModel.uiState.value
                 assertEquals(
                     UnitConverter.celsiusToDisplayTemperature(36.5f, UnitSystem.IMPERIAL),
-                    after.presentation.baselineBodyTemp,
+                    after.presentation.bodyTemp.baseline,
                 )
                 assertEquals(selectedDate, selectedDateFlow.value)
                 assertSame(before.chartSeries, after.chartSeries)
@@ -577,19 +577,19 @@ class VitalsViewModelTest {
             val collector = backgroundScope.launch { viewModel.uiState.collect() }
             try {
                 advanceUntilIdle()
-                assertEquals(36.2f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.2f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 selectedDateFlow.value = nextDate
                 advanceUntilIdle()
-                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.4f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 initialDateBaseline.value = 37.1f
                 advanceUntilIdle()
-                assertEquals(36.4f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.4f, viewModel.uiState.value.presentation.bodyTemp.baseline)
 
                 nextDateBaseline.value = 36.5f
                 advanceUntilIdle()
-                assertEquals(36.5f, viewModel.uiState.value.presentation.baselineBodyTemp)
+                assertEquals(36.5f, viewModel.uiState.value.presentation.bodyTemp.baseline)
             } finally {
                 collector.cancel()
             }

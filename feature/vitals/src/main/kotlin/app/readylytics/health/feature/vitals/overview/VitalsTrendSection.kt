@@ -201,10 +201,10 @@ internal fun VitalsTrendSection(
                                 stringResource(CoreUiR.string.unit_celsius)
                             },
                         modifier = Modifier.testTag("BodyTemperatureTrendChart"),
-                        baseline = presentation.baselineBodyTemp,
-                        showBaseline = presentation.baselineBodyTemp != null,
+                        baseline = presentation.bodyTemp.baseline,
+                        showBaseline = presentation.bodyTemp.baseline != null,
                         baselineUnavailableLabel =
-                            if (presentation.baselineBodyTemp == null) {
+                            if (presentation.bodyTemp.baseline == null) {
                                 stringResource(CoreUiR.string.body_temperature_calibrating)
                             } else {
                                 null
