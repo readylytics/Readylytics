@@ -41,12 +41,14 @@ import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.ReorderableWorkoutChartList
 import app.readylytics.health.core.ui.components.ReorderableWorkoutHistoryList
 import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.components.WorkoutChartConfigurationsList
 import app.readylytics.health.core.ui.components.WorkoutChartDataMap
 import app.readylytics.health.core.ui.components.WorkoutHistoryConfigurationsList
 import app.readylytics.health.core.ui.components.WorkoutHistoryDataMap
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
+import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -204,6 +206,7 @@ fun WorkoutsScreen(
                             onCardRemove = { cardId -> onToggleCardVisibility(cardId, false) },
                             onCardReorder = onReorderCards,
                             modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                            additionalFullWidthIds = setOf(CardId.RAS_DAILY),
                         )
                     },
                 )
@@ -269,6 +272,10 @@ fun WorkoutsScreen(
                         )
                     },
                 )
+
+                Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
+
+                StatusLegend()
 
                 if (!uiState.isManagingWorkoutsLayout) {
                     FilledTonalButton(

@@ -188,20 +188,20 @@ class WorkoutsViewModelLayoutManagementTest {
         }
 
     @Test
-    fun `history management toggle hides status legend and persists on save`() =
+    fun `history management toggle hides workout list and persists on save`() =
         runTest(testDispatcher) {
             viewModel = createViewModel()
             val collector = backgroundScope.launch { viewModel.uiState.collect() }
             advanceUntilIdle()
-            assertEquals(2, viewModel.uiState.value.historyConfigurations.size)
+            assertEquals(1, viewModel.uiState.value.historyConfigurations.size)
 
             viewModel.toggleWorkoutsManagement()
             advanceUntilIdle()
-            viewModel.onToggleHistoryVisibility(WorkoutHistoryId.STATUS_LEGEND, visible = false)
+            viewModel.onToggleHistoryVisibility(WorkoutHistoryId.WORKOUT_LIST, visible = false)
             advanceUntilIdle()
             assertFalse(
                 viewModel.uiState.value.historyConfigurations
-                    .first { it.historyId == WorkoutHistoryId.STATUS_LEGEND }
+                    .first { it.historyId == WorkoutHistoryId.WORKOUT_LIST }
                     .isVisible,
             )
 
@@ -210,7 +210,7 @@ class WorkoutsViewModelLayoutManagementTest {
             coVerify {
                 workoutsLayoutRepository.updateWorkoutHistoryConfigurations(
                     match { history ->
-                        history.any { it.historyId == WorkoutHistoryId.STATUS_LEGEND && !it.isVisible }
+                        history.any { it.historyId == WorkoutHistoryId.WORKOUT_LIST && !it.isVisible }
                     },
                 )
             }

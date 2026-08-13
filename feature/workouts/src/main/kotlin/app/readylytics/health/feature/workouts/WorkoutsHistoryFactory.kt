@@ -1,7 +1,6 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Composable
-import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.domain.workouts.WorkoutHistoryId
 
@@ -23,8 +22,5 @@ fun buildWorkoutsHistoryDataMap(
                 onNextPage = onNextPage,
                 onWorkoutClick = onWorkoutClick,
             )
-        },
-        WorkoutHistoryId.STATUS_LEGEND to { _: WorkoutHistoryConfiguration ->
-            StatusLegend()
         },
     )

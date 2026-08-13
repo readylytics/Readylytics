@@ -46,7 +46,6 @@
     <string name="workouts_management_cards_section_title">Cards</string>
     <string name="workouts_management_diagrams_section_title">Diagrams</string>
     <string name="workouts_management_history_section_title">History</string>
-    <string name="workout_history_status_legend_title">Status Guide</string>
 
     <!-- Workout Intensities -->
     <string name="workout_intensity_very_hard">Very Hard</string>

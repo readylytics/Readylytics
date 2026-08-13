@@ -25,7 +25,6 @@ class WorkoutHistoryManagementDelegateTest {
     private val defaultConfigs =
         listOf(
             WorkoutHistoryConfiguration(WorkoutHistoryId.WORKOUT_LIST, isVisible = true, position = 0),
-            WorkoutHistoryConfiguration(WorkoutHistoryId.STATUS_LEGEND, isVisible = true, position = 1),
         )
 
     @Before
@@ -52,21 +51,10 @@ class WorkoutHistoryManagementDelegateTest {
     }
 
     @Test
-    fun `onToggleHistoryVisibility hides status legend`() {
-        delegate.onToggleHistoryVisibility(defaultConfigs, WorkoutHistoryId.STATUS_LEGEND, visible = false)
+    fun `onToggleHistoryVisibility hides workout list`() {
+        delegate.onToggleHistoryVisibility(defaultConfigs, WorkoutHistoryId.WORKOUT_LIST, visible = false)
         val updated = delegate.pendingConfigs.value!!
-        assertFalse(updated.first { it.historyId == WorkoutHistoryId.STATUS_LEGEND }.isVisible)
-    }
-
-    @Test
-    fun `onReorderHistory reorders and renumbers positions`() {
-        val newOrder = listOf(defaultConfigs[1], defaultConfigs[0])
-        delegate.onReorderHistory(defaultConfigs, newOrder)
-        val updated = delegate.pendingConfigs.value!!
-        assertEquals(WorkoutHistoryId.STATUS_LEGEND, updated[0].historyId)
-        assertEquals(0, updated[0].position)
-        assertEquals(WorkoutHistoryId.WORKOUT_LIST, updated[1].historyId)
-        assertEquals(1, updated[1].position)
+        assertFalse(updated.first { it.historyId == WorkoutHistoryId.WORKOUT_LIST }.isVisible)
     }
 
     @Test

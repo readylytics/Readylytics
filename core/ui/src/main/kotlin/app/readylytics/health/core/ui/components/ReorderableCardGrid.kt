@@ -42,6 +42,7 @@ fun ReorderableCardGrid(
     onCardReorder: (List<CardConfiguration>) -> Unit,
     modifier: Modifier = Modifier,
     controller: DragController<CardId>? = null,
+    additionalFullWidthIds: Set<CardId> = emptySet(),
 ) {
     ReorderableGrid(
         items = cardConfigurations.items,
@@ -49,7 +50,7 @@ fun ReorderableCardGrid(
         isEditing = isEditing,
         onItemReorder = onCardReorder,
         onItemDropToRemove = onCardRemove,
-        fullWidthIds = FULL_WIDTH_CARDS,
+        fullWidthIds = FULL_WIDTH_CARDS + additionalFullWidthIds,
         fixedHeightIds = FIXED_HEIGHT_CARDS,
         modifier = modifier,
         controller = controller,

@@ -209,7 +209,6 @@ object SettingsDefaults {
     val DEFAULT_WORKOUT_HISTORY =
         listOf(
             WorkoutHistoryConfiguration(WorkoutHistoryId.WORKOUT_LIST, isVisible = true, position = 0),
-            WorkoutHistoryConfiguration(WorkoutHistoryId.STATUS_LEGEND, isVisible = true, position = 1),
         )
 }
 
