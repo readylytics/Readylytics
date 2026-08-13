@@ -95,6 +95,7 @@ class DashboardMetricPresentationFactory
             circadianResult: CircadianConsistencyResult?,
             heartRateSummary: HeartRateDaySummary?,
             todayStrainIncrease: Float? = null,
+            todayRasIncrease: Float? = null,
             bodyTempBaseline: Float? = null,
         ): Map<CardId, UniversalMetricPresentation> {
             val map = mutableMapOf<CardId, UniversalMetricPresentation>()
@@ -129,6 +130,7 @@ class DashboardMetricPresentationFactory
                     lastSleepSession = lastSleepSession,
                     hrvAssessment = hrvAssessment,
                     rhrAssessment = rhrAssessment,
+                    todayRasIncrease = todayRasIncrease,
                 ),
             )
 
