@@ -4,9 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.AppTheme
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
@@ -190,6 +192,7 @@ class VitalsViewModelTest {
                 viewModel.toggleVitalsCardManagement()
                 advanceUntilIdle()
                 assertTrue(viewModel.uiState.value.isManagingVitalsCards)
+                assertTrue(viewModel.uiState.value.isManagingVitalsLayout)
 
                 viewModel.onToggleVitalsCardVisibility(CardId.HRV, visible = false)
                 advanceUntilIdle()
@@ -203,6 +206,7 @@ class VitalsViewModelTest {
                 viewModel.toggleVitalsCardManagement()
                 advanceUntilIdle()
                 assertFalse(viewModel.uiState.value.isManagingVitalsCards)
+                assertFalse(viewModel.uiState.value.isManagingVitalsLayout)
                 coVerify {
                     vitalsLayoutRepository.updateVitalsCardConfigurations(
                         match { configs ->
@@ -228,6 +232,7 @@ class VitalsViewModelTest {
                 viewModel.toggleVitalsChartManagement()
                 advanceUntilIdle()
                 assertTrue(viewModel.uiState.value.isManagingVitalsCharts)
+                assertTrue(viewModel.uiState.value.isManagingVitalsLayout)
 
                 viewModel.onToggleVitalsChartVisibility(VitalsChartId.HRV_TREND, visible = false)
                 advanceUntilIdle()
@@ -241,11 +246,237 @@ class VitalsViewModelTest {
                 viewModel.toggleVitalsChartManagement()
                 advanceUntilIdle()
                 assertFalse(viewModel.uiState.value.isManagingVitalsCharts)
+                assertFalse(viewModel.uiState.value.isManagingVitalsLayout)
                 coVerify {
                     vitalsLayoutRepository.updateVitalsChartConfigurations(
                         match { charts ->
                             charts.any { it.chartId == VitalsChartId.HRV_TREND && !it.isVisible }
                         },
+                    )
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `cancel vitals card management discards changes without persisting`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+                assertTrue(viewModel.uiState.value.isManagingVitalsLayout)
+
+                viewModel.onToggleVitalsCardVisibility(CardId.HRV, visible = false)
+                advanceUntilIdle()
+                viewModel.onCancelVitalsCardManagement()
+                advanceUntilIdle()
+
+                assertFalse(viewModel.uiState.value.isManagingVitalsCards)
+                assertFalse(viewModel.uiState.value.isManagingVitalsLayout)
+                assertTrue(
+                    "cancel must not leak pending edits into the committed set",
+                    viewModel.uiState.value.vitalsCardConfigurations
+                        .all { it.isVisible },
+                )
+                coVerify(exactly = 0) {
+                    vitalsLayoutRepository.updateVitalsCardConfigurations(any())
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `cancel vitals chart management discards changes without persisting`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                viewModel.toggleVitalsChartManagement()
+                advanceUntilIdle()
+                assertTrue(viewModel.uiState.value.isManagingVitalsLayout)
+
+                viewModel.onToggleVitalsChartVisibility(VitalsChartId.HRV_TREND, visible = false)
+                advanceUntilIdle()
+                viewModel.onCancelVitalsChartManagement()
+                advanceUntilIdle()
+
+                assertFalse(viewModel.uiState.value.isManagingVitalsCharts)
+                assertFalse(viewModel.uiState.value.isManagingVitalsLayout)
+                assertTrue(
+                    "cancel must not leak pending edits into the committed set",
+                    viewModel.uiState.value.vitalsChartConfigurations
+                        .all { it.isVisible },
+                )
+                coVerify(exactly = 0) {
+                    vitalsLayoutRepository.updateVitalsChartConfigurations(any())
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `reset vitals to defaults restores default card and chart configurations and persists on save`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                viewModel.toggleVitalsCardManagement()
+                viewModel.toggleVitalsChartManagement()
+                advanceUntilIdle()
+
+                viewModel.onResetVitalsToDefaults()
+                advanceUntilIdle()
+
+                assertEquals(
+                    SettingsDefaults.DEFAULT_VITALS_CARDS,
+                    viewModel.uiState.value.vitalsCardConfigurations,
+                )
+                assertEquals(
+                    SettingsDefaults.DEFAULT_VITALS_CHARTS,
+                    viewModel.uiState.value.vitalsChartConfigurations,
+                )
+
+                viewModel.toggleVitalsCardManagement()
+                viewModel.toggleVitalsChartManagement()
+                advanceUntilIdle()
+
+                coVerify {
+                    vitalsLayoutRepository.updateVitalsCardConfigurations(
+                        SettingsDefaults.DEFAULT_VITALS_CARDS,
+                    )
+                }
+                coVerify {
+                    vitalsLayoutRepository.updateVitalsChartConfigurations(
+                        SettingsDefaults.DEFAULT_VITALS_CHARTS,
+                    )
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `reorder vitals cards updates pending order and persists on save`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+
+                val newOrder =
+                    listOf(
+                        viewModel.uiState.value.vitalsCardConfigurations[1],
+                        viewModel.uiState.value.vitalsCardConfigurations[0],
+                    )
+                viewModel.onReorderVitalsCards(newOrder)
+                advanceUntilIdle()
+
+                assertEquals(
+                    CardId.HRV,
+                    viewModel.uiState.value.vitalsCardConfigurations[0]
+                        .cardId,
+                )
+                assertEquals(
+                    0,
+                    viewModel.uiState.value.vitalsCardConfigurations[0]
+                        .position,
+                )
+                assertEquals(
+                    CardId.RESTING_HR,
+                    viewModel.uiState.value.vitalsCardConfigurations[1]
+                        .cardId,
+                )
+
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+                coVerify {
+                    vitalsLayoutRepository.updateVitalsCardConfigurations(
+                        match { configs -> configs.first().cardId == CardId.HRV },
+                    )
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `vitals card display mode change updates pending config and persists on save`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+
+                viewModel.onVitalsCardDisplayModeChanged(CardId.HRV, DashboardCardDisplayMode.BAR)
+                advanceUntilIdle()
+                assertEquals(
+                    DashboardCardDisplayMode.BAR,
+                    viewModel.uiState.value.vitalsCardConfigurations
+                        .first { it.cardId == CardId.HRV }
+                        .requestedDisplayMode,
+                )
+
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+                coVerify {
+                    vitalsLayoutRepository.updateVitalsCardConfigurations(
+                        match { configs ->
+                            configs.any {
+                                it.cardId == CardId.HRV &&
+                                    it.requestedDisplayMode == DashboardCardDisplayMode.BAR
+                            }
+                        },
+                    )
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `reorder vitals charts updates pending order and persists on save`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                viewModel.toggleVitalsChartManagement()
+                advanceUntilIdle()
+
+                val current = viewModel.uiState.value.vitalsChartConfigurations
+                val newOrder =
+                    listOf(
+                        current.first { it.chartId == VitalsChartId.BODY_TEMP_TREND },
+                        current.first { it.chartId == VitalsChartId.HRV_TREND },
+                        current.first { it.chartId == VitalsChartId.RHR_TREND },
+                        current.first { it.chartId == VitalsChartId.SPO2_TREND },
+                    )
+                viewModel.onReorderVitalsCharts(newOrder)
+                advanceUntilIdle()
+
+                assertEquals(
+                    VitalsChartId.BODY_TEMP_TREND,
+                    viewModel.uiState.value.vitalsChartConfigurations[0]
+                        .chartId,
+                )
+
+                viewModel.toggleVitalsChartManagement()
+                advanceUntilIdle()
+                coVerify {
+                    vitalsLayoutRepository.updateVitalsChartConfigurations(
+                        match { charts -> charts.first().chartId == VitalsChartId.BODY_TEMP_TREND },
                     )
                 }
             } finally {

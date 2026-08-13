@@ -52,6 +52,7 @@ import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.model.InsightType
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private data class ColoredSnackbarVisuals(
     override val message: String,
@@ -347,7 +348,7 @@ fun DashboardScreen(
                             ),
                     ) {
                         Text(
-                            text = stringResource(R.string.action_customize),
+                            text = stringResource(CoreUiR.string.action_customize),
                             style = MaterialTheme.typography.labelLarge,
                         )
                     }

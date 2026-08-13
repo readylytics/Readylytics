@@ -30,6 +30,7 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +74,7 @@ fun VitalsManagementBottomSheet(
                 IconButton(onClick = onResetToDefaults) {
                     Icon(
                         imageVector = Icons.Outlined.RestartAlt,
-                        contentDescription = stringResource(R.string.action_reset_to_defaults),
+                        contentDescription = stringResource(CoreUiR.string.action_reset_to_defaults),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -174,7 +175,7 @@ fun VitalsManagementBottomSheet(
                             top = MaterialTheme.spacing.pageSectionGap,
                         ),
             ) {
-                Text(stringResource(R.string.action_done))
+                Text(stringResource(CoreUiR.string.action_done))
             }
         }
     }

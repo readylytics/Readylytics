@@ -47,6 +47,7 @@ import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.feature.vitals.R
 import kotlinx.coroutines.launch
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun VitalsRoute(
@@ -252,7 +253,7 @@ fun VitalsScreen(
                             ),
                     ) {
                         Text(
-                            text = stringResource(R.string.action_customize),
+                            text = stringResource(CoreUiR.string.action_customize),
                             style = MaterialTheme.typography.labelLarge,
                         )
                     }
