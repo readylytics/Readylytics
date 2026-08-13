@@ -171,6 +171,7 @@ fun DashboardScreen(
     onNavigateToVitals: () -> Unit = {},
     onToggleCardManagement: () -> Unit = {},
     onCancelCardManagement: () -> Unit = {},
+    onManageClick: (() -> Unit)? = null,
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
@@ -330,10 +331,7 @@ fun DashboardScreen(
             if (!uiState.isManagingCards) {
                 item(key = "customize_button") {
                     FilledTonalButton(
-                        onClick = {
-                            showCardManagement = true
-                            onToggleCardManagement()
-                        },
+                        onClick = onToggleCardManagement,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -392,6 +390,7 @@ fun DashboardScreen(
             isVisible = uiState.isManagingCards,
             onDoneClick = onToggleCardManagement,
             onCancelClick = onCancelCardManagement,
+            onManageClick = onManageClick ?: { showCardManagement = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
 

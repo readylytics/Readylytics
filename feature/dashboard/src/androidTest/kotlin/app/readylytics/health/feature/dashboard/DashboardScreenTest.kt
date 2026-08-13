@@ -628,4 +628,85 @@ class DashboardScreenTest {
         assertEquals(1, setupClicks)
         assertEquals(1, dailyClicks)
     }
+
+    @Test
+    fun manageFabVisibleWhenEditingEnabled() {
+        val uiState = createTestUiState(isManagingCards = true)
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = uiState,
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+                onToggleCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Manage")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun manageFabHiddenWhenEditingDisabled() {
+        val uiState = createTestUiState(isManagingCards = false)
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = uiState,
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+                onToggleCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Manage")
+            .assertIsNotDisplayed()
+    }
+
+    @Test
+    fun manageFabOpensSheetWhenTapped() {
+        val uiState = createTestUiState(isManagingCards = true)
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = uiState,
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+                onToggleCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Manage")
+            .performClick()
+
+        composeRule.onNodeWithText("Manage Cards").assertIsDisplayed()
+    }
 }
+
