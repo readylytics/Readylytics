@@ -13,6 +13,7 @@ import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -44,6 +45,7 @@ class LocalBackupManager
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
+        private val vitalsLayoutRepository: VitalsLayoutRepository,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -501,6 +503,8 @@ class LocalBackupManager
         private suspend fun writePreferences(writer: BufferedWriter) {
             val prefs = settingsRepository.userPreferences.first()
             val cards = cardConfigurationRepository.dashboardCardConfigurations().first()
+            val vitalsCards = vitalsLayoutRepository.vitalsCardConfigurations().first()
+            val vitalsCharts = vitalsLayoutRepository.vitalsChartConfigurations().first()
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
@@ -597,6 +601,8 @@ class LocalBackupManager
                     deviceByDataType = prefs.deviceByDataType.takeIf { it.isNotEmpty() },
                     backupDirectoryUri = prefs.backupDirectoryUri,
                     dashboardCards = cards,
+                    vitalsCards = vitalsCards,
+                    vitalsCharts = vitalsCharts,
                 )
             writer.write(json.encodeToString(backup))
         }

@@ -16,6 +16,9 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.domain.vitals.VitalsChartId
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -46,6 +49,7 @@ class LocalBackupManagerTest {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var encryptionManager: EncryptionManager
     private lateinit var cardConfigRepo: CardConfigurationRepository
+    private lateinit var vitalsLayoutRepo: VitalsLayoutRepository
     private lateinit var auditTrailRepository: FakeAuditTrailRepository
     private lateinit var manager: LocalBackupManager
     private lateinit var backupDir: File
@@ -88,6 +92,11 @@ class LocalBackupManagerTest {
             mockk<CardConfigurationRepository>(relaxed = true).apply {
                 every { dashboardCardConfigurations() } returns flowOf(emptyList())
             }
+        vitalsLayoutRepo =
+            mockk<VitalsLayoutRepository>(relaxed = true).apply {
+                every { vitalsCardConfigurations() } returns flowOf(emptyList())
+                every { vitalsChartConfigurations() } returns flowOf(emptyList())
+            }
         auditTrailRepository = FakeAuditTrailRepository()
         manager =
             LocalBackupManager(
@@ -95,6 +104,7 @@ class LocalBackupManagerTest {
                 db,
                 settingsRepo,
                 cardConfigRepo,
+                vitalsLayoutRepo,
                 encryptionManager,
                 auditTrailRepository,
                 Dispatchers.Unconfined,
@@ -230,6 +240,73 @@ class LocalBackupManagerTest {
             assertTrue(!dashboardCards.getJSONObject(1).getBoolean("isVisible"))
             assertEquals(4, dashboardCards.getJSONObject(1).getInt("position"))
             assertTrue(backupJson.contains("\"requestedDisplayMode\":\"BAR\""))
+        }
+
+    @Test
+    fun createBackup_writesVitalsLayoutToPreferences() =
+        runTest {
+            val vitalsCards =
+                listOf(
+                    CardConfiguration(
+                        cardId = CardId.RESTING_HR,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                    CardConfiguration(
+                        cardId = CardId.HRV,
+                        isVisible = false,
+                        position = 1,
+                        requestedDisplayMode = DashboardCardDisplayMode.BAR,
+                    ),
+                )
+            val vitalsCharts =
+                listOf(
+                    VitalsChartConfiguration(
+                        chartId = VitalsChartId.HRV_TREND,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                    VitalsChartConfiguration(
+                        chartId = VitalsChartId.BODY_TEMP_TREND,
+                        isVisible = false,
+                        position = 3,
+                    ),
+                )
+            coEvery { vitalsLayoutRepo.vitalsCardConfigurations() } returns flowOf(vitalsCards)
+            coEvery { vitalsLayoutRepo.vitalsChartConfigurations() } returns flowOf(vitalsCharts)
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val preferences = JSONObject(backupJson).getJSONObject("preferences")
+            val vitalsCardsJson = preferences.getJSONArray("vitalsCards")
+            val vitalsChartsJson = preferences.getJSONArray("vitalsCharts")
+
+            assertEquals(2, vitalsCardsJson.length())
+            assertEquals("RESTING_HR", vitalsCardsJson.getJSONObject(0).getString("cardId"))
+            assertTrue(vitalsCardsJson.getJSONObject(0).getBoolean("isVisible"))
+            assertEquals(0, vitalsCardsJson.getJSONObject(0).getInt("position"))
+            assertEquals("HRV", vitalsCardsJson.getJSONObject(1).getString("cardId"))
+            assertTrue(!vitalsCardsJson.getJSONObject(1).getBoolean("isVisible"))
+            assertEquals(1, vitalsCardsJson.getJSONObject(1).getInt("position"))
+            assertTrue(backupJson.contains("\"requestedDisplayMode\":\"BAR\""))
+
+            assertEquals(2, vitalsChartsJson.length())
+            assertEquals("HRV_TREND", vitalsChartsJson.getJSONObject(0).getString("chartId"))
+            assertTrue(vitalsChartsJson.getJSONObject(0).getBoolean("isVisible"))
+            assertEquals(0, vitalsChartsJson.getJSONObject(0).getInt("position"))
+            assertEquals("BODY_TEMP_TREND", vitalsChartsJson.getJSONObject(1).getString("chartId"))
+            assertTrue(!vitalsChartsJson.getJSONObject(1).getBoolean("isVisible"))
+            assertEquals(3, vitalsChartsJson.getJSONObject(1).getInt("position"))
         }
 
     @Test
@@ -427,6 +504,7 @@ class LocalBackupManagerTest {
                     db,
                     settingsRepo,
                     cardConfigRepo,
+                    vitalsLayoutRepo,
                     encryptionManager,
                     auditTrailRepository,
                     Dispatchers.Unconfined,
@@ -488,6 +566,7 @@ class LocalBackupManagerTest {
                     db,
                     settingsRepo,
                     cardConfigRepo,
+                    vitalsLayoutRepo,
                     encryptionManager,
                     auditTrailRepository,
                     Dispatchers.Unconfined,

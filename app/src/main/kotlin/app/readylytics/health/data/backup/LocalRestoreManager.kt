@@ -33,6 +33,7 @@ import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.backup.WrongBackupPasswordException
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.util.logW
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -57,6 +58,7 @@ class LocalRestoreManager
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
+        private val vitalsLayoutRepository: VitalsLayoutRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
@@ -662,6 +664,12 @@ class LocalRestoreManager
             }
             backup.dashboardCards?.let {
                 cardConfigurationRepository.updateDashboardCardConfigurations(it)
+            }
+            backup.vitalsCards?.let {
+                vitalsLayoutRepository.updateVitalsCardConfigurations(it)
+            }
+            backup.vitalsCharts?.let {
+                vitalsLayoutRepository.updateVitalsChartConfigurations(it)
             }
             backup.backgroundSyncEnabled?.let { enabled ->
                 if (enabled) {
