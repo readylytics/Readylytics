@@ -42,21 +42,18 @@ internal fun createVitalsCardStateFlow(
 ): Flow<VitalsCardState> {
     // One-shot checks, not re-polled -- relies on VitalsViewModel.uiState's WhileSubscribed(5_000)
     // sharing policy naturally restarting this flow after a permission-grant round trip.
-    val permissionGrants: Flow<List<Boolean>> =
+    val permissionGrants: Flow<Pair<Boolean, Boolean>> =
         combine(
             flow { emit(healthConnectRepository.hasBodyTemperaturePermission()) },
             flow { emit(healthConnectRepository.hasOxygenSaturationPermission()) },
-        ) { results -> results.toList() }
+        ) { bodyTempGranted, spo2Granted -> bodyTempGranted to spo2Granted }
 
     return combine(
         cardManagementDelegate.isManagingCards,
         cardManagementDelegate.pendingConfigs,
         vitalsLayoutRepository.vitalsCardConfigurations(),
         permissionGrants,
-    ) { isManaging, pendingCardConfig, cardConfig, grants ->
-        val bodyTempGranted = grants[0]
-        val spo2Granted = grants[1]
-
+    ) { isManaging, pendingCardConfig, cardConfig, (bodyTempGranted, spo2Granted) ->
         fun List<CardConfiguration>.filteredForPermission(): List<CardConfiguration> {
             var list = this
             if (!bodyTempGranted) list = list.filter { it.cardId != CardId.BODY_TEMPERATURE }
