@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.dashboard
 
-import app.readylytics.health.domain.preferences.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +61,8 @@ sealed interface CardManagementEvent {
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CardManagementDelegate(
-    private val cardConfigRepository: CardConfigurationRepository,
+    private val defaultConfigurations: List<CardConfiguration>,
+    private val persist: suspend (List<CardConfiguration>) -> Unit,
     private val scope: CoroutineScope,
     // Gates optional-card persistence on Health Connect permissions. Each defaults to
     // "granted" so every existing 2-arg call site (and its tests) is unaffected; the
@@ -95,7 +95,7 @@ class CardManagementDelegate(
         if (!hasBodyFatPermission()) toPersist = toPersist.filter { it.cardId != CardId.BODY_FAT }
         if (!hasBloodPressurePermission()) toPersist = toPersist.filter { it.cardId != CardId.BLOOD_PRESSURE }
         if (!hasOxygenSaturationPermission()) toPersist = toPersist.filter { it.cardId != CardId.OXYGEN_SATURATION }
-        cardConfigRepository.updateDashboardCardConfigurations(toPersist)
+        persist(toPersist)
     }
 
     init {
@@ -145,7 +145,7 @@ class CardManagementDelegate(
                 _pendingConfigs.value = null
             }
             CardManagementEvent.ResetToDefaults -> {
-                _pendingConfigs.value = SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+                _pendingConfigs.value = defaultConfigurations
             }
             is CardManagementEvent.ToggleVisibility -> {
                 val base = _pendingConfigs.value ?: event.currentConfigs
