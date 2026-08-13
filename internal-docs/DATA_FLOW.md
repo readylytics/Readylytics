@@ -1044,7 +1044,7 @@ SleepManagementBottomSheet / SleepOverviewScreen (UI interaction)
   ▼ emits layout updates (reorder, toggle visibility, change display mode, reset defaults)
 SleepViewModel
   │
-  ▼ delegates to SleepTopCardManagementDelegate / SleepChartManagementDelegate / SleepMetricCardManagementDelegate
+  ▼ delegates to SleepTopCardManagementDelegate / LayoutManagementDelegate (charts) / SleepMetricCardManagementDelegate
 SleepFlowIntermediate (combines repository flows with daily summary state)
   │
   ▼ updates layout state via
@@ -1079,7 +1079,7 @@ WorkoutsManagementBottomSheet / WorkoutsScreen (UI interaction)
   ▼ emits layout updates (reorder, toggle visibility, change display mode, reset defaults)
 WorkoutsViewModel
   │
-  ▼ delegates to CardManagementDelegate / WorkoutChartManagementDelegate / WorkoutHistoryManagementDelegate
+  ▼ delegates to CardManagementDelegate / LayoutManagementDelegate (charts & history)
 WorkoutsFlowIntermediate (combines repository flows with daily-summary/workout state)
   │
   ▼ updates layout state via
