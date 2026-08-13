@@ -21,6 +21,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -121,35 +122,41 @@ fun WorkoutsScreen(
         )
 
     val cardDataMap =
-        CardDataMap(
-            buildWorkoutsCardDataMap(
-                uiState = uiState,
-                isEditing = uiState.isManagingCards,
-                onWorkoutsCardDisplayModeChanged = onWorkoutsCardDisplayModeChanged,
-            ),
-        )
+        remember(uiState, onWorkoutsCardDisplayModeChanged) {
+            CardDataMap(
+                buildWorkoutsCardDataMap(
+                    uiState = uiState,
+                    isEditing = uiState.isManagingCards,
+                    onWorkoutsCardDisplayModeChanged = onWorkoutsCardDisplayModeChanged,
+                ),
+            )
+        }
     val chartDataMap =
-        WorkoutChartDataMap(
-            buildWorkoutsChartDataMap(
-                uiState = uiState,
-                rangeDays = uiState.selectedRange.days,
-                scrollState = chartScrollState,
-                zoomState = chartZoomState,
-                granularity = selectedRange.granularity,
-                parentScrollInProgress = { scrollState.isScrollInProgress },
-            ),
-        )
+        remember(uiState, selectedRange, chartScrollState, chartZoomState) {
+            WorkoutChartDataMap(
+                buildWorkoutsChartDataMap(
+                    uiState = uiState,
+                    rangeDays = uiState.selectedRange.days,
+                    scrollState = chartScrollState,
+                    zoomState = chartZoomState,
+                    granularity = selectedRange.granularity,
+                    parentScrollInProgress = { scrollState.isScrollInProgress },
+                ),
+            )
+        }
     val historyDataMap =
-        WorkoutHistoryDataMap(
-            buildWorkoutsHistoryDataMap(
-                uiState = uiState,
-                currentPage = uiState.currentPage,
-                totalPages = uiState.totalPages,
-                onPreviousPage = onPreviousPage,
-                onNextPage = onNextPage,
-                onWorkoutClick = onWorkoutClick,
-            ),
-        )
+        remember(uiState, onPreviousPage, onNextPage, onWorkoutClick) {
+            WorkoutHistoryDataMap(
+                buildWorkoutsHistoryDataMap(
+                    uiState = uiState,
+                    currentPage = uiState.currentPage,
+                    totalPages = uiState.totalPages,
+                    onPreviousPage = onPreviousPage,
+                    onNextPage = onNextPage,
+                    onWorkoutClick = onWorkoutClick,
+                ),
+            )
+        }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (manageState.isManageOpen) {
