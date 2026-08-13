@@ -148,4 +148,10 @@ abstract class RepositoryModule {
     abstract fun bindSleepLayoutRepository(
         impl: app.readylytics.health.data.preferences.SleepLayoutRepositoryImpl,
     ): app.readylytics.health.domain.sleep.SleepLayoutRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWorkoutsLayoutRepository(
+        impl: app.readylytics.health.data.preferences.WorkoutsLayoutRepositoryImpl,
+    ): app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 }
