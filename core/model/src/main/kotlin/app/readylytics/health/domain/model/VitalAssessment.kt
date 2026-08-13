@@ -1,6 +1,9 @@
 package app.readylytics.health.domain.model
 
+import app.readylytics.health.domain.preferences.UnitSystem
+import app.readylytics.health.domain.util.UnitConverter
 import java.math.BigDecimal
+import kotlin.math.abs
 
 interface VitalAssessment {
     val status: MetricStatus
@@ -20,6 +23,13 @@ data class Spo2Assessment(
     val value: Float?,
     override val status: MetricStatus,
     override val zoneBands: List<ZoneBand>,
+) : VitalAssessment
+
+data class BodyTemperatureAssessment(
+    val value: Float?,
+    val baseline: Float?,
+    override val status: MetricStatus,
+    override val zoneBands: List<ZoneBand>? = null,
 ) : VitalAssessment
 
 fun assessHrv(
@@ -80,6 +90,30 @@ fun assessSpo2(value: Float?): Spo2Assessment =
         status = spo2StatusFromValue(value),
         zoneBands = spo2ReferenceZoneBands(),
     )
+
+fun assessBodyTemperature(
+    valueCelsius: Float?,
+    baselineCelsius: Float?,
+    thresholdCelsius: Float,
+    unitSystem: UnitSystem,
+): BodyTemperatureAssessment =
+    BodyTemperatureAssessment(
+        value = valueCelsius?.let { UnitConverter.celsiusToDisplayTemperature(it, unitSystem) },
+        baseline = baselineCelsius?.let { UnitConverter.celsiusToDisplayTemperature(it, unitSystem) },
+        status = bodyTemperatureStatus(valueCelsius, baselineCelsius, thresholdCelsius),
+    )
+
+fun bodyTemperatureStatus(
+    value: Float?,
+    baseline: Float?,
+    thresholdCelsius: Float,
+): MetricStatus =
+    when {
+        value == null -> MetricStatus.CALIBRATING
+        baseline == null -> MetricStatus.NEUTRAL
+        abs(value - baseline) >= thresholdCelsius -> MetricStatus.WARNING
+        else -> MetricStatus.NEUTRAL
+    }
 
 private fun assessPersonalBaseline(
     value: Int?,

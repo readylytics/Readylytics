@@ -6,7 +6,6 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
@@ -37,7 +36,6 @@ class GetDashboardDataUseCaseTest {
                     DashboardMetricPresentationFactory(
                         resourceProvider,
                         getWorkoutMetricsUseCase,
-                        BodyTemperatureBaselineCalculator(),
                     ),
             )
     }
