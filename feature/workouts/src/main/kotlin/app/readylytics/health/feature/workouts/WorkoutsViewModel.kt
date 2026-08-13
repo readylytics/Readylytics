@@ -18,6 +18,7 @@ import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.dashboard.CardManagementEvent
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
@@ -37,10 +38,8 @@ import app.readylytics.health.domain.scoring.calculateDailyStrainIncrease
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.domain.workouts.WorkoutChartId
-import app.readylytics.health.domain.workouts.WorkoutChartManagementDelegate
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.domain.workouts.WorkoutHistoryId
-import app.readylytics.health.domain.workouts.WorkoutHistoryManagementDelegate
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -152,17 +151,21 @@ class WorkoutsViewModel
             )
 
         private val chartManagementDelegate =
-            WorkoutChartManagementDelegate(
+            LayoutManagementDelegate(
                 defaultConfigurations = SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
                 persist = workoutsLayoutRepository::updateWorkoutChartConfigurations,
                 scope = viewModelScope,
+                withVisibility = { config, visible -> config.copy(isVisible = visible) },
+                withPosition = { config, pos -> config.copy(position = pos) },
             )
 
         private val historyManagementDelegate =
-            WorkoutHistoryManagementDelegate(
+            LayoutManagementDelegate(
                 defaultConfigurations = SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
                 persist = workoutsLayoutRepository::updateWorkoutHistoryConfigurations,
                 scope = viewModelScope,
+                withVisibility = { config, visible -> config.copy(isVisible = visible) },
+                withPosition = { config, pos -> config.copy(position = pos) },
             )
 
         private val cardStateFlow =
@@ -680,22 +683,22 @@ class WorkoutsViewModel
             chartId: WorkoutChartId,
             visible: Boolean,
         ) {
-            chartManagementDelegate.onToggleChartVisibility(uiState.value.chartConfigurations, chartId, visible)
+            chartManagementDelegate.onToggleVisibility(uiState.value.chartConfigurations, chartId, visible)
         }
 
         fun onReorderCharts(newOrder: List<WorkoutChartConfiguration>) {
-            chartManagementDelegate.onReorderCharts(uiState.value.chartConfigurations, newOrder)
+            chartManagementDelegate.onReorder(uiState.value.chartConfigurations, newOrder)
         }
 
         fun onToggleHistoryVisibility(
             historyId: WorkoutHistoryId,
             visible: Boolean,
         ) {
-            historyManagementDelegate.onToggleHistoryVisibility(uiState.value.historyConfigurations, historyId, visible)
+            historyManagementDelegate.onToggleVisibility(uiState.value.historyConfigurations, historyId, visible)
         }
 
         fun onReorderHistory(newOrder: List<WorkoutHistoryConfiguration>) {
-            historyManagementDelegate.onReorderHistory(uiState.value.historyConfigurations, newOrder)
+            historyManagementDelegate.onReorder(uiState.value.historyConfigurations, newOrder)
         }
 
         fun onResetWorkoutsToDefaults() {

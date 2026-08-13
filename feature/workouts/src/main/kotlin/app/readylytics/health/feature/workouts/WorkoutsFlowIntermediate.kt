@@ -3,10 +3,11 @@ package app.readylytics.health.feature.workouts
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
-import app.readylytics.health.domain.workouts.WorkoutChartManagementDelegate
+import app.readylytics.health.domain.workouts.WorkoutChartId
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryManagementDelegate
+import app.readylytics.health.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -49,11 +50,11 @@ internal fun createWorkoutsCardStateFlow(
     }
 
 internal fun createWorkoutsChartStateFlow(
-    chartManagementDelegate: WorkoutChartManagementDelegate,
+    chartManagementDelegate: LayoutManagementDelegate<WorkoutChartConfiguration, WorkoutChartId>,
     workoutsLayoutRepository: WorkoutsLayoutRepository,
 ): Flow<WorkoutsChartState> =
     combine(
-        chartManagementDelegate.isManagingCharts,
+        chartManagementDelegate.isManaging,
         chartManagementDelegate.pendingConfigs,
         workoutsLayoutRepository.workoutChartConfigurations(),
     ) { isManaging, pendingChartConfig, chartConfig ->
@@ -65,11 +66,11 @@ internal fun createWorkoutsChartStateFlow(
     }
 
 internal fun createWorkoutsHistoryStateFlow(
-    historyManagementDelegate: WorkoutHistoryManagementDelegate,
+    historyManagementDelegate: LayoutManagementDelegate<WorkoutHistoryConfiguration, WorkoutHistoryId>,
     workoutsLayoutRepository: WorkoutsLayoutRepository,
 ): Flow<WorkoutsHistoryState> =
     combine(
-        historyManagementDelegate.isManagingHistory,
+        historyManagementDelegate.isManaging,
         historyManagementDelegate.pendingConfigs,
         workoutsLayoutRepository.workoutHistoryConfigurations(),
     ) { isManaging, pendingHistoryConfig, historyConfig ->
