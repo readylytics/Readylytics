@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -157,16 +158,18 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableList(
                             }
                         },
             ) {
-                ReorderableSlot(
-                    id = item.id,
-                    content = { dataMap[item.id]!!(item) },
-                    isEditing = isEditing,
-                    isDragged = draggedId == item.id,
-                    controller = dragController,
-                    onHandlePositioned = onHandlePositioned,
-                    fixedHeight = false,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                key(item.id) {
+                    ReorderableSlot(
+                        id = item.id,
+                        content = { dataMap[item.id]!!(item) },
+                        isEditing = isEditing,
+                        isDragged = draggedId == item.id,
+                        controller = dragController,
+                        onHandlePositioned = onHandlePositioned,
+                        fixedHeight = false,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 

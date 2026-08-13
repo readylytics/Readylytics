@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -191,16 +192,18 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
                                 }
                             },
                 ) {
-                    ReorderableSlot(
-                        id = item.id,
-                        content = { dataMap[item.id]!!(item) },
-                        isEditing = isEditing,
-                        isDragged = draggedId == item.id,
-                        controller = dragController,
-                        onHandlePositioned = onHandlePositioned,
-                        fixedHeight = item.id in fixedHeightIds,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    key(item.id) {
+                        ReorderableSlot(
+                            id = item.id,
+                            content = { dataMap[item.id]!!(item) },
+                            isEditing = isEditing,
+                            isDragged = draggedId == item.id,
+                            controller = dragController,
+                            onHandlePositioned = onHandlePositioned,
+                            fixedHeight = item.id in fixedHeightIds,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
                 index++
             } else {
@@ -224,16 +227,18 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
                                     }
                                 },
                     ) {
-                        ReorderableSlot(
-                            id = leftItem.id,
-                            content = { dataMap[leftItem.id]!!(leftItem) },
-                            isEditing = isEditing,
-                            isDragged = draggedId == leftItem.id,
-                            controller = dragController,
-                            onHandlePositioned = onHandlePositioned,
-                            fixedHeight = leftItem.id in fixedHeightIds,
-                            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                        )
+                        key(leftItem.id) {
+                            ReorderableSlot(
+                                id = leftItem.id,
+                                content = { dataMap[leftItem.id]!!(leftItem) },
+                                isEditing = isEditing,
+                                isDragged = draggedId == leftItem.id,
+                                controller = dragController,
+                                onHandlePositioned = onHandlePositioned,
+                                fixedHeight = leftItem.id in fixedHeightIds,
+                                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                            )
+                        }
                     }
                     index++
 
@@ -257,16 +262,18 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
                                         }
                                     },
                         ) {
-                            ReorderableSlot(
-                                id = rightItem.id,
-                                content = { dataMap[rightItem.id]!!(rightItem) },
-                                isEditing = isEditing,
-                                isDragged = draggedId == rightItem.id,
-                                controller = dragController,
-                                onHandlePositioned = onHandlePositioned,
-                                fixedHeight = rightItem.id in fixedHeightIds,
-                                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                            )
+                            key(rightItem.id) {
+                                ReorderableSlot(
+                                    id = rightItem.id,
+                                    content = { dataMap[rightItem.id]!!(rightItem) },
+                                    isEditing = isEditing,
+                                    isDragged = draggedId == rightItem.id,
+                                    controller = dragController,
+                                    onHandlePositioned = onHandlePositioned,
+                                    fixedHeight = rightItem.id in fixedHeightIds,
+                                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                                )
+                            }
                         }
                         index++
                     } else {
