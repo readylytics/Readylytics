@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -131,6 +133,7 @@ fun HeartRateDetailScreen(
                             .fillMaxWidth()
                             .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.pageSectionGapSmall),
+                    verticalAlignment = Alignment.Top,
                 ) {
                     HrStatCard(stringResource(CoreUiR.string.label_min), "${uiState.minBpm} bpm", Modifier.weight(1f))
                     HrStatCard(stringResource(CoreUiR.string.label_max), "${uiState.maxBpm} bpm", Modifier.weight(1f))
@@ -138,7 +141,6 @@ fun HeartRateDetailScreen(
                         label = stringResource(CoreUiR.string.label_avg),
                         value = "${uiState.avgBpm} bpm",
                         modifier = Modifier.weight(1f),
-                        status = uiState.averageStatus,
                     )
                 }
             }
@@ -273,15 +275,18 @@ private fun HrStatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    status: MetricStatus? = null,
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.heightIn(min = 72.dp),
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier =
+                Modifier
+                    .fillMaxHeight()
+                    .padding(MaterialTheme.spacing.smallMedium),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.Top,
         ) {
             Text(
                 text = label,
@@ -294,13 +299,6 @@ private fun HrStatCard(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            status?.let {
-                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-                StatusPill(
-                    label = stringResource(metricStatusLabelRes(it)),
-                    status = it,
-                )
-            }
         }
     }
 }
