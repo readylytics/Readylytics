@@ -709,4 +709,3 @@ class DashboardScreenTest {
         composeRule.onNodeWithText("Manage Cards").assertIsDisplayed()
     }
 }
-
