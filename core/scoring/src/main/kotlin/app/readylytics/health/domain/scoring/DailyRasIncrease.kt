@@ -3,14 +3,9 @@ package app.readylytics.health.domain.scoring
 fun calculateDailyRasIncrease(
     dataTenureDays: Int,
     todayRas: Float?,
-    yesterdayRas: Float?,
 ): Float? =
-    if (dataTenureDays < 7) {
+    if (dataTenureDays < 7 || todayRas == null) {
         null
     } else {
-        if (todayRas != null && yesterdayRas != null) {
-            (todayRas - yesterdayRas).coerceAtLeast(0f)
-        } else {
-            null
-        }
+        todayRas.coerceAtLeast(0f)
     }

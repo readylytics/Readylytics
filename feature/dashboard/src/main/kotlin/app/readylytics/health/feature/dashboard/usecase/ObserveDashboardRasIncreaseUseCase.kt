@@ -42,7 +42,6 @@ class ObserveDashboardRasIncreaseUseCase
                         .observeSince(fetchFromMs)
                         .mapLatest { summaries ->
                             val todaySummary = summaries.firstOrNull { it.date == date }
-                            val yesterdaySummary = summaries.firstOrNull { it.date == date.minusDays(1) }
 
                             val earliestDate =
                                 summaries.minByOrNull { it.date }?.date
@@ -56,13 +55,10 @@ class ObserveDashboardRasIncreaseUseCase
                                         prefs.rasSourceMode,
                                     )
                                 }
-                            val yesterdayRas =
-                                yesterdaySummary?.let { LoadSourceSelector.selectDailyRas(it, prefs.rasSourceMode) }
 
                             calculateDailyRasIncrease(
                                 dataTenureDays = dataTenureDays,
                                 todayRas = todayRas,
-                                yesterdayRas = yesterdayRas,
                             )
                         }
                 }.flowOn(defaultDispatcher)

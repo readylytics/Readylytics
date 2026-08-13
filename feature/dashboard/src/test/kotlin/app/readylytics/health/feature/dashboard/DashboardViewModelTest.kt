@@ -369,6 +369,9 @@ class DashboardViewModelTest {
             every {
                 observeDashboardStrainIncreaseUseCase.invoke(any(), any())
             } returns flowOf(0.23f)
+            every {
+                observeDashboardRasIncreaseUseCase.invoke(any(), any())
+            } returns flowOf(null)
             every { bodyTemperatureBaselineProvider.observeBaseline(any()) } returns flowOf(null)
             coEvery { healthConnectRepository.hasBodyTemperaturePermission() } returns true
             every {
@@ -381,6 +384,7 @@ class DashboardViewModelTest {
                     circadianResult = CircadianConsistencyResult.MissingData,
                     heartRateSummary = null,
                     todayStrainIncrease = 0.23f,
+                    todayRasIncrease = null,
                 )
             } returns
                 Result.success(

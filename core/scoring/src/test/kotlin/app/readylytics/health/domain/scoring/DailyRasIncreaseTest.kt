@@ -9,8 +9,7 @@ class DailyRasIncreaseTest {
     fun `returns null when data tenure is less than 7 days`() {
         val result = calculateDailyRasIncrease(
             dataTenureDays = 6,
-            todayRas = 75f,
-            yesterdayRas = 70f,
+            todayRas = 5f,
         )
         assertNull(result)
     }
@@ -20,67 +19,42 @@ class DailyRasIncreaseTest {
         val result = calculateDailyRasIncrease(
             dataTenureDays = 7,
             todayRas = null,
-            yesterdayRas = 70f,
         )
         assertNull(result)
     }
 
     @Test
-    fun `returns null when yesterday RAS is null`() {
+    fun `returns today RAS when data tenure is at least 7 days`() {
         val result = calculateDailyRasIncrease(
             dataTenureDays = 7,
-            todayRas = 75f,
-            yesterdayRas = null,
-        )
-        assertNull(result)
-    }
-
-    @Test
-    fun `returns positive delta when today RAS is higher than yesterday`() {
-        val result = calculateDailyRasIncrease(
-            dataTenureDays = 7,
-            todayRas = 75f,
-            yesterdayRas = 70f,
+            todayRas = 5f,
         )
         assertEquals(5f, result!!, 0.001f)
     }
 
     @Test
-    fun `clamps negative delta to zero`() {
+    fun `clamps negative RAS to zero`() {
         val result = calculateDailyRasIncrease(
             dataTenureDays = 7,
-            todayRas = 60f,
-            yesterdayRas = 70f,
+            todayRas = -3f,
         )
         assertEquals(0f, result!!, 0.001f)
     }
 
     @Test
-    fun `returns zero when RAS values are equal`() {
+    fun `returns zero when today RAS is zero`() {
         val result = calculateDailyRasIncrease(
             dataTenureDays = 7,
-            todayRas = 70f,
-            yesterdayRas = 70f,
+            todayRas = 0f,
         )
         assertEquals(0f, result!!, 0.001f)
-    }
-
-    @Test
-    fun `works with exactly 7 days tenure`() {
-        val result = calculateDailyRasIncrease(
-            dataTenureDays = 7,
-            todayRas = 80f,
-            yesterdayRas = 75f,
-        )
-        assertEquals(5f, result!!, 0.001f)
     }
 
     @Test
     fun `works with more than 7 days tenure`() {
         val result = calculateDailyRasIncrease(
             dataTenureDays = 30,
-            todayRas = 85f,
-            yesterdayRas = 80f,
+            todayRas = 5f,
         )
         assertEquals(5f, result!!, 0.001f)
     }
