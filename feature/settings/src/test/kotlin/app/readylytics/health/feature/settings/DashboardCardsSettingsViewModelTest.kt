@@ -64,7 +64,7 @@ class DashboardCardsSettingsViewModelTest {
                 CardConfiguration(cardId = CardId.HEART_RATE, requestedDisplayMode = null),
             ),
         initialVitalsConfigs: List<CardConfiguration> =
-            listOf(CardConfiguration(cardId = CardId.SLEEP_RHR, requestedDisplayMode = null)),
+            listOf(CardConfiguration(cardId = CardId.RESTING_HR, requestedDisplayMode = null)),
     ): Harness {
         val prefsFlow =
             MutableStateFlow(
@@ -125,7 +125,7 @@ class DashboardCardsSettingsViewModelTest {
             assertNull(configsFlow.value.first { it.cardId == CardId.HEART_RATE }.requestedDisplayMode)
             assertEquals(
                 DashboardCardDisplayMode.GAUGE,
-                vitalsConfigsFlow.value.first { it.cardId == CardId.SLEEP_RHR }.requestedDisplayMode,
+                vitalsConfigsFlow.value.first { it.cardId == CardId.RESTING_HR }.requestedDisplayMode,
             )
 
             job.cancel()
@@ -300,8 +300,8 @@ class DashboardCardsSettingsViewModelTest {
                     initialVitalsConfigs =
                         listOf(
                             CardConfiguration(
-                                cardId = CardId.SLEEP_RHR,
-                                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+                                cardId = CardId.RESTING_HR,
+                                requestedDisplayMode = DashboardCardDisplayMode.BAR,
                             ),
                         ),
                 )
@@ -311,7 +311,10 @@ class DashboardCardsSettingsViewModelTest {
             advanceUntilIdle()
 
             assertNull(configsFlow.value.first { it.cardId == CardId.SLEEP_SCORE }.requestedDisplayMode)
-            assertNull(vitalsConfigsFlow.value.first { it.cardId == CardId.SLEEP_RHR }.requestedDisplayMode)
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                vitalsConfigsFlow.value.first { it.cardId == CardId.RESTING_HR }.requestedDisplayMode,
+            )
             coVerify { displaySettings.updateLastGlobalDisplayMode(null) }
 
             job.cancel()

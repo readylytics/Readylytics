@@ -6,6 +6,7 @@ import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.DisplaySettings
+import app.readylytics.health.domain.preferences.SettingsDefaults
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -143,8 +144,21 @@ class DashboardCardsSettingsViewModel
             val updatedDashboard = DashboardCardCatalog.resetAllDisplayModes(currentDashboard)
             cardConfigurationRepository.updateDashboardCardConfigurations(updatedDashboard)
 
+            // Dashboard cards reset to null so the catalog's VALUE legacy default applies, which is
+            // their intended reset target. Vitals defaults are explicit GAUGE in
+            // SettingsDefaults.DEFAULT_VITALS_CARDS, so a null-mode reset would fall through to the
+            // catalog's VALUE legacy default instead of restoring GAUGE. Restore the per-card
+            // default while preserving each card's current visibility and position.
             val currentVitals = vitalsLayoutRepository.vitalsCardConfigurations().first()
-            val updatedVitals = DashboardCardCatalog.resetAllDisplayModes(currentVitals)
+            val vitalsDefaultModes =
+                SettingsDefaults.DEFAULT_VITALS_CARDS.associate {
+                    it.cardId to
+                        it.requestedDisplayMode
+                }
+            val updatedVitals =
+                currentVitals.map { config ->
+                    config.copy(requestedDisplayMode = vitalsDefaultModes[config.cardId])
+                }
             vitalsLayoutRepository.updateVitalsCardConfigurations(updatedVitals)
 
             displaySettings.updateLastGlobalDisplayMode(null)
