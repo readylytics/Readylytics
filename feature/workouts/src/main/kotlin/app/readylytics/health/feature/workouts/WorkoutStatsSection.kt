@@ -182,63 +182,6 @@ fun WorkoutStatsSection(
             },
         )
 
-        CardLoader(
-            isLoading = uiState.isLoading,
-            skeleton = {
-                SkeletonCard(
-                    height = 160.dp,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                )
-            },
-            content = {
-                Card(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                    shape = MaterialTheme.shapes.large,
-                ) {
-                    Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.workout_stats_ras_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                uiState.latestMetrics?.rasRounded?.let { total ->
-                                    Text(
-                                        text = total.toString(),
-                                        style = rasTotalValueTextStyle().asTextStyle(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                MetricTooltip(
-                                    description = stringResource(CoreUiR.string.tooltip_ras),
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
-                        RasWeeklyBar(
-                            dailyBreakdown = uiState.rasDailyBreakdown,
-                            totalRas = uiState.latestMetrics?.rasRounded?.toFloat() ?: 0f,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            },
-        )
-
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
         SectionHeader(
             title = stringResource(R.string.workout_stats_acwr_title),

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -108,5 +109,52 @@ private fun RasDayLegendItem(
             style = MaterialTheme.typography.labelSmall,
             color = onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+fun RasWeeklyCard(
+    dailyBreakdown: List<Pair<String, Float>>,
+    totalRas: Int?,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.material3.Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    text = stringResource(R.string.workout_stats_ras_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    totalRas?.let { total ->
+                        Text(
+                            text = total.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    app.readylytics.health.core.ui.components.MetricTooltip(
+                        description = stringResource(app.readylytics.health.core.ui.R.string.tooltip_ras),
+                    )
+                }
+            }
+            Spacer(Modifier.height(MaterialTheme.spacing.smallMedium))
+            RasWeeklyBar(
+                dailyBreakdown = dailyBreakdown,
+                totalRas = totalRas?.toFloat() ?: 0f,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
