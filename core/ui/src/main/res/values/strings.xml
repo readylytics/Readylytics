@@ -29,6 +29,7 @@
 
 
     <string name="action_delete_drop_zone">Drop here to remove</string>
+    <string name="action_hide_drop_zone">Drop here to hide</string>
 
 
     <string name="unit_metric_cm">cm</string>
