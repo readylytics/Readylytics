@@ -5,8 +5,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.domain.dashboard.CardManagementEvent
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
@@ -15,8 +21,13 @@ import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.domain.vitals.VitalsChartId
+import app.readylytics.health.domain.vitals.VitalsChartManagementDelegate
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,7 +58,14 @@ data class VitalsUiState(
     val rangeStartMs: Long = System.currentTimeMillis(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
-)
+    val vitalsCardConfigurations: List<CardConfiguration> = emptyList(),
+    val isManagingVitalsCards: Boolean = false,
+    val vitalsChartConfigurations: List<VitalsChartConfiguration> = emptyList(),
+    val isManagingVitalsCharts: Boolean = false,
+) {
+    val isManagingVitalsLayout: Boolean
+        get() = isManagingVitalsCards || isManagingVitalsCharts
+}
 
 private data class VitalsSelection(
     val range: TimeRange,
@@ -99,8 +117,38 @@ class VitalsViewModel
         private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
+        private val vitalsLayoutRepository: VitalsLayoutRepository,
+        private val healthConnectRepository: HealthConnectRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
+        private val vitalsCardManagementDelegate =
+            CardManagementDelegate(
+                defaultConfigurations = SettingsDefaults.DEFAULT_VITALS_CARDS,
+                persist = vitalsLayoutRepository::updateVitalsCardConfigurations,
+                scope = viewModelScope,
+                hasBodyTemperaturePermission = { healthConnectRepository.hasBodyTemperaturePermission() },
+                hasOxygenSaturationPermission = { healthConnectRepository.hasOxygenSaturationPermission() },
+            )
+
+        private val vitalsChartManagementDelegate =
+            VitalsChartManagementDelegate(
+                defaultConfigurations = SettingsDefaults.DEFAULT_VITALS_CHARTS,
+                persist = vitalsLayoutRepository::updateVitalsChartConfigurations,
+                scope = viewModelScope,
+            )
+
+        private val vitalsCardStateFlow =
+            createVitalsCardStateFlow(
+                cardManagementDelegate = vitalsCardManagementDelegate,
+                vitalsLayoutRepository = vitalsLayoutRepository,
+                healthConnectRepository = healthConnectRepository,
+            ).distinctUntilChanged()
+
+        private val vitalsChartStateFlow =
+            createVitalsChartStateFlow(
+                chartManagementDelegate = vitalsChartManagementDelegate,
+                vitalsLayoutRepository = vitalsLayoutRepository,
+            ).distinctUntilChanged()
         private val _selectedRange =
             MutableStateFlow(
                 savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS,
@@ -225,7 +273,9 @@ class VitalsViewModel
                 contentFlow,
                 presentationInputsFlow,
                 foregroundSyncController.isSyncing,
-            ) { content, inputs, isSyncing ->
+                vitalsCardStateFlow,
+                vitalsChartStateFlow,
+            ) { content, inputs, isSyncing, cardState, chartState ->
                 val presentation =
                     buildVitalsPresentationState(
                         metrics = inputs.metrics.takeIf { it.date == content.selection.date }?.metrics,
@@ -250,6 +300,12 @@ class VitalsViewModel
                     rangeStartMs = content.rangeStartMs,
                     isLoading = isSyncing && !hasHistoricalData,
                     isRefreshing = isSyncing,
+                    vitalsCardConfigurations =
+                        cardState.pendingConfiguration ?: cardState.cardConfigurations,
+                    isManagingVitalsCards = cardState.isManagingCards,
+                    vitalsChartConfigurations =
+                        chartState.pendingConfiguration ?: chartState.chartConfigurations,
+                    isManagingVitalsCharts = chartState.isManagingCharts,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -286,5 +342,77 @@ class VitalsViewModel
             viewModelScope.launch {
                 selectedDateRepository.selectNextDay()
             }
+        }
+
+        fun toggleVitalsCardManagement() {
+            if (uiState.value.isManagingVitalsCards) {
+                vitalsCardManagementDelegate.saveChanges()
+            } else {
+                vitalsCardManagementDelegate.enterEditMode(uiState.value.vitalsCardConfigurations)
+            }
+        }
+
+        fun onCancelVitalsCardManagement() {
+            vitalsCardManagementDelegate.cancelChanges()
+        }
+
+        fun onToggleVitalsCardVisibility(
+            cardId: CardId,
+            visible: Boolean,
+        ) {
+            vitalsCardManagementDelegate.onToggleCardVisibility(
+                uiState.value.vitalsCardConfigurations,
+                cardId,
+                visible,
+            )
+        }
+
+        fun onReorderVitalsCards(newOrder: List<CardConfiguration>) {
+            vitalsCardManagementDelegate.onReorderCards(
+                uiState.value.vitalsCardConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onVitalsCardDisplayModeChanged(
+            cardId: CardId,
+            mode: DashboardCardDisplayMode,
+        ) {
+            vitalsCardManagementDelegate.onEvent(CardManagementEvent.DisplayModeChanged(cardId, mode))
+        }
+
+        fun toggleVitalsChartManagement() {
+            if (uiState.value.isManagingVitalsCharts) {
+                vitalsChartManagementDelegate.saveChanges()
+            } else {
+                vitalsChartManagementDelegate.enterEditMode(uiState.value.vitalsChartConfigurations)
+            }
+        }
+
+        fun onCancelVitalsChartManagement() {
+            vitalsChartManagementDelegate.cancelChanges()
+        }
+
+        fun onToggleVitalsChartVisibility(
+            chartId: VitalsChartId,
+            visible: Boolean,
+        ) {
+            vitalsChartManagementDelegate.onToggleChartVisibility(
+                uiState.value.vitalsChartConfigurations,
+                chartId,
+                visible,
+            )
+        }
+
+        fun onReorderVitalsCharts(newOrder: List<VitalsChartConfiguration>) {
+            vitalsChartManagementDelegate.onReorderCharts(
+                uiState.value.vitalsChartConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onResetVitalsToDefaults() {
+            vitalsCardManagementDelegate.onResetToDefaults()
+            vitalsChartManagementDelegate.onResetToDefaults()
         }
     }

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
@@ -13,10 +15,15 @@ import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.util.UnitConverter
+import app.readylytics.health.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.domain.vitals.VitalsChartId
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +58,22 @@ class VitalsViewModelTest {
     private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
     private val syncing = MutableStateFlow(false)
     private val bodyTemperatureBaseline = MutableStateFlow<Float?>(36.5f)
+    private val vitalsCardConfigs =
+        MutableStateFlow<List<CardConfiguration>>(
+            listOf(
+                CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0),
+                CardConfiguration(CardId.HRV, isVisible = true, position = 1),
+            ),
+        )
+    private val vitalsChartConfigs =
+        MutableStateFlow<List<VitalsChartConfiguration>>(
+            listOf(
+                VitalsChartConfiguration(VitalsChartId.HRV_TREND, isVisible = true, position = 0),
+                VitalsChartConfiguration(VitalsChartId.RHR_TREND, isVisible = true, position = 1),
+                VitalsChartConfiguration(VitalsChartId.SPO2_TREND, isVisible = true, position = 2),
+                VitalsChartConfiguration(VitalsChartId.BODY_TEMP_TREND, isVisible = true, position = 3),
+            ),
+        )
     private val metricsByDate = mutableMapOf<LocalDate, MutableStateFlow<DailyMetrics?>>()
     private val customMetricsFlowsByDate = mutableMapOf<LocalDate, Flow<DailyMetrics?>>()
     private val settingsRepo = FakeUserPreferencesReader()
@@ -102,6 +125,20 @@ class VitalsViewModelTest {
             every { observeBaseline(any()) } returns bodyTemperatureBaseline
         }
 
+    private val vitalsLayoutRepository =
+        mockk<VitalsLayoutRepository> {
+            every { vitalsCardConfigurations() } returns vitalsCardConfigs
+            every { vitalsChartConfigurations() } returns vitalsChartConfigs
+            coEvery { updateVitalsCardConfigurations(any()) } returns Unit
+            coEvery { updateVitalsChartConfigurations(any()) } returns Unit
+        }
+
+    private val healthConnectRepository =
+        mockk<HealthConnectRepository> {
+            coEvery { hasBodyTemperaturePermission() } returns true
+            coEvery { hasOxygenSaturationPermission() } returns true
+        }
+
     private fun createViewModel() =
         VitalsViewModel(
             dailySummaryRepository = dailySummaryRepository,
@@ -111,6 +148,8 @@ class VitalsViewModelTest {
             foregroundSyncController = foregroundSyncGateway,
             savedStateHandle = SavedStateHandle(),
             bodyTemperatureBaselineProvider = bodyTemperatureBaselineProvider,
+            vitalsLayoutRepository = vitalsLayoutRepository,
+            healthConnectRepository = healthConnectRepository,
             ioDispatcher = testDispatcher,
         )
 
@@ -137,6 +176,82 @@ class VitalsViewModelTest {
         syncing.value = false
         bodyTemperatureBaseline.value = 36.5f
     }
+
+    @Test
+    fun `vitals card management toggle enters edit mode and saving persists reordered config`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                assertFalse(viewModel.uiState.value.isManagingVitalsCards)
+                assertEquals(2, viewModel.uiState.value.vitalsCardConfigurations.size)
+
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+                assertTrue(viewModel.uiState.value.isManagingVitalsCards)
+
+                viewModel.onToggleVitalsCardVisibility(CardId.HRV, visible = false)
+                advanceUntilIdle()
+                assertEquals(
+                    false,
+                    viewModel.uiState.value.vitalsCardConfigurations
+                        .first { it.cardId == CardId.HRV }
+                        .isVisible,
+                )
+
+                viewModel.toggleVitalsCardManagement()
+                advanceUntilIdle()
+                assertFalse(viewModel.uiState.value.isManagingVitalsCards)
+                coVerify {
+                    vitalsLayoutRepository.updateVitalsCardConfigurations(
+                        match { configs ->
+                            configs.any { it.cardId == CardId.HRV && !it.isVisible }
+                        },
+                    )
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun `vitals chart management toggle hides a chart and persists on save`() =
+        runTest {
+            viewModel = createViewModel()
+            val collector = backgroundScope.launch { viewModel.uiState.collect() }
+            try {
+                advanceUntilIdle()
+                assertFalse(viewModel.uiState.value.isManagingVitalsCharts)
+                assertEquals(4, viewModel.uiState.value.vitalsChartConfigurations.size)
+
+                viewModel.toggleVitalsChartManagement()
+                advanceUntilIdle()
+                assertTrue(viewModel.uiState.value.isManagingVitalsCharts)
+
+                viewModel.onToggleVitalsChartVisibility(VitalsChartId.HRV_TREND, visible = false)
+                advanceUntilIdle()
+                assertEquals(
+                    false,
+                    viewModel.uiState.value.vitalsChartConfigurations
+                        .first { it.chartId == VitalsChartId.HRV_TREND }
+                        .isVisible,
+                )
+
+                viewModel.toggleVitalsChartManagement()
+                advanceUntilIdle()
+                assertFalse(viewModel.uiState.value.isManagingVitalsCharts)
+                coVerify {
+                    vitalsLayoutRepository.updateVitalsChartConfigurations(
+                        match { charts ->
+                            charts.any { it.chartId == VitalsChartId.HRV_TREND && !it.isVisible }
+                        },
+                    )
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
 
     @After
     fun tearDown() {
