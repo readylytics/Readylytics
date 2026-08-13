@@ -102,13 +102,6 @@ fun VitalsScreen(
                         bottom = MaterialTheme.spacing.pageBottom,
                     ),
         ) {
-            VitalsGaugeRow(
-                isLoading = uiState.isLoading,
-                presentation = uiState.presentation,
-                onNavigateToHrv = onNavigateToHrv,
-                onNavigateToRhr = onNavigateToRhr,
-            )
-
             // Time Range selection
             SectionHeader(
                 title = stringResource(R.string.label_physiological_trends),
