@@ -28,7 +28,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString
 import app.readylytics.health.domain.sleep.SleepCardCatalog
-import app.readylytics.health.domain.sleep.SleepCardSpec
+import app.readylytics.health.domain.dashboard.ModeSpec
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
@@ -47,7 +47,7 @@ val SLEEP_TOP_CARD_FULL_WIDTH_IDS: Set<SleepTopCardId> =
 
 private val VALUE_ONLY_MODES = listOf(UniversalCardDisplayMode.VALUE)
 
-private fun supportedModes(spec: SleepCardSpec?): List<UniversalCardDisplayMode> =
+private fun supportedModes(spec: ModeSpec?): List<UniversalCardDisplayMode> =
     spec?.supportedModes?.map { it.toUniversalMode() } ?: VALUE_ONLY_MODES
 
 @Composable

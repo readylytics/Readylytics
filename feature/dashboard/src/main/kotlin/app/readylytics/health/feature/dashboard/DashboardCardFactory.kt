@@ -65,7 +65,7 @@ private fun ConfigurableMetricCard(
             if (presentation != null && spec != null) {
                 UniversalMetricCard(
                     presentation = presentation,
-                    specification = spec.toUniversalSpec(),
+                    specification = spec.toUniversalSpec(cardId.usesDeltaPill()),
                     requestedMode = DashboardCardCatalog.requestedMode(configuration).toUniversalMode(),
                     isEditing = isEditing,
                     onModeSelected = { mode -> onCardDisplayModeChanged(cardId, mode.toDashboardMode()) },

@@ -69,6 +69,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                     secondaryText = "↑ 0.23",
                     accessibilityDescription = "Strain ratio 1.14, normal.",
                 ),
+            usesDeltaPill = true,
         )
 
         composeRule.onNodeWithText("↑ 0.23").assertIsDisplayed()
@@ -217,6 +218,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         requestedMode = DashboardCardDisplayMode.BAR,
                         isEditing = false,
                         onModeSelected = {},
+                        usesDeltaPill = true,
                     )
                 }
             }
@@ -250,6 +252,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         requestedMode = DashboardCardDisplayMode.VALUE,
                         isEditing = false,
                         onModeSelected = {},
+                        usesDeltaPill = true,
                     )
                 }
             }
@@ -273,17 +276,18 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 DashboardMetricCard(
                     presentation =
                         presentation.copy(
-                            title = "HRV",
-                            valueText = "41",
-                            unitText = "ms",
-                            secondaryText = "\u2193 2",
-                            accessibilityDescription = "HRV 41 milliseconds, normal.",
-                        ),
-                    specification = hrvSpecification,
-                    requestedMode = mode,
-                    isEditing = false,
-                    onModeSelected = {},
-                )
+                                title = "HRV",
+                                valueText = "41",
+                                unitText = "ms",
+                                secondaryText = "\u2193 2",
+                                accessibilityDescription = "HRV 41 milliseconds, normal.",
+                            ),
+                        specification = hrvSpecification,
+                        requestedMode = mode,
+                        isEditing = false,
+                        onModeSelected = {},
+                        usesDeltaPill = true,
+                    )
             }
         }
 
@@ -314,18 +318,19 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 DashboardMetricCard(
                     presentation =
                         presentation.copy(
-                            title = "HRV",
-                            valueText = "41",
-                            unitText = "ms",
-                            secondaryText = "↓ 2",
-                            status = MetricStatus.WARNING,
-                            accessibilityDescription = "HRV 41 milliseconds, warning.",
-                        ),
-                    specification = specification,
-                    requestedMode = DashboardCardDisplayMode.GAUGE,
-                    isEditing = false,
-                    onModeSelected = {},
-                )
+                                title = "HRV",
+                                valueText = "41",
+                                unitText = "ms",
+                                secondaryText = "↓ 2",
+                                status = MetricStatus.WARNING,
+                                accessibilityDescription = "HRV 41 milliseconds, warning.",
+                            ),
+                        specification = specification,
+                        requestedMode = DashboardCardDisplayMode.GAUGE,
+                        isEditing = false,
+                        onModeSelected = {},
+                        usesDeltaPill = true,
+                    )
             }
         }
 
@@ -349,17 +354,18 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 DashboardMetricCard(
                     presentation =
                         presentation.copy(
-                            title = "HRV",
-                            valueText = "41",
-                            unitText = "ms",
-                            secondaryText = "↓ 2",
-                            accessibilityDescription = "HRV 41 milliseconds, normal.",
-                        ),
-                    specification = hrvSpecification,
-                    requestedMode = DashboardCardDisplayMode.GAUGE,
-                    isEditing = false,
-                    onModeSelected = {},
-                )
+                                title = "HRV",
+                                valueText = "41",
+                                unitText = "ms",
+                                secondaryText = "↓ 2",
+                                accessibilityDescription = "HRV 41 milliseconds, normal.",
+                            ),
+                        specification = hrvSpecification,
+                        requestedMode = DashboardCardDisplayMode.GAUGE,
+                        isEditing = false,
+                        onModeSelected = {},
+                        usesDeltaPill = true,
+                    )
             }
         }
 
@@ -494,6 +500,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         requestedMode = DashboardCardDisplayMode.VALUE,
                         isEditing = false,
                         onModeSelected = {},
+                        usesDeltaPill = true,
                         modifier = Modifier.weight(1f).height(240.dp),
                     )
                     DashboardMetricCard(
@@ -663,6 +670,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         requestedMode = DashboardCardDisplayMode.BAR,
                         isEditing = false,
                         onModeSelected = {},
+                        usesDeltaPill = true,
                     )
                 }
             }
@@ -695,6 +703,7 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                         requestedMode = DashboardCardDisplayMode.BAR,
                         isEditing = false,
                         onModeSelected = {},
+                        usesDeltaPill = true,
                     )
                 }
             }

@@ -1,44 +1,26 @@
 package app.readylytics.health.domain.sleep
 
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.domain.dashboard.ModeSpec
+import app.readylytics.health.domain.dashboard.resolveRequestedMode
 
 /**
- * Which visualization modes a sleep layout item supports, plus its legacy default.
- *
- * Mirrors [app.readylytics.health.domain.dashboard.DashboardCardSpec] for the sleep-specific
- * config types ([SleepTopCardConfiguration] / [SleepMetricCardConfiguration]). The full-width
- * top cards (architecture bar, stages timeline, HR chart) and the value-only metric cards
- * (nap duration, nap count) have no spec — they are not mode-switchable.
+ * Sleep layout items that are mode-switchable, mirroring the dashboard [DashboardCardCatalog].
+ * Full-width top cards (architecture bar, stages timeline, HR chart) and the value-only metric
+ * cards (nap duration, nap count) have no spec.
  */
-data class SleepCardSpec(
-    val legacyDefaultMode: DashboardCardDisplayMode,
-    val supportedModes: List<DashboardCardDisplayMode>,
-)
-
 object SleepCardCatalog {
-    fun topCardSpec(id: SleepTopCardId): SleepCardSpec? = topCardSpecs[id]
+    fun topCardSpec(id: SleepTopCardId): ModeSpec? = topCardSpecs[id]
 
-    fun metricCardSpec(id: SleepMetricCardId): SleepCardSpec? = metricCardSpecs[id]
+    fun metricCardSpec(id: SleepMetricCardId): ModeSpec? = metricCardSpecs[id]
 
-    fun requestedTopCardMode(configuration: SleepTopCardConfiguration): DashboardCardDisplayMode {
-        val spec = topCardSpec(configuration.cardId) ?: return DashboardCardDisplayMode.VALUE
-        val requested = configuration.requestedDisplayMode
-        return if (requested != null && spec.supportedModes.contains(requested)) {
-            requested
-        } else {
-            spec.legacyDefaultMode
-        }
-    }
+    fun requestedTopCardMode(configuration: SleepTopCardConfiguration): DashboardCardDisplayMode =
+        topCardSpec(configuration.cardId)?.resolveRequestedMode(configuration.requestedDisplayMode)
+            ?: DashboardCardDisplayMode.VALUE
 
-    fun requestedMetricCardMode(configuration: SleepMetricCardConfiguration): DashboardCardDisplayMode {
-        val spec = metricCardSpec(configuration.cardId) ?: return DashboardCardDisplayMode.VALUE
-        val requested = configuration.requestedDisplayMode
-        return if (requested != null && spec.supportedModes.contains(requested)) {
-            requested
-        } else {
-            spec.legacyDefaultMode
-        }
-    }
+    fun requestedMetricCardMode(configuration: SleepMetricCardConfiguration): DashboardCardDisplayMode =
+        metricCardSpec(configuration.cardId)?.resolveRequestedMode(configuration.requestedDisplayMode)
+            ?: DashboardCardDisplayMode.VALUE
 
     fun applyGlobalTopCardMode(
         configurations: List<SleepTopCardConfiguration>,
@@ -71,20 +53,17 @@ object SleepCardCatalog {
             DashboardCardDisplayMode.VALUE,
         )
 
-    // Only the two gauge top cards are mode-switchable; the remaining top cards are full-width
-    // charts with no display-mode concept.
-    private val topCardSpecs: Map<SleepTopCardId, SleepCardSpec> =
+    private val topCardSpecs: Map<SleepTopCardId, ModeSpec> =
         mapOf(
-            SleepTopCardId.SLEEP_SCORE to SleepCardSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
-            SleepTopCardId.SLEEP_DURATION_GAUGE to SleepCardSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
+            SleepTopCardId.SLEEP_SCORE to ModeSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
+            SleepTopCardId.SLEEP_DURATION_GAUGE to ModeSpec(DashboardCardDisplayMode.GAUGE, ALL_MODES),
         )
 
-    // Percentage-based metric cards are mode-switchable; nap duration/count stay value-only.
-    private val metricCardSpecs: Map<SleepMetricCardId, SleepCardSpec> =
+    private val metricCardSpecs: Map<SleepMetricCardId, ModeSpec> =
         mapOf(
-            SleepMetricCardId.CIRCADIAN_CONSISTENCY to SleepCardSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
-            SleepMetricCardId.SLEEP_EFFICIENCY to SleepCardSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
-            SleepMetricCardId.DEEP_SLEEP to SleepCardSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
-            SleepMetricCardId.REM_SLEEP to SleepCardSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
+            SleepMetricCardId.CIRCADIAN_CONSISTENCY to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
+            SleepMetricCardId.SLEEP_EFFICIENCY to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
+            SleepMetricCardId.DEEP_SLEEP to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
+            SleepMetricCardId.REM_SLEEP to ModeSpec(DashboardCardDisplayMode.VALUE, ALL_MODES),
         )
 }

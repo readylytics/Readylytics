@@ -140,7 +140,7 @@ private fun DashboardScoreGaugePreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec.toUniversalSpec(),
+            specification = sleepScoreSpec.toUniversalSpec(CardId.SLEEP_SCORE.usesDeltaPill()),
             requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
@@ -154,7 +154,7 @@ private fun DashboardScoreBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec.toUniversalSpec(),
+            specification = sleepScoreSpec.toUniversalSpec(CardId.SLEEP_SCORE.usesDeltaPill()),
             requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
@@ -168,7 +168,7 @@ private fun DashboardScoreValuePreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec.toUniversalSpec(),
+            specification = sleepScoreSpec.toUniversalSpec(CardId.SLEEP_SCORE.usesDeltaPill()),
             requestedMode = DashboardCardDisplayMode.VALUE.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
@@ -182,7 +182,7 @@ private fun DashboardGoalAboveTargetBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = goalAboveTargetPresentation(),
-            specification = sleepDurationSpec.toUniversalSpec(),
+            specification = sleepDurationSpec.toUniversalSpec(CardId.SLEEP_DURATION.usesDeltaPill()),
             requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
@@ -196,7 +196,7 @@ private fun DashboardBaselineWithinRangeGaugePreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = baselineWithinRangePresentation(),
-            specification = hrvSpec.toUniversalSpec(),
+            specification = hrvSpec.toUniversalSpec(CardId.HRV.usesDeltaPill()),
             requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
@@ -210,7 +210,7 @@ private fun DashboardWeightReferenceRangeBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = weightReferenceRangePresentation(),
-            specification = weightSpec.toUniversalSpec(),
+            specification = weightSpec.toUniversalSpec(CardId.WEIGHT.usesDeltaPill()),
             requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
@@ -224,7 +224,7 @@ private fun DashboardGoalUnavailableBarPreview() {
     FitDashboardTheme {
         UniversalMetricCard(
             presentation = goalUnavailablePresentation(),
-            specification = sleepDurationSpec.toUniversalSpec(),
+            specification = sleepDurationSpec.toUniversalSpec(CardId.SLEEP_DURATION.usesDeltaPill()),
             requestedMode = DashboardCardDisplayMode.BAR.toUniversalMode(),
             isEditing = false,
             onModeSelected = {},
@@ -239,7 +239,7 @@ private fun DashboardEditModeSelectorPreview() {
         var mode by remember { mutableStateOf(DashboardCardDisplayMode.GAUGE) }
         UniversalMetricCard(
             presentation = sleepScorePresentation(),
-            specification = sleepScoreSpec.toUniversalSpec(),
+            specification = sleepScoreSpec.toUniversalSpec(CardId.SLEEP_SCORE.usesDeltaPill()),
             requestedMode = mode.toUniversalMode(),
             isEditing = true,
             onModeSelected = { mode = it.toDashboardMode() },
@@ -257,7 +257,7 @@ private fun DashboardCardFontScaleDefaultPreview() {
         ) {
             UniversalMetricCard(
                 presentation = sleepScorePresentation(),
-                specification = sleepScoreSpec.toUniversalSpec(),
+                specification = sleepScoreSpec.toUniversalSpec(CardId.SLEEP_SCORE.usesDeltaPill()),
                 requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
                 isEditing = true,
                 onModeSelected = {},
@@ -276,7 +276,7 @@ private fun DashboardCardFontScaleLargePreview() {
         ) {
             UniversalMetricCard(
                 presentation = sleepScorePresentation(),
-                specification = sleepScoreSpec.toUniversalSpec(),
+                specification = sleepScoreSpec.toUniversalSpec(CardId.SLEEP_SCORE.usesDeltaPill()),
                 requestedMode = DashboardCardDisplayMode.GAUGE.toUniversalMode(),
                 isEditing = true,
                 onModeSelected = {},
