@@ -8,7 +8,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import app.readylytics.health.domain.dashboard.CardId
 
 /**
  * Pure state holder for drag-and-drop reordering logic.
@@ -23,36 +22,36 @@ import app.readylytics.health.domain.dashboard.CardId
  *  V4 — exactly one onCardReorder (or onCardRemove) call is emitted, on onDragEnd.
  */
 @Stable
-class DragController(
-    initialOrder: List<CardId>,
+class DragController<T : Any>(
+    initialOrder: List<T>,
 ) {
     /** Working order during drag. Authoritative for rendering while draggedCardId != null. */
-    var pendingOrder: List<CardId> by mutableStateOf(initialOrder)
+    var pendingOrder: List<T> by mutableStateOf(initialOrder)
         private set
 
     /** Card currently being dragged, null when idle. */
-    var draggedCardId: CardId? by mutableStateOf(null)
+    var draggedCardId: T? by mutableStateOf(null)
         private set
 
     /** Pointer offset from the drag-start origin, in root-local pixels. */
     var dragOffset: Offset by mutableStateOf(Offset.Zero)
         private set
 
-    /** Slot bounds keyed by CardId. MUST be written in a single coord space (root-local). */
-    val slotBounds: SnapshotStateMap<CardId, Rect> = mutableStateMapOf()
+    /** Slot bounds keyed by id. MUST be written in a single coord space (root-local). */
+    val slotBounds: SnapshotStateMap<T, Rect> = mutableStateMapOf()
 
     /** True when the dragged card's center has crossed the delete-zone top edge. */
     var hoveringDeleteZone: Boolean by mutableStateOf(false)
         private set
 
     fun updateSlotBounds(
-        id: CardId,
+        id: T,
         rect: Rect,
     ) {
         slotBounds[id] = rect
     }
 
-    fun onDragStart(id: CardId) {
+    fun onDragStart(id: T) {
         draggedCardId = id
         dragOffset = Offset.Zero
         hoveringDeleteZone = false
@@ -107,7 +106,7 @@ class DragController(
         pendingOrder = newOrder
     }
 
-    fun onDragEnd(): DragEndResult {
+    fun onDragEnd(): DragEndResult<T> {
         val id = draggedCardId
         val deletion = hoveringDeleteZone
         val finalOrder = pendingOrder
@@ -125,7 +124,7 @@ class DragController(
      * Sync pendingOrder from an upstream emission.
      * No-op while a drag is active (V1).
      */
-    fun syncFromUpstream(newOrder: List<CardId>) {
+    fun syncFromUpstream(newOrder: List<T>) {
         if (draggedCardId == null) {
             pendingOrder = newOrder
         }
@@ -133,8 +132,8 @@ class DragController(
 }
 
 /** Result returned by DragController.onDragEnd. */
-data class DragEndResult(
-    val draggedId: CardId?,
-    val finalOrder: List<CardId>,
+data class DragEndResult<T>(
+    val draggedId: T?,
+    val finalOrder: List<T>,
     val delete: Boolean,
 )

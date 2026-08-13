@@ -90,7 +90,7 @@ fun ReorderableCardGrid(
     onCardRemove: (CardId) -> Unit,
     onCardReorder: (List<CardConfiguration>) -> Unit,
     modifier: Modifier = Modifier,
-    controller: DragController? = null,
+    controller: DragController<CardId>? = null,
 ) {
     val items = cardConfigurations.items
     val dataMap = cardDataMap.map
@@ -105,7 +105,7 @@ fun ReorderableCardGrid(
 
     val dragController =
         remember {
-            controller ?: DragController(
+            controller ?: DragController<CardId>(
                 items
                     .filter { it.isVisible && dataMap.containsKey(it.cardId) }
                     .sortedBy { it.position }
@@ -362,7 +362,7 @@ private fun RenderCardItem(
     card: CardConfiguration,
     cardDataMap: Map<CardId, @Composable (CardConfiguration) -> Unit>,
     isEditing: Boolean,
-    controller: DragController,
+    controller: DragController<CardId>,
     onHandlePositioned: (CardId, LayoutCoordinates) -> Unit,
     modifier: Modifier,
 ) {
@@ -403,7 +403,7 @@ private fun ReorderableCardItem(
     content: @Composable (() -> Unit)?,
     isEditing: Boolean,
     isDragged: Boolean,
-    controller: DragController,
+    controller: DragController<CardId>,
     onHandlePositioned: (CardId, LayoutCoordinates) -> Unit,
     modifier: Modifier = Modifier,
 ) {

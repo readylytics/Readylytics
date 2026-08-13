@@ -22,7 +22,7 @@ class DragControllerTest {
     // Three-card order used as base in most tests
     private val initialOrder = listOf(CardId.SLEEP_SCORE, CardId.HRV, CardId.STEPS)
 
-    private lateinit var controller: DragController
+    private lateinit var controller: DragController<CardId>
 
     @Before
     fun setUp() {
