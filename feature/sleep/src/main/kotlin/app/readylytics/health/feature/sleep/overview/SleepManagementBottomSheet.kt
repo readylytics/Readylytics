@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -53,10 +51,9 @@ import app.readylytics.health.core.ui.R as CoreUiR
 /**
  * Unified bottom sheet for customizing the layout of the Sleep tab.
  *
- * Supports sectioned/tabbed reordering, visibility switches, and display mode pickers for:
- * - Top Cards ([SleepTopCardConfiguration])
- * - Charts ([SleepChartConfiguration])
- * - Metric Cards ([SleepMetricCardConfiguration])
+ * Reordering happens on the Sleep screen via drag-and-drop while in edit mode; this sheet
+ * provides visibility toggles, display-mode pickers, and reset-to-defaults for the three
+ * sections (top cards, charts, metric cards).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,9 +70,6 @@ fun SleepManagementBottomSheet(
     modifier: Modifier = Modifier,
     onTopCardDisplayModeChanged: ((SleepTopCardId, DashboardCardDisplayMode?) -> Unit)? = null,
     onMetricCardDisplayModeChanged: ((SleepMetricCardId, DashboardCardDisplayMode?) -> Unit)? = null,
-    onTopCardReordered: ((List<SleepTopCardConfiguration>) -> Unit)? = null,
-    onChartReordered: ((List<SleepChartConfiguration>) -> Unit)? = null,
-    onMetricCardReordered: ((List<SleepMetricCardConfiguration>) -> Unit)? = null,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -148,10 +142,7 @@ fun SleepManagementBottomSheet(
             ) {
                 when (selectedTabIndex) {
                     0 -> {
-                        itemsIndexed(
-                            items = sortedTopCards,
-                            key = { _, card -> "top_card_${card.cardId.name}" },
-                        ) { index, card ->
+                        items(sortedTopCards, key = { "top_card_${it.cardId.name}" }) { card ->
                             TopCardManagementItem(
                                 card = card,
                                 onVisibilityChanged = { visible -> onTopCardVisibilityChanged(card.cardId, visible) },
@@ -159,73 +150,19 @@ fun SleepManagementBottomSheet(
                                     onTopCardDisplayModeChanged?.let { callback ->
                                         { mode -> callback(card.cardId, mode) }
                                     },
-                                onMoveUp =
-                                    if (index > 0 && onTopCardReordered != null) {
-                                        {
-                                            val mutable = sortedTopCards.toMutableList()
-                                            val temp = mutable[index]
-                                            mutable[index] = mutable[index - 1]
-                                            mutable[index - 1] = temp
-                                            onTopCardReordered(mutable.mapIndexed { i, c -> c.copy(position = i) })
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                onMoveDown =
-                                    if (index < sortedTopCards.size - 1 && onTopCardReordered != null) {
-                                        {
-                                            val mutable = sortedTopCards.toMutableList()
-                                            val temp = mutable[index]
-                                            mutable[index] = mutable[index + 1]
-                                            mutable[index + 1] = temp
-                                            onTopCardReordered(mutable.mapIndexed { i, c -> c.copy(position = i) })
-                                        }
-                                    } else {
-                                        null
-                                    },
                             )
                         }
                     }
                     1 -> {
-                        itemsIndexed(
-                            items = sortedCharts,
-                            key = { _, chart -> "chart_${chart.chartId.name}" },
-                        ) { index, chart ->
+                        items(sortedCharts, key = { "chart_${it.chartId.name}" }) { chart ->
                             ChartManagementItem(
                                 chart = chart,
                                 onVisibilityChanged = { visible -> onChartVisibilityChanged(chart.chartId, visible) },
-                                onMoveUp =
-                                    if (index > 0 && onChartReordered != null) {
-                                        {
-                                            val mutable = sortedCharts.toMutableList()
-                                            val temp = mutable[index]
-                                            mutable[index] = mutable[index - 1]
-                                            mutable[index - 1] = temp
-                                            onChartReordered(mutable.mapIndexed { i, c -> c.copy(position = i) })
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                onMoveDown =
-                                    if (index < sortedCharts.size - 1 && onChartReordered != null) {
-                                        {
-                                            val mutable = sortedCharts.toMutableList()
-                                            val temp = mutable[index]
-                                            mutable[index] = mutable[index + 1]
-                                            mutable[index + 1] = temp
-                                            onChartReordered(mutable.mapIndexed { i, c -> c.copy(position = i) })
-                                        }
-                                    } else {
-                                        null
-                                    },
                             )
                         }
                     }
                     2 -> {
-                        itemsIndexed(
-                            items = sortedMetricCards,
-                            key = { _, card -> "metric_card_${card.cardId.name}" },
-                        ) { index, card ->
+                        items(sortedMetricCards, key = { "metric_card_${it.cardId.name}" }) { card ->
                             MetricCardManagementItem(
                                 card = card,
                                 onVisibilityChanged = { visible ->
@@ -234,30 +171,6 @@ fun SleepManagementBottomSheet(
                                 onDisplayModeChanged =
                                     onMetricCardDisplayModeChanged?.let { callback ->
                                         { mode -> callback(card.cardId, mode) }
-                                    },
-                                onMoveUp =
-                                    if (index > 0 && onMetricCardReordered != null) {
-                                        {
-                                            val mutable = sortedMetricCards.toMutableList()
-                                            val temp = mutable[index]
-                                            mutable[index] = mutable[index - 1]
-                                            mutable[index - 1] = temp
-                                            onMetricCardReordered(mutable.mapIndexed { i, c -> c.copy(position = i) })
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                onMoveDown =
-                                    if (index < sortedMetricCards.size - 1 && onMetricCardReordered != null) {
-                                        {
-                                            val mutable = sortedMetricCards.toMutableList()
-                                            val temp = mutable[index]
-                                            mutable[index] = mutable[index + 1]
-                                            mutable[index + 1] = temp
-                                            onMetricCardReordered(mutable.mapIndexed { i, c -> c.copy(position = i) })
-                                        }
-                                    } else {
-                                        null
                                     },
                             )
                         }
@@ -286,8 +199,6 @@ private fun TopCardManagementItem(
     card: SleepTopCardConfiguration,
     onVisibilityChanged: (Boolean) -> Unit,
     onDisplayModeChanged: ((DashboardCardDisplayMode?) -> Unit)?,
-    onMoveUp: (() -> Unit)?,
-    onMoveDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     ListItem(
@@ -304,31 +215,6 @@ private fun TopCardManagementItem(
                         selectedMode = card.requestedDisplayMode,
                         onModeSelected = onDisplayModeChanged,
                     )
-                }
-            } else {
-                null
-            },
-        leadingContent =
-            if (onMoveUp != null || onMoveDown != null) {
-                {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (onMoveUp != null) {
-                            IconButton(onClick = onMoveUp) {
-                                Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowUp,
-                                    contentDescription = stringResource(R.string.sleep_management_move_up),
-                                )
-                            }
-                        }
-                        if (onMoveDown != null) {
-                            IconButton(onClick = onMoveDown) {
-                                Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.sleep_management_move_down),
-                                )
-                            }
-                        }
-                    }
                 }
             } else {
                 null
@@ -347,8 +233,6 @@ private fun TopCardManagementItem(
 private fun ChartManagementItem(
     chart: SleepChartConfiguration,
     onVisibilityChanged: (Boolean) -> Unit,
-    onMoveUp: (() -> Unit)?,
-    onMoveDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     ListItem(
@@ -358,31 +242,6 @@ private fun ChartManagementItem(
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
-        leadingContent =
-            if (onMoveUp != null || onMoveDown != null) {
-                {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (onMoveUp != null) {
-                            IconButton(onClick = onMoveUp) {
-                                Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowUp,
-                                    contentDescription = stringResource(R.string.sleep_management_move_up),
-                                )
-                            }
-                        }
-                        if (onMoveDown != null) {
-                            IconButton(onClick = onMoveDown) {
-                                Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.sleep_management_move_down),
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                null
-            },
         trailingContent = {
             Checkbox(
                 checked = chart.isVisible,
@@ -398,8 +257,6 @@ private fun MetricCardManagementItem(
     card: SleepMetricCardConfiguration,
     onVisibilityChanged: (Boolean) -> Unit,
     onDisplayModeChanged: ((DashboardCardDisplayMode?) -> Unit)?,
-    onMoveUp: (() -> Unit)?,
-    onMoveDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     ListItem(
@@ -416,31 +273,6 @@ private fun MetricCardManagementItem(
                         selectedMode = card.requestedDisplayMode,
                         onModeSelected = onDisplayModeChanged,
                     )
-                }
-            } else {
-                null
-            },
-        leadingContent =
-            if (onMoveUp != null || onMoveDown != null) {
-                {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (onMoveUp != null) {
-                            IconButton(onClick = onMoveUp) {
-                                Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowUp,
-                                    contentDescription = stringResource(R.string.sleep_management_move_up),
-                                )
-                            }
-                        }
-                        if (onMoveDown != null) {
-                            IconButton(onClick = onMoveDown) {
-                                Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.sleep_management_move_down),
-                                )
-                            }
-                        }
-                    }
                 }
             } else {
                 null

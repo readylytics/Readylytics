@@ -56,7 +56,5 @@
     <string name="sleep_management_display_mode_gauge">Gauge</string>
     <string name="sleep_management_display_mode_bar">Bar</string>
     <string name="sleep_management_display_mode_value">Value</string>
-    <string name="sleep_management_move_up">Move up</string>
-    <string name="sleep_management_move_down">Move down</string>
 </resources>
 

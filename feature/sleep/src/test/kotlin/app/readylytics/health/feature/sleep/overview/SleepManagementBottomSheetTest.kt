@@ -29,30 +29,6 @@ class SleepManagementBottomSheetTest {
     }
 
     @Test
-    fun `reordering top card list updates position indices deterministically`() {
-        val initial =
-            listOf(
-                SleepTopCardConfiguration(cardId = SleepTopCardId.SLEEP_SCORE, position = 0),
-                SleepTopCardConfiguration(cardId = SleepTopCardId.SLEEP_DURATION_GAUGE, position = 1),
-                SleepTopCardConfiguration(cardId = SleepTopCardId.SLEEP_BREAKDOWN_BAR, position = 2),
-            )
-
-        // Swap 0 and 1
-        val mutable = initial.toMutableList()
-        val temp = mutable[0]
-        mutable[0] = mutable[1]
-        mutable[1] = temp
-        val reordered = mutable.mapIndexed { index, config -> config.copy(position = index) }
-
-        assertEquals(SleepTopCardId.SLEEP_DURATION_GAUGE, reordered[0].cardId)
-        assertEquals(0, reordered[0].position)
-        assertEquals(SleepTopCardId.SLEEP_SCORE, reordered[1].cardId)
-        assertEquals(1, reordered[1].position)
-        assertEquals(SleepTopCardId.SLEEP_BREAKDOWN_BAR, reordered[2].cardId)
-        assertEquals(2, reordered[2].position)
-    }
-
-    @Test
     fun `metric card display mode modification preserves card identity`() {
         val card =
             SleepMetricCardConfiguration(
