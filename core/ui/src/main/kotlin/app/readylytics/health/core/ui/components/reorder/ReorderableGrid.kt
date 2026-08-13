@@ -80,7 +80,7 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
     controller: DragController<Id>? = null,
 ) {
     val configById: Map<Id, Config> =
-        remember(items) {
+        remember(items, dataMap.keys) {
             items
                 .filter { it.isVisible && dataMap.containsKey(it.id) }
                 .associateBy { it.id }
@@ -195,7 +195,7 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
                     key(item.id) {
                         ReorderableSlot(
                             id = item.id,
-                            content = { dataMap[item.id]!!(item) },
+                            content = remember(item, dataMap[item.id]) { { dataMap[item.id]!!(item) } },
                             isEditing = isEditing,
                             isDragged = draggedId == item.id,
                             controller = dragController,
@@ -230,7 +230,11 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
                         key(leftItem.id) {
                             ReorderableSlot(
                                 id = leftItem.id,
-                                content = { dataMap[leftItem.id]!!(leftItem) },
+                                content =
+                                    remember(
+                                        leftItem,
+                                        dataMap[leftItem.id],
+                                    ) { { dataMap[leftItem.id]!!(leftItem) } },
                                 isEditing = isEditing,
                                 isDragged = draggedId == leftItem.id,
                                 controller = dragController,
@@ -265,7 +269,11 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
                             key(rightItem.id) {
                                 ReorderableSlot(
                                     id = rightItem.id,
-                                    content = { dataMap[rightItem.id]!!(rightItem) },
+                                    content =
+                                        remember(
+                                            rightItem,
+                                            dataMap[rightItem.id],
+                                        ) { { dataMap[rightItem.id]!!(rightItem) } },
                                     isEditing = isEditing,
                                     isDragged = draggedId == rightItem.id,
                                     controller = dragController,

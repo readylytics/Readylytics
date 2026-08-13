@@ -56,7 +56,7 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableList(
     controller: DragController<Id>? = null,
 ) {
     val configById: Map<Id, Config> =
-        remember(items) {
+        remember(items, dataMap.keys) {
             items
                 .filter { it.isVisible && dataMap.containsKey(it.id) }
                 .associateBy { it.id }
@@ -161,7 +161,7 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableList(
                 key(item.id) {
                     ReorderableSlot(
                         id = item.id,
-                        content = { dataMap[item.id]!!(item) },
+                        content = remember(item, dataMap[item.id]) { { dataMap[item.id]!!(item) } },
                         isEditing = isEditing,
                         isDragged = draggedId == item.id,
                         controller = dragController,
