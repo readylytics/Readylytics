@@ -518,6 +518,23 @@ any caller-supplied window to the same 42-day span its own fetch would have used
 pre-fetched list can never shift a workout's gained strain relative to the Workout Detail
 screen (which supplies no window and self-fetches).
 
+**History pagination boundary.** Blood-pressure, workout, weight, and body-fat history are read
+with Room `LIMIT/OFFSET` pagination rather than unbounded range loads.
+`BloodPressureDetailViewModel`, `WeightDetailViewModel`, and `BodyFatDetailViewModel` each
+combine the selected range/date with a `_currentPage` flow and read
+`*Repository.getByDateRangePaged`/`countByDateRange` (newest-first
+`ORDER BY timestampMs DESC, id DESC`, half-open `[fromMs, toMs)`) for the visible page, keeping
+the full-range query only for the chart series. `WorkoutsViewModel` scopes the history page to
+`[displayFromMs, selectedDayEndMs)` via `WorkoutRepository.getInRangePaged`/`countByTimeRange`
+(`WorkoutDao.getPagedInRange`, newest-first `ORDER BY startTime DESC, id DESC`); the full 42-day
+daily-summary flows stay subscribed for charts/scoring and are what re-drive the page after a
+sync, since workout history is no longer a reactive `observeSince` flow. The `WORKOUT_ONLY`
+daily strain delta is derived from every selected-day workout via a separate
+`getInRange(selectedMidnightMs, selectedDayEndMs)` read, independent of the paged history view,
+so the card total still matches the rounded per-row gains. Weight history keeps the full-range
+records for the chart and per-row delta (the first row of a page may delta against a record on a
+previous, older page) while rendering only the paged subset. Page size is 10 on all screens.
+
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
 geometry and dial progress, but visible Sleep Score, Readiness, Restoration, TRIMP,

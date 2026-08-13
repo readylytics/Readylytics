@@ -12,6 +12,7 @@ import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
+import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.toMetricStatus
@@ -25,6 +26,10 @@ import app.readylytics.health.core.ui.R as CoreUiR
 @Composable
 fun BloodPressureHistorySection(
     items: List<BloodPressureHistoryItem>,
+    currentPage: Int,
+    totalPages: Int,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -39,6 +44,12 @@ fun BloodPressureHistorySection(
                     ),
             )
         }
+        PaginationControls(
+            currentPage = currentPage,
+            totalPages = totalPages,
+            onPreviousPage = onPreviousPage,
+            onNextPage = onNextPage,
+        )
     }
 }
 

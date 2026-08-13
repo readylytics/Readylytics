@@ -13,10 +13,13 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -56,6 +59,8 @@ class BloodPressureDetailViewModelTest {
         repository =
             mockk {
                 coEvery { getByDateRange(any(), any()) } returns emptyList()
+                coEvery { getByDateRangePaged(any(), any(), any(), any()) } returns emptyList()
+                coEvery { countByDateRange(any(), any()) } returns 0
                 coEvery { getLatest() } returns null
             }
         selectedDateRepo =
@@ -68,18 +73,19 @@ class BloodPressureDetailViewModelTest {
             }
     }
 
-    private fun createViewModel(): BloodPressureDetailViewModel =
-        BloodPressureDetailViewModel(
-            bloodPressureRepository = repository,
-            selectedDateRepository = selectedDateRepo,
-            ioDispatcher = testDispatcher,
-        )
+    private fun TestScope.createViewModel(): BloodPressureDetailViewModel {
+        val vm =
+            BloodPressureDetailViewModel(
+                bloodPressureRepository = repository,
+                selectedDateRepository = selectedDateRepo,
+                ioDispatcher = testDispatcher,
+            )
+        backgroundScope.launch { vm.uiState.collect {} }
+        return vm
+    }
 
     @After
     fun tearDown() {
-        if (::viewModel.isInitialized) {
-            viewModel.viewModelScope.cancel()
-        }
         Dispatchers.resetMain()
     }
 
@@ -201,6 +207,8 @@ class BloodPressureDetailViewModelTest {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertEquals(emptyList<Any>(), state.historyItems)
+            assertEquals(1, state.totalPages)
+            assertEquals(1, state.currentPage)
         }
 
     @Test
@@ -208,7 +216,8 @@ class BloodPressureDetailViewModelTest {
         runTest {
             val older = bloodPressureEntity(systolic = 140, diastolic = 70, timestampMs = 1_000L)
             val newer = bloodPressureEntity(systolic = 180, diastolic = 110, timestampMs = 2_000L)
-            coEvery { repository.getByDateRange(any(), any()) } returns listOf(older, newer)
+            coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns listOf(newer, older)
+            coEvery { repository.countByDateRange(any(), any()) } returns 2
 
             viewModel = createViewModel()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
@@ -218,6 +227,166 @@ class BloodPressureDetailViewModelTest {
             assertEquals(BloodPressureStatus.HypertensionStage2, state.historyItems[0].status)
             assertEquals(1_000L, state.historyItems[1].timestampMs)
             assertEquals(BloodPressureStatus.HypertensionStage2, state.historyItems[1].status)
+        }
+
+    @Test
+    fun `historyItems are paginated`() =
+        runTest {
+            val records =
+                (1..25)
+                    .map { i ->
+                        bloodPressureEntity(systolic = 120, diastolic = 80, timestampMs = i * 1000L)
+                    }.reversed()
+
+            coEvery { repository.getByDateRangePaged(any(), any(), 10, 0) } returns records.take(10)
+            coEvery { repository.getByDateRangePaged(any(), any(), 10, 10) } returns records.drop(10).take(10)
+            coEvery { repository.countByDateRange(any(), any()) } returns 25
+
+            viewModel = createViewModel()
+            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+
+            assertEquals(10, state.historyItems.size)
+            assertEquals(3, state.totalPages)
+            assertEquals(1, state.currentPage)
+            assertEquals(25_000L, state.historyItems.first().timestampMs)
+
+            viewModel.onNextPage()
+            val pageTwo = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(15_000L, pageTwo.historyItems.first().timestampMs)
+        }
+
+    @Test
+    fun `page resets to 1 onRangeSelected`() =
+        runTest {
+            coEvery { repository.countByDateRange(any(), any()) } returns 25
+            coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(bloodPressureEntity(120, 80))
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            var state = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(2, state.currentPage)
+
+            viewModel.onRangeSelected(TimeRange.THIRTY_DAYS)
+            state = viewModel.uiState.first { it.currentPage == 1 }
+            assertEquals(1, state.currentPage)
+        }
+
+    @Test
+    fun `page resets to 1 on selected date change`() =
+        runTest {
+            coEvery { repository.countByDateRange(any(), any()) } returns 25
+            coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(bloodPressureEntity(120, 80))
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            var state = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(2, state.currentPage)
+
+            selectedDateRepo.updateSelectedDate(LocalDate.now().minusDays(1))
+            state = viewModel.uiState.first { it.currentPage == 1 }
+            assertEquals(1, state.currentPage)
+        }
+
+    @Test
+    fun `page persists across re-subscription after WhileSubscribed timeout`() =
+        runTest(testDispatcher) {
+            coEvery { repository.countByDateRange(any(), any()) } returns 25
+            coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(bloodPressureEntity(120, 80))
+
+            viewModel =
+                BloodPressureDetailViewModel(
+                    bloodPressureRepository = repository,
+                    selectedDateRepository = selectedDateRepo,
+                    ioDispatcher = testDispatcher,
+                )
+
+            val job1 = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { !it.isLoading }
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+
+            job1.cancel()
+            testScheduler.advanceUntilIdle()
+
+            val job2 = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+            assertEquals(2, viewModel.uiState.value.currentPage)
+            job2.cancel()
+
+            viewModel.viewModelScope.coroutineContext[Job]?.cancelAndJoin()
+        }
+
+    @Test
+    fun `last partial page renders correctly`() =
+        runTest {
+            val records =
+                (1..15)
+                    .map { i ->
+                        bloodPressureEntity(systolic = 120, diastolic = 80, timestampMs = i * 1000L)
+                    }.reversed()
+
+            coEvery { repository.getByDateRangePaged(any(), any(), 10, 0) } returns records.take(10)
+            coEvery { repository.getByDateRangePaged(any(), any(), 10, 10) } returns records.drop(10).take(5)
+            coEvery { repository.countByDateRange(any(), any()) } returns 15
+
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+            viewModel.onNextPage()
+
+            val pageTwo = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(5, pageTwo.historyItems.size)
+            assertEquals(5_000L, pageTwo.historyItems.first().timestampMs)
+            assertEquals(2, pageTwo.totalPages)
+        }
+
+    @Test
+    fun `currentPage is clamped when count drops`() =
+        runTest {
+            val countFlow = MutableStateFlow(25)
+            coEvery { repository.countByDateRange(any(), any()) } answers { countFlow.value }
+            coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(bloodPressureEntity(120, 80))
+
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+            viewModel.onNextPage()
+            val state3 = viewModel.uiState.first { it.currentPage == 3 }
+            assertEquals(3, state3.currentPage)
+            assertEquals(3, state3.totalPages)
+
+            countFlow.value = 5
+            viewModel.onPreviousPage()
+            val clampedState = viewModel.uiState.first { it.totalPages == 1 }
+            assertEquals(1, clampedState.currentPage)
+            assertEquals(1, clampedState.totalPages)
+        }
+
+    @Test
+    fun `onPreviousPage decrements page but not below 1`() =
+        runTest {
+            coEvery { repository.countByDateRange(any(), any()) } returns 25
+            coEvery { repository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(bloodPressureEntity(120, 80))
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { !it.isLoading && it.currentPage == 2 }
+
+            viewModel.onPreviousPage()
+            var state = viewModel.uiState.first { !it.isLoading && it.currentPage == 1 }
+            assertEquals(1, state.currentPage)
+
+            viewModel.onPreviousPage()
+            assertEquals(1, viewModel.uiState.value.currentPage)
         }
 
     // --- onRangeSelected ---

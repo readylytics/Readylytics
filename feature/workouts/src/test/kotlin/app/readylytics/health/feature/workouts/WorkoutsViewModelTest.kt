@@ -66,7 +66,8 @@ class WorkoutsViewModelTest {
     private val selectedDateFlow = MutableStateFlow(LocalDate.now())
     private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
     private val isSyncingFlow = MutableStateFlow(false)
-    private val workoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
+    private val workouts = mutableListOf<WorkoutData>()
+    private var workoutCount: Int? = null
     private val summariesFlow = MutableStateFlow<List<DailySummary>>(emptyList())
     private val preferencesFlow = MutableStateFlow(UserPreferences())
 
@@ -83,7 +84,24 @@ class WorkoutsViewModelTest {
         workoutRepository =
             mockk {
                 coEvery { getEarliestWorkoutTimestamp() } returns null
-                every { observeSince(any()) } returns workoutsFlow
+                coEvery { countByTimeRange(any(), any()) } answers {
+                    workoutCount
+                        ?: workouts.count {
+                            it.startTime >= firstArg<Long>() && it.startTime < secondArg<Long>()
+                        }
+                }
+                coEvery { getInRangePaged(any(), any(), any(), any()) } answers {
+                    val fromMs = firstArg<Long>()
+                    val toMs = secondArg<Long>()
+                    val limit = thirdArg<Int>()
+                    val offset = args[3] as Int
+                    workouts.filter { it.startTime >= fromMs && it.startTime < toMs }.drop(offset).take(limit)
+                }
+                coEvery { getInRange(any(), any()) } answers {
+                    val fromMs = firstArg<Long>()
+                    val toMs = secondArg<Long>()
+                    workouts.filter { it.startTime >= fromMs && it.startTime < toMs }
+                }
             }
         heartRateRepository =
             mockk {
@@ -199,7 +217,7 @@ class WorkoutsViewModelTest {
                         avgHr = 130f,
                     )
                 }
-            workoutsFlow.value = dummyWorkouts
+            workouts.addAll(dummyWorkouts)
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -254,7 +272,7 @@ class WorkoutsViewModelTest {
                         avgHr = 130f,
                     )
                 }
-            workoutsFlow.value = dummyWorkouts
+            workouts.addAll(dummyWorkouts)
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -296,7 +314,7 @@ class WorkoutsViewModelTest {
                         avgHr = 130f,
                     )
                 }
-            workoutsFlow.value = dummyWorkouts
+            workouts.addAll(dummyWorkouts)
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -316,6 +334,173 @@ class WorkoutsViewModelTest {
             assertEquals(1, viewModel.currentPage.value)
 
             collectJob.cancel()
+        }
+
+    @Test
+    fun `page two requests offset ten and exposes only that page`() =
+        runTest(testDispatcher) {
+            workouts.addAll(workoutPageFixtures(25))
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+
+            viewModel.onNextPage()
+            val pageTwo = viewModel.uiState.first { it.currentPage == 2 }
+
+            assertEquals(10, pageTwo.recentWorkouts.size)
+            assertEquals(
+                "11",
+                pageTwo.recentWorkouts
+                    .first()
+                    .workout.id,
+            )
+            assertEquals(
+                "20",
+                pageTwo.recentWorkouts
+                    .last()
+                    .workout.id,
+            )
+
+            coVerify { workoutRepository.getInRangePaged(any(), any(), 10, 10) }
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `final page holds the remainder`() =
+        runTest(testDispatcher) {
+            workouts.addAll(workoutPageFixtures(25))
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+            viewModel.onNextPage()
+            val pageThree = viewModel.uiState.first { it.currentPage == 3 }
+
+            assertEquals(5, pageThree.recentWorkouts.size)
+            assertEquals(
+                "21",
+                pageThree.recentWorkouts
+                    .first()
+                    .workout.id,
+            )
+            assertEquals(
+                "25",
+                pageThree.recentWorkouts
+                    .last()
+                    .workout.id,
+            )
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `shrinking repository count clamps the page`() =
+        runTest(testDispatcher) {
+            workouts.addAll(workoutPageFixtures(25))
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 3 }
+            assertEquals(3, viewModel.currentPage.value)
+
+            // The repository count collapses to a single page; the next pipeline run must clamp.
+            workoutCount = 5
+            viewModel.onPreviousPage()
+            val clamped = viewModel.uiState.first { it.totalPages == 1 }
+            assertEquals(1, clamped.currentPage)
+            assertEquals(1, clamped.totalPages)
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `previous press reaches page 1 with no dead press when count shrinks to two pages`() =
+        runTest(testDispatcher) {
+            workouts.addAll(workoutPageFixtures(25))
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 3 }
+            assertEquals(3, viewModel.currentPage.value)
+
+            // A resync/cleanup shrinks the range to 15 items (two pages) and re-emits the
+            // daily-summary flow. The pipeline clamps the displayed page to 2 while the raw
+            // _currentPage stays 3.
+            workoutCount = 15
+            summariesFlow.value = listOf(DailySummary(date = LocalDate.now(), trimpWorkoutOnly = 0f))
+            viewModel.uiState.first { it.totalPages == 2 }
+            assertEquals(2, viewModel.uiState.value.currentPage)
+            assertEquals(3, viewModel.currentPage.value)
+
+            viewModel.onPreviousPage()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, viewModel.uiState.value.currentPage)
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `display metrics are computed only for visible page rows`() =
+        runTest(testDispatcher) {
+            // Yesterday's workouts: inside the display window but outside the selected (today)
+            // window, so the selected-day strain derivation maps nothing extra.
+            val yesterday =
+                LocalDate
+                    .now()
+                    .minusDays(1)
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            workouts.addAll(workoutPageFixtures(25, startTimeMs = yesterday + 23 * 60 * 60 * 1000L))
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val state = viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+
+            assertEquals(10, state.recentWorkouts.size)
+            assertEquals(3, state.totalPages)
+
+            coVerify(exactly = 10) {
+                getWorkoutDisplayMetricsUseCase.execute(any(), any(), any(), any())
+            }
+
+            collectJob.cancel()
+        }
+
+    private fun workoutPageFixtures(
+        count: Int,
+        startTimeMs: Long = System.currentTimeMillis(),
+    ): List<WorkoutData> =
+        (1..count).map { id ->
+            WorkoutData(
+                id = id.toString(),
+                startTime = startTimeMs - (id * 1000 * 60),
+                endTime = startTimeMs - (id * 1000 * 60) + 30 * 1000L,
+                exerciseType = "running",
+                durationMinutes = 30,
+                zone1Minutes = 0f,
+                zone2Minutes = 0f,
+                zone3Minutes = 0f,
+                zone4Minutes = 0f,
+                zone5Minutes = 0f,
+                trimp = 50f,
+                avgHr = 130f,
+            )
         }
 
     @Test
@@ -343,7 +528,7 @@ class WorkoutsViewModelTest {
                     trimp = 115.6f,
                     avgHr = 134f,
                 )
-            workoutsFlow.value = listOf(workout)
+            workouts.add(workout)
             summariesFlow.value = listOf(DailySummary(date = today, trimpWorkoutOnly = 115.6f, rhrBpm = 52f))
             coEvery {
                 getWorkoutDisplayMetricsUseCase.execute(
@@ -462,7 +647,7 @@ class WorkoutsViewModelTest {
                     trimp = 25f,
                     avgHr = 116f,
                 )
-            workoutsFlow.value = listOf(workout1, workout2)
+            workouts.addAll(listOf(workout1, workout2))
             summariesFlow.value =
                 listOf(
                     DailySummary(
@@ -629,7 +814,7 @@ class WorkoutsViewModelTest {
                         trimp = 30f,
                         avgHr = 120f,
                     )
-                workoutsFlow.value = listOf(workout)
+                workouts.add(workout)
 
                 viewModel = createViewModel()
                 val collectJob = launch { viewModel.uiState.collect {} }
@@ -671,34 +856,9 @@ class WorkoutsViewModelTest {
             testScheduler.advanceUntilIdle()
             assertNull(viewModel.uiState.value.todayStrainIncrease)
 
-            workoutsFlow.value =
-                listOf(
-                    WorkoutData(
-                        id = "prior-day",
-                        startTime =
-                            selectedDate
-                                .minusDays(6)
-                                .atStartOfDay(zoneId)
-                                .toInstant()
-                                .toEpochMilli(),
-                        endTime =
-                            selectedDate
-                                .minusDays(6)
-                                .atStartOfDay(zoneId)
-                                .plusMinutes(30)
-                                .toInstant()
-                                .toEpochMilli(),
-                        exerciseType = "running",
-                        durationMinutes = 30,
-                        zone1Minutes = 0f,
-                        zone2Minutes = 0f,
-                        zone3Minutes = 0f,
-                        zone4Minutes = 0f,
-                        zone5Minutes = 0f,
-                        trimp = 0f,
-                        avgHr = 0f,
-                    ),
-                )
+            // A sync that extends history re-emits the daily-summary flow, re-running the
+            // pipeline body (which re-derives tenure) without resubscribing to a workout flow.
+            summariesFlow.value = listOf(DailySummary(date = selectedDate, trimpWorkoutOnly = 0f))
             testScheduler.advanceUntilIdle()
 
             assertEquals(0f, viewModel.uiState.value.todayStrainIncrease!!, 0.001f)
@@ -724,7 +884,7 @@ class WorkoutsViewModelTest {
                     trimp = 50f,
                     avgHr = 130f,
                 )
-            workoutsFlow.value = listOf(workout)
+            workouts.add(workout)
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -747,16 +907,14 @@ class WorkoutsViewModelTest {
             assertEquals(false, stateAfterToggle.isLoading)
             assertEquals(false, stateAfterToggle.isRefreshing)
 
-            // The heavy pipeline (Room subscriptions, tenure derivation, EMA series) must not restart
-            // on a sync toggle -- only the cheap isLoading/isRefreshing merge should run.
-            // dailySummaryRepository.observeSince is called twice per pipeline run with different
-            // fromMs arguments (fetchFromMs, rasFromMs), so verify(exactly = 1) { ...(any()) } would
-            // over-count against MockK's per-signature matching; workoutRepository.observeSince is
-            // called with a single fromMs, so it alone is a reliable "didn't restart" signal for
-            // the Room re-subscription. getEarliestWorkoutTimestamp proves the pipeline *body*
-            // (WORKOUT_ONLY tenure derivation) did not re-run either, and assertSame proves the
-            // emitted items were not recomputed.
-            verify(exactly = 1) { workoutRepository.observeSince(any()) }
+            // The heavy pipeline (paged history reads, tenure derivation, EMA series) must not
+            // restart on a sync toggle -- only the cheap isLoading/isRefreshing merge should run.
+            // getInRangePaged/countByTimeRange run once per pipeline body, so an exactly-once
+            // verification proves the body did not re-run; getEarliestWorkoutTimestamp proves the
+            // WORKOUT_ONLY tenure derivation did not re-run, and assertSame proves the emitted
+            // items were not recomputed.
+            coVerify(exactly = 1) { workoutRepository.getInRangePaged(any(), any(), any(), any()) }
+            coVerify(exactly = 1) { workoutRepository.countByTimeRange(any(), any()) }
             coVerify(exactly = 1) { workoutRepository.getEarliestWorkoutTimestamp() }
             assertSame(stateBeforeToggle.recentWorkouts, stateAfterToggle.recentWorkouts)
 
@@ -764,7 +922,7 @@ class WorkoutsViewModelTest {
         }
 
     @Test
-    fun unrelatedPreferenceChange_doesNotRestartWorkoutDatabaseFlows() =
+    fun unrelatedPreferenceChange_doesNotRestartDatabaseSubscriptions() =
         runTest(testDispatcher) {
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -776,9 +934,10 @@ class WorkoutsViewModelTest {
                 )
             testScheduler.advanceUntilIdle()
 
+            // Room subscriptions (observeLatest, observeSince) are created once per pipeline
+            // restart; an unrelated preference change must not recreate them.
             verify(exactly = 1) { dailySummaryRepository.observeLatest() }
             verify(exactly = 2) { dailySummaryRepository.observeSince(any()) }
-            verify(exactly = 1) { workoutRepository.observeSince(any()) }
             collectJob.cancelAndJoin()
         }
 
@@ -801,8 +960,10 @@ class WorkoutsViewModelTest {
     @Test
     fun `heart-rate samples are batched, not fetched once per workout`() =
         runTest(testDispatcher) {
-            // 5 close-together workouts must collapse into a single getByTimeRange call
-            // (F10) instead of one query per workout.
+            // 5 close-together workouts must collapse into one getByTimeRange call per fetch
+            // (F10) instead of one query per workout. After pagination there are two fetches:
+            // the visible page (5 workouts) and the selected-day strain derivation (5 workouts),
+            // each collapsed into a single batched query.
             val dummyWorkouts =
                 (1..5).map { id ->
                     WorkoutData(
@@ -820,7 +981,7 @@ class WorkoutsViewModelTest {
                         avgHr = 130f,
                     )
                 }
-            workoutsFlow.value = dummyWorkouts
+            workouts.addAll(dummyWorkouts)
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -828,7 +989,7 @@ class WorkoutsViewModelTest {
 
             viewModel.uiState.first { it.recentWorkouts.size == 5 }
 
-            coVerify(exactly = 1) { heartRateRepository.getByTimeRange(any(), any()) }
+            coVerify(exactly = 2) { heartRateRepository.getByTimeRange(any(), any()) }
 
             collectJob.cancel()
         }

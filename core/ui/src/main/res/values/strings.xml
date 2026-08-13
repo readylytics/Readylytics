@@ -223,4 +223,9 @@
     <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
     <string name="semantics_edit_mode_separator">, %1$s</string>
 
+    <!-- History Pagination -->
+    <string name="pagination_page_info">Page %1$d of %2$d</string>
+    <string name="pagination_button_previous">Previous page</string>
+    <string name="pagination_button_next">Next page</string>
+
 </resources>

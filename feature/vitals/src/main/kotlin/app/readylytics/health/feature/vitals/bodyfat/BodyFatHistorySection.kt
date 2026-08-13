@@ -12,6 +12,7 @@ import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
+import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.BodyFatCategory
@@ -26,6 +27,10 @@ import app.readylytics.health.core.ui.R as CoreUiR
 @Composable
 fun BodyFatHistorySection(
     items: List<BodyFatHistoryItem>,
+    currentPage: Int,
+    totalPages: Int,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -40,6 +45,12 @@ fun BodyFatHistorySection(
                     ),
             )
         }
+        PaginationControls(
+            currentPage = currentPage,
+            totalPages = totalPages,
+            onPreviousPage = onPreviousPage,
+            onNextPage = onNextPage,
+        )
     }
 }
 

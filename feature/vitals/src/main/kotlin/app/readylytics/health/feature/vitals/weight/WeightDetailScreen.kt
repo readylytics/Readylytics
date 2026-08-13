@@ -66,6 +66,8 @@ fun WeightDetailRoute(
         uiState = uiState,
         onBack = onBack,
         onRangeSelected = viewModel::onRangeSelected,
+        onPreviousPage = viewModel::onPreviousPage,
+        onNextPage = viewModel::onNextPage,
     )
 }
 
@@ -82,6 +84,8 @@ fun WeightDetailScreen(
     uiState: WeightDetailUiState,
     onBack: () -> Unit,
     onRangeSelected: (TimeRange) -> Unit,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (chartScrollState, chartZoomState) =
@@ -295,7 +299,13 @@ fun WeightDetailScreen(
             }
 
             if (uiState.historyItems.isNotEmpty()) {
-                WeightHistorySection(items = uiState.historyItems)
+                WeightHistorySection(
+                    items = uiState.historyItems,
+                    currentPage = uiState.currentPage,
+                    totalPages = uiState.totalPages,
+                    onPreviousPage = onPreviousPage,
+                    onNextPage = onNextPage,
+                )
             }
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageBottom))

@@ -16,6 +16,17 @@ class WeightRepositoryImpl
         override suspend fun getByDateRange(fromMs: Long, toMs: Long): List<WeightRecord> =
             dao.getByTimeRange(fromMs, toMs).map(WeightRecordMapper::toDomain)
 
+        override suspend fun getByDateRangePaged(
+            fromMs: Long,
+            toMs: Long,
+            limit: Int,
+            offset: Int,
+        ): List<WeightRecord> =
+            dao.getPagedByTimeRange(fromMs, toMs, limit, offset).map(WeightRecordMapper::toDomain)
+
+        override suspend fun countByDateRange(fromMs: Long, toMs: Long): Int =
+            dao.countByTimeRange(fromMs, toMs)
+
         override fun observeByDateRange(fromMs: Long, toMs: Long): Flow<List<WeightRecord>> =
             dao.observeByTimeRange(fromMs, toMs).map { entities -> entities.map(WeightRecordMapper::toDomain) }
 

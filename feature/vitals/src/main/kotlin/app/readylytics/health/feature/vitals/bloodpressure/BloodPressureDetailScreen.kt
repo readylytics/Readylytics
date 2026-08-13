@@ -59,6 +59,8 @@ fun BloodPressureDetailRoute(
         uiState = uiState,
         onBack = onBack,
         onRangeSelected = viewModel::onRangeSelected,
+        onPreviousPage = viewModel::onPreviousPage,
+        onNextPage = viewModel::onNextPage,
     )
 }
 
@@ -68,6 +70,8 @@ fun BloodPressureDetailScreen(
     uiState: BloodPressureDetailUiState,
     onBack: () -> Unit,
     onRangeSelected: (TimeRange) -> Unit,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (chartScrollState, chartZoomState) =
@@ -283,7 +287,13 @@ fun BloodPressureDetailScreen(
             }
 
             if (uiState.historyItems.isNotEmpty()) {
-                BloodPressureHistorySection(items = uiState.historyItems)
+                BloodPressureHistorySection(
+                    items = uiState.historyItems,
+                    currentPage = uiState.currentPage,
+                    totalPages = uiState.totalPages,
+                    onPreviousPage = onPreviousPage,
+                    onNextPage = onNextPage,
+                )
             }
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageBottom))
