@@ -1,8 +1,9 @@
 package app.readylytics.health.feature.sleep.overview
 
 import androidx.compose.runtime.Immutable
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
-import app.readylytics.health.domain.sleep.SleepChartManagementDelegate
+import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardManagementDelegate
@@ -45,7 +46,7 @@ internal fun createSleepTopCardStateFlow(
     }
 
 internal fun createSleepChartStateFlow(
-    delegate: SleepChartManagementDelegate,
+    delegate: LayoutManagementDelegate<SleepChartConfiguration, SleepChartId>,
     repository: SleepLayoutRepository,
 ): Flow<SleepChartState> =
     combine(
