@@ -30,14 +30,18 @@ fun buildWorkoutsCardDataMap(
                 rawValue = strainRatio,
                 maxValue = 2.0f,
                 valueText =
-                    uiState.latestMetrics?.strainRatioDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                    uiState.latestMetrics?.strainRatioDisplay ?: stringResource(
+                        CoreUiR.string.metric_value_unavailable,
+                    ),
                 unitText = "",
                 status = strainStatus,
                 tooltip = stringResource(CoreUiR.string.tooltip_strain_ratio),
                 mode = requestedMode.toUniversalMode(),
                 supportedModes = spec.supportedModes.map { it.toUniversalMode() },
                 isEditing = isEditing,
-                onModeSelected = { mode -> onWorkoutsCardDisplayModeChanged(CardId.STRAIN_RATIO, mode.toDashboardMode()) },
+                onModeSelected = { mode ->
+                    onWorkoutsCardDisplayModeChanged(CardId.STRAIN_RATIO, mode.toDashboardMode())
+                },
             )
         }
     }
@@ -101,7 +105,9 @@ fun buildWorkoutsCardDataMap(
                     mode = requestedMode.toUniversalMode(),
                     supportedModes = spec.supportedModes.map { it.toUniversalMode() },
                     isEditing = isEditing,
-                    onModeSelected = { mode -> onWorkoutsCardDisplayModeChanged(CardId.RAS_DAILY, mode.toDashboardMode()) },
+                    onModeSelected = { mode ->
+                        onWorkoutsCardDisplayModeChanged(CardId.RAS_DAILY, mode.toDashboardMode())
+                    },
                 )
             } else {
                 RasWeeklyCard(

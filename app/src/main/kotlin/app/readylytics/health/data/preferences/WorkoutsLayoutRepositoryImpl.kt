@@ -41,7 +41,13 @@ class WorkoutsLayoutRepositoryImpl
                     proto
                 } else {
                     val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended = missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
+                    val appended =
+                        missingDefaults.mapIndexed { index, config ->
+                            config.copy(
+                                position =
+                                    maxPos + 1 + index,
+                            )
+                        }
                     val merged = stored + appended
                     proto
                         .toBuilder()
@@ -63,7 +69,13 @@ class WorkoutsLayoutRepositoryImpl
                     proto
                 } else {
                     val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended = missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
+                    val appended =
+                        missingDefaults.mapIndexed { index, config ->
+                            config.copy(
+                                position =
+                                    maxPos + 1 + index,
+                            )
+                        }
                     val merged = stored + appended
                     proto
                         .toBuilder()
@@ -85,7 +97,13 @@ class WorkoutsLayoutRepositoryImpl
                     proto
                 } else {
                     val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended = missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
+                    val appended =
+                        missingDefaults.mapIndexed { index, config ->
+                            config.copy(
+                                position =
+                                    maxPos + 1 + index,
+                            )
+                        }
                     val merged = stored + appended
                     proto
                         .toBuilder()
@@ -113,7 +131,8 @@ class WorkoutsLayoutRepositoryImpl
                         stored
                     } else {
                         val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        stored + missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
+                        stored +
+                            missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
                     }
                 }
 
@@ -134,7 +153,8 @@ class WorkoutsLayoutRepositoryImpl
                         stored
                     } else {
                         val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        stored + missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
+                        stored +
+                            missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
                     }
                 }
 
@@ -155,7 +175,8 @@ class WorkoutsLayoutRepositoryImpl
                         stored
                     } else {
                         val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        stored + missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
+                        stored +
+                            missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
                     }
                 }
 

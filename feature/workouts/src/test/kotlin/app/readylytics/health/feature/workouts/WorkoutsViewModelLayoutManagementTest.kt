@@ -143,7 +143,9 @@ class WorkoutsViewModelLayoutManagementTest {
             viewModel.onToggleCardVisibility(CardId.RAS_DAILY, visible = false)
             advanceUntilIdle()
             assertFalse(
-                viewModel.uiState.value.cardConfigurations.first { it.cardId == CardId.RAS_DAILY }.isVisible,
+                viewModel.uiState.value.cardConfigurations
+                    .first { it.cardId == CardId.RAS_DAILY }
+                    .isVisible,
             )
 
             viewModel.toggleWorkoutsManagement()
@@ -170,7 +172,9 @@ class WorkoutsViewModelLayoutManagementTest {
             viewModel.onToggleChartVisibility(WorkoutChartId.ACWR_TRIMP, visible = false)
             advanceUntilIdle()
             assertFalse(
-                viewModel.uiState.value.chartConfigurations.first { it.chartId == WorkoutChartId.ACWR_TRIMP }.isVisible,
+                viewModel.uiState.value.chartConfigurations
+                    .first { it.chartId == WorkoutChartId.ACWR_TRIMP }
+                    .isVisible,
             )
 
             viewModel.toggleWorkoutsManagement()
@@ -205,7 +209,9 @@ class WorkoutsViewModelLayoutManagementTest {
             advanceUntilIdle()
             coVerify {
                 workoutsLayoutRepository.updateWorkoutHistoryConfigurations(
-                    match { history -> history.any { it.historyId == WorkoutHistoryId.STATUS_LEGEND && !it.isVisible } },
+                    match { history ->
+                        history.any { it.historyId == WorkoutHistoryId.STATUS_LEGEND && !it.isVisible }
+                    },
                 )
             }
             collector.cancel()
@@ -226,7 +232,10 @@ class WorkoutsViewModelLayoutManagementTest {
             advanceUntilIdle()
 
             assertFalse(viewModel.uiState.value.isManagingWorkoutsLayout)
-            assertTrue(viewModel.uiState.value.cardConfigurations.all { it.isVisible })
+            assertTrue(
+                viewModel.uiState.value.cardConfigurations
+                    .all { it.isVisible },
+            )
             coVerify(exactly = 0) { workoutsLayoutRepository.updateWorkoutCardConfigurations(any()) }
             collector.cancel()
         }
@@ -249,7 +258,11 @@ class WorkoutsViewModelLayoutManagementTest {
 
             viewModel.toggleWorkoutsManagement()
             advanceUntilIdle()
-            coVerify { workoutsLayoutRepository.updateWorkoutCardConfigurations(SettingsDefaults.DEFAULT_WORKOUT_CARDS) }
+            coVerify {
+                workoutsLayoutRepository.updateWorkoutCardConfigurations(
+                    SettingsDefaults.DEFAULT_WORKOUT_CARDS,
+                )
+            }
             collector.cancel()
         }
 }

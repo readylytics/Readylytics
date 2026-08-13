@@ -1,7 +1,9 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
+import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
@@ -304,15 +307,15 @@ fun WorkoutsScreen(
 
 @Composable
 private fun WorkoutsCardsSkeleton() {
-    androidx.compose.foundation.layout.Row(
+    Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = MaterialTheme.spacing.pageHorizontal, vertical = MaterialTheme.spacing.small),
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(MaterialTheme.spacing.small),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
-        app.readylytics.health.core.ui.common.ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
-        app.readylytics.health.core.ui.common.ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
+        ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
+        ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
     }
 }
 

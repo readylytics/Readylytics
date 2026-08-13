@@ -9,6 +9,7 @@ import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.core.ui.common.padBucketsToRange
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.dashboard.CardConfiguration
@@ -145,21 +146,21 @@ class WorkoutsViewModel
 
         private val cardManagementDelegate =
             CardManagementDelegate(
-                defaultConfigurations = app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CARDS,
+                defaultConfigurations = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
                 persist = workoutsLayoutRepository::updateWorkoutCardConfigurations,
                 scope = viewModelScope,
             )
 
         private val chartManagementDelegate =
             WorkoutChartManagementDelegate(
-                defaultConfigurations = app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
+                defaultConfigurations = SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
                 persist = workoutsLayoutRepository::updateWorkoutChartConfigurations,
                 scope = viewModelScope,
             )
 
         private val historyManagementDelegate =
             WorkoutHistoryManagementDelegate(
-                defaultConfigurations = app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
+                defaultConfigurations = SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
                 persist = workoutsLayoutRepository::updateWorkoutHistoryConfigurations,
                 scope = viewModelScope,
             )
@@ -625,9 +626,30 @@ class WorkoutsViewModel
         }
 
         fun toggleWorkoutsManagement() {
-            if (uiState.value.isManagingCards) cardManagementDelegate.saveChanges() else cardManagementDelegate.enterEditMode(uiState.value.cardConfigurations)
-            if (uiState.value.isManagingCharts) chartManagementDelegate.saveChanges() else chartManagementDelegate.enterEditMode(uiState.value.chartConfigurations)
-            if (uiState.value.isManagingHistory) historyManagementDelegate.saveChanges() else historyManagementDelegate.enterEditMode(uiState.value.historyConfigurations)
+            if (uiState.value.isManagingCards) {
+                cardManagementDelegate.saveChanges()
+            } else {
+                cardManagementDelegate
+                    .enterEditMode(
+                        uiState.value.cardConfigurations,
+                    )
+            }
+            if (uiState.value.isManagingCharts) {
+                chartManagementDelegate.saveChanges()
+            } else {
+                chartManagementDelegate
+                    .enterEditMode(
+                        uiState.value.chartConfigurations,
+                    )
+            }
+            if (uiState.value.isManagingHistory) {
+                historyManagementDelegate.saveChanges()
+            } else {
+                historyManagementDelegate
+                    .enterEditMode(
+                        uiState.value.historyConfigurations,
+                    )
+            }
         }
 
         fun onCancelWorkoutsManagement() {

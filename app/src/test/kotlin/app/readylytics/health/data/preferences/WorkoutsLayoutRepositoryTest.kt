@@ -107,7 +107,12 @@ class WorkoutsLayoutRepositoryTest {
     @Test
     fun updateWorkoutCardConfigurations_writesCorrectProtoField() =
         runTest {
-            val capturedUpdate = slot<suspend (WorkoutsLayoutConfigurationsProto) -> WorkoutsLayoutConfigurationsProto>()
+            val capturedUpdate =
+                slot<
+                    suspend (
+                        WorkoutsLayoutConfigurationsProto,
+                    ) -> WorkoutsLayoutConfigurationsProto,
+                >()
             coEvery { dataStore.updateData(capture(capturedUpdate)) } returns
                 WorkoutsLayoutConfigurationsProto.getDefaultInstance()
 
@@ -143,7 +148,12 @@ class WorkoutsLayoutRepositoryTest {
                             .build(),
                     ).build()
             coEvery { dataStore.updateData(any()) } coAnswers {
-                val transform = firstArg<suspend (WorkoutsLayoutConfigurationsProto) -> WorkoutsLayoutConfigurationsProto>()
+                val transform =
+                    firstArg<
+                        suspend (
+                            WorkoutsLayoutConfigurationsProto,
+                        ) -> WorkoutsLayoutConfigurationsProto,
+                    >()
                 persisted = transform(persisted)
                 persisted
             }
