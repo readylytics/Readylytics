@@ -19,6 +19,7 @@ import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -59,6 +60,7 @@ class WorkoutsViewModelTest {
     private lateinit var settingsRepo: UserPreferencesReader
     private lateinit var getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase
     private lateinit var foregroundSyncController: ForegroundSyncGateway
+    private lateinit var workoutsLayoutRepository: WorkoutsLayoutRepository
     private lateinit var savedStateHandle: SavedStateHandle
 
     private lateinit var viewModel: WorkoutsViewModel
@@ -159,6 +161,15 @@ class WorkoutsViewModelTest {
             mockk {
                 every { isSyncing } returns isSyncingFlow
             }
+        workoutsLayoutRepository =
+            mockk {
+                every { workoutCardConfigurations() } returns
+                    flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CARDS)
+                every { workoutChartConfigurations() } returns
+                    flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CHARTS)
+                every { workoutHistoryConfigurations() } returns
+                    flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_HISTORY)
+            }
         savedStateHandle = SavedStateHandle()
     }
 
@@ -172,6 +183,7 @@ class WorkoutsViewModelTest {
             settingsRepo = settingsRepo,
             getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             foregroundSyncController = foregroundSyncController,
+            workoutsLayoutRepository = workoutsLayoutRepository,
             savedStateHandle = savedStateHandle,
             ioDispatcher = testDispatcher,
             defaultDispatcher = testDispatcher,

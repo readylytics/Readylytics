@@ -11,6 +11,11 @@ import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.core.ui.common.padBucketsToRange
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.domain.dashboard.CardManagementEvent
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
@@ -29,6 +34,13 @@ import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.calculateDailyStrainIncrease
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.domain.workouts.WorkoutChartId
+import app.readylytics.health.domain.workouts.WorkoutChartManagementDelegate
+import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.domain.workouts.WorkoutHistoryId
+import app.readylytics.health.domain.workouts.WorkoutHistoryManagementDelegate
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -83,7 +95,16 @@ data class WorkoutsUiState(
     val isRangeChanging: Boolean = false,
     val trimpPeriodSummary: PeriodAverageSummary? = null,
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
-)
+    val cardConfigurations: List<CardConfiguration> = emptyList(),
+    val isManagingCards: Boolean = false,
+    val chartConfigurations: List<WorkoutChartConfiguration> = emptyList(),
+    val isManagingCharts: Boolean = false,
+    val historyConfigurations: List<WorkoutHistoryConfiguration> = emptyList(),
+    val isManagingHistory: Boolean = false,
+) {
+    val isManagingWorkoutsLayout: Boolean
+        get() = isManagingCards || isManagingCharts || isManagingHistory
+}
 
 private data class WorkoutFlowData(
     val latestSummary: DailySummary?,
@@ -110,6 +131,7 @@ class WorkoutsViewModel
         private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val foregroundSyncController: ForegroundSyncGateway,
+        private val workoutsLayoutRepository: WorkoutsLayoutRepository,
         private val savedStateHandle: SavedStateHandle,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
@@ -120,6 +142,34 @@ class WorkoutsViewModel
             )
 
         val selectedRange = _selectedRange.asStateFlow()
+
+        private val cardManagementDelegate =
+            CardManagementDelegate(
+                defaultConfigurations = app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CARDS,
+                persist = workoutsLayoutRepository::updateWorkoutCardConfigurations,
+                scope = viewModelScope,
+            )
+
+        private val chartManagementDelegate =
+            WorkoutChartManagementDelegate(
+                defaultConfigurations = app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
+                persist = workoutsLayoutRepository::updateWorkoutChartConfigurations,
+                scope = viewModelScope,
+            )
+
+        private val historyManagementDelegate =
+            WorkoutHistoryManagementDelegate(
+                defaultConfigurations = app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
+                persist = workoutsLayoutRepository::updateWorkoutHistoryConfigurations,
+                scope = viewModelScope,
+            )
+
+        private val cardStateFlow =
+            createWorkoutsCardStateFlow(cardManagementDelegate, workoutsLayoutRepository).distinctUntilChanged()
+        private val chartStateFlow =
+            createWorkoutsChartStateFlow(chartManagementDelegate, workoutsLayoutRepository).distinctUntilChanged()
+        private val historyStateFlow =
+            createWorkoutsHistoryStateFlow(historyManagementDelegate, workoutsLayoutRepository).distinctUntilChanged()
 
         private val isRangeChangingState = MutableStateFlow(false)
 
@@ -487,6 +537,21 @@ class WorkoutsViewModel
                     )
                 }.combine(isRangeChangingState) { state, isChanging ->
                     state.copy(isRangeChanging = isChanging)
+                }.combine(cardStateFlow) { state, cardState ->
+                    state.copy(
+                        cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfigurations,
+                        isManagingCards = cardState.isManagingCards,
+                    )
+                }.combine(chartStateFlow) { state, chartState ->
+                    state.copy(
+                        chartConfigurations = chartState.pendingConfiguration ?: chartState.chartConfigurations,
+                        isManagingCharts = chartState.isManagingCharts,
+                    )
+                }.combine(historyStateFlow) { state, historyState ->
+                    state.copy(
+                        historyConfigurations = historyState.pendingConfiguration ?: historyState.historyConfigurations,
+                        isManagingHistory = historyState.isManagingHistory,
+                    )
                 }.flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
@@ -557,5 +622,63 @@ class WorkoutsViewModel
             if (current > 1) {
                 _currentPage.value = current - 1
             }
+        }
+
+        fun toggleWorkoutsManagement() {
+            if (uiState.value.isManagingCards) cardManagementDelegate.saveChanges() else cardManagementDelegate.enterEditMode(uiState.value.cardConfigurations)
+            if (uiState.value.isManagingCharts) chartManagementDelegate.saveChanges() else chartManagementDelegate.enterEditMode(uiState.value.chartConfigurations)
+            if (uiState.value.isManagingHistory) historyManagementDelegate.saveChanges() else historyManagementDelegate.enterEditMode(uiState.value.historyConfigurations)
+        }
+
+        fun onCancelWorkoutsManagement() {
+            cardManagementDelegate.cancelChanges()
+            chartManagementDelegate.cancelChanges()
+            historyManagementDelegate.cancelChanges()
+        }
+
+        fun onToggleCardVisibility(
+            cardId: CardId,
+            visible: Boolean,
+        ) {
+            cardManagementDelegate.onToggleCardVisibility(uiState.value.cardConfigurations, cardId, visible)
+        }
+
+        fun onReorderCards(newOrder: List<CardConfiguration>) {
+            cardManagementDelegate.onReorderCards(uiState.value.cardConfigurations, newOrder)
+        }
+
+        fun onWorkoutsCardDisplayModeChanged(
+            cardId: CardId,
+            mode: DashboardCardDisplayMode,
+        ) {
+            cardManagementDelegate.onEvent(CardManagementEvent.DisplayModeChanged(cardId, mode))
+        }
+
+        fun onToggleChartVisibility(
+            chartId: WorkoutChartId,
+            visible: Boolean,
+        ) {
+            chartManagementDelegate.onToggleChartVisibility(uiState.value.chartConfigurations, chartId, visible)
+        }
+
+        fun onReorderCharts(newOrder: List<WorkoutChartConfiguration>) {
+            chartManagementDelegate.onReorderCharts(uiState.value.chartConfigurations, newOrder)
+        }
+
+        fun onToggleHistoryVisibility(
+            historyId: WorkoutHistoryId,
+            visible: Boolean,
+        ) {
+            historyManagementDelegate.onToggleHistoryVisibility(uiState.value.historyConfigurations, historyId, visible)
+        }
+
+        fun onReorderHistory(newOrder: List<WorkoutHistoryConfiguration>) {
+            historyManagementDelegate.onReorderHistory(uiState.value.historyConfigurations, newOrder)
+        }
+
+        fun onResetWorkoutsToDefaults() {
+            cardManagementDelegate.onResetToDefaults()
+            chartManagementDelegate.onResetToDefaults()
+            historyManagementDelegate.onResetToDefaults()
         }
     }
