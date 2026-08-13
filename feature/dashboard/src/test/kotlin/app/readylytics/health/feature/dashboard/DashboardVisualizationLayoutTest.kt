@@ -276,18 +276,18 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 DashboardMetricCard(
                     presentation =
                         presentation.copy(
-                                title = "HRV",
-                                valueText = "41",
-                                unitText = "ms",
-                                secondaryText = "\u2193 2",
-                                accessibilityDescription = "HRV 41 milliseconds, normal.",
-                            ),
-                        specification = hrvSpecification,
-                        requestedMode = mode,
-                        isEditing = false,
-                        onModeSelected = {},
-                        usesDeltaPill = true,
-                    )
+                            title = "HRV",
+                            valueText = "41",
+                            unitText = "ms",
+                            secondaryText = "\u2193 2",
+                            accessibilityDescription = "HRV 41 milliseconds, normal.",
+                        ),
+                    specification = hrvSpecification,
+                    requestedMode = mode,
+                    isEditing = false,
+                    onModeSelected = {},
+                    usesDeltaPill = true,
+                )
             }
         }
 
@@ -318,19 +318,19 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 DashboardMetricCard(
                     presentation =
                         presentation.copy(
-                                title = "HRV",
-                                valueText = "41",
-                                unitText = "ms",
-                                secondaryText = "↓ 2",
-                                status = MetricStatus.WARNING,
-                                accessibilityDescription = "HRV 41 milliseconds, warning.",
-                            ),
-                        specification = specification,
-                        requestedMode = DashboardCardDisplayMode.GAUGE,
-                        isEditing = false,
-                        onModeSelected = {},
-                        usesDeltaPill = true,
-                    )
+                            title = "HRV",
+                            valueText = "41",
+                            unitText = "ms",
+                            secondaryText = "↓ 2",
+                            status = MetricStatus.WARNING,
+                            accessibilityDescription = "HRV 41 milliseconds, warning.",
+                        ),
+                    specification = specification,
+                    requestedMode = DashboardCardDisplayMode.GAUGE,
+                    isEditing = false,
+                    onModeSelected = {},
+                    usesDeltaPill = true,
+                )
             }
         }
 
@@ -354,18 +354,18 @@ class DashboardVisualizationLayoutTest : DashboardVisualizationRegressionTestBas
                 DashboardMetricCard(
                     presentation =
                         presentation.copy(
-                                title = "HRV",
-                                valueText = "41",
-                                unitText = "ms",
-                                secondaryText = "↓ 2",
-                                accessibilityDescription = "HRV 41 milliseconds, normal.",
-                            ),
-                        specification = hrvSpecification,
-                        requestedMode = DashboardCardDisplayMode.GAUGE,
-                        isEditing = false,
-                        onModeSelected = {},
-                        usesDeltaPill = true,
-                    )
+                            title = "HRV",
+                            valueText = "41",
+                            unitText = "ms",
+                            secondaryText = "↓ 2",
+                            accessibilityDescription = "HRV 41 milliseconds, normal.",
+                        ),
+                    specification = hrvSpecification,
+                    requestedMode = DashboardCardDisplayMode.GAUGE,
+                    isEditing = false,
+                    onModeSelected = {},
+                    usesDeltaPill = true,
+                )
             }
         }
 

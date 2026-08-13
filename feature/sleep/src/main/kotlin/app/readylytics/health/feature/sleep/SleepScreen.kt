@@ -21,13 +21,9 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +37,7 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.StatusLegend
+import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.components.reorder.ReorderableGrid
 import app.readylytics.health.core.ui.components.reorder.ReorderableList
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
@@ -54,7 +51,6 @@ import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.feature.sleep.R
 import app.readylytics.health.feature.sleep.overview.SleepManagementBottomSheet
-import kotlinx.coroutines.launch
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -109,9 +105,7 @@ fun SleepScreen(
     onResetSleepLayoutToDefaults: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState()
-    var showSleepManagement by rememberSaveable { mutableStateOf(false) }
+    val manageState = rememberManageLayoutState()
 
     val singleSessionVisual = uiState.latestSession
     val (trendScrollState, trendZoomState) =
@@ -161,7 +155,7 @@ fun SleepScreen(
         )
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (showSleepManagement) {
+        if (manageState.isManageOpen) {
             SleepManagementBottomSheet(
                 topCardConfigurations = uiState.sleepTopCardConfigurations,
                 chartConfigurations = uiState.sleepChartConfigurations,
@@ -172,11 +166,8 @@ fun SleepScreen(
                 onTopCardDisplayModeChanged = onSleepTopCardDisplayModeChanged,
                 onMetricCardDisplayModeChanged = onSleepMetricCardDisplayModeChanged,
                 onResetToDefaults = onResetSleepLayoutToDefaults,
-                onDismiss = {
-                    scope.launch { sheetState.hide() }
-                    showSleepManagement = false
-                },
-                sheetState = sheetState,
+                onDismiss = manageState.closeManage,
+                sheetState = manageState.sheetState,
             )
         }
 
@@ -317,7 +308,7 @@ fun SleepScreen(
             isVisible = uiState.isManagingSleepLayout,
             onDoneClick = onToggleSleepManagement,
             onCancelClick = onCancelSleepManagement,
-            onManageClick = { showSleepManagement = true },
+            onManageClick = manageState.openManage,
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
     }
