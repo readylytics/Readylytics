@@ -3,8 +3,6 @@ package app.readylytics.health.domain.service
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
-import kotlin.test.assertFalse
 
 class BodyTemperatureBaselineCalculatorTest {
     private val calculator = BodyTemperatureBaselineCalculator()
@@ -31,16 +29,5 @@ class BodyTemperatureBaselineCalculatorTest {
     @Test
     fun `empty list returns null`() {
         assertNull(calculator.calculateBaseline(emptyList()))
-    }
-
-    @Test
-    fun `isElevated is true only when the absolute deviation meets or exceeds the threshold`() {
-        assertFalse(calculator.isElevated(todayCelsius = 36.9f, baselineCelsius = 36.5f, thresholdCelsius = 1.0f))
-        assertTrue(calculator.isElevated(todayCelsius = 37.5f, baselineCelsius = 36.5f, thresholdCelsius = 1.0f))
-        assertTrue(calculator.isElevated(todayCelsius = 37.5f, baselineCelsius = 36.5f, thresholdCelsius = 0.25f))
-        // Symmetric: an unusually LOW deviation of the same magnitude also counts.
-        assertTrue(calculator.isElevated(todayCelsius = 35.4f, baselineCelsius = 36.5f, thresholdCelsius = 1.0f))
-        // Boundary: exactly at threshold counts as elevated ("meets or exceeds").
-        assertTrue(calculator.isElevated(todayCelsius = 37.5f, baselineCelsius = 36.5f, thresholdCelsius = 1.0f))
     }
 }

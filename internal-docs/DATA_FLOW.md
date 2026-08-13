@@ -392,8 +392,9 @@ formula:
   (`core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`)
   is a pure-Kotlin plain trailing average over the 14 calendar days immediately before the target
   date (`BASELINE_WINDOW_DAYS = 14`); it returns `null` ("Calibrating") until at least 14 non-null
-  `avgSleepingBodyTemp` values exist in that window. `isElevated(today, baseline, threshold)` flags a
-  day when `|today − baseline| >= threshold`, in either direction. This is intentionally independent
+  `avgSleepingBodyTemp` values exist in that window. `bodyTemperatureStatus(today, baseline, threshold)`
+  (in `VitalAssessment.kt`, `core/model/.../domain/model/`) flags a day when `|today − baseline| >= threshold`,
+  in either direction. This is intentionally independent
   of the HRV/RHR scoring-baseline machinery (`BaselineComputer`, `ScoringHistoryRepository` — see
   §2.4): a plain average rather than a log-normal EWMA, computed from the already-cached display
   field, and never persisted anywhere the scoring pipeline reads from.
@@ -420,8 +421,9 @@ formula:
   builds `CardId.BODY_TEMPERATURE`'s `UniversalMetricPresentation` from `summary.avgSleepingBodyTemp`,
   the resolved baseline, and `preferences.bodyTempElevatedThresholdCelsius`: `MetricStatus.CALIBRATING`
   when there's no reading yet, `NEUTRAL` while the baseline itself is still calibrating (shows a
-  "Calibrating" secondary label), `WARNING` when `BodyTemperatureBaselineCalculator.isElevated(...)`
-  is true, else `NEUTRAL`. Value/unit display converts through `UnitConverter.celsiusToDisplayTemperature`
+  "Calibrating" secondary label), `WARNING` when `bodyTemperatureStatus(...)` (core/model
+  `VitalAssessment.kt`) returns `WARNING` — `abs(value − baseline) >= threshold` — else `NEUTRAL`.
+  Value/unit display converts through `UnitConverter.celsiusToDisplayTemperature`
   per `preferences.unitSystem` (°C/°F), and the secondary text shows the signed delta from baseline in
   the same display unit. The card is registered in `DashboardCardCatalog` (VALUE/BAR/GAUGE modes) and
   gated end-to-end on the optional `READ_BODY_TEMPERATURE` permission: `CardManagementDelegate`
@@ -904,7 +906,7 @@ resetting to zero.
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 / body temperature trends + bands                                       |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsTrendSection.kt`      | UI — Vico chart                                     | body temperature trend chart + baseline reference line (display-only, see §1.5)          |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`    | Domain — display-only baseline (non-scoring)         | 14-day plain trailing average + elevated-deviation check                                 |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`    | Domain — display-only baseline (non-scoring)         | 14-day plain trailing average baseline                                                      |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineProvider.kt`      | Domain — display-only baseline (non-scoring)         | `observeBaseline(date)` stream; Room summary/scoring-zone emissions recalculate dashboard + Vitals baseline |
 | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`       | Ingestion — mapper                                   | body temperature (°C)                                                                    |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepViewModel.kt`                      | UI — sleep state                                    | sleep score, stage timeline, sleep window/duration trend data, `sleepHrSamples`          |
