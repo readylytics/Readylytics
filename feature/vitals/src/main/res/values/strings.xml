@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Vitals layout management -->
+    <string name="action_done">Done</string>
+    <string name="action_reset_to_defaults">Reset to defaults</string>
+    <string name="vitals_manage_layout">Customize Vitals</string>
+    <string name="vitals_management_cards_section_title">Vitals Cards</string>
+    <string name="vitals_management_diagrams_section_title">Diagrams</string>
+
     <!-- General Labels -->
     <string name="label_physiological_trends">Physiological trends</string>
     <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
