@@ -168,6 +168,40 @@ class WorkoutsViewModel
                 withPosition = { config, pos -> config.copy(position = pos) },
             )
 
+        private inner class WorkoutsLayoutManagementCoordinator {
+            fun toggle() {
+                if (uiState.value.isManagingCards) {
+                    cardManagementDelegate.saveChanges()
+                } else {
+                    cardManagementDelegate.enterEditMode(uiState.value.cardConfigurations)
+                }
+                if (uiState.value.isManagingCharts) {
+                    chartManagementDelegate.saveChanges()
+                } else {
+                    chartManagementDelegate.enterEditMode(uiState.value.chartConfigurations)
+                }
+                if (uiState.value.isManagingHistory) {
+                    historyManagementDelegate.saveChanges()
+                } else {
+                    historyManagementDelegate.enterEditMode(uiState.value.historyConfigurations)
+                }
+            }
+
+            fun cancel() {
+                cardManagementDelegate.cancelChanges()
+                chartManagementDelegate.cancelChanges()
+                historyManagementDelegate.cancelChanges()
+            }
+
+            fun resetToDefaults() {
+                cardManagementDelegate.onResetToDefaults()
+                chartManagementDelegate.onResetToDefaults()
+                historyManagementDelegate.onResetToDefaults()
+            }
+        }
+
+        private val layoutManagementCoordinator = WorkoutsLayoutManagementCoordinator()
+
         private val cardStateFlow =
             createWorkoutsCardStateFlow(cardManagementDelegate, workoutsLayoutRepository).distinctUntilChanged()
         private val chartStateFlow =
@@ -629,36 +663,11 @@ class WorkoutsViewModel
         }
 
         fun toggleWorkoutsManagement() {
-            if (uiState.value.isManagingCards) {
-                cardManagementDelegate.saveChanges()
-            } else {
-                cardManagementDelegate
-                    .enterEditMode(
-                        uiState.value.cardConfigurations,
-                    )
-            }
-            if (uiState.value.isManagingCharts) {
-                chartManagementDelegate.saveChanges()
-            } else {
-                chartManagementDelegate
-                    .enterEditMode(
-                        uiState.value.chartConfigurations,
-                    )
-            }
-            if (uiState.value.isManagingHistory) {
-                historyManagementDelegate.saveChanges()
-            } else {
-                historyManagementDelegate
-                    .enterEditMode(
-                        uiState.value.historyConfigurations,
-                    )
-            }
+            layoutManagementCoordinator.toggle()
         }
 
         fun onCancelWorkoutsManagement() {
-            cardManagementDelegate.cancelChanges()
-            chartManagementDelegate.cancelChanges()
-            historyManagementDelegate.cancelChanges()
+            layoutManagementCoordinator.cancel()
         }
 
         fun onToggleCardVisibility(
@@ -702,8 +711,6 @@ class WorkoutsViewModel
         }
 
         fun onResetWorkoutsToDefaults() {
-            cardManagementDelegate.onResetToDefaults()
-            chartManagementDelegate.onResetToDefaults()
-            historyManagementDelegate.onResetToDefaults()
+            layoutManagementCoordinator.resetToDefaults()
         }
     }
