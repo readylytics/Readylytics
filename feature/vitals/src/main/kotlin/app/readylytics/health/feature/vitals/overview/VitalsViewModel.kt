@@ -14,6 +14,7 @@ import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.dashboard.CardManagementEvent
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UnitSystem
@@ -26,7 +27,6 @@ import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
-import app.readylytics.health.domain.vitals.VitalsChartManagementDelegate
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -131,10 +131,12 @@ class VitalsViewModel
             )
 
         private val vitalsChartManagementDelegate =
-            VitalsChartManagementDelegate(
+            LayoutManagementDelegate(
                 defaultConfigurations = SettingsDefaults.DEFAULT_VITALS_CHARTS,
                 persist = vitalsLayoutRepository::updateVitalsChartConfigurations,
                 scope = viewModelScope,
+                withVisibility = { config, visible -> config.copy(isVisible = visible) },
+                withPosition = { config, pos -> config.copy(position = pos) },
             )
 
         private val vitalsCardStateFlow =
@@ -397,7 +399,7 @@ class VitalsViewModel
             chartId: VitalsChartId,
             visible: Boolean,
         ) {
-            vitalsChartManagementDelegate.onToggleChartVisibility(
+            vitalsChartManagementDelegate.onToggleVisibility(
                 uiState.value.vitalsChartConfigurations,
                 chartId,
                 visible,
@@ -405,7 +407,7 @@ class VitalsViewModel
         }
 
         fun onReorderVitalsCharts(newOrder: List<VitalsChartConfiguration>) {
-            vitalsChartManagementDelegate.onReorderCharts(
+            vitalsChartManagementDelegate.onReorder(
                 uiState.value.vitalsChartConfigurations,
                 newOrder,
             )
