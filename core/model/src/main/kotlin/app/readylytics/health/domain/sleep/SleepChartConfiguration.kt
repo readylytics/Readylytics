@@ -1,10 +1,13 @@
 package app.readylytics.health.domain.sleep
 
+import app.readylytics.health.domain.layout.ReorderableItem
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class SleepChartConfiguration(
     val chartId: SleepChartId,
-    val isVisible: Boolean = true,
-    val position: Int = 0,
-)
+    override val isVisible: Boolean = true,
+    override val position: Int = 0,
+) : ReorderableItem<SleepChartId> {
+    override val id: SleepChartId get() = chartId
+}
