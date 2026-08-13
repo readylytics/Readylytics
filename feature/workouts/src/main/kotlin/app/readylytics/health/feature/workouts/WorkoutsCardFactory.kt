@@ -1,13 +1,116 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
+import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
+import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.strainRatioStatus
+import app.readylytics.health.core.ui.R as CoreUiR
 
-fun buildWorkoutsCardDataMap(uiState: WorkoutsUiState): Map<CardId, @Composable () -> Unit> {
-    val cardMap = mutableMapOf<CardId, @Composable () -> Unit>()
+fun buildWorkoutsCardDataMap(
+    uiState: WorkoutsUiState,
+    isEditing: Boolean,
+    onWorkoutsCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
+): Map<CardId, @Composable (CardConfiguration) -> Unit> {
+    val cardMap = mutableMapOf<CardId, @Composable (CardConfiguration) -> Unit>()
 
-    // Add workouts-specific cards here based on actual Workouts screen implementation
-    // For now, these are placeholders - you'll customize based on your actual cards
+    cardMap[CardId.STRAIN_RATIO] = { configuration ->
+        val spec = DashboardCardCatalog.spec(CardId.STRAIN_RATIO)
+        if (spec != null) {
+            val strainRatio = uiState.latestMetrics?.strainRatioRaw
+            val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
+            val requestedMode = DashboardCardCatalog.requestedMode(configuration)
+            UniversalWorkoutMetricCard(
+                title = stringResource(CardId.STRAIN_RATIO.displayNameResId),
+                rawValue = strainRatio,
+                maxValue = 2.0f,
+                valueText =
+                    uiState.latestMetrics?.strainRatioDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                unitText = "",
+                status = strainStatus,
+                tooltip = stringResource(CoreUiR.string.tooltip_strain_ratio),
+                mode = requestedMode.toUniversalMode(),
+                supportedModes = spec.supportedModes.map { it.toUniversalMode() },
+                isEditing = isEditing,
+                onModeSelected = { mode -> onWorkoutsCardDisplayModeChanged(CardId.STRAIN_RATIO, mode.toDashboardMode()) },
+            )
+        }
+    }
 
-    return cardMap.filterValues { true }
+    cardMap[CardId.READINESS] = { configuration ->
+        val spec = DashboardCardCatalog.spec(CardId.READINESS)
+        if (spec != null) {
+            val readinessVal = uiState.latestMetrics?.readinessRounded?.toFloat()
+            val readinessStatus =
+                readinessVal?.let {
+                    when {
+                        it >= 85f -> MetricStatus.OPTIMAL
+                        it >= 60f -> MetricStatus.NEUTRAL
+                        it >= 40f -> MetricStatus.WARNING
+                        else -> MetricStatus.POOR
+                    }
+                } ?: MetricStatus.CALIBRATING
+            val requestedMode = DashboardCardCatalog.requestedMode(configuration)
+            UniversalWorkoutMetricCard(
+                title = stringResource(CardId.READINESS.displayNameResId),
+                rawValue = readinessVal,
+                maxValue = 100f,
+                valueText =
+                    uiState.latestMetrics?.readinessRounded?.toString()
+                        ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                unitText = "",
+                status = readinessStatus,
+                tooltip = stringResource(CoreUiR.string.tooltip_readiness),
+                mode = requestedMode.toUniversalMode(),
+                supportedModes = spec.supportedModes.map { it.toUniversalMode() },
+                isEditing = isEditing,
+                onModeSelected = { mode -> onWorkoutsCardDisplayModeChanged(CardId.READINESS, mode.toDashboardMode()) },
+            )
+        }
+    }
+
+    cardMap[CardId.RAS_DAILY] = { configuration ->
+        val spec = DashboardCardCatalog.spec(CardId.RAS_DAILY)
+        if (spec != null) {
+            val requestedMode = DashboardCardCatalog.requestedMode(configuration)
+            if (requestedMode == DashboardCardDisplayMode.GAUGE) {
+                val rasVal = uiState.todayRasScore
+                val rasStatus =
+                    when {
+                        rasVal == null -> MetricStatus.CALIBRATING
+                        rasVal >= 100f -> MetricStatus.OPTIMAL
+                        rasVal >= 75f -> MetricStatus.NEUTRAL
+                        rasVal >= 50f -> MetricStatus.WARNING
+                        else -> MetricStatus.POOR
+                    }
+                UniversalWorkoutMetricCard(
+                    title = stringResource(CardId.RAS_DAILY.displayNameResId),
+                    rawValue = rasVal,
+                    maxValue = 100f,
+                    valueText =
+                        uiState.latestMetrics?.rasRounded?.toString()
+                            ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                    unitText = "",
+                    status = rasStatus,
+                    tooltip = stringResource(CoreUiR.string.tooltip_ras),
+                    mode = requestedMode.toUniversalMode(),
+                    supportedModes = spec.supportedModes.map { it.toUniversalMode() },
+                    isEditing = isEditing,
+                    onModeSelected = { mode -> onWorkoutsCardDisplayModeChanged(CardId.RAS_DAILY, mode.toDashboardMode()) },
+                )
+            } else {
+                RasWeeklyCard(
+                    dailyBreakdown = uiState.rasDailyBreakdown,
+                    totalRas = uiState.latestMetrics?.rasRounded,
+                )
+            }
+        }
+    }
+
+    return cardMap
 }
