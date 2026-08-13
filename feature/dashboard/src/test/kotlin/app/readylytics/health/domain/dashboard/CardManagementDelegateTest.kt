@@ -108,7 +108,7 @@ class CardManagementDelegateTest {
     }
 
     @Test
-    fun `saveChanges persists pending configs via repository`() =
+    fun `saveChanges persists pending configs via persist`() =
         testScope.runTest {
             delegate.enterEditMode(sampleConfigs)
             delegate.saveChanges()
@@ -117,7 +117,7 @@ class CardManagementDelegateTest {
         }
 
     @Test
-    fun `saveChanges with no pending does not invoke repository`() =
+    fun `saveChanges with no pending does not invoke persist`() =
         testScope.runTest {
             delegate.saveChanges()
             advanceUntilIdle()
@@ -313,9 +313,9 @@ class CardManagementDelegateTest {
             // Cancel — any launched coroutine would have completed inside scope.
             localScope.cancel()
             advanceUntilIdle()
-            // Structural guarantee: CardManagementDelegate source contains no
-            // `viewModelScope.launch`; persistence flows through stateIn pipeline
-            // tied to this scope, so cancel terminates all work cooperatively.
+            // Structural guarantee: CardManagementDelegate launches all
+            // persistence through the injected scope, so cancelling that scope
+            // terminates all work cooperatively.
             assertTrue(true)
         }
 
