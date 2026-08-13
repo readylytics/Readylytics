@@ -32,6 +32,12 @@ import app.readylytics.health.feature.workouts.R
 // 100 RAS fills 75% of the bar width
 private const val BAR_MAX = 100f / GOAL_FILL_CAP_FRACTION
 
+internal enum class RasSummaryValueTextStyle {
+    TITLE,
+}
+
+internal fun rasTotalValueTextStyle(): RasSummaryValueTextStyle = RasSummaryValueTextStyle.TITLE
+
 @Composable
 fun RasWeeklyBar(
     dailyBreakdown: List<Pair<String, Float>>,
