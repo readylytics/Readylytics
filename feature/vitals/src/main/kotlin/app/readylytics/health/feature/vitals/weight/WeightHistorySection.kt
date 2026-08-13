@@ -12,6 +12,7 @@ import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.WeightHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
+import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.BmiCategory
@@ -28,6 +29,10 @@ import app.readylytics.health.core.ui.R as CoreUiR
 @Composable
 fun WeightHistorySection(
     items: List<WeightHistoryItem>,
+    currentPage: Int,
+    totalPages: Int,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -42,6 +47,12 @@ fun WeightHistorySection(
                     ),
             )
         }
+        PaginationControls(
+            currentPage = currentPage,
+            totalPages = totalPages,
+            onPreviousPage = onPreviousPage,
+            onNextPage = onNextPage,
+        )
     }
 }
 
