@@ -12,6 +12,7 @@ import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.rasStatus
 import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -103,11 +104,36 @@ fun buildWorkoutsCardDataMap(
         }
     }
 
-    cardMap[CardId.RAS_DAILY] = { _ ->
-        RasWeeklyCard(
-            dailyBreakdown = uiState.rasDailyBreakdown,
-            totalRas = uiState.latestMetrics?.rasRounded,
-        )
+    cardMap[CardId.RAS_DAILY] = { configuration ->
+        val spec = DashboardCardCatalog.spec(CardId.RAS_DAILY)
+        if (spec != null) {
+            val requestedMode = DashboardCardCatalog.requestedMode(configuration)
+            if (requestedMode == DashboardCardDisplayMode.VALUE) {
+                RasWeeklyCard(
+                    dailyBreakdown = uiState.rasDailyBreakdown,
+                    totalRas = uiState.latestMetrics?.rasRounded,
+                )
+            } else {
+                val rasValue = uiState.latestMetrics?.rasRounded?.toFloat()
+                UniversalWorkoutMetricCard(
+                    title = stringResource(CardId.RAS_DAILY.displayNameResId),
+                    rawValue = rasValue,
+                    maxValue = 100f,
+                    valueText =
+                        uiState.latestMetrics?.rasRounded?.toString()
+                            ?: stringResource(CoreUiR.string.metric_value_unavailable),
+                    unitText = "",
+                    status = rasValue.rasStatus(),
+                    tooltip = stringResource(CoreUiR.string.tooltip_ras),
+                    mode = requestedMode.toUniversalMode(),
+                    supportedModes = spec.supportedModes.map { it.toUniversalMode() },
+                    isEditing = isEditing,
+                    onModeSelected = { mode ->
+                        onWorkoutsCardDisplayModeChanged(CardId.RAS_DAILY, mode.toDashboardMode())
+                    },
+                )
+            }
+        }
     }
 
     return cardMap

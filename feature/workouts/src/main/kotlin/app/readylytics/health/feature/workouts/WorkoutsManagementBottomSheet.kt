@@ -44,12 +44,7 @@ fun WorkoutsManagementBottomSheet(
                                 key = "card_${card.cardId.name}",
                                 label = stringResource(card.cardId.displayNameResId),
                                 isVisible = card.isVisible,
-                                supportedModes =
-                                    if (card.cardId == CardId.RAS_DAILY) {
-                                        emptyList()
-                                    } else {
-                                        DashboardCardCatalog.spec(card.cardId)?.supportedModes.orEmpty()
-                                    },
+                                supportedModes = DashboardCardCatalog.spec(card.cardId)?.supportedModes.orEmpty(),
                                 requestedMode = DashboardCardCatalog.requestedMode(card),
                                 onVisibilityChanged = { onCardVisibilityChanged(card.cardId, it) },
                                 onDisplayModeChanged = { onCardDisplayModeChanged(card.cardId, it) },
