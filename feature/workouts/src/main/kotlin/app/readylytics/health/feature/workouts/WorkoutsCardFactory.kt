@@ -78,44 +78,11 @@ fun buildWorkoutsCardDataMap(
         }
     }
 
-    cardMap[CardId.RAS_DAILY] = { configuration ->
-        val spec = DashboardCardCatalog.spec(CardId.RAS_DAILY)
-        if (spec != null) {
-            val requestedMode = DashboardCardCatalog.requestedMode(configuration)
-            if (requestedMode == DashboardCardDisplayMode.GAUGE) {
-                val rasVal = uiState.todayRasScore
-                val rasStatus =
-                    when {
-                        rasVal == null -> MetricStatus.CALIBRATING
-                        rasVal >= 100f -> MetricStatus.OPTIMAL
-                        rasVal >= 75f -> MetricStatus.NEUTRAL
-                        rasVal >= 50f -> MetricStatus.WARNING
-                        else -> MetricStatus.POOR
-                    }
-                UniversalWorkoutMetricCard(
-                    title = stringResource(CardId.RAS_DAILY.displayNameResId),
-                    rawValue = rasVal,
-                    maxValue = 100f,
-                    valueText =
-                        uiState.latestMetrics?.rasRounded?.toString()
-                            ?: stringResource(CoreUiR.string.metric_value_unavailable),
-                    unitText = "",
-                    status = rasStatus,
-                    tooltip = stringResource(CoreUiR.string.tooltip_ras),
-                    mode = requestedMode.toUniversalMode(),
-                    supportedModes = spec.supportedModes.map { it.toUniversalMode() },
-                    isEditing = isEditing,
-                    onModeSelected = { mode ->
-                        onWorkoutsCardDisplayModeChanged(CardId.RAS_DAILY, mode.toDashboardMode())
-                    },
-                )
-            } else {
-                RasWeeklyCard(
-                    dailyBreakdown = uiState.rasDailyBreakdown,
-                    totalRas = uiState.latestMetrics?.rasRounded,
-                )
-            }
-        }
+    cardMap[CardId.RAS_DAILY] = { _ ->
+        RasWeeklyCard(
+            dailyBreakdown = uiState.rasDailyBreakdown,
+            totalRas = uiState.latestMetrics?.rasRounded,
+        )
     }
 
     return cardMap
