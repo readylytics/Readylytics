@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package app.readylytics.health.data.preferences;
+
+option java_package = "app.readylytics.health.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "VitalsLayoutConfigurationsProtoFile";
+
+message VitalsCardConfigurationProto {
+    string card_id = 1;
+    bool is_visible = 2;
+    int32 position = 3;
+    string requested_display_mode = 4;
+}
+
+message VitalsChartConfigurationProto {
+    string chart_id = 1;
+    bool is_visible = 2;
+    int32 position = 3;
+}
+
+message VitalsLayoutConfigurationsProto {
+    repeated VitalsCardConfigurationProto vitals_cards = 1;
+    repeated VitalsChartConfigurationProto trend_charts = 2;
+    int32 version = 3;
+}

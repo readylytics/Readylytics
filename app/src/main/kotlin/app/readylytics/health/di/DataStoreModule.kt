@@ -90,6 +90,21 @@ object DataStoreModule {
 
     @Provides
     @Singleton
+    fun provideVitalsLayoutConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<VitalsLayoutConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = VitalsLayoutConfigurationsSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    VitalsLayoutConfigurationsSerializer.defaultValue
+                },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { context.dataStoreFile("vitals_layout_configurations.pb") },
+        )
+
+    @Provides
+    @Singleton
     fun provideUserPreferencesDataStore(
         @ApplicationContext context: Context,
         @ApplicationScope appScope: CoroutineScope,
