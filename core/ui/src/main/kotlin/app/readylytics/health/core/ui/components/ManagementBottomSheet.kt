@@ -40,9 +40,9 @@ data class ManagementItem(
     val label: String,
     val isVisible: Boolean,
     val supportedModes: List<DashboardCardDisplayMode>,
-    val requestedMode: DashboardCardDisplayMode?,
+    val requestedMode: DashboardCardDisplayMode,
     val onVisibilityChanged: (Boolean) -> Unit,
-    val onDisplayModeChanged: (DashboardCardDisplayMode?) -> Unit,
+    val onDisplayModeChanged: (DashboardCardDisplayMode) -> Unit,
 )
 
 data class ManagementSection(
@@ -142,31 +142,48 @@ fun ManagementBottomSheet(
 
 @Composable
 private fun ManagementRow(item: ManagementItem) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = item.label,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        supportingContent =
-            if (item.supportedModes.isNotEmpty()) {
-                {
+    if (item.supportedModes.isNotEmpty()) {
+        ListItem(
+            headlineContent = {
+                Text(
+                    text = item.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            supportingContent = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     DisplayModeDropdownSelector(
                         selectedMode = item.requestedMode,
                         supportedModes = item.supportedModes,
                         onModeSelected = item.onDisplayModeChanged,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Checkbox(
+                        checked = item.isVisible,
+                        onCheckedChange = item.onVisibilityChanged,
                     )
                 }
-            } else {
-                null
             },
-        trailingContent = {
-            Checkbox(
-                checked = item.isVisible,
-                onCheckedChange = item.onVisibilityChanged,
-            )
-        },
-        modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-    )
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+        )
+    } else {
+        ListItem(
+            headlineContent = {
+                Text(
+                    text = item.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            trailingContent = {
+                Checkbox(
+                    checked = item.isVisible,
+                    onCheckedChange = item.onVisibilityChanged,
+                )
+            },
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
+        )
+    }
 }

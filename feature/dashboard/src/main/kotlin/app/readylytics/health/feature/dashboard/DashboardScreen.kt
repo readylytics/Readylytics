@@ -173,7 +173,7 @@ fun DashboardScreen(
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
-    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode?) -> Unit = { _, _ -> },
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
     onDismissInsight: (InsightType) -> Unit = {},

@@ -56,7 +56,7 @@ private fun ConfigurableMetricCard(
     isEditing: Boolean,
     isLoading: Boolean,
     onClick: () -> Unit,
-    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode?) -> Unit,
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
     skeleton: @Composable () -> Unit = { MetricCardSkeleton() },
 ) {
     CardLoader(
@@ -98,7 +98,7 @@ fun buildCardDataMap(
     onDismissInsight: (InsightType) -> Unit = {},
     onRestoreInsights: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
-    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode?) -> Unit = { _, _ -> },
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
     onCopySetupPrompt: () -> Unit = {},
     onCopyDailyPrompt: () -> Unit = {},
     insightsCard: @Composable (

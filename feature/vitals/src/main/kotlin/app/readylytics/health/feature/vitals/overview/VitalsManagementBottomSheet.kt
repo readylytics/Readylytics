@@ -23,7 +23,7 @@ fun VitalsManagementBottomSheet(
     chartConfigurations: List<VitalsChartConfiguration>,
     onCardVisibilityChanged: (CardId, Boolean) -> Unit,
     onChartVisibilityChanged: (VitalsChartId, Boolean) -> Unit,
-    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode?) -> Unit,
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
     onResetToDefaults: () -> Unit,
     onDismiss: () -> Unit,
     sheetState: SheetState,
@@ -42,7 +42,7 @@ fun VitalsManagementBottomSheet(
                                 label = stringResource(card.cardId.displayNameResId),
                                 isVisible = card.isVisible,
                                 supportedModes = DashboardCardCatalog.spec(card.cardId)?.supportedModes.orEmpty(),
-                                requestedMode = card.requestedDisplayMode,
+                                requestedMode = DashboardCardCatalog.requestedMode(card),
                                 onVisibilityChanged = { onCardVisibilityChanged(card.cardId, it) },
                                 onDisplayModeChanged = { onCardDisplayModeChanged(card.cardId, it) },
                             )
@@ -57,7 +57,7 @@ fun VitalsManagementBottomSheet(
                                 label = stringResource(chart.chartId.displayNameResId),
                                 isVisible = chart.isVisible,
                                 supportedModes = emptyList(),
-                                requestedMode = null,
+                                requestedMode = DashboardCardDisplayMode.VALUE,
                                 onVisibilityChanged = { onChartVisibilityChanged(chart.chartId, it) },
                                 onDisplayModeChanged = {},
                             )

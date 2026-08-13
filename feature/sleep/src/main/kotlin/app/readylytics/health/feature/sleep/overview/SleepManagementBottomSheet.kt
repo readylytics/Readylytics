@@ -47,7 +47,7 @@ fun SleepManagementBottomSheet(
                                 label = stringResource(card.cardId.displayNameResId),
                                 isVisible = card.isVisible,
                                 supportedModes = SleepCardCatalog.topCardSpec(card.cardId)?.supportedModes.orEmpty(),
-                                requestedMode = card.requestedDisplayMode,
+                                requestedMode = SleepCardCatalog.requestedTopCardMode(card),
                                 onVisibilityChanged = { onTopCardVisibilityChanged(card.cardId, it) },
                                 onDisplayModeChanged = { onTopCardDisplayModeChanged?.invoke(card.cardId, it) },
                             )
@@ -62,7 +62,7 @@ fun SleepManagementBottomSheet(
                                 label = stringResource(chart.chartId.displayNameResId),
                                 isVisible = chart.isVisible,
                                 supportedModes = emptyList(),
-                                requestedMode = null,
+                                requestedMode = DashboardCardDisplayMode.VALUE,
                                 onVisibilityChanged = { onChartVisibilityChanged(chart.chartId, it) },
                                 onDisplayModeChanged = {},
                             )
@@ -77,7 +77,7 @@ fun SleepManagementBottomSheet(
                                 label = stringResource(card.cardId.displayNameResId),
                                 isVisible = card.isVisible,
                                 supportedModes = SleepCardCatalog.metricCardSpec(card.cardId)?.supportedModes.orEmpty(),
-                                requestedMode = card.requestedDisplayMode,
+                                requestedMode = SleepCardCatalog.requestedMetricCardMode(card),
                                 onVisibilityChanged = { onMetricCardVisibilityChanged(card.cardId, it) },
                                 onDisplayModeChanged = { onMetricCardDisplayModeChanged?.invoke(card.cardId, it) },
                             )

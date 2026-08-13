@@ -85,8 +85,8 @@ class ManagementBottomSheetTest {
                 sheetState = rememberModalBottomSheetState(),
             )
         }
-        // The mode-capable row's dropdown shows its "Default" selected value.
-        composeTestRule.onNodeWithText("Default").assertIsDisplayed()
+        // The mode-capable row's dropdown shows its selected value.
+        composeTestRule.onNodeWithText("Value").assertIsDisplayed()
     }
 
     @Test
@@ -149,7 +149,7 @@ class ManagementBottomSheetTest {
         label = label,
         isVisible = isVisible,
         supportedModes = supportedModes,
-        requestedMode = null,
+        requestedMode = DashboardCardDisplayMode.VALUE,
         onVisibilityChanged = onVisibilityChanged,
         onDisplayModeChanged = {},
     )

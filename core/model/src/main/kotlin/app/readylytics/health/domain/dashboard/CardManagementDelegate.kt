@@ -48,7 +48,7 @@ sealed interface CardManagementEvent {
 
     data class DisplayModeChanged(
         val cardId: CardId,
-        val mode: DashboardCardDisplayMode?,
+        val mode: DashboardCardDisplayMode,
     ) : CardManagementEvent
 }
 

@@ -18,7 +18,7 @@ import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 fun CardManagementBottomSheet(
     cards: List<CardConfiguration>,
     onCardVisibilityChanged: (CardId, Boolean) -> Unit,
-    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode?) -> Unit,
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
     onResetToDefaults: () -> Unit,
     onDismiss: () -> Unit,
     sheetState: SheetState,
@@ -37,7 +37,7 @@ fun CardManagementBottomSheet(
                                 label = stringResource(card.cardId.displayNameResId),
                                 isVisible = card.isVisible,
                                 supportedModes = DashboardCardCatalog.spec(card.cardId)?.supportedModes.orEmpty(),
-                                requestedMode = card.requestedDisplayMode,
+                                requestedMode = DashboardCardCatalog.requestedMode(card),
                                 onVisibilityChanged = { onCardVisibilityChanged(card.cardId, it) },
                                 onDisplayModeChanged = { onCardDisplayModeChanged(card.cardId, it) },
                             )

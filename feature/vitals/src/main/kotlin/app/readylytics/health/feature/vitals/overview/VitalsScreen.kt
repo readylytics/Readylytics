@@ -97,7 +97,7 @@ fun VitalsScreen(
     onManageClick: (() -> Unit)? = null,
     onToggleVitalsCardVisibility: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderVitalsCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
-    onVitalsCardDisplayModeChanged: (CardId, DashboardCardDisplayMode?) -> Unit = { _, _ -> },
+    onVitalsCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
     onToggleChartVisibility: (VitalsChartId, Boolean) -> Unit = { _, _ -> },
     onReorderVitalsCharts: (List<VitalsChartConfiguration>) -> Unit = {},
     onResetVitalsToDefaults: () -> Unit = {},

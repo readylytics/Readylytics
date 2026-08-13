@@ -16,22 +16,6 @@ class DisplayModeDropdownSelectorTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun `null selected mode renders Default label`() {
-        composeTestRule.setContent {
-            DisplayModeDropdownSelector(
-                selectedMode = null,
-                supportedModes =
-                    listOf(
-                        DashboardCardDisplayMode.GAUGE,
-                        DashboardCardDisplayMode.VALUE,
-                    ),
-                onModeSelected = {},
-            )
-        }
-        composeTestRule.onNodeWithText("Default").assertExists()
-    }
-
-    @Test
     fun `selected mode renders its label`() {
         composeTestRule.setContent {
             DisplayModeDropdownSelector(
