@@ -34,6 +34,7 @@
     <string name="action_done_editing">Done editing</string>
     <string name="action_cancel_editing">Cancel editing</string>
     <string name="action_customize">Customize</string>
+    <string name="action_manage_menu">Manage</string>
     <string name="action_reset_to_defaults">Reset to defaults</string>
 
 

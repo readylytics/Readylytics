@@ -8,6 +8,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -23,16 +24,20 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.R
 
 /**
- * Reusable FAB for edit mode toggle that animates in/out based on edit state.
+ * Reusable FAB cluster for edit mode that animates in/out based on edit state.
  *
  * This composable encapsulates the standard pattern for edit mode FAB:
  * - Appears with slide-up animation when entering edit mode
  * - Disappears with slide-down animation when exiting edit mode
- * - Provides two actions: Save (Done) and Cancel
+ * - Provides three actions when [onManageClick] is provided: Manage (opens the
+ *   manage menu), Cancel, and Done (save)
+ * - When [onManageClick] is null only the two actions Save (Done) and Cancel
+ *   are rendered (legacy behavior)
  *
  * @param isVisible Whether edit mode is active
  * @param onDoneClick Callback when user clicks FAB to save and exit edit mode
  * @param onCancelClick Callback when user clicks FAB to cancel and exit edit mode
+ * @param onManageClick Callback when user clicks FAB to open the manage menu; null hides the FAB
  * @param modifier Optional modifier for customization
  */
 @Composable
@@ -40,6 +45,7 @@ fun EditModeFab(
     isVisible: Boolean,
     onDoneClick: () -> Unit,
     onCancelClick: () -> Unit,
+    onManageClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -52,6 +58,19 @@ fun EditModeFab(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
             horizontalAlignment = Alignment.End,
         ) {
+            if (onManageClick != null) {
+                SmallFloatingActionButton(
+                    onClick = onManageClick,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.List,
+                        contentDescription = stringResource(R.string.action_manage_menu),
+                    )
+                }
+            }
+
             SmallFloatingActionButton(
                 onClick = onCancelClick,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
