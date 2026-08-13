@@ -27,7 +27,7 @@ fun buildVitalsCardDataMap(
     isEditing: Boolean,
     onNavigateToHrv: (() -> Unit)? = null,
     onNavigateToRhr: (() -> Unit)? = null,
-    onVitalsCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
+    onVitalsCardDisplayModeChanged: (CardId, DashboardCardDisplayMode?) -> Unit = { _, _ -> },
 ): Map<CardId, @Composable (CardConfiguration) -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable (CardConfiguration) -> Unit>()
 

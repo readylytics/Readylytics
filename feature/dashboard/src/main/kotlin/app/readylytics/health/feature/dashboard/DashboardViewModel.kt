@@ -316,7 +316,7 @@ class DashboardViewModel
 
         fun onCardDisplayModeChanged(
             cardId: CardId,
-            mode: DashboardCardDisplayMode,
+            mode: DashboardCardDisplayMode?,
         ) {
             cardManagementDelegate.onEvent(CardManagementEvent.DisplayModeChanged(cardId, mode))
         }

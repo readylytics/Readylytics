@@ -376,7 +376,7 @@ class VitalsViewModel
 
         fun onVitalsCardDisplayModeChanged(
             cardId: CardId,
-            mode: DashboardCardDisplayMode,
+            mode: DashboardCardDisplayMode?,
         ) {
             vitalsCardManagementDelegate.onEvent(CardManagementEvent.DisplayModeChanged(cardId, mode))
         }
