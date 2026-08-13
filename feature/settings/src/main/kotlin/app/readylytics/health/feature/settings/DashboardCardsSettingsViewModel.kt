@@ -7,6 +7,7 @@ import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ class DashboardCardsSettingsViewModel
         private val settingsReader: UserPreferencesReader,
         private val displaySettings: DisplaySettings,
         private val cardConfigurationRepository: CardConfigurationRepository,
+        private val vitalsLayoutRepository: VitalsLayoutRepository,
     ) : ViewModel() {
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -125,16 +127,26 @@ class DashboardCardsSettingsViewModel
         }
 
         private suspend fun applyGlobalMode(mode: DashboardCardDisplayMode) {
-            val current = cardConfigurationRepository.dashboardCardConfigurations().first()
-            val updated = DashboardCardCatalog.applyGlobalDisplayMode(current, mode)
-            cardConfigurationRepository.updateDashboardCardConfigurations(updated)
+            val currentDashboard = cardConfigurationRepository.dashboardCardConfigurations().first()
+            val updatedDashboard = DashboardCardCatalog.applyGlobalDisplayMode(currentDashboard, mode)
+            cardConfigurationRepository.updateDashboardCardConfigurations(updatedDashboard)
+
+            val currentVitals = vitalsLayoutRepository.vitalsCardConfigurations().first()
+            val updatedVitals = DashboardCardCatalog.applyGlobalDisplayMode(currentVitals, mode)
+            vitalsLayoutRepository.updateVitalsCardConfigurations(updatedVitals)
+
             displaySettings.updateLastGlobalDisplayMode(mode)
         }
 
         private suspend fun resetAllModes() {
-            val current = cardConfigurationRepository.dashboardCardConfigurations().first()
-            val updated = DashboardCardCatalog.resetAllDisplayModes(current)
-            cardConfigurationRepository.updateDashboardCardConfigurations(updated)
+            val currentDashboard = cardConfigurationRepository.dashboardCardConfigurations().first()
+            val updatedDashboard = DashboardCardCatalog.resetAllDisplayModes(currentDashboard)
+            cardConfigurationRepository.updateDashboardCardConfigurations(updatedDashboard)
+
+            val currentVitals = vitalsLayoutRepository.vitalsCardConfigurations().first()
+            val updatedVitals = DashboardCardCatalog.resetAllDisplayModes(currentVitals)
+            vitalsLayoutRepository.updateVitalsCardConfigurations(updatedVitals)
+
             displaySettings.updateLastGlobalDisplayMode(null)
         }
     }
