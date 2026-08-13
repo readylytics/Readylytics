@@ -4,9 +4,9 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
-import app.readylytics.health.domain.scoring.TrimpModel
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
