@@ -3,6 +3,7 @@ package app.readylytics.health.data.preferences
 import androidx.datastore.core.DataStore
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.layout.LayoutDefaultsMerger
 import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
@@ -33,22 +34,15 @@ class WorkoutsLayoutRepositoryImpl
         private suspend fun ensureDefaultCardsArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.workoutCardsList.mapNotNull { WorkoutsLayoutMapper.toCardDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_WORKOUT_CARDS
-                val storedIds = stored.map { it.cardId }.toSet()
-                val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(
-                                position =
-                                    maxPos + 1 + index,
-                            )
-                        }
-                    val merged = stored + appended
                     proto
                         .toBuilder()
                         .clearWorkoutCards()
@@ -61,22 +55,15 @@ class WorkoutsLayoutRepositoryImpl
         private suspend fun ensureDefaultChartsArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.workoutChartsList.mapNotNull { WorkoutsLayoutMapper.toChartDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_WORKOUT_CHARTS
-                val storedIds = stored.map { it.chartId }.toSet()
-                val missingDefaults = defaults.filter { it.chartId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(
-                                position =
-                                    maxPos + 1 + index,
-                            )
-                        }
-                    val merged = stored + appended
                     proto
                         .toBuilder()
                         .clearWorkoutCharts()
@@ -89,22 +76,15 @@ class WorkoutsLayoutRepositoryImpl
         private suspend fun ensureDefaultHistoryArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.workoutHistoryList.mapNotNull { WorkoutsLayoutMapper.toHistoryDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_WORKOUT_HISTORY
-                val storedIds = stored.map { it.historyId }.toSet()
-                val missingDefaults = defaults.filter { it.historyId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(
-                                position =
-                                    maxPos + 1 + index,
-                            )
-                        }
-                    val merged = stored + appended
                     proto
                         .toBuilder()
                         .clearWorkoutHistory()
@@ -124,16 +104,11 @@ class WorkoutsLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.workoutCardsList.mapNotNull { WorkoutsLayoutMapper.toCardDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_WORKOUT_CARDS
-                    val storedIds = stored.map { it.cardId }.toSet()
-                    val missingDefaults = defaults.filter { it.cardId !in storedIds }
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        stored +
-                            missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override fun workoutChartConfigurations(): Flow<List<WorkoutChartConfiguration>> =
@@ -146,16 +121,11 @@ class WorkoutsLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.workoutChartsList.mapNotNull { WorkoutsLayoutMapper.toChartDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_WORKOUT_CHARTS
-                    val storedIds = stored.map { it.chartId }.toSet()
-                    val missingDefaults = defaults.filter { it.chartId !in storedIds }
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        stored +
-                            missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override fun workoutHistoryConfigurations(): Flow<List<WorkoutHistoryConfiguration>> =
@@ -168,16 +138,11 @@ class WorkoutsLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.workoutHistoryList.mapNotNull { WorkoutsLayoutMapper.toHistoryDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_WORKOUT_HISTORY
-                    val storedIds = stored.map { it.historyId }.toSet()
-                    val missingDefaults = defaults.filter { it.historyId !in storedIds }
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        stored +
-                            missingDefaults.mapIndexed { index, config -> config.copy(position = maxPos + 1 + index) }
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override suspend fun updateWorkoutCardConfigurations(cards: List<CardConfiguration>) {
