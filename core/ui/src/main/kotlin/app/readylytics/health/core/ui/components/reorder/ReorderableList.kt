@@ -55,7 +55,7 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableList(
     controller: DragController<Id>? = null,
 ) {
     val configById: Map<Id, Config> =
-        remember(items, dataMap.keys) {
+        remember(items) {
             items
                 .filter { it.isVisible && dataMap.containsKey(it.id) }
                 .associateBy { it.id }
