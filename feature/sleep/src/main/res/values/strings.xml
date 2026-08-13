@@ -43,4 +43,12 @@
 
     <string name="sleep_trend_avg_delta_minutes_format">%1$s%2$dmin</string>
     <string name="sleep_trend_avg_delta_no_change">—</string>
+
+    <!-- Sleep layout management -->
+    <string name="sleep_manage_layout">Customize Sleep</string>
+    <string name="sleep_management_top_cards_section_title">Top Cards</string>
+    <string name="sleep_management_charts_section_title">Charts</string>
+    <string name="sleep_management_metrics_section_title">Metric Cards</string>
+    <string name="sleep_card_title_circadian_consistency">Circadian Consistency</string>
+    <string name="sleep_card_title_sleep_efficiency">Sleep Efficiency</string>
 </resources>
