@@ -1,30 +1,21 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
@@ -57,50 +48,12 @@ fun WorkoutListSection(
             )
         }
 
-        if (totalPages > 1) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            vertical = MaterialTheme.spacing.pageSectionGap,
-                            horizontal = MaterialTheme.spacing.pageHorizontal,
-                        ),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedIconButton(
-                    onClick = onPreviousPage,
-                    enabled = currentPage > 1,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = stringResource(R.string.workout_history_button_prev),
-                    )
-                }
-                Spacer(modifier = Modifier.width(MaterialTheme.spacing.medium))
-                Text(
-                    text =
-                        stringResource(
-                            R.string.workout_history_page_info,
-                            currentPage,
-                            totalPages,
-                        ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.width(MaterialTheme.spacing.medium))
-                OutlinedIconButton(
-                    onClick = onNextPage,
-                    enabled = currentPage < totalPages,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = stringResource(R.string.workout_history_button_next),
-                    )
-                }
-            }
-        }
+        PaginationControls(
+            currentPage = currentPage,
+            totalPages = totalPages,
+            onPreviousPage = onPreviousPage,
+            onNextPage = onNextPage,
+        )
     }
 }
 

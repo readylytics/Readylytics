@@ -25,5 +25,14 @@ interface WorkoutRepository {
 
     suspend fun getInRange(fromMs: Long, toMs: Long): List<WorkoutData>
 
+    suspend fun getInRangePaged(
+        fromMs: Long,
+        toMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<WorkoutData>
+
+    suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
+
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>
 }

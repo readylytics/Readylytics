@@ -56,6 +56,8 @@ fun BodyFatDetailRoute(
         uiState = uiState,
         onBack = onBack,
         onRangeSelected = viewModel::onRangeSelected,
+        onPreviousPage = viewModel::onPreviousPage,
+        onNextPage = viewModel::onNextPage,
     )
 }
 
@@ -65,6 +67,8 @@ fun BodyFatDetailScreen(
     uiState: BodyFatDetailUiState,
     onBack: () -> Unit,
     onRangeSelected: (TimeRange) -> Unit,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (chartScrollState, chartZoomState) =
@@ -208,7 +212,13 @@ fun BodyFatDetailScreen(
             }
 
             if (uiState.historyItems.isNotEmpty()) {
-                BodyFatHistorySection(items = uiState.historyItems)
+                BodyFatHistorySection(
+                    items = uiState.historyItems,
+                    currentPage = uiState.currentPage,
+                    totalPages = uiState.totalPages,
+                    onPreviousPage = onPreviousPage,
+                    onNextPage = onNextPage,
+                )
             }
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageBottom))

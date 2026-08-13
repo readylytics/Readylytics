@@ -87,7 +87,6 @@ data class WorkoutsUiState(
 
 private data class WorkoutFlowData(
     val latestSummary: DailySummary?,
-    val allWorkouts: List<WorkoutData>,
     val trimpSummaries: List<DailySummary>,
     val rasSummaries: List<DailySummary>,
     val prefs: app.readylytics.health.data.preferences.UserPreferences,
@@ -201,17 +200,16 @@ class WorkoutsViewModel
                     val dataFlow =
                         combine(
                             summaryFlow,
-                            workoutRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(rasFromMs),
                             settingsRepo.userPreferences,
-                        ) { latest, allWorkouts, trimpSummaries, rasSummaries, prefs ->
-                            WorkoutFlowData(latest, allWorkouts, trimpSummaries, rasSummaries, prefs)
+                        ) { latest, trimpSummaries, rasSummaries, prefs ->
+                            WorkoutFlowData(latest, trimpSummaries, rasSummaries, prefs)
                         }
 
                     dataFlow.flatMapLatest { data ->
                         flow {
-                            val (latest, allWorkouts, trimpSummaries, rasSummaries, prefs) = data
+                            val (latest, trimpSummaries, rasSummaries, prefs) = data
 
                             val earliestLocalDate =
                                 when (prefs.strainLoadSourceMode) {
@@ -223,10 +221,6 @@ class WorkoutsViewModel
                                         LoadSourceSelector.selectEarliestDataDate(trimpSummaries)
                                 }
 
-                            val filteredWorkouts =
-                                allWorkouts.filter {
-                                    it.startTime < selectedDayEndMs
-                                }
                             val trimpByDate: Map<LocalDate, Float> =
                                 trimpSummaries.associate { summary ->
                                     summary.date to
@@ -332,17 +326,29 @@ class WorkoutsViewModel
                                     date,
                                 )
 
-                            val summaryByDate = trimpSummaries.associateBy { it.date }
+                            // Paged history read: scope the page to the display window, not the
+                            // full fetch window, so totalPages/clamping reflect only what the
+                            // user can see. Newest-first order and the stable id tiebreak come
+                            // from the DAO's SQL, not an in-memory sort.
+                            val pageSize = 10
+                            val totalItems = workoutRepository.countByTimeRange(displayFromMs, selectedDayEndMs)
+                            val totalPages = maxOf(1, (totalItems + pageSize - 1) / pageSize)
+                            val clampedPage = page.coerceIn(1, totalPages)
+                            val pageWorkouts =
+                                workoutRepository.getInRangePaged(
+                                    displayFromMs,
+                                    selectedDayEndMs,
+                                    pageSize,
+                                    (clampedPage - 1) * pageSize,
+                                )
 
-                            val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
-
-                            // Batch load HR samples for all recent workouts: one getByTimeRange
+                            // Batch load HR samples for the current page only: one getByTimeRange
                             // per span-bounded cluster instead of one per workout (F10).
                             val samplesByWorkoutId =
-                                fetchHeartRateSamplesByWorkout(recentWorkouts, heartRateRepository)
+                                fetchHeartRateSamplesByWorkout(pageWorkouts, heartRateRepository)
 
                             val recentItems =
-                                recentWorkouts
+                                pageWorkouts
                                     .map { workout ->
                                         val samples = samplesByWorkoutId[workout.id] ?: emptyList()
 
@@ -363,19 +369,6 @@ class WorkoutsViewModel
                                         )
                                     }
 
-                            val pageSize = 10
-                            val totalItems = recentItems.size
-                            val totalPages = maxOf(1, (totalItems + pageSize - 1) / pageSize)
-                            val clampedPage = page.coerceIn(1, totalPages)
-                            val startIndex = (clampedPage - 1) * pageSize
-                            val endIndex = minOf(startIndex + pageSize, totalItems)
-                            val paginatedItems =
-                                if (startIndex < totalItems) {
-                                    recentItems.subList(startIndex, endIndex)
-                                } else {
-                                    emptyList()
-                                }
-
                             val yesterday = date.minusDays(1)
                             val yesterdaySummary = rasSummaries.firstOrNull { it.date == yesterday }
                             val yesterdayMetrics = yesterdaySummary?.let { DailyMetricsMapper.toMetrics(it, prefs) }
@@ -391,13 +384,24 @@ class WorkoutsViewModel
                                 when (prefs.strainLoadSourceMode) {
                                     LoadSourceMode.WORKOUT_ONLY -> {
                                         // Sum the already-rounded per-workout gains shown in History so the
-                                        // card total always exactly matches the rows below it.
+                                        // card total always exactly matches the rows below it. Selected-day
+                                        // gains must be derived from every selected-day workout, independent
+                                        // of the paged history view (which may only hold a subset).
+                                        val selectedDayWorkouts =
+                                            workoutRepository.getInRange(selectedMidnightMs, selectedDayEndMs)
+                                        val selectedDaySamples =
+                                            fetchHeartRateSamplesByWorkout(selectedDayWorkouts, heartRateRepository)
                                         val workoutOnlyGains =
-                                            recentItems
-                                                .filter {
-                                                    it.workout.startTime in
-                                                        selectedMidnightMs until selectedDayEndMs
-                                                }.map { it.gainedStrain }
+                                            selectedDayWorkouts.map { workout ->
+                                                val samples = selectedDaySamples[workout.id] ?: emptyList()
+                                                getWorkoutDisplayMetricsUseCase
+                                                    .execute(
+                                                        workout = workout,
+                                                        samples = samples,
+                                                        preferences = prefs,
+                                                        historicalSummaries = trimpSummaries,
+                                                    ).gainedStrain
+                                            }
                                         calculateDailyStrainIncrease(
                                             dataTenureDays = dataTenureDaysForDate,
                                             loadSourceMode = prefs.strainLoadSourceMode,
@@ -437,7 +441,7 @@ class WorkoutsViewModel
                                 latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
                                 dailyTrimp = paddedTrimp,
                                 dailyStrainRatio = paddedStrain,
-                                recentWorkouts = paginatedItems,
+                                recentWorkouts = recentItems,
                                 selectedRange = range,
                                 selectedDate = date,
                                 rangeStartMs = displayStartDayMs,
@@ -541,15 +545,17 @@ class WorkoutsViewModel
         }
 
         fun onNextPage() {
+            val current = uiState.value.currentPage
             val totalPages = uiState.value.totalPages
-            if (_currentPage.value < totalPages) {
-                _currentPage.value += 1
+            if (current < totalPages) {
+                _currentPage.value = current + 1
             }
         }
 
         fun onPreviousPage() {
-            if (_currentPage.value > 1) {
-                _currentPage.value -= 1
+            val current = uiState.value.currentPage
+            if (current > 1) {
+                _currentPage.value = current - 1
             }
         }
     }
