@@ -342,7 +342,7 @@ result detail. They do not store health samples, backup contents, passwords, enc
 Health Connect payloads.
 
 **Staged Restore Design:**
-Restore is staged. Database replacement is atomic within Room. Preferences are restored after the
+Restore is staged. Database replacement is atomic within Room. Preferences and layout configurations (dashboard cards, vitals layout, and sleep tab layout configurations via `SleepLayoutRepository`) are restored after the
 database transaction commits because Room and DataStore cannot share a transaction. If a later
 stage fails, the app returns an explicit partial-success result requiring restart and instructs
 the user to rerun restore. Backup manifests v5, v6, and v7 restore into the current v7 entities.
@@ -938,6 +938,12 @@ resetting to zero.
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepHrChart.kt`                          | UI — Canvas chart                                   | sleep HR timeline                                                                        |
 | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/RasWeeklyBar.kt`                 | UI — Canvas chart                                   | 7-day RAS breakdown                                                                      |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepTrendChart.kt`                      | UI — Vico chart                                     | stacked column & line dual-axis sleep window & duration chart                            |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/sleep/SleepLayoutRepository.kt`                      | UI — sleep layout contract                          | Interface for observing and updating sleep top cards, trend charts, and metric card configurations |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/SleepLayoutRepositoryImpl.kt`                     | UI — sleep layout store implementation              | Proto DataStore persistence, default auto-healing/appending, and proto/domain mapping for sleep tab layout |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/SleepLayoutConfigurationsSerializer.kt`         | UI — sleep layout serializer                        | Proto DataStore serializer for `SleepLayoutConfigurationsProto`                          |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/SleepLayoutMapper.kt`                             | UI — sleep layout mapper                            | Bidirectional conversion between proto DTOs and domain sleep layout configurations       |
+| `app/src/main/proto/sleep_layout_configurations.proto`                                                          | UI — sleep layout schema                            | Proto schema for sleep tab layout configurations (top cards, trend charts, metric cards) |
+| `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/overview/SleepFlowIntermediate.kt`        | UI — sleep tab reactive flow assembly               | Merges daily summary domain state with reactive `SleepLayoutRepository` layout configurations |
 
 ### 3.5 Dashboard Insight Card Derivation & Dismissal Flow
 
@@ -1024,6 +1030,39 @@ Key behaviors:
 - Default card presence: `AI_RECOMMENDATION` is in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS`;
   `CardConfigurationRepositoryImpl` appends missing defaults once, visibly, after the highest stored
   position for existing installs.
+
+### 3.7 Sleep Tab Layout Customization & Proto DataStore Persistence Pipeline
+
+The Sleep tab supports customizable layout ordering, visibility toggling, and display mode selection across three distinct card/chart groups: **Top Cards** (score gauge, sleep duration, efficiency, consistency), **Trend Charts** (sleep duration/window, HR/HRV trends, stage timelines), and **Metric Cards** (RHR, HRV, SpO2, body temperature, circadian metrics).
+
+```
+SleepManagementBottomSheet / SleepOverviewScreen (UI interaction)
+  │
+  ▼ emits layout updates (reorder, toggle visibility, change display mode, reset defaults)
+SleepViewModel
+  │
+  ▼ delegates to SleepTopCardManagementDelegate / SleepChartManagementDelegate / SleepMetricCardManagementDelegate
+SleepFlowIntermediate (combines repository flows with daily summary state)
+  │
+  ▼ updates layout state via
+SleepLayoutRepository (core/model/.../domain/sleep/SleepLayoutRepository.kt)
+  │
+  ▼ implemented by
+SleepLayoutRepositoryImpl (app/.../data/preferences/SleepLayoutRepositoryImpl.kt)
+  │
+  ▼ mapped by SleepLayoutMapper (toTopCardProto / toChartProto / toMetricCardProto)
+DataStore<SleepLayoutConfigurationsProto> ("sleep_layout_configurations.pb")
+  │  Proto schema: app/src/main/proto/sleep_layout_configurations.proto
+  │  Serializer: SleepLayoutConfigurationsSerializer
+  ▼
+Local backup/restore pipeline (LocalBackupManager & LocalRestoreManager)
+```
+
+Key behaviors:
+- **Proto Schema:** `sleep_layout_configurations.proto` defines `SleepTopCardConfigurationProto`, `SleepChartConfigurationProto`, `SleepMetricCardConfigurationProto`, and `SleepLayoutConfigurationsProto`.
+- **Domain Seam:** Pure domain models (`SleepTopCardConfiguration`, `SleepChartConfiguration`, `SleepMetricCardConfiguration`) and ID enums (`SleepTopCardId`, `SleepChartId`, `SleepMetricCardId`) live in `core/model` (zero Android dependencies).
+- **Auto-Healing Defaults:** On initialization or repository flow observation, `SleepLayoutRepositoryImpl` checks stored configurations against `SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS`, `DEFAULT_SLEEP_CHARTS`, and `DEFAULT_SLEEP_METRIC_CARDS`. Any missing default items are automatically appended after the highest stored position. This ensures forward-compatibility when new cards or charts are introduced in app updates without overwriting existing user reordering or visibility choices.
+- **Backup & Restore Integration:** `LocalBackupManager` streams active sleep layout configurations (`sleepTopCards`, `sleepCharts`, `sleepMetricCards`) into `UserPreferencesBackup` within encrypted ZIP backups. `LocalRestoreManager` restores these stored configurations back to `SleepLayoutRepository` (Proto DataStore) during the post-database preference restoration stage.
 
 ---
 
