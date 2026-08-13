@@ -944,6 +944,9 @@ resetting to zero.
 | `app/src/main/kotlin/app/readylytics/health/data/preferences/SleepLayoutMapper.kt`                             | UI — sleep layout mapper                            | Bidirectional conversion between proto DTOs and domain sleep layout configurations       |
 | `app/src/main/proto/sleep_layout_configurations.proto`                                                          | UI — sleep layout schema                            | Proto schema for sleep tab layout configurations (top cards, trend charts, metric cards) |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/overview/SleepFlowIntermediate.kt`        | UI — sleep tab reactive flow assembly               | Merges daily summary domain state with reactive `SleepLayoutRepository` layout configurations |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/workouts/WorkoutsLayoutRepository.kt`             | UI — workouts layout contract                       | Interface for observing and updating workout cards, diagram, and history configurations |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/WorkoutsLayoutRepositoryImpl.kt`                | UI — workouts layout store implementation           | Proto DataStore persistence, default auto-healing/appending, and proto/domain mapping for workouts tab layout |
+| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsFlowIntermediate.kt`       | UI — workouts tab reactive flow assembly            | Merges workout/daily-summary domain state with reactive `WorkoutsLayoutRepository` layout configurations |
 
 ### 3.5 Dashboard Insight Card Derivation & Dismissal Flow
 
@@ -1063,6 +1066,42 @@ Key behaviors:
 - **Domain Seam:** Pure domain models (`SleepTopCardConfiguration`, `SleepChartConfiguration`, `SleepMetricCardConfiguration`) and ID enums (`SleepTopCardId`, `SleepChartId`, `SleepMetricCardId`) live in `core/model` (zero Android dependencies).
 - **Auto-Healing Defaults:** On initialization or repository flow observation, `SleepLayoutRepositoryImpl` checks stored configurations against `SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS`, `DEFAULT_SLEEP_CHARTS`, and `DEFAULT_SLEEP_METRIC_CARDS`. Any missing default items are automatically appended after the highest stored position. This ensures forward-compatibility when new cards or charts are introduced in app updates without overwriting existing user reordering or visibility choices.
 - **Backup & Restore Integration:** `LocalBackupManager` streams active sleep layout configurations (`sleepTopCards`, `sleepCharts`, `sleepMetricCards`) into `UserPreferencesBackup` within encrypted ZIP backups. `LocalRestoreManager` restores these stored configurations back to `SleepLayoutRepository` (Proto DataStore) during the post-database preference restoration stage.
+
+---
+
+### 3.8 Workouts Tab Layout Customization & Proto DataStore Persistence Pipeline
+
+The Workouts tab supports customizable layout ordering, visibility toggling, and display mode selection across three groups: **Cards** (Strain Ratio, Readiness, RAS Daily — reusing the shared `CardId`/`CardConfiguration` model from `core/model/.../domain/dashboard`), **Diagrams** (the ACWR/TRIMP training-load chart), and **History** (recent workout list, status legend).
+
+```
+WorkoutsManagementBottomSheet / WorkoutsScreen (UI interaction)
+  │
+  ▼ emits layout updates (reorder, toggle visibility, change display mode, reset defaults)
+WorkoutsViewModel
+  │
+  ▼ delegates to CardManagementDelegate / WorkoutChartManagementDelegate / WorkoutHistoryManagementDelegate
+WorkoutsFlowIntermediate (combines repository flows with daily-summary/workout state)
+  │
+  ▼ updates layout state via
+WorkoutsLayoutRepository (core/model/.../domain/workouts/WorkoutsLayoutRepository.kt)
+  │
+  ▼ implemented by
+WorkoutsLayoutRepositoryImpl (app/.../data/preferences/WorkoutsLayoutRepositoryImpl.kt)
+  │
+  ▼ mapped by WorkoutsLayoutMapper (toCardProto / toChartProto / toHistoryProto)
+DataStore<WorkoutsLayoutConfigurationsProto> ("workouts_layout_configurations.pb")
+  │  Proto schema: app/src/main/proto/workouts_layout_configurations.proto
+  │  Serializer: WorkoutsLayoutConfigurationsSerializer
+  ▼
+Local backup/restore pipeline (LocalBackupManager & LocalRestoreManager)
+```
+
+Key behaviors:
+- **Proto Schema:** `workouts_layout_configurations.proto` defines `WorkoutCardConfigurationProto`, `WorkoutChartConfigurationProto`, `WorkoutHistoryConfigurationProto`, and `WorkoutsLayoutConfigurationsProto`.
+- **Domain Seam:** Cards reuse the existing `CardId`/`CardConfiguration` (already shared with Dashboard/Sleep/Vitals). `WorkoutChartConfiguration`/`WorkoutChartId` and `WorkoutHistoryConfiguration`/`WorkoutHistoryId` are new pure domain models in `core/model` (zero Android dependencies).
+- **Auto-Healing Defaults:** On initialization or repository flow observation, `WorkoutsLayoutRepositoryImpl` checks stored configurations against `SettingsDefaults.DEFAULT_WORKOUT_CARDS`, `DEFAULT_WORKOUT_CHARTS`, and `DEFAULT_WORKOUT_HISTORY`. Any missing default items are automatically appended after the highest stored position.
+- **RAS Daily dual rendering:** `CardId.RAS_DAILY`'s VALUE mode (default) renders the rich weekly-breakdown card (`RasWeeklyCard`); switching to GAUGE mode renders a compact dial of today's RAS score, matching Strain Ratio/Readiness.
+- **Backup & Restore Integration:** `LocalBackupManager` streams active workout layout configurations (`workoutCards`, `workoutCharts`, `workoutHistory`) into `UserPreferencesBackup` within encrypted ZIP backups. `LocalRestoreManager` restores these back to `WorkoutsLayoutRepository` (Proto DataStore) during the post-database preference restoration stage.
 
 ---
 
