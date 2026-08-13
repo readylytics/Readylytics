@@ -20,14 +20,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +42,7 @@ import app.readylytics.health.core.ui.components.CardDataMap
 import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.StatusLegend
+import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
@@ -193,22 +191,18 @@ fun DashboardScreen(
     ) -> Unit = { _, _, _, _, _ -> },
 ) {
     val summary = uiState.summary
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState()
-    var showCardManagement by rememberSaveable { mutableStateOf(false) }
+    val manageState = rememberManageLayoutState()
     val today = uiState.today
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (showCardManagement) {
+        if (manageState.isManageOpen) {
             CardManagementBottomSheet(
                 cards = uiState.cardConfigurations,
                 onCardVisibilityChanged = onCardVisibilityChanged,
+                onCardDisplayModeChanged = onCardDisplayModeChanged,
                 onResetToDefaults = onResetToDefaults,
-                onDismiss = {
-                    scope.launch { sheetState.hide() }
-                    showCardManagement = false
-                },
-                sheetState = sheetState,
+                onDismiss = manageState.closeManage,
+                sheetState = manageState.sheetState,
             )
         }
 
@@ -390,7 +384,7 @@ fun DashboardScreen(
             isVisible = uiState.isManagingCards,
             onDoneClick = onToggleCardManagement,
             onCancelClick = onCancelCardManagement,
-            onManageClick = onManageClick ?: { showCardManagement = true },
+            onManageClick = onManageClick ?: manageState.openManage,
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
 

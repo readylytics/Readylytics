@@ -17,13 +17,9 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,13 +36,13 @@ import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.StatusLegend
+import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.feature.vitals.R
-import kotlinx.coroutines.launch
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -114,9 +110,7 @@ fun VitalsScreen(
             key = "vitals-${uiState.selectedRange}",
         )
     val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState()
-    var showVitalsManagement by rememberSaveable { mutableStateOf(false) }
+    val manageState = rememberManageLayoutState()
 
     val vitalsCardDataMap =
         remember(uiState.presentation, uiState.isManagingVitalsCards) {
@@ -132,18 +126,16 @@ fun VitalsScreen(
         }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (showVitalsManagement) {
+        if (manageState.isManageOpen) {
             VitalsManagementBottomSheet(
                 cardConfigurations = uiState.vitalsCardConfigurations,
                 chartConfigurations = uiState.vitalsChartConfigurations,
                 onCardVisibilityChanged = onToggleVitalsCardVisibility,
                 onChartVisibilityChanged = onToggleChartVisibility,
+                onCardDisplayModeChanged = onVitalsCardDisplayModeChanged,
                 onResetToDefaults = onResetVitalsToDefaults,
-                onDismiss = {
-                    scope.launch { sheetState.hide() }
-                    showVitalsManagement = false
-                },
-                sheetState = sheetState,
+                onDismiss = manageState.closeManage,
+                sheetState = manageState.sheetState,
             )
         }
 
@@ -263,7 +255,7 @@ fun VitalsScreen(
             isVisible = uiState.isManagingVitalsLayout,
             onDoneClick = onToggleVitalsManagement,
             onCancelClick = onCancelVitalsManagement,
-            onManageClick = onManageClick ?: { showVitalsManagement = true },
+            onManageClick = onManageClick ?: manageState.openManage,
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
     }

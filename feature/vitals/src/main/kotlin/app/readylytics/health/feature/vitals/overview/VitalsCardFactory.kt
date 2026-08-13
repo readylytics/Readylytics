@@ -3,7 +3,8 @@ package app.readylytics.health.feature.vitals.overview
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
-import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
+import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
+import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
@@ -17,20 +18,6 @@ import app.readylytics.health.core.ui.R as CoreUiR
 
 private const val RHR_DIAL_FLOOR = 30
 private const val RHR_BASELINE_FILL = 0.5f
-
-private fun DashboardCardDisplayMode.toUniversalMode(): UniversalCardDisplayMode =
-    when (this) {
-        DashboardCardDisplayMode.GAUGE -> UniversalCardDisplayMode.GAUGE
-        DashboardCardDisplayMode.BAR -> UniversalCardDisplayMode.BAR
-        DashboardCardDisplayMode.VALUE -> UniversalCardDisplayMode.VALUE
-    }
-
-private fun UniversalCardDisplayMode.toDashboardMode(): DashboardCardDisplayMode =
-    when (this) {
-        UniversalCardDisplayMode.GAUGE -> DashboardCardDisplayMode.GAUGE
-        UniversalCardDisplayMode.BAR -> DashboardCardDisplayMode.BAR
-        UniversalCardDisplayMode.VALUE -> DashboardCardDisplayMode.VALUE
-    }
 
 // Build a map of CardId to composable card content for the Vitals screen. Only covers the
 // CardIds the Vitals tab can render; the dashboard's buildCardDataMap is the sibling for the

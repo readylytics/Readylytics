@@ -28,6 +28,8 @@ import app.readylytics.health.core.ui.components.StepsCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
+import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
+import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
@@ -65,7 +67,7 @@ private fun ConfigurableMetricCard(
             if (presentation != null && spec != null) {
                 UniversalMetricCard(
                     presentation = presentation,
-                    specification = spec.toUniversalSpec(),
+                    specification = spec.toUniversalSpec(cardId.usesDeltaPill()),
                     requestedMode = DashboardCardCatalog.requestedMode(configuration).toUniversalMode(),
                     isEditing = isEditing,
                     onModeSelected = { mode -> onCardDisplayModeChanged(cardId, mode.toDashboardMode()) },

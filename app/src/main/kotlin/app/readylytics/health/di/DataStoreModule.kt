@@ -105,6 +105,21 @@ object DataStoreModule {
 
     @Provides
     @Singleton
+    fun provideSleepLayoutConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<SleepLayoutConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = SleepLayoutConfigurationsSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    SleepLayoutConfigurationsSerializer.defaultValue
+                },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { context.dataStoreFile("sleep_layout_configurations.pb") },
+        )
+
+    @Provides
+    @Singleton
     fun provideUserPreferencesDataStore(
         @ApplicationContext context: Context,
         @ApplicationScope appScope: CoroutineScope,

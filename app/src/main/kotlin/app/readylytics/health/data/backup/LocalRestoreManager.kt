@@ -32,6 +32,7 @@ import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.backup.WrongBackupPasswordException
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.workers.WorkerScheduler
@@ -59,6 +60,7 @@ class LocalRestoreManager
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val vitalsLayoutRepository: VitalsLayoutRepository,
+        private val sleepLayoutRepository: SleepLayoutRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
@@ -670,6 +672,15 @@ class LocalRestoreManager
             }
             backup.vitalsCharts?.let {
                 vitalsLayoutRepository.updateVitalsChartConfigurations(it)
+            }
+            backup.sleepTopCards?.let {
+                sleepLayoutRepository.updateSleepTopCardConfigurations(it)
+            }
+            backup.sleepCharts?.let {
+                sleepLayoutRepository.updateSleepChartConfigurations(it)
+            }
+            backup.sleepMetricCards?.let {
+                sleepLayoutRepository.updateSleepMetricCardConfigurations(it)
             }
             backup.backgroundSyncEnabled?.let { enabled ->
                 if (enabled) {

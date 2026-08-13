@@ -6,6 +6,12 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.domain.sleep.SleepChartId
+import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.domain.sleep.SleepMetricCardId
+import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
 import io.mockk.coEvery
@@ -456,6 +462,99 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             assertTrue(result is RestoreResult.SuccessRequiresRestart)
             coVerify(exactly = 0) { vitalsLayoutRepo.updateVitalsCardConfigurations(any()) }
             coVerify(exactly = 0) { vitalsLayoutRepo.updateVitalsChartConfigurations(any()) }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_restoresSleepTopCardsChartsAndMetricCards() =
+        runTest {
+            val json = createValidBackupJson()
+            val sleepTopCardsJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("cardId", "SLEEP_SCORE")
+                            put("isVisible", true)
+                            put("position", 0)
+                        },
+                    )
+                }
+            val sleepChartsJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("chartId", "SLEEP_DURATION_TREND")
+                            put("isVisible", true)
+                            put("position", 0)
+                        },
+                    )
+                }
+            val sleepMetricCardsJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("cardId", "CIRCADIAN_CONSISTENCY")
+                            put("isVisible", true)
+                            put("position", 0)
+                        },
+                    )
+                }
+            json.getJSONObject("preferences").put("sleepTopCards", sleepTopCardsJson)
+            json.getJSONObject("preferences").put("sleepCharts", sleepChartsJson)
+            json.getJSONObject("preferences").put("sleepMetricCards", sleepMetricCardsJson)
+            val zipFile = createBackupZipFile("sleep_layout_backup.zip", json)
+
+            coEvery { sleepLayoutRepo.updateSleepTopCardConfigurations(any()) } returns Unit
+            coEvery { sleepLayoutRepo.updateSleepChartConfigurations(any()) } returns Unit
+            coEvery { sleepLayoutRepo.updateSleepMetricCardConfigurations(any()) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val expectedTopCards =
+                listOf(
+                    SleepTopCardConfiguration(
+                        cardId = SleepTopCardId.SLEEP_SCORE,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                )
+            val expectedCharts =
+                listOf(
+                    SleepChartConfiguration(
+                        chartId = SleepChartId.SLEEP_DURATION_TREND,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                )
+            val expectedMetricCards =
+                listOf(
+                    SleepMetricCardConfiguration(
+                        cardId = SleepMetricCardId.CIRCADIAN_CONSISTENCY,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                )
+
+            coVerify(exactly = 1) { sleepLayoutRepo.updateSleepTopCardConfigurations(expectedTopCards) }
+            coVerify(exactly = 1) { sleepLayoutRepo.updateSleepChartConfigurations(expectedCharts) }
+            coVerify(exactly = 1) { sleepLayoutRepo.updateSleepMetricCardConfigurations(expectedMetricCards) }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_oldBackupWithoutSleepLayoutLeavesSleepConfigurationsUntouched() =
+        runTest {
+            val json = createValidBackupJson()
+            val zipFile = createBackupZipFile("old_format_no_sleep_layout_backup.zip", json)
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            coVerify(exactly = 0) { sleepLayoutRepo.updateSleepTopCardConfigurations(any()) }
+            coVerify(exactly = 0) { sleepLayoutRepo.updateSleepChartConfigurations(any()) }
+            coVerify(exactly = 0) { sleepLayoutRepo.updateSleepMetricCardConfigurations(any()) }
             zipFile.delete()
         }
 }

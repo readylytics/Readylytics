@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package app.readylytics.health.data.preferences;
+
+option java_package = "app.readylytics.health.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "SleepLayoutConfigurationsProtoFile";
+
+message SleepTopCardConfigurationProto {
+    string card_id = 1;
+    bool is_visible = 2;
+    int32 position = 3;
+    string requested_display_mode = 4;
+}
+
+message SleepChartConfigurationProto {
+    string chart_id = 1;
+    bool is_visible = 2;
+    int32 position = 3;
+}
+
+message SleepMetricCardConfigurationProto {
+    string card_id = 1;
+    bool is_visible = 2;
+    int32 position = 3;
+    string requested_display_mode = 4;
+}
+
+message SleepLayoutConfigurationsProto {
+    repeated SleepTopCardConfigurationProto top_cards = 1;
+    repeated SleepChartConfigurationProto trend_charts = 2;
+    repeated SleepMetricCardConfigurationProto metric_cards = 3;
+    int32 version = 4;
+}

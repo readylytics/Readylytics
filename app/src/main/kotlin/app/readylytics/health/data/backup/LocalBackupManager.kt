@@ -13,6 +13,7 @@ import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -46,6 +47,7 @@ class LocalBackupManager
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val vitalsLayoutRepository: VitalsLayoutRepository,
+        private val sleepLayoutRepository: SleepLayoutRepository,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -505,6 +507,9 @@ class LocalBackupManager
             val cards = cardConfigurationRepository.dashboardCardConfigurations().first()
             val vitalsCards = vitalsLayoutRepository.vitalsCardConfigurations().first()
             val vitalsCharts = vitalsLayoutRepository.vitalsChartConfigurations().first()
+            val sleepTopCards = sleepLayoutRepository.sleepTopCardConfigurations().first()
+            val sleepCharts = sleepLayoutRepository.sleepChartConfigurations().first()
+            val sleepMetricCards = sleepLayoutRepository.sleepMetricCardConfigurations().first()
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
@@ -603,6 +608,9 @@ class LocalBackupManager
                     dashboardCards = cards,
                     vitalsCards = vitalsCards,
                     vitalsCharts = vitalsCharts,
+                    sleepTopCards = sleepTopCards,
+                    sleepCharts = sleepCharts,
+                    sleepMetricCards = sleepMetricCards,
                 )
             writer.write(json.encodeToString(backup))
         }
