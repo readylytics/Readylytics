@@ -19,6 +19,7 @@ import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.ResourceProvider
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
@@ -215,7 +216,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
                     resourceProvider.getString(
                         CoreUiR.string.delta_up_format,
                         resourceProvider.getString(CoreUiR.string.delta_up),
-                        increase.toInt().toString(),
+                        increase.roundToInt().toString(),
                     )
                 } else {
                     resourceProvider.getString(CoreUiR.string.delta_no_change)
