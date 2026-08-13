@@ -11,7 +11,7 @@ class CanonicalMetricDisplayAuditTest {
             listOf(
                 "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardCardFactory.kt",
                 "feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepScreen.kt",
-                "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutStatsSection.kt",
+                "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsCardFactory.kt",
                 "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutMetricsDisplay.kt",
                 "feature/dashboard/src/main/kotlin/app/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase.kt",
             ).map(::resolveAuditedFile)
@@ -48,10 +48,7 @@ class CanonicalMetricDisplayAuditTest {
                 // String.format(Locale.US, "%.2f", ...), which the old call-site-only pattern missed.
                 "\"%.2f\"",
             )
-        return when (file.name) {
-            "WorkoutStatsSection.kt" -> commonDecimalFormatting + ".roundToPercentInt()"
-            else -> commonDecimalFormatting
-        }
+        return commonDecimalFormatting
     }
 
     private fun resolveAuditedFile(pathFromRepoRoot: String): File {
