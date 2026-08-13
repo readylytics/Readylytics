@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -200,6 +201,38 @@ class VitalsLayoutRepositoryTest {
         }
 
     @Test
+    fun updateVitalsCardConfigurations_preservesTrendCharts() =
+        runTest {
+            var persisted =
+                VitalsLayoutConfigurationsProto
+                    .newBuilder()
+                    .addAllVitalsCards(SettingsDefaults.DEFAULT_VITALS_CARDS.map { VitalsLayoutMapper.toCardProto(it) })
+                    .addAllTrendCharts(
+                        SettingsDefaults.DEFAULT_VITALS_CHARTS.map { VitalsLayoutMapper.toChartProto(it) },
+                    ).build()
+            coEvery { dataStore.updateData(any()) } coAnswers {
+                val transform = firstArg<suspend (VitalsLayoutConfigurationsProto) -> VitalsLayoutConfigurationsProto>()
+                persisted = transform(persisted)
+                persisted
+            }
+
+            val newCards =
+                listOf(
+                    CardConfiguration(
+                        CardId.HRV,
+                        isVisible = false,
+                        position = 1,
+                    ),
+                )
+            repository.updateVitalsCardConfigurations(newCards)
+
+            assertEquals(1, persisted.vitalsCardsCount)
+            assertEquals(CardId.HRV.name, persisted.getVitalsCards(0).cardId)
+            assertFalse(persisted.getVitalsCards(0).isVisible)
+            assertEquals(SettingsDefaults.DEFAULT_VITALS_CHARTS.size, persisted.trendChartsCount)
+        }
+
+    @Test
     fun updateVitalsChartConfigurations_writesCorrectProtoField() =
         runTest {
             val capturedUpdate = slot<suspend (VitalsLayoutConfigurationsProto) -> VitalsLayoutConfigurationsProto>()
@@ -225,6 +258,38 @@ class VitalsLayoutRepositoryTest {
             assertEquals(VitalsChartId.SPO2_TREND.name, protoChart.chartId)
             assertEquals(false, protoChart.isVisible)
             assertEquals(4, protoChart.position)
+        }
+
+    @Test
+    fun updateVitalsChartConfigurations_preservesVitalsCards() =
+        runTest {
+            var persisted =
+                VitalsLayoutConfigurationsProto
+                    .newBuilder()
+                    .addAllVitalsCards(SettingsDefaults.DEFAULT_VITALS_CARDS.map { VitalsLayoutMapper.toCardProto(it) })
+                    .addAllTrendCharts(
+                        SettingsDefaults.DEFAULT_VITALS_CHARTS.map { VitalsLayoutMapper.toChartProto(it) },
+                    ).build()
+            coEvery { dataStore.updateData(any()) } coAnswers {
+                val transform = firstArg<suspend (VitalsLayoutConfigurationsProto) -> VitalsLayoutConfigurationsProto>()
+                persisted = transform(persisted)
+                persisted
+            }
+
+            val newCharts =
+                listOf(
+                    app.readylytics.health.domain.vitals.VitalsChartConfiguration(
+                        VitalsChartId.SPO2_TREND,
+                        isVisible = false,
+                        position = 4,
+                    ),
+                )
+            repository.updateVitalsChartConfigurations(newCharts)
+
+            assertEquals(1, persisted.trendChartsCount)
+            assertEquals(VitalsChartId.SPO2_TREND.name, persisted.getTrendCharts(0).chartId)
+            assertFalse(persisted.getTrendCharts(0).isVisible)
+            assertEquals(SettingsDefaults.DEFAULT_VITALS_CARDS.size, persisted.vitalsCardsCount)
         }
 
     @Test
@@ -318,6 +383,45 @@ class VitalsLayoutRepositoryTest {
             assertEquals(SettingsDefaults.DEFAULT_VITALS_CHARTS.size, persisted.trendChartsCount)
             assertEquals(1, persisted.vitalsCardsList.count { it.cardId == CardId.HRV.name })
             assertEquals(1, persisted.trendChartsList.count { it.chartId == VitalsChartId.RHR_TREND.name })
+        }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun init_appendPreservesExistingExplicitCardModes() =
+        runTest {
+            var persisted =
+                VitalsLayoutConfigurationsProto
+                    .newBuilder()
+                    .addVitalsCards(
+                        cardProto(CardId.RESTING_HR.name, requestedDisplayMode = DashboardCardDisplayMode.BAR.name),
+                    ).build()
+            coEvery { dataStore.updateData(any()) } coAnswers {
+                val transform = firstArg<suspend (VitalsLayoutConfigurationsProto) -> VitalsLayoutConfigurationsProto>()
+                persisted = transform(persisted)
+                persisted
+            }
+
+            val testScope = TestScope(testScheduler)
+            VitalsLayoutRepositoryImpl(dataStore, testScope)
+            testScope.advanceUntilIdle()
+
+            val restingHr = persisted.vitalsCardsList.find { it.cardId == CardId.RESTING_HR.name }
+            assertNotNull(restingHr)
+            assertEquals(DashboardCardDisplayMode.BAR.name, restingHr.requestedDisplayMode)
+
+            assertEquals(SettingsDefaults.DEFAULT_VITALS_CARDS.size, persisted.vitalsCardsCount)
+
+            val appendedCards = persisted.vitalsCardsList.filter { it.cardId != CardId.RESTING_HR.name }
+            appendedCards.forEachIndexed { index, protoCard ->
+                assertEquals(1 + index, protoCard.position)
+                val expectedMode =
+                    SettingsDefaults.DEFAULT_VITALS_CARDS
+                        .first { it.cardId.name == protoCard.cardId }
+                        .requestedDisplayMode
+                        ?.name
+                        .orEmpty()
+                assertEquals(expectedMode, protoCard.requestedDisplayMode)
+            }
         }
 
     @Test
