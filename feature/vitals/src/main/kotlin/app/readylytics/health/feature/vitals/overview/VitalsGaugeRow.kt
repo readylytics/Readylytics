@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import kotlin.math.abs
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -105,6 +106,8 @@ internal fun VitalsGaugeRow(
                 UniversalVitalsMetricCard(
                     modifier = Modifier.weight(1f),
                     title = stringResource(CoreUiR.string.label_rhr),
+                    supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                    requestedMode = UniversalCardDisplayMode.GAUGE,
                     rawValue = rhrFill,
                     valueText = currentRhr?.toString() ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = bpmUnit,
@@ -135,6 +138,8 @@ internal fun VitalsGaugeRow(
                 UniversalVitalsMetricCard(
                     modifier = Modifier.weight(1f),
                     title = stringResource(CoreUiR.string.label_hrv),
+                    supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                    requestedMode = UniversalCardDisplayMode.GAUGE,
                     rawValue = currentHrv?.toFloat(),
                     valueText = currentHrv?.toString() ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = msUnit,
