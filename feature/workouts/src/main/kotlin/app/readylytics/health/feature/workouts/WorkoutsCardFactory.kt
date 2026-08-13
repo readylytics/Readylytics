@@ -2,12 +2,15 @@ package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
+import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -25,6 +28,21 @@ fun buildWorkoutsCardDataMap(
             val strainRatio = uiState.latestMetrics?.strainRatioRaw
             val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
             val requestedMode = DashboardCardCatalog.requestedMode(configuration)
+            val strainDelta =
+                if (uiState.todayStrainIncrease != null) {
+                    if (uiState.todayStrainIncrease > 0.005f) {
+                        val diffFormatted = MetricFormatter.formatStrain(uiState.todayStrainIncrease)
+                        stringResource(
+                            CoreUiR.string.delta_up_format,
+                            stringResource(CoreUiR.string.delta_up),
+                            diffFormatted,
+                        )
+                    } else {
+                        stringResource(CoreUiR.string.delta_no_change)
+                    }
+                } else {
+                    null
+                }
             UniversalWorkoutMetricCard(
                 title = stringResource(CardId.STRAIN_RATIO.displayNameResId),
                 rawValue = strainRatio,
@@ -35,6 +53,7 @@ fun buildWorkoutsCardDataMap(
                     ),
                 unitText = "",
                 status = strainStatus,
+                secondaryText = strainDelta,
                 tooltip = stringResource(CoreUiR.string.tooltip_strain_ratio),
                 mode = requestedMode.toUniversalMode(),
                 supportedModes = spec.supportedModes.map { it.toUniversalMode() },
@@ -60,6 +79,11 @@ fun buildWorkoutsCardDataMap(
                     }
                 } ?: MetricStatus.CALIBRATING
             val requestedMode = DashboardCardCatalog.requestedMode(configuration)
+            val readinessDelta =
+                formatRoundedScoreDelta(
+                    currentRounded = uiState.latestMetrics?.readinessRounded,
+                    previousRounded = uiState.yesterdayReadiness?.toInt(),
+                ).resolveOrNull()
             UniversalWorkoutMetricCard(
                 title = stringResource(CardId.READINESS.displayNameResId),
                 rawValue = readinessVal,
@@ -69,6 +93,7 @@ fun buildWorkoutsCardDataMap(
                         ?: stringResource(CoreUiR.string.metric_value_unavailable),
                 unitText = "",
                 status = readinessStatus,
+                secondaryText = readinessDelta,
                 tooltip = stringResource(CoreUiR.string.tooltip_readiness),
                 mode = requestedMode.toUniversalMode(),
                 supportedModes = spec.supportedModes.map { it.toUniversalMode() },
