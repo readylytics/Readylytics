@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.vitals.heartrate
 
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Rule
@@ -18,7 +18,7 @@ class HeartRateDetailScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun `average card presents the classifier provided status`() {
+    fun `average card omits classifier status`() {
         composeRule.setContent {
             FitDashboardTheme {
                 HeartRateDetailScreen(
@@ -37,6 +37,6 @@ class HeartRateDetailScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Neutral").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Neutral").assertCountEquals(0)
     }
 }
