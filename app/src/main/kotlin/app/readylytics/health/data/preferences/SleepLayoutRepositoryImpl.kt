@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
 import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.domain.layout.LayoutDefaultsMerger
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
@@ -33,21 +34,15 @@ class SleepLayoutRepositoryImpl
         private suspend fun ensureDefaultTopCardsArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.topCardsList.mapNotNull { SleepLayoutMapper.toTopCardDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS
-
-                val storedIds = stored.map { it.cardId }.toSet()
-                val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(position = maxPos + 1 + index)
-                        }
-                    val merged = stored + appended
-
                     proto
                         .toBuilder()
                         .clearTopCards()
@@ -60,21 +55,15 @@ class SleepLayoutRepositoryImpl
         private suspend fun ensureDefaultChartsArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.trendChartsList.mapNotNull { SleepLayoutMapper.toChartDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_SLEEP_CHARTS
-
-                val storedIds = stored.map { it.chartId }.toSet()
-                val missingDefaults = defaults.filter { it.chartId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_SLEEP_CHARTS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(position = maxPos + 1 + index)
-                        }
-                    val merged = stored + appended
-
                     proto
                         .toBuilder()
                         .clearTrendCharts()
@@ -87,21 +76,15 @@ class SleepLayoutRepositoryImpl
         private suspend fun ensureDefaultMetricCardsArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.metricCardsList.mapNotNull { SleepLayoutMapper.toMetricCardDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS
-
-                val storedIds = stored.map { it.cardId }.toSet()
-                val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(position = maxPos + 1 + index)
-                        }
-                    val merged = stored + appended
-
                     proto
                         .toBuilder()
                         .clearMetricCards()
@@ -121,20 +104,11 @@ class SleepLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.topCardsList.mapNotNull { SleepLayoutMapper.toTopCardDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS
-                    val storedIds = stored.map { it.cardId }.toSet()
-                    val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        val appended =
-                            missingDefaults.mapIndexed { index, config ->
-                                config.copy(position = maxPos + 1 + index)
-                            }
-                        stored + appended
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override fun sleepChartConfigurations(): Flow<List<SleepChartConfiguration>> =
@@ -147,20 +121,11 @@ class SleepLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.trendChartsList.mapNotNull { SleepLayoutMapper.toChartDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_SLEEP_CHARTS
-                    val storedIds = stored.map { it.chartId }.toSet()
-                    val missingDefaults = defaults.filter { it.chartId !in storedIds }
-
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        val appended =
-                            missingDefaults.mapIndexed { index, config ->
-                                config.copy(position = maxPos + 1 + index)
-                            }
-                        stored + appended
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_SLEEP_CHARTS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override fun sleepMetricCardConfigurations(): Flow<List<SleepMetricCardConfiguration>> =
@@ -173,20 +138,11 @@ class SleepLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.metricCardsList.mapNotNull { SleepLayoutMapper.toMetricCardDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS
-                    val storedIds = stored.map { it.cardId }.toSet()
-                    val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        val appended =
-                            missingDefaults.mapIndexed { index, config ->
-                                config.copy(position = maxPos + 1 + index)
-                            }
-                        stored + appended
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override suspend fun updateSleepTopCardConfigurations(cards: List<SleepTopCardConfiguration>) {
