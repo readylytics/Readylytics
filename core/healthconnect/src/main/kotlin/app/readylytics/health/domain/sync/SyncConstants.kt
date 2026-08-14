@@ -20,3 +20,11 @@ const val MAX_INLINE_RECOMPUTE_DAYS = 7
  * recompute; this constant remains the recent-window default for everything else.
  */
 const val SETTINGS_REFRESH_WINDOW_DAYS = 8
+
+/**
+ * B′: ingest budget (ms) for the overnight back-day reach-back segment of the daily sync. The
+ * back-day segment covers the previous evening's pre-midnight HR/HRV and is typically denser than
+ * today's partial day, so it gets a longer budget than the coordinator's 3-minute default. Each
+ * segment is still a bounded foreground transaction; a timeout here does not widen the window.
+ */
+const val BACK_DAY_INGEST_BUDGET_MS = 5 * 60_000L

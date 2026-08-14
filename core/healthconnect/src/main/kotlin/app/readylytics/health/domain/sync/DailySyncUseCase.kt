@@ -105,6 +105,7 @@ class DailySyncUseCase
                         }
 
                     val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
+                    val todayMidnight = today.atStartOfDay(zoneId).toInstant()
 
                     // Overnight sleep sessions cross midnight: a session ending inside the
                     // recompute range may begin the previous evening. Reach the raw-sample fetch
@@ -113,7 +114,20 @@ class DailySyncUseCase
                     val ingestStart = oldestTargetDay.minusDays(1).atStartOfDay(zoneId).toInstant()
 
                     val ingestStartedAt = System.currentTimeMillis()
-                    ingestionCoordinator.ingestWindow(ingestStart, windowEnd, prefs, onProgress = onProgress)
+                    // B′: split the recent-window ingest into today's segment and the overnight
+                    // back-day reach-back so each gets its own read budget and the user-facing day
+                    // completes (and scores) before the denser back-day. Both segments stay inside
+                    // the original [ingestStart, windowEnd) range, so the current-day-only contract
+                    // is unchanged; the full-range reconcile below re-derives session links across
+                    // the segment boundary (chunk-independent determinism).
+                    ingestionCoordinator.ingestWindow(todayMidnight, windowEnd, prefs, onProgress = onProgress)
+                    ingestionCoordinator.ingestWindow(
+                        ingestStart,
+                        todayMidnight,
+                        prefs,
+                        windowBudgetMs = BACK_DAY_INGEST_BUDGET_MS,
+                        onProgress = onProgress,
+                    )
                     logD("HealthSync.Phase") {
                         "INGEST completed in ${System.currentTimeMillis() - ingestStartedAt}ms"
                     }

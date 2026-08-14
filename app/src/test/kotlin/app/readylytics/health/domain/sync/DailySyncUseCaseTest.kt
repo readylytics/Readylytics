@@ -303,6 +303,21 @@ class DailySyncUseCaseTest {
         }
 
     @Test
+    fun `daily sync ingests today's window before the back-day reach-back window`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val todayMidnight = today.atStartOfDay(zoneId).toInstant()
+            val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
+            val froms = mutableListOf<Instant>()
+            coEvery { hcRepo.readSleepSessions(capture(froms), any()) } returns emptyList()
+
+            useCase.run(windowDays = 1, onProgress = null)
+
+            assertEquals(listOf(todayMidnight, yesterdayMidnight), froms)
+        }
+
+    @Test
     fun `daily sync keeps current-day range and requests historical resync for older changes`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
@@ -554,8 +569,15 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = 1, onProgress = onProgress)
 
             val ingestEvents = progressEvents.filter { it.first == ResyncPhase.INGEST }
+            // B′: the page counter is local to each ingestWindow call, so it resets to 1 when the
+            // back-day segment starts. Both segments emit (1,0) then (2,0).
             assertEquals(
-                listOf(Triple(ResyncPhase.INGEST, 1, 0), Triple(ResyncPhase.INGEST, 2, 0)),
+                listOf(
+                    Triple(ResyncPhase.INGEST, 1, 0),
+                    Triple(ResyncPhase.INGEST, 2, 0),
+                    Triple(ResyncPhase.INGEST, 1, 0),
+                    Triple(ResyncPhase.INGEST, 2, 0),
+                ),
                 ingestEvents,
             )
         }
