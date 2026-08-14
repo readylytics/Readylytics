@@ -167,13 +167,19 @@ class DailySyncUseCase
                             "DEFERRED_DAILY_SYNC",
                         )
                     }
-                    ingestSegment(
-                        ingestStart,
-                        todayMidnight,
-                        prefs,
-                        windowBudgetMs = BACK_DAY_INGEST_BUDGET_MS,
-                        onProgress = onProgress,
-                    )
+                    try {
+                        ingestSegment(
+                            ingestStart,
+                            todayMidnight,
+                            prefs,
+                            windowBudgetMs = BACK_DAY_INGEST_BUDGET_MS,
+                            onProgress = onProgress,
+                        )
+                    } catch (e: HealthConnectWindowTimeoutException) {
+                        logE("DailySyncUseCase", e) {
+                            "Back-day ingest deferred; continuing with today's data"
+                        }
+                    }
                     logD("HealthSync.Phase") {
                         "INGEST completed in ${System.currentTimeMillis() - ingestStartedAt}ms"
                     }

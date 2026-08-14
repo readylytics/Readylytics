@@ -366,6 +366,32 @@ class DailySyncUseCaseTest {
         }
 
     @Test
+    fun `sync continues and scores today when the back-day reach-back times out`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val todayMidnight = today.atStartOfDay(zoneId).toInstant()
+            val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
+            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+                if (firstArg<Instant>() == yesterdayMidnight) {
+                    throw HealthConnectWindowTimeoutException(
+                        yesterdayMidnight,
+                        todayMidnight,
+                        RuntimeException("timeout"),
+                    )
+                }
+                emptyList()
+            }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            coVerify(exactly = 1) {
+                scoringRepository.computeAndPersistDailySummary(today, any(), any(), any(), any())
+            }
+        }
+
+    @Test
     fun `daily sync keeps current-day range and requests historical resync for older changes`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
