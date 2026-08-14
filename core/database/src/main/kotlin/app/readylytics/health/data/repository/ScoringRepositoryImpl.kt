@@ -714,7 +714,7 @@ class ScoringRepositoryImpl
             val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
             if (hot.isNotEmpty()) return hot
             return minuteBucketDao
-                .getBucketsForSessionInRange("EXERCISE", workout.id, workout.startTime, workout.endTime)
+                .getBucketsForSession("EXERCISE", workout.id)
                 .reconstructTimestampedSamples()
                 .map { (timestampMs, bpm) ->
                     HeartRateRecordEntity(

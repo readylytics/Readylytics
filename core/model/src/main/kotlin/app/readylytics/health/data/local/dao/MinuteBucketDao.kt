@@ -43,7 +43,7 @@ interface MinuteBucketDao {
     @Query(
         "SELECT * FROM hr_minute_buckets " +
             "WHERE recordType = :recordType AND sessionId = :sessionId " +
-            "AND bucketStartMs >= :startMs AND bucketEndMs <= :endMs " +
+            "AND bucketEndMs > :startMs AND bucketStartMs < :endMs " +
             "ORDER BY bucketStartMs ASC",
     )
     suspend fun getBucketsForSessionInRange(
@@ -66,7 +66,7 @@ interface MinuteBucketDao {
             "MIN(beatsPerMinute), MAX(beatsPerMinute), AVG(beatsPerMinute), COUNT(*), " +
             "recordType, COALESCE(sessionId, ''), NULL " +
             "FROM heart_rate_records " +
-            "WHERE timestampMs < :beforeMs " +
+            "WHERE timestampMs < :beforeMs AND beatsPerMinute BETWEEN 30 AND 230 " +
             "GROUP BY (timestampMs / 60000) * 60000, recordType, COALESCE(sessionId, '')",
     )
     suspend fun rollupIntoBucketsBefore(beforeMs: Long)

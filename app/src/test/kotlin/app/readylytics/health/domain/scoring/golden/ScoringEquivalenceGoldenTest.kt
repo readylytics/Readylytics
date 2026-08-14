@@ -7,6 +7,8 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.domain.heartrate.ZoneThresholds
+import app.readylytics.health.domain.model.DomainHeartRateSample
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -14,6 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Instant
 import kotlin.math.round
 
 /**
@@ -130,6 +133,54 @@ class ScoringEquivalenceGoldenTest {
             assertEquals(rawPercentile, warmPercentile, 1.0)
         }
 
+    @Test
+    fun workoutReconstructionMatchesRawAfterRollupWithinTolerance() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val minuteBucketDao = database.minuteBucketDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-workout-golden", "HEART_RATE", 0L)
+
+            // Non-minute-aligned workout: 15.0s to 2145.0s (35m 30s).
+            val workoutStartMs = 15_000L
+            val workoutEndMs = 2_145_000L
+            val rawSamples =
+                (workoutStartMs..workoutEndMs step 2_000L).map { ts ->
+                    val minute = ts / 60_000L
+                    val bpm = 130 + (minute.toInt() % 30)
+                    HeartRateRecordEntity(
+                        sourceRecordRef = ref,
+                        timestampMs = ts,
+                        beatsPerMinute = bpm,
+                        recordType = "EXERCISE",
+                        sessionId = "w1",
+                    )
+                }
+            heartRateDao.upsertAll(rawSamples)
+
+            val thresholds = ZoneThresholds.zoneThresholds()
+            val rawDomainSamples =
+                rawSamples.map {
+                    DomainHeartRateSample(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute)
+                }
+            val rawMetrics =
+                ZoneThresholds.computeMetrics(workoutStartMs, workoutEndMs, rawDomainSamples, thresholds)
+
+            rollupManager.rollupExpiredHotTier(workoutEndMs + 60_000L)
+
+            val warmBuckets = minuteBucketDao.getBucketsForSession("EXERCISE", "w1")
+            val reconstructedSamples =
+                warmBuckets.reconstructTimestamped().map { (ts, bpm) ->
+                    DomainHeartRateSample(Instant.ofEpochMilli(ts), bpm)
+                }
+            val warmMetrics =
+                ZoneThresholds.computeMetrics(workoutStartMs, workoutEndMs, reconstructedSamples, thresholds)
+
+            assertEquals(rawMetrics.durationMinutes, warmMetrics.durationMinutes)
+            assertEquals(rawMetrics.avgHr, warmMetrics.avgHr, 1.0f)
+            assertEquals(rawMetrics.trimp, warmMetrics.trimp, 1.0f)
+        }
+
     private fun percentileRhr(
         sortedBpm: List<Int>,
         percentile: Double,
@@ -140,4 +191,13 @@ class ScoringEquivalenceGoldenTest {
 
     private fun List<HrMinuteBucketEntity>.reconstruct(): List<Int> =
         flatMap { bucket -> List(bucket.sampleCount) { round(bucket.avgBpm).toInt() } }
+
+    private fun List<HrMinuteBucketEntity>.reconstructTimestamped(): List<Pair<Long, Int>> =
+        flatMap { bucket ->
+            val stepMs = if (bucket.sampleCount > 1) 60_000L / bucket.sampleCount else 0L
+            List(bucket.sampleCount) { i ->
+                val offsetMs = (i * stepMs).coerceAtMost(59_999L)
+                bucket.bucketStartMs + offsetMs to round(bucket.avgBpm).toInt()
+            }
+        }
 }

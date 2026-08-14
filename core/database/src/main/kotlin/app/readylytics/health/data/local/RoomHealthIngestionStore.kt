@@ -96,26 +96,8 @@ class RoomHealthIngestionStore
                 stepRecordDao.upsertAll(batch.stepRecords.map(StepRecordInput::toEntity))
             }
 
-            var persistedHeartRateSamples = 0
-            batch.heartRateSamples.forEachPersistenceBatch { samples ->
-                val startedAt = System.currentTimeMillis()
-                persistHeartRateSamples(samples)
-                persistedHeartRateSamples += samples.size
-                logD(TAG) {
-                    "Persisted HR batch: $persistedHeartRateSamples/${batch.heartRateSamples.size} " +
-                        "samples in ${System.currentTimeMillis() - startedAt}ms"
-                }
-            }
-            var persistedHrvSamples = 0
-            batch.hrvSamples.forEachPersistenceBatch { samples ->
-                val startedAt = System.currentTimeMillis()
-                persistHrvSamples(samples)
-                persistedHrvSamples += samples.size
-                logD(TAG) {
-                    "Persisted HRV batch: $persistedHrvSamples/${batch.hrvSamples.size} " +
-                        "samples in ${System.currentTimeMillis() - startedAt}ms"
-                }
-            }
+            persistHeartRateSamples(batch.heartRateSamples)
+            persistHrvSamples(batch.hrvSamples)
         }
 
         override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {

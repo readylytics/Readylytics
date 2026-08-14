@@ -17,6 +17,7 @@ internal fun List<HrMinuteBucketEntity>.reconstructTimestampedSamples(): List<Pa
     flatMap { bucket ->
         val stepMs = if (bucket.sampleCount > 1) 60_000L / bucket.sampleCount else 0L
         List(bucket.sampleCount) { i ->
-            bucket.bucketStartMs + i * stepMs to round(bucket.avgBpm).toInt()
+            val offsetMs = (i * stepMs).coerceAtMost(59_999L)
+            bucket.bucketStartMs + offsetMs to round(bucket.avgBpm).toInt()
         }
     }
