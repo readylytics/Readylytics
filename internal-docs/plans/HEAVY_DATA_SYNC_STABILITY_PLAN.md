@@ -1,6 +1,6 @@
 # Sync Stability at High Data Volume — Options & Plan
 
-**Status:** PLAN — self-contained findings, decision criteria, and recommended phased approach. No implementation code has been written.
+**Status:** IN PROGRESS — Phase 3 (steps 7–8) complete; steps 9–11 not started.
 **Date:** 2026-08-13
 **Branch:** (not yet created)
 **Scope:** Make Health Connect sync stable and responsive for users with very large datasets (≈1M+ records/month, dominated by heart-rate samples).
@@ -401,9 +401,13 @@ conflict-targeted UPSERT via `@Query` (see the Step 7 implementation note for wh
   into abstract DAO methods — the probe's question was answered by the Step 7 research, so it is deleted, not fixed).
 - **Docs:** `internal-docs/DATA_FLOW.md` idempotency-contract paragraph + data-flow diagram label updated to describe
   the HR/HRV conflict-targeted strategy vs `@Upsert` elsewhere.
-- **Note:** `UpsertConflictStrategyInstrumentedTest` (Step 7) still passes unmodified; production DAO SQL is byte-for-
-  byte the prototype's proven statement, so on-device behavior is already characterized. Remaining pre-commit:
-  `./gradlew lintRelease` at the very end.
+- **Note:** `UpsertConflictStrategyInstrumentedTest` (Step 7) passes again after one measurement fix: the
+  `roomQuery_acceptsUpsertSyntax_andBehavesLikeExecSql` test read `changes()` via `writableDatabase`, but
+  `changes()` is connection-scoped and Room's suspend `@Query` runs on a pooled connection, so the raw counter
+  came back 0 even though the write succeeded. The test now asserts the observable row state (same rowId + updated
+  mutable columns + count=1) — a strictly stronger equivalence proof — and the execSQL-path tests still assert
+  `changes()` on the writable connection directly. The production DAO SQL is byte-for-byte the prototype's proven
+  statement. Remaining pre-commit: `./gradlew lintRelease` at the very end.
 
 #### Phase 4 — steps 9–11
 

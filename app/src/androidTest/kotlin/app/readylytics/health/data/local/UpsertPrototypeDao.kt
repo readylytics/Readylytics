@@ -41,6 +41,11 @@ interface UpsertPrototypeDao {
         timestampMs: Long,
     ): HrvRecordEntity?
 
+    /** Connection-scoped change count: reads `changes()` on Room's own connection, unlike
+     *  `db.openHelper.writableDatabase` which may be a different pooled connection under WAL. */
+    @Query("SELECT changes()")
+    suspend fun changes(): Long
+
     @Query("SELECT COUNT(*) FROM heart_rate_records")
     suspend fun countHeartRate(): Int
 
