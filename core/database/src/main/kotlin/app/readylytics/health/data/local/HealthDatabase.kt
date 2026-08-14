@@ -14,6 +14,7 @@ import app.readylytics.health.data.local.dao.InsightDismissalDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
@@ -23,6 +24,7 @@ import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.InsightDismissalEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
@@ -38,6 +40,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
         SleepStageEntity::class,
         HeartRateRecordEntity::class,
         HrvRecordEntity::class,
+        HealthSourceRecordEntity::class,
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
         WeightRecordEntity::class,
@@ -60,6 +63,8 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun heartRateDao(): HeartRateDao
 
     abstract fun hrvDao(): HrvDao
+
+    abstract fun sourceRecordDao(): SourceRecordDao
 
     abstract fun workoutDao(): WorkoutDao
 
