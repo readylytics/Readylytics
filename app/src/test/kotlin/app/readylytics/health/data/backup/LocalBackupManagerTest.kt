@@ -16,6 +16,17 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.domain.sleep.SleepChartId
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.domain.sleep.SleepMetricCardId
+import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.domain.sleep.SleepTopCardId
+import app.readylytics.health.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.domain.vitals.VitalsChartId
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -46,6 +57,9 @@ class LocalBackupManagerTest {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var encryptionManager: EncryptionManager
     private lateinit var cardConfigRepo: CardConfigurationRepository
+    private lateinit var vitalsLayoutRepo: VitalsLayoutRepository
+    private lateinit var sleepLayoutRepo: SleepLayoutRepository
+    private lateinit var workoutsLayoutRepo: WorkoutsLayoutRepository
     private lateinit var auditTrailRepository: FakeAuditTrailRepository
     private lateinit var manager: LocalBackupManager
     private lateinit var backupDir: File
@@ -88,6 +102,23 @@ class LocalBackupManagerTest {
             mockk<CardConfigurationRepository>(relaxed = true).apply {
                 every { dashboardCardConfigurations() } returns flowOf(emptyList())
             }
+        vitalsLayoutRepo =
+            mockk<VitalsLayoutRepository>(relaxed = true).apply {
+                every { vitalsCardConfigurations() } returns flowOf(emptyList())
+                every { vitalsChartConfigurations() } returns flowOf(emptyList())
+            }
+        sleepLayoutRepo =
+            mockk<SleepLayoutRepository>(relaxed = true).apply {
+                every { sleepTopCardConfigurations() } returns flowOf(emptyList())
+                every { sleepChartConfigurations() } returns flowOf(emptyList())
+                every { sleepMetricCardConfigurations() } returns flowOf(emptyList())
+            }
+        workoutsLayoutRepo =
+            mockk<WorkoutsLayoutRepository>(relaxed = true).apply {
+                every { workoutCardConfigurations() } returns flowOf(emptyList())
+                every { workoutChartConfigurations() } returns flowOf(emptyList())
+                every { workoutHistoryConfigurations() } returns flowOf(emptyList())
+            }
         auditTrailRepository = FakeAuditTrailRepository()
         manager =
             LocalBackupManager(
@@ -95,6 +126,9 @@ class LocalBackupManagerTest {
                 db,
                 settingsRepo,
                 cardConfigRepo,
+                vitalsLayoutRepo,
+                sleepLayoutRepo,
+                workoutsLayoutRepo,
                 encryptionManager,
                 auditTrailRepository,
                 Dispatchers.Unconfined,
@@ -230,6 +264,140 @@ class LocalBackupManagerTest {
             assertTrue(!dashboardCards.getJSONObject(1).getBoolean("isVisible"))
             assertEquals(4, dashboardCards.getJSONObject(1).getInt("position"))
             assertTrue(backupJson.contains("\"requestedDisplayMode\":\"BAR\""))
+        }
+
+    @Test
+    fun createBackup_writesVitalsLayoutToPreferences() =
+        runTest {
+            val vitalsCards =
+                listOf(
+                    CardConfiguration(
+                        cardId = CardId.RESTING_HR,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                    CardConfiguration(
+                        cardId = CardId.HRV,
+                        isVisible = false,
+                        position = 1,
+                        requestedDisplayMode = DashboardCardDisplayMode.BAR,
+                    ),
+                )
+            val vitalsCharts =
+                listOf(
+                    VitalsChartConfiguration(
+                        chartId = VitalsChartId.HRV_TREND,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                    VitalsChartConfiguration(
+                        chartId = VitalsChartId.BODY_TEMP_TREND,
+                        isVisible = false,
+                        position = 3,
+                    ),
+                )
+            coEvery { vitalsLayoutRepo.vitalsCardConfigurations() } returns flowOf(vitalsCards)
+            coEvery { vitalsLayoutRepo.vitalsChartConfigurations() } returns flowOf(vitalsCharts)
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val preferences = JSONObject(backupJson).getJSONObject("preferences")
+            val vitalsCardsJson = preferences.getJSONArray("vitalsCards")
+            val vitalsChartsJson = preferences.getJSONArray("vitalsCharts")
+
+            assertEquals(2, vitalsCardsJson.length())
+            assertEquals("RESTING_HR", vitalsCardsJson.getJSONObject(0).getString("cardId"))
+            assertTrue(vitalsCardsJson.getJSONObject(0).getBoolean("isVisible"))
+            assertEquals(0, vitalsCardsJson.getJSONObject(0).getInt("position"))
+            assertEquals("HRV", vitalsCardsJson.getJSONObject(1).getString("cardId"))
+            assertTrue(!vitalsCardsJson.getJSONObject(1).getBoolean("isVisible"))
+            assertEquals(1, vitalsCardsJson.getJSONObject(1).getInt("position"))
+            assertTrue(backupJson.contains("\"requestedDisplayMode\":\"BAR\""))
+
+            assertEquals(2, vitalsChartsJson.length())
+            assertEquals("HRV_TREND", vitalsChartsJson.getJSONObject(0).getString("chartId"))
+            assertTrue(vitalsChartsJson.getJSONObject(0).getBoolean("isVisible"))
+            assertEquals(0, vitalsChartsJson.getJSONObject(0).getInt("position"))
+            assertEquals("BODY_TEMP_TREND", vitalsChartsJson.getJSONObject(1).getString("chartId"))
+            assertTrue(!vitalsChartsJson.getJSONObject(1).getBoolean("isVisible"))
+            assertEquals(3, vitalsChartsJson.getJSONObject(1).getInt("position"))
+        }
+
+    @Test
+    fun createBackup_writesSleepLayoutToPreferences() =
+        runTest {
+            val sleepTopCards =
+                listOf(
+                    SleepTopCardConfiguration(
+                        cardId = SleepTopCardId.SLEEP_SCORE,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                    SleepTopCardConfiguration(
+                        cardId = SleepTopCardId.SLEEP_DURATION_GAUGE,
+                        isVisible = false,
+                        position = 1,
+                    ),
+                )
+            val sleepCharts =
+                listOf(
+                    SleepChartConfiguration(
+                        chartId = SleepChartId.SLEEP_DURATION_TREND,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                )
+            val sleepMetricCards =
+                listOf(
+                    SleepMetricCardConfiguration(
+                        cardId = SleepMetricCardId.CIRCADIAN_CONSISTENCY,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                )
+            coEvery { sleepLayoutRepo.sleepTopCardConfigurations() } returns flowOf(sleepTopCards)
+            coEvery { sleepLayoutRepo.sleepChartConfigurations() } returns flowOf(sleepCharts)
+            coEvery { sleepLayoutRepo.sleepMetricCardConfigurations() } returns flowOf(sleepMetricCards)
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val preferences = JSONObject(backupJson).getJSONObject("preferences")
+            val topCardsJson = preferences.getJSONArray("sleepTopCards")
+            val chartsJson = preferences.getJSONArray("sleepCharts")
+            val metricCardsJson = preferences.getJSONArray("sleepMetricCards")
+
+            assertEquals(2, topCardsJson.length())
+            assertEquals("SLEEP_SCORE", topCardsJson.getJSONObject(0).getString("cardId"))
+            assertTrue(topCardsJson.getJSONObject(0).getBoolean("isVisible"))
+            assertEquals(0, topCardsJson.getJSONObject(0).getInt("position"))
+
+            assertEquals(1, chartsJson.length())
+            assertEquals("SLEEP_DURATION_TREND", chartsJson.getJSONObject(0).getString("chartId"))
+            assertTrue(chartsJson.getJSONObject(0).getBoolean("isVisible"))
+
+            assertEquals(1, metricCardsJson.length())
+            assertEquals("CIRCADIAN_CONSISTENCY", metricCardsJson.getJSONObject(0).getString("cardId"))
+            assertTrue(metricCardsJson.getJSONObject(0).getBoolean("isVisible"))
         }
 
     @Test
@@ -427,6 +595,9 @@ class LocalBackupManagerTest {
                     db,
                     settingsRepo,
                     cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
                     encryptionManager,
                     auditTrailRepository,
                     Dispatchers.Unconfined,
@@ -488,6 +659,9 @@ class LocalBackupManagerTest {
                     db,
                     settingsRepo,
                     cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
                     encryptionManager,
                     auditTrailRepository,
                     Dispatchers.Unconfined,

@@ -1,7 +1,6 @@
 package app.readylytics.health.domain.service
 
 import javax.inject.Inject
-import kotlin.math.abs
 
 /**
  * Pure-Kotlin trailing-average baseline for the Body Temperature "possible illness" insight.
@@ -23,13 +22,6 @@ class BodyTemperatureBaselineCalculator
             if (nonNullValuesInTrailingWindow.size < BASELINE_WINDOW_DAYS) return null
             return nonNullValuesInTrailingWindow.average().toFloat()
         }
-
-        /** True when today's reading deviates from the baseline by at least [thresholdCelsius], in either direction. */
-        fun isElevated(
-            todayCelsius: Float,
-            baselineCelsius: Float,
-            thresholdCelsius: Float,
-        ): Boolean = abs(todayCelsius - baselineCelsius) >= thresholdCelsius
 
         companion object {
             const val BASELINE_WINDOW_DAYS = 14

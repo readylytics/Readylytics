@@ -3,6 +3,7 @@ package app.readylytics.health.core.ui.components.reorder
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.vitals.VitalsChartId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -22,7 +23,7 @@ class DragControllerTest {
     // Three-card order used as base in most tests
     private val initialOrder = listOf(CardId.SLEEP_SCORE, CardId.HRV, CardId.STEPS)
 
-    private lateinit var controller: DragController
+    private lateinit var controller: DragController<CardId>
 
     @Before
     fun setUp() {
@@ -429,5 +430,67 @@ class DragControllerTest {
         controller.updateSlotBounds(CardId.HRV, rect1)
         controller.updateSlotBounds(CardId.HRV, rect2)
         assertEquals(rect2, controller.slotBounds[CardId.HRV])
+    }
+
+    // -------------------------------------------------------------------------
+    // VitalsChartId parameterization (Task 5): DragController<VitalsChartId> is the same
+    // pure state machine, parameterized over the vitals chart id space. Pure JVM controller
+    // tests exercising onDragStart/updateSlotBounds/onDrag/onDragEnd/syncFromUpstream and
+    // the center-cross threshold hit-testing.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun vitalsChartController_reordersOnCenterCrossingThreshold() {
+        val chartController =
+            DragController(
+                listOf(VitalsChartId.HRV_TREND, VitalsChartId.RHR_TREND, VitalsChartId.SPO2_TREND),
+            )
+        // HRV_TREND: y 0..150, RHR_TREND: y 150..300, SPO2_TREND: y 300..450
+        chartController.updateSlotBounds(VitalsChartId.HRV_TREND, Rect(0f, 0f, 200f, 150f))
+        chartController.updateSlotBounds(VitalsChartId.RHR_TREND, Rect(0f, 150f, 200f, 300f))
+        chartController.updateSlotBounds(VitalsChartId.SPO2_TREND, Rect(0f, 300f, 200f, 450f))
+
+        chartController.onDragStart(VitalsChartId.HRV_TREND)
+        // HRV_TREND center starts at y=75; drag down 150px → center.y = 225, inside RHR_TREND.
+        chartController.onDrag(Offset(0f, 150f), deleteZoneTop = null)
+
+        assertEquals(VitalsChartId.RHR_TREND, chartController.pendingOrder[0])
+        assertEquals(VitalsChartId.HRV_TREND, chartController.pendingOrder[1])
+    }
+
+    @Test
+    fun vitalsChartController_deleteZoneAndDragEndReturnVitalsChartId() {
+        val chartController =
+            DragController(
+                listOf(VitalsChartId.RHR_TREND, VitalsChartId.BODY_TEMP_TREND),
+            )
+        chartController.updateSlotBounds(VitalsChartId.RHR_TREND, Rect(0f, 0f, 200f, 150f))
+        chartController.updateSlotBounds(VitalsChartId.BODY_TEMP_TREND, Rect(0f, 150f, 200f, 300f))
+
+        chartController.onDragStart(VitalsChartId.RHR_TREND)
+        chartController.onDrag(Offset(0f, 130f), deleteZoneTop = 200f)
+        assertTrue(chartController.hoveringDeleteZone)
+
+        val result = chartController.onDragEnd()
+        assertEquals(VitalsChartId.RHR_TREND, result.draggedId)
+        assertTrue(result.delete)
+        assertNull(chartController.draggedCardId)
+    }
+
+    @Test
+    fun vitalsChartController_syncFromUpstreamSkipsDuringDrag() {
+        val chartController =
+            DragController(listOf(VitalsChartId.HRV_TREND, VitalsChartId.RHR_TREND))
+        chartController.updateSlotBounds(VitalsChartId.HRV_TREND, Rect(0f, 0f, 200f, 150f))
+        chartController.updateSlotBounds(VitalsChartId.RHR_TREND, Rect(0f, 150f, 200f, 300f))
+
+        val upstream = listOf(VitalsChartId.RHR_TREND, VitalsChartId.HRV_TREND)
+        chartController.onDragStart(VitalsChartId.HRV_TREND)
+        chartController.syncFromUpstream(upstream)
+        assertEquals(listOf(VitalsChartId.HRV_TREND, VitalsChartId.RHR_TREND), chartController.pendingOrder)
+
+        chartController.onDragEnd()
+        chartController.syncFromUpstream(upstream)
+        assertEquals(upstream, chartController.pendingOrder)
     }
 }

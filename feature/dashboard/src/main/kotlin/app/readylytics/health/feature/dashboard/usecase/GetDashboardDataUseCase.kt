@@ -36,6 +36,7 @@ class GetDashboardDataUseCase
             circadianResult: CircadianConsistencyResult? = null,
             heartRateSummary: HeartRateDaySummary? = null,
             todayStrainIncrease: Float? = null,
+            todayRasIncrease: Float? = null,
             bodyTempBaseline: Float? = null,
         ): Result<DashboardCards> =
             try {
@@ -48,6 +49,7 @@ class GetDashboardDataUseCase
                         circadianResult,
                         heartRateSummary,
                         todayStrainIncrease,
+                        todayRasIncrease,
                         bodyTempBaseline,
                     )
                 val rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs)

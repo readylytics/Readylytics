@@ -137,7 +137,7 @@ class BloodPressureRepositoryImplTest {
         }
 
     @Test
-    fun getByDateRange_boundaryTimestampsIncluded() =
+    fun getByDateRange_startIncluded_endExcluded() =
         runTest {
             dao.upsertAll(
                 listOf(
@@ -148,7 +148,8 @@ class BloodPressureRepositoryImplTest {
 
             val result = repo.getByDateRange(day2Start, day2End)
 
-            assertEquals(2, result.size)
+            assertEquals(1, result.size)
+            assertEquals("start", result[0].id)
         }
 
     @Test

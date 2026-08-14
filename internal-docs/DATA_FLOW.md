@@ -113,12 +113,12 @@ explicit and idempotent.
 | Component                     | Path                                         | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | :---------------------------- | :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `HealthSyncUseCase`           | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthSyncUseCase.kt`           | Facade owning `syncMutex`; its public methods delegate to `DailySyncUseCase` (`sync`), `ResyncRangeUseCase` (`resyncRange`, `recomputeRange`), and chunked catch-up resync (`catchUpSync`), which carry the behavior described in this row. `catchUpSync` is gated by `lastSyncTimestamp == 0` and executes `resyncRangeUseCase.run` in 30-day chunks over a 365-day range. `recomputeRange(start, end, onProgress)` (SCORE-007, see 1.2.2) runs under the same `syncMutex` and delegates to `resyncRangeUseCase.run(..., skipIngestAndPrune = true)` — a Health-Connect-free re-scoring pass for settings changes that alter historical scoring inputs (TRIMP model/params, HR zones, hrMax, RAS scaling factor) without altering ingested data. Its resumable identity includes a versioned canonical scoring-preference fingerprint, so a changed scoring snapshot invalidates the saved checkpoint and restarts at the requested range start; recompute-only checkpoints contain no Changes API tokens. `withSyncLock { block }` exposes the same mutex to non-sync callers (e.g. app-start baseline backfill) so they never race a sync/resync. `sync(windowDays, onProgress)` recent-window sync — note the **ingestion fetch starts one day earlier than the scored window** (`today − windowDays`), because overnight sleep sessions begin the previous evening; clipping at the scored window's midnight would drop a night's pre-midnight HR/HRV samples (lower HRV mean, higher RHR percentile). After recent-window ingest, `sync()` runs `SessionLinkReconciler.reconcile(...)` over the ingested overlap before scoring so pull-to-refresh preserves the same canonical HR/HRV session links as historical resync. Raw Health Connect reads stay in the sync engine, but Room writes now flow through `HealthIngestionStore.persist(batch)` and frozen-baseline clearing through `HealthIngestionStore.clearFrozenBaselines(start, endExclusive)`, keeping DAO/transaction details in data layer. The recalc loop covers `windowDays`, widened down to the earliest **recent** out-of-window affected day (within `MAX_INLINE_RECOMPUTE_DAYS` = 7 of today, in `DailySyncUseCase`) so last night's sleep (dated yesterday) or backfilled HR/HRV recomputes inline; only changes older than that inline bound escalate to durable historical resync. `resyncRange(start, end, chunkDays = 30, onProgress)` full historical runs **four resumable phases**: chunked ingest → selected-source prune → full-range session-link reconcile → walk-forward recompute. Before first ingest it captures Changes API baseline tokens and stores them with the immutable range, current phase, next date, and device-selection hash in `ResyncCheckpointStore`; retries reuse the same baseline, while legacy/mismatched checkpoints restart cleanly. **Every ingestion chunk of `resyncRange` starts one day early and fetches sleep/exercise sessions one day past the chunk end** so HR/HRV samples at either side of a 30-day boundary can still be assigned to cross-midnight sessions. Metric sample reads remain capped to the chunk. Step totals are rebuilt only for the remaining recompute range on resume, preserving selected-device correctness without re-running completed raw ingest. After all chunks are ingested, a single `SessionLinkReconciler.reconcile(...)` pass starting one day before the start date (i.e. `start - 1 day` to `end`) re-derives HR/HRV session linkage and recomputes affected workout metrics (see 1.2.1) — this makes the result independent of chunk alignment. Historical resync progress reports recomputed calendar days, not internal ingest/prune/reconcile units, but resumed recompute starts with the already-completed day offset. `HealthIngestionCoordinator.ingestWindow(start, end, prefs)` remains the single read→map→filter funnel (shared by both flows); `StepCountFetcher` performs per-device step reads (recent window + historical range); `DailyRecomputeSupport` runs the per-day score recompute and auto-MaxHR refresh; `retryWithBackoff(maxAttempts = 4, initialDelayMs = 1000)` (shared helper in `RetryWithBackoff.kt`) handles transient HC/IO faults (never swallows `CancellationException`); `syncMutex` (owned by the facade) serializes daily vs. resync. |
-| `DailySyncUseCase`            | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/DailySyncUseCase.kt`            | Foreground daily-sync orchestrator (the `sync(windowDays)` body). Runs under the facade's `syncMutex`. Owns the recent-window ingest → reconcile-over-overlap → frozen-baseline clear → walk-forward recompute, the cross-midnight reach-back, change-token commit, and the `REQUIRES_HISTORICAL_RESYNC` decision. Before the walk-forward it builds one `WalkForwardTrimpContext` + `WalkForwardBaselineContext` over the widened `[oldestTargetDay, today]` range (`DailyRecomputeSupport.buildWalkForward*`) and passes both to every recomputed day, so the 84-day TRIMP series and 56-day baseline sleep window are fetched once per sync rather than once per synced day — the same PERF-002/WP-20/WP-22 shape `ResyncRangeUseCase` already uses. The frozen-baseline clear and the entire walk-forward run inside one `DailyRecomputeSupport.inRecomputeTransaction { }` (F7), so a routine sync produces a single Room invalidation round on `daily_summaries`/`workout_records` instead of one per synced day. Health Connect I/O (window ingest, reconcile, step fetch) always completes before that transaction opens. Cancellation rolls the window back; the next sync redoes the same idempotent range. |
+| `DailySyncUseCase`            | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/DailySyncUseCase.kt`            | Foreground daily-sync orchestrator (the `sync(windowDays)` body). Runs under the facade's `syncMutex`. Owns the recent-window ingest → reconcile-over-overlap → frozen-baseline clear → walk-forward recompute, the cross-midnight reach-back, change-token commit, and the `REQUIRES_HISTORICAL_RESYNC` decision. Before the walk-forward it builds one `WalkForwardTrimpContext` + `WalkForwardBaselineContext` over the widened `[oldestTargetDay, today]` range (`DailyRecomputeSupport.buildWalkForward*`) and passes both to every recomputed day, so the 84-day TRIMP series and 56-day baseline sleep window are fetched once per sync rather than once per synced day — the same PERF-002/WP-20/WP-22 shape `ResyncRangeUseCase` already uses. The frozen-baseline clear and the entire walk-forward run inside one `DailyRecomputeSupport.inRecomputeTransaction { }` (F7), so a routine sync produces a single Room invalidation round on `daily_summaries`/`workout_records` instead of one per synced day. Health Connect I/O (window ingest, reconcile, step fetch) always completes before that transaction opens. The recent-window ingest is split into today's segment `[todayMidnight, windowEnd)` and the overnight back-day reach-back `[ingestStart, todayMidnight)` (B′), each under its own `withTimeout` budget; a segment that times out is retried once with an extended budget, a still-failing today segment returns `DEFERRED_DAILY_SYNC` (no historical-worker escalation), and a still-failing back-day segment is best-effort so today still scores. Cancellation rolls the window back; the next sync redoes the same idempotent range. |
 | `ResyncRangeUseCase`          | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/ResyncRangeUseCase.kt`          | Full-historical-resync orchestrator (the `resyncRange(...)` body). Runs under the facade's `syncMutex`. Owns the four resumable phases (chunked ingest → selected-source prune → full-range session-link reconcile → walk-forward recompute), checkpoint capture/resume, and baseline-token promotion. `run(..., skipIngestAndPrune = false)`: when `true` (see 1.2.2), ingest and prune are forced off, the checkpoint starts at `RECONCILE`, and the checkpoint identity is namespaced with `RECOMPUTE_ONLY_V2` plus the device-selection hash and a canonical projection of every scoring/reconciliation preference. Matching scoring snapshots resume; changed scoring inputs restart from the requested start date, while operational/UI settings do not invalidate the checkpoint. Recompute-only checkpoints deliberately store no Changes API tokens and never capture/apply/commit tokens or update `lastSyncTimestamp`; full-resync checkpoints retain the mandatory non-empty-token resume guard. **Adaptive chunk shrink (HC-002):** if a chunk's `ingestWindow` throws `HealthConnectWindowTimeoutException`, the ingest loop halves the effective chunk size (floor 1 day), persists it as the checkpoint's `chunkDaysOverride` so a killed worker resumes at the shrunk size, and retries the same chunk start — never the identical oversized window. Once a chunk succeeds it grows back to the caller-supplied `chunkDays` for the next chunk. If the 1-day floor itself times out, the exception propagates out as a distinct `Result.failure("...", "RESYNC_WINDOW_TIMEOUT")` (not the generic `RESYNC_ERROR`), which `HealthResyncWorker` still resolves via its normal `Result.retry()` backoff. Its RECOMPUTE phase runs in 30-day units (`RECOMPUTE_CHECKPOINT_INTERVAL_DAYS`), each unit one Room transaction via `DailyRecomputeSupport.inRecomputeTransaction { }` (F7), checkpointed only after that transaction commits. Transaction-rollback and checkpoint-resume boundaries therefore coincide: a kill, cancellation, or per-day failure discards at most one unit and the stored checkpoint still points at that unit's first day, so the retry idempotently redoes exactly what was lost. |
-| `HealthIngestionCoordinator`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthIngestionCoordinator.kt`  | Single read→map→device-filter→upsert funnel for one HC window (`ingestWindow`), shared by both flows. Sessions and low-volume record types are fetched and persisted first, in one `HealthIngestionStore.persist(batch)` transaction; HR and HRV samples then stream page-by-page via `readHeartRateSamplesPaged`/`readHrvSamplesPaged` (HC-001), each page tagged against this window's already-known sessions and persisted immediately through `HealthIngestionStore.persistHeartRateSamples`/`persistHrvSamples` — at most one HC page of samples is held in memory at once. Workouts are persisted with zero HR-derived metrics at this point (mirroring the changes-path pattern); `SessionLinkReconciler.recomputeWorkouts`, which both sync flows always run immediately after ingestion, fills in the real values once every HR sample in range is stored. The entire window read (sessions, low-volume types, and both streamed passes) runs inside one `withTimeout(windowBudgetMs)`; a `TimeoutCancellationException` from that timeout is caught here and rethrown as `HealthConnectWindowTimeoutException` (HC-002) — deliberately not a `CancellationException` subtype, so callers can never mistake "this window is too dense for its budget" for cooperative cancellation. If interrupted, the checkpoint stays on the current HC window and stable-ID upserts make the retry safe without deleting prior valid data. |
+| `HealthIngestionCoordinator`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthIngestionCoordinator.kt`  | Single read→map→device-filter→upsert funnel for one HC window (`ingestWindow(start, end, prefs, onProgress)`), shared by both flows. `onProgress` (optional, default `null`) fires `(ResyncPhase.INGEST, pagesIngested, 0)` after each HR/HRV page persists — an indeterminate running page count, not a determinate total; `DailySyncUseCase` passes its own `onProgress` through here, `ResyncRangeUseCase` reports chunk-level `INGEST` progress separately and does not thread per-page granularity through this parameter. Sessions and low-volume record types are fetched and persisted first, in one `HealthIngestionStore.persist(batch)` transaction — that same call also sub-batches HR/HRV samples at ≤5,000 rows per transaction (see the streamed path below); HR and HRV samples then stream page-by-page via `readHeartRateSamplesPaged`/`readHrvSamplesPaged` (HC-001), each page tagged against this window's already-known sessions and persisted immediately through `HealthIngestionStore.persistHeartRateSamples`/`persistHrvSamples`, both of which internally sub-batch at ≤5,000 rows per transaction regardless of the source HC page size — at most one HC page of samples is held in memory at once. Workouts are persisted with zero HR-derived metrics at this point (mirroring the changes-path pattern); `SessionLinkReconciler.recomputeWorkouts`, which both sync flows always run immediately after ingestion, fills in the real values once every HR sample in range is stored. The entire window read (sessions, low-volume types, and both streamed passes) runs inside one `withTimeout(windowBudgetMs)`; a `TimeoutCancellationException` from that timeout is caught here and rethrown as `HealthConnectWindowTimeoutException` (HC-002) — deliberately not a `CancellationException` subtype, so callers can never mistake "this window is too dense for its budget" for cooperative cancellation. If interrupted, the checkpoint stays on the current HC window and stable-ID upserts make the retry safe without deleting prior valid data. |
 | `StepCountFetcher`            | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/StepCountFetcher.kt`            | Per-device daily step reads. `fetchWindow(...)` for the recent window (semaphore-capped concurrent reads when no device filter); `fetchRange(...)` for the resync recompute range — the "all devices" path issues one grouped `readDailyStepTotals` call per chunk (HC-003) instead of one `readSteps` aggregate call per calendar day; the device-selected path stays raw-record-based, chunked, retry-wrapped. |
 | `DailyRecomputeSupport`       | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/DailyRecomputeSupport.kt`       | Shared per-day helpers: `recomputeDay(day, steps)` → `ScoringRepository.computeAndPersistDailySummary` (single point of daily score persistence; no math here), and `refreshAutoMaxHr(prefs)`. **PERF-002/WP-20/WP-22:** every multi-day walk-forward (both `DailySyncUseCase.run` and `ResyncRangeUseCase`'s RECOMPUTE phase) instead calls `buildWalkForwardTrimpContext`/`buildWalkForwardBaselineContext` once up front, then the 5-arg `recomputeDay(day, steps, prefs, trimpContext, baselineContext)` per day — `ScoringRepositoryImpl` slices the shared in-memory `WalkForwardTrimpContext`/`WalkForwardBaselineContext` per day instead of each day independently re-querying its own 84-day TRIMP window or 30-/56-day baseline window; math is unchanged, only the I/O is batched. Also owns `inRecomputeTransaction { }`, the single place either sync path opens a recompute transaction (F7). Reads inside it observe the transaction's own uncommitted writes, which the walk-forward requires (day N sums days N-1..N-6 and reads day N-1). |
-| `ForegroundSyncController`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/ForegroundSyncController.kt`    | Foreground state + progress bridge. `triggerDailySync()` = pull-to-refresh (current day only, `windowDays = 1`); `triggerImmediateSync()` = first-launch catch-up; `onBackgroundRecalc{Started,Progress,Finished}()` publish WorkManager job progress into `isSyncing` / `recalcProgress` StateFlows + `syncCompletedEvent`. |
+| `ForegroundSyncController`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/ForegroundSyncController.kt`    | Foreground state + progress bridge. `triggerDailySync()` = pull-to-refresh (current day only, `windowDays = 1`); `triggerImmediateSync()` = first-launch catch-up; `onBackgroundRecalc{Started,Progress,Finished}()` publish WorkManager job progress into `isSyncing` / `recalcProgress` StateFlows + `syncCompletedEvent`. A `DEFERRED_DAILY_SYNC` failure result (dense daily window that timed out even after its extended-budget retry) is logged and dropped — no `getOrThrow()`, no historical-worker escalation, no completion event. |
 | `FullHistoricalResyncUseCase` | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/FullHistoricalResyncUseCase.kt` | Snapshots preferences once, resolves `today` in that snapshot's stored scoring timezone, then resolves the retention-bounded start date via `RetentionBounds.resolveResyncStartDate(prefs, today)` and delegates to `HealthSyncUseCase.resyncRange(start, today)`. Checkpoint/resume behavior stays in the sync engine; no math. `execute(recomputeOnly = false, onProgress)`: when `true` (see 1.2.2) delegates to `HealthSyncUseCase.recomputeRange(start, today, onProgress)` instead. |
 | `HealthResyncWorker`          | `app/src/main/kotlin/app/readylytics/health/workers/HealthResyncWorker.kt`              | Before resolving its lazy Room-backed `FullHistoricalResyncUseCase` or lazy `ForegroundSyncController`, it requires `DatabaseReadiness.Ready`; otherwise it retries without opening Room or constructing the controller graph. Once ready, this `@HiltWorker` durable foreground service (`FOREGROUND_SERVICE_TYPE_DATA_SYNC`) runs the resync use case, emits `WorkInfo` progress (`setProgressAsync`), posts a determinate "day X of Y" notification, and bridges progress to `ForegroundSyncController`; `Result.retry()` on transient failure, but confirmed permission failures stop with `Result.failure()` so WorkManager does not loop. Checkpoints remain available for a new sync after access is restored. Reads the boolean `KEY_RECOMPUTE_ONLY` input-data flag (default `false`, see 1.2.2) and forwards it as `FullHistoricalResyncUseCase.execute(recomputeOnly = ...)`. |
 | `DatabaseMigrationWorker` / `DatabaseMigrationController` | `app/src/main/kotlin/app/readylytics/health/workers/DatabaseMigrationWorker.kt`; `app/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationController.kt` | The required external v7 migration runs as its own non-expedited unique one-time foreground work (`database_v7_migration`, `ExistingWorkPolicy.KEEP`, exponential backoff, `FOREGROUND_SERVICE_TYPE_DATA_SYNC`). It publishes phase and copied/total-row `WorkInfo` progress through a migration-specific notification/channel; insufficient-space bytes are terminal failure output, ordinary migration failure retries, and cancellation is rethrown. The controller combines the pre-Room readiness inspection with this unique-work progress in a `StateFlow`; migration progress is deliberately separate from historical health-resync progress. |
@@ -342,7 +342,7 @@ result detail. They do not store health samples, backup contents, passwords, enc
 Health Connect payloads.
 
 **Staged Restore Design:**
-Restore is staged. Database replacement is atomic within Room. Preferences are restored after the
+Restore is staged. Database replacement is atomic within Room. Preferences and layout configurations (dashboard cards, vitals layout, and sleep tab layout configurations via `SleepLayoutRepository`) are restored after the
 database transaction commits because Room and DataStore cannot share a transaction. If a later
 stage fails, the app returns an explicit partial-success result requiring restart and instructs
 the user to rerun restore. Backup manifests v5, v6, and v7 restore into the current v7 entities.
@@ -392,8 +392,9 @@ formula:
   (`core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`)
   is a pure-Kotlin plain trailing average over the 14 calendar days immediately before the target
   date (`BASELINE_WINDOW_DAYS = 14`); it returns `null` ("Calibrating") until at least 14 non-null
-  `avgSleepingBodyTemp` values exist in that window. `isElevated(today, baseline, threshold)` flags a
-  day when `|today − baseline| >= threshold`, in either direction. This is intentionally independent
+  `avgSleepingBodyTemp` values exist in that window. `bodyTemperatureStatus(today, baseline, threshold)`
+  (in `VitalAssessment.kt`, `core/model/.../domain/model/`) flags a day when `|today − baseline| >= threshold`,
+  in either direction. This is intentionally independent
   of the HRV/RHR scoring-baseline machinery (`BaselineComputer`, `ScoringHistoryRepository` — see
   §2.4): a plain average rather than a log-normal EWMA, computed from the already-cached display
   field, and never persisted anywhere the scoring pipeline reads from.
@@ -420,8 +421,9 @@ formula:
   builds `CardId.BODY_TEMPERATURE`'s `UniversalMetricPresentation` from `summary.avgSleepingBodyTemp`,
   the resolved baseline, and `preferences.bodyTempElevatedThresholdCelsius`: `MetricStatus.CALIBRATING`
   when there's no reading yet, `NEUTRAL` while the baseline itself is still calibrating (shows a
-  "Calibrating" secondary label), `WARNING` when `BodyTemperatureBaselineCalculator.isElevated(...)`
-  is true, else `NEUTRAL`. Value/unit display converts through `UnitConverter.celsiusToDisplayTemperature`
+  "Calibrating" secondary label), `WARNING` when `bodyTemperatureStatus(...)` (core/model
+  `VitalAssessment.kt`) returns `WARNING` — `abs(value − baseline) >= threshold` — else `NEUTRAL`.
+  Value/unit display converts through `UnitConverter.celsiusToDisplayTemperature`
   per `preferences.unitSystem` (°C/°F), and the secondary text shows the signed delta from baseline in
   the same display unit. The card is registered in `DashboardCardCatalog` (VALUE/BAR/GAUGE modes) and
   gated end-to-end on the optional `READ_BODY_TEMPERATURE` permission: `CardManagementDelegate`
@@ -515,6 +517,23 @@ metrics, so N displayed workouts cost one 42-day history fetch, not N. That use 
 any caller-supplied window to the same 42-day span its own fetch would have used, so a wider
 pre-fetched list can never shift a workout's gained strain relative to the Workout Detail
 screen (which supplies no window and self-fetches).
+
+**History pagination boundary.** Blood-pressure, workout, weight, and body-fat history are read
+with Room `LIMIT/OFFSET` pagination rather than unbounded range loads.
+`BloodPressureDetailViewModel`, `WeightDetailViewModel`, and `BodyFatDetailViewModel` each
+combine the selected range/date with a `_currentPage` flow and read
+`*Repository.getByDateRangePaged`/`countByDateRange` (newest-first
+`ORDER BY timestampMs DESC, id DESC`, half-open `[fromMs, toMs)`) for the visible page, keeping
+the full-range query only for the chart series. `WorkoutsViewModel` scopes the history page to
+`[displayFromMs, selectedDayEndMs)` via `WorkoutRepository.getInRangePaged`/`countByTimeRange`
+(`WorkoutDao.getPagedInRange`, newest-first `ORDER BY startTime DESC, id DESC`); the full 42-day
+daily-summary flows stay subscribed for charts/scoring and are what re-drive the page after a
+sync, since workout history is no longer a reactive `observeSince` flow. The `WORKOUT_ONLY`
+daily strain delta is derived from every selected-day workout via a separate
+`getInRange(selectedMidnightMs, selectedDayEndMs)` read, independent of the paged history view,
+so the card total still matches the rounded per-row gains. Weight history keeps the full-range
+records for the chart and per-row delta (the first row of a page may delta against a record on a
+previous, older page) while rendering only the paged subset. Page size is 10 on all screens.
 
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
@@ -802,14 +821,23 @@ phases and, for `INGEST`/`RECOMPUTE`, again after each unit of work (a chunk / a
 `RECOMPUTE_CHECKPOINT_INTERVAL_DAYS` (30) days, or on the final day, since recompute is idempotent
 and a kill-and-resume redoing up to one interval's worth of already-correct work is cheaper than a
 proto-DataStore write per day across a multi-year resync.
-Both `HealthResyncWorker` (background WorkManager resync) and `ForegroundSyncController.executeSync`
-(foreground first-launch `catchUpSync`) funnel this through the same `RecalcProgress(phase, current,
-total)` type:
+
+`DailySyncUseCase.run()` (the daily pull-to-refresh path — see §2.2/HC-009) feeds the identical
+`RecalcProgress` pipeline: it fires `(INGEST, pagesIngested, 0)` after each streamed HC HR/HRV page
+persists during `HealthIngestionCoordinator.ingestWindow`, `(RECONCILE, 0, 0)` once immediately
+before `SessionLinkReconciler.reconcile`, then determinate `(RECOMPUTE, completedDays, totalDays)`
+across its walk-forward. Both `INGEST` and `RECONCILE` are indeterminate on this path (`total = 0`)
+since neither a page count nor a reconcile pass has a known total up front — see Phase 1 of
+`internal-docs/plans/HEAVY_DATA_SYNC_STABILITY_PLAN.md`.
+
+`HealthResyncWorker` (background WorkManager resync), `ForegroundSyncController.executeSync`
+(foreground first-launch `catchUpSync`), and `DailySyncUseCase.run()` (foreground daily sync) all
+funnel through the same `RecalcProgress(phase, current, total)` type:
 
 ```
-ResyncRangeUseCase.run()
+ResyncRangeUseCase.run() / DailySyncUseCase.run()
   → onProgress(phase, current, total)                              // phase-start + per-unit signals
-     → HealthResyncWorker / ForegroundSyncController.executeSync
+     → HealthResyncWorker / ForegroundSyncController.executeSync / triggerDailySync
         → ForegroundSyncController.recalcProgress: StateFlow<RecalcProgress?>
            → SyncViewModel.recalcProgress
               → MainScaffold's RecalcProgressBanner / SyncProgressScreen (collectAsStateWithLifecycle)
@@ -817,15 +845,17 @@ ResyncRangeUseCase.run()
 
 `RecalcProgress.fraction()` (`core/model/.../FeatureSyncPorts.kt`) is the single shared computation
 all three UI surfaces (bottom banner, full-screen `SyncProgressScreen`, foreground-service
-notification) use to render one continuous, always-determinate `LinearProgressIndicator` — never an
-indeterminate spinner. Each `ResyncPhase` value owns an equal-width slice of the bar, derived
-generically from `phase.ordinal / ResyncPhase.entries.size` (25% each for the current 4 phases:
-`INGEST` 0-25%, `PRUNE` 25-50%, `RECONCILE` 50-75%, `RECOMPUTE` 75-100%). `INGEST` (chunked HC
-re-fetch) and `RECOMPUTE` (walk-forward days) report real `current`/`total` and fill smoothly within
-their slice; `PRUNE` and `RECONCILE` are single non-chunked passes with no natural sub-progress, so
-they simply hold the bar at their slice's start until the next phase begins. When a historical
-resync resumes from checkpoint, progress starts directly at the resumed phase/offset instead of
-resetting to zero.
+notification) use to render one continuous `LinearProgressIndicator`. Each `ResyncPhase` value owns
+an equal-width slice of the bar, derived generically from `phase.ordinal / ResyncPhase.entries.size`
+(25% each for the current 4 phases: `INGEST` 0-25%, `PRUNE` 25-50%, `RECONCILE` 50-75%, `RECOMPUTE`
+75-100%). On the **historical resync path**, `INGEST` (chunked HC re-fetch) and `RECOMPUTE`
+(walk-forward days) report real `current`/`total` and fill smoothly within their slice; `PRUNE` and
+`RECONCILE` are single non-chunked passes with no natural sub-progress, so they simply hold the bar
+at their slice's start until the next phase begins. On the **daily sync path**, `INGEST` and
+`RECONCILE` are always indeterminate (`total = 0`, guarded by `fraction()`'s `total > 0` check) and
+likewise hold at their slice's start — `MainScaffold`/`SyncProgressScreen` render a page-count label
+instead of a "N of M" count for indeterminate `INGEST`. When a historical resync resumes from
+checkpoint, progress starts directly at the resumed phase/offset instead of resetting to zero.
 
 ---
 
@@ -904,7 +934,7 @@ resetting to zero.
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 / body temperature trends + bands                                       |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsTrendSection.kt`      | UI — Vico chart                                     | body temperature trend chart + baseline reference line (display-only, see §1.5)          |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`    | Domain — display-only baseline (non-scoring)         | 14-day plain trailing average + elevated-deviation check                                 |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`    | Domain — display-only baseline (non-scoring)         | 14-day plain trailing average baseline                                                      |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineProvider.kt`      | Domain — display-only baseline (non-scoring)         | `observeBaseline(date)` stream; Room summary/scoring-zone emissions recalculate dashboard + Vitals baseline |
 | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`       | Ingestion — mapper                                   | body temperature (°C)                                                                    |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepViewModel.kt`                      | UI — sleep state                                    | sleep score, stage timeline, sleep window/duration trend data, `sleepHrSamples`          |
@@ -919,6 +949,15 @@ resetting to zero.
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepHrChart.kt`                          | UI — Canvas chart                                   | sleep HR timeline                                                                        |
 | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/RasWeeklyBar.kt`                 | UI — Canvas chart                                   | 7-day RAS breakdown                                                                      |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepTrendChart.kt`                      | UI — Vico chart                                     | stacked column & line dual-axis sleep window & duration chart                            |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/sleep/SleepLayoutRepository.kt`                      | UI — sleep layout contract                          | Interface for observing and updating sleep top cards, trend charts, and metric card configurations |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/SleepLayoutRepositoryImpl.kt`                     | UI — sleep layout store implementation              | Proto DataStore persistence, default auto-healing/appending, and proto/domain mapping for sleep tab layout |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/SleepLayoutConfigurationsSerializer.kt`         | UI — sleep layout serializer                        | Proto DataStore serializer for `SleepLayoutConfigurationsProto`                          |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/SleepLayoutMapper.kt`                             | UI — sleep layout mapper                            | Bidirectional conversion between proto DTOs and domain sleep layout configurations       |
+| `app/src/main/proto/sleep_layout_configurations.proto`                                                          | UI — sleep layout schema                            | Proto schema for sleep tab layout configurations (top cards, trend charts, metric cards) |
+| `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/overview/SleepFlowIntermediate.kt`        | UI — sleep tab reactive flow assembly               | Merges daily summary domain state with reactive `SleepLayoutRepository` layout configurations |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/workouts/WorkoutsLayoutRepository.kt`             | UI — workouts layout contract                       | Interface for observing and updating workout cards, diagram, and history configurations |
+| `app/src/main/kotlin/app/readylytics/health/data/preferences/WorkoutsLayoutRepositoryImpl.kt`                | UI — workouts layout store implementation           | Proto DataStore persistence, default auto-healing/appending, and proto/domain mapping for workouts tab layout |
+| `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsFlowIntermediate.kt`       | UI — workouts tab reactive flow assembly            | Merges workout/daily-summary domain state with reactive `WorkoutsLayoutRepository` layout configurations |
 
 ### 3.5 Dashboard Insight Card Derivation & Dismissal Flow
 
@@ -1005,6 +1044,75 @@ Key behaviors:
 - Default card presence: `AI_RECOMMENDATION` is in `SettingsDefaults.DEFAULT_DASHBOARD_CARDS`;
   `CardConfigurationRepositoryImpl` appends missing defaults once, visibly, after the highest stored
   position for existing installs.
+
+### 3.7 Sleep Tab Layout Customization & Proto DataStore Persistence Pipeline
+
+The Sleep tab supports customizable layout ordering, visibility toggling, and display mode selection across three distinct card/chart groups: **Top Cards** (score gauge, sleep duration, efficiency, consistency), **Trend Charts** (sleep duration/window, HR/HRV trends, stage timelines), and **Metric Cards** (RHR, HRV, SpO2, body temperature, circadian metrics).
+
+```
+SleepManagementBottomSheet / SleepOverviewScreen (UI interaction)
+  │
+  ▼ emits layout updates (reorder, toggle visibility, change display mode, reset defaults)
+SleepViewModel
+  │
+  ▼ delegates to SleepTopCardManagementDelegate / LayoutManagementDelegate (charts) / SleepMetricCardManagementDelegate
+SleepFlowIntermediate (combines repository flows with daily summary state)
+  │
+  ▼ updates layout state via
+SleepLayoutRepository (core/model/.../domain/sleep/SleepLayoutRepository.kt)
+  │
+  ▼ implemented by
+SleepLayoutRepositoryImpl (app/.../data/preferences/SleepLayoutRepositoryImpl.kt)
+  │
+  ▼ mapped by SleepLayoutMapper (toTopCardProto / toChartProto / toMetricCardProto)
+DataStore<SleepLayoutConfigurationsProto> ("sleep_layout_configurations.pb")
+  │  Proto schema: app/src/main/proto/sleep_layout_configurations.proto
+  │  Serializer: SleepLayoutConfigurationsSerializer
+  ▼
+Local backup/restore pipeline (LocalBackupManager & LocalRestoreManager)
+```
+
+Key behaviors:
+- **Proto Schema:** `sleep_layout_configurations.proto` defines `SleepTopCardConfigurationProto`, `SleepChartConfigurationProto`, `SleepMetricCardConfigurationProto`, and `SleepLayoutConfigurationsProto`.
+- **Domain Seam:** Pure domain models (`SleepTopCardConfiguration`, `SleepChartConfiguration`, `SleepMetricCardConfiguration`) and ID enums (`SleepTopCardId`, `SleepChartId`, `SleepMetricCardId`) live in `core/model` (zero Android dependencies).
+- **Auto-Healing Defaults:** On initialization or repository flow observation, `SleepLayoutRepositoryImpl` checks stored configurations against `SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS`, `DEFAULT_SLEEP_CHARTS`, and `DEFAULT_SLEEP_METRIC_CARDS`. Any missing default items are automatically appended after the highest stored position. This ensures forward-compatibility when new cards or charts are introduced in app updates without overwriting existing user reordering or visibility choices.
+- **Backup & Restore Integration:** `LocalBackupManager` streams active sleep layout configurations (`sleepTopCards`, `sleepCharts`, `sleepMetricCards`) into `UserPreferencesBackup` within encrypted ZIP backups. `LocalRestoreManager` restores these stored configurations back to `SleepLayoutRepository` (Proto DataStore) during the post-database preference restoration stage.
+
+---
+
+### 3.8 Workouts Tab Layout Customization & Proto DataStore Persistence Pipeline
+
+The Workouts tab supports customizable layout ordering, visibility toggling, and display mode selection across three groups: **Cards** (Strain Ratio, Readiness, RAS Daily — reusing the shared `CardId`/`CardConfiguration` model from `core/model/.../domain/dashboard`), **Diagrams** (the ACWR/TRIMP training-load chart), and **History** (recent workout list, status legend).
+
+```
+WorkoutsManagementBottomSheet / WorkoutsScreen (UI interaction)
+  │
+  ▼ emits layout updates (reorder, toggle visibility, change display mode, reset defaults)
+WorkoutsViewModel
+  │
+  ▼ delegates to CardManagementDelegate / LayoutManagementDelegate (charts & history)
+WorkoutsFlowIntermediate (combines repository flows with daily-summary/workout state)
+  │
+  ▼ updates layout state via
+WorkoutsLayoutRepository (core/model/.../domain/workouts/WorkoutsLayoutRepository.kt)
+  │
+  ▼ implemented by
+WorkoutsLayoutRepositoryImpl (app/.../data/preferences/WorkoutsLayoutRepositoryImpl.kt)
+  │
+  ▼ mapped by WorkoutsLayoutMapper (toCardProto / toChartProto / toHistoryProto)
+DataStore<WorkoutsLayoutConfigurationsProto> ("workouts_layout_configurations.pb")
+  │  Proto schema: app/src/main/proto/workouts_layout_configurations.proto
+  │  Serializer: WorkoutsLayoutConfigurationsSerializer
+  ▼
+Local backup/restore pipeline (LocalBackupManager & LocalRestoreManager)
+```
+
+Key behaviors:
+- **Proto Schema:** `workouts_layout_configurations.proto` defines `WorkoutCardConfigurationProto`, `WorkoutChartConfigurationProto`, `WorkoutHistoryConfigurationProto`, and `WorkoutsLayoutConfigurationsProto`.
+- **Domain Seam:** Cards reuse the existing `CardId`/`CardConfiguration` (already shared with Dashboard/Sleep/Vitals). `WorkoutChartConfiguration`/`WorkoutChartId` and `WorkoutHistoryConfiguration`/`WorkoutHistoryId` are new pure domain models in `core/model` (zero Android dependencies).
+- **Auto-Healing Defaults:** On initialization or repository flow observation, `WorkoutsLayoutRepositoryImpl` checks stored configurations against `SettingsDefaults.DEFAULT_WORKOUT_CARDS`, `DEFAULT_WORKOUT_CHARTS`, and `DEFAULT_WORKOUT_HISTORY`. Any missing default items are automatically appended after the highest stored position.
+- **RAS Daily dual rendering:** `CardId.RAS_DAILY`'s VALUE mode (default) renders the rich weekly-breakdown card (`RasWeeklyCard`); switching to GAUGE mode renders a compact dial of today's RAS score, matching Strain Ratio/Readiness.
+- **Backup & Restore Integration:** `LocalBackupManager` streams active workout layout configurations (`workoutCards`, `workoutCharts`, `workoutHistory`) into `UserPreferencesBackup` within encrypted ZIP backups. `LocalRestoreManager` restores these back to `WorkoutsLayoutRepository` (Proto DataStore) during the post-database preference restoration stage.
 
 ---
 

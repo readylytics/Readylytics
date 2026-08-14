@@ -199,7 +199,11 @@ private fun RecalcProgressBanner(
             val text =
                 when (progress.phase) {
                     ResyncPhase.INGEST ->
-                        stringResource(CoreUiR.string.resync_phase_ingest, progress.current, progress.total)
+                        if (progress.total > 0) {
+                            stringResource(CoreUiR.string.resync_phase_ingest, progress.current, progress.total)
+                        } else {
+                            stringResource(CoreUiR.string.resync_phase_ingest_indeterminate, progress.current)
+                        }
                     ResyncPhase.PRUNE -> stringResource(CoreUiR.string.resync_phase_prune)
                     ResyncPhase.RECONCILE -> stringResource(CoreUiR.string.resync_phase_reconcile)
                     ResyncPhase.RECOMPUTE ->

@@ -1,11 +1,6 @@
 package app.readylytics.health.domain.dashboard
 
 import app.readylytics.health.data.preferences.SettingsDefaults
-import io.mockk.Runs
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.just
-import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -30,8 +25,8 @@ class CardManagementDelegateTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var testScope: TestScope
     private lateinit var delegateScope: CoroutineScope
-    private lateinit var repository: CardConfigurationRepository
     private lateinit var delegate: CardManagementDelegate
+    private val persistedConfigs = mutableListOf<List<CardConfiguration>>()
 
     private val sampleConfigs =
         listOf(
@@ -43,10 +38,13 @@ class CardManagementDelegateTest {
     @Before
     fun setUp() {
         testScope = TestScope(testDispatcher)
-        repository = mockk(relaxed = true)
-        coEvery { repository.updateDashboardCardConfigurations(any()) } just Runs
         delegateScope = CoroutineScope(testDispatcher)
-        delegate = CardManagementDelegate(repository, delegateScope)
+        delegate =
+            CardManagementDelegate(
+                defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                persist = { persistedConfigs += it },
+                scope = delegateScope,
+            )
     }
 
     @After
@@ -110,20 +108,20 @@ class CardManagementDelegateTest {
     }
 
     @Test
-    fun `saveChanges persists pending configs via repository`() =
+    fun `saveChanges persists pending configs via persist`() =
         testScope.runTest {
             delegate.enterEditMode(sampleConfigs)
             delegate.saveChanges()
             advanceUntilIdle()
-            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(sampleConfigs) }
+            assertEquals(listOf(sampleConfigs), persistedConfigs)
         }
 
     @Test
-    fun `saveChanges with no pending does not invoke repository`() =
+    fun `saveChanges with no pending does not invoke persist`() =
         testScope.runTest {
             delegate.saveChanges()
             advanceUntilIdle()
-            coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
+            assertTrue(persistedConfigs.isEmpty())
         }
 
     @Test
@@ -149,7 +147,7 @@ class CardManagementDelegateTest {
             delegate.enterEditMode(sampleConfigs)
             delegate.cancelChanges()
             advanceUntilIdle()
-            coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
+            assertTrue(persistedConfigs.isEmpty())
         }
 
     // --- 5. resetToDefaults ---
@@ -173,7 +171,7 @@ class CardManagementDelegateTest {
         testScope.runTest {
             delegate.onResetToDefaults()
             advanceUntilIdle()
-            coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
+            assertTrue(persistedConfigs.isEmpty())
         }
 
     // --- 6. toggleCardVisibility ---
@@ -263,7 +261,12 @@ class CardManagementDelegateTest {
         runTest {
             val localDispatcher = StandardTestDispatcher(testScheduler)
             val localScope = TestScope(localDispatcher)
-            val localDelegate = CardManagementDelegate(repository, localScope)
+            val localDelegate =
+                CardManagementDelegate(
+                    defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                    persist = { },
+                    scope = localScope,
+                )
 
             localDelegate.enterEditMode(sampleConfigs)
             localScope.cancel()
@@ -277,7 +280,12 @@ class CardManagementDelegateTest {
     fun `saveChanges after scope cancellation does not throw`() =
         runTest {
             val localScope = TestScope(StandardTestDispatcher(testScheduler))
-            val localDelegate = CardManagementDelegate(repository, localScope)
+            val localDelegate =
+                CardManagementDelegate(
+                    defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                    persist = { },
+                    scope = localScope,
+                )
             localDelegate.enterEditMode(sampleConfigs)
             localScope.cancel()
             advanceUntilIdle()
@@ -290,7 +298,12 @@ class CardManagementDelegateTest {
         runTest {
             val localDispatcher = StandardTestDispatcher(testScheduler)
             val localScope = TestScope(localDispatcher)
-            val localDelegate = CardManagementDelegate(repository, localScope)
+            val localDelegate =
+                CardManagementDelegate(
+                    defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                    persist = { },
+                    scope = localScope,
+                )
 
             // Run a save which used to spawn an orphan launch.
             localDelegate.enterEditMode(sampleConfigs)
@@ -300,9 +313,9 @@ class CardManagementDelegateTest {
             // Cancel — any launched coroutine would have completed inside scope.
             localScope.cancel()
             advanceUntilIdle()
-            // Structural guarantee: CardManagementDelegate source contains no
-            // `viewModelScope.launch`; persistence flows through stateIn pipeline
-            // tied to this scope, so cancel terminates all work cooperatively.
+            // Structural guarantee: CardManagementDelegate launches all
+            // persistence through the injected scope, so cancelling that scope
+            // terminates all work cooperatively.
             assertTrue(true)
         }
 
@@ -346,9 +359,7 @@ class CardManagementDelegateTest {
             delegate.onResetToDefaults()
             delegate.saveChanges()
             advanceUntilIdle()
-            coVerify(exactly = 1) {
-                repository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
-            }
+            assertEquals(listOf(SettingsDefaults.DEFAULT_DASHBOARD_CARDS), persistedConfigs)
         }
 
     @Test
@@ -358,8 +369,14 @@ class CardManagementDelegateTest {
             // includes BODY_TEMPERATURE, isVisible = true) straight into pendingConfigs. SaveChanges
             // must still gate what actually reaches the repository on the injected permission check,
             // independent of what createDashboardCardStateFlow filters for display.
+            val gatedPersisted = mutableListOf<List<CardConfiguration>>()
             val gatedDelegate =
-                CardManagementDelegate(repository, delegateScope, hasBodyTemperaturePermission = { false })
+                CardManagementDelegate(
+                    defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                    persist = { gatedPersisted += it },
+                    scope = delegateScope,
+                    hasBodyTemperaturePermission = { false },
+                )
 
             gatedDelegate.enterEditMode(sampleConfigs)
             gatedDelegate.onResetToDefaults()
@@ -368,26 +385,27 @@ class CardManagementDelegateTest {
 
             val expectedPersisted =
                 SettingsDefaults.DEFAULT_DASHBOARD_CARDS.filter { it.cardId != CardId.BODY_TEMPERATURE }
-            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expectedPersisted) }
-            coVerify(exactly = 0) {
-                repository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
-            }
+            assertEquals(listOf(expectedPersisted), gatedPersisted)
         }
 
     @Test
     fun `reset then save persists body temperature when permission is granted`() =
         testScope.runTest {
+            val grantedPersisted = mutableListOf<List<CardConfiguration>>()
             val grantedDelegate =
-                CardManagementDelegate(repository, delegateScope, hasBodyTemperaturePermission = { true })
+                CardManagementDelegate(
+                    defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                    persist = { grantedPersisted += it },
+                    scope = delegateScope,
+                    hasBodyTemperaturePermission = { true },
+                )
 
             grantedDelegate.enterEditMode(sampleConfigs)
             grantedDelegate.onResetToDefaults()
             grantedDelegate.saveChanges()
             advanceUntilIdle()
 
-            coVerify(exactly = 1) {
-                repository.updateDashboardCardConfigurations(SettingsDefaults.DEFAULT_DASHBOARD_CARDS)
-            }
+            assertEquals(listOf(SettingsDefaults.DEFAULT_DASHBOARD_CARDS), grantedPersisted)
         }
 
     @Test
@@ -402,8 +420,7 @@ class CardManagementDelegateTest {
             delegate.saveChanges()
             advanceUntilIdle()
 
-            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(sampleConfigs) }
-            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(secondSet) }
+            assertEquals(listOf(sampleConfigs, secondSet), persistedConfigs)
         }
 
     // --- 12. DisplayModeChanged ---
@@ -439,7 +456,7 @@ class CardManagementDelegateTest {
                 sampleConfigs.map {
                     if (it.cardId == CardId.HRV) it.copy(requestedDisplayMode = DashboardCardDisplayMode.BAR) else it
                 }
-            coVerify(exactly = 1) { repository.updateDashboardCardConfigurations(expected) }
+            assertEquals(listOf(expected), persistedConfigs)
         }
 
     @Test
@@ -455,7 +472,7 @@ class CardManagementDelegateTest {
             delegate.cancelChanges()
             advanceUntilIdle()
 
-            coVerify(exactly = 0) { repository.updateDashboardCardConfigurations(any()) }
+            assertTrue(persistedConfigs.isEmpty())
             assertNull(delegate.pendingConfigs.value)
         }
 

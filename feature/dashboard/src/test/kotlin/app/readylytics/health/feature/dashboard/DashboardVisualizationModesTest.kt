@@ -235,6 +235,7 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                     secondaryText = "↑ 0.23",
                     accessibilityDescription = "Strain ratio 1.14, normal.",
                 ),
+            usesDeltaPill = true,
         )
 
         composeRule.onNodeWithText("↑ 0.23").assertIsDisplayed()
@@ -347,6 +348,7 @@ class DashboardVisualizationModesTest : DashboardVisualizationRegressionTestBase
                     secondaryText = "↓ 1",
                     accessibilityDescription = "Resting heart rate 48 bpm, optimal.",
                 ),
+            usesDeltaPill = true,
         )
 
         composeRule.onNodeWithText("48").assertIsDisplayed()

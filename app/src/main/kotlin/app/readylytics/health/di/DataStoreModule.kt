@@ -90,6 +90,51 @@ object DataStoreModule {
 
     @Provides
     @Singleton
+    fun provideVitalsLayoutConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<VitalsLayoutConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = VitalsLayoutConfigurationsSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    VitalsLayoutConfigurationsSerializer.defaultValue
+                },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { context.dataStoreFile("vitals_layout_configurations.pb") },
+        )
+
+    @Provides
+    @Singleton
+    fun provideSleepLayoutConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<SleepLayoutConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = SleepLayoutConfigurationsSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    SleepLayoutConfigurationsSerializer.defaultValue
+                },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { context.dataStoreFile("sleep_layout_configurations.pb") },
+        )
+
+    @Provides
+    @Singleton
+    fun provideWorkoutsLayoutConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<WorkoutsLayoutConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = WorkoutsLayoutConfigurationsSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    WorkoutsLayoutConfigurationsSerializer.defaultValue
+                },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { context.dataStoreFile("workouts_layout_configurations.pb") },
+        )
+
+    @Provides
+    @Singleton
     fun provideUserPreferencesDataStore(
         @ApplicationContext context: Context,
         @ApplicationScope appScope: CoroutineScope,

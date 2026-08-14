@@ -19,6 +19,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
@@ -44,7 +45,9 @@ class FirstSetupDummyIngestionFlowTest {
 
             buildUseCase(hcRepo, ingestionStore).run(windowDays = 1, onProgress = null)
 
-            val batch = ingestionStore.persisted.single()
+            // B′: the daily ingest runs as two segments (today, then back-day). The window-agnostic
+            // fixture returns the same records for both, so each segment persists the same
+            // deterministic batch.
             val expectedBatch =
                 HealthIngestionBatch(
                     sleepSessions =
@@ -124,7 +127,8 @@ class FirstSetupDummyIngestionFlowTest {
                     bodyTemperatureSamples = emptyList(),
                     stepRecords = emptyList(),
                 )
-            assertEquals(expectedBatch, batch)
+            assertEquals(2, ingestionStore.persisted.size)
+            ingestionStore.persisted.forEach { assertEquals(expectedBatch, it) }
 
             val expectedHeartRateSamples =
                 listOf(
@@ -153,7 +157,8 @@ class FirstSetupDummyIngestionFlowTest {
                         deviceName = "Pixel Watch",
                     ),
                 )
-            assertEquals(expectedHeartRateSamples, ingestionStore.persistedHeartRateSamples.single())
+            assertEquals(2, ingestionStore.persistedHeartRateSamples.size)
+            ingestionStore.persistedHeartRateSamples.forEach { assertEquals(expectedHeartRateSamples, it) }
 
             val expectedHrvSamples =
                 listOf(
@@ -166,7 +171,8 @@ class FirstSetupDummyIngestionFlowTest {
                         deviceName = "Pixel Watch",
                     ),
                 )
-            assertEquals(expectedHrvSamples, ingestionStore.persistedHrvSamples.single())
+            assertEquals(2, ingestionStore.persistedHrvSamples.size)
+            ingestionStore.persistedHrvSamples.forEach { assertEquals(expectedHrvSamples, it) }
         }
 
     @Test
@@ -179,22 +185,15 @@ class FirstSetupDummyIngestionFlowTest {
             useCase.run(windowDays = 1, onProgress = null)
             useCase.run(windowDays = 1, onProgress = null)
 
-            assertEquals(2, ingestionStore.persisted.size)
-            val first = ingestionStore.persisted.first()
-            val second = ingestionStore.persisted.last()
-            assertEquals(first, second)
+            // 2 runs × 2 segments (today + back-day) = 4 batches; all must be identical (stable ids).
+            assertEquals(4, ingestionStore.persisted.size)
+            assertEquals(1, ingestionStore.persisted.toSet().size)
 
-            assertEquals(2, ingestionStore.persistedHeartRateSamples.size)
-            assertEquals(
-                ingestionStore.persistedHeartRateSamples.first(),
-                ingestionStore.persistedHeartRateSamples.last(),
-            )
+            assertEquals(4, ingestionStore.persistedHeartRateSamples.size)
+            assertEquals(1, ingestionStore.persistedHeartRateSamples.toSet().size)
 
-            assertEquals(2, ingestionStore.persistedHrvSamples.size)
-            assertEquals(
-                ingestionStore.persistedHrvSamples.first(),
-                ingestionStore.persistedHrvSamples.last(),
-            )
+            assertEquals(4, ingestionStore.persistedHrvSamples.size)
+            assertEquals(1, ingestionStore.persistedHrvSamples.toSet().size)
         }
 
     private fun buildUseCase(
@@ -225,6 +224,7 @@ class FirstSetupDummyIngestionFlowTest {
             ingestionCoordinator = HealthIngestionCoordinator(hcRepo, ingestionStore),
             stepCountFetcher = StepCountFetcher(hcRepo),
             recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, RecordingTransactionRunner()),
+            walDiagnostics = mockk<WalDiagnostics>(relaxed = true),
             ioDispatcher = Dispatchers.Unconfined,
             // The fixture data below is keyed to fixed epoch millis (2026-06-28/29), independent
             // of the sync window boundaries, so a fixed clock in that era is used for determinism

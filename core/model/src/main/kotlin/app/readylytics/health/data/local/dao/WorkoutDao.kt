@@ -30,6 +30,22 @@ interface WorkoutDao {
         offset: Int,
     ): List<WorkoutRecordEntity>
 
+    @Query(
+        "SELECT * FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs " +
+            "ORDER BY startTime DESC, id DESC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPagedInRange(
+        fromMs: Long,
+        toMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<WorkoutRecordEntity>
+
+    @Query(
+        "SELECT COUNT(*) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs",
+    )
+    suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
+
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
     suspend fun getSince(fromMs: Long): List<WorkoutRecordEntity>
 

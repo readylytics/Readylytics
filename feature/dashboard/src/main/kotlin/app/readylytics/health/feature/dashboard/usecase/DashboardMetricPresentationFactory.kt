@@ -18,6 +18,7 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.assessHrv
 import app.readylytics.health.domain.model.assessRhr
 import app.readylytics.health.domain.model.assessSpo2
+import app.readylytics.health.domain.model.bodyTemperatureStatus
 import app.readylytics.health.domain.model.circadianConsistencyStatus
 import app.readylytics.health.domain.model.normalizedSleepEfficiencyPercent
 import app.readylytics.health.domain.model.scoreStatus
@@ -27,7 +28,6 @@ import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.service.BodyTemperatureBaselineCalculator
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.UnitConverter
@@ -42,7 +42,6 @@ class DashboardMetricPresentationFactory
     constructor(
         private val resourceProvider: ResourceProvider,
         private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
-        private val bodyTemperatureBaselineCalculator: BodyTemperatureBaselineCalculator,
     ) {
         // Human-readable, TalkBack-friendly accessibilityDescription wiring for all 15 dashboard metric
         // cards (Sleep Score, Readiness, Weight, Body Fat, Sleep Duration, HRV, Sleep RHR, Resting HR,
@@ -87,20 +86,7 @@ class DashboardMetricPresentationFactory
             )
 
         // Deliberately not POOR/OPTIMAL: elevated body temperature is a deviation flag, not a
-        // "good/bad" score.
-        private fun bodyTempStatus(
-            value: Float?,
-            baseline: Float?,
-            thresholdCelsius: Float,
-        ): MetricStatus =
-            when {
-                value == null -> MetricStatus.CALIBRATING
-                baseline == null -> MetricStatus.NEUTRAL
-                bodyTemperatureBaselineCalculator.isElevated(value, baseline, thresholdCelsius) ->
-                    MetricStatus.WARNING
-                else -> MetricStatus.NEUTRAL
-            }
-
+        // "good/bad" score. Status logic lives in core/model `bodyTemperatureStatus`.
         fun build(
             summary: DailySummary?,
             preferences: UserPreferences,
@@ -109,6 +95,7 @@ class DashboardMetricPresentationFactory
             circadianResult: CircadianConsistencyResult?,
             heartRateSummary: HeartRateDaySummary?,
             todayStrainIncrease: Float? = null,
+            todayRasIncrease: Float? = null,
             bodyTempBaseline: Float? = null,
         ): Map<CardId, UniversalMetricPresentation> {
             val map = mutableMapOf<CardId, UniversalMetricPresentation>()
@@ -143,6 +130,7 @@ class DashboardMetricPresentationFactory
                     lastSleepSession = lastSleepSession,
                     hrvAssessment = hrvAssessment,
                     rhrAssessment = rhrAssessment,
+                    todayRasIncrease = todayRasIncrease,
                 ),
             )
 
@@ -463,7 +451,7 @@ class DashboardMetricPresentationFactory
                     resourceProvider.getString(CoreUiR.string.unit_celsius)
                 }
             val bodyTempStatus =
-                bodyTempStatus(bodyTempCelsius, bodyTempBaseline, preferences.bodyTempElevatedThresholdCelsius)
+                bodyTemperatureStatus(bodyTempCelsius, bodyTempBaseline, preferences.bodyTempElevatedThresholdCelsius)
             val bodyTempTitle = resourceProvider.getString(DashboardR.string.card_title_body_temperature)
             val bodyTempValueText =
                 bodyTempDisplay?.let { "%.1f".format(it) } ?: unavailableValueText

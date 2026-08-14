@@ -38,6 +38,7 @@ import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
+import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
@@ -56,6 +57,8 @@ fun BodyFatDetailRoute(
         uiState = uiState,
         onBack = onBack,
         onRangeSelected = viewModel::onRangeSelected,
+        onPreviousPage = viewModel::onPreviousPage,
+        onNextPage = viewModel::onNextPage,
     )
 }
 
@@ -65,6 +68,8 @@ fun BodyFatDetailScreen(
     uiState: BodyFatDetailUiState,
     onBack: () -> Unit,
     onRangeSelected: (TimeRange) -> Unit,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (chartScrollState, chartZoomState) =
@@ -133,6 +138,8 @@ fun BodyFatDetailScreen(
                                 vertical = MaterialTheme.spacing.pageSectionGapSmall,
                             ),
                     title = stringResource(R.string.label_body_fat),
+                    supportedModes = listOf(UniversalCardDisplayMode.GAUGE),
+                    requestedMode = UniversalCardDisplayMode.GAUGE,
                     rawValue = uiState.latestBodyFat,
                     valueText = uiState.bodyFatDisplay ?: stringResource(CoreUiR.string.metric_value_unavailable),
                     unitText = stringResource(CoreUiR.string.unit_percent),
@@ -208,7 +215,13 @@ fun BodyFatDetailScreen(
             }
 
             if (uiState.historyItems.isNotEmpty()) {
-                BodyFatHistorySection(items = uiState.historyItems)
+                BodyFatHistorySection(
+                    items = uiState.historyItems,
+                    currentPage = uiState.currentPage,
+                    totalPages = uiState.totalPages,
+                    onPreviousPage = onPreviousPage,
+                    onNextPage = onNextPage,
+                )
             }
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageBottom))

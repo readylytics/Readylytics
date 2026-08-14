@@ -14,7 +14,9 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -31,7 +33,19 @@ import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDayAssembler
+import app.readylytics.health.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.domain.sleep.SleepChartId
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.domain.sleep.SleepMetricCardId
+import app.readylytics.health.domain.sleep.SleepMetricCardManagementDelegate
+import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.domain.sleep.SleepTopCardId
+import app.readylytics.health.domain.sleep.SleepTopCardManagementDelegate
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.feature.sleep.overview.createSleepChartStateFlow
+import app.readylytics.health.feature.sleep.overview.createSleepMetricCardStateFlow
+import app.readylytics.health.feature.sleep.overview.createSleepTopCardStateFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,7 +94,16 @@ data class SleepUiState(
             goalSleepHours = SettingsDefaults.GOAL_SLEEP_HOURS,
         ),
     val yesterdaySleepScoreRounded: Int? = null,
-)
+    val sleepTopCardConfigurations: List<SleepTopCardConfiguration> = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
+    val isManagingSleepTopCards: Boolean = false,
+    val sleepChartConfigurations: List<SleepChartConfiguration> = SettingsDefaults.DEFAULT_SLEEP_CHARTS,
+    val isManagingSleepCharts: Boolean = false,
+    val sleepMetricCardConfigurations: List<SleepMetricCardConfiguration> = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
+    val isManagingSleepMetricCards: Boolean = false,
+) {
+    val isManagingSleepLayout: Boolean
+        get() = isManagingSleepTopCards || isManagingSleepCharts || isManagingSleepMetricCards
+}
 
 private data class SleepTrendData(
     val startOffsetPoints: List<DailyDataPoint>,
@@ -92,9 +115,6 @@ private data class SleepTrendData(
     val actualDurationSummary: PeriodAverageSummary? = null,
 )
 
-// Only these preference fields are consumed by the inner pipeline; projecting them through
-// distinctUntilChanged means unrelated pref changes (theme, retention, HR zones, ...) do not
-// cancel and restart the observe* flows that feed the Sleep screen.
 private data class SleepScoringPrefs(
     val scoringZoneId: ZoneId,
     val coreMergeGapMinutes: Int,
@@ -150,9 +170,51 @@ class SleepViewModel
         private val circadianRepo: CircadianConsistencyRepository,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
+        private val sleepLayoutRepository: SleepLayoutRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
+        private val sleepTopCardManagementDelegate =
+            SleepTopCardManagementDelegate(
+                defaultConfigurations = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
+                persist = sleepLayoutRepository::updateSleepTopCardConfigurations,
+                scope = viewModelScope,
+            )
+
+        private val sleepChartManagementDelegate =
+            LayoutManagementDelegate(
+                defaultConfigurations = SettingsDefaults.DEFAULT_SLEEP_CHARTS,
+                persist = sleepLayoutRepository::updateSleepChartConfigurations,
+                scope = viewModelScope,
+                withVisibility = { config, visible -> config.copy(isVisible = visible) },
+                withPosition = { config, pos -> config.copy(position = pos) },
+            )
+
+        private val sleepMetricCardManagementDelegate =
+            SleepMetricCardManagementDelegate(
+                defaultConfigurations = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
+                persist = sleepLayoutRepository::updateSleepMetricCardConfigurations,
+                scope = viewModelScope,
+            )
+
+        private val sleepTopCardStateFlow =
+            createSleepTopCardStateFlow(
+                delegate = sleepTopCardManagementDelegate,
+                repository = sleepLayoutRepository,
+            ).distinctUntilChanged()
+
+        private val sleepChartStateFlow =
+            createSleepChartStateFlow(
+                delegate = sleepChartManagementDelegate,
+                repository = sleepLayoutRepository,
+            ).distinctUntilChanged()
+
+        private val sleepMetricCardStateFlow =
+            createSleepMetricCardStateFlow(
+                delegate = sleepMetricCardManagementDelegate,
+                repository = sleepLayoutRepository,
+            ).distinctUntilChanged()
+
         private val selectedTrendRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
         private val sleepScoringPrefsFlow =
@@ -172,7 +234,7 @@ class SleepViewModel
                 )
 
         @OptIn(ExperimentalCoroutinesApi::class)
-        val uiState =
+        private val contentStateFlow =
             combine(
                 selectedDateRepository.selectedDate,
                 selectedTrendRangeFlow,
@@ -410,35 +472,32 @@ class SleepViewModel
                             sleepHrSamples = hrSamples,
                         )
                     }.distinctUntilChanged()
-                        // isSyncing is merged in after the heavy pipeline instead of inside it
-                        // (mirrors DashboardViewModel.kt:104-113) so a sync toggle only triggers a
-                        // cheap copy, not a full re-run of the trend-day-loop unpacking above.
-                        // isLoading means "true first-load, no data yet" (skeleton); isRefreshing
-                        // tracks every sync regardless of data presence. The "no data yet" signal
-                        // is based on whether the trend chart has any real historical point loaded,
-                        // not on whether the *selected day's* summary/session exists --
-                        // latestSummary/latestSession are scoped to the selected date, so on the
-                        // first sync of a new day (before today's session/summary is computed) they
-                        // are null even though the trend already has unchanged history loaded.
-                        // Checking the trend list instead avoids flashing the skeleton and tearing
-                        // down/rebuilding the Vico chart once per day. The trend point lists are
-                        // always padded to range.days entries (null-valued, never actually empty),
-                        // so this must be an any-non-null check, not a trend-list emptiness check.
-                        .combine(
-                            foregroundSyncController.isSyncing,
-                        ) { state, syncing ->
-                            val hasHistoricalData = state.trendStartOffsetPoints.any { it.value != null }
-                            state.copy(
-                                isLoading = syncing && !hasHistoricalData,
-                                isRefreshing = syncing,
-                            )
-                        }
                 }.flowOn(defaultDispatcher)
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = SleepUiState(isLoading = true),
+
+        val uiState: StateFlow<SleepUiState> =
+            combine(
+                contentStateFlow,
+                foregroundSyncController.isSyncing,
+                sleepTopCardStateFlow,
+                sleepChartStateFlow,
+                sleepMetricCardStateFlow,
+            ) { state, syncing, topCardState, chartState, metricCardState ->
+                val hasHistoricalData = state.trendStartOffsetPoints.any { it.value != null }
+                state.copy(
+                    isLoading = syncing && !hasHistoricalData,
+                    isRefreshing = syncing,
+                    sleepTopCardConfigurations = topCardState.topCardConfigurations,
+                    isManagingSleepTopCards = topCardState.isManagingTopCards,
+                    sleepChartConfigurations = chartState.chartConfigurations,
+                    isManagingSleepCharts = chartState.isManagingCharts,
+                    sleepMetricCardConfigurations = metricCardState.metricCardConfigurations,
+                    isManagingSleepMetricCards = metricCardState.isManagingMetricCards,
                 )
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = SleepUiState(isLoading = true),
+            )
 
         val earliestDate: StateFlow<LocalDate?> =
             selectedDateRepository.earliestDate
@@ -468,5 +527,97 @@ class SleepViewModel
 
         fun onTrendRangeSelected(range: TimeRange) {
             selectedTrendRangeFlow.value = range
+        }
+
+        fun toggleSleepLayoutManagement() {
+            if (uiState.value.isManagingSleepLayout) {
+                sleepTopCardManagementDelegate.saveChanges()
+                sleepChartManagementDelegate.saveChanges()
+                sleepMetricCardManagementDelegate.saveChanges()
+            } else {
+                sleepTopCardManagementDelegate.enterEditMode(uiState.value.sleepTopCardConfigurations)
+                sleepChartManagementDelegate.enterEditMode(uiState.value.sleepChartConfigurations)
+                sleepMetricCardManagementDelegate.enterEditMode(uiState.value.sleepMetricCardConfigurations)
+            }
+        }
+
+        fun onCancelSleepLayoutManagement() {
+            sleepTopCardManagementDelegate.cancelChanges()
+            sleepChartManagementDelegate.cancelChanges()
+            sleepMetricCardManagementDelegate.cancelChanges()
+        }
+
+        fun onToggleSleepTopCardVisibility(
+            cardId: SleepTopCardId,
+            visible: Boolean,
+        ) {
+            sleepTopCardManagementDelegate.onToggleVisibility(
+                uiState.value.sleepTopCardConfigurations,
+                cardId,
+                visible,
+            )
+        }
+
+        fun onReorderSleepTopCards(newOrder: List<SleepTopCardConfiguration>) {
+            sleepTopCardManagementDelegate.onReorder(
+                uiState.value.sleepTopCardConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onSleepTopCardDisplayModeChanged(
+            cardId: SleepTopCardId,
+            mode: DashboardCardDisplayMode?,
+        ) {
+            sleepTopCardManagementDelegate.onDisplayModeChanged(cardId, mode)
+        }
+
+        fun onToggleSleepChartVisibility(
+            chartId: SleepChartId,
+            visible: Boolean,
+        ) {
+            sleepChartManagementDelegate.onToggleVisibility(
+                uiState.value.sleepChartConfigurations,
+                chartId,
+                visible,
+            )
+        }
+
+        fun onReorderSleepCharts(newOrder: List<SleepChartConfiguration>) {
+            sleepChartManagementDelegate.onReorder(
+                uiState.value.sleepChartConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onToggleSleepMetricCardVisibility(
+            cardId: SleepMetricCardId,
+            visible: Boolean,
+        ) {
+            sleepMetricCardManagementDelegate.onToggleVisibility(
+                uiState.value.sleepMetricCardConfigurations,
+                cardId,
+                visible,
+            )
+        }
+
+        fun onReorderSleepMetricCards(newOrder: List<SleepMetricCardConfiguration>) {
+            sleepMetricCardManagementDelegate.onReorder(
+                uiState.value.sleepMetricCardConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onSleepMetricCardDisplayModeChanged(
+            cardId: SleepMetricCardId,
+            mode: DashboardCardDisplayMode?,
+        ) {
+            sleepMetricCardManagementDelegate.onDisplayModeChanged(cardId, mode)
+        }
+
+        fun onResetSleepLayoutToDefaults() {
+            sleepTopCardManagementDelegate.onResetToDefaults()
+            sleepChartManagementDelegate.onResetToDefaults()
+            sleepMetricCardManagementDelegate.onResetToDefaults()
         }
     }

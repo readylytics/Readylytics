@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.model
 
+import app.readylytics.health.domain.preferences.UnitSystem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -119,6 +120,60 @@ class VitalAssessmentTest {
         assertEquals(HealthZone.WARNING, assessment.zoneBands.zoneAt(90.0))
         assertEquals(HealthZone.NEUTRAL, assessment.zoneBands.zoneAt(95.0))
         assertEquals(HealthZone.OPTIMAL, assessment.zoneBands.zoneAt(98.0))
+    }
+
+    @Test
+    fun `bodyTemperatureStatus warns when abs difference equals threshold`() {
+        assertEquals(
+            MetricStatus.WARNING,
+            bodyTemperatureStatus(value = 37.5f, baseline = 36.5f, thresholdCelsius = 1.0f),
+        )
+    }
+
+    @Test
+    fun `bodyTemperatureStatus distinct when value below baseline by threshold`() {
+        assertEquals(
+            MetricStatus.WARNING,
+            bodyTemperatureStatus(value = 36.5f, baseline = 37.5f, thresholdCelsius = 1.0f),
+        )
+    }
+
+    @Test
+    fun `bodyTemperatureStatus neutral below threshold`() {
+        assertEquals(
+            MetricStatus.NEUTRAL,
+            bodyTemperatureStatus(value = 37.0f, baseline = 36.5f, thresholdCelsius = 1.0f),
+        )
+    }
+
+    @Test
+    fun `bodyTemperatureStatus calibrating on null value`() {
+        assertEquals(
+            MetricStatus.CALIBRATING,
+            bodyTemperatureStatus(value = null, baseline = 36.5f, thresholdCelsius = 1.0f),
+        )
+    }
+
+    @Test
+    fun `bodyTemperatureStatus neutral on null baseline`() {
+        assertEquals(
+            MetricStatus.NEUTRAL,
+            bodyTemperatureStatus(value = 37.0f, baseline = null, thresholdCelsius = 1.0f),
+        )
+    }
+
+    @Test
+    fun `assessBodyTemperature converts to display units`() {
+        val a =
+            assessBodyTemperature(
+                valueCelsius = 37.0f,
+                baselineCelsius = 36.5f,
+                thresholdCelsius = 1.0f,
+                unitSystem = UnitSystem.IMPERIAL,
+            )
+        assertEquals(MetricStatus.NEUTRAL, a.status)
+        assertEquals(98.6f, a.value!!, 0.1f)
+        assertEquals(97.7f, a.baseline!!, 0.1f)
     }
 
     @Test

@@ -13,6 +13,9 @@ import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -44,6 +47,9 @@ class LocalBackupManager
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
+        private val vitalsLayoutRepository: VitalsLayoutRepository,
+        private val sleepLayoutRepository: SleepLayoutRepository,
+        private val workoutsLayoutRepository: WorkoutsLayoutRepository,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -501,6 +507,14 @@ class LocalBackupManager
         private suspend fun writePreferences(writer: BufferedWriter) {
             val prefs = settingsRepository.userPreferences.first()
             val cards = cardConfigurationRepository.dashboardCardConfigurations().first()
+            val vitalsCards = vitalsLayoutRepository.vitalsCardConfigurations().first()
+            val vitalsCharts = vitalsLayoutRepository.vitalsChartConfigurations().first()
+            val sleepTopCards = sleepLayoutRepository.sleepTopCardConfigurations().first()
+            val sleepCharts = sleepLayoutRepository.sleepChartConfigurations().first()
+            val sleepMetricCards = sleepLayoutRepository.sleepMetricCardConfigurations().first()
+            val workoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
+            val workoutCharts = workoutsLayoutRepository.workoutChartConfigurations().first()
+            val workoutHistory = workoutsLayoutRepository.workoutHistoryConfigurations().first()
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
@@ -597,6 +611,14 @@ class LocalBackupManager
                     deviceByDataType = prefs.deviceByDataType.takeIf { it.isNotEmpty() },
                     backupDirectoryUri = prefs.backupDirectoryUri,
                     dashboardCards = cards,
+                    vitalsCards = vitalsCards,
+                    vitalsCharts = vitalsCharts,
+                    sleepTopCards = sleepTopCards,
+                    sleepCharts = sleepCharts,
+                    sleepMetricCards = sleepMetricCards,
+                    workoutCards = workoutCards,
+                    workoutCharts = workoutCharts,
+                    workoutHistory = workoutHistory,
                 )
             writer.write(json.encodeToString(backup))
         }

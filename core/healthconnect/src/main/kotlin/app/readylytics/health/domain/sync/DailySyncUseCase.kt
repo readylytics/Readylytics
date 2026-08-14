@@ -4,8 +4,11 @@ import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.time.Clock
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,15 +44,47 @@ class DailySyncUseCase
         private val ingestionCoordinator: HealthIngestionCoordinator,
         private val stepCountFetcher: StepCountFetcher,
         private val recomputeSupport: DailyRecomputeSupport,
+        private val walDiagnostics: WalDiagnostics,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val clock: Clock,
     ) {
+        private suspend fun ingestSegment(
+            startMs: Instant,
+            endMs: Instant,
+            prefs: UserPreferences,
+            windowBudgetMs: Long,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ) {
+            try {
+                ingestionCoordinator.ingestWindow(
+                    startMs,
+                    endMs,
+                    prefs,
+                    windowBudgetMs = windowBudgetMs,
+                    onProgress = onProgress,
+                )
+            } catch (e: HealthConnectWindowTimeoutException) {
+                logE("DailySyncUseCase") {
+                    "Ingest segment $startMs..$endMs timed out; retrying with extended budget"
+                }
+                ingestionCoordinator.ingestWindow(
+                    startMs,
+                    endMs,
+                    prefs,
+                    windowBudgetMs = EXTENDED_DAILY_INGEST_BUDGET_MS,
+                    onProgress = onProgress,
+                )
+            }
+        }
+
         /**
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
-         *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress
-         *   instead of a silent spinner. Invoked off the main thread. Daily sync has no chunked
-         *   ingest/prune phase of its own (single non-chunked window, always fast), so it always
-         *   reports [ResyncPhase.RECOMPUTE].
+         *   reporting (phase, current, total) so the UI can surface progress instead of a silent
+         *   spinner. Invoked off the main thread. Unlike the historical resync, daily sync's HR/HRV
+         *   page ingest has no real page count up front, so it reports [ResyncPhase.INGEST] with an
+         *   indeterminate `total = 0`; it also reports [ResyncPhase.RECONCILE] (indeterminate, once)
+         *   before finally reporting determinate [ResyncPhase.RECOMPUTE] progress across the
+         *   walk-forward.
          */
         suspend fun run(
             windowDays: Int,
@@ -101,6 +137,7 @@ class DailySyncUseCase
                         }
 
                     val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
+                    val todayMidnight = today.atStartOfDay(zoneId).toInstant()
 
                     // Overnight sleep sessions cross midnight: a session ending inside the
                     // recompute range may begin the previous evening. Reach the raw-sample fetch
@@ -108,7 +145,47 @@ class DailySyncUseCase
                     // samples of the earliest in-range night are captured.
                     val ingestStart = oldestTargetDay.minusDays(1).atStartOfDay(zoneId).toInstant()
 
-                    ingestionCoordinator.ingestWindow(ingestStart, windowEnd, prefs)
+                    val ingestStartedAt = System.currentTimeMillis()
+                    // B′: split the recent-window ingest into today's segment and the overnight
+                    // back-day reach-back so each gets its own read budget and the user-facing day
+                    // completes (and scores) before the denser back-day. Both segments stay inside
+                    // the original [ingestStart, windowEnd) range, so the current-day-only contract
+                    // is unchanged; the full-range reconcile below re-derives session links across
+                    // the segment boundary (chunk-independent determinism).
+                    try {
+                        ingestSegment(
+                            todayMidnight,
+                            windowEnd,
+                            prefs,
+                            windowBudgetMs = DEFAULT_DAILY_INGEST_BUDGET_MS,
+                            onProgress = onProgress,
+                        )
+                    } catch (e: HealthConnectWindowTimeoutException) {
+                        logE("DailySyncUseCase", e) { "Today's ingest deferred: window too dense" }
+                        return@withContext Result.failure(
+                            "Today's Health Connect data too dense for foreground sync",
+                            "DEFERRED_DAILY_SYNC",
+                        )
+                    }
+                    try {
+                        ingestSegment(
+                            ingestStart,
+                            todayMidnight,
+                            prefs,
+                            windowBudgetMs = BACK_DAY_INGEST_BUDGET_MS,
+                            onProgress = onProgress,
+                        )
+                    } catch (e: HealthConnectWindowTimeoutException) {
+                        logE("DailySyncUseCase", e) {
+                            "Back-day ingest deferred; continuing with today's data"
+                        }
+                    }
+                    logD("HealthSync.Phase") {
+                        "INGEST completed in ${System.currentTimeMillis() - ingestStartedAt}ms"
+                    }
+
+                    onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
+                    val reconcileStartedAt = System.currentTimeMillis()
                     sessionLinkReconciler.reconcile(
                         startMs = ingestStart.toEpochMilli(),
                         endMs = windowEnd.toEpochMilli() - 1,
@@ -121,6 +198,9 @@ class DailySyncUseCase
                                 prefs.zone4MaxBpm,
                             ),
                     )
+                    logD("HealthSync.Phase") {
+                        "RECONCILE completed in ${System.currentTimeMillis() - reconcileStartedAt}ms"
+                    }
 
                     val stepsDevice =
                         prefs.deviceByDataType[HealthDataType.STEPS.name]?.takeIf { it.isNotBlank() }
@@ -154,6 +234,7 @@ class DailySyncUseCase
                     // existing log-and-continue + SYNC_PARTIAL_FAILURE semantics are unchanged.
                     // Cancellation does roll the window back, which is fine: the next sync redoes
                     // the same idempotent range.
+                    val recomputeStartedAt = System.currentTimeMillis()
                     recomputeSupport.inRecomputeTransaction {
                         healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1), zoneId)
 
@@ -186,10 +267,14 @@ class DailySyncUseCase
                             yield()
                         }
                     }
+                    logD("HealthSync.Phase") {
+                        "RECOMPUTE completed in ${System.currentTimeMillis() - recomputeStartedAt}ms"
+                    }
 
                     logI("DailySyncUseCase") {
                         "Sync complete: $successCount succeeded, $failureCount failed"
                     }
+                    logD("HealthSync.Wal") { "WAL file size: ${walDiagnostics.walFileSizeInfo()}" }
                     if (failureCount > 0) {
                         return@withContext Result.failure(
                             "One or more daily summaries failed",

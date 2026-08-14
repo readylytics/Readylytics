@@ -22,9 +22,12 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -71,6 +74,8 @@ class BodyFatDetailViewModelTest {
         bodyFatRepository =
             mockk {
                 coEvery { getByDateRange(any(), any()) } returns emptyList()
+                coEvery { getByDateRangePaged(any(), any(), any(), any()) } returns emptyList()
+                coEvery { countByDateRange(any(), any()) } returns 0
                 coEvery { getLatest() } returns null
                 coEvery { getPrevious(any()) } returns null
             }
@@ -260,6 +265,8 @@ class BodyFatDetailViewModelTest {
             val bodyFatRecord = BodyFatRecordEntity(id = "1", timestampMs = now, bodyFatPercent = 14.2f)
             val weightRecord = WeightRecordEntity(id = "1", timestampMs = now, weightKg = 78.4f)
             coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(bodyFatRecord)
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns listOf(bodyFatRecord)
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 1
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(weightRecord)
 
             every { settingsRepo.userPreferences } returns
@@ -281,6 +288,8 @@ class BodyFatDetailViewModelTest {
         runTest {
             val record = BodyFatRecordEntity("male-essential", System.currentTimeMillis(), 2f)
             coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(record)
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns listOf(record)
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 1
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE, gender = Gender.MALE))
             viewModel = createViewModel()
@@ -311,6 +320,8 @@ class BodyFatDetailViewModelTest {
                     bodyFatPercent = 18f,
                 )
             coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(bodyFatRecord)
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns listOf(bodyFatRecord)
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 1
             coEvery { weightRepository.getByDateRange(any(), any()) } returns emptyList()
 
             every { settingsRepo.userPreferences } returns
@@ -329,6 +340,8 @@ class BodyFatDetailViewModelTest {
             val bodyFatRecord = BodyFatRecordEntity(id = "1", timestampMs = now, bodyFatPercent = 14.2f)
             val weightRecord = WeightRecordEntity(id = "1", timestampMs = now, weightKg = 78.4f)
             coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(bodyFatRecord)
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns listOf(bodyFatRecord)
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 1
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(weightRecord)
 
             every { settingsRepo.userPreferences } returns
@@ -341,6 +354,170 @@ class BodyFatDetailViewModelTest {
             // 67.2752 kg * 2.20462 = 148.3 lbs
             assertEquals(148.3f, item.leanMassDisplay!!, 0.1f)
             assertEquals(UnitSystem.IMPERIAL, item.unitSystem)
+        }
+
+    // --- pagination ---
+
+    @Test
+    fun `historyItems are paginated`() =
+        runTest {
+            val records =
+                (1..25)
+                    .map { i ->
+                        BodyFatRecordEntity(id = "bf$i", timestampMs = i * 1000L, bodyFatPercent = 20f)
+                    }.reversed()
+
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), 10, 0) } returns records.take(10)
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), 10, 10) } returns records.drop(10).take(10)
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 25
+
+            viewModel = createViewModel()
+            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+
+            assertEquals(10, state.historyItems.size)
+            assertEquals(3, state.totalPages)
+            assertEquals(1, state.currentPage)
+            assertEquals(25_000L, state.historyItems.first().timestampMs)
+
+            viewModel.onNextPage()
+            val pageTwo = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(15_000L, pageTwo.historyItems.first().timestampMs)
+        }
+
+    @Test
+    fun `page resets to 1 onRangeSelected`() =
+        runTest {
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 25
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(BodyFatRecordEntity("bf", 1_000L, 20f))
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            var state = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(2, state.currentPage)
+
+            viewModel.onRangeSelected(TimeRange.THIRTY_DAYS)
+            state = viewModel.uiState.first { it.currentPage == 1 }
+            assertEquals(1, state.currentPage)
+        }
+
+    @Test
+    fun `page resets to 1 on selected date change`() =
+        runTest {
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 25
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(BodyFatRecordEntity("bf", 1_000L, 20f))
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            var state = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(2, state.currentPage)
+
+            selectedDateRepo.updateSelectedDate(LocalDate.now().minusDays(1))
+            state = viewModel.uiState.first { it.currentPage == 1 }
+            assertEquals(1, state.currentPage)
+        }
+
+    @Test
+    fun `page persists across re-subscription after WhileSubscribed timeout`() =
+        runTest(testDispatcher) {
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 25
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(BodyFatRecordEntity("bf", 1_000L, 20f))
+
+            viewModel =
+                BodyFatDetailViewModel(
+                    bodyFatRepository = bodyFatRepository,
+                    weightRepository = weightRepository,
+                    settingsRepo = settingsRepo,
+                    selectedDateRepository = selectedDateRepo,
+                    ioDispatcher = testDispatcher,
+                )
+
+            val job1 = launch { viewModel.uiState.collect {} }
+            viewModel.uiState.first { !it.isLoading }
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+
+            job1.cancel()
+            testScheduler.advanceUntilIdle()
+
+            val job2 = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+            assertEquals(2, viewModel.uiState.value.currentPage)
+            job2.cancel()
+
+            viewModel.viewModelScope.coroutineContext[Job]?.cancelAndJoin()
+        }
+
+    @Test
+    fun `last partial page renders correctly`() =
+        runTest {
+            val records =
+                (1..15)
+                    .map { i ->
+                        BodyFatRecordEntity(id = "bf$i", timestampMs = i * 1000L, bodyFatPercent = 20f)
+                    }.reversed()
+
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), 10, 0) } returns records.take(10)
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), 10, 10) } returns records.drop(10).take(5)
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 15
+
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+            viewModel.onNextPage()
+
+            val pageTwo = viewModel.uiState.first { it.currentPage == 2 }
+            assertEquals(5, pageTwo.historyItems.size)
+            assertEquals(5_000L, pageTwo.historyItems.first().timestampMs)
+            assertEquals(2, pageTwo.totalPages)
+        }
+
+    @Test
+    fun `currentPage is clamped when count drops`() =
+        runTest {
+            val countFlow = MutableStateFlow(25)
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } answers { countFlow.value }
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(BodyFatRecordEntity("bf", 1_000L, 20f))
+
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { it.currentPage == 2 }
+            viewModel.onNextPage()
+            val state3 = viewModel.uiState.first { it.currentPage == 3 }
+            assertEquals(3, state3.currentPage)
+            assertEquals(3, state3.totalPages)
+
+            countFlow.value = 5
+            viewModel.onPreviousPage()
+            val clampedState = viewModel.uiState.first { it.totalPages == 1 }
+            assertEquals(1, clampedState.currentPage)
+            assertEquals(1, clampedState.totalPages)
+        }
+
+    @Test
+    fun `onPreviousPage decrements page but not below 1`() =
+        runTest {
+            coEvery { bodyFatRepository.countByDateRange(any(), any()) } returns 25
+            coEvery { bodyFatRepository.getByDateRangePaged(any(), any(), any(), any()) } returns
+                listOf(BodyFatRecordEntity("bf", 1_000L, 20f))
+            viewModel = createViewModel()
+            viewModel.uiState.first { !it.isLoading }
+
+            viewModel.onNextPage()
+            viewModel.uiState.first { !it.isLoading && it.currentPage == 2 }
+
+            viewModel.onPreviousPage()
+            var state = viewModel.uiState.first { !it.isLoading && it.currentPage == 1 }
+            assertEquals(1, state.currentPage)
+
+            viewModel.onPreviousPage()
+            assertEquals(1, viewModel.uiState.value.currentPage)
         }
 
     @Test

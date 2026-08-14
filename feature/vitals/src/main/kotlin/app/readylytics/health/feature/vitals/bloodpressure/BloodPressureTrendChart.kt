@@ -29,6 +29,8 @@ import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TrendGranularity
+import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -36,6 +38,7 @@ import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
 import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.ZoneBandDecoration
+import app.readylytics.health.core.ui.components.formatTrendTooltipDate
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import app.readylytics.health.core.ui.components.rememberZoneBandColors
 import app.readylytics.health.domain.service.HealthMetricsService
@@ -69,6 +72,7 @@ fun BloodPressureTrendChart(
     rangeStartMs: Long,
     rangeDays: Int,
     modifier: Modifier = Modifier,
+    granularity: TrendGranularity = TrendGranularity.DAILY,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     // Same fix as TrendChart: Zoom.min(Zoom.Content, Zoom.fixed(1f)) as minZoom floor.
     // See TrendChart's zoomState comment for the full rationale.
@@ -162,7 +166,9 @@ fun BloodPressureTrendChart(
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+    val xAxisFormatter = ChartDefaults.rememberPeriodFormatter(rangeStartMs, granularity)
+    val ordinalLabel = rememberPeriodOrdinalLabel(granularity)
+    val weekRangeTemplate = stringResource(app.readylytics.health.core.ui.R.string.tooltip_week_range)
 
     LaunchedEffect(systolicPoints, diastolicPoints) {
         modelProducer.runTransaction {
@@ -248,7 +254,8 @@ fun BloodPressureTrendChart(
         rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
             val dayOffset = x.toInt()
             val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-            val dateText = ChartUtils.formatTooltipDate(date)
+            val dateText =
+                formatTrendTooltipDate(granularity, date, ordinalLabel, weekRangeTemplate)
             val sysNearest = systolicPoints.firstOrNull { it.dayOffset == dayOffset }
             val diaNearest = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }
             val sysVal = sysNearest?.value
@@ -318,9 +325,11 @@ fun BloodPressureTrendChart(
                             label = labelComponent,
                             valueFormatter = xAxisFormatter,
                             itemPlacer =
-                                remember(
-                                    rangeDays,
-                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                ChartDefaults.rememberTrendAxisItemPlacer(
+                                    rangeDays = rangeDays,
+                                    granularity = granularity,
+                                    rangeStartMs = rangeStartMs,
+                                ),
                             guideline = guidelineComponent,
                         ),
                     decorations = decorations,

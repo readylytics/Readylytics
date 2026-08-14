@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.dashboard
 
+import app.readylytics.health.domain.layout.ReorderableItem
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -31,8 +32,10 @@ enum class CardId {
 @Serializable
 data class CardConfiguration(
     val cardId: CardId,
-    val isVisible: Boolean = true,
-    val position: Int = 0,
+    override val isVisible: Boolean = true,
+    override val position: Int = 0,
     @Serializable(with = NullableDashboardCardDisplayModeSerializer::class)
     val requestedDisplayMode: DashboardCardDisplayMode? = null,
-)
+) : ReorderableItem<CardId> {
+    override val id: CardId get() = cardId
+}

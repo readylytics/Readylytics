@@ -9,6 +9,9 @@ import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.every
@@ -32,6 +35,9 @@ abstract class LocalRestoreManagerTestBase {
     protected lateinit var settingsRepo: SettingsRepository
     protected lateinit var encryptionManager: EncryptionManager
     protected lateinit var cardConfigRepo: CardConfigurationRepository
+    protected lateinit var vitalsLayoutRepo: VitalsLayoutRepository
+    protected lateinit var sleepLayoutRepo: SleepLayoutRepository
+    protected lateinit var workoutsLayoutRepo: WorkoutsLayoutRepository
     protected lateinit var workerScheduler: WorkerScheduler
     protected lateinit var auditTrailRepository: FakeAuditTrailRepository
     protected lateinit var manager: LocalRestoreManager
@@ -55,6 +61,9 @@ abstract class LocalRestoreManagerTestBase {
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
         every { encryptionManager.encrypt("restored_password") } returns "encrypted_restored_password"
         cardConfigRepo = mockk<CardConfigurationRepository>(relaxed = true)
+        vitalsLayoutRepo = mockk<VitalsLayoutRepository>(relaxed = true)
+        sleepLayoutRepo = mockk<SleepLayoutRepository>(relaxed = true)
+        workoutsLayoutRepo = mockk<WorkoutsLayoutRepository>(relaxed = true)
         workerScheduler = mockk<WorkerScheduler>(relaxed = true)
         auditTrailRepository = FakeAuditTrailRepository()
         manager =
@@ -63,6 +72,9 @@ abstract class LocalRestoreManagerTestBase {
                 db,
                 settingsRepo,
                 cardConfigRepo,
+                vitalsLayoutRepo,
+                sleepLayoutRepo,
+                workoutsLayoutRepo,
                 workerScheduler,
                 encryptionManager,
                 auditTrailRepository,

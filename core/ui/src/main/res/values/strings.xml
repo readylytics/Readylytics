@@ -29,6 +29,13 @@
 
 
     <string name="action_delete_drop_zone">Drop here to remove</string>
+    <string name="action_hide_drop_zone">Drop here to hide</string>
+    <string name="action_done">Done</string>
+    <string name="action_done_editing">Done editing</string>
+    <string name="action_cancel_editing">Cancel editing</string>
+    <string name="action_customize">Customize</string>
+    <string name="action_manage_menu">Manage</string>
+    <string name="action_reset_to_defaults">Reset to defaults</string>
 
 
     <string name="unit_metric_cm">cm</string>
@@ -176,6 +183,7 @@
     <string name="sync_progress_fetching_data">Fetching data: Day %1$d of %2$d</string>
     <string name="sync_progress_finishing_setup">Finishing setup…</string>
     <string name="sync_progress_phase_ingest">Fetching Health Connect data (batch %1$d of %2$d)…</string>
+    <string name="sync_progress_phase_ingest_indeterminate">Fetching Health Connect data (page %1$d)…</string>
     <string name="sync_progress_phase_prune">Cleaning up local data…</string>
     <string name="sync_progress_phase_reconcile">Linking sleep and workout sessions…</string>
     <string name="sync_progress_view_logs">Show log output</string>
@@ -186,6 +194,7 @@
     <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
     <string name="resync_notification_preparing">Preparing…</string>
     <string name="resync_phase_ingest">Fetching Health Connect data (batch %1$d of %2$d)…</string>
+    <string name="resync_phase_ingest_indeterminate">Fetching Health Connect data (page %1$d)…</string>
     <string name="resync_phase_prune">Cleaning up local data…</string>
     <string name="resync_phase_reconcile">Linking sleep and workout sessions…</string>
     <string name="error_sync_failed">Sync failed</string>
@@ -212,8 +221,14 @@
     <string name="mode_gauge">Gauge</string>
     <string name="mode_bar">Bar</string>
     <string name="mode_value">Value</string>
+    <string name="display_mode_label">Display mode</string>
     <string name="menu_item_description_mode">Visualization style: %1$s</string>
     <string name="menu_item_description_mode_selected">Visualization style: %1$s, selected</string>
     <string name="semantics_edit_mode_separator">, %1$s</string>
+
+    <!-- History Pagination -->
+    <string name="pagination_page_info">Page %1$d of %2$d</string>
+    <string name="pagination_button_previous">Previous page</string>
+    <string name="pagination_button_next">Next page</string>
 
 </resources>

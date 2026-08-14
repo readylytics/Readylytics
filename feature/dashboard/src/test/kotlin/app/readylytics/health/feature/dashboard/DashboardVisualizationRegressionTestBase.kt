@@ -14,7 +14,7 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.DashboardCardSpec
+import app.readylytics.health.domain.dashboard.ModeSpec
 import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -29,8 +29,7 @@ abstract class DashboardVisualizationRegressionTestBase {
     val composeRule = createComposeRule()
 
     protected val specification =
-        DashboardCardSpec(
-            cardId = CardId.HRV,
+        ModeSpec(
             legacyDefaultMode = DashboardCardDisplayMode.VALUE,
             supportedModes = DashboardCardDisplayMode.entries,
         )
@@ -57,7 +56,8 @@ abstract class DashboardVisualizationRegressionTestBase {
     protected fun setMetricCard(
         mode: DashboardCardDisplayMode,
         presentation: UniversalMetricPresentation,
-        specification: DashboardCardSpec = this.specification,
+        specification: ModeSpec = this.specification,
+        usesDeltaPill: Boolean = false,
     ) {
         composeRule.setContent {
             TestTheme {
@@ -67,6 +67,7 @@ abstract class DashboardVisualizationRegressionTestBase {
                     requestedMode = mode,
                     isEditing = false,
                     onModeSelected = {},
+                    usesDeltaPill = usesDeltaPill,
                 )
             }
         }

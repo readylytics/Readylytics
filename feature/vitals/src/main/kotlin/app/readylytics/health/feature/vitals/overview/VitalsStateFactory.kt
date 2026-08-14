@@ -10,6 +10,7 @@ import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.core.ui.common.bucketLengthDays
 import app.readylytics.health.core.ui.common.bucketStartForDate
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.BodyTemperatureAssessment
 import app.readylytics.health.domain.model.BucketZoneBands
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
@@ -17,6 +18,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.PersonalBaselineAssessment
 import app.readylytics.health.domain.model.Spo2Assessment
 import app.readylytics.health.domain.model.ZoneBand
+import app.readylytics.health.domain.model.assessBodyTemperature
 import app.readylytics.health.domain.model.assessHrv
 import app.readylytics.health.domain.model.assessRhr
 import app.readylytics.health.domain.model.assessSpo2
@@ -76,7 +78,7 @@ data class VitalsPresentationState(
     val hrv: PersonalBaselineAssessment,
     val rhr: PersonalBaselineAssessment,
     val spo2: Spo2Assessment,
-    val baselineBodyTemp: Float?,
+    val bodyTemp: BodyTemperatureAssessment,
     val bodyTempUnitSystem: UnitSystem,
 ) {
     companion object {
@@ -94,17 +96,14 @@ private fun presentationStateFromAssessments(
     hrv: PersonalBaselineAssessment,
     rhr: PersonalBaselineAssessment,
     spo2: Spo2Assessment,
-    bodyTemperatureBaselineCelsius: Float?,
+    bodyTemp: BodyTemperatureAssessment,
     unitSystem: UnitSystem,
 ): VitalsPresentationState =
     VitalsPresentationState(
         hrv = hrv,
         rhr = rhr,
         spo2 = spo2,
-        baselineBodyTemp =
-            bodyTemperatureBaselineCelsius?.let {
-                UnitConverter.celsiusToDisplayTemperature(it, unitSystem)
-            },
+        bodyTemp = bodyTemp,
         bodyTempUnitSystem = unitSystem,
     )
 
@@ -304,12 +303,19 @@ internal fun buildVitalsPresentationState(
             warningRatio = prefs.rhrWarningThreshold,
         )
     val spo2Assessment = assessSpo2(summary?.avgSleepingSpo2)
+    val bodyTempAssessment =
+        assessBodyTemperature(
+            valueCelsius = summary?.avgSleepingBodyTemp,
+            baselineCelsius = bodyTemperatureBaselineCelsius,
+            thresholdCelsius = prefs.bodyTempElevatedThresholdCelsius,
+            unitSystem = prefs.unitSystem,
+        )
 
     return presentationStateFromAssessments(
         hrv = hrvAssessment,
         rhr = rhrAssessment,
         spo2 = spo2Assessment,
-        bodyTemperatureBaselineCelsius = bodyTemperatureBaselineCelsius,
+        bodyTemp = bodyTempAssessment,
         unitSystem = prefs.unitSystem,
     )
 }

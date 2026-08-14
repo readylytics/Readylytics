@@ -29,6 +29,7 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.SettingsDefaults
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
@@ -42,6 +43,7 @@ import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
+import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -78,6 +80,7 @@ class DashboardViewModel
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
         private val observeDashboardStrainIncreaseUseCase: ObserveDashboardStrainIncreaseUseCase,
+        private val observeDashboardRasIncreaseUseCase: ObserveDashboardRasIncreaseUseCase,
         private val getDailyPromptDataUseCase: GetDailyPromptDataUseCase,
         private val bodyTemperatureBaselineProvider: BodyTemperatureBaselineProvider,
         private val healthConnectRepository: HealthConnectRepository,
@@ -93,8 +96,9 @@ class DashboardViewModel
 
         private val cardManagementDelegate =
             CardManagementDelegate(
-                cardConfigRepository,
-                viewModelScope,
+                defaultConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                persist = cardConfigRepository::updateDashboardCardConfigurations,
+                scope = viewModelScope,
                 hasBodyTemperaturePermission = { healthConnectRepository.hasBodyTemperaturePermission() },
                 hasStepsPermission = { healthConnectRepository.hasStepsPermission() },
                 hasWeightPermission = { healthConnectRepository.hasWeightPermission() },
@@ -132,12 +136,17 @@ class DashboardViewModel
                     selectedDateRepository.selectedDate,
                     settingsRepo.userPreferences,
                 ),
-            ) { basicInputs, cardState, hrSummary, todayStrainIncrease ->
+                observeDashboardRasIncreaseUseCase(
+                    selectedDateRepository.selectedDate,
+                    settingsRepo.userPreferences,
+                ),
+            ) { basicInputs, cardState, hrSummary, todayStrainIncrease, todayRasIncrease ->
                 transformToUiState(
                     basicInputs,
                     cardState,
                     hrSummary,
                     todayStrainIncrease,
+                    todayRasIncrease,
                 )
             }.distinctUntilChanged()
                 .combine(createDashboardRealtimeStateFlow(foregroundSyncController)) { coreState, realtimeState ->
@@ -161,6 +170,7 @@ class DashboardViewModel
             cardState: DashboardCardState,
             hrSummary: HeartRateDaySummary? = null,
             todayStrainIncrease: Float? = null,
+            todayRasIncrease: Float? = null,
         ): DashboardUiState {
             val selectedDate = basicInputs.selectedDate
             val sessionSummary =
@@ -178,6 +188,7 @@ class DashboardViewModel
                     circadianResult = basicInputs.circadianResult,
                     heartRateSummary = hrSummary,
                     todayStrainIncrease = todayStrainIncrease,
+                    todayRasIncrease = todayRasIncrease,
                     bodyTempBaseline = basicInputs.bodyTempBaseline,
                 )
 

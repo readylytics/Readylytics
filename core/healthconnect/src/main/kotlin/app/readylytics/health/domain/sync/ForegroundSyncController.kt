@@ -198,6 +198,16 @@ class ForegroundSyncController
                         "Sync requires historical resync, enqueuing worker"
                     }
                     workerScheduler.get().scheduleResyncWorker()
+                } else if (result is app.readylytics.health.domain.model.Result.Failure &&
+                    result.code == "DEFERRED_DAILY_SYNC"
+                ) {
+                    // B: a dense daily window that timed out even after its extended-budget retry
+                    // is deferred, not escalated. No historical-worker handoff (the two-flow
+                    // contract), no completion snackbar, no crash -- the next foreground/periodic
+                    // sync retries the same idempotent range.
+                    app.readylytics.health.domain.util.logI("ForegroundSyncController") {
+                        "Daily sync deferred (data too dense); will retry on next sync"
+                    }
                 } else {
                     result.getOrThrow()
                     app.readylytics.health.domain.util

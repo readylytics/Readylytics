@@ -6,7 +6,9 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
@@ -47,6 +49,7 @@ class DailySyncUseCaseTest {
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     private val transactionRunner = RecordingTransactionRunner()
+    private val walDiagnostics = mockk<WalDiagnostics>(relaxed = true)
 
     // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
     // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
@@ -71,6 +74,7 @@ class DailySyncUseCaseTest {
                 ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                 stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                walDiagnostics = walDiagnostics,
                 ioDispatcher = Dispatchers.Unconfined,
                 clock = fixedClock,
             )
@@ -300,6 +304,94 @@ class DailySyncUseCaseTest {
         }
 
     @Test
+    fun `daily sync ingests today's window before the back-day reach-back window`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val todayMidnight = today.atStartOfDay(zoneId).toInstant()
+            val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
+            val froms = mutableListOf<Instant>()
+            coEvery { hcRepo.readSleepSessions(capture(froms), any()) } returns emptyList()
+
+            useCase.run(windowDays = 1, onProgress = null)
+
+            assertEquals(listOf(todayMidnight, yesterdayMidnight), froms)
+        }
+
+    @Test
+    fun `sync retries today's ingest with an extended budget after a timeout`() =
+        runTest {
+            var sleepReadCalls = 0
+            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+                if (++sleepReadCalls == 1) {
+                    throw HealthConnectWindowTimeoutException(
+                        Instant.EPOCH,
+                        Instant.EPOCH.plusSeconds(1),
+                        RuntimeException("timeout"),
+                    )
+                }
+                emptyList()
+            }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            // today attempt + today retry + back-day = 3 sleep reads proves the retry happened.
+            assertEquals(3, sleepReadCalls)
+        }
+
+    @Test
+    fun `sync returns DEFERRED_DAILY_SYNC when today's ingest times out even after retry`() =
+        runTest {
+            coEvery { hcRepo.readSleepSessions(any(), any()) } throws
+                HealthConnectWindowTimeoutException(
+                    Instant.EPOCH,
+                    Instant.EPOCH.plusSeconds(1),
+                    RuntimeException("timeout"),
+                )
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.domain.model.Result.Failure)
+            assertEquals(
+                "DEFERRED_DAILY_SYNC",
+                (result as app.readylytics.health.domain.model.Result.Failure).code,
+            )
+            // today's two attempts both timed out; the back-day segment never ran and nothing scored.
+            coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any()) }
+            coVerify(exactly = 0) {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
+            }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+        }
+
+    @Test
+    fun `sync continues and scores today when the back-day reach-back times out`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(fixedClock.withZone(zoneId))
+            val todayMidnight = today.atStartOfDay(zoneId).toInstant()
+            val yesterdayMidnight = today.minusDays(1).atStartOfDay(zoneId).toInstant()
+            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+                if (firstArg<Instant>() == yesterdayMidnight) {
+                    throw HealthConnectWindowTimeoutException(
+                        yesterdayMidnight,
+                        todayMidnight,
+                        RuntimeException("timeout"),
+                    )
+                }
+                emptyList()
+            }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            coVerify(exactly = 1) {
+                scoringRepository.computeAndPersistDailySummary(today, any(), any(), any(), any())
+            }
+        }
+
+    @Test
     fun `daily sync keeps current-day range and requests historical resync for older changes`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
@@ -454,6 +546,7 @@ class DailySyncUseCaseTest {
                     ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                     stepCountFetcher = StepCountFetcher(hcRepo),
                     recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                    walDiagnostics = walDiagnostics,
                     ioDispatcher = Dispatchers.Unconfined,
                     clock = historicalClock,
                 )
@@ -508,6 +601,58 @@ class DailySyncUseCaseTest {
             assertEquals(
                 listOf("clear:1", "score:1", "score:1", "score:1"),
                 insideTransaction,
+            )
+        }
+
+    @Test
+    fun `sync emits an indeterminate RECONCILE progress signal before reconcile runs`() =
+        runTest {
+            // US-003: onProgress must fire (RECONCILE, 0, 0) before sessionLinkReconciler.reconcile
+            // is invoked, so the UI banner switches to the RECONCILE label before that phase starts.
+            val events = mutableListOf<String>()
+            val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
+                if (phase == ResyncPhase.RECONCILE) events += "progress:RECONCILE:$current:$total"
+            }
+            coEvery { sessionLinkReconciler.reconcile(any(), any(), any()) } answers {
+                events += "reconcile:called"
+            }
+
+            useCase.run(windowDays = 1, onProgress = onProgress)
+
+            assertEquals(listOf("progress:RECONCILE:0:0", "reconcile:called"), events)
+        }
+
+    @Test
+    fun `sync emits incrementing indeterminate INGEST progress signals per streamed page`() =
+        runTest {
+            // US-004: each HR/HRV page persisted during ingestWindow must report an indeterminate
+            // (total = 0) INGEST signal with a monotonically incrementing page count. M4: the first
+            // page carries 2 records and the second carries 1 -- if the counter incremented per
+            // record instead of per page, this would report (…, 2, 0) then (…, 3, 0) instead of the
+            // expected (…, 1, 0) then (…, 2, 0), so this distinguishes the two implementations.
+            val progressEvents = mutableListOf<Triple<ResyncPhase, Int, Int>>()
+            val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
+                progressEvents += Triple(phase, current, total)
+            }
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
+                val callback = thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>()
+                callback(listOf(mockk(relaxed = true), mockk(relaxed = true)))
+                callback(listOf(mockk(relaxed = true)))
+            }
+
+            useCase.run(windowDays = 1, onProgress = onProgress)
+
+            val ingestEvents = progressEvents.filter { it.first == ResyncPhase.INGEST }
+            // B′: the page counter is local to each ingestWindow call, so it resets to 1 when the
+            // back-day segment starts. Both segments emit (1,0) then (2,0).
+            assertEquals(
+                listOf(
+                    Triple(ResyncPhase.INGEST, 1, 0),
+                    Triple(ResyncPhase.INGEST, 2, 0),
+                    Triple(ResyncPhase.INGEST, 1, 0),
+                    Triple(ResyncPhase.INGEST, 2, 0),
+                ),
+                ingestEvents,
             )
         }
 

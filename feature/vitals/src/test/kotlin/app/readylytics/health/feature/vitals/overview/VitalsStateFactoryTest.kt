@@ -181,7 +181,7 @@ class VitalsStateFactoryTest {
                 prefs = prefs(unitSystem = UnitSystem.METRIC),
                 bodyTemperatureBaselineCelsius = 36.7f,
             )
-        assertEquals(36.7f, metricState.baselineBodyTemp)
+        assertEquals(36.7f, metricState.bodyTemp.baseline)
 
         val imperialState =
             buildVitalsPresentationState(
@@ -192,8 +192,43 @@ class VitalsStateFactoryTest {
             )
         assertEquals(
             UnitConverter.celsiusToDisplayTemperature(36.7f, UnitSystem.IMPERIAL),
-            imperialState.baselineBodyTemp,
+            imperialState.bodyTemp.baseline,
         )
+        // A body temperature value absent from the summary yields a calibrating status.
+        assertEquals(MetricStatus.CALIBRATING, metricState.bodyTemp.status)
+        assertEquals(MetricStatus.CALIBRATING, imperialState.bodyTemp.status)
+    }
+
+    @Test
+    fun `body temperature assessment status derives from deviation against baseline`() {
+        val neutralState =
+            buildVitalsPresentationState(
+                metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
+                summary = summary(date = LocalDate.of(2026, 6, 1), bodyTemp = 36.5f),
+                prefs = prefs(),
+                bodyTemperatureBaselineCelsius = 36.5f,
+            )
+        assertEquals(MetricStatus.NEUTRAL, neutralState.bodyTemp.status)
+        assertEquals(36.5f, neutralState.bodyTemp.value)
+
+        val warningState =
+            buildVitalsPresentationState(
+                metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
+                summary = summary(date = LocalDate.of(2026, 6, 1), bodyTemp = 37.6f),
+                prefs = prefs(),
+                bodyTemperatureBaselineCelsius = 36.5f,
+            )
+        // 37.6 - 36.5 = 1.1 >= default threshold (1.0C) -> WARNING
+        assertEquals(MetricStatus.WARNING, warningState.bodyTemp.status)
+
+        val noBaselineState =
+            buildVitalsPresentationState(
+                metrics = metrics(hrvBaselineRounded = 50, rhrSnapshotRaw = 55f),
+                summary = summary(date = LocalDate.of(2026, 6, 1), bodyTemp = 36.5f),
+                prefs = prefs(),
+                bodyTemperatureBaselineCelsius = null,
+            )
+        assertEquals(MetricStatus.NEUTRAL, noBaselineState.bodyTemp.status)
     }
 
     @Test
@@ -431,12 +466,14 @@ class VitalsStateFactoryTest {
         hrv: Int? = null,
         rhr: Int? = null,
         spo2: Double? = null,
+        bodyTemp: Float? = null,
     ): DailySummary =
         DailySummary(
             date = date,
             nocturnalHrv = hrv,
             restingHeartRate = rhr,
             avgSleepingSpo2 = spo2?.toFloat(),
+            avgSleepingBodyTemp = bodyTemp,
             isCalibrating = false,
         )
 

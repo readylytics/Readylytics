@@ -5,6 +5,18 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
+import app.readylytics.health.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.domain.sleep.SleepChartId
+import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.domain.sleep.SleepMetricCardId
+import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.domain.sleep.SleepTopCardId
+import app.readylytics.health.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.domain.vitals.VitalsChartId
+import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.domain.workouts.WorkoutChartId
+import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.domain.workouts.WorkoutHistoryId
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -125,6 +137,78 @@ object SettingsDefaults {
             CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
             CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = true, position = 17),
             CardConfiguration(CardId.AI_RECOMMENDATION, isVisible = true, position = 18),
+        )
+
+    val DEFAULT_VITALS_CARDS =
+        listOf(
+            CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(CardId.HRV, isVisible = true, position = 1, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = false, position = 2, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = false, position = 3, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+        )
+
+    val DEFAULT_VITALS_CHARTS =
+        listOf(
+            VitalsChartConfiguration(VitalsChartId.HRV_TREND, isVisible = true, position = 0),
+            VitalsChartConfiguration(VitalsChartId.RHR_TREND, isVisible = true, position = 1),
+            VitalsChartConfiguration(VitalsChartId.SPO2_TREND, isVisible = true, position = 2),
+            VitalsChartConfiguration(VitalsChartId.BODY_TEMP_TREND, isVisible = true, position = 3),
+        )
+
+    val DEFAULT_SLEEP_TOP_CARDS =
+        listOf(
+            SleepTopCardConfiguration(SleepTopCardId.SLEEP_SCORE, isVisible = true, position = 0),
+            SleepTopCardConfiguration(SleepTopCardId.SLEEP_DURATION_GAUGE, isVisible = true, position = 1),
+            SleepTopCardConfiguration(SleepTopCardId.SLEEP_BREAKDOWN_BAR, isVisible = true, position = 2),
+            SleepTopCardConfiguration(SleepTopCardId.SLEEP_STAGES_TIMELINE, isVisible = true, position = 3),
+            SleepTopCardConfiguration(SleepTopCardId.SLEEP_HR_CHART, isVisible = true, position = 4),
+        )
+
+    val DEFAULT_SLEEP_CHARTS =
+        listOf(
+            SleepChartConfiguration(SleepChartId.SLEEP_DURATION_TREND, isVisible = true, position = 0),
+        )
+
+    val DEFAULT_SLEEP_METRIC_CARDS =
+        listOf(
+            SleepMetricCardConfiguration(SleepMetricCardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 0),
+            SleepMetricCardConfiguration(SleepMetricCardId.SLEEP_EFFICIENCY, isVisible = true, position = 1),
+            SleepMetricCardConfiguration(SleepMetricCardId.DEEP_SLEEP, isVisible = true, position = 2),
+            SleepMetricCardConfiguration(SleepMetricCardId.REM_SLEEP, isVisible = true, position = 3),
+            SleepMetricCardConfiguration(SleepMetricCardId.NAP_DURATION, isVisible = true, position = 4),
+            SleepMetricCardConfiguration(SleepMetricCardId.NAP_COUNT, isVisible = true, position = 5),
+        )
+
+    val DEFAULT_WORKOUT_CARDS =
+        listOf(
+            CardConfiguration(
+                CardId.STRAIN_RATIO,
+                isVisible = true,
+                position = 0,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.READINESS,
+                isVisible = true,
+                position = 1,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.RAS_DAILY,
+                isVisible = true,
+                position = 2,
+                requestedDisplayMode = DashboardCardDisplayMode.VALUE,
+            ),
+        )
+
+    val DEFAULT_WORKOUT_CHARTS =
+        listOf(
+            WorkoutChartConfiguration(WorkoutChartId.ACWR_TRIMP, isVisible = true, position = 0),
+        )
+
+    val DEFAULT_WORKOUT_HISTORY =
+        listOf(
+            WorkoutHistoryConfiguration(WorkoutHistoryId.WORKOUT_LIST, isVisible = true, position = 0),
         )
 }
 

@@ -19,6 +19,7 @@ import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.ResourceProvider
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 import app.readylytics.health.feature.dashboard.R as DashboardR
 
@@ -32,6 +33,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
         lastSleepSession: SleepSessionSummary?,
         hrvAssessment: PersonalBaselineAssessment,
         rhrAssessment: PersonalBaselineAssessment,
+        todayRasIncrease: Float? = null,
     ): Map<CardId, UniversalMetricPresentation> =
         mapOf(
             CardId.SLEEP_DURATION to
@@ -39,7 +41,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
             CardId.HRV to hrvPresentation(metrics, preferences, hrvAssessment),
             CardId.SLEEP_RHR to rhrPresentation(metrics, preferences, rhrAssessment, isSleep = true),
             CardId.RESTING_HR to rhrPresentation(metrics, preferences, rhrAssessment, isSleep = false),
-            CardId.RAS_DAILY to rasPresentation(summary, metrics, preferences),
+            CardId.RAS_DAILY to rasPresentation(summary, metrics, preferences, todayRasIncrease),
         )
 
     private fun sleepDurationPresentation(
@@ -193,6 +195,7 @@ internal class DashboardRecoveryMetricPresentationFactory(
         summary: DailySummary?,
         metrics: DailyMetrics?,
         preferences: UserPreferences,
+        todayRasIncrease: Float? = null,
     ): UniversalMetricPresentation {
         val value =
             summary?.let {
@@ -207,12 +210,24 @@ internal class DashboardRecoveryMetricPresentationFactory(
         val title = resourceProvider.getString(DashboardR.string.card_title_ras_daily)
         val valueText = metrics?.rasRounded?.toString() ?: "—"
         val status = value.rasStatus()
+        val rasIncreaseText =
+            todayRasIncrease?.let { increase ->
+                if (increase > 0.005f) {
+                    resourceProvider.getString(
+                        CoreUiR.string.delta_up_format,
+                        resourceProvider.getString(CoreUiR.string.delta_up),
+                        increase.roundToInt().toString(),
+                    )
+                } else {
+                    resourceProvider.getString(CoreUiR.string.delta_no_change)
+                }
+            }
 
         return UniversalMetricPresentation(
             title = title,
             valueText = valueText,
             unitText = "",
-            secondaryText = null,
+            secondaryText = rasIncreaseText,
             status = status,
             tooltip = resourceProvider.getString(CoreUiR.string.tooltip_ras),
             accessibilityDescription =

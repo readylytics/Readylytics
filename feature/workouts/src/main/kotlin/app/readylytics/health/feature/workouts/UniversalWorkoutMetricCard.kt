@@ -22,6 +22,10 @@ internal fun UniversalWorkoutMetricCard(
     rawValue: Float? = null,
     maxValue: Float = 100f,
     mode: UniversalCardDisplayMode = UniversalCardDisplayMode.VALUE,
+    supportedModes: List<UniversalCardDisplayMode> = listOf(mode),
+    isEditing: Boolean = false,
+    onModeSelected: (UniversalCardDisplayMode) -> Unit = {},
+    onClick: (() -> Unit)? = null,
 ) {
     UniversalMetricCard(
         presentation =
@@ -42,10 +46,13 @@ internal fun UniversalWorkoutMetricCard(
             ),
         specification =
             UniversalMetricCardSpec(
-                supportedModes = listOf(mode),
+                supportedModes = supportedModes,
                 usesDeltaPill = mode == UniversalCardDisplayMode.GAUGE && secondaryText != null,
             ),
         requestedMode = mode,
+        isEditing = isEditing,
+        onModeSelected = onModeSelected,
         modifier = modifier,
+        onClick = if (isEditing) null else onClick,
     )
 }

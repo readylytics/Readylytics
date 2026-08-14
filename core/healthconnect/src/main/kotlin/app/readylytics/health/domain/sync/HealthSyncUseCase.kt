@@ -50,9 +50,11 @@ class HealthSyncUseCase
          * for the inline-vs-durable-resync cutoff both [DailySyncUseCase] and
          * [ForegroundSyncController] use.
          *
-         * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
-         *   reporting (phase, completedDays, totalDays) so the UI can surface determinate progress
-         *   instead of a silent spinner. Invoked off the main thread.
+         * @param onProgress optional reactive hook reporting (phase, current, total) as the daily
+         *   sync advances: `INGEST` fires per streamed HC page with an indeterminate `total = 0`
+         *   (a running page count, not `completedDays`/`totalDays`), `RECONCILE` fires once as
+         *   `(0, 0)` before session-link reconciliation, and `RECOMPUTE` reports determinate
+         *   (completedDays, totalDays) across the walk-forward. Invoked off the main thread.
          */
         suspend fun sync(
             windowDays: Int,
