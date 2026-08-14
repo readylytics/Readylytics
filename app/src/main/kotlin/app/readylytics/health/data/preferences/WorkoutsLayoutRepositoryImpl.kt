@@ -2,11 +2,11 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
 import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.layout.LayoutDefaultsMerger
-import app.readylytics.health.domain.sleep.SleepChartConfiguration
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -17,27 +17,27 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SleepLayoutRepositoryImpl
+class WorkoutsLayoutRepositoryImpl
     @Inject
     constructor(
-        private val dataStore: DataStore<SleepLayoutConfigurationsProto>,
+        private val dataStore: DataStore<WorkoutsLayoutConfigurationsProto>,
         @param:ApplicationScope private val repositoryScope: CoroutineScope,
-    ) : SleepLayoutRepository {
+    ) : WorkoutsLayoutRepository {
         init {
             repositoryScope.launch {
-                ensureDefaultTopCardsArePresent()
+                ensureDefaultCardsArePresent()
                 ensureDefaultChartsArePresent()
-                ensureDefaultMetricCardsArePresent()
+                ensureDefaultHistoryArePresent()
             }
         }
 
-        private suspend fun ensureDefaultTopCardsArePresent() {
+        private suspend fun ensureDefaultCardsArePresent() {
             dataStore.updateData { proto ->
-                val stored = proto.topCardsList.mapNotNull { SleepLayoutMapper.toTopCardDomain(it) }
+                val stored = proto.workoutCardsList.mapNotNull { WorkoutsLayoutMapper.toCardDomain(it) }
                 val merged =
                     LayoutDefaultsMerger.mergeWithDefaults(
                         stored = stored,
-                        defaults = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
                         withPosition = { config, pos -> config.copy(position = pos) },
                     )
                 if (merged === stored) {
@@ -45,8 +45,8 @@ class SleepLayoutRepositoryImpl
                 } else {
                     proto
                         .toBuilder()
-                        .clearTopCards()
-                        .addAllTopCards(merged.map { SleepLayoutMapper.toTopCardProto(it) })
+                        .clearWorkoutCards()
+                        .addAllWorkoutCards(merged.map { WorkoutsLayoutMapper.toCardProto(it) })
                         .build()
                 }
             }
@@ -54,11 +54,11 @@ class SleepLayoutRepositoryImpl
 
         private suspend fun ensureDefaultChartsArePresent() {
             dataStore.updateData { proto ->
-                val stored = proto.trendChartsList.mapNotNull { SleepLayoutMapper.toChartDomain(it) }
+                val stored = proto.workoutChartsList.mapNotNull { WorkoutsLayoutMapper.toChartDomain(it) }
                 val merged =
                     LayoutDefaultsMerger.mergeWithDefaults(
                         stored = stored,
-                        defaults = SettingsDefaults.DEFAULT_SLEEP_CHARTS,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
                         withPosition = { config, pos -> config.copy(position = pos) },
                     )
                 if (merged === stored) {
@@ -66,20 +66,20 @@ class SleepLayoutRepositoryImpl
                 } else {
                     proto
                         .toBuilder()
-                        .clearTrendCharts()
-                        .addAllTrendCharts(merged.map { SleepLayoutMapper.toChartProto(it) })
+                        .clearWorkoutCharts()
+                        .addAllWorkoutCharts(merged.map { WorkoutsLayoutMapper.toChartProto(it) })
                         .build()
                 }
             }
         }
 
-        private suspend fun ensureDefaultMetricCardsArePresent() {
+        private suspend fun ensureDefaultHistoryArePresent() {
             dataStore.updateData { proto ->
-                val stored = proto.metricCardsList.mapNotNull { SleepLayoutMapper.toMetricCardDomain(it) }
+                val stored = proto.workoutHistoryList.mapNotNull { WorkoutsLayoutMapper.toHistoryDomain(it) }
                 val merged =
                     LayoutDefaultsMerger.mergeWithDefaults(
                         stored = stored,
-                        defaults = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
                         withPosition = { config, pos -> config.copy(position = pos) },
                     )
                 if (merged === stored) {
@@ -87,88 +87,91 @@ class SleepLayoutRepositoryImpl
                 } else {
                     proto
                         .toBuilder()
-                        .clearMetricCards()
-                        .addAllMetricCards(merged.map { SleepLayoutMapper.toMetricCardProto(it) })
+                        .clearWorkoutHistory()
+                        .addAllWorkoutHistory(merged.map { WorkoutsLayoutMapper.toHistoryProto(it) })
                         .build()
                 }
             }
         }
 
-        override fun sleepTopCardConfigurations(): Flow<List<SleepTopCardConfiguration>> =
+        override fun workoutCardConfigurations(): Flow<List<CardConfiguration>> =
             dataStore.data
                 .catch { exception ->
                     if (exception is IOException) {
-                        emit(SleepLayoutConfigurationsSerializer.defaultValue)
+                        emit(WorkoutsLayoutConfigurationsSerializer.defaultValue)
                     } else {
                         throw exception
                     }
                 }.map { proto ->
-                    val stored = proto.topCardsList.mapNotNull { SleepLayoutMapper.toTopCardDomain(it) }
+                    val stored = proto.workoutCardsList.mapNotNull { WorkoutsLayoutMapper.toCardDomain(it) }
                     LayoutDefaultsMerger.mergeWithDefaults(
                         stored = stored,
-                        defaults = SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
                         withPosition = { config, pos -> config.copy(position = pos) },
                     )
                 }
 
-        override fun sleepChartConfigurations(): Flow<List<SleepChartConfiguration>> =
+        override fun workoutChartConfigurations(): Flow<List<WorkoutChartConfiguration>> =
             dataStore.data
                 .catch { exception ->
                     if (exception is IOException) {
-                        emit(SleepLayoutConfigurationsSerializer.defaultValue)
+                        emit(WorkoutsLayoutConfigurationsSerializer.defaultValue)
                     } else {
                         throw exception
                     }
                 }.map { proto ->
-                    val stored = proto.trendChartsList.mapNotNull { SleepLayoutMapper.toChartDomain(it) }
+                    val stored = proto.workoutChartsList.mapNotNull { WorkoutsLayoutMapper.toChartDomain(it) }
                     LayoutDefaultsMerger.mergeWithDefaults(
                         stored = stored,
-                        defaults = SettingsDefaults.DEFAULT_SLEEP_CHARTS,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_CHARTS,
                         withPosition = { config, pos -> config.copy(position = pos) },
                     )
                 }
 
-        override fun sleepMetricCardConfigurations(): Flow<List<SleepMetricCardConfiguration>> =
+        override fun workoutHistoryConfigurations(): Flow<List<WorkoutHistoryConfiguration>> =
             dataStore.data
                 .catch { exception ->
                     if (exception is IOException) {
-                        emit(SleepLayoutConfigurationsSerializer.defaultValue)
+                        emit(WorkoutsLayoutConfigurationsSerializer.defaultValue)
                     } else {
                         throw exception
                     }
                 }.map { proto ->
-                    val stored = proto.metricCardsList.mapNotNull { SleepLayoutMapper.toMetricCardDomain(it) }
+                    val stored = proto.workoutHistoryList.mapNotNull { WorkoutsLayoutMapper.toHistoryDomain(it) }
                     LayoutDefaultsMerger.mergeWithDefaults(
                         stored = stored,
-                        defaults = SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
+                        defaults = SettingsDefaults.DEFAULT_WORKOUT_HISTORY,
                         withPosition = { config, pos -> config.copy(position = pos) },
                     )
                 }
 
-        override suspend fun updateSleepTopCardConfigurations(cards: List<SleepTopCardConfiguration>) {
+        override suspend fun updateWorkoutCardConfigurations(cards: List<CardConfiguration>) {
             dataStore.updateData { current ->
-                val builder = current.toBuilder()
-                val protoCards = cards.map { SleepLayoutMapper.toTopCardProto(it) }
-                builder.clearTopCards().addAllTopCards(protoCards)
-                builder.build()
+                current
+                    .toBuilder()
+                    .clearWorkoutCards()
+                    .addAllWorkoutCards(cards.map { WorkoutsLayoutMapper.toCardProto(it) })
+                    .build()
             }
         }
 
-        override suspend fun updateSleepChartConfigurations(charts: List<SleepChartConfiguration>) {
+        override suspend fun updateWorkoutChartConfigurations(charts: List<WorkoutChartConfiguration>) {
             dataStore.updateData { current ->
-                val builder = current.toBuilder()
-                val protoCharts = charts.map { SleepLayoutMapper.toChartProto(it) }
-                builder.clearTrendCharts().addAllTrendCharts(protoCharts)
-                builder.build()
+                current
+                    .toBuilder()
+                    .clearWorkoutCharts()
+                    .addAllWorkoutCharts(charts.map { WorkoutsLayoutMapper.toChartProto(it) })
+                    .build()
             }
         }
 
-        override suspend fun updateSleepMetricCardConfigurations(cards: List<SleepMetricCardConfiguration>) {
+        override suspend fun updateWorkoutHistoryConfigurations(history: List<WorkoutHistoryConfiguration>) {
             dataStore.updateData { current ->
-                val builder = current.toBuilder()
-                val protoCards = cards.map { SleepLayoutMapper.toMetricCardProto(it) }
-                builder.clearMetricCards().addAllMetricCards(protoCards)
-                builder.build()
+                current
+                    .toBuilder()
+                    .clearWorkoutHistory()
+                    .addAllWorkoutHistory(history.map { WorkoutsLayoutMapper.toHistoryProto(it) })
+                    .build()
             }
         }
     }

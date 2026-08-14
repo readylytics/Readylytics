@@ -42,6 +42,10 @@
     <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
     <string name="workout_zones_title">Heart rate zones</string>
+    <string name="workouts_manage_layout">Customize Workouts</string>
+    <string name="workouts_management_cards_section_title">Cards</string>
+    <string name="workouts_management_diagrams_section_title">Diagrams</string>
+    <string name="workouts_management_history_section_title">History</string>
 
     <!-- Workout Intensities -->
     <string name="workout_intensity_very_hard">Very Hard</string>

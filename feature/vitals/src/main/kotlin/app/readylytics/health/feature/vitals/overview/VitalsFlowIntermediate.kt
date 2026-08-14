@@ -4,9 +4,10 @@ import androidx.compose.runtime.Immutable
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
-import app.readylytics.health.domain.vitals.VitalsChartManagementDelegate
+import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -73,11 +74,11 @@ internal fun createVitalsCardStateFlow(
  * with the persisted configuration. Charts have no permission gating and no display mode.
  */
 internal fun createVitalsChartStateFlow(
-    chartManagementDelegate: VitalsChartManagementDelegate,
+    chartManagementDelegate: LayoutManagementDelegate<VitalsChartConfiguration, VitalsChartId>,
     vitalsLayoutRepository: VitalsLayoutRepository,
 ): Flow<VitalsChartState> =
     combine(
-        chartManagementDelegate.isManagingCharts,
+        chartManagementDelegate.isManaging,
         chartManagementDelegate.pendingConfigs,
         vitalsLayoutRepository.vitalsChartConfigurations(),
     ) { isManaging, pendingChartConfig, chartConfig ->

@@ -16,6 +16,7 @@ import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -34,7 +35,6 @@ import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.domain.scoring.sleep.SleepTrendDayAssembler
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
-import app.readylytics.health.domain.sleep.SleepChartManagementDelegate
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardId
@@ -182,10 +182,12 @@ class SleepViewModel
             )
 
         private val sleepChartManagementDelegate =
-            SleepChartManagementDelegate(
+            LayoutManagementDelegate(
                 defaultConfigurations = SettingsDefaults.DEFAULT_SLEEP_CHARTS,
                 persist = sleepLayoutRepository::updateSleepChartConfigurations,
                 scope = viewModelScope,
+                withVisibility = { config, visible -> config.copy(isVisible = visible) },
+                withPosition = { config, pos -> config.copy(position = pos) },
             )
 
         private val sleepMetricCardManagementDelegate =

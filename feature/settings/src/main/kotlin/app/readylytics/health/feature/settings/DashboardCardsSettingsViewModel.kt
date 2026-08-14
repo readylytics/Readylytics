@@ -11,6 +11,7 @@ import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.sleep.SleepCardCatalog
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ class DashboardCardsSettingsViewModel
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val vitalsLayoutRepository: VitalsLayoutRepository,
         private val sleepLayoutRepository: SleepLayoutRepository,
+        private val workoutsLayoutRepository: WorkoutsLayoutRepository,
     ) : ViewModel() {
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -148,6 +150,10 @@ class DashboardCardsSettingsViewModel
                 SleepCardCatalog.applyGlobalMetricCardMode(currentSleepMetricCards, mode),
             )
 
+            val currentWorkoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
+            val updatedWorkoutCards = DashboardCardCatalog.applyGlobalDisplayMode(currentWorkoutCards, mode)
+            workoutsLayoutRepository.updateWorkoutCardConfigurations(updatedWorkoutCards)
+
             displaySettings.updateLastGlobalDisplayMode(mode)
         }
 
@@ -183,6 +189,19 @@ class DashboardCardsSettingsViewModel
             sleepLayoutRepository.updateSleepMetricCardConfigurations(
                 SleepCardCatalog.resetMetricCardModes(currentSleepMetricCards),
             )
+
+            // Workouts cards default to explicit modes (Strain Ratio and Readiness are gauges,
+            // RAS Daily is value), so a null-mode reset would fall through to the catalog's VALUE
+            // legacy default instead of restoring those. Restore the per-card default while
+            // preserving each card's current visibility and position.
+            val currentWorkoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
+            val workoutDefaultModes =
+                SettingsDefaults.DEFAULT_WORKOUT_CARDS.associate { it.cardId to it.requestedDisplayMode }
+            val updatedWorkoutCards =
+                currentWorkoutCards.map { config ->
+                    config.copy(requestedDisplayMode = workoutDefaultModes[config.cardId])
+                }
+            workoutsLayoutRepository.updateWorkoutCardConfigurations(updatedWorkoutCards)
 
             displaySettings.updateLastGlobalDisplayMode(null)
         }

@@ -35,6 +35,7 @@ import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -61,6 +62,7 @@ class LocalRestoreManager
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val vitalsLayoutRepository: VitalsLayoutRepository,
         private val sleepLayoutRepository: SleepLayoutRepository,
+        private val workoutsLayoutRepository: WorkoutsLayoutRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
@@ -681,6 +683,15 @@ class LocalRestoreManager
             }
             backup.sleepMetricCards?.let {
                 sleepLayoutRepository.updateSleepMetricCardConfigurations(it)
+            }
+            backup.workoutCards?.let {
+                workoutsLayoutRepository.updateWorkoutCardConfigurations(it)
+            }
+            backup.workoutCharts?.let {
+                workoutsLayoutRepository.updateWorkoutChartConfigurations(it)
+            }
+            backup.workoutHistory?.let {
+                workoutsLayoutRepository.updateWorkoutHistoryConfigurations(it)
             }
             backup.backgroundSyncEnabled?.let { enabled ->
                 if (enabled) {

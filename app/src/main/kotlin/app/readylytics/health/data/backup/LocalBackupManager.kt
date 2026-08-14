@@ -15,6 +15,7 @@ import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -48,6 +49,7 @@ class LocalBackupManager
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val vitalsLayoutRepository: VitalsLayoutRepository,
         private val sleepLayoutRepository: SleepLayoutRepository,
+        private val workoutsLayoutRepository: WorkoutsLayoutRepository,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -510,6 +512,9 @@ class LocalBackupManager
             val sleepTopCards = sleepLayoutRepository.sleepTopCardConfigurations().first()
             val sleepCharts = sleepLayoutRepository.sleepChartConfigurations().first()
             val sleepMetricCards = sleepLayoutRepository.sleepMetricCardConfigurations().first()
+            val workoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
+            val workoutCharts = workoutsLayoutRepository.workoutChartConfigurations().first()
+            val workoutHistory = workoutsLayoutRepository.workoutHistoryConfigurations().first()
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
@@ -611,6 +616,9 @@ class LocalBackupManager
                     sleepTopCards = sleepTopCards,
                     sleepCharts = sleepCharts,
                     sleepMetricCards = sleepMetricCards,
+                    workoutCards = workoutCards,
+                    workoutCharts = workoutCharts,
+                    workoutHistory = workoutHistory,
                 )
             writer.write(json.encodeToString(backup))
         }

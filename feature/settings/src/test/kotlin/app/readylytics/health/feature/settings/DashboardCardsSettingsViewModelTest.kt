@@ -13,6 +13,7 @@ import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -60,6 +61,7 @@ class DashboardCardsSettingsViewModelTest {
         val displaySettings: DisplaySettings,
         val sleepTopCards: MutableStateFlow<List<SleepTopCardConfiguration>>,
         val sleepMetricCards: MutableStateFlow<List<SleepMetricCardConfiguration>>,
+        val workoutConfigs: MutableStateFlow<List<CardConfiguration>>,
     )
 
     private fun buildViewModel(
@@ -74,6 +76,7 @@ class DashboardCardsSettingsViewModelTest {
             listOf(CardConfiguration(cardId = CardId.RESTING_HR, requestedDisplayMode = null)),
         initialSleepTopCards: List<SleepTopCardConfiguration> = emptyList(),
         initialSleepMetricCards: List<SleepMetricCardConfiguration> = emptyList(),
+        initialWorkoutConfigs: List<CardConfiguration> = emptyList(),
     ): Harness {
         val prefsFlow =
             MutableStateFlow(
@@ -119,6 +122,15 @@ class DashboardCardsSettingsViewModelTest {
                     sleepMetricCardsFlow.value = it.invocation.args[0] as List<SleepMetricCardConfiguration>
                 }
             }
+        val workoutConfigsFlow = MutableStateFlow(initialWorkoutConfigs)
+        val workoutsLayoutRepository =
+            mockk<WorkoutsLayoutRepository> {
+                every { workoutCardConfigurations() } returns workoutConfigsFlow
+                coEvery { updateWorkoutCardConfigurations(any()) } coAnswers {
+                    @Suppress("UNCHECKED_CAST")
+                    workoutConfigsFlow.value = it.invocation.args[0] as List<CardConfiguration>
+                }
+            }
         val displaySettings = mockk<DisplaySettings>(relaxed = true)
 
         val viewModel =
@@ -128,6 +140,7 @@ class DashboardCardsSettingsViewModelTest {
                 cardConfigurationRepository,
                 vitalsLayoutRepository,
                 sleepLayoutRepository,
+                workoutsLayoutRepository,
             )
         viewModel.sharingStarted = SharingStarted.Lazily
         return Harness(
@@ -137,6 +150,7 @@ class DashboardCardsSettingsViewModelTest {
             displaySettings,
             sleepTopCardsFlow,
             sleepMetricCardsFlow,
+            workoutConfigsFlow,
         )
     }
 
@@ -269,6 +283,11 @@ class DashboardCardsSettingsViewModelTest {
                     coJustRun { updateSleepTopCardConfigurations(any()) }
                     coJustRun { updateSleepMetricCardConfigurations(any()) }
                 }
+            val workoutsLayoutRepository =
+                mockk<WorkoutsLayoutRepository> {
+                    every { workoutCardConfigurations() } returns MutableStateFlow(emptyList())
+                    coJustRun { updateWorkoutCardConfigurations(any()) }
+                }
 
             val viewModel =
                 DashboardCardsSettingsViewModel(
@@ -277,6 +296,7 @@ class DashboardCardsSettingsViewModelTest {
                     cardConfigurationRepository,
                     vitalsLayoutRepository,
                     sleepLayoutRepository,
+                    workoutsLayoutRepository,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -455,6 +475,11 @@ class DashboardCardsSettingsViewModelTest {
                     coJustRun { updateSleepTopCardConfigurations(any()) }
                     coJustRun { updateSleepMetricCardConfigurations(any()) }
                 }
+            val workoutsLayoutRepository =
+                mockk<WorkoutsLayoutRepository> {
+                    every { workoutCardConfigurations() } returns MutableStateFlow(emptyList())
+                    coJustRun { updateWorkoutCardConfigurations(any()) }
+                }
 
             val viewModel =
                 DashboardCardsSettingsViewModel(
@@ -463,6 +488,7 @@ class DashboardCardsSettingsViewModelTest {
                     cardConfigurationRepository,
                     vitalsLayoutRepository,
                     sleepLayoutRepository,
+                    workoutsLayoutRepository,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -580,6 +606,96 @@ class DashboardCardsSettingsViewModelTest {
             assertNull(
                 harness.sleepMetricCards.value
                     .first { it.cardId == SleepMetricCardId.DEEP_SLEEP }
+                    .requestedDisplayMode,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun `apply also sets workout cards`() =
+        runTest(testDispatcher) {
+            val harness =
+                buildViewModel(
+                    noticeDismissed = true,
+                    initialWorkoutConfigs =
+                        listOf(
+                            CardConfiguration(cardId = CardId.STRAIN_RATIO, requestedDisplayMode = null),
+                            CardConfiguration(cardId = CardId.READINESS, requestedDisplayMode = null),
+                        ),
+                )
+            val job =
+                backgroundScope.launch(
+                    UnconfinedTestDispatcher(testScheduler),
+                ) { harness.viewModel.uiState.collect() }
+
+            harness.viewModel.onEvent(
+                SettingsEvent.DashboardGlobalDisplayModeApplyRequested(DashboardCardDisplayMode.GAUGE),
+            )
+            advanceUntilIdle()
+
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                harness.workoutConfigs.value
+                    .first { it.cardId == CardId.STRAIN_RATIO }
+                    .requestedDisplayMode,
+            )
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                harness.workoutConfigs.value
+                    .first { it.cardId == CardId.READINESS }
+                    .requestedDisplayMode,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun `reset also restores workout cards to their default modes`() =
+        runTest(testDispatcher) {
+            val harness =
+                buildViewModel(
+                    noticeDismissed = true,
+                    initialWorkoutConfigs =
+                        listOf(
+                            CardConfiguration(
+                                cardId = CardId.STRAIN_RATIO,
+                                requestedDisplayMode = DashboardCardDisplayMode.BAR,
+                            ),
+                            CardConfiguration(
+                                cardId = CardId.READINESS,
+                                requestedDisplayMode = DashboardCardDisplayMode.BAR,
+                            ),
+                            CardConfiguration(
+                                cardId = CardId.RAS_DAILY,
+                                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+                            ),
+                        ),
+                )
+            val job =
+                backgroundScope.launch(
+                    UnconfinedTestDispatcher(testScheduler),
+                ) { harness.viewModel.uiState.collect() }
+
+            harness.viewModel.onEvent(SettingsEvent.DashboardGlobalDisplayModeResetRequested)
+            advanceUntilIdle()
+
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                harness.workoutConfigs.value
+                    .first { it.cardId == CardId.STRAIN_RATIO }
+                    .requestedDisplayMode,
+            )
+            assertEquals(
+                DashboardCardDisplayMode.GAUGE,
+                harness.workoutConfigs.value
+                    .first { it.cardId == CardId.READINESS }
+                    .requestedDisplayMode,
+            )
+            assertEquals(
+                DashboardCardDisplayMode.VALUE,
+                harness.workoutConfigs.value
+                    .first { it.cardId == CardId.RAS_DAILY }
                     .requestedDisplayMode,
             )
 

@@ -3,6 +3,7 @@ package app.readylytics.health.data.preferences
 import androidx.datastore.core.DataStore
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.layout.LayoutDefaultsMerger
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import kotlinx.coroutines.CoroutineScope
@@ -31,21 +32,15 @@ class VitalsLayoutRepositoryImpl
         private suspend fun ensureDefaultCardsArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.vitalsCardsList.mapNotNull { VitalsLayoutMapper.toCardDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_VITALS_CARDS
-
-                val storedIds = stored.map { it.cardId }.toSet()
-                val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_VITALS_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(position = maxPos + 1 + index)
-                        }
-                    val merged = stored + appended
-
                     proto
                         .toBuilder()
                         .clearVitalsCards()
@@ -58,21 +53,15 @@ class VitalsLayoutRepositoryImpl
         private suspend fun ensureDefaultChartsArePresent() {
             dataStore.updateData { proto ->
                 val stored = proto.trendChartsList.mapNotNull { VitalsLayoutMapper.toChartDomain(it) }
-                val defaults = SettingsDefaults.DEFAULT_VITALS_CHARTS
-
-                val storedIds = stored.map { it.chartId }.toSet()
-                val missingDefaults = defaults.filter { it.chartId !in storedIds }
-
-                if (missingDefaults.isEmpty()) {
+                val merged =
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_VITALS_CHARTS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
+                if (merged === stored) {
                     proto
                 } else {
-                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                    val appended =
-                        missingDefaults.mapIndexed { index, config ->
-                            config.copy(position = maxPos + 1 + index)
-                        }
-                    val merged = stored + appended
-
                     proto
                         .toBuilder()
                         .clearTrendCharts()
@@ -92,20 +81,11 @@ class VitalsLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.vitalsCardsList.mapNotNull { VitalsLayoutMapper.toCardDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_VITALS_CARDS
-                    val storedIds = stored.map { it.cardId }.toSet()
-                    val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        val appended =
-                            missingDefaults.mapIndexed { index, config ->
-                                config.copy(position = maxPos + 1 + index)
-                            }
-                        stored + appended
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_VITALS_CARDS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override fun vitalsChartConfigurations(): Flow<List<VitalsChartConfiguration>> =
@@ -118,20 +98,11 @@ class VitalsLayoutRepositoryImpl
                     }
                 }.map { proto ->
                     val stored = proto.trendChartsList.mapNotNull { VitalsLayoutMapper.toChartDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_VITALS_CHARTS
-                    val storedIds = stored.map { it.chartId }.toSet()
-                    val missingDefaults = defaults.filter { it.chartId !in storedIds }
-
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        val appended =
-                            missingDefaults.mapIndexed { index, config ->
-                                config.copy(position = maxPos + 1 + index)
-                            }
-                        stored + appended
-                    }
+                    LayoutDefaultsMerger.mergeWithDefaults(
+                        stored = stored,
+                        defaults = SettingsDefaults.DEFAULT_VITALS_CHARTS,
+                        withPosition = { config, pos -> config.copy(position = pos) },
+                    )
                 }
 
         override suspend fun updateVitalsCardConfigurations(cards: List<CardConfiguration>) {
