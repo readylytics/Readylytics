@@ -10,10 +10,8 @@ import app.readylytics.health.data.local.entity.HrvRecordEntity
  *
  * Declares the same production entities (`HeartRateRecordEntity` / `HrvRecordEntity`) so the
  * generated tables and unique `(sourceRecordId, timestampMs)` index exactly match the production
- * `HealthDatabase` v9 schema. The prototype DAO exposes both the current `@Insert(REPLACE)`
- * baseline and the Room `@Upsert` candidate; the conflict-targeted `INSERT ... ON CONFLICT
- * (sourceRecordId, timestampMs) DO UPDATE` SQL is exercised via raw `SupportSQLiteDatabase`
- * statements against the same tables (Room's @Query parser does not accept UPSERT syntax).
+ * `HealthDatabase` v9 schema. The prototype DAO exposes the `@Insert(REPLACE)` baseline, the Room
+ * `@Upsert` candidate, and the conflict-targeted `@Query` UPSERT query to compare behavior across engines.
  */
 @Database(
     entities = [HeartRateRecordEntity::class, HrvRecordEntity::class],

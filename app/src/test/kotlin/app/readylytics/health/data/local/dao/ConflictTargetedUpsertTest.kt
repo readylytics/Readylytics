@@ -59,18 +59,30 @@ class ConflictTargetedUpsertTest {
         }
 
     @Test
-    fun `re-tagged heart rate record updates session and record type in place`() =
+    fun `re-tagged heart rate record updates session, record type, and device name in place`() =
         runTest {
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity("id-1", 1000L, 60, "RESTING")))
+            heartRateDao.upsertAll(listOf(HeartRateRecordEntity("id-1", 1000L, 60, "RESTING", deviceName = "Watch 1")))
             val originalRowId = heartRateDao.getByTimeRange(0, Long.MAX_VALUE).single().rowId
 
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity("id-1", 1000L, 60, "SLEEP", sessionId = "sleep-1")))
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        "id-1",
+                        1000L,
+                        60,
+                        "SLEEP",
+                        sessionId = "sleep-1",
+                        deviceName = "Watch 2",
+                    ),
+                ),
+            )
 
             val rows = heartRateDao.getByTimeRange(0, Long.MAX_VALUE)
             assertEquals(1, rows.size)
             assertEquals(originalRowId, rows.single().rowId)
             assertEquals("SLEEP", rows.single().recordType)
             assertEquals("sleep-1", rows.single().sessionId)
+            assertEquals("Watch 2", rows.single().deviceName)
         }
 
     @Test
@@ -87,18 +99,30 @@ class ConflictTargetedUpsertTest {
         }
 
     @Test
-    fun `re-tagged hrv record updates session and record type in place`() =
+    fun `re-tagged hrv record updates session, record type, and device name in place`() =
         runTest {
-            hrvDao.upsertAll(listOf(HrvRecordEntity("id-1", 1000L, 40f, "RESTING")))
+            hrvDao.upsertAll(listOf(HrvRecordEntity("id-1", 1000L, 40f, "RESTING", deviceName = "Watch 1")))
             val originalRowId = hrvDao.getByTimeRange(0, Long.MAX_VALUE).single().rowId
 
-            hrvDao.upsertAll(listOf(HrvRecordEntity("id-1", 1000L, 40f, "SLEEP", sessionId = "sleep-1")))
+            hrvDao.upsertAll(
+                listOf(
+                    HrvRecordEntity(
+                        "id-1",
+                        1000L,
+                        40f,
+                        "SLEEP",
+                        sessionId = "sleep-1",
+                        deviceName = "Watch 2",
+                    ),
+                ),
+            )
 
             val rows = hrvDao.getByTimeRange(0, Long.MAX_VALUE)
             assertEquals(1, rows.size)
             assertEquals(originalRowId, rows.single().rowId)
             assertEquals("SLEEP", rows.single().recordType)
             assertEquals("sleep-1", rows.single().sessionId)
+            assertEquals("Watch 2", rows.single().deviceName)
         }
 
     @Test
