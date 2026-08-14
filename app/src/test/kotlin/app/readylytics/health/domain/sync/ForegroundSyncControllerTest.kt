@@ -280,6 +280,26 @@ class ForegroundSyncControllerTest {
         }
 
     @Test
+    fun `triggerDailySync drops DEFERRED_DAILY_SYNC without worker escalation or completion event`() =
+        runTest {
+            coEvery { syncUseCase.sync(windowDays = 1, onProgress = any()) } returns
+                app.readylytics.health.domain.model.Result.Failure(
+                    reason = "Too dense",
+                    code = "DEFERRED_DAILY_SYNC",
+                )
+            var completedCount = 0
+            val job = launch { controller.syncCompletedEvent.collect { completedCount++ } }
+            runCurrent()
+
+            controller.triggerDailySync()
+            runCurrent()
+
+            verify(exactly = 0) { workerScheduler.scheduleResyncWorker() }
+            kotlin.test.assertEquals(0, completedCount)
+            job.cancel()
+        }
+
+    @Test
     fun `background recalculation flows publish correctly`() =
         runTest {
             var isSyncing = false
