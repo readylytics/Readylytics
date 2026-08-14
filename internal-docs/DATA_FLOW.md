@@ -50,7 +50,8 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
 ┌──────────────────────────────┐
 │  RoomTransactionRunner       │   parent txn + 5,000-row HR/HRV transactions
 └──────────────┬───────────────┘
-               │ @Upsert by stable HC id (idempotent; overlap → replace)
+               │ HR/HRV: conflict-targeted UPSERT on (sourceRecordId, timestampMs) — updates mutable
+               │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
 │  HealthDatabase (SQLite v9)  │   14 entities — single source of truth
@@ -361,7 +362,15 @@ and StrongBox status are tracked in `KeyMetadataStore` (backed by SharedPreferen
 rotation is managed by `DatabaseKeyRotator`, which rekeys the SQLCipher database connection in-place and
 logs the operation status to the local audit trail. Keys are hardware-bound and do not support cloud backup.
 
-**Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
+**Idempotency contract:** every DAO upserts keyed on a stable identity. `HeartRateDao`/`HrvDao`
+use a conflict-targeted `INSERT ... ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET
+recordType=excluded.recordType, sessionId=excluded.sessionId, deviceName=excluded.deviceName
+WHERE (mutable columns differ)` (a plain `@Query`, per-row loop in a non-abstract `upsertAll`
+inside the batch transaction) — this updates mutable columns in place with a stable `rowId` and
+is a near-no-op (SQLite `changes() = 0`) on an identical re-ingest, unlike the former
+`@Insert(onConflict = REPLACE)` which deleted+reinserted and rotated `rowId`. The `WHERE`
+predicate ensures the session-link reconciler's post-ingest re-tags still propagate. All other
+DAOs use `@Upsert` keyed on the stable primary key, so
 re-fetching a record replaces rather than duplicates. Workout bulk ingestion is a raw-record
 merge rather than an unconditional replacement of every column. `RoomHealthIngestionStore`
 updates Health Connect-owned workout fields for the stable workout `id` while preserving the
