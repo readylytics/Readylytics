@@ -1,6 +1,6 @@
 # Sync Stability at High Data Volume — Options & Plan
 
-**Status:** IN PROGRESS — Phase 3 (steps 7–8) complete; steps 9–11 not started.
+**Status:** IN PROGRESS — Phase 4 (steps 9–11) complete; Phase 5 (steps 12–14) not started.
 **Date:** 2026-08-13
 **Branch:** (not yet created)
 **Scope:** Make Health Connect sync stable and responsive for users with very large datasets (≈1M+ records/month, dominated by heart-rate samples).
@@ -414,16 +414,22 @@ conflict-targeted UPSERT via `@Query` (see the Step 7 implementation note for wh
 **Step 9 — Verify `DashboardLoadingState` is dead code.**
 Grep the codebase for all references to `DashboardLoadingState`, `shouldShowSkeleton`, `isBusy`, `SyncingMetrics`, `MetricsReady`. Confirm none are called from production code. Check test code for references that would need updating.
 
+**Step 9 result — PASSED (2026-08-14).** `git grep "DashboardLoadingState"` finds the sealed interface and its helpers (`shouldShowSkeleton()`, `isBusy()`, and the `Idle`/`SyncingMetrics`/`MetricsReady`/`Error` variants) referenced only in `DashboardLoadingState.kt` itself, `internal-docs/DATA_FLOW.md` (§3.2 UI state wrappers table), and the plan docs. No production code and no unit/instrumentation test references the type. Confirmed dead.
+
 **Step 10 — Remove dead `DashboardLoadingState` code.**
 Delete the sealed interface and its extension functions if confirmed dead. Update or remove any test references.
 
 - **Files:** `DashboardLoadingState.kt`; any test files referencing it.
+
+**Step 10 result — COMPLETE (2026-08-14).** Deleted `feature/dashboard/.../DashboardLoadingState.kt` and removed its entry from `internal-docs/DATA_FLOW.md` §3.2 (the UI-state-wrappers list now cites only `DashboardFlowIntermediate.kt`). No test files referenced the type, so none needed updating. Committed as `b292a5d5` ("refactor(dashboard): remove dead DashboardLoadingState code").
 
 **Step 11 — Option E: first-launch/new-date syncing state.**
 Add a distinguishable "syncing, no data yet" state for the first-launch/new-date case. The returning-user case is already handled (cached data + Option A progress banner).
 
 - **Files:** `DashboardViewModel.kt`, `DashboardScreen.kt` — differentiate `summary == null && isSyncing` from `summary == null && !isSyncing`.
 - **Verify:** `MainNavHostTest`, `MainScaffoldTest`, `DashboardRecompositionTest`, `ForegroundSyncController` tests.
+
+**Step 11 result — COMPLETE (2026-08-14).** The `isComputingMetrics = isSyncing && summary == null` derivation already existed in `DashboardViewModel.kt` and already fed `isLoading` to the card grid, so no production change was required — the first-launch/new-date vs returning-user vs empty-date distinction is already implemented. Phase 4 formalized the contract in unit tests instead (see design §3 state matrix): `DashboardViewModelTest` gained four tests covering the three-state matrix (`summary == null && isSyncing` → `isComputingMetrics = true`; `summary != null && isSyncing` → `false` with progressive availability; `summary == null && !isSyncing` → `false`) plus `recalcProgress` propagation; `DashboardFlowIntermediateTest` gained a test that `createDashboardRealtimeStateFlow` combines `isSyncing` and `recalcProgress` reactively. Committed as `89537811` ("test(dashboard): add unit tests for sync state matrix and progress propagation"). All `feature:dashboard` unit tests pass.
 
 #### Phase 5 — steps 12–14 (independent, separate approvals)
 
