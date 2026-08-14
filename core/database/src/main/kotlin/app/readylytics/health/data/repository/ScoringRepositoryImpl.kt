@@ -5,11 +5,14 @@ import app.readylytics.health.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.reconstructTimestampedSamples
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.preferences.scoringZone
@@ -18,6 +21,7 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.data.local.entity.SleepSessionEntity
@@ -75,6 +79,7 @@ class ScoringRepositoryImpl
         private val scoringConfigFactory: ScoringConfigFactory,
         private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
         private val heartRateDao: HeartRateDao,
+        private val minuteBucketDao: MinuteBucketDao,
         private val weightRecordDao: WeightRecordDao,
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
@@ -233,7 +238,7 @@ class ScoringRepositoryImpl
 
                 workouts.forEach { workout ->
                     val workoutHrSamples =
-                        allDayExerciseHrSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
+                        exerciseSamplesForWorkout(workout, allDayExerciseHrSamples)
 
                     val workoutAvgHr =
                         workoutHrSamples
@@ -284,7 +289,7 @@ class ScoringRepositoryImpl
                 // exclusion handled inside the calculator). PERF-006/WP-21: buckets are
                 // pre-averaged and plausibility-filtered in SQL (getMinuteBuckets), not fetched as
                 // raw per-sample rows and bucketed in Kotlin.
-                val everydayHrBuckets = heartRateDao.getMinuteBuckets(dayMidnightMs, nextDayMidnightMs)
+                val everydayHrBuckets = mergedMinuteBuckets(dayMidnightMs, nextDayMidnightMs)
                 val sleepIntervalsMs =
                     aggregatedSleep?.allSleepIntervals
                         ?: if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
@@ -670,6 +675,57 @@ class ScoringRepositoryImpl
         }
 
         override suspend fun toReadinessResult(summary: DailySummary): ReadinessResult = summary.readinessResult
+
+        // Hot and warm tiers never overlap (warm = rolled-up minutes older than the 90-day hot
+        // boundary), so a per-minute weighted merge reproduces the plain AVG exactly and keeps a
+        // day that straddles the boundary whole.
+        private suspend fun mergedMinuteBuckets(
+            dayStartMs: Long,
+            dayEndMs: Long,
+        ): List<HrMinuteBucketRow> {
+            val hot = heartRateDao.getMinuteBuckets(dayStartMs, dayEndMs)
+            val warm = minuteBucketDao.getMinuteBuckets(dayStartMs, dayEndMs)
+            if (warm.isEmpty()) return hot
+            if (hot.isEmpty()) return warm
+            val acc = LinkedHashMap<Int, Pair<Double, Int>>()
+            fun add(row: HrMinuteBucketRow) {
+                val prev = acc[row.bucketIndex]
+                acc[row.bucketIndex] =
+                    if (prev == null) {
+                        row.avgBpm * row.sampleCount to row.sampleCount
+                    } else {
+                        (prev.first + row.avgBpm * row.sampleCount) to (prev.second + row.sampleCount)
+                    }
+            }
+            hot.forEach(::add)
+            warm.forEach(::add)
+            return acc.entries
+                .sortedBy { it.key }
+                .map { (idx, value) -> HrMinuteBucketRow(idx, value.first / value.second, value.second) }
+        }
+
+        // Rebuilds a workout's exercise samples from the warm tier when its raw rows have been
+        // rolled up (hot tier empty). The reconstructed timestamped stream feeds the same
+        // ComputeWorkoutTrimpUseCase path as raw samples.
+        private suspend fun exerciseSamplesForWorkout(
+            workout: WorkoutRecordEntity,
+            hotSamples: List<HeartRateRecordEntity>,
+        ): List<HeartRateRecordEntity> {
+            val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
+            if (hot.isNotEmpty()) return hot
+            return minuteBucketDao
+                .getBucketsForSessionInRange("EXERCISE", workout.id, workout.startTime, workout.endTime)
+                .reconstructTimestampedSamples()
+                .map { (timestampMs, bpm) ->
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 0L,
+                        timestampMs = timestampMs,
+                        beatsPerMinute = bpm,
+                        recordType = RecordType.EXERCISE.name,
+                        sessionId = workout.id,
+                    )
+                }
+        }
 
         private suspend fun resolveSleepAggregation(
             targetDate: LocalDate,

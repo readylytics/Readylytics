@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
@@ -356,13 +357,14 @@ class BackfillBaselinesUseCaseTest {
         val heartRateDao = mockk<HeartRateDao>()
         val hrvDao = mockk<HrvDao>()
         val sleepSessionDao = mockk<SleepSessionDao>()
+        val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
         val scoringCalculator = mockk<ScoringCalculator>()
 
         // Default: no frozen baseline — live recompute path.
         coEvery { freezeDailySummaryDao.getByDate(any()) } returns null
 
         val scoringHistoryRepository =
-            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, freezeDailySummaryDao)
+            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, freezeDailySummaryDao, minuteBucketDao)
         freezeBaselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
     }
 
@@ -396,6 +398,7 @@ class BackfillBaselinesUseCaseTest {
             val heartRateDao = mockk<HeartRateDao>()
             val hrvDao = mockk<HrvDao>()
             val sleepSessionDao = mockk<SleepSessionDao>()
+            val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
             val scoringCalculator = mockk<ScoringCalculator>()
 
             coEvery { sleepSessionDao.getSince(any()) } returns emptyList()
@@ -405,7 +408,13 @@ class BackfillBaselinesUseCaseTest {
             coEvery { hrvDao.getSleepRmssdValuesForSessions(any()) } returns emptyList()
 
             val scoringHistoryRepository =
-                ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, freezeDailySummaryDao)
+                ScoringHistoryRepositoryImpl(
+                    heartRateDao,
+                    hrvDao,
+                    sleepSessionDao,
+                    freezeDailySummaryDao,
+                    minuteBucketDao,
+                )
             val computer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
 
             val result = computer.computeHrvWindows(dayMidnight, excludeSessionId = null)
@@ -444,11 +453,18 @@ class BackfillBaselinesUseCaseTest {
             val heartRateDao = mockk<HeartRateDao>()
             val hrvDao = mockk<HrvDao>()
             val sleepSessionDao = mockk<SleepSessionDao>()
+            val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
             val scoringCalculator = mockk<ScoringCalculator>()
             coEvery { sleepSessionDao.getSince(any()) } returns emptyList()
 
             val scoringHistoryRepository =
-                ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, freezeDailySummaryDao)
+                ScoringHistoryRepositoryImpl(
+                    heartRateDao,
+                    hrvDao,
+                    sleepSessionDao,
+                    freezeDailySummaryDao,
+                    minuteBucketDao,
+                )
             val computer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
 
             val result = computer.computeAdaptiveBaselineRhrBpm(dayMidnight, rhrBaselineOverride = null, percentile = 5)

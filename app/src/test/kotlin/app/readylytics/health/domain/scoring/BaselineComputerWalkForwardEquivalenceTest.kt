@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.SleepSessionEntity
@@ -30,9 +31,10 @@ class BaselineComputerWalkForwardEquivalenceTest {
     private val sleepSessionDao = mockk<SleepSessionDao>()
     private val scoringCalculator = mockk<ScoringCalculator>()
     private val dailySummaryDao = mockk<DailySummaryDao>()
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
 
     private val scoringHistoryRepository =
-        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
     private val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
 
     private val zone: ZoneId = ZoneId.systemDefault()

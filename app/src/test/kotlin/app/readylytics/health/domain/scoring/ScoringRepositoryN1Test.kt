@@ -6,6 +6,7 @@ import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
@@ -52,6 +53,7 @@ class ScoringRepositoryN1Test {
     private lateinit var weightRecordDao: WeightRecordDao
     private lateinit var bodyFatRecordDao: BodyFatRecordDao
     private lateinit var bloodPressureRecordDao: BloodPressureRecordDao
+    private lateinit var minuteBucketDao: MinuteBucketDao
     private lateinit var repo: ScoringRepository
 
     private val todayMidnight =
@@ -88,6 +90,7 @@ class ScoringRepositoryN1Test {
         weightRecordDao = mockk()
         bodyFatRecordDao = mockk()
         bloodPressureRecordDao = mockk()
+        minuteBucketDao = mockk(relaxed = true)
 
         coEvery { weightRecordDao.getLatestUpTo(any()) } returns null
         coEvery { bodyFatRecordDao.getLatestUpTo(any()) } returns null
@@ -146,7 +149,7 @@ class ScoringRepositoryN1Test {
             )
 
         val scoringHistoryRepository =
-            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
         val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
@@ -184,6 +187,7 @@ class ScoringRepositoryN1Test {
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
                 heartRateDao = heartRateDao,
+                minuteBucketDao = minuteBucketDao,
                 weightRecordDao = weightRecordDao,
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,

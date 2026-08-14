@@ -10,12 +10,15 @@ import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
+import app.readylytics.health.data.local.reconstructSampleValues
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.round
 
 @Singleton
 class ScoringHistoryRepositoryImpl
@@ -25,6 +28,7 @@ class ScoringHistoryRepositoryImpl
         private val hrvDao: HrvDao,
         private val sleepSessionDao: SleepSessionDao,
         private val dailySummaryDao: DailySummaryDao,
+        private val minuteBucketDao: MinuteBucketDao,
     ) : ScoringHistoryRepository {
         override suspend fun getSleepSessionsSince(fromMs: Long): List<SleepSession> =
             sleepSessionDao.getSince(fromMs).map(SleepSessionMapper::toDomain)
@@ -34,18 +38,49 @@ class ScoringHistoryRepositoryImpl
             toMs: Long,
         ): List<SleepSession> = sleepSessionDao.getBetween(fromMs, toMs).map(SleepSessionMapper::toDomain)
 
-        override suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample> =
-            heartRateDao.getSleepHrProjectionForSessions(sessionIds).map {
-                SleepHrSample(sessionId = it.sessionId, beatsPerMinute = it.beatsPerMinute)
-            }
+        override suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample> {
+            val hot =
+                heartRateDao.getSleepHrProjectionForSessions(sessionIds).map {
+                    SleepHrSample(sessionId = it.sessionId, beatsPerMinute = it.beatsPerMinute)
+                }
+            val hotSessionIds = hot.map { it.sessionId }.toSet()
+            val warmOnly = sessionIds.filter { it !in hotSessionIds }
+            if (warmOnly.isEmpty()) return hot
+            val warmSamples =
+                warmOnly.flatMap { sessionId ->
+                    minuteBucketDao
+                        .getBucketsForSession("SLEEP", sessionId)
+                        .reconstructSampleValues()
+                        .sorted()
+                        .map { SleepHrSample(sessionId = sessionId, beatsPerMinute = it) }
+                }
+            return (hot + warmSamples).sortedWith(compareBy({ it.sessionId }, { it.beatsPerMinute }))
+        }
 
-        override suspend fun getAvgSleepHrForSessions(sessionIds: List<String>): Map<String, Int> =
-            heartRateDao.getAvgSleepHrForSessions(sessionIds)
+        override suspend fun getAvgSleepHrForSessions(sessionIds: List<String>): Map<String, Int> {
+            val hot = heartRateDao.getAvgSleepHrForSessions(sessionIds)
+            val warmOnly = sessionIds.filter { it !in hot }
+            if (warmOnly.isEmpty()) return hot
+            val warm =
+                warmOnly.mapNotNull { sessionId ->
+                    val buckets = minuteBucketDao.getBucketsForSession("SLEEP", sessionId)
+                    val total = buckets.sumOf { it.sampleCount }
+                    if (total == 0) {
+                        null
+                    } else {
+                        sessionId to round(buckets.sumOf { it.avgBpm * it.sampleCount } / total).toInt()
+                    }
+                }.toMap()
+            return hot + warm
+        }
 
         override suspend fun getMinHrTimestamp(sessionId: String): Long? = heartRateDao.getMinHrTimestamp(sessionId)
 
-        override suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int> =
-            heartRateDao.getSleepHrSamplesForSession(sessionId)
+        override suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int> {
+            val hot = heartRateDao.getSleepHrSamplesForSession(sessionId)
+            if (hot.isNotEmpty()) return hot
+            return minuteBucketDao.getBucketsForSession("SLEEP", sessionId).reconstructSampleValues().sorted()
+        }
 
         override suspend fun getSleepRmssdForSessionsMap(sessionIds: List<String>): Map<String, List<Float>> =
             hrvDao.getSleepRmssdForSessionsMap(sessionIds)

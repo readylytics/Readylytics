@@ -6,6 +6,7 @@ import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
@@ -184,6 +185,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val settingsRepo = mockk<SettingsRepository>(relaxed = true)
         val heartRateDao = mockk<HeartRateDao>(relaxed = true)
         val hrvDao = mockk<HrvDao>(relaxed = true)
+        val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
         val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
         val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
         val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
@@ -296,6 +298,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 hrvDao = hrvDao,
                 sleepSessionDao = sleepSessionDao,
                 dailySummaryDao = dailySummaryDao,
+                minuteBucketDao = minuteBucketDao,
             )
         val baselineComputer =
             BaselineComputer(
@@ -335,6 +338,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
                 heartRateDao = heartRateDao,
+                minuteBucketDao = minuteBucketDao,
                 weightRecordDao = weightRecordDao,
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
