@@ -786,8 +786,7 @@ ViewModels collect repository flows, fuse them with `combine()`, and expose immu
 ### 3.2 UI state wrappers
 
 `@Immutable` data classes: `DashboardUiState` (+ intermediates in
-`feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardFlowIntermediate.kt`,
-`feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardLoadingState.kt`), per-screen
+`feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardFlowIntermediate.kt`), per-screen
 `*UiState` (`HeartRateDetailUiState`, `VitalsUiState`, `SleepUiState`, `WorkoutsUiState`, …),
 and `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/SettingsState.kt` (incl. `SyncSettingsState` with resync current/total
 progress).
