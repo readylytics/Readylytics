@@ -1,6 +1,6 @@
 # Sync Stability at High Data Volume — Options & Plan
 
-**Status:** IN PROGRESS — Phase 4 (steps 9–11) complete; Phase 5 (steps 12–14) not started.
+**Status:** COMPLETE — Phase 4 (steps 9–11) and Phase 5 (steps 12–14) complete (2026-08-14).
 **Date:** 2026-08-13
 **Branch:** (not yet created)
 **Scope:** Make Health Connect sync stable and responsive for users with very large datasets (≈1M+ records/month, dominated by heart-rate samples).
@@ -440,6 +440,12 @@ These are independent projects that each require a separate proposal, scoring-ow
 **Step 13 — Option F:** collision-safe identity/index redesign. Requires migration tests and idempotency re-verification.
 
 **Step 14 — Option H:** raw-sample retention policy change. Requires product decision and documentation updates.
+
+**Step 12 result — COMPLETE (2026-08-14) (Option D).** Introduced a warm tier `hr_minute_buckets` (composite identity `(bucketStartMs, recordType, sessionId)`, one row per minute/session/type) and a `DataRollupWorker`/`DataRollupManager` that atomically downsample raw `heart_rate_records` older than the fixed 90-day hot boundary into buckets and delete the raw rows. `ScoringRepositoryImpl` merges hot+warm minute buckets for the everyday-HR load (weighted avg is bit-identical to the raw AVG), and `ScoringHistoryRepositoryImpl` reconstructs a sleep session's sample stream from its warm buckets when raw rows are gone; workout exercise samples are likewise rebuilt from the warm tier. Golden equivalence tests (`ScoringEquivalenceGoldenTest`) lock everyday buckets (TRIMP ≤ 0.01%) and sleep percentile RHR (≤ 1 bpm). Committed across `abe1ba39` and `5a5c9779`.
+
+**Step 13 result — COMPLETE (2026-08-14) (Option F).** Added `health_source_records` (base UUID → integer id dimension table) and rebuilt `heart_rate_records`/`hrv_records` to reference it via an integer `sourceRecordRef` FK, replacing the per-row TEXT `sourceRecordId` (`MIGRATION_9_10`, DATABASE_VERSION 10). Idempotent upsert now keys on the unique `(sourceRecordRef, timestampMs)` index; ingestion, session-link reconcile (keyset pagination), Health Connect changes-path deletion, and local backup/restore all resolve refs through `SourceRecordDao`. Backup now also carries `health_source_records` and `hr_minute_buckets`, and restore decodes legacy `sourceRecordId`-format rows (schema 7–9 and the pre-v7 legacy path) back to refs. Lossless 9→10 migration proven on-device by `DatabaseMigrationInstrumentedTest.migrate9To10NormalizesSourceRecordRefsAndPreservesData`. Committed as `6c2cd4bb`.
+
+**Step 14 result — COMPLETE (2026-08-14) (Option H).** Raw-sample retention is unchanged at the product level (`retentionDays`, default 365): the warm tier is an internal storage optimization, not a new user-facing data contract. Raw 1-second heart-rate samples are now rolled to 1-minute buckets after the fixed 90-day hot window and pruned from the hot tier; `RetentionCleanup` additionally prunes expired warm buckets at the user's retention cutoff (`RetentionBounds.resolveRetentionCutoffMs`), and `RetentionBounds.resolveHotTierCutoffMs` is the single 90-day hot/warm boundary shared by rollup and scoring. `DataRollupWorker` is scheduled daily alongside `DataCleanupWorker`. Committed as `5a5c9779`.
 
 ---
 

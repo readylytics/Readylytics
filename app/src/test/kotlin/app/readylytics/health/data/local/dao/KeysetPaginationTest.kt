@@ -5,8 +5,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -57,9 +57,24 @@ class KeysetPaginationTest {
             seedSourceRecordParents(1L, 2L, 3L)
             val records =
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "RESTING"),
-                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 1000L, beatsPerMinute = 65, recordType = "RESTING"),
-                    HeartRateRecordEntity(sourceRecordRef = 3L, timestampMs = 2000L, beatsPerMinute = 70, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 65,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 3L,
+                        timestampMs = 2000L,
+                        beatsPerMinute = 70,
+                        recordType = "RESTING",
+                    ),
                 )
             heartRateDao.upsertAll(records)
 

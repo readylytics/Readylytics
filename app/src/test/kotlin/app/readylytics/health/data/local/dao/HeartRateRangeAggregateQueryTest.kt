@@ -70,9 +70,24 @@ class HeartRateRangeAggregateQueryTest {
             seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 60, recordType = "RESTING"),
-                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 100L, beatsPerMinute = 80, recordType = "RESTING"),
-                    HeartRateRecordEntity(sourceRecordRef = 3L, timestampMs = 200L, beatsPerMinute = 100, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 0L,
+                        beatsPerMinute = 60,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = 100L,
+                        beatsPerMinute = 80,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 3L,
+                        timestampMs = 200L,
+                        beatsPerMinute = 100,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 

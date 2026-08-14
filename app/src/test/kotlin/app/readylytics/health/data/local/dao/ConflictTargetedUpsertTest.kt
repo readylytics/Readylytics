@@ -4,8 +4,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -63,10 +63,28 @@ class ConflictTargetedUpsertTest {
     fun `identical heart rate re-ingest keeps rowId stable and does not duplicate`() =
         runTest {
             seedSourceRecordParents(1L)
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP")))
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                ),
+            )
 
             val firstRowId = heartRateDao.getByTimeRange(0, Long.MAX_VALUE).single().rowId
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP")))
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                ),
+            )
 
             val rows = heartRateDao.getByTimeRange(0, Long.MAX_VALUE)
             assertEquals(1, rows.size)
@@ -77,7 +95,17 @@ class ConflictTargetedUpsertTest {
     fun `re-tagged heart rate record updates session, record type, and device name in place`() =
         runTest {
             seedSourceRecordParents(1L)
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "RESTING", deviceName = "Watch 1")))
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "RESTING",
+                        deviceName = "Watch 1",
+                    ),
+                ),
+            )
             val originalRowId = heartRateDao.getByTimeRange(0, Long.MAX_VALUE).single().rowId
 
             heartRateDao.upsertAll(
@@ -105,10 +133,14 @@ class ConflictTargetedUpsertTest {
     fun `identical hrv re-ingest keeps rowId stable and does not duplicate`() =
         runTest {
             seedSourceRecordParents(1L)
-            hrvDao.upsertAll(listOf(HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, rmssdMs = 40f, recordType = "SLEEP")))
+            hrvDao.upsertAll(
+                listOf(HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, rmssdMs = 40f, recordType = "SLEEP")),
+            )
 
             val firstRowId = hrvDao.getByTimeRange(0, Long.MAX_VALUE).single().rowId
-            hrvDao.upsertAll(listOf(HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, rmssdMs = 40f, recordType = "SLEEP")))
+            hrvDao.upsertAll(
+                listOf(HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, rmssdMs = 40f, recordType = "SLEEP")),
+            )
 
             val rows = hrvDao.getByTimeRange(0, Long.MAX_VALUE)
             assertEquals(1, rows.size)
@@ -119,7 +151,17 @@ class ConflictTargetedUpsertTest {
     fun `re-tagged hrv record updates session, record type, and device name in place`() =
         runTest {
             seedSourceRecordParents(1L)
-            hrvDao.upsertAll(listOf(HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, rmssdMs = 40f, recordType = "RESTING", deviceName = "Watch 1")))
+            hrvDao.upsertAll(
+                listOf(
+                    HrvRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        rmssdMs = 40f,
+                        recordType = "RESTING",
+                        deviceName = "Watch 1",
+                    ),
+                ),
+            )
             val originalRowId = hrvDao.getByTimeRange(0, Long.MAX_VALUE).single().rowId
 
             hrvDao.upsertAll(
@@ -147,7 +189,16 @@ class ConflictTargetedUpsertTest {
     fun `rowId zero ingestion auto-assigns a real rowid`() =
         runTest {
             seedSourceRecordParents(1L)
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP")))
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                ),
+            )
 
             val row = heartRateDao.getByTimeRange(0, Long.MAX_VALUE).single()
             assertNotEquals(0L, row.rowId)
@@ -158,10 +209,28 @@ class ConflictTargetedUpsertTest {
     fun `re-upsert after deletion-by-source-record reinserts fresh`() =
         runTest {
             seedSourceRecordParents(1L)
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP")))
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                ),
+            )
             assertEquals(1, heartRateDao.deleteBySourceRecordRef(1L))
 
-            heartRateDao.upsertAll(listOf(HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP")))
+            heartRateDao.upsertAll(
+                listOf(
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                ),
+            )
 
             val rows = heartRateDao.getByTimeRange(0, Long.MAX_VALUE)
             assertEquals(1, rows.size)

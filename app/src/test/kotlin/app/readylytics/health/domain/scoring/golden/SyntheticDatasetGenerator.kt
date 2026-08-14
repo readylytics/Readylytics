@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring.golden
 
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.SleepStageEntity

@@ -8,8 +8,8 @@ import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity

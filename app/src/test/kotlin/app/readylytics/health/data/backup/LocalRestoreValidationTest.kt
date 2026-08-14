@@ -137,7 +137,12 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-v5.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
-            val heartRef = db.heartRateDao().getSince(0).single().sourceRecordRef
+            val heartRef =
+                db
+                    .heartRateDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordRef
             assertEquals(
                 "hc-heart",
                 db
@@ -146,7 +151,12 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
                     .single { it.id == heartRef }
                     .sourceRecordId,
             )
-            val hrvRef = db.hrvDao().getSince(0).single().sourceRecordRef
+            val hrvRef =
+                db
+                    .hrvDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordRef
             assertEquals(
                 "hc-hrv",
                 db
@@ -189,7 +199,12 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-malformed-suffix-v6.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
-            val heartRef = db.heartRateDao().getSince(0).single().sourceRecordRef
+            val heartRef =
+                db
+                    .heartRateDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordRef
             assertEquals(
                 malformedHeartId,
                 db
@@ -198,7 +213,12 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
                     .single { it.id == heartRef }
                     .sourceRecordId,
             )
-            val hrvRef = db.hrvDao().getSince(0).single().sourceRecordRef
+            val hrvRef =
+                db
+                    .hrvDao()
+                    .getSince(0)
+                    .single()
+                    .sourceRecordRef
             assertEquals(
                 mismatchedHrvId,
                 db

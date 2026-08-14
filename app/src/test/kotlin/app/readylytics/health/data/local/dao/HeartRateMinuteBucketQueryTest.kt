@@ -86,7 +86,12 @@ class HeartRateMinuteBucketQueryTest {
             seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 20, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 0L,
+                        beatsPerMinute = 20,
+                        recordType = "RESTING",
+                    ),
                     HeartRateRecordEntity(
                         sourceRecordRef = 2L,
                         timestampMs = 30_000L,
@@ -107,7 +112,12 @@ class HeartRateMinuteBucketQueryTest {
             seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 120, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 0L,
+                        beatsPerMinute = 120,
+                        recordType = "RESTING",
+                    ),
                     HeartRateRecordEntity(
                         sourceRecordRef = 2L,
                         timestampMs = 30_000L,
@@ -133,7 +143,12 @@ class HeartRateMinuteBucketQueryTest {
             // reflect only the plausible sample, not both.
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 130, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 0L,
+                        beatsPerMinute = 130,
+                        recordType = "RESTING",
+                    ),
                     HeartRateRecordEntity(
                         sourceRecordRef = 2L,
                         timestampMs = 30_000L,
@@ -162,7 +177,12 @@ class HeartRateMinuteBucketQueryTest {
                         beatsPerMinute = 100,
                         recordType = "RESTING",
                     ),
-                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 0L, beatsPerMinute = 100, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = 0L,
+                        beatsPerMinute = 100,
+                        recordType = "RESTING",
+                    ),
                     HeartRateRecordEntity(
                         sourceRecordRef = 3L,
                         timestampMs = 60_000L,

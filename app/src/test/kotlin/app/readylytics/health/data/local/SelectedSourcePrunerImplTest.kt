@@ -13,8 +13,8 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.HealthDataType
 import kotlinx.coroutines.test.runTest

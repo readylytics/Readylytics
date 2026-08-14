@@ -329,8 +329,18 @@ class HealthChangeSynchronizerImplTest {
             coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
             coEvery { heartRateDao.getBySourceRecordRef(1L) } returns
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP"),
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 2000L, beatsPerMinute = 61, recordType = "SLEEP"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 2000L,
+                        beatsPerMinute = 61,
+                        recordType = "SLEEP",
+                    ),
                 )
             coEvery { heartRateDao.deleteBySourceRecordRef(1L) } returns 2
             coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1

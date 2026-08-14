@@ -8,8 +8,8 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
@@ -66,10 +66,30 @@ class SourceRecordIdSargableQueryTest {
             val dao = database.heartRateDao()
             dao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1L, beatsPerMinute = 60, recordType = "RESTING"),
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 2L, beatsPerMinute = 61, recordType = "RESTING"),
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 3L, beatsPerMinute = 62, recordType = "RESTING"),
-                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 4L, beatsPerMinute = 63, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1L,
+                        beatsPerMinute = 60,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 2L,
+                        beatsPerMinute = 61,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 3L,
+                        beatsPerMinute = 62,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = 4L,
+                        beatsPerMinute = 63,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 

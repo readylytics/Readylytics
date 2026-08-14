@@ -19,10 +19,12 @@ class DataRollupManagerTest {
     @Before
     fun setup() {
         database =
-            Room.inMemoryDatabaseBuilder(
-                ApplicationProvider.getApplicationContext(),
-                HealthDatabase::class.java,
-            ).allowMainThreadQueries().build()
+            Room
+                .inMemoryDatabaseBuilder(
+                    ApplicationProvider.getApplicationContext(),
+                    HealthDatabase::class.java,
+                ).allowMainThreadQueries()
+                .build()
         rollupManager =
             DataRollupManager(
                 minuteBucketDao = database.minuteBucketDao(),

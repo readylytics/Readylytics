@@ -7,8 +7,8 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
@@ -72,9 +72,24 @@ class DeleteBySourceRecordIdTest {
             seedSourceRecordParents(1L, 2L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP"),
-                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 2000L, beatsPerMinute = 61, recordType = "SLEEP"),
-                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 3000L, beatsPerMinute = 62, recordType = "SLEEP"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 2000L,
+                        beatsPerMinute = 61,
+                        recordType = "SLEEP",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = 3000L,
+                        beatsPerMinute = 62,
+                        recordType = "SLEEP",
+                    ),
                 ),
             )
 

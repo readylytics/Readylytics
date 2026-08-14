@@ -192,9 +192,24 @@ class RetentionCleanupTest {
             // 3. HRV
             hrvDao.upsertAll(
                 listOf(
-                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = cutoffMs - 1, rmssdMs = 50f, recordType = "RESTING"),
-                    HrvRecordEntity(sourceRecordRef = 2L, timestampMs = cutoffMs, rmssdMs = 50f, recordType = "RESTING"),
-                    HrvRecordEntity(sourceRecordRef = 3L, timestampMs = cutoffMs + 1, rmssdMs = 50f, recordType = "RESTING"),
+                    HrvRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = cutoffMs - 1,
+                        rmssdMs = 50f,
+                        recordType = "RESTING",
+                    ),
+                    HrvRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = cutoffMs,
+                        rmssdMs = 50f,
+                        recordType = "RESTING",
+                    ),
+                    HrvRecordEntity(
+                        sourceRecordRef = 3L,
+                        timestampMs = cutoffMs + 1,
+                        rmssdMs = 50f,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 

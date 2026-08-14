@@ -8,13 +8,13 @@ import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
 import kotlinx.coroutines.runBlocking
-import kotlin.math.round
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.math.round
 
 /**
  * Golden equivalence for the warm tier: once a day's raw 1s samples are rolled into 1-minute
@@ -29,10 +29,12 @@ class ScoringEquivalenceGoldenTest {
     @Before
     fun setup() {
         database =
-            Room.inMemoryDatabaseBuilder(
-                ApplicationProvider.getApplicationContext(),
-                HealthDatabase::class.java,
-            ).allowMainThreadQueries().build()
+            Room
+                .inMemoryDatabaseBuilder(
+                    ApplicationProvider.getApplicationContext(),
+                    HealthDatabase::class.java,
+                ).allowMainThreadQueries()
+                .build()
         rollupManager =
             DataRollupManager(
                 minuteBucketDao = database.minuteBucketDao(),
