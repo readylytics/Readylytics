@@ -1,9 +1,7 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
 import androidx.room.MapColumn
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.flow.Flow
@@ -111,10 +109,43 @@ interface HrvDao {
         toMs: Long,
     ): List<HrvRecordEntity>
 
-    // REPLACE deletes+reinserts on (sourceRecordId, timestampMs) conflict — rowId changes
-    // on every re-upsert of the same source record; see HrvRecordEntity.rowId.
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(records: List<HrvRecordEntity>)
+    // Conflict-targeted UPSERT on the natural unique key (sourceRecordId, timestampMs): updates
+    // mutable columns (recordType/sessionId/deviceName) in place and preserves rowId — unlike
+    // SQLite REPLACE, which deletes+reinserts and rotates rowId on every re-upsert. The WHERE
+    // predicate makes an identical re-ingest a near-no-op (SQLite changes() = 0). Room 2.8's
+    // @Query parser accepts UPSERT syntax; proven on-device by UpsertConflictStrategyInstrumentedTest.
+    @Query(
+        "INSERT INTO hrv_records " +
+            "(sourceRecordId, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
+            "VALUES (:sourceRecordId, :timestampMs, :rmssdMs, :recordType, :sessionId, :deviceName) " +
+            "ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET " +
+            "recordType = excluded.recordType, " +
+            "sessionId = excluded.sessionId, " +
+            "deviceName = excluded.deviceName " +
+            "WHERE (recordType IS NOT excluded.recordType OR " +
+            "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)",
+    )
+    suspend fun conflictTargetedUpsert(
+        sourceRecordId: String,
+        timestampMs: Long,
+        rmssdMs: Float,
+        recordType: String,
+        sessionId: String?,
+        deviceName: String?,
+    ): Long
+
+    suspend fun upsertAll(records: List<HrvRecordEntity>) {
+        for (record in records) {
+            conflictTargetedUpsert(
+                sourceRecordId = record.sourceRecordId,
+                timestampMs = record.timestampMs,
+                rmssdMs = record.rmssdMs,
+                recordType = record.recordType,
+                sessionId = record.sessionId,
+                deviceName = record.deviceName,
+            )
+        }
+    }
 
     @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int

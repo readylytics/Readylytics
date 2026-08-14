@@ -360,6 +360,9 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite)
+    // Room KSP for androidTest: prototype DAOs used by conflict-strategy research
+    // (UpsertConflictStrategyInstrumentedTest) live in the androidTest source set.
+    kspAndroidTest(libs.room.compiler)
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)

@@ -1,9 +1,7 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
 import androidx.room.MapColumn
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.domain.model.HrMinuteBucketRow
@@ -138,10 +136,43 @@ interface HeartRateDao {
         endMs: Long,
     ): Flow<List<HeartRateRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
 
-    // REPLACE deletes+reinserts on (sourceRecordId, timestampMs) conflict — rowId changes
-    // on every re-upsert of the same source record; see HeartRateRecordEntity.rowId.
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(records: List<HeartRateRecordEntity>)
+    // Conflict-targeted UPSERT on the natural unique key (sourceRecordId, timestampMs): updates
+    // mutable columns (recordType/sessionId/deviceName) in place and preserves rowId — unlike
+    // SQLite REPLACE, which deletes+reinserts and rotates rowId on every re-upsert. The WHERE
+    // predicate makes an identical re-ingest a near-no-op (SQLite changes() = 0). Room 2.8's
+    // @Query parser accepts UPSERT syntax; proven on-device by UpsertConflictStrategyInstrumentedTest.
+    @Query(
+        "INSERT INTO heart_rate_records " +
+            "(sourceRecordId, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+            "VALUES (:sourceRecordId, :timestampMs, :beatsPerMinute, :recordType, :sessionId, :deviceName) " +
+            "ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET " +
+            "recordType = excluded.recordType, " +
+            "sessionId = excluded.sessionId, " +
+            "deviceName = excluded.deviceName " +
+            "WHERE (recordType IS NOT excluded.recordType OR " +
+            "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)",
+    )
+    suspend fun conflictTargetedUpsert(
+        sourceRecordId: String,
+        timestampMs: Long,
+        beatsPerMinute: Int,
+        recordType: String,
+        sessionId: String?,
+        deviceName: String?,
+    ): Long
+
+    suspend fun upsertAll(records: List<HeartRateRecordEntity>) {
+        for (record in records) {
+            conflictTargetedUpsert(
+                sourceRecordId = record.sourceRecordId,
+                timestampMs = record.timestampMs,
+                beatsPerMinute = record.beatsPerMinute,
+                recordType = record.recordType,
+                sessionId = record.sessionId,
+                deviceName = record.deviceName,
+            )
+        }
+    }
 
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int

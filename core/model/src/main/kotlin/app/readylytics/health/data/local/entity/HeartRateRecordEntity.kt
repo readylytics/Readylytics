@@ -18,10 +18,12 @@ import kotlinx.serialization.Serializable
 )
 data class HeartRateRecordEntity(
     /**
-     * Not stable across re-ingestion: [HeartRateDao.upsertAll] uses
-     * `@Insert(onConflict = REPLACE)`, keyed off the unique (sourceRecordId, timestampMs)
-     * index, and SQLite REPLACE deletes the conflicting row before inserting the new one.
-     * Never persist or compare rowId across sync passes.
+     * Stable across idempotent re-ingestion: [HeartRateDao.upsertAll] uses a conflict-targeted
+     * UPSERT on the unique (sourceRecordId, timestampMs) index, so re-upserting the same source
+     * record updates mutable columns (recordType/sessionId/deviceName) in place and preserves
+     * rowId — unlike the former `@Insert(onConflict = REPLACE)`, which deleted+reinserted and
+     * rotated rowId on every re-ingest. Still never persist or compare rowId across backup/restore:
+     * restore deleteAll's then reinserts, so rowIds are renumbered there.
      */
     @PrimaryKey(autoGenerate = true)
     val rowId: Long = 0,

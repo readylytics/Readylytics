@@ -360,11 +360,50 @@ Before writing production code, prototype the `INSERT OR REPLACE` → `INSERT ..
 
 - **Output:** instrumentation test proving the strategy works or documenting why it doesn't; generated SQL captured.
 
+**Step 7 result — research gate PASSED (2026-08-14).** `UpsertConflictStrategyInstrumentedTest` (app/androidTest, real SQLCipher Room DB on SM-A576B / API 36) proves:
+
+- **Engine:** SQLCipher bundles SQLite **3.53.1** (independent of the minSdk-26 platform SQLite), so `INSERT ... ON CONFLICT ... DO UPDATE` UPSERT syntax is fully supported across the supported API range.
+- **Room `@Upsert` is NOT viable.** Generated SQL (captured from `UpsertPrototypeDao_Impl` via reflection): `INSERT ... VALUES (nullif(?, 0), ...)` + `UPDATE ... WHERE rowId = ?`. The conflict target is the PRIMARY KEY `rowId` (autoGenerate), NOT the secondary unique `(sourceRecordId, timestampMs)` index. A `rowId = 0` re-ingest therefore matches no existing row (`WHERE rowId = 0`); the changed `sessionId` is silently dropped while the old row survives (`count=1, rowId stable, sessionId=null`). Exactly the failure the plan's §2.4 warned about — `@Upsert` must not be used.
+- **Conflict-targeted strategy WORKS.** On both `heart_rate_records` and `hrv_records`:
+  - `rowId = 0` ingestion auto-assigns a real rowid (`rowId > 0`), no mapper changes needed;
+  - identical re-ingest is a true near-no-op — SQLite `changes() = 0` and `rowId` stable (the `WHERE (recordType IS NOT excluded.recordType OR sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)` predicate skips the write);
+  - reconciler-style re-tag (changed `recordType`/`sessionId`/`deviceName`) updates in place with **stable `rowId`** and propagates all mutable columns;
+  - baseline `REPLACE` rotates `rowId` on re-ingest (confirms the churn being removed).
+- **Implementation note for Step 8:** Room 2.8's `@Query` parser **accepts UPSERT syntax** (proven: `UpsertPrototypeDao.conflictTargetedUpsert` compiles to a real prepared statement and behaves identically to `execSQL` on-device), so production can use a plain `@Query`-annotated single-row UPSERT instead of raw `execSQL`. The DAO `upsertAll` becomes a non-abstract method looping that `@Query` per row (Room cannot express a dynamic placeholder-count multi-row UPSERT, and `@Upsert`/`@Insert`-injected connections are not supported); the loop runs inside the existing `transactionRunner` batch transaction, preserving the one-transaction-per-5000-row shape. RowId is non-stable today, so nothing downstream may rely on it — the conflict-targeted path only strengthens that (stable rows, not rotating ones).
+
 **Step 8 — Option C implementation: conflict-targeted HR/HRV persistence.**
 Only after step 7 confirms a viable strategy. Replace `@Insert(onConflict = REPLACE)` with the proven strategy.
 
 - **Files:** `HeartRateDao.kt:143`, `HrvDao.kt:116`; verify all identity/deletion paths.
 - **Verify:** DAO tests for duplicate ingestion, changed session links, `rowId = 0`, deletion-by-source-record, backup/restore compatibility.
+
+**Step 8 result — COMPLETE (2026-08-14).** Replaced `@Insert(onConflict = REPLACE)` in both DAOs with a
+conflict-targeted UPSERT via `@Query` (see the Step 7 implementation note for why `@Query` over `execSQL`):
+
+- `HeartRateDao` / `HrvDao`: single-row `@Query` UPSERT (`conflictTargetedUpsert`) mirroring the proven prototype
+  SQL — `INSERT INTO ... ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET recordType=excluded.recordType,
+  sessionId=excluded.sessionId, deviceName=excluded.deviceName WHERE (recordType IS NOT excluded.recordType OR
+  sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)`. Public `upsertAll(records)` is now a
+  non-abstract default method looping that `@Query` per row (Room KSP skips method bodies; confirmed in generated
+  `HrvDao_Impl.kt:700` / `HeartRateDao_Impl.kt:915` — per-row `_stmt.prepare` + bind + `step()`, no `upsertAll`
+  override generated). The loop runs inside the existing `transactionRunner` batch transaction, so the
+  one-transaction-per-5000-row shape and `PersistenceBatchingTest` proxy (intercepts `upsertAll` by name) are
+  unchanged. Callers (store, `HealthChangeSynchronizerImpl`, `SessionLinkReconcilerImpl`, `LocalRestoreManager`)
+  compile untouched because the signature is preserved.
+- Entity KDocs (`HeartRateRecordEntity.kt` / `HrvRecordEntity.kt`) updated: `rowId` is now stable across idempotent
+  re-ingest (no longer rotated by REPLACE); still not persistable across backup/restore (restore deleteAll's first).
+- **Tests:** new JVM `ConflictTargetedUpsertTest` (app/src/test, Robolectric-style real in-memory Room) — 6 tests:
+  identical HR/HRV re-ingest keeps `rowId` stable + no duplicate; re-tagged record updates `recordType`/`sessionId`
+  in place with stable `rowId`; `rowId = 0` ingestion auto-assigns a real rowid; re-upsert after
+  deletion-by-source-record reinserts fresh. All pass. Existing `DeleteBySourceRecordIdTest` + all other DAO JVM tests
+  still green; `assembleDebugAndroidTest` green after removing the now-defunct `batchConflictTargetedUpsert`
+  db-injection probe from `UpsertPrototypeDao` (KSP error confirmed Room 2.8 does not inject `SupportSQLiteDatabase`
+  into abstract DAO methods — the probe's question was answered by the Step 7 research, so it is deleted, not fixed).
+- **Docs:** `internal-docs/DATA_FLOW.md` idempotency-contract paragraph + data-flow diagram label updated to describe
+  the HR/HRV conflict-targeted strategy vs `@Upsert` elsewhere.
+- **Note:** `UpsertConflictStrategyInstrumentedTest` (Step 7) still passes unmodified; production DAO SQL is byte-for-
+  byte the prototype's proven statement, so on-device behavior is already characterized. Remaining pre-commit:
+  `./gradlew lintRelease` at the very end.
 
 #### Phase 4 — steps 9–11
 
