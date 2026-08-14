@@ -26,6 +26,7 @@ class WorkerSchedulerImpl
             const val LOCAL_BACKUP_WORK_NAME = WorkerScheduler.LOCAL_BACKUP_WORK_NAME
             const val BIRTHDAY_WORK_NAME = WorkerScheduler.BIRTHDAY_WORK_NAME
             const val DATA_CLEANUP_WORK_NAME = WorkerScheduler.DATA_CLEANUP_WORK_NAME
+            const val DATA_ROLLUP_WORK_NAME = WorkerScheduler.DATA_ROLLUP_WORK_NAME
             const val RESYNC_WORK_NAME = WorkerScheduler.RESYNC_WORK_NAME
             const val PERIODIC_SYNC_WORK_NAME = WorkerScheduler.PERIODIC_SYNC_WORK_NAME
             const val DATABASE_MIGRATION_WORK_NAME = WorkerScheduler.DATABASE_MIGRATION_WORK_NAME
@@ -171,6 +172,26 @@ class WorkerSchedulerImpl
 
             workManager.get().enqueueUniquePeriodicWork(
                 DATA_CLEANUP_WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                request,
+            )
+        }
+
+        override fun scheduleDataRollupWorker() {
+            val constraints =
+                Constraints
+                    .Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .setRequiresDeviceIdle(true)
+                    .build()
+
+            val request =
+                PeriodicWorkRequestBuilder<DataRollupWorker>(1, TimeUnit.DAYS)
+                    .setConstraints(constraints)
+                    .build()
+
+            workManager.get().enqueueUniquePeriodicWork(
+                DATA_ROLLUP_WORK_NAME,
                 ExistingPeriodicWorkPolicy.KEEP,
                 request,
             )

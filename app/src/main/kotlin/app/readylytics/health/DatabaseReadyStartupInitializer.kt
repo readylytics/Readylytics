@@ -55,6 +55,7 @@ internal class DatabaseReadyStartupInitializer(
             workerScheduler.scheduleBackupWorker(backupSchedule)
             workerScheduler.scheduleBirthdayWorker()
             workerScheduler.scheduleDataCleanupWorker()
+            workerScheduler.scheduleDataRollupWorker()
             if (periodicSyncMinutes != null) {
                 workerScheduler.schedulePeriodicSync(periodicSyncMinutes.toLong())
             } else {

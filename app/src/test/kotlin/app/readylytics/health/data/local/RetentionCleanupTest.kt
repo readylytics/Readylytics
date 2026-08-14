@@ -27,6 +27,7 @@ class RetentionCleanupTest {
     private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
     private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
     private lateinit var stepRecordDao: StepRecordDao
+    private lateinit var minuteBucketDao: MinuteBucketDao
     private lateinit var retentionCleanup: RetentionCleanup
 
     @Before
@@ -49,6 +50,7 @@ class RetentionCleanupTest {
         oxygenSaturationDao = database.oxygenSaturationRecordDao()
         bodyTemperatureDao = database.bodyTemperatureRecordDao()
         stepRecordDao = database.stepRecordDao()
+        minuteBucketDao = database.minuteBucketDao()
 
         val transactionRunner = RoomTransactionRunner(database)
         retentionCleanup =
@@ -65,6 +67,7 @@ class RetentionCleanupTest {
                 oxygenSaturationDao = oxygenSaturationDao,
                 bodyTemperatureDao = bodyTemperatureDao,
                 stepRecordDao = stepRecordDao,
+                minuteBucketDao = minuteBucketDao,
             )
     }
 
@@ -308,6 +311,39 @@ class RetentionCleanupTest {
                 ),
             )
 
+            // 11. Warm-tier minute buckets
+            minuteBucketDao.upsertBuckets(
+                listOf(
+                    HrMinuteBucketEntity(
+                        bucketStartMs = cutoffMs - 120_000,
+                        bucketEndMs = cutoffMs - 60_000,
+                        minBpm = 60,
+                        maxBpm = 70,
+                        avgBpm = 65.0,
+                        sampleCount = 60,
+                        recordType = "RESTING",
+                    ),
+                    HrMinuteBucketEntity(
+                        bucketStartMs = cutoffMs,
+                        bucketEndMs = cutoffMs + 60_000,
+                        minBpm = 65,
+                        maxBpm = 75,
+                        avgBpm = 70.0,
+                        sampleCount = 60,
+                        recordType = "RESTING",
+                    ),
+                    HrMinuteBucketEntity(
+                        bucketStartMs = cutoffMs + 60_000,
+                        bucketEndMs = cutoffMs + 120_000,
+                        minBpm = 70,
+                        maxBpm = 80,
+                        avgBpm = 75.0,
+                        sampleCount = 60,
+                        recordType = "RESTING",
+                    ),
+                ),
+            )
+
             // Execute cleanup
             retentionCleanup.deleteBefore(cutoffMs)
 
@@ -358,5 +394,9 @@ class RetentionCleanupTest {
             // Verify Body Temperature
             val bodyTemperatureRemaining = bodyTemperatureDao.getByTimeRange(0, Long.MAX_VALUE)
             assertEquals(listOf("equal_bt", "new_bt"), bodyTemperatureRemaining.map { it.id }.sorted())
+
+            // Verify warm-tier minute buckets (old deleted, equal/new remain)
+            val bucketRemaining = minuteBucketDao.getMinuteBuckets(cutoffMs - 120_000, cutoffMs + 120_000)
+            assertEquals(listOf(2, 3), bucketRemaining.map { it.bucketIndex })
         }
 }

@@ -6,13 +6,13 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "hr_minute_buckets",
+    primaryKeys = ["bucketStartMs", "recordType", "sessionId"],
     indices = [
         Index(value = ["sessionId", "recordType"]),
         Index(value = ["bucketStartMs", "bucketEndMs"]),
     ],
 )
 data class HrMinuteBucketEntity(
-    @PrimaryKey
     val bucketStartMs: Long,
     val bucketEndMs: Long,
     val minBpm: Int,
@@ -20,6 +20,6 @@ data class HrMinuteBucketEntity(
     val avgBpm: Double,
     val sampleCount: Int,
     val recordType: String,
-    val sessionId: String? = null,
+    val sessionId: String = "",
     val deviceName: String? = null,
 )

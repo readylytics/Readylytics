@@ -35,19 +35,20 @@ val MIGRATION_9_10 =
                     "ON health_source_records(sourceRecordId)",
             )
 
-            // 2. Warm-tier minute buckets.
+            // 2. Warm-tier minute buckets (composite identity: one row per minute/session/type).
             db.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS hr_minute_buckets (
-                    bucketStartMs INTEGER PRIMARY KEY NOT NULL,
+                    bucketStartMs INTEGER NOT NULL,
                     bucketEndMs INTEGER NOT NULL,
                     minBpm INTEGER NOT NULL,
                     maxBpm INTEGER NOT NULL,
                     avgBpm REAL NOT NULL,
                     sampleCount INTEGER NOT NULL,
                     recordType TEXT NOT NULL,
-                    sessionId TEXT,
-                    deviceName TEXT
+                    sessionId TEXT NOT NULL,
+                    deviceName TEXT,
+                    PRIMARY KEY(bucketStartMs, recordType, sessionId)
                 )
                 """.trimIndent(),
             )

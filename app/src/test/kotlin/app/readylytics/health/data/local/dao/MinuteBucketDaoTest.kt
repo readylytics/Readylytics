@@ -41,7 +41,6 @@ class MinuteBucketDaoTest {
             avgBpm = 70.0,
             sampleCount = 60,
             recordType = "RESTING",
-            sessionId = null,
             deviceName = "Watch",
         )
         dao.upsertBuckets(listOf(bucket))
@@ -52,8 +51,8 @@ class MinuteBucketDaoTest {
 
     @Test
     fun deleteBeforeTimestamp_prunesOldBuckets() = runBlocking {
-        val bucket1 = HrMinuteBucketEntity(60000L, 120000L, 60, 80, 70.0, 60, "RESTING", null, null)
-        val bucket2 = HrMinuteBucketEntity(180000L, 240000L, 65, 85, 75.0, 60, "RESTING", null, null)
+        val bucket1 = HrMinuteBucketEntity(60000L, 120000L, 60, 80, 70.0, 60, "RESTING", "", null)
+        val bucket2 = HrMinuteBucketEntity(180000L, 240000L, 65, 85, 75.0, 60, "RESTING", "", null)
         dao.upsertBuckets(listOf(bucket1, bucket2))
 
         val deleted = dao.deleteBeforeTimestamp(150000L)

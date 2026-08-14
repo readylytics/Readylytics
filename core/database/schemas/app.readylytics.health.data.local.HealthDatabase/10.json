@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "c94b397e748c23dea05404282c9eeacc",
+    "identityHash": "64b8ae1be6ae215f4d8767f2c4a969ad",
     "entities": [
       {
         "tableName": "sleep_sessions",
@@ -1370,7 +1370,7 @@
       },
       {
         "tableName": "hr_minute_buckets",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bucketStartMs` INTEGER NOT NULL, `bucketEndMs` INTEGER NOT NULL, `minBpm` INTEGER NOT NULL, `maxBpm` INTEGER NOT NULL, `avgBpm` REAL NOT NULL, `sampleCount` INTEGER NOT NULL, `recordType` TEXT NOT NULL, `sessionId` TEXT, `deviceName` TEXT, PRIMARY KEY(`bucketStartMs`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bucketStartMs` INTEGER NOT NULL, `bucketEndMs` INTEGER NOT NULL, `minBpm` INTEGER NOT NULL, `maxBpm` INTEGER NOT NULL, `avgBpm` REAL NOT NULL, `sampleCount` INTEGER NOT NULL, `recordType` TEXT NOT NULL, `sessionId` TEXT NOT NULL, `deviceName` TEXT, PRIMARY KEY(`bucketStartMs`, `recordType`, `sessionId`))",
         "fields": [
           {
             "fieldPath": "bucketStartMs",
@@ -1417,7 +1417,8 @@
           {
             "fieldPath": "sessionId",
             "columnName": "sessionId",
-            "affinity": "TEXT"
+            "affinity": "TEXT",
+            "notNull": true
           },
           {
             "fieldPath": "deviceName",
@@ -1428,7 +1429,9 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "bucketStartMs"
+            "bucketStartMs",
+            "recordType",
+            "sessionId"
           ]
         },
         "indices": [
@@ -1457,7 +1460,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c94b397e748c23dea05404282c9eeacc')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '64b8ae1be6ae215f4d8767f2c4a969ad')"
     ]
   }
 }
