@@ -53,7 +53,7 @@ class HeartRateRepositoryImpl
 
         private fun mapToDomain(entity: HeartRateRecordEntity): HeartRateRecordData =
             HeartRateRecordData(
-                id = entity.id,
+                id = "${entity.sourceRecordRef}:${entity.timestampMs}",
                 timestampMs = entity.timestampMs,
                 beatsPerMinute = entity.beatsPerMinute,
                 recordType = entity.recordType,
@@ -63,7 +63,7 @@ class HeartRateRepositoryImpl
 
         private fun mapToDomain(entity: HrvRecordEntity): HrvRecordData =
             HrvRecordData(
-                id = entity.id,
+                id = "${entity.sourceRecordRef}:${entity.timestampMs}",
                 timestampMs = entity.timestampMs,
                 rmssdMs = entity.rmssdMs,
                 recordType = entity.recordType,

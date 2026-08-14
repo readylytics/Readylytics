@@ -9,6 +9,7 @@ import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
@@ -61,6 +62,7 @@ class RoomHealthIngestionStore
         private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
         private val stepRecordDao: StepRecordDao,
         private val dailySummaryDao: DailySummaryDao,
+        private val sourceRecordDao: SourceRecordDao,
         private val transactionRunner: TransactionRunner,
     ) : HealthIngestionStore {
         override suspend fun persist(batch: HealthIngestionBatch) {
@@ -118,10 +120,18 @@ class RoomHealthIngestionStore
 
         override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
             if (samples.isEmpty()) return
+            val sourceRefByBaseId = samples.mapTo(mutableSetOf()) { it.id.substringBefore('_') }
+                .associateWith { baseId ->
+                    sourceRecordDao.getOrCreateSourceRef(
+                        sourceRecordId = baseId,
+                        recordType = "HEART_RATE",
+                        createdAtMs = samples.first().timestampMs,
+                    )
+                }
             samples.forEachPersistenceBatch { batch ->
                 val startedAt = System.currentTimeMillis()
                 transactionRunner.runInTransaction {
-                    heartRateDao.upsertAll(batch.map(HeartRateInput::toEntity))
+                    heartRateDao.upsertAll(batch.map { input -> input.toEntity(sourceRefByBaseId) })
                 }
                 logD(PERSIST_TAG) {
                     "HR batch persisted: ${batch.size} samples in ${System.currentTimeMillis() - startedAt}ms"
@@ -131,10 +141,18 @@ class RoomHealthIngestionStore
 
         override suspend fun persistHrvSamples(samples: List<HrvInput>) {
             if (samples.isEmpty()) return
+            val sourceRefByBaseId = samples.mapTo(mutableSetOf()) { it.id.substringBefore('_') }
+                .associateWith { baseId ->
+                    sourceRecordDao.getOrCreateSourceRef(
+                        sourceRecordId = baseId,
+                        recordType = "HRV",
+                        createdAtMs = samples.first().timestampMs,
+                    )
+                }
             samples.forEachPersistenceBatch { batch ->
                 val startedAt = System.currentTimeMillis()
                 transactionRunner.runInTransaction {
-                    hrvDao.upsertAll(batch.map(HrvInput::toEntity))
+                    hrvDao.upsertAll(batch.map { input -> input.toEntity(sourceRefByBaseId) })
                 }
                 logD(PERSIST_TAG) {
                     "HRV batch persisted: ${batch.size} samples in ${System.currentTimeMillis() - startedAt}ms"
@@ -213,9 +231,9 @@ private fun SleepStageInput.toEntity() =
         durationMinutes = durationMinutes,
     )
 
-private fun HeartRateInput.toEntity() =
+private fun HeartRateInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
     HeartRateRecordEntity(
-        sourceRecordId = id,
+        sourceRecordRef = sourceRefByBaseId.getValue(id.substringBefore('_')),
         timestampMs = timestampMs,
         beatsPerMinute = beatsPerMinute,
         recordType = recordType,
@@ -223,9 +241,9 @@ private fun HeartRateInput.toEntity() =
         deviceName = deviceName,
     )
 
-private fun HrvInput.toEntity() =
+private fun HrvInput.toEntity(sourceRefByBaseId: Map<String, Long>) =
     HrvRecordEntity(
-        sourceRecordId = id,
+        sourceRecordRef = sourceRefByBaseId.getValue(id.substringBefore('_')),
         timestampMs = timestampMs,
         rmssdMs = rmssdMs,
         recordType = recordType,

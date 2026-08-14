@@ -33,7 +33,7 @@ class ScoringHistoryRepositoryImplTest {
         runTest {
             val entity =
                 HeartRateRecordEntity(
-                    id = "hr1_500",
+                    sourceRecordRef = 1L,
                     timestampMs = 500L,
                     beatsPerMinute = 55,
                     recordType = "SLEEP",

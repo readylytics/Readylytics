@@ -144,6 +144,80 @@ class DatabaseMigrationInstrumentedTest {
         }
     }
 
+    @Test
+    fun migrate9To10NormalizesSourceRecordRefsAndPreservesData() {
+        helper.createDatabase(TEST_DATABASE, 9).apply {
+            execSQL(
+                "INSERT INTO heart_rate_records (sourceRecordId, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+                    "VALUES ('uuid-abc_1000', 1000, 72, 'RESTING', NULL, NULL)",
+            )
+            execSQL(
+                "INSERT INTO heart_rate_records (sourceRecordId, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+                    "VALUES ('uuid-abc_2000', 2000, 80, 'RESTING', NULL, NULL)",
+            )
+            execSQL(
+                "INSERT INTO heart_rate_records (sourceRecordId, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+                    "VALUES ('uuid-xyz_1000', 1000, 65, 'RESTING', NULL, NULL)",
+            )
+            execSQL(
+                "INSERT INTO hrv_records (sourceRecordId, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
+                    "VALUES ('uuid-hrv_3000', 3000, 42.5, 'SLEEP', NULL, NULL)",
+            )
+            close()
+        }
+
+        val database =
+            helper.runMigrationsAndValidate(
+                TEST_DATABASE,
+                10,
+                true,
+                *DatabaseMigrations.all,
+            )
+
+        // Dimension table holds the distinct base UUIDs, one row per source.
+        database.query("SELECT sourceRecordId, recordType FROM health_source_records ORDER BY sourceRecordId").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val rows = mutableListOf<Pair<String, String>>()
+            do {
+                rows.add(cursor.getString(0) to cursor.getString(1))
+            } while (cursor.moveToNext())
+            assertEquals(3, rows.size)
+            assertTrue(rows.any { it == "uuid-abc" to "HEART_RATE" })
+            assertTrue(rows.any { it == "uuid-xyz" to "HEART_RATE" })
+            assertTrue(rows.any { it == "uuid-hrv" to "HRV" })
+        }
+
+        // Heart-rate rows survive losslessly and share one ref per base UUID.
+        database.query(
+            "SELECT hr.timestampMs, hr.beatsPerMinute, sr.sourceRecordId " +
+                "FROM heart_rate_records hr JOIN health_source_records sr ON sr.id = hr.sourceRecordRef",
+        ).use { cursor ->
+            val byKey = mutableMapOf<Pair<Long, String>, Int>()
+            while (cursor.moveToNext()) {
+                byKey[cursor.getLong(0) to cursor.getString(2)] = cursor.getInt(1)
+            }
+            assertEquals(3, byKey.size)
+            assertEquals(72, byKey[1000L to "uuid-abc"])
+            assertEquals(80, byKey[2000L to "uuid-abc"])
+            assertEquals(65, byKey[1000L to "uuid-xyz"])
+        }
+
+        // HRV row survives with its ref normalized.
+        database.query(
+            "SELECT hrv.rmssdMs, sr.sourceRecordId " +
+                "FROM hrv_records hrv JOIN health_source_records sr ON sr.id = hrv.sourceRecordRef",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(42.5, cursor.getFloat(0).toDouble(), 0.001)
+            assertEquals("uuid-hrv", cursor.getString(1))
+        }
+
+        // Warm-tier table exists.
+        database.query("SELECT * FROM hr_minute_buckets LIMIT 1").use { cursor ->
+            assertTrue(cursor.columnNames.toList().containsAll(listOf("bucketStartMs", "bucketEndMs", "avgBpm", "sampleCount", "recordType")))
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "audit-migration-test"
     }

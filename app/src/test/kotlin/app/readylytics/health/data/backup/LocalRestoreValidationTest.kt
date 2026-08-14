@@ -137,20 +137,22 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-v5.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
+            val heartRef = db.heartRateDao().getSince(0).single().sourceRecordRef
             assertEquals(
                 "hc-heart",
                 db
-                    .heartRateDao()
-                    .getSince(0)
-                    .single()
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == heartRef }
                     .sourceRecordId,
             )
+            val hrvRef = db.hrvDao().getSince(0).single().sourceRecordRef
             assertEquals(
                 "hc-hrv",
                 db
-                    .hrvDao()
-                    .getSince(0)
-                    .single()
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == hrvRef }
                     .sourceRecordId,
             )
             zipFile.delete()
@@ -187,20 +189,22 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-malformed-suffix-v6.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
+            val heartRef = db.heartRateDao().getSince(0).single().sourceRecordRef
             assertEquals(
                 malformedHeartId,
                 db
-                    .heartRateDao()
-                    .getSince(0)
-                    .single()
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == heartRef }
                     .sourceRecordId,
             )
+            val hrvRef = db.hrvDao().getSince(0).single().sourceRecordRef
             assertEquals(
                 mismatchedHrvId,
                 db
-                    .hrvDao()
-                    .getSince(0)
-                    .single()
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == hrvRef }
                     .sourceRecordId,
             )
             zipFile.delete()

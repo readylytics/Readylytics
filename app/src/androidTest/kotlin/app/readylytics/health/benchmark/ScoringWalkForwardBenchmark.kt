@@ -106,7 +106,7 @@ class ScoringWalkForwardBenchmark {
             val batch =
                 (0 until 5_000).map { i ->
                     HeartRateRecordEntity(
-                        id = "bench_hr_${seq}_$i",
+                        sourceRecordRef = seq + 1,
                         timestampMs = baseMs + i * 1_000L,
                         beatsPerMinute = 60 + (i % 40),
                         recordType = RecordType.RESTING.name,
@@ -257,7 +257,7 @@ class ScoringWalkForwardBenchmark {
             while (sampleTime < wakeTime) {
                 heartRateRows +=
                     HeartRateRecordEntity(
-                        id = "bench_hr_${id}_$sampleIndex",
+                        sourceRecordRef = index.toLong() * 100_000L + sampleIndex,
                         timestampMs = sampleTime,
                         beatsPerMinute = 55 + (sampleIndex % 15),
                         recordType = RecordType.RESTING.name,

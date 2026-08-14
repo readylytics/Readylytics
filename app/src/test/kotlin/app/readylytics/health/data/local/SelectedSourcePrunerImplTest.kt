@@ -14,6 +14,7 @@ import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.HealthDataType
 import kotlinx.coroutines.test.runTest
@@ -81,9 +82,23 @@ class SelectedSourcePrunerImplTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun pruneDeletesNonMatchingDevicesWithinRange() =
         runTest {
+            seedSourceRecordParents(1L, 2L)
             val zoneId = ZoneId.systemDefault()
             val date = LocalDate.of(2024, 6, 1)
             val timestamp = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
@@ -122,14 +137,14 @@ class SelectedSourcePrunerImplTest {
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(
-                        id = "hr_a",
+                        sourceRecordRef = 1L,
                         timestampMs = timestamp,
                         beatsPerMinute = 70,
                         recordType = "RESTING",
                         deviceName = "Device A",
                     ),
                     HeartRateRecordEntity(
-                        id = "hr_b",
+                        sourceRecordRef = 2L,
                         timestampMs = timestamp,
                         beatsPerMinute = 70,
                         recordType = "RESTING",
@@ -152,7 +167,7 @@ class SelectedSourcePrunerImplTest {
 
             val remainingHr = heartRateDao.getByTimeRange(0, timestamp + 10000000)
             assertEquals(1, remainingHr.size)
-            assertEquals("hr_b", remainingHr[0].id)
+            assertEquals(2L, remainingHr[0].sourceRecordRef)
         }
 
     @Test
@@ -241,6 +256,7 @@ class SelectedSourcePrunerImplTest {
     @Test
     fun pruneUsesScoringZoneForRangeBoundaries() =
         runTest {
+            seedSourceRecordParents(1L)
             val originalTimeZone = TimeZone.getDefault()
             TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
             try {
@@ -255,7 +271,7 @@ class SelectedSourcePrunerImplTest {
                 heartRateDao.upsertAll(
                     listOf(
                         HeartRateRecordEntity(
-                            id = "scoring-zone-record",
+                            sourceRecordRef = 1L,
                             timestampMs = timestamp,
                             beatsPerMinute = 70,
                             recordType = "RESTING",

@@ -54,6 +54,7 @@ class PersistenceBatchingTest {
                     bodyTemperatureRecordDao = recordingDao(events, "bodyTemperature"),
                     stepRecordDao = recordingDao(events, "steps"),
                     dailySummaryDao = recordingDao(events, "summary"),
+                    sourceRecordDao = recordingDao(events, "sourceRecord"),
                     transactionRunner = transactionRunner,
                 )
 
@@ -205,7 +206,14 @@ class PersistenceBatchingTest {
             if (method.name == "upsertAll") {
                 events += "$name:${(args?.firstOrNull() as? List<*>)?.size ?: 0}"
             }
-            Unit
+            when {
+                // suspend DAO methods surface as Object return types on the Proxy; the source-ref
+                // resolvers must hand back a Long or re-ingest breaks with a ClassCastException.
+                method.name == "getOrCreateSourceRef" || method.name == "getSourceRef" -> 1L
+                method.returnType == java.lang.Integer.TYPE -> 1
+                method.returnType == java.lang.Long.TYPE || method.returnType == java.lang.Long::class.java -> 1L
+                else -> Unit
+            }
         } as T
 
     private fun buildStore(
@@ -225,6 +233,7 @@ class PersistenceBatchingTest {
             bodyTemperatureRecordDao = recordingDao(events, "bodyTemperature"),
             stepRecordDao = recordingDao(events, "steps"),
             dailySummaryDao = recordingDao(events, "summary"),
+            sourceRecordDao = recordingDao(events, "sourceRecord"),
             transactionRunner = transactionRunner,
         )
 

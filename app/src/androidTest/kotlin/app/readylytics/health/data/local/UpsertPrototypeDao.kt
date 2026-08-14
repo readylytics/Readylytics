@@ -29,15 +29,15 @@ interface UpsertPrototypeDao {
     @Upsert
     suspend fun upsertAllHrv(records: List<HrvRecordEntity>)
 
-    @Query("SELECT * FROM heart_rate_records WHERE sourceRecordId = :sourceRecordId AND timestampMs = :timestampMs")
+    @Query("SELECT * FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef AND timestampMs = :timestampMs")
     suspend fun getHeartRate(
-        sourceRecordId: String,
+        sourceRecordRef: Long,
         timestampMs: Long,
     ): HeartRateRecordEntity?
 
-    @Query("SELECT * FROM hrv_records WHERE sourceRecordId = :sourceRecordId AND timestampMs = :timestampMs")
+    @Query("SELECT * FROM hrv_records WHERE sourceRecordRef = :sourceRecordRef AND timestampMs = :timestampMs")
     suspend fun getHrv(
-        sourceRecordId: String,
+        sourceRecordRef: Long,
         timestampMs: Long,
     ): HrvRecordEntity?
 
@@ -65,9 +65,9 @@ interface UpsertPrototypeDao {
      */
     @Query(
         "INSERT INTO heart_rate_records " +
-            "(sourceRecordId, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
-            "VALUES (:sourceRecordId, :timestampMs, :beatsPerMinute, :recordType, :sessionId, :deviceName) " +
-            "ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET " +
+            "(sourceRecordRef, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+            "VALUES (:sourceRecordRef, :timestampMs, :beatsPerMinute, :recordType, :sessionId, :deviceName) " +
+            "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
             "recordType = excluded.recordType, " +
             "sessionId = excluded.sessionId, " +
             "deviceName = excluded.deviceName " +
@@ -75,7 +75,7 @@ interface UpsertPrototypeDao {
             "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)",
     )
     suspend fun conflictTargetedUpsert(
-        sourceRecordId: String,
+        sourceRecordRef: Long,
         timestampMs: Long,
         beatsPerMinute: Int,
         recordType: String,

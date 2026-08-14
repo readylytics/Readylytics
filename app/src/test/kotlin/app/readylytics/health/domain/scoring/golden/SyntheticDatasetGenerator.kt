@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring.golden
 
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.SleepStageEntity
@@ -28,6 +29,9 @@ class SyntheticDatasetGenerator(
     seed: Long = 20260202L,
 ) {
     private val random = Random(seed)
+    private var nextSourceRecordRef = 0L
+
+    private fun nextSourceRecordRef(): Long = ++nextSourceRecordRef
 
     data class Config(
         val historyDays: Int = 3650,
@@ -70,6 +74,18 @@ class SyntheticDatasetGenerator(
         suspend fun flushHr(force: Boolean = false) {
             if (hrBuffer.isEmpty()) return
             if (force || hrBuffer.size >= config.flushEveryRows) {
+                // heart_rate_records FKs into health_source_records; the in-memory test DB enforces
+                // FKs, so materialize a parent row for every ref before the chunk's child rows.
+                db.sourceRecordDao().insertAll(
+                    hrBuffer.map { hr ->
+                        HealthSourceRecordEntity(
+                            id = hr.sourceRecordRef,
+                            sourceRecordId = "fixture-${hr.sourceRecordRef}",
+                            recordType = "HEART_RATE",
+                            createdAtMs = 0L,
+                        )
+                    },
+                )
                 heartRateDao.upsertAll(hrBuffer)
                 heartRateRowCount += hrBuffer.size
                 hrBuffer.clear()
@@ -128,7 +144,7 @@ class SyntheticDatasetGenerator(
                 )
             hrvRows +=
                 HrvRecordEntity(
-                    id = "synthetic_hrv_$sleepIndex",
+                    sourceRecordRef = nextSourceRecordRef(),
                     timestampMs = bedTime + 3 * 60 * 60_000L,
                     rmssdMs = 35f + random.nextInt(15),
                     recordType = RecordType.RESTING.name,
@@ -141,6 +157,16 @@ class SyntheticDatasetGenerator(
         }
         sleepSessionDao.upsertAll(sleepSessions)
         sleepStageDao.upsertAll(sleepStages)
+        db.sourceRecordDao().insertAll(
+            hrvRows.map { hrv ->
+                HealthSourceRecordEntity(
+                    id = hrv.sourceRecordRef,
+                    sourceRecordId = "fixture-${hrv.sourceRecordRef}",
+                    recordType = "HRV",
+                    createdAtMs = 0L,
+                )
+            },
+        )
         hrvDao.upsertAll(hrvRows)
         hrvRowCount += hrvRows.size
 
@@ -191,18 +217,16 @@ class SyntheticDatasetGenerator(
         val sampleIntervalMs = (denseWindowMs / config.heartRateSamplesInDenseWindow).coerceAtLeast(1L)
 
         var sampleTime = denseWindowStartMs
-        var sampleSeq = 0L
         while (sampleTime < denseWindowEndMs) {
             hrBuffer +=
                 HeartRateRecordEntity(
-                    id = "synthetic_hr_$sampleSeq",
+                    sourceRecordRef = nextSourceRecordRef(),
                     timestampMs = sampleTime,
                     beatsPerMinute = 55 + random.nextInt(60),
                     recordType = RecordType.RESTING.name,
                     sessionId = null,
                     deviceName = deviceName(),
                 )
-            sampleSeq++
             sampleTime += sampleIntervalMs
             flushHr()
         }

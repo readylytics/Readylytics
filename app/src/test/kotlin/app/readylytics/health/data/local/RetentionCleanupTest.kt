@@ -73,9 +73,23 @@ class RetentionCleanupTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun testRetentionCleanup() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             val cutoffMs = 1000000L
 
             // 1. Sleep sessions & stages
@@ -152,19 +166,19 @@ class RetentionCleanupTest {
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(
-                        id = "old_hr",
+                        sourceRecordRef = 1L,
                         timestampMs = cutoffMs - 1,
                         beatsPerMinute = 70,
                         recordType = "RESTING",
                     ),
                     HeartRateRecordEntity(
-                        id = "equal_hr",
+                        sourceRecordRef = 2L,
                         timestampMs = cutoffMs,
                         beatsPerMinute = 70,
                         recordType = "RESTING",
                     ),
                     HeartRateRecordEntity(
-                        id = "new_hr",
+                        sourceRecordRef = 3L,
                         timestampMs = cutoffMs + 1,
                         beatsPerMinute = 70,
                         recordType = "RESTING",
@@ -175,9 +189,9 @@ class RetentionCleanupTest {
             // 3. HRV
             hrvDao.upsertAll(
                 listOf(
-                    HrvRecordEntity(id = "old_hrv", timestampMs = cutoffMs - 1, rmssdMs = 50f, recordType = "RESTING"),
-                    HrvRecordEntity(id = "equal_hrv", timestampMs = cutoffMs, rmssdMs = 50f, recordType = "RESTING"),
-                    HrvRecordEntity(id = "new_hrv", timestampMs = cutoffMs + 1, rmssdMs = 50f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = cutoffMs - 1, rmssdMs = 50f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 2L, timestampMs = cutoffMs, rmssdMs = 50f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 3L, timestampMs = cutoffMs + 1, rmssdMs = 50f, recordType = "RESTING"),
                 ),
             )
 
@@ -311,11 +325,11 @@ class RetentionCleanupTest {
 
             // Verify Heart Rate
             val hrRemaining = heartRateDao.getSince(0)
-            assertEquals(listOf("equal_hr", "new_hr"), hrRemaining.map { it.id }.sorted())
+            assertEquals(listOf(2L, 3L), hrRemaining.map { it.sourceRecordRef }.sorted())
 
             // Verify HRV
             val hrvRemaining = hrvDao.getSince(0)
-            assertEquals(listOf("equal_hrv", "new_hrv"), hrvRemaining.map { it.id }.sorted())
+            assertEquals(listOf(2L, 3L), hrvRemaining.map { it.sourceRecordRef }.sorted())
 
             // Verify Workout
             val workoutRemaining = workoutDao.getSince(0)

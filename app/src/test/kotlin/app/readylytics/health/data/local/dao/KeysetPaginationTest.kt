@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -37,14 +38,28 @@ class KeysetPaginationTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun testHeartRateKeysetPagination() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             val records =
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 1000L, beatsPerMinute = 60, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr2", timestampMs = 1000L, beatsPerMinute = 65, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr3", timestampMs = 2000L, beatsPerMinute = 70, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 1000L, beatsPerMinute = 65, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 3L, timestampMs = 2000L, beatsPerMinute = 70, recordType = "RESTING"),
                 )
             heartRateDao.upsertAll(records)
 
@@ -53,33 +68,34 @@ class KeysetPaginationTest {
                     startMs = 500L,
                     endMs = 2500L,
                     lastTimestampMs = 0L,
-                    lastId = "",
+                    lastSourceRecordRef = 0L,
                     limit = 2,
                 )
             assertEquals(2, page1.size)
-            assertEquals("hr1", page1[0].id)
-            assertEquals("hr2", page1[1].id)
+            assertEquals(1L, page1[0].sourceRecordRef)
+            assertEquals(2L, page1[1].sourceRecordRef)
 
             val page2 =
                 heartRateDao.getKeysetPage(
                     startMs = 500L,
                     endMs = 2500L,
                     lastTimestampMs = page1.last().timestampMs,
-                    lastId = page1.last().id,
+                    lastSourceRecordRef = page1.last().sourceRecordRef,
                     limit = 2,
                 )
             assertEquals(1, page2.size)
-            assertEquals("hr3", page2[0].id)
+            assertEquals(3L, page2[0].sourceRecordRef)
         }
 
     @Test
     fun testHrvKeysetPagination() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             val records =
                 listOf(
-                    HrvRecordEntity(id = "hrv1", timestampMs = 1000L, rmssdMs = 45f, recordType = "RESTING"),
-                    HrvRecordEntity(id = "hrv2", timestampMs = 1000L, rmssdMs = 50f, recordType = "RESTING"),
-                    HrvRecordEntity(id = "hrv3", timestampMs = 2000L, rmssdMs = 55f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, rmssdMs = 45f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 2L, timestampMs = 1000L, rmssdMs = 50f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 3L, timestampMs = 2000L, rmssdMs = 55f, recordType = "RESTING"),
                 )
             hrvDao.upsertAll(records)
 
@@ -88,22 +104,22 @@ class KeysetPaginationTest {
                     startMs = 500L,
                     endMs = 2500L,
                     lastTimestampMs = 0L,
-                    lastId = "",
+                    lastSourceRecordRef = 0L,
                     limit = 2,
                 )
             assertEquals(2, page1.size)
-            assertEquals("hrv1", page1[0].id)
-            assertEquals("hrv2", page1[1].id)
+            assertEquals(1L, page1[0].sourceRecordRef)
+            assertEquals(2L, page1[1].sourceRecordRef)
 
             val page2 =
                 hrvDao.getKeysetPage(
                     startMs = 500L,
                     endMs = 2500L,
                     lastTimestampMs = page1.last().timestampMs,
-                    lastId = page1.last().id,
+                    lastSourceRecordRef = page1.last().sourceRecordRef,
                     limit = 2,
                 )
             assertEquals(1, page2.size)
-            assertEquals("hrv3", page2[0].id)
+            assertEquals(3L, page2[0].sourceRecordRef)
         }
 }

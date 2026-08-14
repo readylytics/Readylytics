@@ -46,6 +46,7 @@ class HealthChangeSynchronizerImplTest {
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val stepRecordDao = mockk<StepRecordDao>(relaxed = true)
+    private val sourceRecordDao = mockk<SourceRecordDao>(relaxed = true)
 
     private val client = mockk<HealthConnectClient>(relaxed = true)
 
@@ -80,6 +81,7 @@ class HealthChangeSynchronizerImplTest {
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao = bodyTemperatureRecordDao,
                 stepRecordDao = stepRecordDao,
+                sourceRecordDao = sourceRecordDao,
             )
     }
 
@@ -324,21 +326,23 @@ class HealthChangeSynchronizerImplTest {
                     every { this@mockk.recordId } returns recordId
                 }
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
-            coEvery { heartRateDao.getBySourceRecordId(recordId) } returns
+            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
+            coEvery { heartRateDao.getBySourceRecordRef(1L) } returns
                 listOf(
-                    HeartRateRecordEntity("${recordId}_1000", 1000L, 60, "SLEEP"),
-                    HeartRateRecordEntity("${recordId}_2000", 2000L, 61, "SLEEP"),
+                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, beatsPerMinute = 60, recordType = "SLEEP"),
+                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 2000L, beatsPerMinute = 61, recordType = "SLEEP"),
                 )
-            coEvery { heartRateDao.deleteBySourceRecordId(recordId) } returns 2
+            coEvery { heartRateDao.deleteBySourceRecordRef(1L) } returns 2
+            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(setOf(epochDay(1000L), epochDay(2000L)), outcome.affectedDates)
             coVerifyOrder {
-                heartRateDao.getBySourceRecordId(recordId)
-                heartRateDao.deleteBySourceRecordId(recordId)
+                heartRateDao.getBySourceRecordRef(1L)
+                heartRateDao.deleteBySourceRecordRef(1L)
             }
-            coVerify(exactly = 0) { heartRateDao.deleteById(any()) }
+            coVerify(exactly = 0) { heartRateDao.deleteByRef(any()) }
         }
 
     @Test
@@ -351,21 +355,23 @@ class HealthChangeSynchronizerImplTest {
                     every { this@mockk.recordId } returns recordId
                 }
             routeOneChange(dataType = HealthDataType.HRV, change = change)
-            coEvery { hrvDao.getBySourceRecordId(recordId) } returns
+            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
+            coEvery { hrvDao.getBySourceRecordRef(1L) } returns
                 listOf(
-                    HrvRecordEntity("${recordId}_3000", 3000L, 40f, "SLEEP"),
-                    HrvRecordEntity("${recordId}_4000", 4000L, 41f, "SLEEP"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 3000L, rmssdMs = 40f, recordType = "SLEEP"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 4000L, rmssdMs = 41f, recordType = "SLEEP"),
                 )
-            coEvery { hrvDao.deleteBySourceRecordId(recordId) } returns 2
+            coEvery { hrvDao.deleteBySourceRecordRef(1L) } returns 2
+            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
 
             val outcome = synchronizer.applyPendingChanges()
 
             assertEquals(setOf(epochDay(3000L), epochDay(4000L)), outcome.affectedDates)
             coVerifyOrder {
-                hrvDao.getBySourceRecordId(recordId)
-                hrvDao.deleteBySourceRecordId(recordId)
+                hrvDao.getBySourceRecordRef(1L)
+                hrvDao.deleteBySourceRecordRef(1L)
             }
-            coVerify(exactly = 0) { hrvDao.deleteById(any()) }
+            coVerify(exactly = 0) { hrvDao.deleteByRef(any()) }
         }
 
     @Test
@@ -373,7 +379,13 @@ class HealthChangeSynchronizerImplTest {
         runTest {
             seedTokens()
             val recordId = "hr-record"
-            val oldEntity = HeartRateRecordEntity("${recordId}_1000", 1000L, 55, "SLEEP")
+            val oldEntity =
+                HeartRateRecordEntity(
+                    sourceRecordRef = 1L,
+                    timestampMs = 1000L,
+                    beatsPerMinute = 55,
+                    recordType = "SLEEP",
+                )
             val sampleTime = Instant.parse("2026-06-20T09:00:00Z")
             val record =
                 mockk<HeartRateRecord>(relaxed = true) {
@@ -395,8 +407,11 @@ class HealthChangeSynchronizerImplTest {
                     every { this@mockk.record } returns record
                 }
             routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
-            coEvery { heartRateDao.getBySourceRecordId(recordId) } returns listOf(oldEntity)
-            coEvery { heartRateDao.deleteBySourceRecordId(recordId) } returns 1
+            coEvery { sourceRecordDao.getSourceRef(recordId) } returns 1L
+            coEvery { sourceRecordDao.getOrCreateSourceRef(recordId, "HEART_RATE", any()) } returns 1L
+            coEvery { heartRateDao.getBySourceRecordRef(1L) } returns listOf(oldEntity)
+            coEvery { heartRateDao.deleteBySourceRecordRef(1L) } returns 1
+            coEvery { sourceRecordDao.deleteBySourceRecordId(recordId) } returns 1
 
             val outcome = synchronizer.applyPendingChanges()
 
@@ -405,11 +420,12 @@ class HealthChangeSynchronizerImplTest {
                 outcome.affectedDates,
             )
             coVerifyOrder {
-                heartRateDao.getBySourceRecordId(recordId)
-                heartRateDao.deleteBySourceRecordId(recordId)
+                heartRateDao.getBySourceRecordRef(1L)
+                heartRateDao.deleteBySourceRecordRef(1L)
                 heartRateDao.upsertAll(
                     match {
-                        it.map(HeartRateRecordEntity::id) == listOf("${recordId}_${sampleTime.toEpochMilli()}")
+                        it.map(HeartRateRecordEntity::sourceRecordRef) == listOf(1L) &&
+                            it.map(HeartRateRecordEntity::timestampMs) == listOf(sampleTime.toEpochMilli())
                     },
                 )
             }

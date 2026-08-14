@@ -77,7 +77,7 @@ class SessionLinkReconcilerTest {
         runTest {
             val hr1 =
                 HeartRateRecordEntity(
-                    id = "hr1",
+                    sourceRecordRef = 1L,
                     timestampMs = 1_500L,
                     beatsPerMinute = 50,
                     recordType = RecordType.RESTING.name,
@@ -85,7 +85,7 @@ class SessionLinkReconcilerTest {
                 )
             val hr2 =
                 HeartRateRecordEntity(
-                    id = "hr2",
+                    sourceRecordRef = 2L,
                     timestampMs = 4_500L,
                     beatsPerMinute = 48,
                     recordType = RecordType.SLEEP.name,
@@ -93,15 +93,15 @@ class SessionLinkReconcilerTest {
                 )
             val hr3 =
                 HeartRateRecordEntity(
-                    id = "hr3",
+                    sourceRecordRef = 3L,
                     timestampMs = 11_000L,
                     beatsPerMinute = 120,
                     recordType = RecordType.RESTING.name,
                     sessionId = null,
                 )
 
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr1, hr2, hr3)
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, "hr3", any()) } returns emptyList()
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hr1, hr2, hr3)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, 3L, any()) } returns emptyList()
             coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns listOf(hr3)
 
             val upsertSlot = slot<List<HeartRateRecordEntity>>()
@@ -109,12 +109,12 @@ class SessionLinkReconcilerTest {
 
             reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
 
-            val updated = upsertSlot.captured.associateBy { it.id }
-            assertEquals(RecordType.SLEEP.name, updated.getValue("hr1").recordType)
-            assertEquals("sleep_1", updated.getValue("hr1").sessionId)
-            assertEquals(RecordType.EXERCISE.name, updated.getValue("hr3").recordType)
-            assertEquals("workout_1", updated.getValue("hr3").sessionId)
-            org.junit.Assert.assertNull(updated["hr2"])
+            val updated = upsertSlot.captured.associateBy { it.sourceRecordRef }
+            assertEquals(RecordType.SLEEP.name, updated.getValue(1L).recordType)
+            assertEquals("sleep_1", updated.getValue(1L).sessionId)
+            assertEquals(RecordType.EXERCISE.name, updated.getValue(3L).recordType)
+            assertEquals("workout_1", updated.getValue(3L).sessionId)
+            org.junit.Assert.assertNull(updated[2L])
         }
 
     @Test
@@ -122,15 +122,15 @@ class SessionLinkReconcilerTest {
         runTest {
             val hrv1 =
                 HrvRecordEntity(
-                    id = "hrv1",
+                    sourceRecordRef = 1L,
                     timestampMs = 2_000L,
                     rmssdMs = 42f,
                     recordType = RecordType.RESTING.name,
                     sessionId = null,
                 )
 
-            coEvery { hrvDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hrv1)
-            coEvery { hrvDao.getKeysetPage(0L, 20_000L, 2_000L, "hrv1", any()) } returns emptyList()
+            coEvery { hrvDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hrv1)
+            coEvery { hrvDao.getKeysetPage(0L, 20_000L, 2_000L, 1L, any()) } returns emptyList()
             coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
 
             val upsertSlot = slot<List<HrvRecordEntity>>()
@@ -138,9 +138,9 @@ class SessionLinkReconcilerTest {
 
             reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
 
-            val updated = upsertSlot.captured.associateBy { it.id }
-            assertEquals(RecordType.SLEEP.name, updated.getValue("hrv1").recordType)
-            assertEquals("sleep_1", updated.getValue("hrv1").sessionId)
+            val updated = upsertSlot.captured.associateBy { it.sourceRecordRef }
+            assertEquals(RecordType.SLEEP.name, updated.getValue(1L).recordType)
+            assertEquals("sleep_1", updated.getValue(1L).sessionId)
         }
 
     @Test
@@ -148,15 +148,15 @@ class SessionLinkReconcilerTest {
         runTest {
             val hr3 =
                 HeartRateRecordEntity(
-                    id = "hr3",
+                    sourceRecordRef = 3L,
                     timestampMs = 11_000L,
                     beatsPerMinute = 120,
                     recordType = RecordType.EXERCISE.name,
                     sessionId = "workout_1",
                 )
 
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr3)
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, "hr3", any()) } returns emptyList()
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hr3)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 11_000L, 3L, any()) } returns emptyList()
             coEvery { heartRateDao.getByTimeRange(10_000L, 14_000L) } returns listOf(hr3)
             coEvery { hrvDao.getKeysetPage(any(), any(), any(), any(), any()) } returns emptyList()
 
@@ -188,7 +188,7 @@ class SessionLinkReconcilerTest {
         runTest {
             val hr1A =
                 HeartRateRecordEntity(
-                    id = "hr1",
+                    sourceRecordRef = 1L,
                     timestampMs = 1_500L,
                     beatsPerMinute = 50,
                     recordType = RecordType.RESTING.name,
@@ -196,7 +196,7 @@ class SessionLinkReconcilerTest {
                 )
             val hr2A =
                 HeartRateRecordEntity(
-                    id = "hr2",
+                    sourceRecordRef = 2L,
                     timestampMs = 4_500L,
                     beatsPerMinute = 48,
                     recordType = RecordType.SLEEP.name,
@@ -210,25 +210,25 @@ class SessionLinkReconcilerTest {
             coEvery { hrvDao.getKeysetPage(any(), any(), any(), any(), any()) } returns emptyList()
 
             // --- Scenario A ---
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr1A, hr2A)
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, "hr2", any()) } returns emptyList()
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hr1A, hr2A)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, 2L, any()) } returns emptyList()
             val upsertSlotA = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotA)) } returns Unit
             reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
             val upsertedA = if (upsertSlotA.isCaptured) upsertSlotA.captured else emptyList()
             val resultA =
-                (listOf(hr1A, hr2A).associateBy { it.id } + upsertedA.associateBy { it.id })
+                (listOf(hr1A, hr2A).associateBy { it.sourceRecordRef } + upsertedA.associateBy { it.sourceRecordRef })
                     .mapValues { it.value.recordType to it.value.sessionId }
 
             // --- Scenario B ---
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, "", any()) } returns listOf(hr1B, hr2B)
-            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, "hr2", any()) } returns emptyList()
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 0L, 0L, any()) } returns listOf(hr1B, hr2B)
+            coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, 2L, any()) } returns emptyList()
             val upsertSlotB = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotB)) } returns Unit
             reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
             val upsertedB = if (upsertSlotB.isCaptured) upsertSlotB.captured else emptyList()
             val resultB =
-                (listOf(hr1B, hr2B).associateBy { it.id } + upsertedB.associateBy { it.id })
+                (listOf(hr1B, hr2B).associateBy { it.sourceRecordRef } + upsertedB.associateBy { it.sourceRecordRef })
                     .mapValues { it.value.recordType to it.value.sessionId }
 
             assertEquals(resultA, resultB)

@@ -16,9 +16,11 @@ import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.InsightDismissalDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
@@ -125,6 +127,12 @@ abstract class DatabaseModule {
 
         @Provides
         fun provideStepRecordDao(db: HealthDatabase): StepRecordDao = db.stepRecordDao()
+
+        @Provides
+        fun provideSourceRecordDao(db: HealthDatabase): SourceRecordDao = db.sourceRecordDao()
+
+        @Provides
+        fun provideMinuteBucketDao(db: HealthDatabase): MinuteBucketDao = db.minuteBucketDao()
     }
 }
 

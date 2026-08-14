@@ -227,7 +227,7 @@ class ScoringRepositoryN1Test {
             val samples =
                 (0 until 60).map { i ->
                     app.readylytics.health.data.local.entity.HeartRateRecordEntity(
-                        id = "s$i",
+                        sourceRecordRef = i.toLong() + 1,
                         timestampMs = workout.startTime + i * 60000L,
                         beatsPerMinute = 150,
                         recordType = "EXERCISE",

@@ -60,6 +60,7 @@ class HealthChangeSynchronizerImpl
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
         private val stepRecordDao: StepRecordDao,
+        private val sourceRecordDao: SourceRecordDao,
     ) : HealthChangeSynchronizer {
         private val client by lazy { HealthConnectClient.getOrCreate(context) }
 
@@ -252,7 +253,16 @@ class HealthChangeSynchronizerImpl
                         val sleepSpans = sleepSessionDao.getOverlapping(startMs, endMs).map { it.toInput() }
                         val workoutSpans = workoutDao.getOverlapping(startMs, endMs).map { it.toInput() }
                         val hrInputs = HeartRateMapper.mapToInputs(listOf(domainHr), sleepSpans, workoutSpans)
-                        val entities = hrInputs.map { it.toEntity() }
+                        val entities =
+                            hrInputs.map { input ->
+                                input.toEntity(
+                                    sourceRecordDao.getOrCreateSourceRef(
+                                        sourceRecordId = input.id.substringBefore('_'),
+                                        recordType = "HEART_RATE",
+                                        createdAtMs = input.timestampMs,
+                                    ),
+                                )
+                            }
                         heartRateDao.upsertAll(entities)
                     }
                 }
@@ -262,7 +272,16 @@ class HealthChangeSynchronizerImpl
                         val sampleMs = record.time.toEpochMilli()
                         val sleepSpans = sleepSessionDao.getOverlapping(sampleMs, sampleMs).map { it.toInput() }
                         val hrvInputs = HrvMapper.mapToInputs(listOf(domainHrv), sleepSpans)
-                        val entities = hrvInputs.map { it.toEntity() }
+                        val entities =
+                            hrvInputs.map { input ->
+                                input.toEntity(
+                                    sourceRecordDao.getOrCreateSourceRef(
+                                        sourceRecordId = input.id.substringBefore('_'),
+                                        recordType = "HRV",
+                                        createdAtMs = input.timestampMs,
+                                    ),
+                                )
+                            }
                         hrvDao.upsertAll(entities)
                     }
                 }
@@ -438,14 +457,18 @@ class HealthChangeSynchronizerImpl
                     } ?: emptySet()
                 }
                 HealthDataType.HEART_RATE -> {
-                    heartRateDao
-                        .getBySourceRecordId(id)
-                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
+                    sourceRecordDao.getSourceRef(id)?.let { ref ->
+                        heartRateDao
+                            .getBySourceRecordRef(ref)
+                            .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
+                    } ?: emptySet()
                 }
                 HealthDataType.HRV -> {
-                    hrvDao
-                        .getBySourceRecordId(id)
-                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
+                    sourceRecordDao.getSourceRef(id)?.let { ref ->
+                        hrvDao
+                            .getBySourceRecordRef(ref)
+                            .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
+                    } ?: emptySet()
                 }
                 HealthDataType.EXERCISE -> {
                     workoutDao.getById(id)?.let {
@@ -492,8 +515,14 @@ class HealthChangeSynchronizerImpl
         ) {
             when (dataType) {
                 HealthDataType.SLEEP -> sleepSessionDao.deleteById(id)
-                HealthDataType.HEART_RATE -> heartRateDao.deleteBySourceRecordId(id)
-                HealthDataType.HRV -> hrvDao.deleteBySourceRecordId(id)
+                HealthDataType.HEART_RATE -> {
+                    sourceRecordDao.getSourceRef(id)?.let { heartRateDao.deleteBySourceRecordRef(it) }
+                    sourceRecordDao.deleteBySourceRecordId(id)
+                }
+                HealthDataType.HRV -> {
+                    sourceRecordDao.getSourceRef(id)?.let { hrvDao.deleteBySourceRecordRef(it) }
+                    sourceRecordDao.deleteBySourceRecordId(id)
+                }
                 HealthDataType.EXERCISE -> workoutDao.deleteById(id)
                 HealthDataType.WEIGHT -> weightRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.BODY_FAT -> bodyFatRecordDao.deleteBySourceRecordId(id)
@@ -548,9 +577,9 @@ private fun SleepStageInput.toEntity() =
         durationMinutes = durationMinutes,
     )
 
-private fun HeartRateInput.toEntity() =
+private fun HeartRateInput.toEntity(sourceRecordRef: Long) =
     HeartRateRecordEntity(
-        sourceRecordId = id,
+        sourceRecordRef = sourceRecordRef,
         timestampMs = timestampMs,
         beatsPerMinute = beatsPerMinute,
         recordType = recordType,
@@ -558,9 +587,9 @@ private fun HeartRateInput.toEntity() =
         deviceName = deviceName,
     )
 
-private fun HrvInput.toEntity() =
+private fun HrvInput.toEntity(sourceRecordRef: Long) =
     HrvRecordEntity(
-        sourceRecordId = id,
+        sourceRecordRef = sourceRecordRef,
         timestampMs = timestampMs,
         rmssdMs = rmssdMs,
         recordType = recordType,

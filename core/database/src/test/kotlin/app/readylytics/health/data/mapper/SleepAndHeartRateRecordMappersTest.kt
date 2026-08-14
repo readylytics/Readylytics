@@ -10,7 +10,7 @@ class SleepAndHeartRateRecordMappersTest {
     fun `HeartRateRecordMapper roundtrips through entity`() {
         val entity =
             HeartRateRecordEntity(
-                id = "hr1_1000",
+                sourceRecordRef = 7L,
                 timestampMs = 1_000L,
                 beatsPerMinute = 60,
                 recordType = "SLEEP",
@@ -18,13 +18,13 @@ class SleepAndHeartRateRecordMappersTest {
                 deviceName = "Watch",
             )
         val domain = HeartRateRecordMapper.toDomain(entity)
-        assertEquals("hr1_1000", domain.id)
+        assertEquals("7:1000", domain.id)
         assertEquals(1_000L, domain.timestampMs)
         assertEquals(60, domain.beatsPerMinute)
         assertEquals("SLEEP", domain.recordType)
         assertEquals("s1", domain.sessionId)
         assertEquals("Watch", domain.deviceName)
-        assertEquals(entity, HeartRateRecordMapper.toEntity(domain))
+        assertEquals(entity, HeartRateRecordMapper.toEntity(domain, 7L))
     }
 
     @Test

@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -44,13 +45,27 @@ class HeartRateMinuteBucketQueryTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun `sample exactly at bucket boundary falls into the later bucket`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(
-                        id = "hr1",
+                        sourceRecordRef = 1L,
                         timestampMs = 60_000L,
                         beatsPerMinute = 130,
                         recordType = "RESTING",
@@ -68,11 +83,12 @@ class HeartRateMinuteBucketQueryTest {
     @Test
     fun `implausible samples never produce a bucket row`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 0L, beatsPerMinute = 20, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 20, recordType = "RESTING"),
                     HeartRateRecordEntity(
-                        id = "hr2",
+                        sourceRecordRef = 2L,
                         timestampMs = 30_000L,
                         beatsPerMinute = 250,
                         recordType = "RESTING",
@@ -88,11 +104,12 @@ class HeartRateMinuteBucketQueryTest {
     @Test
     fun `multiple samples in the same minute are averaged into one bucket row`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 0L, beatsPerMinute = 120, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 120, recordType = "RESTING"),
                     HeartRateRecordEntity(
-                        id = "hr2",
+                        sourceRecordRef = 2L,
                         timestampMs = 30_000L,
                         beatsPerMinute = 140,
                         recordType = "RESTING",
@@ -111,13 +128,14 @@ class HeartRateMinuteBucketQueryTest {
     @Test
     fun `implausible sample in a minute is excluded from that minute's average`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             // One plausible (130) and one implausible (250) sample in minute 0: the average must
             // reflect only the plausible sample, not both.
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 0L, beatsPerMinute = 130, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 130, recordType = "RESTING"),
                     HeartRateRecordEntity(
-                        id = "hr2",
+                        sourceRecordRef = 2L,
                         timestampMs = 30_000L,
                         beatsPerMinute = 250,
                         recordType = "RESTING",
@@ -135,17 +153,18 @@ class HeartRateMinuteBucketQueryTest {
     @Test
     fun `buckets are returned in ascending bucketIndex order`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(
-                        id = "hr1",
+                        sourceRecordRef = 1L,
                         timestampMs = 180_000L,
                         beatsPerMinute = 100,
                         recordType = "RESTING",
                     ),
-                    HeartRateRecordEntity(id = "hr2", timestampMs = 0L, beatsPerMinute = 100, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 0L, beatsPerMinute = 100, recordType = "RESTING"),
                     HeartRateRecordEntity(
-                        id = "hr3",
+                        sourceRecordRef = 3L,
                         timestampMs = 60_000L,
                         beatsPerMinute = 100,
                         recordType = "RESTING",
@@ -161,10 +180,11 @@ class HeartRateMinuteBucketQueryTest {
     @Test
     fun `dayEndMs is exclusive`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(
-                        id = "hr1",
+                        sourceRecordRef = 1L,
                         timestampMs = dayEndMs,
                         beatsPerMinute = 100,
                         recordType = "RESTING",

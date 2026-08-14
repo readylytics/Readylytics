@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -41,9 +42,23 @@ class HeartRateRangeAggregateQueryTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun `empty range yields null instead of a row of NULLs`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             val aggregate = heartRateDao.observeAggregateByTimeRange(0L, 1_000L).first()
 
             assertNull(aggregate)
@@ -52,11 +67,12 @@ class HeartRateRangeAggregateQueryTest {
     @Test
     fun `non-empty range yields correct min max avg count`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "hr1", timestampMs = 0L, beatsPerMinute = 60, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr2", timestampMs = 100L, beatsPerMinute = 80, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "hr3", timestampMs = 200L, beatsPerMinute = 100, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 1L, timestampMs = 0L, beatsPerMinute = 60, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 2L, timestampMs = 100L, beatsPerMinute = 80, recordType = "RESTING"),
+                    HeartRateRecordEntity(sourceRecordRef = 3L, timestampMs = 200L, beatsPerMinute = 100, recordType = "RESTING"),
                 ),
             )
 
@@ -72,10 +88,11 @@ class HeartRateRangeAggregateQueryTest {
     @Test
     fun `range bound is exclusive at endMs`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L)
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(
-                        id = "hr1",
+                        sourceRecordRef = 1L,
                         timestampMs = 1_000L,
                         beatsPerMinute = 60,
                         recordType = "RESTING",

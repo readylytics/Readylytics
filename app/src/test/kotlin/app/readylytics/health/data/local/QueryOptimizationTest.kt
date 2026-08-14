@@ -9,9 +9,11 @@ import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -38,6 +40,20 @@ class QueryOptimizationTest {
         hrvDao = db.hrvDao()
         sleepSessionDao = db.sleepSessionDao()
         dailySummaryDao = db.dailySummaryDao()
+        // heart_rate_records / hrv_records reference health_source_records via sourceRecordRef; the
+        // in-memory test DB enforces FKs, so seed parents for every ref the fixtures below use.
+        runBlocking {
+            db.sourceRecordDao().insertAll(
+                (1L..1_000L).map { ref ->
+                    HealthSourceRecordEntity(
+                        id = ref,
+                        sourceRecordId = "seed-$ref",
+                        recordType = "HEART_RATE",
+                        createdAtMs = 0L,
+                    )
+                },
+            )
+        }
     }
 
     @After
@@ -52,7 +68,7 @@ class QueryOptimizationTest {
             val records =
                 (0 until 150).map { i ->
                     HeartRateRecordEntity(
-                        id = i.toString(),
+                        sourceRecordRef = i.toLong() + 1,
                         sessionId = "session_${i % 30}",
                         recordType = "activity",
                         timestampMs = baselineMs + (i * 3_600_000L),
@@ -108,7 +124,7 @@ class QueryOptimizationTest {
                 val records =
                     (0 until 100).map { j ->
                         HrvRecordEntity(
-                            id = "${i}_$j",
+                            sourceRecordRef = (i * 100L + j).toLong() + 1,
                             sessionId = sessionId,
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (i * 24 * 3_600_000L) + (j * 300_000L),
@@ -185,7 +201,7 @@ class QueryOptimizationTest {
                 repeat(20) { sampleIdx ->
                     allRecords.add(
                         HeartRateRecordEntity(
-                            id = "${sessionIdx}_$sampleIdx",
+                            sourceRecordRef = (sessionIdx * 100L + sampleIdx).toLong() + 1,
                             sessionId = "sleep_$sessionIdx",
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (sessionIdx * 24 * 3_600_000L) + (sampleIdx * 60_000L),
@@ -240,7 +256,7 @@ class QueryOptimizationTest {
                 repeat(50) { sampleIdx ->
                     hrRecords.add(
                         HeartRateRecordEntity(
-                            id = "hr_${sessionIdx}_$sampleIdx",
+                            sourceRecordRef = (sessionIdx * 100L + sampleIdx).toLong() + 1,
                             sessionId = sessionId,
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (sessionIdx * 24 * 3_600_000L) + (sampleIdx * 10_000L),
@@ -249,7 +265,7 @@ class QueryOptimizationTest {
                     )
                     hrvRecords.add(
                         HrvRecordEntity(
-                            id = "hrv_${sessionIdx}_$sampleIdx",
+                            sourceRecordRef = (sessionIdx * 100L + sampleIdx).toLong() + 1,
                             sessionId = sessionId,
                             recordType = "SLEEP",
                             timestampMs = baselineMs + (sessionIdx * 24 * 3_600_000L) + (sampleIdx * 10_000L),
@@ -282,14 +298,14 @@ class QueryOptimizationTest {
             val sleepRecords =
                 listOf(
                     HeartRateRecordEntity(
-                        id = "sleep_2",
+                        sourceRecordRef = 2L,
                         sessionId = "sleep_session",
                         recordType = "SLEEP",
                         timestampMs = baselineMs + 120_000L,
                         beatsPerMinute = 58,
                     ),
                     HeartRateRecordEntity(
-                        id = "sleep_1",
+                        sourceRecordRef = 1L,
                         sessionId = "sleep_session",
                         recordType = "SLEEP",
                         timestampMs = baselineMs,
@@ -298,7 +314,7 @@ class QueryOptimizationTest {
                 )
             val otherSessionRecord =
                 HeartRateRecordEntity(
-                    id = "workout_sample",
+                    sourceRecordRef = 3L,
                     sessionId = "workout_session",
                     recordType = "EXERCISE",
                     timestampMs = baselineMs + 60_000L,
@@ -306,7 +322,7 @@ class QueryOptimizationTest {
                 )
             val restingRecord =
                 HeartRateRecordEntity(
-                    id = "resting_sample",
+                    sourceRecordRef = 4L,
                     sessionId = null,
                     recordType = "RESTING",
                     timestampMs = baselineMs + 60_000L,

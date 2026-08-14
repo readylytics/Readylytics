@@ -9,6 +9,7 @@ import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
@@ -63,6 +64,19 @@ class DeleteByTimestampTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun `sleep session delete before timestamp only deletes old records`() =
         runTest {
@@ -108,6 +122,7 @@ class DeleteByTimestampTest {
     @Test
     fun `heart rate delete before timestamp only deletes old records`() =
         runTest {
+            seedSourceRecordParents(1L, 2L)
             val now = System.currentTimeMillis()
             val oldTime = now - (60L * 24 * 60 * 60 * 1000)
             val newTime = now - (10L * 24 * 60 * 60 * 1000)
@@ -115,14 +130,14 @@ class DeleteByTimestampTest {
             heartRateDao.upsertAll(
                 listOf(
                     HeartRateRecordEntity(
-                        id = "old",
+                        sourceRecordRef = 1L,
                         timestampMs = oldTime,
                         beatsPerMinute = 75,
                         recordType = "SLEEP",
                         sessionId = "session1",
                     ),
                     HeartRateRecordEntity(
-                        id = "new",
+                        sourceRecordRef = 2L,
                         timestampMs = newTime,
                         beatsPerMinute = 80,
                         recordType = "SLEEP",
@@ -136,12 +151,13 @@ class DeleteByTimestampTest {
 
             val remaining = heartRateDao.getByTimeRange(0, now + 1000000)
             assertEquals(1, remaining.size)
-            assertEquals("new", remaining[0].id)
+            assertEquals(2L, remaining[0].sourceRecordRef)
         }
 
     @Test
     fun `hrv delete before timestamp only deletes old records`() =
         runTest {
+            seedSourceRecordParents(1L, 2L)
             val now = System.currentTimeMillis()
             val oldTime = now - (60L * 24 * 60 * 60 * 1000)
             val newTime = now - (10L * 24 * 60 * 60 * 1000)
@@ -149,14 +165,14 @@ class DeleteByTimestampTest {
             hrvDao.upsertAll(
                 listOf(
                     HrvRecordEntity(
-                        id = "old",
+                        sourceRecordRef = 1L,
                         timestampMs = oldTime,
                         rmssdMs = 50f,
                         recordType = "SLEEP",
                         sessionId = "session1",
                     ),
                     HrvRecordEntity(
-                        id = "new",
+                        sourceRecordRef = 2L,
                         timestampMs = newTime,
                         rmssdMs = 45f,
                         recordType = "SLEEP",
@@ -170,7 +186,7 @@ class DeleteByTimestampTest {
 
             val remaining = hrvDao.observeSince(0).first()
             assertEquals(1, remaining.size)
-            assertEquals("new", remaining[0].id)
+            assertEquals(2L, remaining[0].sourceRecordRef)
         }
 
     @Test

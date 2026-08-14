@@ -459,7 +459,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
             heartRateRecords +=
                 bpmCurve.mapIndexed { index, bpm ->
                     HeartRateRecordEntity(
-                        id = "$sessionId-hr-$index",
+                        sourceRecordRef = index.toLong() + 1,
                         timestampMs = session.startTime + stepMs * index,
                         beatsPerMinute = bpm,
                         recordType = "SLEEP",
