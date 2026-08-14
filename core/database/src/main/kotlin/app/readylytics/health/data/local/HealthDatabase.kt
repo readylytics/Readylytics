@@ -11,6 +11,7 @@ import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.InsightDismissalDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
@@ -26,6 +27,7 @@ import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.data.local.entity.InsightDismissalEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
@@ -51,6 +53,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
         InsightDismissalEntity::class,
         AuditEventEntity::class,
         StepRecordEntity::class,
+        HrMinuteBucketEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -85,6 +88,8 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun auditEventDao(): AuditEventDao
 
     abstract fun stepRecordDao(): StepRecordDao
+
+    abstract fun minuteBucketDao(): MinuteBucketDao
 
     companion object {
         const val DATABASE_VERSION = 9
