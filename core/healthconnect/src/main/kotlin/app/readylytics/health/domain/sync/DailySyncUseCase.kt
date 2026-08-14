@@ -4,8 +4,10 @@ import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.time.Clock
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,6 +48,35 @@ class DailySyncUseCase
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val clock: Clock,
     ) {
+        private suspend fun ingestSegment(
+            startMs: Instant,
+            endMs: Instant,
+            prefs: UserPreferences,
+            windowBudgetMs: Long,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
+        ) {
+            try {
+                ingestionCoordinator.ingestWindow(
+                    startMs,
+                    endMs,
+                    prefs,
+                    windowBudgetMs = windowBudgetMs,
+                    onProgress = onProgress,
+                )
+            } catch (e: HealthConnectWindowTimeoutException) {
+                logE("DailySyncUseCase") {
+                    "Ingest segment $startMs..$endMs timed out; retrying with extended budget"
+                }
+                ingestionCoordinator.ingestWindow(
+                    startMs,
+                    endMs,
+                    prefs,
+                    windowBudgetMs = EXTENDED_DAILY_INGEST_BUDGET_MS,
+                    onProgress = onProgress,
+                )
+            }
+        }
+
         /**
          * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
          *   reporting (phase, current, total) so the UI can surface progress instead of a silent
@@ -120,8 +152,22 @@ class DailySyncUseCase
                     // the original [ingestStart, windowEnd) range, so the current-day-only contract
                     // is unchanged; the full-range reconcile below re-derives session links across
                     // the segment boundary (chunk-independent determinism).
-                    ingestionCoordinator.ingestWindow(todayMidnight, windowEnd, prefs, onProgress = onProgress)
-                    ingestionCoordinator.ingestWindow(
+                    try {
+                        ingestSegment(
+                            todayMidnight,
+                            windowEnd,
+                            prefs,
+                            windowBudgetMs = DEFAULT_DAILY_INGEST_BUDGET_MS,
+                            onProgress = onProgress,
+                        )
+                    } catch (e: HealthConnectWindowTimeoutException) {
+                        logE("DailySyncUseCase", e) { "Today's ingest deferred: window too dense" }
+                        return@withContext Result.failure(
+                            "Today's Health Connect data too dense for foreground sync",
+                            "DEFERRED_DAILY_SYNC",
+                        )
+                    }
+                    ingestSegment(
                         ingestStart,
                         todayMidnight,
                         prefs,

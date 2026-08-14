@@ -6,6 +6,7 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
@@ -315,6 +316,53 @@ class DailySyncUseCaseTest {
             useCase.run(windowDays = 1, onProgress = null)
 
             assertEquals(listOf(todayMidnight, yesterdayMidnight), froms)
+        }
+
+    @Test
+    fun `sync retries today's ingest with an extended budget after a timeout`() =
+        runTest {
+            var sleepReadCalls = 0
+            coEvery { hcRepo.readSleepSessions(any(), any()) } coAnswers {
+                if (++sleepReadCalls == 1) {
+                    throw HealthConnectWindowTimeoutException(
+                        Instant.EPOCH,
+                        Instant.EPOCH.plusSeconds(1),
+                        RuntimeException("timeout"),
+                    )
+                }
+                emptyList()
+            }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            // today attempt + today retry + back-day = 3 sleep reads proves the retry happened.
+            assertEquals(3, sleepReadCalls)
+        }
+
+    @Test
+    fun `sync returns DEFERRED_DAILY_SYNC when today's ingest times out even after retry`() =
+        runTest {
+            coEvery { hcRepo.readSleepSessions(any(), any()) } throws
+                HealthConnectWindowTimeoutException(
+                    Instant.EPOCH,
+                    Instant.EPOCH.plusSeconds(1),
+                    RuntimeException("timeout"),
+                )
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertTrue(result is app.readylytics.health.domain.model.Result.Failure)
+            assertEquals(
+                "DEFERRED_DAILY_SYNC",
+                (result as app.readylytics.health.domain.model.Result.Failure).code,
+            )
+            // today's two attempts both timed out; the back-day segment never ran and nothing scored.
+            coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any()) }
+            coVerify(exactly = 0) {
+                scoringRepository.computeAndPersistDailySummary(any(), any(), any(), any(), any())
+            }
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
         }
 
     @Test
