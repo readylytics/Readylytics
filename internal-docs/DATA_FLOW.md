@@ -343,6 +343,12 @@ index; the base UUID is recovered by taking everything up to the first `_` of th
   workout exercise samples from warm buckets; `ScoringHistoryRepositoryImpl` reconstructs a sleep
   session's sample stream from its warm buckets when raw rows are gone. Hot-path reads are unchanged;
   warm fallbacks fire only when raw data is absent.
+  **Plausibility tier-consistency:** the warm rollup (`MinuteBucketDao.rollupIntoBucketsBefore`) and the
+  everyday-HR load reads both filter implausible samples (`beatsPerMinute BETWEEN 30 AND 230`); the
+  hot-path sleep-RHR reads apply the same predicate (`HeartRateDao.getSleepHrSamplesForSession`,
+  `getSleepHrProjectionForSessions`, `getAvgSleepHrForSessions`) so the sleep percentile RHR and avg RHR
+  are bit-consistent whether read from raw or reconstructed warm samples. `observeSleepHrTimelineForSession`
+  (UI chart) intentionally stays unfiltered.
 - **Cold tier:** the permanent `daily_summaries` (computed cache). `RetentionCleanup` prunes raw
   HR/HRV and warm buckets older than `RetentionBounds.resolveRetentionCutoffMs(prefs)`; retention
   semantics are otherwise unchanged (a storage optimization, not a new user-facing data contract).

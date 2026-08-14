@@ -134,6 +134,45 @@ class ScoringEquivalenceGoldenTest {
         }
 
     @Test
+    fun sleepRhrMatchesAfterRollupWhenImplausibleSamplesPresent() =
+        runBlocking {
+            val heartRateDao = database.heartRateDao()
+            val minuteBucketDao = database.minuteBucketDao()
+            val sourceRecordDao = database.sourceRecordDao()
+            val ref = sourceRecordDao.getOrCreateSourceRef("uuid-sleep-artifact", "HEART_RATE", 0L)
+
+            val dayEnd = 120 * 60_000L
+            // 60 sleep minutes, 10 samples/min; inject one sub-30 bpm artifact (20 bpm) in minute 0.
+            val entities =
+                (0 until 60).flatMap { minute ->
+                    val base = 50 + (minute % 20)
+                    (0 until 10).map { sample ->
+                        val bpm = if (minute == 0 && sample == 0) 20 else base + (sample % 5)
+                        HeartRateRecordEntity(
+                            sourceRecordRef = ref,
+                            timestampMs = minute * 60_000L + sample * 6_000L,
+                            beatsPerMinute = bpm,
+                            recordType = "SLEEP",
+                            sessionId = "s1",
+                        )
+                    }
+                }
+            heartRateDao.upsertAll(entities)
+
+            val rawSleepSamples = heartRateDao.getSleepHrSamplesForSession("s1").sorted()
+
+            rollupManager.rollupExpiredHotTier(dayEnd)
+
+            val warmSleepSamples =
+                minuteBucketDao.getBucketsForSession("SLEEP", "s1").reconstruct().sorted()
+
+            // 599 samples after the 20-bpm artifact is filtered from BOTH tiers.
+            assertEquals(599, rawSleepSamples.size)
+            assertEquals(rawSleepSamples.size, warmSleepSamples.size)
+            assertEquals(percentileRhr(rawSleepSamples, 0.25), percentileRhr(warmSleepSamples, 0.25), 1.0)
+        }
+
+    @Test
     fun workoutReconstructionMatchesRawAfterRollupWithinTolerance() =
         runBlocking {
             val heartRateDao = database.heartRateDao()

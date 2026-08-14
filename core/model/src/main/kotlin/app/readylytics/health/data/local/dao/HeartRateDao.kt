@@ -46,6 +46,7 @@ interface HeartRateDao {
     @Query(
         "SELECT sessionId, CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) AS avgHr FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds) " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "GROUP BY sessionId",
     )
     suspend fun getAvgSleepHrForSessions(
@@ -67,6 +68,7 @@ interface HeartRateDao {
     @Query(
         "SELECT beatsPerMinute FROM heart_rate_records " +
             "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int>
@@ -234,6 +236,7 @@ interface HeartRateDao {
         "SELECT sessionId, beatsPerMinute " +
             "FROM heart_rate_records " +
             "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
