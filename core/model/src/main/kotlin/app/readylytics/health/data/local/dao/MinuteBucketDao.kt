@@ -40,19 +40,6 @@ interface MinuteBucketDao {
         sessionId: String,
     ): List<HrMinuteBucketEntity>
 
-    @Query(
-        "SELECT * FROM hr_minute_buckets " +
-            "WHERE recordType = :recordType AND sessionId = :sessionId " +
-            "AND bucketEndMs > :startMs AND bucketStartMs < :endMs " +
-            "ORDER BY bucketStartMs ASC",
-    )
-    suspend fun getBucketsForSessionInRange(
-        recordType: String,
-        sessionId: String,
-        startMs: Long,
-        endMs: Long,
-    ): List<HrMinuteBucketEntity>
-
     @Query("DELETE FROM hr_minute_buckets WHERE bucketEndMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
