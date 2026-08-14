@@ -42,9 +42,10 @@ class HealthIngestionCoordinator
             windowEnd: Instant,
             prefs: UserPreferences,
             windowBudgetMs: Long = 3 * 60_000L,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)? = null,
         ) {
             try {
-                ingestWindowWithinBudget(windowStart, windowEnd, prefs, windowBudgetMs)
+                ingestWindowWithinBudget(windowStart, windowEnd, prefs, windowBudgetMs, onProgress)
             } catch (e: TimeoutCancellationException) {
                 // Not a CancellationException from here on -- HC-002: callers (ResyncRangeUseCase)
                 // must be able to tell "this window is too dense for its budget" apart from
@@ -58,6 +59,7 @@ class HealthIngestionCoordinator
             windowEnd: Instant,
             prefs: UserPreferences,
             windowBudgetMs: Long,
+            onProgress: ((phase: ResyncPhase, current: Int, total: Int) -> Unit)?,
         ) {
             withTimeout(windowBudgetMs) {
                 val sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) }
@@ -228,11 +230,17 @@ class HealthIngestionCoordinator
                     ),
                 )
 
+                // Deliberately NOT reset on retry (unlike hrSampleCount below): this is a
+                // UI-facing progress counter, and a page count that regresses on retry would look
+                // like sync going backwards.
+                var pagesIngested = 0
+
                 val hrDevice = deviceFor(HealthDataType.HEART_RATE)
                 var hrSampleCount = 0
                 retryWithBackoff {
                     hrSampleCount = 0
                     hcRepo.readHeartRateSamplesPaged(windowStart, windowEnd) { page ->
+                        logD("HealthSync.Ingest") { "HR page size=${page.size}" }
                         val hrInputs =
                             HeartRateMapper.mapToInputs(
                                 page,
@@ -242,6 +250,8 @@ class HealthIngestionCoordinator
                         val filteredHr = DeviceSourceFilter.filterToDevice(hrInputs, hrDevice) { it.deviceName }
                         healthIngestionStore.persistHeartRateSamples(filteredHr)
                         hrSampleCount += filteredHr.size
+                        pagesIngested++
+                        onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
                     }
                 }
 
@@ -250,6 +260,7 @@ class HealthIngestionCoordinator
                 retryWithBackoff {
                     hrvSampleCount = 0
                     hcRepo.readHrvSamplesPaged(windowStart, windowEnd) { page ->
+                        logD("HealthSync.Ingest") { "HRV page size=${page.size}" }
                         val hrvInputs =
                             HrvMapper.mapToInputs(
                                 page,
@@ -258,6 +269,8 @@ class HealthIngestionCoordinator
                         val filteredHrv = DeviceSourceFilter.filterToDevice(hrvInputs, hrvDevice) { it.deviceName }
                         healthIngestionStore.persistHrvSamples(filteredHrv)
                         hrvSampleCount += filteredHrv.size
+                        pagesIngested++
+                        onProgress?.invoke(ResyncPhase.INGEST, pagesIngested, 0)
                     }
                 }
 

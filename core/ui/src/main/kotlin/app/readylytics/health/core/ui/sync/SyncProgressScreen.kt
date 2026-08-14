@@ -83,7 +83,18 @@ fun SyncProgressScreen(
                 } else {
                     when (progress.phase) {
                         ResyncPhase.INGEST ->
-                            stringResource(R.string.sync_progress_phase_ingest, progress.current, progress.total)
+                            if (progress.total > 0) {
+                                stringResource(
+                                    R.string.sync_progress_phase_ingest,
+                                    progress.current,
+                                    progress.total,
+                                )
+                            } else {
+                                stringResource(
+                                    R.string.sync_progress_phase_ingest_indeterminate,
+                                    progress.current,
+                                )
+                            }
                         ResyncPhase.PRUNE -> stringResource(R.string.sync_progress_phase_prune)
                         ResyncPhase.RECONCILE -> stringResource(R.string.sync_progress_phase_reconcile)
                         ResyncPhase.RECOMPUTE ->

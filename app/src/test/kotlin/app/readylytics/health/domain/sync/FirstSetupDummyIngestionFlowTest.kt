@@ -19,6 +19,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
@@ -225,6 +226,7 @@ class FirstSetupDummyIngestionFlowTest {
             ingestionCoordinator = HealthIngestionCoordinator(hcRepo, ingestionStore),
             stepCountFetcher = StepCountFetcher(hcRepo),
             recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, RecordingTransactionRunner()),
+            walDiagnostics = mockk<WalDiagnostics>(relaxed = true),
             ioDispatcher = Dispatchers.Unconfined,
             // The fixture data below is keyed to fixed epoch millis (2026-06-28/29), independent
             // of the sync window boundaries, so a fixed clock in that era is used for determinism

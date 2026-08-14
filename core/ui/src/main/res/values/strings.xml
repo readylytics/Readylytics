@@ -183,6 +183,7 @@
     <string name="sync_progress_fetching_data">Fetching data: Day %1$d of %2$d</string>
     <string name="sync_progress_finishing_setup">Finishing setup…</string>
     <string name="sync_progress_phase_ingest">Fetching Health Connect data (batch %1$d of %2$d)…</string>
+    <string name="sync_progress_phase_ingest_indeterminate">Fetching Health Connect data (page %1$d)…</string>
     <string name="sync_progress_phase_prune">Cleaning up local data…</string>
     <string name="sync_progress_phase_reconcile">Linking sleep and workout sessions…</string>
     <string name="sync_progress_view_logs">Show log output</string>
@@ -193,6 +194,7 @@
     <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
     <string name="resync_notification_preparing">Preparing…</string>
     <string name="resync_phase_ingest">Fetching Health Connect data (batch %1$d of %2$d)…</string>
+    <string name="resync_phase_ingest_indeterminate">Fetching Health Connect data (page %1$d)…</string>
     <string name="resync_phase_prune">Cleaning up local data…</string>
     <string name="resync_phase_reconcile">Linking sleep and workout sessions…</string>
     <string name="error_sync_failed">Sync failed</string>

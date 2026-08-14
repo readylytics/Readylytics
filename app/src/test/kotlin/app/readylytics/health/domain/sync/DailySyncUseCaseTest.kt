@@ -7,6 +7,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
@@ -47,6 +48,7 @@ class DailySyncUseCaseTest {
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     private val transactionRunner = RecordingTransactionRunner()
+    private val walDiagnostics = mockk<WalDiagnostics>(relaxed = true)
 
     // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
     // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
@@ -71,6 +73,7 @@ class DailySyncUseCaseTest {
                 ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                 stepCountFetcher = StepCountFetcher(hcRepo),
                 recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                walDiagnostics = walDiagnostics,
                 ioDispatcher = Dispatchers.Unconfined,
                 clock = fixedClock,
             )
@@ -454,6 +457,7 @@ class DailySyncUseCaseTest {
                     ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
                     stepCountFetcher = StepCountFetcher(hcRepo),
                     recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo, transactionRunner),
+                    walDiagnostics = walDiagnostics,
                     ioDispatcher = Dispatchers.Unconfined,
                     clock = historicalClock,
                 )
@@ -508,6 +512,51 @@ class DailySyncUseCaseTest {
             assertEquals(
                 listOf("clear:1", "score:1", "score:1", "score:1"),
                 insideTransaction,
+            )
+        }
+
+    @Test
+    fun `sync emits an indeterminate RECONCILE progress signal before reconcile runs`() =
+        runTest {
+            // US-003: onProgress must fire (RECONCILE, 0, 0) before sessionLinkReconciler.reconcile
+            // is invoked, so the UI banner switches to the RECONCILE label before that phase starts.
+            val events = mutableListOf<String>()
+            val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
+                if (phase == ResyncPhase.RECONCILE) events += "progress:RECONCILE:$current:$total"
+            }
+            coEvery { sessionLinkReconciler.reconcile(any(), any(), any()) } answers {
+                events += "reconcile:called"
+            }
+
+            useCase.run(windowDays = 1, onProgress = onProgress)
+
+            assertEquals(listOf("progress:RECONCILE:0:0", "reconcile:called"), events)
+        }
+
+    @Test
+    fun `sync emits incrementing indeterminate INGEST progress signals per streamed page`() =
+        runTest {
+            // US-004: each HR/HRV page persisted during ingestWindow must report an indeterminate
+            // (total = 0) INGEST signal with a monotonically incrementing page count. M4: the first
+            // page carries 2 records and the second carries 1 -- if the counter incremented per
+            // record instead of per page, this would report (…, 2, 0) then (…, 3, 0) instead of the
+            // expected (…, 1, 0) then (…, 2, 0), so this distinguishes the two implementations.
+            val progressEvents = mutableListOf<Triple<ResyncPhase, Int, Int>>()
+            val onProgress: (ResyncPhase, Int, Int) -> Unit = { phase, current, total ->
+                progressEvents += Triple(phase, current, total)
+            }
+            coEvery { hcRepo.readHeartRateSamplesPaged(any(), any(), any()) } coAnswers {
+                val callback = thirdArg<suspend (List<DomainHeartRateRecord>) -> Unit>()
+                callback(listOf(mockk(relaxed = true), mockk(relaxed = true)))
+                callback(listOf(mockk(relaxed = true)))
+            }
+
+            useCase.run(windowDays = 1, onProgress = onProgress)
+
+            val ingestEvents = progressEvents.filter { it.first == ResyncPhase.INGEST }
+            assertEquals(
+                listOf(Triple(ResyncPhase.INGEST, 1, 0), Triple(ResyncPhase.INGEST, 2, 0)),
+                ingestEvents,
             )
         }
 

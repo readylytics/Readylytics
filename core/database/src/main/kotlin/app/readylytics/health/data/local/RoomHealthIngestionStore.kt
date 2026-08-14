@@ -118,15 +118,27 @@ class RoomHealthIngestionStore
 
         override suspend fun persistHeartRateSamples(samples: List<HeartRateInput>) {
             if (samples.isEmpty()) return
-            transactionRunner.runInTransaction {
-                heartRateDao.upsertAll(samples.map(HeartRateInput::toEntity))
+            samples.forEachPersistenceBatch { batch ->
+                val startedAt = System.currentTimeMillis()
+                transactionRunner.runInTransaction {
+                    heartRateDao.upsertAll(batch.map(HeartRateInput::toEntity))
+                }
+                logD(PERSIST_TAG) {
+                    "HR batch persisted: ${batch.size} samples in ${System.currentTimeMillis() - startedAt}ms"
+                }
             }
         }
 
         override suspend fun persistHrvSamples(samples: List<HrvInput>) {
             if (samples.isEmpty()) return
-            transactionRunner.runInTransaction {
-                hrvDao.upsertAll(samples.map(HrvInput::toEntity))
+            samples.forEachPersistenceBatch { batch ->
+                val startedAt = System.currentTimeMillis()
+                transactionRunner.runInTransaction {
+                    hrvDao.upsertAll(batch.map(HrvInput::toEntity))
+                }
+                logD(PERSIST_TAG) {
+                    "HRV batch persisted: ${batch.size} samples in ${System.currentTimeMillis() - startedAt}ms"
+                }
             }
         }
 
@@ -159,6 +171,7 @@ class RoomHealthIngestionStore
     }
 
 private const val TAG = "RoomHealthIngestionStore"
+private const val PERSIST_TAG = "HealthSync.Persist"
 
 internal suspend fun <T> List<T>.forEachPersistenceBatch(
     batchSize: Int = 5_000,

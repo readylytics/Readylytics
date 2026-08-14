@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import app.readylytics.health.data.local.DatabaseMigrations
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
+import app.readylytics.health.data.local.RoomWalDiagnostics
 import app.readylytics.health.data.local.dao.AuditEventDao
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
@@ -27,6 +28,7 @@ import app.readylytics.health.data.security.KeyProvider
 import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.domain.repository.WalDiagnostics
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -41,6 +43,9 @@ import javax.inject.Singleton
 abstract class DatabaseModule {
     @Binds
     abstract fun bindTransactionRunner(impl: RoomTransactionRunner): TransactionRunner
+
+    @Binds
+    abstract fun bindWalDiagnostics(impl: RoomWalDiagnostics): WalDiagnostics
 
     @Binds
     abstract fun bindKeyProvider(impl: AndroidKeystoreKeyProvider): KeyProvider
