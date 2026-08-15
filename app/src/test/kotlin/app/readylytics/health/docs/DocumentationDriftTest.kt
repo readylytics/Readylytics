@@ -348,6 +348,26 @@ class DocumentationDriftTest {
         }
     }
 
+    @Test
+    fun `workout GPS and route details documentation is synchronized across About surfaces and DATA_FLOW md`() {
+        val requiredRoutePhrases =
+            listOf(
+                "Douglas-Peucker",
+                "Canvas",
+                "workout_route_points",
+            )
+
+        for ((surface, text) in listOf(
+            "ABOUT.md" to aboutMd,
+            "docs/about.md" to publicAboutMd,
+            "DATA_FLOW.md" to dataFlowMd,
+        )) {
+            for (phrase in requiredRoutePhrases) {
+                assertTrue(text.contains(phrase), "$surface must contain '$phrase'")
+            }
+        }
+    }
+
     /** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */
     private fun normalizeWhitespace(text: String): String = text.replace(Regex("\\s+"), " ")
 

@@ -306,6 +306,20 @@ a display-only insight, entirely outside the scoring engine.
 
 ---
 
+## Workout GPS and Route Details
+
+When outdoor workouts include GPS location tracks, Readylytics visualizes route contours, pace, and elevation profiles directly inside workout details.
+
+- **Privacy-preserving offline Canvas rendering** — routes are drawn entirely on-device using native Android Canvas vector graphics. The app never embeds or initializes third-party mapping SDKs (such as Google Maps or Mapbox), downloads no raster or vector map tiles, and executes zero network calls. Location coordinates remain strictly private on the device.
+- **Douglas-Peucker line simplification** — GPS tracks containing hundreds or thousands of raw coordinates are simplified on-device via the Douglas-Peucker algorithm using an adaptive tolerance. This preserves sharp turns, curves, and route shape while keeping rendering lightweight and responsive.
+- **Pace and elevation performance charts** — route waypoints provide distance, altitude, and timestamp metrics used to generate elevation profiles and pace or speed progression charts across the activity.
+- **Local storage and cascade lifecycle** — route coordinates are stored in the local encrypted Room database (`workout_route_points` table). When a workout session is deleted or purged during historical retention cleanup, all associated route points are immediately cascade-deleted.
+- **Optional permission & graceful fallback** — reading route data requires the optional Health Connect exercise route permission. If route permissions are not granted or route data is unavailable for a session, the app continues to display heart-rate metrics, zone distribution, TRIMP, and recovery analysis normally without route contours.
+
+_Implemented in: `RouteSimplifier.kt`, `RouteDistanceCalculator.kt`, `RouteContourCard.kt`, `WorkoutPerformanceCharts.kt`, `WorkoutDetailScreen.kt`_
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:
@@ -314,6 +328,7 @@ We read from Android Health Connect:
 - **Heart rate** during sleep (for restoration metrics)
 - **Heart rate variability (RMSSD)** during sleep
 - **Heart rate** during exercise sessions (for training load)
+- **Exercise routes & GPS data** (optional, for offline route visualization, pace, and elevation profiles)
 
 The app reads only — it never writes. You can revoke access at any time in Health Connect settings.
 
