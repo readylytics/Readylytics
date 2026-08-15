@@ -12,10 +12,10 @@ class ElevationGainCalculatorTest {
     }
 
     @Test
-    fun `accumulates only ascents exceeding the 3m threshold`() {
+    fun `accumulates net climb ignoring sub-threshold noise dips`() {
         val climb = listOf(100.0, 104.0, 110.0, 108.0, 112.0, 116.0)
-        // anchor 100 -> +4m @104, anchor 104 -> +6m @110, drop to 108 (anchor resets) -> +4m @112, anchor 112 -> +4m @116
-        assertEquals(18.0, ElevationGainCalculator.calculateAscent(climb), 0.01)
+        // 100 -> 110 (+10m climb), 2m noise dip to 108 (< 3m), climb continues to 116 (+6m) -> net 16m
+        assertEquals(16.0, ElevationGainCalculator.calculateAscent(climb), 0.01)
     }
 
     @Test
@@ -45,5 +45,12 @@ class ElevationGainCalculatorTest {
         val gain = ElevationGainCalculator.calculateAscent(altitudes, thresholdMeters = 3.0)
         assertEquals(0.0, gain, 0.01)
     }
-}
 
+    @Test
+    fun calculateAscent_filtersOutlierSpikes() {
+        // Corrupted GPS telemetry spike: 100 -> 1,000,000 -> 105 -> 110
+        val altitudes = listOf(100.0, 1_000_000.0, 105.0, 110.0)
+        val gain = ElevationGainCalculator.calculateAscent(altitudes, thresholdMeters = 3.0)
+        assertEquals(10.0, gain, 0.01)
+    }
+}

@@ -12,6 +12,7 @@ object WorkoutMapper {
 
     fun mapExerciseSession(session: DomainExerciseSessionRecord): WorkoutInput {
         val durationMinutes = ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
+        val sortedPoints = session.routePoints.sortedBy { it.time }
         return WorkoutInput(
             id = session.id,
             startTime = session.startTime.toEpochMilli(),
@@ -26,16 +27,16 @@ object WorkoutMapper {
             trimp = 0f,
             avgHr = 0f,
             deviceName = session.deviceName,
-            routePoints = session.routePoints.map { it.toRoutePoint(session.id) },
+            routePoints = sortedPoints.map { it.toRoutePoint(session.id) },
             totalDistanceMeters =
-                session.totalDistanceMeters?.toFloat()
-                    ?: fallbackDistanceMeters(session.routePoints),
+                session.totalDistanceMeters?.takeIf { it in 0.0..1000_000.0 }?.toFloat()
+                    ?: fallbackDistanceMeters(sortedPoints),
             avgSpeedKmh =
-                session.avgSpeedMps?.let { (it * 3.6).toFloat() }
-                    ?: fallbackAvgSpeedKmh(session.routePoints, session.startTime.toEpochMilli(), session.endTime.toEpochMilli()),
+                session.avgSpeedMps?.takeIf { it in 0.0..100.0 }?.let { (it * 3.6).toFloat() }
+                    ?: fallbackAvgSpeedKmh(sortedPoints, session.startTime.toEpochMilli(), session.endTime.toEpochMilli()),
             elevationGainMeters =
-                session.elevationGainMeters?.toFloat()
-                    ?: fallbackElevationGainMeters(session.routePoints),
+                session.elevationGainMeters?.takeIf { it in 0.0..15_000.0 }?.toFloat()
+                    ?: fallbackElevationGainMeters(sortedPoints),
             routeState = session.routeState,
         )
     }

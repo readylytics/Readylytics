@@ -141,10 +141,11 @@ object UnitConverter {
         meters: Float,
         unitSystem: UnitSystem,
     ): String {
-        if (meters <= 0f) return "—"
+        if (meters <= 0f || meters.isNaN() || meters.isInfinite()) return "—"
+        val bounded = meters.coerceIn(0f, 15_000f)
         return when (unitSystem) {
-            UnitSystem.METRIC -> "%.0f m".format(meters)
-            UnitSystem.IMPERIAL -> "%.0f ft".format(meters * METERS_TO_FEET)
+            UnitSystem.METRIC -> "%.0f m".format(bounded)
+            UnitSystem.IMPERIAL -> "%.0f ft".format(bounded * METERS_TO_FEET)
         }
     }
 }
