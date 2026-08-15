@@ -43,7 +43,7 @@ playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.12.0"
 playPublisher = "4.0.0"
 appcompat = "1.7.1"
-materialColorUtilities = "4.1.1"
+materialColorUtilities = "5.0.0"
 adaptive = "1.2.0"
 
 
