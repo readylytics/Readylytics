@@ -26,8 +26,11 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.domain.util.PaceSpeedCalculator
+import app.readylytics.health.domain.util.UnitConverter
 import app.readylytics.health.feature.workouts.R
 import java.time.Instant
 import java.time.ZoneId
@@ -42,6 +45,7 @@ fun WorkoutMetricsDisplay(
     gainedStrainDisplay: String,
     ras: Float?,
     classification: WorkoutLoadClassification?,
+    unitSystem: UnitSystem = UnitSystem.METRIC,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         WorkoutHeader(workout)
@@ -140,6 +144,74 @@ fun WorkoutMetricsDisplay(
                     tooltip = stringResource(R.string.workout_tooltip_intensity),
                     modifier = Modifier.weight(1f),
                 )
+            }
+
+            val hasGpsMetrics =
+                workout.totalDistanceMeters != null ||
+                    workout.avgSpeedKmh != null ||
+                    workout.elevationGainMeters != null
+
+            if (hasGpsMetrics) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                ) {
+                    UniversalWorkoutMetricCard(
+                        title = stringResource(R.string.workout_metric_distance),
+                        valueText =
+                            workout.totalDistanceMeters?.let {
+                                UnitConverter.formatDistance(it, unitSystem)
+                            } ?: stringResource(R.string.workout_metric_unavailable),
+                        status = MetricStatus.NEUTRAL,
+                        tooltip = stringResource(R.string.workout_tooltip_distance),
+                        modifier = Modifier.weight(1f),
+                    )
+                    val isPace = PaceSpeedCalculator.isPaceActivity(workout.exerciseType)
+                    UniversalWorkoutMetricCard(
+                        title =
+                            if (isPace) {
+                                stringResource(R.string.workout_metric_avg_pace)
+                            } else {
+                                stringResource(R.string.workout_metric_avg_speed)
+                            },
+                        valueText =
+                            if (isPace) {
+                                workout.avgSpeedKmh?.takeIf { it > 0f }?.let { kmh ->
+                                    val paceMinKm = PaceSpeedCalculator.speedMpsToPaceMinKm(kmh / 3.6).toFloat()
+                                    UnitConverter.formatPace(paceMinKm, unitSystem)
+                                } ?: stringResource(R.string.workout_metric_unavailable)
+                            } else {
+                                workout.avgSpeedKmh?.takeIf { it > 0f }?.let { kmh ->
+                                    UnitConverter.formatSpeed(kmh, unitSystem)
+                                } ?: stringResource(R.string.workout_metric_unavailable)
+                            },
+                        status = MetricStatus.NEUTRAL,
+                        tooltip =
+                            if (isPace) {
+                                stringResource(R.string.workout_tooltip_avg_pace)
+                            } else {
+                                stringResource(R.string.workout_tooltip_avg_speed)
+                            },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                val elevationGain = workout.elevationGainMeters
+                if (elevationGain != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                    ) {
+                        UniversalWorkoutMetricCard(
+                            title = stringResource(R.string.workout_metric_elevation_gain),
+                            valueText = UnitConverter.formatElevation(elevationGain, unitSystem),
+                            status = MetricStatus.NEUTRAL,
+                            tooltip = stringResource(R.string.workout_tooltip_elevation_gain),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
 
