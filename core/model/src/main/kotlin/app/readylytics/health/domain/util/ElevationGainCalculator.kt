@@ -1,7 +1,6 @@
 package app.readylytics.health.domain.util
 
 object ElevationGainCalculator {
-
     const val DEFAULT_THRESHOLD_METERS = 3.0
 
     fun calculateAscent(
@@ -15,8 +14,11 @@ object ElevationGainCalculator {
             if (altitude >= anchor + thresholdMeters) {
                 gain += altitude - anchor
                 anchor = altitude
+            } else if (altitude < anchor) {
+                anchor = altitude
             }
         }
         return gain
     }
 }
+

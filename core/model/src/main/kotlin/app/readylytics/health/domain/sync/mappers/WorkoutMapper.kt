@@ -4,6 +4,7 @@ import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.sync.WorkoutInput
+import app.readylytics.health.domain.util.ElevationGainCalculator
 import app.readylytics.health.domain.util.RouteDistanceCalculator
 
 object WorkoutMapper {
@@ -56,19 +57,8 @@ object WorkoutMapper {
     }
 
     private fun fallbackElevationGainMeters(points: List<DomainRouteLocation>): Float? {
-        var gain = 0.0
-        var anchor: Double? = null
-        for (point in points) {
-            val altitude = point.altitudeMeters ?: continue
-            val previous = anchor ?: run {
-                anchor = altitude
-                continue
-            }
-            if (altitude - previous >= ELEVATION_GAIN_THRESHOLD_METERS) {
-                gain += altitude - previous
-                anchor = altitude
-            }
-        }
+        val altitudes = points.mapNotNull { it.altitudeMeters }
+        val gain = ElevationGainCalculator.calculateAscent(altitudes, ELEVATION_GAIN_THRESHOLD_METERS)
         return gain.takeIf { it > 0.0 }?.toFloat()
     }
 }
