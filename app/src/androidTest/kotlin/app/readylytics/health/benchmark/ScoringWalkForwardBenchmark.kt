@@ -155,7 +155,13 @@ class ScoringWalkForwardBenchmark {
         seedSessionsAndHr(targetDate.minusDays(5), targetDate.plusDays(1), sleepSessionCount = 6)
 
         val scoringHistoryRepository =
-            ScoringHistoryRepositoryImpl(db.heartRateDao(), db.hrvDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.minuteBucketDao())
+            ScoringHistoryRepositoryImpl(
+                db.heartRateDao(),
+                db.hrvDao(),
+                db.sleepSessionDao(),
+                db.dailySummaryDao(),
+                db.minuteBucketDao(),
+            )
         val loadScoringStrategy = LoadScoringStrategy()
         val scoringCalculator =
             CompositeScoringCalculator(
