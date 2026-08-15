@@ -94,6 +94,7 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(OxygenSaturationRecord::class),
                 HealthPermission.getReadPermission(BodyTemperatureRecord::class),
                 "android.permission.health.READ_EXERCISE_ROUTES",
+                "com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES",
             )
 
         override val allPermissions: Set<String> =
@@ -179,6 +180,21 @@ class HealthConnectRepositoryImpl
 
         override suspend fun hasOxygenSaturationPermission(): Boolean =
             hasPermission<OxygenSaturationRecord>("oxygen saturation")
+
+        override suspend fun hasExerciseRoutesPermission(): Boolean =
+            withContext(ioDispatcher) {
+                if (!isAvailable()) return@withContext false
+                try {
+                    val granted = client.permissionController.getGrantedPermissions()
+                    granted.contains("android.permission.health.READ_EXERCISE_ROUTES") ||
+                        granted.contains("com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES")
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                        "Failed to check exercise routes permission"
+                    }
+                    false
+                }
+            }
 
         private suspend inline fun <reified T : androidx.health.connect.client.records.Record> hasPermission(
             label: String,
@@ -300,22 +316,55 @@ class HealthConnectRepositoryImpl
         ): List<DomainExerciseSessionRecord> =
             withContext(ioDispatcher) {
                 readAllPages<ExerciseSessionRecord>(from, to).map { session ->
-                    // Bulk readRecords does NOT include exercise route data; route is only
-                    // available through a per-record readRecord call (HC docs: "Read the specific
-                    // record to check for the route"). Failures degrade to NoData so a missing
-                    // route permission never aborts the whole exercise sync pass.
                     val routeResult =
                         try {
-                            client
-                                .readRecord(ExerciseSessionRecord::class, session.metadata.id)
-                                .record
-                                .exerciseRouteResult
+                            val record =
+                                client
+                                    .readRecord(ExerciseSessionRecord::class, session.metadata.id)
+                                    .record
+                            val result = record.exerciseRouteResult
+                            app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                                "Exercise session ${session.metadata.id} (${session.exerciseType}) route result: ${result.javaClass.simpleName}"
+                            }
+                            result
                         } catch (e: CancellationException) {
                             throw e
-                        } catch (_: Exception) {
+                        } catch (e: SecurityException) {
+                            app.readylytics.health.domain.util.logW("HealthConnectRepository") {
+                                "SecurityException reading route for session ${session.metadata.id}: ${e.message}"
+                            }
+                            ExerciseRouteResult.ConsentRequired()
+                        } catch (e: Exception) {
+                            app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                                "Failed to read route for session ${session.metadata.id}"
+                            }
                             ExerciseRouteResult.NoData()
                         }
                     session.toDomain(routeResult)
+                }
+            }
+
+        override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
+            withContext(ioDispatcher) {
+                try {
+                    val record = client.readRecord(ExerciseSessionRecord::class, id).record
+                    val routeResult = record.exerciseRouteResult
+                    app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                        "Read single exercise session $id (${record.exerciseType}) route result: ${routeResult.javaClass.simpleName}"
+                    }
+                    record.toDomain(routeResult)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: SecurityException) {
+                    app.readylytics.health.domain.util.logW("HealthConnectRepository") {
+                        "SecurityException reading exercise session $id: ${e.message}"
+                    }
+                    null
+                } catch (e: Exception) {
+                    app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
+                        "Failed to read exercise session $id"
+                    }
+                    null
                 }
             }
 

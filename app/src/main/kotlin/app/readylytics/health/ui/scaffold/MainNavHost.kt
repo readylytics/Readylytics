@@ -26,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination
@@ -358,15 +357,35 @@ fun MainNavHost(
         }
         composable<AppDestination.WorkoutDetail> { backStackEntry ->
             val detail: AppDestination.WorkoutDetail = backStackEntry.toRoute()
+            val context = LocalContext.current
+            var pendingOnPermissionGranted by remember { mutableStateOf<(() -> Unit)?>(null) }
             val routePermissionLauncher =
                 rememberLauncherForActivityResult(
-                    contract = PermissionController.createRequestPermissionResultContract(),
-                ) { }
+                    contract =
+                        androidx.health.connect.client.PermissionController
+                            .createRequestPermissionResultContract(),
+                ) { _ ->
+                    pendingOnPermissionGranted?.invoke()
+                }
             WorkoutDetailRoute(
                 workoutId = detail.workoutId,
                 onBack = { navController.popBackStack() },
-                onRequestRoutePermission = {
-                    routePermissionLauncher.launch(setOf("android.permission.health.READ_EXERCISE_ROUTES"))
+                onRequestRoutePermission = { onGranted ->
+                    pendingOnPermissionGranted = onGranted
+                    try {
+                        routePermissionLauncher.launch(
+                            setOf(
+                                "android.permission.health.READ_EXERCISE_ROUTES",
+                                "com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES",
+                            ),
+                        )
+                    } catch (_: Exception) {
+                        val intent =
+                            android.content.Intent(
+                                androidx.health.connect.client.HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS,
+                            )
+                        context.startActivity(intent)
+                    }
                 },
             )
         }

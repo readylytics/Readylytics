@@ -18,6 +18,7 @@ import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.domain.sync.SyncWorkoutRouteUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -57,6 +58,7 @@ class WorkoutDetailViewModelTest {
             every { userPreferences } returns MutableStateFlow(UserPreferences())
         }
     private val getWorkoutDisplayMetricsUseCase = mockk<GetWorkoutDisplayMetricsUseCase>()
+    private val syncWorkoutRouteUseCase = mockk<SyncWorkoutRouteUseCase>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -70,6 +72,7 @@ class WorkoutDetailViewModelTest {
                 dailySummaryRepository = dailySummaryRepository,
                 settingsRepo = settingsRepository,
                 getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
+                syncWorkoutRouteUseCase = syncWorkoutRouteUseCase,
                 savedStateHandle = SavedStateHandle(),
                 defaultDispatcher = testDispatcher,
             )
@@ -230,6 +233,7 @@ class WorkoutDetailViewModelTest {
                     dailySummaryRepository = dailySummaryRepository,
                     settingsRepo = settingsRepository,
                     getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
+                    syncWorkoutRouteUseCase = syncWorkoutRouteUseCase,
                     savedStateHandle = restoredHandle,
                     defaultDispatcher = testDispatcher,
                 )
@@ -638,5 +642,119 @@ class WorkoutDetailViewModelTest {
             assertEquals(RouteDataState.NotAvailable, state.routeUiState.state)
             assertTrue(state.paceSpeedChartData.isEmpty())
             assertTrue(state.elevationChartData.isEmpty())
+        }
+
+    @Test
+    fun `onRoutePermissionResult triggers syncWorkoutRouteUseCase and reloads workout`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-perm-test",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    routeState = RouteState.PERMISSION_REQUIRED,
+                )
+
+            coEvery { workoutRepository.getById("run-perm-test") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-perm-test") } returns emptyList()
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-perm-test")
+            advanceUntilIdle()
+
+            assertEquals(RouteDataState.PermissionRequired, viewModel.uiState.value.routeUiState.state)
+
+            viewModel.onRoutePermissionResult()
+            advanceUntilIdle()
+
+            coVerify(atLeast = 1) { syncWorkoutRouteUseCase.invoke("run-perm-test") }
+        }
+
+    @Test
+    fun `loadWorkout auto-syncs route if permission is already granted when routeState is PERMISSION_REQUIRED`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-auto-sync",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    routeState = RouteState.PERMISSION_REQUIRED,
+                )
+
+            coEvery { healthConnectRepository.hasExerciseRoutesPermission() } returns true
+            coEvery { workoutRepository.getById("run-auto-sync") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-auto-sync") } returns emptyList()
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-auto-sync")
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { syncWorkoutRouteUseCase.invoke("run-auto-sync") }
         }
 }

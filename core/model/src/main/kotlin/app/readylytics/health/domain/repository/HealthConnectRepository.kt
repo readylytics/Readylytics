@@ -169,4 +169,10 @@ interface HealthConnectRepository {
 
     /** Whether the optional `READ_OXYGEN_SATURATION` permission is currently granted. */
     suspend fun hasOxygenSaturationPermission(): Boolean
+
+    /** Reads a single exercise session by ID with its route data. */
+    suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord?
+
+    /** Whether the optional `READ_EXERCISE_ROUTES` permission is currently granted. */
+    suspend fun hasExerciseRoutesPermission(): Boolean
 }

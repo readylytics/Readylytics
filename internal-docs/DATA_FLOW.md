@@ -341,6 +341,9 @@ fetched via `readRecord` and the `exerciseRouteResult` is mapped through `Exerci
 `NoData` (`NOT_AVAILABLE`) so a missing/revoked route permission never aborts an exercise sync pass.
 The changes path (`HealthChangeSynchronizerImpl`) can never carry routes (the Changes API excludes
 them), so those workouts land with `routeState = NOT_AVAILABLE` until a full resync re-reads them.
+On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
+when route permission is granted or the user opens a workout requiring permission, it reads the session from Health Connect,
+maps route points, and updates the local Room database atomically via `HealthIngestionStore.persistSingleWorkoutRoute`.
 
 **3-tier health-data lifecycle (hot → warm → cold).**
 - **Hot tier (0–90 days):** raw 1-second `heart_rate_records`/`hrv_records` keyed by integer
@@ -983,6 +986,7 @@ checkpoint, progress starts directly at the resumed phase/offset instead of rese
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …)              | Storage — raw metric entities                       | upsert by stable HC id                                                                   |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteSimplifier.kt`                                            | Domain — route simplification                       | Douglas-Peucker point reduction for on-device Canvas rendering                           |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteDistanceCalculator.kt`                                    | Domain — route metrics calculation                  | haversine path distance and cumulative elevation calculations                            |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/sync/SyncWorkoutRouteUseCase.kt`                                    | Domain — on-demand workout route sync               | single-workout route retrieval from Health Connect and Room atomic persistence           |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/InsightDismissalDao.kt`                                    | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/dao/AuditEventDao.kt`                                       | Storage — local audit DAO                           | append / observe recent metadata events                                                  |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/*.kt`                                                      | Storage — DAOs                                      | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp`                               |

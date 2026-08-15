@@ -242,6 +242,46 @@ class PersistenceBatchingTest {
             assertEquals(2, stored.size)
         }
 
+    @Test
+    fun `persistSingleWorkoutRoute replaces existing route points idempotently`() =
+        runTest {
+            val events = mutableListOf<String>()
+            val transactionRunner = RecordingTransactionRunner(events)
+            val routePointDao = FakeWorkoutRoutePointDao()
+            val store = buildStore(events, transactionRunner, routePointDao)
+
+            val initialPoints =
+                listOf(
+                    WorkoutRoutePoint(workoutId = "w1", latitude = 52.5, longitude = 13.4, timestampMs = 1000L),
+                )
+            store.persistSingleWorkoutRoute(
+                workoutId = "w1",
+                routePoints = initialPoints,
+                routeState = "IMPORTED",
+                totalDistanceMeters = 1000f,
+                avgSpeedKmh = 10f,
+                elevationGainMeters = 5f,
+            )
+            assertEquals(1, routePointDao.getRoutePoints("w1").size)
+
+            val updatedPoints =
+                listOf(
+                    WorkoutRoutePoint(workoutId = "w1", latitude = 52.5, longitude = 13.4, timestampMs = 1000L),
+                    WorkoutRoutePoint(workoutId = "w1", latitude = 52.6, longitude = 13.5, timestampMs = 2000L),
+                )
+            store.persistSingleWorkoutRoute(
+                workoutId = "w1",
+                routePoints = updatedPoints,
+                routeState = "IMPORTED",
+                totalDistanceMeters = 2000f,
+                avgSpeedKmh = 12f,
+                elevationGainMeters = 10f,
+            )
+
+            val stored = routePointDao.getRoutePoints("w1")
+            assertEquals(2, stored.size)
+        }
+
     private class RecordingTransactionRunner(
         private val events: MutableList<String>,
     ) : TransactionRunner {
@@ -290,7 +330,7 @@ class PersistenceBatchingTest {
                 // suspend DAO methods surface as Object return types on the Proxy; the source-ref
                 // resolvers must hand back a Long or re-ingest breaks with a ClassCastException.
                 method.name == "getOrCreateSourceRef" || method.name == "getSourceRef" -> 1L
-                method.name == "getModelTrimpById" -> null
+                method.name == "getModelTrimpById" || method.name == "getById" -> null
                 method.returnType == java.lang.Integer.TYPE -> 1
                 method.returnType == java.lang.Long.TYPE || method.returnType == Long::class.javaObjectType -> 1L
                 else -> Unit

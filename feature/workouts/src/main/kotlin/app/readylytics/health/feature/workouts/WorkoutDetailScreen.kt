@@ -35,7 +35,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 fun WorkoutDetailRoute(
     workoutId: String,
     onBack: () -> Unit,
-    onRequestRoutePermission: () -> Unit = {},
+    onRequestRoutePermission: (onGranted: () -> Unit) -> Unit = {},
     viewModel: WorkoutDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,7 +68,11 @@ fun WorkoutDetailRoute(
         } else {
             WorkoutDetailScreen(
                 uiState = uiState,
-                onGrantPermissionClick = onRequestRoutePermission,
+                onGrantPermissionClick = {
+                    onRequestRoutePermission {
+                        viewModel.onRoutePermissionResult()
+                    }
+                },
                 modifier = Modifier.padding(innerPadding),
             )
         }

@@ -28,6 +28,15 @@ interface HealthIngestionStore {
     suspend fun countHrvInRange(startMs: Long, endMs: Long): Int
     suspend fun countSleepSessionsInRange(startMs: Long, endMs: Long): Int
     suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int
+
+    suspend fun persistSingleWorkoutRoute(
+        workoutId: String,
+        routePoints: List<WorkoutRoutePoint>,
+        routeState: String,
+        totalDistanceMeters: Float?,
+        avgSpeedKmh: Float?,
+        elevationGainMeters: Float?,
+    )
 }
 
 data class HealthIngestionBatch(

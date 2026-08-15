@@ -181,6 +181,35 @@ class RoomHealthIngestionStore
         override suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int {
             return workoutDao.countInRange(startMs, endMs)
         }
+
+        override suspend fun persistSingleWorkoutRoute(
+            workoutId: String,
+            routePoints: List<WorkoutRoutePoint>,
+            routeState: String,
+            totalDistanceMeters: Float?,
+            avgSpeedKmh: Float?,
+            elevationGainMeters: Float?,
+        ) {
+            transactionRunner.runInTransaction {
+                val existing = workoutDao.getById(workoutId)
+                if (existing != null) {
+                    workoutDao.upsertAll(
+                        listOf(
+                            existing.copy(
+                                routeState = routeState,
+                                totalDistanceMeters = totalDistanceMeters ?: existing.totalDistanceMeters,
+                                avgSpeedKmh = avgSpeedKmh ?: existing.avgSpeedKmh,
+                                elevationGainMeters = elevationGainMeters ?: existing.elevationGainMeters,
+                            ),
+                        ),
+                    )
+                }
+                workoutRoutePointDao.deleteForWorkouts(listOf(workoutId))
+                if (routePoints.isNotEmpty()) {
+                    workoutRoutePointDao.insertAll(routePoints.map(WorkoutRoutePoint::toEntity))
+                }
+            }
+        }
     }
 
 private const val TAG = "RoomHealthIngestionStore"

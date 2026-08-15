@@ -17,6 +17,7 @@ import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.domain.sync.SyncWorkoutRouteUseCase
 import app.readylytics.health.domain.util.PaceSpeedCalculator
 import app.readylytics.health.domain.util.RouteDistanceCalculator
 import app.readylytics.health.domain.util.RouteProjector
@@ -76,6 +77,7 @@ class WorkoutDetailViewModel
         private val dailySummaryRepository: DailySummaryRepository,
         private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
+        private val syncWorkoutRouteUseCase: SyncWorkoutRouteUseCase,
         private val savedStateHandle: SavedStateHandle,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
@@ -88,14 +90,28 @@ class WorkoutDetailViewModel
             }
         }
 
+        fun onRoutePermissionResult() {
+            val workoutId = savedStateHandle.get<String>("workoutId") ?: return
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true) }
+                syncWorkoutRouteUseCase(workoutId)
+                loadWorkout(workoutId)
+            }
+        }
+
         fun loadWorkout(workoutId: String) {
             savedStateHandle["workoutId"] = workoutId
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
-                val workout = workoutRepository.getById(workoutId)
+                var workout = workoutRepository.getById(workoutId)
                 if (workout == null) {
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
+                }
+
+                if (workout.routeState == RouteState.PERMISSION_REQUIRED && hcRepo.hasExerciseRoutesPermission()) {
+                    syncWorkoutRouteUseCase(workoutId)
+                    workout = workoutRepository.getById(workoutId) ?: workout
                 }
 
                 withContext(defaultDispatcher) {
