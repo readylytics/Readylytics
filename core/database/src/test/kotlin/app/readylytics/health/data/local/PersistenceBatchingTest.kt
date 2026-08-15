@@ -10,10 +10,14 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.HealthIngestionBatch
 import app.readylytics.health.domain.sync.HeartRateInput
 import app.readylytics.health.domain.sync.HrvInput
+import app.readylytics.health.domain.sync.WorkoutInput
 import java.lang.reflect.Proxy
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -186,6 +190,58 @@ class PersistenceBatchingTest {
             assertEquals(listOf(5_000), batchSizes)
         }
 
+    @Test
+    fun `persist is idempotent for workout route points`() =
+        runTest {
+            val events = mutableListOf<String>()
+            val transactionRunner = RecordingTransactionRunner(events)
+            val routePointDao = FakeWorkoutRoutePointDao()
+            val store = buildStore(events, transactionRunner, workoutRoutePointDao = routePointDao)
+
+            val routePoints =
+                listOf(
+                    WorkoutRoutePoint(workoutId = "w1", latitude = 52.5, longitude = 13.4, timestampMs = 1000L),
+                    WorkoutRoutePoint(workoutId = "w1", latitude = 52.6, longitude = 13.5, timestampMs = 2000L),
+                )
+            val workout =
+                WorkoutInput(
+                    id = "w1",
+                    startTime = 1000L,
+                    endTime = 2000L,
+                    exerciseType = "Running",
+                    durationMinutes = 16,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 0f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 10f,
+                    avgHr = 140f,
+                    deviceName = null,
+                    routePoints = routePoints,
+                )
+            val batch =
+                HealthIngestionBatch(
+                    sleepSessions = emptyList(),
+                    sleepStages = emptyList(),
+                    heartRateSamples = emptyList(),
+                    hrvSamples = emptyList(),
+                    workouts = listOf(workout),
+                    weights = emptyList(),
+                    bodyFatSamples = emptyList(),
+                    bloodPressureSamples = emptyList(),
+                    oxygenSaturationSamples = emptyList(),
+                    bodyTemperatureSamples = emptyList(),
+                    stepRecords = emptyList(),
+                )
+
+            store.persist(batch)
+            store.persist(batch) // Second ingestion of the same batch
+
+            val stored = routePointDao.getRoutePoints("w1")
+            assertEquals(2, stored.size)
+        }
+
     private class RecordingTransactionRunner(
         private val events: MutableList<String>,
     ) : TransactionRunner {
@@ -196,6 +252,29 @@ class PersistenceBatchingTest {
             transactionCount++
             events += "transaction:$transactionCount"
             return block()
+        }
+    }
+
+    private class FakeWorkoutRoutePointDao : WorkoutRoutePointDao {
+        private val points = mutableListOf<WorkoutRoutePointEntity>()
+
+        override suspend fun insertAll(points: List<WorkoutRoutePointEntity>) {
+            this.points.addAll(points)
+        }
+
+        override suspend fun getRoutePoints(workoutId: String): List<WorkoutRoutePointEntity> =
+            points.filter { it.workoutId == workoutId }.sortedBy { it.timestampMs }
+
+        override suspend fun deleteByWorkoutId(workoutId: String): Int {
+            val before = points.size
+            points.removeAll { it.workoutId == workoutId }
+            return before - points.size
+        }
+
+        override suspend fun deleteForWorkouts(workoutIds: List<String>): Int {
+            val before = points.size
+            points.removeAll { it.workoutId in workoutIds }
+            return before - points.size
         }
     }
 
@@ -211,8 +290,9 @@ class PersistenceBatchingTest {
                 // suspend DAO methods surface as Object return types on the Proxy; the source-ref
                 // resolvers must hand back a Long or re-ingest breaks with a ClassCastException.
                 method.name == "getOrCreateSourceRef" || method.name == "getSourceRef" -> 1L
+                method.name == "getModelTrimpById" -> null
                 method.returnType == java.lang.Integer.TYPE -> 1
-                method.returnType == java.lang.Long.TYPE || method.returnType == java.lang.Long::class.java -> 1L
+                method.returnType == java.lang.Long.TYPE || method.returnType == Long::class.javaObjectType -> 1L
                 else -> Unit
             }
         } as T
@@ -220,6 +300,7 @@ class PersistenceBatchingTest {
     private fun buildStore(
         events: MutableList<String>,
         transactionRunner: TransactionRunner,
+        workoutRoutePointDao: WorkoutRoutePointDao = recordingDao(events, "routePoints"),
     ): RoomHealthIngestionStore =
         RoomHealthIngestionStore(
             sleepSessionDao = recordingDao(events, "sleep"),
@@ -227,7 +308,7 @@ class PersistenceBatchingTest {
             heartRateDao = recordingDao(events, "heartRate"),
             hrvDao = recordingDao(events, "hrv"),
             workoutDao = recordingDao(events, "workout"),
-            workoutRoutePointDao = recordingDao(events, "routePoints"),
+            workoutRoutePointDao = workoutRoutePointDao,
             weightRecordDao = recordingDao(events, "weight"),
             bodyFatRecordDao = recordingDao(events, "bodyFat"),
             bloodPressureRecordDao = recordingDao(events, "bloodPressure"),

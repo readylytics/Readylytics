@@ -16,4 +16,7 @@ interface WorkoutRoutePointDao {
 
     @Query("DELETE FROM workout_route_points WHERE workoutId = :workoutId")
     suspend fun deleteByWorkoutId(workoutId: String): Int
+
+    @Query("DELETE FROM workout_route_points WHERE workoutId IN (:workoutIds)")
+    suspend fun deleteForWorkouts(workoutIds: List<String>): Int
 }

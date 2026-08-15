@@ -88,9 +88,15 @@ class RoomHealthIngestionStore
                         )
                     }
                 workoutDao.upsertAll(workoutEntities)
-                workoutRoutePointDao.insertAll(
-                    batch.workouts.flatMap { workout -> workout.routePoints.map(WorkoutRoutePoint::toEntity) },
-                )
+                val workoutIds = batch.workouts.map(WorkoutInput::id)
+                if (workoutIds.isNotEmpty()) {
+                    workoutRoutePointDao.deleteForWorkouts(workoutIds)
+                }
+                val routePointEntities =
+                    batch.workouts.flatMap { workout ->
+                        workout.routePoints.map(WorkoutRoutePoint::toEntity)
+                    }
+                workoutRoutePointDao.insertAll(routePointEntities)
                 weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
                 bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
                 bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))

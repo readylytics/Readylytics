@@ -426,11 +426,10 @@ merge rather than an unconditional replacement of every column. `RoomHealthInges
 updates Health Connect-owned workout fields for the stable workout `id` while preserving the
 existing nullable `modelTrimp`, because that column is scoring-owned derived state. New rows and
 rows already invalidated to `modelTrimp = null` remain null until their scoring day is recomputed.
-Route points ride the same workout ingest: each `WorkoutInput.routePoints` list is upserted into
-`workout_route_points` (`OnConflictStrategy.REPLACE` keyed on autoincrement `id` + the
-`(workoutId, timestampMs)` index) in the same transaction as the parent workout — no
-`deleteByWorkoutId` in the sync path, since a re-fetched session replaces identical points and a
-session belongs to exactly one ingest chunk.
+Route points ride the same workout ingest: each `WorkoutInput.routePoints` list is inserted into
+`workout_route_points` after deleting prior points for incoming workout IDs via
+`WorkoutRoutePointDao.deleteForWorkouts(workoutIds)` in the same transaction as the parent workout,
+preventing duplicate points across repeated syncs or resync passes.
 There is no blanket `deleteAll()` in the sync path — a worker that dies mid-resync leaves prior
 valid data intact, and a retry re-runs the same range cleanly. `DailySummaryDao` additionally
 exposes `updateBaselines()` and `clearFrozenBaselinesBetween(fromMs, toExclusiveMs)` (the only
