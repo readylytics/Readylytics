@@ -91,6 +91,18 @@ class UpsertConflictStrategyInstrumentedTest {
                 .setQueryCoroutineContext(kotlinx.coroutines.Dispatchers.IO)
                 .build()
         dao = db.upsertPrototypeDao()
+
+        // Phase 5 (v10): heart_rate_records / hrv_records now carry a FK to health_source_records.
+        // Provision synthetic parent rows (explicit ids) so the prototype's conflict-strategy inserts
+        // satisfy the FK; the parent rows are inert w.r.t. the rowId/changes() behavior under test.
+        writable().execSQL("PRAGMA foreign_keys = ON")
+        for (ref in listOf(1L, 2L, 3L)) {
+            writable().execSQL(
+                "INSERT OR IGNORE INTO health_source_records (id, sourceRecordId, recordType, createdAtMs) " +
+                    "VALUES (?, ?, 'HEART_RATE', 0)",
+                arrayOf<Any?>(ref, "proto-src-$ref"),
+            )
+        }
     }
 
     @After
