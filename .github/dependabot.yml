@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: "gradle" # Gradle/Kotlin
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions" # Workflow action versions
+    directory: "/"
+    schedule:
+      interval: "weekly"
