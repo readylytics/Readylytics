@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.test.runTest
@@ -37,15 +38,29 @@ class SleepMetricDaoOrderingTest {
         db.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        db.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun `sleep hrv session queries return stable timestamp order`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L, 4L)
             hrvDao.upsertAll(
                 listOf(
-                    hrv("late", timestampMs = 3_000L, rmssdMs = 30f, sessionId = "sleep-1"),
-                    hrv("early", timestampMs = 1_000L, rmssdMs = 10f, sessionId = "sleep-1"),
-                    hrv("middle-b", timestampMs = 2_000L, rmssdMs = 25f, sessionId = "sleep-1"),
-                    hrv("middle-a", timestampMs = 2_000L, rmssdMs = 20f, sessionId = "sleep-1"),
+                    hrv(4L, timestampMs = 3_000L, rmssdMs = 30f, sessionId = "sleep-1"),
+                    hrv(3L, timestampMs = 1_000L, rmssdMs = 10f, sessionId = "sleep-1"),
+                    hrv(2L, timestampMs = 2_000L, rmssdMs = 25f, sessionId = "sleep-1"),
+                    hrv(1L, timestampMs = 2_000L, rmssdMs = 20f, sessionId = "sleep-1"),
                 ),
             )
 
@@ -62,12 +77,13 @@ class SleepMetricDaoOrderingTest {
     @Test
     fun `sleep hrv session map returns stable order inside each session`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L, 4L)
             hrvDao.upsertAll(
                 listOf(
-                    hrv("b-late", timestampMs = 4_000L, rmssdMs = 40f, sessionId = "sleep-b"),
-                    hrv("a-late", timestampMs = 3_000L, rmssdMs = 30f, sessionId = "sleep-a"),
-                    hrv("b-early", timestampMs = 2_000L, rmssdMs = 20f, sessionId = "sleep-b"),
-                    hrv("a-early", timestampMs = 1_000L, rmssdMs = 10f, sessionId = "sleep-a"),
+                    hrv(4L, timestampMs = 4_000L, rmssdMs = 40f, sessionId = "sleep-b"),
+                    hrv(3L, timestampMs = 3_000L, rmssdMs = 30f, sessionId = "sleep-a"),
+                    hrv(2L, timestampMs = 2_000L, rmssdMs = 20f, sessionId = "sleep-b"),
+                    hrv(1L, timestampMs = 1_000L, rmssdMs = 10f, sessionId = "sleep-a"),
                 ),
             )
 
@@ -80,30 +96,31 @@ class SleepMetricDaoOrderingTest {
     @Test
     fun `sleep heart rate grouped samples use stable tie order`() =
         runTest {
+            seedSourceRecordParents(1L, 2L, 3L, 4L)
             heartRateDao.upsertAll(
                 listOf(
-                    hr("tie-late", timestampMs = 3_000L, bpm = 50, sessionId = "sleep-1"),
-                    hr("higher", timestampMs = 1_500L, bpm = 51, sessionId = "sleep-1"),
-                    hr("tie-early-b", timestampMs = 1_000L, bpm = 50, sessionId = "sleep-1"),
-                    hr("tie-early-a", timestampMs = 1_000L, bpm = 50, sessionId = "sleep-1"),
+                    hr(3L, timestampMs = 3_000L, bpm = 50, sessionId = "sleep-1"),
+                    hr(4L, timestampMs = 1_500L, bpm = 51, sessionId = "sleep-1"),
+                    hr(2L, timestampMs = 1_000L, bpm = 50, sessionId = "sleep-1"),
+                    hr(1L, timestampMs = 1_000L, bpm = 50, sessionId = "sleep-1"),
                 ),
             )
 
             val result = heartRateDao.getSleepHrSamplesForSessions(listOf("sleep-1"))
 
             assertEquals(
-                listOf("tie-early-a", "tie-early-b", "tie-late", "higher"),
-                result.map { it.id },
+                listOf(1L, 2L, 3L, 4L),
+                result.map { it.sourceRecordRef },
             )
         }
 
     private fun hrv(
-        id: String,
+        ref: Long,
         timestampMs: Long,
         rmssdMs: Float,
         sessionId: String,
     ) = HrvRecordEntity(
-        id = id,
+        sourceRecordRef = ref,
         timestampMs = timestampMs,
         rmssdMs = rmssdMs,
         recordType = "SLEEP",
@@ -112,12 +129,12 @@ class SleepMetricDaoOrderingTest {
     )
 
     private fun hr(
-        id: String,
+        ref: Long,
         timestampMs: Long,
         bpm: Int,
         sessionId: String,
     ) = HeartRateRecordEntity(
-        id = id,
+        sourceRecordRef = ref,
         timestampMs = timestampMs,
         beatsPerMinute = bpm,
         recordType = "SLEEP",

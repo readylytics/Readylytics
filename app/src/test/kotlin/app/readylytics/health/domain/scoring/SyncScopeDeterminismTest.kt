@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
@@ -34,6 +35,7 @@ class SyncScopeDeterminismTest {
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
 
     private lateinit var baselineComputer: BaselineComputer
@@ -72,6 +74,7 @@ class SyncScopeDeterminismTest {
                 hrvDao = hrvDao,
                 sleepSessionDao = sleepSessionDao,
                 dailySummaryDao = dailySummaryDao,
+                minuteBucketDao = minuteBucketDao,
             )
         baselineComputer =
             BaselineComputer(

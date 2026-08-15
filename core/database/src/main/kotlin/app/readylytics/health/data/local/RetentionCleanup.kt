@@ -6,6 +6,7 @@ import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.StepRecordDao
@@ -31,12 +32,14 @@ class RetentionCleanup
         private val oxygenSaturationDao: OxygenSaturationRecordDao,
         private val bodyTemperatureDao: BodyTemperatureRecordDao,
         private val stepRecordDao: StepRecordDao,
+        private val minuteBucketDao: MinuteBucketDao,
     ) {
         suspend fun deleteBefore(cutoffMs: Long) =
             transactionRunner.runInTransaction {
                 sleepDao.deleteBeforeTimestamp(cutoffMs)
                 heartRateDao.deleteBeforeTimestamp(cutoffMs)
                 hrvDao.deleteBeforeTimestamp(cutoffMs)
+                minuteBucketDao.deleteBeforeTimestamp(cutoffMs)
                 workoutDao.deleteBeforeTimestamp(cutoffMs)
                 dailySummaryDao.deleteBeforeTimestamp(cutoffMs)
                 weightDao.deleteBeforeTimestamp(cutoffMs)

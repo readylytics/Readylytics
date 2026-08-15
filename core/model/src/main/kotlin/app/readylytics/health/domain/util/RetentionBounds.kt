@@ -1,8 +1,10 @@
 package app.readylytics.health.domain.util
 
 import app.readylytics.health.domain.preferences.UserPreferences
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 /**
  * Single source of truth for translating the user's data-retention preference into a date bound.
@@ -16,6 +18,18 @@ import java.time.ZoneId
 object RetentionBounds {
     /** Upper bound for an "unlimited" (retention-disabled) resync window, in days. */
     const val ABSOLUTE_MAX_DAYS = 3650L
+
+    /** Fixed hot/warm tier boundary: raw 1s samples stay hot for 90 days, then roll up to buckets. */
+    const val HOT_TIER_WINDOW_DAYS = 90L
+
+    /**
+     * Epoch-millis cutoff below which heart-rate raw samples are eligible for hot→warm rollup.
+     * A fixed 90-day window, independent of the user's retention setting: retention governs the
+     * warm→cold deletion bound, rollup governs the hot→warm aggregate bound.
+     */
+    fun resolveHotTierCutoffMs(
+        now: Instant = Instant.now(),
+    ): Long = now.minus(HOT_TIER_WINDOW_DAYS, ChronoUnit.DAYS).toEpochMilli()
 
     /**
      * Inclusive start date for a full historical resync: `today - retentionDays` when retention is

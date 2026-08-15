@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring.sleep
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.mapper.SleepSessionMapper
@@ -27,8 +28,9 @@ class CurrentNightHrvResolverTest {
     private val hrvDao = mockk<HrvDao>()
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val scoringHistoryRepository =
-        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
     private val resolver = CurrentNightHrvResolver(scoringHistoryRepository)
 
     @Test
@@ -97,8 +99,9 @@ class SleepPercentileRhrCalculatorTest {
     private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>()
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val scoringHistoryRepository =
-        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
     private val collector = SleepPercentileRhrCalculator(scoringHistoryRepository)
 
     @Test
@@ -241,8 +244,9 @@ class SleepNadirAnalyzerTest {
     private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val scoringHistoryRepository =
-        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
     private val scoringCalculator = mockk<ScoringCalculator>()
     private val analyzer = SleepNadirAnalyzer(scoringCalculator)
 

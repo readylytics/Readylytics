@@ -5,6 +5,7 @@ import app.readylytics.health.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
@@ -55,6 +56,7 @@ class ScoringDeterminismRegressionTest {
     private val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
     private val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
@@ -81,6 +83,7 @@ class ScoringDeterminismRegressionTest {
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
                 heartRateDao,
+                minuteBucketDao,
                 weightRecordDao,
                 bodyFatRecordDao,
                 bloodPressureRecordDao,

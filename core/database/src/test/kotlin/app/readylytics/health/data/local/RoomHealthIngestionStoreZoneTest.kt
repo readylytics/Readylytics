@@ -68,6 +68,7 @@ class RoomHealthIngestionStoreZoneTest {
             bodyTemperatureRecordDao = noOpDao(),
             stepRecordDao = noOpDao(),
             dailySummaryDao = dailySummaryDao,
+            sourceRecordDao = noOpDao(),
             transactionRunner =
                 object : TransactionRunner {
                     override suspend fun <R> runInTransaction(block: suspend () -> R): R = block()

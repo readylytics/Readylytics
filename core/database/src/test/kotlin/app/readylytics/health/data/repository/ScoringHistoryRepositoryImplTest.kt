@@ -3,6 +3,7 @@ package app.readylytics.health.data.repository
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
@@ -20,12 +21,14 @@ class ScoringHistoryRepositoryImplTest {
     private val hrvDao = fakeDao<HrvDao>()
     private val sleepSessionDao = fakeDao<SleepSessionDao>()
     private val dailySummaryDao = fakeDao<DailySummaryDao>(dailySummaryResults)
+    private val minuteBucketDao = fakeDao<MinuteBucketDao>()
     private val repository =
         ScoringHistoryRepositoryImpl(
             heartRateDao = heartRateDao,
             hrvDao = hrvDao,
             sleepSessionDao = sleepSessionDao,
             dailySummaryDao = dailySummaryDao,
+            minuteBucketDao = minuteBucketDao,
         )
 
     @Test
@@ -33,7 +36,7 @@ class ScoringHistoryRepositoryImplTest {
         runTest {
             val entity =
                 HeartRateRecordEntity(
-                    id = "hr1_500",
+                    sourceRecordRef = 1L,
                     timestampMs = 500L,
                     beatsPerMinute = 55,
                     recordType = "SLEEP",

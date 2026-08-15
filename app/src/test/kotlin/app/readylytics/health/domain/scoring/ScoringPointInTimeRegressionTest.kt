@@ -39,6 +39,7 @@ class ScoringPointInTimeRegressionTest {
     private val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
     private val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
+    private val minuteBucketDao = mockk<MinuteBucketDao>(relaxed = true)
     private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
@@ -65,6 +66,7 @@ class ScoringPointInTimeRegressionTest {
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
                 heartRateDao,
+                minuteBucketDao,
                 weightRecordDao,
                 bodyFatRecordDao,
                 bloodPressureRecordDao,

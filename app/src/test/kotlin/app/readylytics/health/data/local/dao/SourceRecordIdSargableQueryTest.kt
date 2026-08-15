@@ -8,6 +8,7 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
@@ -45,43 +46,79 @@ class SourceRecordIdSargableQueryTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun `heartRateDao matches the source id and its composite children, not an unrelated prefix match`() =
         runTest {
+            seedSourceRecordParents(1L, 2L)
             val dao = database.heartRateDao()
             dao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity(id = "abc", timestampMs = 1L, beatsPerMinute = 60, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "abc_1", timestampMs = 2L, beatsPerMinute = 61, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "abc_2", timestampMs = 3L, beatsPerMinute = 62, recordType = "RESTING"),
-                    HeartRateRecordEntity(id = "abcd_1", timestampMs = 4L, beatsPerMinute = 63, recordType = "RESTING"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1L,
+                        beatsPerMinute = 60,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 2L,
+                        beatsPerMinute = 61,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 3L,
+                        beatsPerMinute = 62,
+                        recordType = "RESTING",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = 4L,
+                        beatsPerMinute = 63,
+                        recordType = "RESTING",
+                    ),
                 ),
             )
 
-            val matches = dao.getBySourceRecordId("abc")
-            assertEquals(setOf("abc", "abc_1", "abc_2"), matches.map { it.id }.toSet())
+            val matches = dao.getBySourceRecordRef(1L)
+            assertEquals(setOf(1L), matches.map { it.sourceRecordRef }.toSet())
+            assertEquals(setOf(1L, 2L, 3L), matches.map { it.timestampMs }.toSet())
 
-            val deleted = dao.deleteBySourceRecordId("abc")
+            val deleted = dao.deleteBySourceRecordRef(1L)
             assertEquals(3, deleted)
-            assertEquals(setOf("abcd_1"), dao.getSince(0L).map { it.id }.toSet())
+            assertEquals(setOf(2L), dao.getSince(0L).map { it.sourceRecordRef }.toSet())
         }
 
     @Test
     fun `hrvDao matches the source id and its composite children, not an unrelated prefix match`() =
         runTest {
+            seedSourceRecordParents(1L, 2L)
             val dao = database.hrvDao()
             dao.upsertAll(
                 listOf(
-                    HrvRecordEntity(id = "abc", timestampMs = 1L, rmssdMs = 10f, recordType = "RESTING"),
-                    HrvRecordEntity(id = "abc_1", timestampMs = 2L, rmssdMs = 11f, recordType = "RESTING"),
-                    HrvRecordEntity(id = "abcd_1", timestampMs = 3L, rmssdMs = 12f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1L, rmssdMs = 10f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 2L, rmssdMs = 11f, recordType = "RESTING"),
+                    HrvRecordEntity(sourceRecordRef = 2L, timestampMs = 3L, rmssdMs = 12f, recordType = "RESTING"),
                 ),
             )
 
-            val matches = dao.getBySourceRecordId("abc")
-            assertEquals(setOf("abc", "abc_1"), matches.map { it.id }.toSet())
+            val matches = dao.getBySourceRecordRef(1L)
+            assertEquals(setOf(1L), matches.map { it.sourceRecordRef }.toSet())
 
-            val deleted = dao.deleteBySourceRecordId("abc")
+            val deleted = dao.deleteBySourceRecordRef(1L)
             assertEquals(2, deleted)
         }
 
