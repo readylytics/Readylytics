@@ -29,6 +29,8 @@ this can include:
 - Steps
 - Optional body metrics, such as weight, body fat, blood pressure, or oxygen
   saturation, if supported and permitted
+- Exercise route locations (latitude/longitude/altitude points of a workout)
+  when Health Connect exposes them and route access is permitted
 
 Readylytics reads this data to calculate fitness and training load trends, sleep insights,
 readiness, and recovery context.

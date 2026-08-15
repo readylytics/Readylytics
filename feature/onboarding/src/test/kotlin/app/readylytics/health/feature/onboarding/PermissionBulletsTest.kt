@@ -65,6 +65,14 @@ class PermissionBulletsTest {
     }
 
     @Test
+    fun healthPermissionLabelRes_mapsExerciseRoutesPermission() {
+        assertEquals(
+            R.string.onboarding_hc_permission_exercise_routes,
+            healthPermissionLabelRes("android.permission.health.READ_EXERCISE_ROUTES"),
+        )
+    }
+
+    @Test
     fun healthPermissionLabelRes_returnsNullForUnknownPermission() {
         assertNull(healthPermissionLabelRes("android.permission.health.UNKNOWN_PERMISSION"))
     }

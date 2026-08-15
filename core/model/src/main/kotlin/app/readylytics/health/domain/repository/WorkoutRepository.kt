@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.repository
 
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 import kotlinx.coroutines.flow.Flow
 
 data class WorkoutData(
@@ -33,6 +34,8 @@ interface WorkoutRepository {
     ): List<WorkoutData>
 
     suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
+
+    suspend fun getRoutePoints(workoutId: String): List<WorkoutRoutePointEntity>
 
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>
 }

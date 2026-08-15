@@ -1,6 +1,7 @@
 package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
@@ -14,6 +15,7 @@ class WorkoutRepositoryImpl
     @Inject
     constructor(
         private val dao: WorkoutDao,
+        private val routePointDao: WorkoutRoutePointDao,
     ) : WorkoutRepository {
         override suspend fun getById(id: String): WorkoutData? = dao.getById(id)?.let { mapToDomain(it) }
 
@@ -32,6 +34,8 @@ class WorkoutRepositoryImpl
 
         override suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int =
             dao.countByTimeRange(fromMs, toMs)
+
+        override suspend fun getRoutePoints(workoutId: String) = routePointDao.getRoutePoints(workoutId)
 
         override fun observeSince(fromMs: Long): Flow<List<WorkoutData>> =
             dao.observeSince(fromMs).map { list ->

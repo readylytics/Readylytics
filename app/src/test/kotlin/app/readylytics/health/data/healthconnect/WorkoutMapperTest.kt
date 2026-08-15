@@ -3,10 +3,14 @@ package app.readylytics.health.data.healthconnect
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.domain.model.DomainRouteLocation
+import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.sync.mappers.WorkoutMapper
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
+import kotlin.test.assertTrue
 
 class WorkoutMapperTest {
     @Test
@@ -34,6 +38,65 @@ class WorkoutMapperTest {
         assertEquals(60, result.durationMinutes)
         assertEquals(0f, result.trimp)
         assertEquals(0f, result.avgHr)
+    }
+
+    @Test
+    fun `mapExerciseSession preserves route points and computes fallback metrics`() {
+        val startTime = Instant.parse("2026-05-09T10:00:00Z")
+        val endTime = Instant.parse("2026-05-09T11:00:00Z")
+        val session =
+            DomainExerciseSessionRecord(
+                id = "test_session",
+                startTime = startTime,
+                endTime = endTime,
+                exerciseType = "56",
+                deviceName = "Watch",
+                routePoints =
+                    listOf(
+                        DomainRouteLocation(48.8566, 2.3522, 100.0, startTime, 3.0f, 5.0f),
+                        DomainRouteLocation(48.8580, 2.3540, 110.0, startTime.plusSeconds(600), 3.0f, 5.0f),
+                        DomainRouteLocation(48.8590, 2.3550, 104.0, startTime.plusSeconds(1200), 3.0f, 5.0f),
+                    ),
+                routeState = RouteState.IMPORTED,
+            )
+
+        val result = WorkoutMapper.mapExerciseSession(session)
+
+        assertEquals(RouteState.IMPORTED, result.routeState)
+        assertEquals(3, result.routePoints.size)
+        val first = result.routePoints[0]
+        assertEquals("test_session", first.workoutId)
+        assertEquals(48.8566, first.latitude, 0.00001)
+        assertEquals(2.3522, first.longitude, 0.00001)
+        assertEquals(100.0, first.altitude!!, 0.00001)
+        assertEquals(startTime.toEpochMilli(), first.timestampMs)
+        assertEquals(3.0f, first.horizontalAccuracy!!, 0.001f)
+        assertEquals(5.0f, first.verticalAccuracy!!, 0.001f)
+        assertTrue(result.totalDistanceMeters!! > 0f, "expected fallback distance")
+        assertTrue(result.avgSpeedKmh!! > 0f, "expected fallback avg speed")
+        assertTrue(result.elevationGainMeters!! > 0f, "expected fallback elevation gain")
+    }
+
+    @Test
+    fun `mapExerciseSession leaves metrics null when no route data exists`() {
+        val startTime = Instant.parse("2026-05-09T10:00:00Z")
+        val endTime = Instant.parse("2026-05-09T11:00:00Z")
+        val session =
+            DomainExerciseSessionRecord(
+                id = "test_session",
+                startTime = startTime,
+                endTime = endTime,
+                exerciseType = "56",
+                deviceName = "Watch",
+            )
+
+        val result = WorkoutMapper.mapExerciseSession(session)
+
+        assertTrue(result.routePoints.isEmpty())
+        assertNull(result.totalDistanceMeters)
+        assertNull(result.avgSpeedKmh)
+        assertNull(result.elevationGainMeters)
+        assertEquals(RouteState.NOT_AVAILABLE, result.routeState)
     }
 
     @Test

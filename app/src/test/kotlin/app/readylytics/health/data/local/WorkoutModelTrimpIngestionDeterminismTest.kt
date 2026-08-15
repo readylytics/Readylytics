@@ -46,6 +46,7 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                 heartRateDao = database.heartRateDao(),
                 hrvDao = database.hrvDao(),
                 workoutDao = database.workoutDao(),
+                workoutRoutePointDao = database.workoutRoutePointDao(),
                 weightRecordDao = database.weightRecordDao(),
                 bodyFatRecordDao = database.bodyFatRecordDao(),
                 bloodPressureRecordDao = database.bloodPressureRecordDao(),

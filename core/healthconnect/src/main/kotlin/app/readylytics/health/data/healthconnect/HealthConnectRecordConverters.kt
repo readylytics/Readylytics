@@ -3,6 +3,7 @@ package app.readylytics.health.data.healthconnect
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -14,6 +15,7 @@ import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
 import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord
@@ -23,6 +25,7 @@ import app.readylytics.health.domain.model.DomainSleepStage
 import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
+import app.readylytics.health.domain.model.RouteState
 
 fun SleepSessionRecord.toDomain(): DomainSleepSessionRecord =
     DomainSleepSessionRecord(
@@ -74,14 +77,39 @@ fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
         deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
     )
 
-fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord =
+fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord = toDomain(exerciseRouteResult)
+
+fun ExerciseSessionRecord.toDomain(routeResult: ExerciseRouteResult?): DomainExerciseSessionRecord =
     DomainExerciseSessionRecord(
         id = metadata.id,
         startTime = startTime,
         endTime = endTime,
         exerciseType = exerciseType.toString(),
         deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+        routePoints = routeResult.toDomainRoutePoints(),
+        routeState = routeResult.toRouteState(),
     )
+
+internal fun ExerciseRouteResult?.toDomainRoutePoints(): List<DomainRouteLocation> {
+    val data = this as? ExerciseRouteResult.Data ?: return emptyList()
+    return data.exerciseRoute.route.map { location ->
+        DomainRouteLocation(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            altitudeMeters = location.altitude?.inMeters,
+            time = location.time,
+            horizontalAccuracyMeters = location.horizontalAccuracy?.inMeters?.toFloat(),
+            verticalAccuracyMeters = location.verticalAccuracy?.inMeters?.toFloat(),
+        )
+    }
+}
+
+internal fun ExerciseRouteResult?.toRouteState(): String =
+    when (this) {
+        is ExerciseRouteResult.Data -> RouteState.IMPORTED
+        is ExerciseRouteResult.ConsentRequired -> RouteState.PERMISSION_REQUIRED
+        else -> RouteState.NOT_AVAILABLE
+    }
 
 fun StepsRecord.toDomain(): DomainStepsRecord =
     DomainStepsRecord(

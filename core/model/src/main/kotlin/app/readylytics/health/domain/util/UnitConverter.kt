@@ -2,6 +2,7 @@ package app.readylytics.health.domain.util
 
 import app.readylytics.health.domain.preferences.UnitSystem
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 object UnitConverter {
     // Conversion factors
@@ -11,6 +12,10 @@ object UnitConverter {
     const val INCHES_TO_CM = 2.54f
     const val CELSIUS_TO_FAHRENHEIT_MULTIPLIER = 9f / 5f
     const val CELSIUS_TO_FAHRENHEIT_OFFSET = 32f
+    const val KM_TO_MI = 0.621371f
+    const val METERS_TO_FEET = 3.28084f
+    const val MI_PER_KM = 1.609344f
+    const val PACE_CAP_MIN_PER_KM = 20f
 
     // Height conversions - returns raw values and format info for UI layer to apply i18n
     data class HeightDisplay(
@@ -78,4 +83,68 @@ object UnitConverter {
             UnitSystem.METRIC -> celsiusDelta
             UnitSystem.IMPERIAL -> celsiusDelta * CELSIUS_TO_FAHRENHEIT_MULTIPLIER
         }
+
+    fun formatDistance(
+        meters: Float,
+        unitSystem: UnitSystem,
+    ): String {
+        if (meters <= 0f) return "—"
+        return when (unitSystem) {
+            UnitSystem.METRIC ->
+                if (meters < 1000f) "%.0f m".format(meters)
+                else "%.1f km".format(meters / 1000f)
+            UnitSystem.IMPERIAL -> {
+                val miles = meters * KM_TO_MI / 1000f
+                if (miles < 0.1f) "%.0f ft".format(meters * METERS_TO_FEET)
+                else "%.1f mi".format(miles)
+            }
+        }
+    }
+
+    fun formatSpeed(
+        kmh: Float,
+        unitSystem: UnitSystem,
+    ): String {
+        if (kmh <= 0f) return "—"
+        return when (unitSystem) {
+            UnitSystem.METRIC -> "%.1f km/h".format(kmh)
+            UnitSystem.IMPERIAL -> "%.1f mph".format(kmh * KM_TO_MI)
+        }
+    }
+
+    fun formatPace(
+        minKm: Float,
+        unitSystem: UnitSystem,
+    ): String {
+        if (minKm <= 0f) return "—"
+        val capped = minKm.coerceAtMost(PACE_CAP_MIN_PER_KM)
+        val minPerUnit =
+            when (unitSystem) {
+                UnitSystem.METRIC -> capped
+                UnitSystem.IMPERIAL -> capped * MI_PER_KM
+            }
+        var minutes = minPerUnit.toInt()
+        var seconds = ((minPerUnit - minutes) * 60f).roundToInt()
+        if (seconds == 60) {
+            minutes += 1
+            seconds = 0
+        }
+        val unit =
+            when (unitSystem) {
+                UnitSystem.METRIC -> "km"
+                UnitSystem.IMPERIAL -> "mi"
+            }
+        return "$minutes:${seconds.toString().padStart(2, '0')} /$unit"
+    }
+
+    fun formatElevation(
+        meters: Float,
+        unitSystem: UnitSystem,
+    ): String {
+        if (meters <= 0f) return "—"
+        return when (unitSystem) {
+            UnitSystem.METRIC -> "%.0f m".format(meters)
+            UnitSystem.IMPERIAL -> "%.0f ft".format(meters * METERS_TO_FEET)
+        }
+    }
 }

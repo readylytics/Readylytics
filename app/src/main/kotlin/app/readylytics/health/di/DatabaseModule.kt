@@ -24,6 +24,7 @@ import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.migration.DatabaseReadinessGate
 import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
 import app.readylytics.health.data.security.KeyProvider
@@ -98,6 +99,9 @@ abstract class DatabaseModule {
 
         @Provides
         fun provideWorkoutDao(db: HealthDatabase): WorkoutDao = db.workoutDao()
+
+        @Provides
+        fun provideWorkoutRoutePointDao(db: HealthDatabase): WorkoutRoutePointDao = db.workoutRoutePointDao()
 
         @Provides
         fun provideDailySummaryDao(db: HealthDatabase): DailySummaryDao = db.dailySummaryDao()

@@ -1,7 +1,9 @@
 package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.repository.WorkoutData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -14,7 +16,8 @@ import java.lang.reflect.Proxy
 class WorkoutRepositoryImplTest {
     private val results = mutableMapOf<String, Any?>()
     private val dao = fakeDao<WorkoutDao>(results)
-    private val repository = WorkoutRepositoryImpl(dao)
+    private val routePointDao = fakeDao<WorkoutRoutePointDao>(results)
+    private val repository = WorkoutRepositoryImpl(dao, routePointDao)
 
     @Test
     fun `getInRange delegates to DAO and maps entities to domain WorkoutData`() =
@@ -179,6 +182,24 @@ class WorkoutRepositoryImplTest {
             results["countByTimeRange"] = 7
 
             assertEquals(7, repository.countByTimeRange(100L, 500L))
+        }
+
+    @Test
+    fun `getRoutePoints delegates to the route point dao`() =
+        runTest {
+            val points =
+                listOf(
+                    WorkoutRoutePointEntity(
+                        workoutId = "w1",
+                        latitude = 1.0,
+                        longitude = 2.0,
+                        altitude = 100.0,
+                        timestampMs = 100L,
+                    ),
+                )
+            results["getRoutePoints"] = points
+
+            assertEquals(points, repository.getRoutePoints("w1"))
         }
 
     @Suppress("UNCHECKED_CAST")

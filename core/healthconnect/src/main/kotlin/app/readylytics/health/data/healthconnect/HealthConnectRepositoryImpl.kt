@@ -6,6 +6,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -92,6 +93,7 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
                 HealthPermission.getReadPermission(OxygenSaturationRecord::class),
                 HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+                "android.permission.health.READ_EXERCISE_ROUTES",
             )
 
         override val allPermissions: Set<String> =
@@ -297,7 +299,24 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<DomainExerciseSessionRecord> =
             withContext(ioDispatcher) {
-                readAllPages<ExerciseSessionRecord>(from, to).map { it.toDomain() }
+                readAllPages<ExerciseSessionRecord>(from, to).map { session ->
+                    // Bulk readRecords does NOT include exercise route data; route is only
+                    // available through a per-record readRecord call (HC docs: "Read the specific
+                    // record to check for the route"). Failures degrade to NoData so a missing
+                    // route permission never aborts the whole exercise sync pass.
+                    val routeResult =
+                        try {
+                            client
+                                .readRecord(ExerciseSessionRecord::class, session.metadata.id)
+                                .record
+                                .exerciseRouteResult
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            ExerciseRouteResult.NoData()
+                        }
+                    session.toDomain(routeResult)
+                }
             }
 
         override suspend fun readStepsRecords(

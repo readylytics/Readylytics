@@ -76,4 +76,55 @@ class UnitConverterTest {
         assertEquals(1.0f, UnitConverter.celsiusDeltaToDisplayDelta(1.0f, UnitSystem.METRIC), 0.01f)
         assertEquals(1.8f, UnitConverter.celsiusDeltaToDisplayDelta(1.0f, UnitSystem.IMPERIAL), 0.01f)
     }
+
+    @Test
+    fun `formatDistance uses km for large metric distances`() {
+        assertEquals("5.2 km", UnitConverter.formatDistance(5200f, UnitSystem.METRIC))
+        assertEquals("5.2 km", UnitConverter.formatDistance(5160f, UnitSystem.METRIC))
+    }
+
+    @Test
+    fun `formatDistance uses meters below one kilometer`() {
+        assertEquals("820 m", UnitConverter.formatDistance(820f, UnitSystem.METRIC))
+    }
+
+    @Test
+    fun `formatDistance converts to miles for imperial`() {
+        assertEquals("1.0 mi", UnitConverter.formatDistance(1609.344f, UnitSystem.IMPERIAL))
+        assertEquals("0.4 mi", UnitConverter.formatDistance(644f, UnitSystem.IMPERIAL))
+    }
+
+    @Test
+    fun `formatDistance returns dash for non-positive values`() {
+        assertEquals("—", UnitConverter.formatDistance(0f, UnitSystem.METRIC))
+        assertEquals("—", UnitConverter.formatDistance(-5f, UnitSystem.IMPERIAL))
+    }
+
+    @Test
+    fun `formatSpeed shows kmh for metric and mph for imperial`() {
+        assertEquals("36.0 km/h", UnitConverter.formatSpeed(36f, UnitSystem.METRIC))
+        assertEquals("22.4 mph", UnitConverter.formatSpeed(36f, UnitSystem.IMPERIAL))
+    }
+
+    @Test
+    fun `formatPace renders minutes per km for metric`() {
+        assertEquals("5:30 /km", UnitConverter.formatPace(5.5f, UnitSystem.METRIC))
+    }
+
+    @Test
+    fun `formatPace converts to minutes per mile for imperial`() {
+        assertEquals("8:03 /mi", UnitConverter.formatPace(5f, UnitSystem.IMPERIAL))
+    }
+
+    @Test
+    fun `formatPace caps at 20 minutes per km`() {
+        assertEquals("20:00 /km", UnitConverter.formatPace(20f, UnitSystem.METRIC))
+        assertEquals("20:00 /km", UnitConverter.formatPace(45f, UnitSystem.METRIC))
+    }
+
+    @Test
+    fun `formatElevation shows meters for metric and feet for imperial`() {
+        assertEquals("120 m", UnitConverter.formatElevation(120f, UnitSystem.METRIC))
+        assertEquals("394 ft", UnitConverter.formatElevation(120f, UnitSystem.IMPERIAL))
+    }
 }

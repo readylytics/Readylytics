@@ -2,6 +2,7 @@ package app.readylytics.health.data.local
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import app.readylytics.health.data.local.migration.MIGRATION_10_11
 import app.readylytics.health.data.local.migration.MIGRATION_9_10
 
 object DatabaseMigrations {
@@ -192,5 +193,6 @@ object DatabaseMigrations {
             MIGRATION_7_8,
             MIGRATION_8_9,
             MIGRATION_9_10,
+            MIGRATION_10_11,
         )
 }

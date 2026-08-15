@@ -13,6 +13,7 @@ import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
@@ -55,6 +56,7 @@ class RoomHealthIngestionStore
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
+        private val workoutRoutePointDao: WorkoutRoutePointDao,
         private val weightRecordDao: WeightRecordDao,
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
@@ -84,6 +86,9 @@ class RoomHealthIngestionStore
                         )
                     }
                 workoutDao.upsertAll(workoutEntities)
+                workoutRoutePointDao.insertAll(
+                    batch.workouts.flatMap { workout -> workout.routePoints },
+                )
                 weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
                 bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
                 bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))
@@ -248,6 +253,10 @@ private fun WorkoutInput.toEntity() =
         trimp = trimp,
         avgHr = avgHr,
         deviceName = deviceName,
+        totalDistanceMeters = totalDistanceMeters,
+        avgSpeedKmh = avgSpeedKmh,
+        elevationGainMeters = elevationGainMeters,
+        routeState = routeState,
     )
 
 private fun WeightInput.toEntity() =

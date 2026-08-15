@@ -31,4 +31,10 @@ data class WorkoutRecordEntity(
     // lazily backfilled by the next walk-forward recompute -- read paths use COALESCE(modelTrimp,
     // trimp) until every row has been touched. See WorkoutDao.getTrimpPoints.
     val modelTrimp: Float? = null,
+    // v10->v11 GPS route summary columns. Nullable until a route is ingested for the workout;
+    // routeState records whether route data was imported, awaits route consent, or is absent.
+    val totalDistanceMeters: Float? = null,
+    val avgSpeedKmh: Float? = null,
+    val elevationGainMeters: Float? = null,
+    val routeState: String = "NOT_AVAILABLE",
 )

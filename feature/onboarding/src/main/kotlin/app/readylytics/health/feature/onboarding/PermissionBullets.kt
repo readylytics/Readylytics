@@ -51,6 +51,7 @@ internal fun healthPermissionLabelRes(permission: String): Int? =
         HealthPermission.getReadPermission(ExerciseSessionRecord::class) -> R.string.onboarding_hc_permission_exercise
         HealthPermission.getReadPermission(StepsRecord::class) -> R.string.onboarding_hc_permission_steps
         "android.permission.health.READ_HEALTH_DATA_HISTORY" -> R.string.onboarding_hc_permission_history
+        "android.permission.health.READ_EXERCISE_ROUTES" -> R.string.onboarding_hc_permission_exercise_routes
         HealthPermission.getReadPermission(WeightRecord::class) -> R.string.onboarding_hc_permission_weight
         HealthPermission.getReadPermission(BodyFatRecord::class) -> R.string.onboarding_hc_permission_body_fat
         HealthPermission.getReadPermission(
