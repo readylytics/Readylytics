@@ -108,6 +108,7 @@ class WalkForwardTransactionEquivalenceTest {
                     db.hrvDao(),
                     db.sleepSessionDao(),
                     db.dailySummaryDao(),
+                    db.minuteBucketDao(),
                 )
             val loadScoringStrategy = LoadScoringStrategy()
             val scoringCalculator =
@@ -144,6 +145,7 @@ class WalkForwardTransactionEquivalenceTest {
                     scoringConfigFactory = scoringConfigFactory,
                     computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
                     heartRateDao = db.heartRateDao(),
+                    minuteBucketDao = db.minuteBucketDao(),
                     weightRecordDao = db.weightRecordDao(),
                     bodyFatRecordDao = db.bodyFatRecordDao(),
                     bloodPressureRecordDao = db.bloodPressureRecordDao(),

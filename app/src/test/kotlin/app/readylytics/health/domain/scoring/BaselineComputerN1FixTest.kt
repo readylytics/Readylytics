@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
+import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.SleepSessionEntity
@@ -36,6 +37,7 @@ class BaselineComputerN1FixTest {
     private lateinit var sleepSessionDao: SleepSessionDao
     private lateinit var scoringCalculator: ScoringCalculator
     private lateinit var dailySummaryDao: DailySummaryDao
+    private lateinit var minuteBucketDao: MinuteBucketDao
     private lateinit var baselineComputer: BaselineComputer
 
     @Before
@@ -45,10 +47,11 @@ class BaselineComputerN1FixTest {
         sleepSessionDao = mockk()
         scoringCalculator = mockk()
         dailySummaryDao = mockk()
+        minuteBucketDao = mockk(relaxed = true)
         // Default: no frozen baseline — all dates are live recompute
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         val scoringHistoryRepository =
-            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao, minuteBucketDao)
         baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
     }
 

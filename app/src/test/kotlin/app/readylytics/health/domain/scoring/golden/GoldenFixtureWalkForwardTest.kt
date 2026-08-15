@@ -150,7 +150,13 @@ class GoldenFixtureWalkForwardTest {
             reconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
 
             val scoringHistoryRepository =
-                ScoringHistoryRepositoryImpl(db.heartRateDao(), db.hrvDao(), db.sleepSessionDao(), db.dailySummaryDao())
+                ScoringHistoryRepositoryImpl(
+                    db.heartRateDao(),
+                    db.hrvDao(),
+                    db.sleepSessionDao(),
+                    db.dailySummaryDao(),
+                    db.minuteBucketDao(),
+                )
             val loadScoringStrategy = LoadScoringStrategy()
             val scoringCalculator =
                 CompositeScoringCalculator(
@@ -188,6 +194,7 @@ class GoldenFixtureWalkForwardTest {
                     scoringConfigFactory = scoringConfigFactory,
                     computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
                     heartRateDao = db.heartRateDao(),
+                    minuteBucketDao = db.minuteBucketDao(),
                     weightRecordDao = db.weightRecordDao(),
                     bodyFatRecordDao = db.bodyFatRecordDao(),
                     bloodPressureRecordDao = db.bloodPressureRecordDao(),

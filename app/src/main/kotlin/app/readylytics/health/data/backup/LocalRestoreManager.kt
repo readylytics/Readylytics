@@ -6,11 +6,14 @@ import android.util.JsonReader
 import android.util.JsonToken
 import androidx.room.withTransaction
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
@@ -241,6 +244,8 @@ class LocalRestoreManager
             val oxygenSaturationRecordDao = healthDatabase.oxygenSaturationRecordDao()
             val bodyTemperatureRecordDao = healthDatabase.bodyTemperatureRecordDao()
             val stepRecordDao = healthDatabase.stepRecordDao()
+            val sourceRecordDao = healthDatabase.sourceRecordDao()
+            val minuteBucketDao = healthDatabase.minuteBucketDao()
 
             // Clear all tables first
             sleepSessionDao.deleteAll()
@@ -248,6 +253,8 @@ class LocalRestoreManager
             hrvDao.deleteAll()
             workoutDao.deleteAll()
             dailySummaryDao.deleteAll()
+            sourceRecordDao.deleteAll()
+            minuteBucketDao.deleteAll()
 
             reader.beginObject()
             while (reader.hasNext()) {
@@ -270,17 +277,25 @@ class LocalRestoreManager
                         if (batch.isNotEmpty()) sleepSessionDao.upsertAll(batch)
                         reader.endArray()
                     }
+                    "healthSourceRecords" -> {
+                        reader.beginArray()
+                        val batch = mutableListOf<HealthSourceRecordEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 500) {
+                                sourceRecordDao.insertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) sourceRecordDao.insertAll(batch)
+                        reader.endArray()
+                    }
                     "heartRateRecords" -> {
                         reader.beginArray()
                         val batch = mutableListOf<HeartRateRecordEntity>()
                         while (reader.hasNext()) {
                             val row = readNextObjectAsString(reader)
-                            val entity =
-                                if (schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION) {
-                                    json.decodeFromString<HeartRateRecordEntity>(row)
-                                } else {
-                                    json.decodeFromString<LegacyHeartRateRecordBackup>(row).toCurrent()
-                                }
+                            val entity = decodeHeartRateRecord(row, schemaVersion, sourceRecordDao)
                             batch.add(entity)
                             if (batch.size >= 500) {
                                 heartRateDao.upsertAll(batch)
@@ -295,12 +310,7 @@ class LocalRestoreManager
                         val batch = mutableListOf<HrvRecordEntity>()
                         while (reader.hasNext()) {
                             val row = readNextObjectAsString(reader)
-                            val entity =
-                                if (schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION) {
-                                    json.decodeFromString<HrvRecordEntity>(row)
-                                } else {
-                                    json.decodeFromString<LegacyHrvRecordBackup>(row).toCurrent()
-                                }
+                            val entity = decodeHrvRecord(row, schemaVersion, sourceRecordDao)
                             batch.add(entity)
                             if (batch.size >= 500) {
                                 hrvDao.upsertAll(batch)
@@ -308,6 +318,19 @@ class LocalRestoreManager
                             }
                         }
                         if (batch.isNotEmpty()) hrvDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    "hrMinuteBuckets" -> {
+                        reader.beginArray()
+                        val batch = mutableListOf<HrMinuteBucketEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 500) {
+                                minuteBucketDao.upsertBuckets(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) minuteBucketDao.upsertBuckets(batch)
                         reader.endArray()
                     }
                     "workouts" -> {
@@ -430,6 +453,90 @@ class LocalRestoreManager
             }
             reader.endObject()
         }
+
+        private suspend fun decodeHeartRateRecord(
+            row: String,
+            schemaVersion: Int,
+            sourceRecordDao: SourceRecordDao,
+        ): HeartRateRecordEntity =
+            when {
+                schemaVersion >= BackupSchemaPolicy.SOURCE_REF_FORMAT_MIN_VERSION ->
+                    json.decodeFromString<HeartRateRecordEntity>(row)
+                schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION -> {
+                    val backup = json.decodeFromString<SourceRecordIdHeartRateRecordBackup>(row)
+                    HeartRateRecordEntity(
+                        sourceRecordRef =
+                            sourceRecordDao.getOrCreateSourceRef(
+                                sourceRecordId = backup.sourceRecordId.substringBefore('_'),
+                                recordType = "HEART_RATE",
+                                createdAtMs = backup.timestampMs,
+                            ),
+                        timestampMs = backup.timestampMs,
+                        beatsPerMinute = backup.beatsPerMinute,
+                        recordType = backup.recordType,
+                        sessionId = backup.sessionId,
+                        deviceName = backup.deviceName,
+                    )
+                }
+                else -> {
+                    val backup = json.decodeFromString<LegacyHeartRateRecordBackup>(row)
+                    HeartRateRecordEntity(
+                        sourceRecordRef =
+                            sourceRecordDao.getOrCreateSourceRef(
+                                sourceRecordId = backup.toSourceRecordId(),
+                                recordType = "HEART_RATE",
+                                createdAtMs = backup.timestampMs,
+                            ),
+                        timestampMs = backup.timestampMs,
+                        beatsPerMinute = backup.beatsPerMinute,
+                        recordType = backup.recordType,
+                        sessionId = backup.sessionId,
+                        deviceName = backup.deviceName,
+                    )
+                }
+            }
+
+        private suspend fun decodeHrvRecord(
+            row: String,
+            schemaVersion: Int,
+            sourceRecordDao: SourceRecordDao,
+        ): HrvRecordEntity =
+            when {
+                schemaVersion >= BackupSchemaPolicy.SOURCE_REF_FORMAT_MIN_VERSION ->
+                    json.decodeFromString<HrvRecordEntity>(row)
+                schemaVersion >= BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION -> {
+                    val backup = json.decodeFromString<SourceRecordIdHrvRecordBackup>(row)
+                    HrvRecordEntity(
+                        sourceRecordRef =
+                            sourceRecordDao.getOrCreateSourceRef(
+                                sourceRecordId = backup.sourceRecordId.substringBefore('_'),
+                                recordType = "HRV",
+                                createdAtMs = backup.timestampMs,
+                            ),
+                        timestampMs = backup.timestampMs,
+                        rmssdMs = backup.rmssdMs,
+                        recordType = backup.recordType,
+                        sessionId = backup.sessionId,
+                        deviceName = backup.deviceName,
+                    )
+                }
+                else -> {
+                    val backup = json.decodeFromString<LegacyHrvRecordBackup>(row)
+                    HrvRecordEntity(
+                        sourceRecordRef =
+                            sourceRecordDao.getOrCreateSourceRef(
+                                sourceRecordId = backup.toSourceRecordId(),
+                                recordType = "HRV",
+                                createdAtMs = backup.timestampMs,
+                            ),
+                        timestampMs = backup.timestampMs,
+                        rmssdMs = backup.rmssdMs,
+                        recordType = backup.recordType,
+                        sessionId = backup.sessionId,
+                        deviceName = backup.deviceName,
+                    )
+                }
+            }
 
         private fun readNextObjectAsString(reader: JsonReader): String {
             val sb = StringBuilder()

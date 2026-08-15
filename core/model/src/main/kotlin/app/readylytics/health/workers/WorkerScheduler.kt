@@ -7,6 +7,7 @@ interface WorkerScheduler {
         const val LOCAL_BACKUP_WORK_NAME = "local_backup_periodic"
         const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
         const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
+        const val DATA_ROLLUP_WORK_NAME = "data_rollup_periodic"
         const val RESYNC_WORK_NAME = "health_resync_onetime"
         const val PERIODIC_SYNC_WORK_NAME = "health_periodic_sync"
         const val DATABASE_MIGRATION_WORK_NAME = "database_v7_migration"
@@ -28,4 +29,5 @@ interface WorkerScheduler {
     fun schedulePeriodicSync(intervalMinutes: Long)
     fun cancelPeriodicSync()
     fun scheduleDataCleanupWorker()
+    fun scheduleDataRollupWorker()
 }

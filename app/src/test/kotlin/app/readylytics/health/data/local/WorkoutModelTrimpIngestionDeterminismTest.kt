@@ -53,6 +53,7 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                 bodyTemperatureRecordDao = database.bodyTemperatureRecordDao(),
                 stepRecordDao = database.stepRecordDao(),
                 dailySummaryDao = database.dailySummaryDao(),
+                sourceRecordDao = database.sourceRecordDao(),
                 transactionRunner = RoomTransactionRunner(database),
             )
     }

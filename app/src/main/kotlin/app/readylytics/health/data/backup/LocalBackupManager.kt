@@ -304,6 +304,8 @@ class LocalBackupManager
             val oxygenSaturationRecordDao = healthDatabase.oxygenSaturationRecordDao()
             val bodyTemperatureRecordDao = healthDatabase.bodyTemperatureRecordDao()
             val stepRecordDao = healthDatabase.stepRecordDao()
+            val sourceRecordDao = healthDatabase.sourceRecordDao()
+            val minuteBucketDao = healthDatabase.minuteBucketDao()
 
             val writer = outputStream.bufferedWriter()
             writer.write("{\n")
@@ -325,6 +327,8 @@ class LocalBackupManager
                             "oxygenSaturationRecords" to async { oxygenSaturationRecordDao.count() },
                             "bodyTemperatureRecords" to async { bodyTemperatureRecordDao.count() },
                             "stepRecords" to async { stepRecordDao.count() },
+                            "healthSourceRecords" to async { sourceRecordDao.count() },
+                            "hrMinuteBuckets" to async { minuteBucketDao.count() },
                         )
                     counts.associate { (key, deferred) -> key to deferred.await() }
                 }
@@ -350,6 +354,16 @@ class LocalBackupManager
             }
             writer.write("\n  ],\n")
 
+            writer.write("  \"healthSourceRecords\": [\n")
+            val sourceRecords = sourceRecordDao.getAll()
+            first = true
+            sourceRecords.forEach {
+                if (!first) writer.write(",\n")
+                writer.write("    ${json.encodeToString(it)}")
+                first = false
+            }
+            writer.write("\n  ],\n")
+
             writer.write("  \"heartRateRecords\": [\n")
             offset = 0
             first = true
@@ -370,6 +384,21 @@ class LocalBackupManager
             first = true
             while (true) {
                 val batch = hrvDao.getPaged(0, 500, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 500
+            }
+            writer.write("\n  ],\n")
+
+            writer.write("  \"hrMinuteBuckets\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = minuteBucketDao.getPaged(500, offset)
                 if (batch.isEmpty()) break
                 batch.forEach {
                     if (!first) writer.write(",\n")

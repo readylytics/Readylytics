@@ -137,20 +137,32 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-v5.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
-            assertEquals(
-                "hc-heart",
+            val heartRef =
                 db
                     .heartRateDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                "hc-heart",
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == heartRef }
                     .sourceRecordId,
             )
-            assertEquals(
-                "hc-hrv",
+            val hrvRef =
                 db
                     .hrvDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                "hc-hrv",
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == hrvRef }
                     .sourceRecordId,
             )
             zipFile.delete()
@@ -187,20 +199,32 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val zipFile = createBackupZipFile("legacy-malformed-suffix-v6.zip", json)
 
             assertTrue(manager.applyRestore(Uri.fromFile(zipFile)) is RestoreResult.SuccessRequiresRestart)
-            assertEquals(
-                malformedHeartId,
+            val heartRef =
                 db
                     .heartRateDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                malformedHeartId,
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == heartRef }
                     .sourceRecordId,
             )
-            assertEquals(
-                mismatchedHrvId,
+            val hrvRef =
                 db
                     .hrvDao()
                     .getSince(0)
                     .single()
+                    .sourceRecordRef
+            assertEquals(
+                mismatchedHrvId,
+                db
+                    .sourceRecordDao()
+                    .getAll()
+                    .single { it.id == hrvRef }
                     .sourceRecordId,
             )
             zipFile.delete()

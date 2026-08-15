@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface HeartRateDao {
-    @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordId ASC")
+    @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC")
     suspend fun getSince(fromMs: Long): List<HeartRateRecordEntity>
 
     @Query(
-        "SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordId ASC LIMIT :limit OFFSET :offset",
+        "SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit OFFSET :offset",
     )
     suspend fun getPaged(
         fromMs: Long,
@@ -26,14 +26,14 @@ interface HeartRateDao {
     @Query(
         "SELECT * FROM heart_rate_records " +
             "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
-            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordId > :lastId)) " +
-            "ORDER BY timestampMs ASC, sourceRecordId ASC LIMIT :limit",
+            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef > :lastSourceRecordRef)) " +
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit",
     )
     suspend fun getKeysetPage(
         startMs: Long,
         endMs: Long,
         lastTimestampMs: Long,
-        lastId: String,
+        lastSourceRecordRef: Long,
         limit: Int,
     ): List<HeartRateRecordEntity>
 
@@ -46,6 +46,7 @@ interface HeartRateDao {
     @Query(
         "SELECT sessionId, CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) AS avgHr FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds) " +
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
             "GROUP BY sessionId",
     )
     suspend fun getAvgSleepHrForSessions(
@@ -67,7 +68,8 @@ interface HeartRateDao {
     @Query(
         "SELECT beatsPerMinute FROM heart_rate_records " +
             "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
-            "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordId ASC",
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
+            "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int>
 
@@ -80,7 +82,7 @@ interface HeartRateDao {
     @Query(
         "SELECT beatsPerMinute FROM heart_rate_records " +
             "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
-            "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordId ASC LIMIT 1 OFFSET :offset",
+            "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC LIMIT 1 OFFSET :offset",
     )
     suspend fun getSleepHrSampleAtOffset(
         sessionId: String,
@@ -90,7 +92,7 @@ interface HeartRateDao {
     @Query(
         "SELECT * FROM heart_rate_records " +
             "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
-            "ORDER BY timestampMs ASC, sourceRecordId ASC",
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC",
     )
     fun _observeSleepHrTimelineForSession(sessionId: String): Flow<List<HeartRateRecordEntity>>
 
@@ -109,13 +111,13 @@ interface HeartRateDao {
     @Query(
         "SELECT timestampMs FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId = :sessionId " +
-            "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordId ASC LIMIT 1",
+            "ORDER BY beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC LIMIT 1",
     )
     suspend fun getMinHrTimestamp(sessionId: String): Long?
 
     @Query(
         "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
-            "ORDER BY timestampMs ASC, sourceRecordId ASC",
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getByTimeRange(
         startMs: Long,
@@ -124,7 +126,7 @@ interface HeartRateDao {
 
     @Query(
         "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs < :endMs " +
-            "ORDER BY timestampMs ASC, sourceRecordId ASC",
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC",
     )
     fun _observeByTimeRange(
         startMs: Long,
@@ -136,16 +138,15 @@ interface HeartRateDao {
         endMs: Long,
     ): Flow<List<HeartRateRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
 
-    // Conflict-targeted UPSERT on the natural unique key (sourceRecordId, timestampMs): updates
+    // Conflict-targeted UPSERT on the natural unique key (sourceRecordRef, timestampMs): updates
     // mutable columns (recordType/sessionId/deviceName) in place and preserves rowId — unlike
     // SQLite REPLACE, which deletes+reinserts and rotates rowId on every re-upsert. The WHERE
-    // predicate makes an identical re-ingest a near-no-op (SQLite changes() = 0). Room 2.8's
-    // @Query parser accepts UPSERT syntax; proven on-device by UpsertConflictStrategyInstrumentedTest.
+    // predicate makes an identical re-ingest a near-no-op (SQLite changes() = 0).
     @Query(
         "INSERT INTO heart_rate_records " +
-            "(sourceRecordId, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
-            "VALUES (:sourceRecordId, :timestampMs, :beatsPerMinute, :recordType, :sessionId, :deviceName) " +
-            "ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET " +
+            "(sourceRecordRef, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+            "VALUES (:sourceRecordRef, :timestampMs, :beatsPerMinute, :recordType, :sessionId, :deviceName) " +
+            "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
             "recordType = excluded.recordType, " +
             "sessionId = excluded.sessionId, " +
             "deviceName = excluded.deviceName " +
@@ -153,7 +154,7 @@ interface HeartRateDao {
             "sessionId IS NOT excluded.sessionId OR deviceName IS NOT excluded.deviceName)",
     )
     suspend fun conflictTargetedUpsert(
-        sourceRecordId: String,
+        sourceRecordRef: Long,
         timestampMs: Long,
         beatsPerMinute: Int,
         recordType: String,
@@ -164,7 +165,7 @@ interface HeartRateDao {
     suspend fun upsertAll(records: List<HeartRateRecordEntity>) {
         for (record in records) {
             conflictTargetedUpsert(
-                sourceRecordId = record.sourceRecordId,
+                sourceRecordRef = record.sourceRecordRef,
                 timestampMs = record.timestampMs,
                 beatsPerMinute = record.beatsPerMinute,
                 recordType = record.recordType,
@@ -177,26 +178,23 @@ interface HeartRateDao {
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
-    @Query("DELETE FROM heart_rate_records WHERE sourceRecordId = :id")
-    suspend fun deleteById(id: String): Int
+    @Query("DELETE FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef")
+    suspend fun deleteByRef(sourceRecordRef: Long): Int
 
-    @Query("SELECT * FROM heart_rate_records WHERE sourceRecordId = :id")
-    suspend fun getById(id: String): HeartRateRecordEntity?
+    @Query("SELECT * FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef")
+    suspend fun getByRef(sourceRecordRef: Long): HeartRateRecordEntity?
 
     @Query(
         "SELECT * FROM heart_rate_records " +
-            "WHERE sourceRecordId = :sourceRecordId " +
-            "OR (sourceRecordId >= :sourceRecordId || '_' AND sourceRecordId < :sourceRecordId || '`') " +
-            "ORDER BY timestampMs ASC, sourceRecordId ASC",
+            "WHERE sourceRecordRef = :sourceRecordRef " +
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC",
     )
-    suspend fun getBySourceRecordId(sourceRecordId: String): List<HeartRateRecordEntity>
+    suspend fun getBySourceRecordRef(sourceRecordRef: Long): List<HeartRateRecordEntity>
 
     @Query(
-        "DELETE FROM heart_rate_records " +
-            "WHERE sourceRecordId = :sourceRecordId " +
-            "OR (sourceRecordId >= :sourceRecordId || '_' AND sourceRecordId < :sourceRecordId || '`')",
+        "DELETE FROM heart_rate_records WHERE sourceRecordRef = :sourceRecordRef",
     )
-    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+    suspend fun deleteBySourceRecordRef(sourceRecordRef: Long): Int
 
     @Query("SELECT COUNT(*) FROM heart_rate_records")
     suspend fun count(): Int
@@ -227,10 +225,10 @@ interface HeartRateDao {
      * More efficient than per-session queries for computing statistics.
      */
     @Query(
-        "SELECT rowId, sourceRecordId, sessionId, recordType, beatsPerMinute, timestampMs, deviceName " +
+        "SELECT rowId, sourceRecordRef, sessionId, recordType, beatsPerMinute, timestampMs, deviceName " +
             "FROM heart_rate_records " +
             "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
-            "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, sourceRecordId ASC",
+            "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepHrSamplesForSessions(sessionIds: List<String>): List<HeartRateRecordEntity>
 
@@ -238,7 +236,8 @@ interface HeartRateDao {
         "SELECT sessionId, beatsPerMinute " +
             "FROM heart_rate_records " +
             "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
-            "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, sourceRecordId ASC",
+            "AND beatsPerMinute BETWEEN 30 AND 230 " +
+            "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, sourceRecordRef ASC",
     )
     suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
 

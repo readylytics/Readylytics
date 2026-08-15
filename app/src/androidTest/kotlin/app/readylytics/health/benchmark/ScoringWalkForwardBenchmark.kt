@@ -101,18 +101,20 @@ class ScoringWalkForwardBenchmark {
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        var seq = 0L
+        val sourceRef =
+            runBlocking {
+                db.sourceRecordDao().getOrCreateSourceRef("bench-batch-src", "HEART_RATE", 0L)
+            }
         benchmarkRule.measureRepeated {
             val batch =
                 (0 until 5_000).map { i ->
                     HeartRateRecordEntity(
-                        id = "bench_hr_${seq}_$i",
+                        sourceRecordRef = sourceRef,
                         timestampMs = baseMs + i * 1_000L,
                         beatsPerMinute = 60 + (i % 40),
                         recordType = RecordType.RESTING.name,
                     )
                 }
-            seq++
             runBlocking { heartRateDao.upsertAll(batch) }
         }
     }
@@ -153,7 +155,13 @@ class ScoringWalkForwardBenchmark {
         seedSessionsAndHr(targetDate.minusDays(5), targetDate.plusDays(1), sleepSessionCount = 6)
 
         val scoringHistoryRepository =
-            ScoringHistoryRepositoryImpl(db.heartRateDao(), db.hrvDao(), db.sleepSessionDao(), db.dailySummaryDao())
+            ScoringHistoryRepositoryImpl(
+                db.heartRateDao(),
+                db.hrvDao(),
+                db.sleepSessionDao(),
+                db.dailySummaryDao(),
+                db.minuteBucketDao(),
+            )
         val loadScoringStrategy = LoadScoringStrategy()
         val scoringCalculator =
             CompositeScoringCalculator(
@@ -191,6 +199,7 @@ class ScoringWalkForwardBenchmark {
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
                 heartRateDao = db.heartRateDao(),
+                minuteBucketDao = db.minuteBucketDao(),
                 weightRecordDao = db.weightRecordDao(),
                 bodyFatRecordDao = db.bodyFatRecordDao(),
                 bloodPressureRecordDao = db.bloodPressureRecordDao(),
@@ -214,6 +223,10 @@ class ScoringWalkForwardBenchmark {
         val sleepSessions = mutableListOf<SleepSessionEntity>()
         val sleepStages = mutableListOf<SleepStageEntity>()
         val heartRateRows = mutableListOf<HeartRateRecordEntity>()
+        val sourceRef =
+            runBlocking {
+                db.sourceRecordDao().getOrCreateSourceRef("bench-sleep-src", "HEART_RATE", 0L)
+            }
 
         var day = startDate.plusDays(1)
         var index = 0
@@ -257,7 +270,7 @@ class ScoringWalkForwardBenchmark {
             while (sampleTime < wakeTime) {
                 heartRateRows +=
                     HeartRateRecordEntity(
-                        id = "bench_hr_${id}_$sampleIndex",
+                        sourceRecordRef = sourceRef,
                         timestampMs = sampleTime,
                         beatsPerMinute = 55 + (sampleIndex % 15),
                         recordType = RecordType.RESTING.name,

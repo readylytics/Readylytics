@@ -1,8 +1,6 @@
 package app.readylytics.health.data.backup
 
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
@@ -28,6 +26,12 @@ internal object BackupSchemaPolicy {
     // be mis-decoded via the legacy id-suffix path once a later DATABASE_VERSION ships.
     const val CURRENT_RECORD_FORMAT_MIN_VERSION = 7
 
+    // At DATABASE_VERSION 10 heart-rate/HRV records moved to an integer sourceRecordRef FK into
+    // health_source_records. Backups stamped with a schema < 10 serialize the legacy TEXT
+    // sourceRecordId; >= 10 serialize the integer ref directly (and carry a health_source_records
+    // table alongside). Restore picks the decode path from this boundary.
+    const val SOURCE_REF_FORMAT_MIN_VERSION = 10
+
     fun requireSupported(version: Int) {
         require(version in MIN_SUPPORTED_VERSION..MAX_SUPPORTED_VERSION) {
             "Unsupported backup schema version $version; supported range is " +
@@ -52,15 +56,7 @@ internal data class LegacyHeartRateRecordBackup(
     val sessionId: String? = null,
     val deviceName: String? = null,
 ) {
-    fun toCurrent() =
-        HeartRateRecordEntity(
-            sourceRecordId = legacySourceRecordId(id, timestampMs),
-            timestampMs = timestampMs,
-            beatsPerMinute = beatsPerMinute,
-            recordType = recordType,
-            sessionId = sessionId,
-            deviceName = deviceName,
-        )
+    fun toSourceRecordId(): String = legacySourceRecordId(id, timestampMs)
 }
 
 @Serializable
@@ -72,16 +68,31 @@ internal data class LegacyHrvRecordBackup(
     val sessionId: String? = null,
     val deviceName: String? = null,
 ) {
-    fun toCurrent() =
-        HrvRecordEntity(
-            sourceRecordId = legacySourceRecordId(id, timestampMs),
-            timestampMs = timestampMs,
-            rmssdMs = rmssdMs,
-            recordType = recordType,
-            sessionId = sessionId,
-            deviceName = deviceName,
-        )
+    fun toSourceRecordId(): String = legacySourceRecordId(id, timestampMs)
 }
+
+// Backups stamped in [BackupSchemaPolicy.CURRENT_RECORD_FORMAT_MIN_VERSION]..9 carry the TEXT
+// sourceRecordId (`<baseUuid>_<timestampMs>`); restore recovers the base UUID and re-resolves an
+// integer sourceRecordRef against the restored health_source_records table.
+@Serializable
+internal data class SourceRecordIdHeartRateRecordBackup(
+    val sourceRecordId: String,
+    val timestampMs: Long,
+    val beatsPerMinute: Int,
+    val recordType: String,
+    val sessionId: String? = null,
+    val deviceName: String? = null,
+)
+
+@Serializable
+internal data class SourceRecordIdHrvRecordBackup(
+    val sourceRecordId: String,
+    val timestampMs: Long,
+    val rmssdMs: Float,
+    val recordType: String,
+    val sessionId: String? = null,
+    val deviceName: String? = null,
+)
 
 internal fun legacySourceRecordId(
     id: String,

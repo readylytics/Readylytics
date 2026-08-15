@@ -50,11 +50,11 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
 ┌──────────────────────────────┐
 │  RoomTransactionRunner       │   parent txn + 5,000-row HR/HRV transactions
 └──────────────┬───────────────┘
-               │ HR/HRV: conflict-targeted UPSERT on (sourceRecordId, timestampMs) — updates mutable
+               │ HR/HRV: conflict-targeted UPSERT on (sourceRecordRef, timestampMs) — updates mutable
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v9)  │   14 entities — single source of truth
+│  HealthDatabase (SQLite v10) │   16 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -128,8 +128,10 @@ explicit and idempotent.
 | `PeriodicHealthSyncWorker`    | `app/src/main/kotlin/app/readylytics/health/workers/PeriodicHealthSyncWorker.kt`        | "Background Sync" toggle in Settings. Before resolving its lazy Room-backed `HealthSyncUseCase` or lazy `ForegroundSyncController`, it requires `DatabaseReadiness.Ready`; otherwise it retries without opening Room or constructing the controller graph. Once ready, this `@HiltWorker` periodic **standard (non-foreground) worker** calls `HealthSyncUseCase.sync(windowDays = 2)` (shares `syncMutex` with the other two flows), bridges progress to `ForegroundSyncController`, shows/dismisses a silent transient notification (`SyncNotifications.BACKGROUND_SYNC_CHANNEL_ID`) via `NotificationManagerCompat` directly — no `setForeground()`, since `READ_HEALTH_DATA_IN_BACKGROUND` already permits background HC reads and starting a foreground service from a periodic background worker risks `ForegroundServiceStartNotAllowedException` on API 34+. Ordinary failures return `Result.retry()`; `REQUIRES_HISTORICAL_RESYNC` enqueues `WorkerScheduler.scheduleResyncWorker()` and finishes successfully so durable catch-up runs once without periodic retry churn. |
 | `LocalBackupWorker`           | `app/src/main/kotlin/app/readylytics/health/workers/LocalBackupWorker.kt`                | Before resolving its lazy Room-backed `LocalBackupManager`, it requires `DatabaseReadiness.Ready`; otherwise it retries without opening Room. Ready runs preserve the existing local encrypted backup result mapping. |
 | `DataCleanupWorker`           | `app/src/main/kotlin/app/readylytics/health/workers/DataCleanupWorker.kt`               | Daily retention enforcement; before resolving lazy `RetentionCleanup`, it requires `DatabaseReadiness.Ready` and retries without opening Room otherwise. Cutoff is resolved via `RetentionBounds.resolveRetentionCutoffMs()` (shared with resync). No-op when retention disabled. |
-| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`             | Executes transactional deletions of data strictly older than the cutoff across all 11 sensitive tables (incl. `step_records`, `body_temperature_records`). |
-| `RetentionBounds`             | `core/model/src/main/kotlin/app/readylytics/health/domain/util/RetentionBounds.kt`             | Single source of truth for retention→date math: enabled → `today − retentionDays`; disabled → `today − ABSOLUTE_MAX_DAYS` (3650 / 10y). |
+| `DataRollupWorker`            | `app/src/main/kotlin/app/readylytics/health/workers/DataRollupWorker.kt`                | Daily hot→warm rollup; resolves the 90-day `RetentionBounds.resolveHotTierCutoffMs()` and delegates to `DataRollupManager`. `Result.retry()` on transient failure. |
+| `DataRollupManager`           | `core/database/src/main/kotlin/app/readylytics/health/data/local/DataRollupManager.kt`  | Atomically downsamples raw `heart_rate_records` older than the cutoff into `hr_minute_buckets` then deletes the raw rows (`MinuteBucketDao.rollupIntoBucketsBefore` + `HeartRateDao.deleteBeforeTimestamp` in one transaction). |
+| `RetentionCleanup`            | `core/database/src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt`             | Executes transactional deletions of data strictly older than the cutoff across all 12 sensitive tables (incl. `step_records`, `body_temperature_records`, `hr_minute_buckets`). |
+| `RetentionBounds`             | `core/model/src/main/kotlin/app/readylytics/health/domain/util/RetentionBounds.kt`             | Single source of truth for retention→date math: enabled → `today − retentionDays`; disabled → `today − ABSOLUTE_MAX_DAYS` (3650 / 10y). Also owns the fixed 90-day hot/warm boundary (`HOT_TIER_WINDOW_DAYS`, `resolveHotTierCutoffMs`). |
 | `RoomTransactionRunner`       | `core/database/src/main/kotlin/app/readylytics/health/data/local/RoomTransactionRunner.kt`        | Wraps `HealthDatabase.withTransaction { … }`. Ingestion commits parent/low-volume records together, then HR and HRV in bounded 5,000-row transactions with cancellation checks between batches. A failed window may contain partial new upserts, but never deletes prior valid rows; its unchanged checkpoint causes an idempotent replay. Also wraps the sync/resync walk-forward recompute via `DailyRecomputeSupport`. |
 | `HealthChangeSynchronizer`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/domain/sync/HealthChangeSynchronizer.kt`    | Reconciles differential Health Connect Changes API responses (upsertions and deletions) incrementally during daily/foreground sync. Resolves dates of deleted records via local DB lookup — steps resolve via the new `step_records` raw table (HC-005), every other type via its own scoring table. Composite-key metric changes delete every Room row owned by the HC source record before re-upsert
 (`getBySourceRecordId`/`deleteBySourceRecordId` on the six composite-id DAOs use a sargable
@@ -250,7 +252,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 9)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 10)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
@@ -320,13 +322,45 @@ Version 9 adds a nullable `daily_summaries.avgSleepingBodyTemp` column: a nightl
 body-temperature cache that `ScoringRepositoryImpl` computes by averaging `body_temperature_records`
 samples within that day's sleep-session window, mirroring exactly how `avgSleepingSpo2` is already
 computed there. It is a pure display/insight field, never read by any `domain/scoring/**` formula.
+Version 10 (Option F + Option D) normalizes per-row source identity out of the hot tier and opens
+the warm tier: it adds the `health_source_records` dimension table (15th entity, base UUID →
+autoincrement integer id) and the `hr_minute_buckets` warm-tier aggregate table (16th entity), then
+rebuilds `heart_rate_records` and `hrv_records` to reference the dimension id via an integer
+`sourceRecordRef` FK (`MIGRATION_9_10`, on-delete cascade) instead of storing the full
+`sourceRecordId` TEXT on every row. Idempotency moves to the unique `(sourceRecordRef, timestampMs)`
+index; the base UUID is recovered by taking everything up to the first `_` of the legacy
+`sourceRecordId` (`<uuid>_<timestampMs>`). See §2.6 and the 3-tier lifecycle note below.
+
+**3-tier health-data lifecycle (hot → warm → cold).**
+- **Hot tier (0–90 days):** raw 1-second `heart_rate_records`/`hrv_records` keyed by integer
+  `sourceRecordRef`. `RetentionBounds.resolveHotTierCutoffMs()` is the single 90-day boundary.
+- **Warm tier (90 days → retention cutoff):** 1-minute `hr_minute_buckets` per
+  `(bucketStartMs, recordType, sessionId)`. `DataRollupWorker` (daily periodic) drives
+  `DataRollupManager.rollupExpiredHotTier(cutoffMs)`, which atomically downsamples raw HR older than
+  the boundary into buckets and deletes the raw rows — a crash can never drop a sample (either the
+  raw row survives or it is already folded into a bucket). `ScoringRepositoryImpl` merges hot+warm
+  minute buckets for the everyday-HR load (weighted avg is bit-identical to the raw AVG) and rebuilds
+  workout exercise samples from warm buckets; `ScoringHistoryRepositoryImpl` reconstructs a sleep
+  session's sample stream from its warm buckets when raw rows are gone. Hot-path reads are unchanged;
+  warm fallbacks fire only when raw data is absent.
+  **Plausibility tier-consistency:** the warm rollup (`MinuteBucketDao.rollupIntoBucketsBefore`) and the
+  everyday-HR load reads both filter implausible samples (`beatsPerMinute BETWEEN 30 AND 230`); the
+  hot-path sleep-RHR reads apply the same predicate (`HeartRateDao.getSleepHrSamplesForSession`,
+  `getSleepHrProjectionForSessions`, `getAvgSleepHrForSessions`) so the sleep percentile RHR and avg RHR
+  are bit-consistent whether read from raw or reconstructed warm samples. `observeSleepHrTimelineForSession`
+  (UI chart) intentionally stays unfiltered.
+- **Cold tier:** the permanent `daily_summaries` (computed cache). `RetentionCleanup` prunes raw
+  HR/HRV and warm buckets older than `RetentionBounds.resolveRetentionCutoffMs(prefs)`; retention
+  semantics are otherwise unchanged (a storage optimization, not a new user-facing data contract).
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SleepSessionEntity`           | `sleep_sessions`            | `id: String` (HC id)                   | start/end time, deep/REM/light/awake min, efficiency, `deviceName`                                                                                        |
 | `SleepStageEntity`             | `sleep_stages`              | `id: Long` (auto)                      | `sessionId` (FK), `(sessionId, startTime)` unique — cleared per-session before re-upsert                                                                  |
-| `HeartRateRecordEntity`        | `heart_rate_records`        | `rowId: Long` (auto)                   | `sourceRecordId` (HC id), `(sourceRecordId, timestampMs)` unique; `timestampMs`, `recordType`, `sessionId`, `deviceName`                                  |
-| `HrvRecordEntity`              | `hrv_records`               | `rowId: Long` (auto)                   | `sourceRecordId` (HC id), `(sourceRecordId, timestampMs)` unique; RMSSD ms, `timestampMs`, `recordType`, `sessionId`                                      |
+| `HeartRateRecordEntity`        | `heart_rate_records`        | `rowId: Long` (auto)                   | `sourceRecordRef` (FK → `health_source_records.id`), `(sourceRecordRef, timestampMs)` unique; `timestampMs`, `recordType`, `sessionId`, `deviceName` |
+| `HrvRecordEntity`              | `hrv_records`               | `rowId: Long` (auto)                   | `sourceRecordRef` (FK → `health_source_records.id`), `(sourceRecordRef, timestampMs)` unique; RMSSD ms, `timestampMs`, `recordType`, `sessionId`     |
+| `HealthSourceRecordEntity`     | `health_source_records`     | `id: Long` (auto)                      | `sourceRecordId` (base UUID, unique), `recordType`, `createdAtMs` — normalized source identity                                                      |
+| `HrMinuteBucketEntity`         | `hr_minute_buckets`         | `(bucketStartMs, recordType, sessionId)` | 1-minute warm-tier aggregates: `minBpm`/`maxBpm`/`avgBpm`/`sampleCount`; `sessionId` is `""` for no-session minutes                                      |
 | `WorkoutRecordEntity`          | `workout_records`           | `id: String` (HC id)                   | zone1–5 min, TRIMP, avg HR, `startTime`, `deviceName`                                                                                                     |
 | `WeightRecordEntity`           | `weight_records`            | `id: String` (composite)               | kg, `timestampMs`, `deviceName`                                                                                                                           |
 | `BodyFatRecordEntity`          | `body_fat_records`          | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
@@ -354,6 +388,10 @@ their corresponding JSON key is present in the backup being restored, so restori
 that predates these tables leaves the current local rows for them untouched.
 For v5/v6 payloads, legacy HR/HRV composite IDs normalize to
 `(sourceRecordId, timestampMs)` by removing only an exact trailing `_<timestampMs>` suffix.
+As of v10, backups also carry `health_source_records` and `hr_minute_buckets`; HR/HRV rows
+serialize the integer `sourceRecordRef` directly, and restore re-decodes older schema-7–9
+`sourceRecordId`-format rows (and pre-v7 legacy rows) back into `sourceRecordRef` via
+`SourceRecordDao.getOrCreateSourceRef`, resolving the base UUID the same way the migration does.
 
 **Encryption & Key Management:**
 Local encryption keys are versioned (e.g., `readylytics_master_key_v1`) and protected via Android Keystore.
@@ -363,7 +401,7 @@ rotation is managed by `DatabaseKeyRotator`, which rekeys the SQLCipher database
 logs the operation status to the local audit trail. Keys are hardware-bound and do not support cloud backup.
 
 **Idempotency contract:** every DAO upserts keyed on a stable identity. `HeartRateDao`/`HrvDao`
-use a conflict-targeted `INSERT ... ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET
+use a conflict-targeted `INSERT ... ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET
 recordType=excluded.recordType, sessionId=excluded.sessionId, deviceName=excluded.deviceName
 WHERE (mutable columns differ)` (a plain `@Query`, per-row loop in a non-abstract `upsertAll`
 inside the batch transaction) — this updates mutable columns in place with a stable `rowId` and
@@ -383,12 +421,12 @@ up-front baseline mutation during sync/resync, scoped to the recomputed scoring 
 in the same walk-forward pass).
 
 **Stable-order scoring contract:** sleep HR/HRV DAO reads used by the scoring pipeline return
-deterministic order (`timestampMs`, then stable `id`, or BPM plus timestamp/id for percentile
-queries). This keeps HRV means, percentile HR picks, frozen-baseline replay, and near-boundary
-Sleep/Readiness display rounding stable across app-open recalculation, background sync, and
-historical resync. Recent sync and historical resync both run `SessionLinkReconciler` after
-ingestion so overlap upserts cannot replace canonical session links with mapper-local links before
-scoring.
+deterministic order (`timestampMs`, then stable `sourceRecordRef`, or BPM plus timestamp/ref for
+percentile queries). This keeps HRV means, percentile HR picks, frozen-baseline replay, and
+near-boundary Sleep/Readiness display rounding stable across app-open recalculation, background
+sync, and historical resync. Recent sync and historical resync both run `SessionLinkReconciler`
+after ingestion so overlap upserts cannot replace canonical session links with mapper-local links
+before scoring.
 
 ### 1.5 Body Temperature — 14-day baseline, elevated-deviation threshold, and display surfaces
 
@@ -609,12 +647,16 @@ performs the 1-minute bucketing and the 30-230 bpm plausibility filter in SQL (`
 `WHERE...BETWEEN`, `ORDER BY bucketIndex ASC` so `EverydayHeartRateLoadCalculator`'s
 floating-point `+=` TRIMP accumulation stays order-identical to the old Kotlin-side bucketing),
 returning ≤1,440 `HrMinuteBucketRow` rows/day instead of a full-day `SELECT *` (up to 86k rows at
-1 Hz). `EverydayHrLoadInput.hrBuckets` replaces the old raw-sample list; the calculator no longer
-buckets or filters — it only excludes sleep/workout-overlapping buckets and runs the zone/TRIMP
-formula per pre-averaged bucket. `ComputeWorkoutTrimpUseCase.HeartRateSample` (the workout-TRIMP
-path's per-sample type) is untouched — workout TRIMP still needs raw per-sample timestamps for its
-variable-duration integration and cannot consume pre-bucketed rows. The fetch+assemble step is
-extracted into `AssembleEverydayLoadInputUseCase`.
+1 Hz). For rolled-up (warm) days, `ScoringRepositoryImpl.mergedMinuteBuckets` unions
+`HeartRateDao.getMinuteBuckets` with `MinuteBucketDao.getMinuteBuckets` (the warm tier) per minute
+by weighted average — bit-identical to the raw AVG — so the everyday-HR load sees the same value on
+either tier. `EverydayHrLoadInput.hrBuckets` replaces the old raw-sample list; the calculator no
+longer buckets or filters — it only excludes sleep/workout-overlapping buckets and runs the
+zone/TRIMP formula per pre-averaged bucket. `ComputeWorkoutTrimpUseCase.HeartRateSample` (the
+workout-TRIMP path's per-sample type) still consumes timestamped samples; when a workout's raw rows
+have been rolled up, `ScoringRepositoryImpl.exerciseSamplesForWorkout` rebuilds a timestamped
+sample stream from its warm exercise buckets, so variable-duration integration keeps working. The
+fetch+assemble step is extracted into `AssembleEverydayLoadInputUseCase`.
 
 ### 2.4 Baselines & calibration
 
@@ -912,7 +954,7 @@ checkpoint, progress starts directly at the resumed phase/offset instead of rese
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v9)                              | 14 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v9 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v10)                             | 16 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v10 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |

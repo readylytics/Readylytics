@@ -56,7 +56,7 @@ class SessionLinkReconcilerImpl
             workoutSpans: List<SessionSpan>,
         ) {
             var lastTimestampMs = 0L
-            var lastId = ""
+            var lastSourceRecordRef = 0L
             val limit = 5000
             val sweep = SessionLinkSweep(sleepSpans, workoutSpans)
             while (true) {
@@ -65,7 +65,7 @@ class SessionLinkReconcilerImpl
                     startMs = startMs,
                     endMs = endMs,
                     lastTimestampMs = lastTimestampMs,
-                    lastId = lastId,
+                    lastSourceRecordRef = lastSourceRecordRef,
                     limit = limit
                 )
                 if (records.isEmpty()) break
@@ -83,7 +83,7 @@ class SessionLinkReconcilerImpl
 
                 val lastRecord = records.last()
                 lastTimestampMs = lastRecord.timestampMs
-                lastId = lastRecord.id
+                lastSourceRecordRef = lastRecord.sourceRecordRef
 
                 yield()
             }
@@ -95,7 +95,7 @@ class SessionLinkReconcilerImpl
             sleepSpans: List<SessionSpan>,
         ) {
             var lastTimestampMs = 0L
-            var lastId = ""
+            var lastSourceRecordRef = 0L
             val limit = 5000
             val sweep = SessionLinkSweep(sleepSpans, emptyList())
             while (true) {
@@ -104,7 +104,7 @@ class SessionLinkReconcilerImpl
                     startMs = startMs,
                     endMs = endMs,
                     lastTimestampMs = lastTimestampMs,
-                    lastId = lastId,
+                    lastSourceRecordRef = lastSourceRecordRef,
                     limit = limit
                 )
                 if (records.isEmpty()) break
@@ -122,7 +122,7 @@ class SessionLinkReconcilerImpl
 
                 val lastRecord = records.last()
                 lastTimestampMs = lastRecord.timestampMs
-                lastId = lastRecord.id
+                lastSourceRecordRef = lastRecord.sourceRecordRef
 
                 yield()
             }

@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.scoring.golden
 
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
@@ -33,6 +34,14 @@ class GoldenFixtureDataBuilder(
     seed: Long = 20260101L,
 ) {
     private val random = Random(seed)
+    private var nextSourceRecordRef = 0L
+    private val usedSourceRecordRefs = mutableSetOf<Long>()
+
+    private fun nextSourceRecordRef(): Long {
+        val ref = ++nextSourceRecordRef
+        usedSourceRecordRefs += ref
+        return ref
+    }
 
     data class ScenarioDates(
         val stageLessNightDate: LocalDate,
@@ -114,6 +123,18 @@ class GoldenFixtureDataBuilder(
             day = day.plusDays(1)
         }
 
+        // heart_rate_records / hrv_records FK into health_source_records; the in-memory test DB
+        // enforces FKs, so materialize a parent row for every ref the fixture generated.
+        db.sourceRecordDao().insertAll(
+            usedSourceRecordRefs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "fixture-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
         sleepSessionDao.upsertAll(sleepSessions)
         sleepStageDao.upsertAll(sleepStages)
         heartRateDao.upsertAll(heartRateRows)
@@ -215,7 +236,7 @@ class GoldenFixtureDataBuilder(
             val bpm = 50 + (sampleIndex % 12) + random.nextInt(4)
             heartRateRows +=
                 HeartRateRecordEntity(
-                    id = "hr_${id}_$sampleIndex",
+                    sourceRecordRef = nextSourceRecordRef(),
                     timestampMs = sampleTime,
                     beatsPerMinute = bpm,
                     recordType = RecordType.RESTING.name,
@@ -273,7 +294,7 @@ class GoldenFixtureDataBuilder(
         while (sampleTime < napEnd) {
             heartRateRows +=
                 HeartRateRecordEntity(
-                    id = "hr_${id}_$sampleIndex",
+                    sourceRecordRef = nextSourceRecordRef(),
                     timestampMs = sampleTime,
                     beatsPerMinute = 58 + random.nextInt(6),
                     recordType = RecordType.RESTING.name,
@@ -299,7 +320,7 @@ class GoldenFixtureDataBuilder(
                 .toEpochMilli()
         hrvRows +=
             HrvRecordEntity(
-                id = "hrv_$wakeDay",
+                sourceRecordRef = nextSourceRecordRef(),
                 timestampMs = sampleTime,
                 rmssdMs = 30f + random.nextInt(20),
                 recordType = RecordType.RESTING.name,
@@ -330,7 +351,7 @@ class GoldenFixtureDataBuilder(
         while (sampleTime < dayEnd) {
             heartRateRows +=
                 HeartRateRecordEntity(
-                    id = "hr_day_${day}_$sampleIndex",
+                    sourceRecordRef = nextSourceRecordRef(),
                     timestampMs = sampleTime,
                     beatsPerMinute = 65 + random.nextInt(20),
                     recordType = RecordType.RESTING.name,
@@ -369,7 +390,7 @@ class GoldenFixtureDataBuilder(
             hrCount++
             heartRateRows +=
                 HeartRateRecordEntity(
-                    id = "hr_${id}_$sampleIndex",
+                    sourceRecordRef = nextSourceRecordRef(),
                     timestampMs = sampleTime,
                     beatsPerMinute = bpm,
                     recordType = RecordType.RESTING.name,

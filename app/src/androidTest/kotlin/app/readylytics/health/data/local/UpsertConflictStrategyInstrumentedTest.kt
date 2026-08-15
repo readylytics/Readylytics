@@ -25,7 +25,7 @@ import java.util.UUID
  * Phase 3 Step 7 (Option C) conflict-strategy research on a real device.
  *
  * Prototypes the current `@Insert(REPLACE)` baseline, the Room `@Upsert` candidate, and the
- * proposed conflict-targeted `INSERT ... ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE`
+ * proposed conflict-targeted `INSERT ... ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE`
  * strategy against a fresh SQLCipher-encrypted Room database (production `DatabaseModule` setup,
  * real SQLCipher native engine -- NOT the platform SQLite). Verifies on-device:
  *
@@ -54,9 +54,9 @@ class UpsertConflictStrategyInstrumentedTest {
     // (recordType, sessionId, deviceName), only write when one differs.
     private val conflictTargetedHrSql =
         "INSERT INTO heart_rate_records " +
-            "(sourceRecordId, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
+            "(sourceRecordRef, timestampMs, beatsPerMinute, recordType, sessionId, deviceName) " +
             "VALUES (?, ?, ?, ?, ?, ?) " +
-            "ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET " +
+            "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
             "recordType = excluded.recordType, " +
             "sessionId = excluded.sessionId, " +
             "deviceName = excluded.deviceName " +
@@ -65,9 +65,9 @@ class UpsertConflictStrategyInstrumentedTest {
 
     private val conflictTargetedHrvSql =
         "INSERT INTO hrv_records " +
-            "(sourceRecordId, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
+            "(sourceRecordRef, timestampMs, rmssdMs, recordType, sessionId, deviceName) " +
             "VALUES (?, ?, ?, ?, ?, ?) " +
-            "ON CONFLICT(sourceRecordId, timestampMs) DO UPDATE SET " +
+            "ON CONFLICT(sourceRecordRef, timestampMs) DO UPDATE SET " +
             "recordType = excluded.recordType, " +
             "sessionId = excluded.sessionId, " +
             "deviceName = excluded.deviceName " +
@@ -91,6 +91,18 @@ class UpsertConflictStrategyInstrumentedTest {
                 .setQueryCoroutineContext(kotlinx.coroutines.Dispatchers.IO)
                 .build()
         dao = db.upsertPrototypeDao()
+
+        // Phase 5 (v10): heart_rate_records / hrv_records now carry a FK to health_source_records.
+        // Provision synthetic parent rows (explicit ids) so the prototype's conflict-strategy inserts
+        // satisfy the FK; the parent rows are inert w.r.t. the rowId/changes() behavior under test.
+        writable().execSQL("PRAGMA foreign_keys = ON")
+        for (ref in listOf(1L, 2L, 3L)) {
+            writable().execSQL(
+                "INSERT OR IGNORE INTO health_source_records (id, sourceRecordId, recordType, createdAtMs) " +
+                    "VALUES (?, ?, 'HEART_RATE', 0)",
+                arrayOf<Any?>(ref, "proto-src-$ref"),
+            )
+        }
     }
 
     @After
@@ -120,16 +132,16 @@ class UpsertConflictStrategyInstrumentedTest {
     @Test
     fun baselineReplace_rotatesRowId_onReingest() =
         runBlocking {
-            val id = "replace-src"
+            val ref = 1L
             val ts = 1_000_000L
-            dao.replaceAll(listOf(hrEntity(id, ts, sessionId = null)))
+            dao.replaceAll(listOf(hrEntity(ref, ts, sessionId = null)))
 
-            val firstRowId = dao.getHeartRate(id, ts)!!.rowId
+            val firstRowId = dao.getHeartRate(ref, ts)!!.rowId
 
             // Re-ingest the same natural key with a changed mutable column (reconciler re-tag).
-            dao.replaceAll(listOf(hrEntity(id, ts, sessionId = "sleep-1")))
+            dao.replaceAll(listOf(hrEntity(ref, ts, sessionId = "sleep-1")))
 
-            val after = dao.getHeartRate(id, ts)!!
+            val after = dao.getHeartRate(ref, ts)!!
             // REPLACE deletes+reinserts -> rowId rotates. This is the churn Option C removes.
             assertNotEquals("REPLACE must rotate rowId (baseline churn)", firstRowId, after.rowId)
             assertEquals("sessionId must propagate under REPLACE", "sleep-1", after.sessionId)
@@ -141,18 +153,18 @@ class UpsertConflictStrategyInstrumentedTest {
     @Test
     fun roomUpsert_reingestWithRowIdZero_doesNotCleanlyUpdateInPlace() =
         runBlocking {
-            val id = "upsert-src"
+            val ref = 1L
             val ts = 1_000_000L
-            dao.upsertAll(listOf(hrEntity(id, ts, sessionId = null)))
-            val firstRowId = dao.getHeartRate(id, ts)!!.rowId
+            dao.upsertAll(listOf(hrEntity(ref, ts, sessionId = null)))
+            val firstRowId = dao.getHeartRate(ref, ts)!!.rowId
 
             val outcome =
                 runCatching {
-                    dao.upsertAll(listOf(hrEntity(id, ts, sessionId = "sleep-1")))
+                    dao.upsertAll(listOf(hrEntity(ref, ts, sessionId = "sleep-1")))
                 }
 
             val count = dao.countHeartRate()
-            val now = dao.getHeartRate(id, ts)
+            val now = dao.getHeartRate(ref, ts)
             Log.i(
                 TAG,
                 "Room @Upsert re-ingest (rowId=0): " +
@@ -162,7 +174,7 @@ class UpsertConflictStrategyInstrumentedTest {
 
             // Documented expectation (plan §2.4, Option C): Room @Upsert generated SQL conflicts on
             // the PRIMARY KEY rowId (autoGenerate), so a re-upsert carrying rowId=0 never matches an
-            // existing row and either violates the unique (sourceRecordId, timestampMs) index
+            // existing row and either violates the unique (sourceRecordRef, timestampMs) index
             // (SQLiteConstraintException) or duplicates. Either way it is NOT a clean in-place update
             // of a single stable row. Accept both failure shapes here; assert the invariant that
             // matters: no single stable row with the propagated mutable column.
@@ -185,14 +197,14 @@ class UpsertConflictStrategyInstrumentedTest {
     @Test
     fun conflictTargeted_newRow_rowIdZeroIngestion_assignsRowId() =
         runBlocking {
-            val id = "ct-src"
+            val ref = 1L
             val ts = 1_000_000L
             writable().execSQL(
                 conflictTargetedHrSql,
-                arrayOf<Any?>(id, ts, 62, RecordType.RESTING.name, null, null),
+                arrayOf<Any?>(ref, ts, 62, RecordType.RESTING.name, null, null),
             )
 
-            val row = dao.getHeartRate(id, ts)
+            val row = dao.getHeartRate(ref, ts)
             // rowId omitted from the INSERT -> SQLite AUTOINCREMENT assigns it. rowId=0 ingestion works.
             assertTrue("rowId must be auto-assigned > 0", row != null && row.rowId > 0L)
             assertEquals(62, row!!.beatsPerMinute)
@@ -202,16 +214,16 @@ class UpsertConflictStrategyInstrumentedTest {
     @Test
     fun conflictTargeted_identicalReingest_isNoop_preservesRowId() =
         runBlocking {
-            val id = "ct-noop"
+            val ref = 1L
             val ts = 1_000_000L
-            writable().execSQL(conflictTargetedHrSql, arrayOf<Any?>(id, ts, 62, RecordType.RESTING.name, null, null))
-            val firstRowId = dao.getHeartRate(id, ts)!!.rowId
+            writable().execSQL(conflictTargetedHrSql, arrayOf<Any?>(ref, ts, 62, RecordType.RESTING.name, null, null))
+            val firstRowId = dao.getHeartRate(ref, ts)!!.rowId
 
             // Identical re-ingest: the WHERE predicate evaluates false -> SQLite skips the write.
-            writable().execSQL(conflictTargetedHrSql, arrayOf<Any?>(id, ts, 62, RecordType.RESTING.name, null, null))
+            writable().execSQL(conflictTargetedHrSql, arrayOf<Any?>(ref, ts, 62, RecordType.RESTING.name, null, null))
 
             assertEquals("near no-op: changes() must be 0 after identical re-ingest", 0L, changes())
-            val after = dao.getHeartRate(id, ts)!!
+            val after = dao.getHeartRate(ref, ts)!!
             assertEquals("rowId must be stable across identical re-ingest", firstRowId, after.rowId)
             assertEquals(1, dao.countHeartRate())
         }
@@ -219,19 +231,19 @@ class UpsertConflictStrategyInstrumentedTest {
     @Test
     fun conflictTargeted_changedColumns_updateInPlace_preservingRowId() =
         runBlocking {
-            val id = "ct-update"
+            val ref = 1L
             val ts = 1_000_000L
-            writable().execSQL(conflictTargetedHrSql, arrayOf<Any?>(id, ts, 62, RecordType.RESTING.name, null, null))
-            val firstRowId = dao.getHeartRate(id, ts)!!.rowId
+            writable().execSQL(conflictTargetedHrSql, arrayOf<Any?>(ref, ts, 62, RecordType.RESTING.name, null, null))
+            val firstRowId = dao.getHeartRate(ref, ts)!!.rowId
 
             // Reconciler-style re-tag: sessionId + recordType + deviceName all change.
             writable().execSQL(
                 conflictTargetedHrSql,
-                arrayOf<Any?>(id, ts, 62, RecordType.SLEEP.name, "sleep-9", "Ring"),
+                arrayOf<Any?>(ref, ts, 62, RecordType.SLEEP.name, "sleep-9", "Ring"),
             )
 
             assertEquals("write must happen when mutable columns differ", 1L, changes())
-            val after = dao.getHeartRate(id, ts)!!
+            val after = dao.getHeartRate(ref, ts)!!
             assertEquals("rowId must be preserved on in-place update", firstRowId, after.rowId)
             assertEquals(RecordType.SLEEP.name, after.recordType)
             assertEquals("sleep-9", after.sessionId)
@@ -242,29 +254,29 @@ class UpsertConflictStrategyInstrumentedTest {
     @Test
     fun conflictTargeted_hrv_behavesLikeHeartRate() =
         runBlocking {
-            val id = "ct-hrv"
+            val ref = 1L
             val ts = 1_000_000L
             writable().execSQL(
                 conflictTargetedHrvSql,
-                arrayOf<Any?>(id, ts, 41.5f, RecordType.SLEEP.name, "sleep-1", null),
+                arrayOf<Any?>(ref, ts, 41.5f, RecordType.SLEEP.name, "sleep-1", null),
             )
-            val firstRowId = dao.getHrv(id, ts)!!.rowId
+            val firstRowId = dao.getHrv(ref, ts)!!.rowId
 
             // identical re-ingest -> no-op
             writable().execSQL(
                 conflictTargetedHrvSql,
-                arrayOf<Any?>(id, ts, 41.5f, RecordType.SLEEP.name, "sleep-1", null),
+                arrayOf<Any?>(ref, ts, 41.5f, RecordType.SLEEP.name, "sleep-1", null),
             )
             assertEquals(0L, changes())
-            assertEquals(firstRowId, dao.getHrv(id, ts)!!.rowId)
+            assertEquals(firstRowId, dao.getHrv(ref, ts)!!.rowId)
 
             // changed deviceName -> in-place update, stable rowId
             writable().execSQL(
                 conflictTargetedHrvSql,
-                arrayOf<Any?>(id, ts, 41.5f, RecordType.SLEEP.name, "sleep-1", "Ring"),
+                arrayOf<Any?>(ref, ts, 41.5f, RecordType.SLEEP.name, "sleep-1", "Ring"),
             )
             assertEquals(1L, changes())
-            val after = dao.getHrv(id, ts)!!
+            val after = dao.getHrv(ref, ts)!!
             assertEquals(firstRowId, after.rowId)
             assertEquals("Ring", after.deviceName)
             assertEquals(1, dao.countHrv())
@@ -275,28 +287,28 @@ class UpsertConflictStrategyInstrumentedTest {
     @Test
     fun roomQuery_acceptsUpsertSyntax_andBehavesLikeExecSql() =
         runBlocking {
-            val id = "query-upsert"
+            val ref = 1L
             val ts = 1_000_000L
 
             // Room 2.8's @Query parser accepts the UPSERT statement (KSP generated a prepared
             // statement, not a compile error) -- see UpsertPrototypeDao.conflictTargetedUpsert.
             // Prove the generated statement path behaves identically to raw execSQL.
-            dao.conflictTargetedUpsert(id, ts, 62, RecordType.RESTING.name, null, null)
-            val firstRowId = dao.getHeartRate(id, ts)!!.rowId
+            dao.conflictTargetedUpsert(ref, ts, 62, RecordType.RESTING.name, null, null)
+            val firstRowId = dao.getHeartRate(ref, ts)!!.rowId
 
             // identical re-ingest -> near no-op (WHERE predicate false), rowId stable.
             // Row state is the load-bearing assertion (same content, same rowId, no duplicate).
             // `changes()` is connection-scoped and can read a stale counter on a different pooled
             // connection, so assert the observable rows rather than the raw counter.
-            dao.conflictTargetedUpsert(id, ts, 62, RecordType.RESTING.name, null, null)
-            val afterIdentical = dao.getHeartRate(id, ts)!!
+            dao.conflictTargetedUpsert(ref, ts, 62, RecordType.RESTING.name, null, null)
+            val afterIdentical = dao.getHeartRate(ref, ts)!!
             assertEquals(firstRowId, afterIdentical.rowId)
             assertEquals(RecordType.RESTING.name, afterIdentical.recordType)
             assertEquals(1, dao.countHeartRate())
 
             // reconciler re-tag -> in-place update, stable rowId
-            dao.conflictTargetedUpsert(id, ts, 62, RecordType.SLEEP.name, "sleep-7", "Ring")
-            val after = dao.getHeartRate(id, ts)!!
+            dao.conflictTargetedUpsert(ref, ts, 62, RecordType.SLEEP.name, "sleep-7", "Ring")
+            val after = dao.getHeartRate(ref, ts)!!
             assertEquals(firstRowId, after.rowId)
             assertEquals(RecordType.SLEEP.name, after.recordType)
             assertEquals("sleep-7", after.sessionId)
@@ -318,7 +330,7 @@ class UpsertConflictStrategyInstrumentedTest {
                 if (generated!!.contains("WHERE `rowId` = ?")) {
                     "Room 2.8 @Upsert = INSERT(nulllif(rowId,0)) + UPDATE WHERE rowId -> " +
                         "conflict target is PRIMARY KEY rowId, NOT the secondary unique " +
-                        "(sourceRecordId, timestampMs) index; rowId=0 re-ingest cannot match existing rows"
+                        "(sourceRecordRef, timestampMs) index; rowId=0 re-ingest cannot match existing rows"
                 } else {
                     "conflict target is NOT rowId -> inspect: $generated"
                 },
@@ -354,11 +366,11 @@ class UpsertConflictStrategyInstrumentedTest {
     }
 
     private fun hrEntity(
-        id: String,
+        ref: Long,
         timestampMs: Long,
         sessionId: String?,
     ) = HeartRateRecordEntity(
-        id = id,
+        sourceRecordRef = ref,
         timestampMs = timestampMs,
         beatsPerMinute = 62,
         recordType = RecordType.RESTING.name,
@@ -372,7 +384,7 @@ class UpsertConflictStrategyInstrumentedTest {
      * `createQuery()` methods return the INSERT and the UPDATE (conflict-target) SQL. Reading them
      * answers "which conflict target does @Upsert use" from the compiled artifact:
      * the UPDATE is keyed on the PRIMARY KEY `rowId` (`WHERE `rowId` = ?`), not the secondary
-     * unique (sourceRecordId, timestampMs) index.
+     * unique (sourceRecordRef, timestampMs) index.
      */
     private fun roomUpsertGeneratedSql(daoInstance: UpsertPrototypeDao): String? =
         try {

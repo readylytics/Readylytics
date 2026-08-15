@@ -7,6 +7,7 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
+import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
@@ -52,42 +53,72 @@ class DeleteBySourceRecordIdTest {
         database.close()
     }
 
+    private suspend fun seedSourceRecordParents(vararg refs: Long) {
+        database.sourceRecordDao().insertAll(
+            refs.map { ref ->
+                HealthSourceRecordEntity(
+                    id = ref,
+                    sourceRecordId = "seed-$ref",
+                    recordType = "HEART_RATE",
+                    createdAtMs = 0L,
+                )
+            },
+        )
+    }
+
     @Test
     fun `heart rate source record methods match only exact source prefix`() =
         runTest {
+            seedSourceRecordParents(1L, 2L)
             heartRateDao.upsertAll(
                 listOf(
-                    HeartRateRecordEntity("hc-record_1000", 1000L, 60, "SLEEP"),
-                    HeartRateRecordEntity("hc-record_2000", 2000L, 61, "SLEEP"),
-                    HeartRateRecordEntity("hc-record-other_1000", 3000L, 62, "SLEEP"),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 1000L,
+                        beatsPerMinute = 60,
+                        recordType = "SLEEP",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 1L,
+                        timestampMs = 2000L,
+                        beatsPerMinute = 61,
+                        recordType = "SLEEP",
+                    ),
+                    HeartRateRecordEntity(
+                        sourceRecordRef = 2L,
+                        timestampMs = 3000L,
+                        beatsPerMinute = 62,
+                        recordType = "SLEEP",
+                    ),
                 ),
             )
 
             assertEquals(
-                listOf("hc-record_1000", "hc-record_2000"),
-                heartRateDao.getBySourceRecordId("hc-record").map { it.id },
+                listOf(1L, 1L),
+                heartRateDao.getBySourceRecordRef(1L).map { it.sourceRecordRef },
             )
-            assertEquals(2, heartRateDao.deleteBySourceRecordId("hc-record"))
-            assertEquals(listOf("hc-record-other_1000"), heartRateDao.getSince(0).map { it.id })
+            assertEquals(2, heartRateDao.deleteBySourceRecordRef(1L))
+            assertEquals(listOf(2L), heartRateDao.getSince(0).map { it.sourceRecordRef })
         }
 
     @Test
     fun `hrv source record methods match only exact source prefix`() =
         runTest {
+            seedSourceRecordParents(1L, 2L)
             hrvDao.upsertAll(
                 listOf(
-                    HrvRecordEntity("hc-record_1000", 1000L, 40f, "SLEEP"),
-                    HrvRecordEntity("hc-record_2000", 2000L, 41f, "SLEEP"),
-                    HrvRecordEntity("hc-record-other_1000", 3000L, 42f, "SLEEP"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 1000L, rmssdMs = 40f, recordType = "SLEEP"),
+                    HrvRecordEntity(sourceRecordRef = 1L, timestampMs = 2000L, rmssdMs = 41f, recordType = "SLEEP"),
+                    HrvRecordEntity(sourceRecordRef = 2L, timestampMs = 3000L, rmssdMs = 42f, recordType = "SLEEP"),
                 ),
             )
 
             assertEquals(
-                listOf("hc-record_1000", "hc-record_2000"),
-                hrvDao.getBySourceRecordId("hc-record").map { it.id },
+                listOf(1L, 1L),
+                hrvDao.getBySourceRecordRef(1L).map { it.sourceRecordRef },
             )
-            assertEquals(2, hrvDao.deleteBySourceRecordId("hc-record"))
-            assertEquals(listOf("hc-record-other_1000"), hrvDao.getSince(0).map { it.id })
+            assertEquals(2, hrvDao.deleteBySourceRecordRef(1L))
+            assertEquals(listOf(2L), hrvDao.getSince(0).map { it.sourceRecordRef })
         }
 
     @Test

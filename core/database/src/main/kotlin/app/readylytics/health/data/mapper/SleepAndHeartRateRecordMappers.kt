@@ -8,7 +8,7 @@ import app.readylytics.health.domain.model.SleepSession
 object HeartRateRecordMapper {
     fun toDomain(entity: HeartRateRecordEntity): HeartRateRecord =
         HeartRateRecord(
-            id = entity.id,
+            id = "${entity.sourceRecordRef}:${entity.timestampMs}",
             timestampMs = entity.timestampMs,
             beatsPerMinute = entity.beatsPerMinute,
             recordType = entity.recordType,
@@ -16,9 +16,12 @@ object HeartRateRecordMapper {
             deviceName = entity.deviceName,
         )
 
-    fun toEntity(domain: HeartRateRecord): HeartRateRecordEntity =
+    fun toEntity(
+        domain: HeartRateRecord,
+        sourceRecordRef: Long,
+    ): HeartRateRecordEntity =
         HeartRateRecordEntity(
-            sourceRecordId = domain.id,
+            sourceRecordRef = sourceRecordRef,
             timestampMs = domain.timestampMs,
             beatsPerMinute = domain.beatsPerMinute,
             recordType = domain.recordType,
