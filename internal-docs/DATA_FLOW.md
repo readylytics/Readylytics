@@ -1091,8 +1091,8 @@ DashboardRoute → LocalClipboardManager.setText + SnackbarHostState  (setup pro
 Key behaviors:
 - `WorkoutRepository.getInRange(fromMs, toMs)` is a thin delegation to
   `WorkoutDao.getWorkoutsInRange` (added for this feature; bounded, no schema change).
-- `WorkoutRepository.getRoutePoints(workoutId)` is a thin delegation to
-  `WorkoutRoutePointDao.getRoutePoints`, returning `workout_route_points` rows in ascending
+- `WorkoutRepository.getRoutePoints(workoutId)` delegates to
+  `WorkoutRoutePointDao.getRoutePoints` and maps rows to domain `WorkoutRoutePoint` models in ascending
   `timestampMs` order for route map / distance displays.
 - The prompt labels which Training Load source is active; `LoadSourceSelector` projects the
   active-source ATL/CTL/ratio/load/readiness columns. RAS totals are informational only.

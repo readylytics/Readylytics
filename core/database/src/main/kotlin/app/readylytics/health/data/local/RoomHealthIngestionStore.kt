@@ -25,6 +25,8 @@ import app.readylytics.health.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.BloodPressureInput
 import app.readylytics.health.domain.sync.BodyFatInput
@@ -87,7 +89,7 @@ class RoomHealthIngestionStore
                     }
                 workoutDao.upsertAll(workoutEntities)
                 workoutRoutePointDao.insertAll(
-                    batch.workouts.flatMap { workout -> workout.routePoints },
+                    batch.workouts.flatMap { workout -> workout.routePoints.map(WorkoutRoutePoint::toEntity) },
                 )
                 weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
                 bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
@@ -307,4 +309,16 @@ private fun StepRecordInput.toEntity() =
         endTime = endTime,
         count = count,
         deviceName = deviceName,
+    )
+
+private fun WorkoutRoutePoint.toEntity() =
+    WorkoutRoutePointEntity(
+        id = id,
+        workoutId = workoutId,
+        latitude = latitude,
+        longitude = longitude,
+        altitude = altitude,
+        timestampMs = timestampMs,
+        horizontalAccuracy = horizontalAccuracy,
+        verticalAccuracy = verticalAccuracy,
     )

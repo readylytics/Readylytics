@@ -4,6 +4,7 @@ import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.WorkoutData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -159,6 +160,10 @@ class WorkoutRepositoryImplTest {
                     trimp = 200f,
                     avgHr = 160f,
                     deviceName = "Watch",
+                    totalDistanceMeters = 5000f,
+                    avgSpeedKmh = 12.5f,
+                    elevationGainMeters = 45f,
+                    routeState = "IMPORTED",
                 )
             results["getPagedInRange"] = listOf(entity)
 
@@ -174,6 +179,10 @@ class WorkoutRepositoryImplTest {
             assertEquals(200f, mapped.trimp)
             assertEquals(160f, mapped.avgHr)
             assertEquals("Watch", mapped.deviceName)
+            assertEquals(5000f, mapped.totalDistanceMeters)
+            assertEquals(12.5f, mapped.avgSpeedKmh)
+            assertEquals(45f, mapped.elevationGainMeters)
+            assertEquals("IMPORTED", mapped.routeState)
         }
 
     @Test
@@ -185,21 +194,37 @@ class WorkoutRepositoryImplTest {
         }
 
     @Test
-    fun `getRoutePoints delegates to the route point dao`() =
+    fun `getRoutePoints delegates to the route point dao and maps to domain`() =
         runTest {
-            val points =
+            val entities =
                 listOf(
                     WorkoutRoutePointEntity(
+                        id = 1L,
                         workoutId = "w1",
                         latitude = 1.0,
                         longitude = 2.0,
                         altitude = 100.0,
                         timestampMs = 100L,
+                        horizontalAccuracy = 5f,
+                        verticalAccuracy = 10f,
                     ),
                 )
-            results["getRoutePoints"] = points
+            results["getRoutePoints"] = entities
 
-            assertEquals(points, repository.getRoutePoints("w1"))
+            val expected =
+                listOf(
+                    WorkoutRoutePoint(
+                        id = 1L,
+                        workoutId = "w1",
+                        latitude = 1.0,
+                        longitude = 2.0,
+                        altitude = 100.0,
+                        timestampMs = 100L,
+                        horizontalAccuracy = 5f,
+                        verticalAccuracy = 10f,
+                    ),
+                )
+            assertEquals(expected, repository.getRoutePoints("w1"))
         }
 
     @Suppress("UNCHECKED_CAST")

@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -99,11 +100,11 @@ data class WorkoutInput(
     val trimp: Float,
     val avgHr: Float,
     val deviceName: String?,
-    val routePoints: List<WorkoutRoutePointEntity> = emptyList(),
+    val routePoints: List<WorkoutRoutePoint> = emptyList(),
     val totalDistanceMeters: Float? = null,
     val avgSpeedKmh: Float? = null,
     val elevationGainMeters: Float? = null,
-    val routeState: String = "NOT_AVAILABLE",
+    val routeState: String = RouteState.NOT_AVAILABLE,
 )
 
 data class WeightInput(

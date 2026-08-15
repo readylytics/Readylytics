@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.sync.mappers
 
-import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainRouteLocation
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.sync.WorkoutInput
 import app.readylytics.health.domain.util.RouteDistanceCalculator
 
@@ -25,7 +25,7 @@ object WorkoutMapper {
             trimp = 0f,
             avgHr = 0f,
             deviceName = session.deviceName,
-            routePoints = session.routePoints.map { it.toRoutePointEntity(session.id) },
+            routePoints = session.routePoints.map { it.toRoutePoint(session.id) },
             totalDistanceMeters =
                 session.totalDistanceMeters?.toFloat()
                     ?: fallbackDistanceMeters(session.routePoints),
@@ -73,8 +73,8 @@ object WorkoutMapper {
     }
 }
 
-private fun DomainRouteLocation.toRoutePointEntity(workoutId: String) =
-    WorkoutRoutePointEntity(
+private fun DomainRouteLocation.toRoutePoint(workoutId: String) =
+    WorkoutRoutePoint(
         workoutId = workoutId,
         latitude = latitude,
         longitude = longitude,
