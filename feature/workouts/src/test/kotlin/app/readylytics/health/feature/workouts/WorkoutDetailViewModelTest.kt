@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -31,7 +33,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -57,6 +61,7 @@ class WorkoutDetailViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        coEvery { workoutRepository.getRoutePoints(any()) } returns emptyList()
         viewModel =
             WorkoutDetailViewModel(
                 workoutRepository = workoutRepository,
@@ -357,5 +362,281 @@ class WorkoutDetailViewModelTest {
 
             assertNotNull(viewModel.uiState.value.hrr1Min)
             assertEquals(21, viewModel.uiState.value.hrr1Min)
+        }
+
+    @Test
+    fun `loadWorkout with route points populates Available routeUiState and performance chart series`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-gps",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    routeState = RouteState.IMPORTED,
+                )
+            val routePoints =
+                listOf(
+                    WorkoutRoutePoint(
+                        workoutId = "run-gps",
+                        latitude = 52.5200,
+                        longitude = 13.4050,
+                        altitude = 45.0,
+                        timestampMs = startMs,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "run-gps",
+                        latitude = 52.5210,
+                        longitude = 13.4060,
+                        altitude = 50.0,
+                        timestampMs = startMs + 10_000L,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "run-gps",
+                        latitude = 52.5220,
+                        longitude = 13.4070,
+                        altitude = 55.0,
+                        timestampMs = startMs + 20_000L,
+                    ),
+                )
+
+            coEvery { workoutRepository.getById("run-gps") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-gps") } returns routePoints
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-gps")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(RouteDataState.Available, state.routeUiState.state)
+            assertTrue(state.routeUiState.projectedPoints.isNotEmpty())
+            assertTrue(state.isPaceMode)
+            assertEquals(3, state.paceSpeedChartData.size)
+            assertEquals(3, state.elevationChartData.size)
+            assertEquals(0.0, state.paceSpeedChartData.first().first, 0.001)
+            assertEquals(0.0, state.elevationChartData.first().first, 0.001)
+            assertEquals(45.0, state.elevationChartData.first().second, 0.001)
+            assertEquals(55.0, state.elevationChartData.last().second, 0.001)
+        }
+
+    @Test
+    fun `loadWorkout with cycling activity sets isPaceMode false and computes speed series`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "ride-1",
+                    startTime = startMs,
+                    endTime = startMs + 60 * 60 * 1000L,
+                    exerciseType = "cycling",
+                    durationMinutes = 60,
+                    zone1Minutes = 10f,
+                    zone2Minutes = 20f,
+                    zone3Minutes = 20f,
+                    zone4Minutes = 10f,
+                    zone5Minutes = 0f,
+                    trimp = 80f,
+                    avgHr = 140f,
+                    routeState = RouteState.IMPORTED,
+                )
+            val routePoints =
+                listOf(
+                    WorkoutRoutePoint(
+                        workoutId = "ride-1",
+                        latitude = 52.5200,
+                        longitude = 13.4050,
+                        altitude = 40.0,
+                        timestampMs = startMs,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "ride-1",
+                        latitude = 52.5300,
+                        longitude = 13.4150,
+                        altitude = 45.0,
+                        timestampMs = startMs + 120_000L,
+                    ),
+                )
+
+            coEvery { workoutRepository.getById("ride-1") } returns workout
+            coEvery { workoutRepository.getRoutePoints("ride-1") } returns routePoints
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 80f,
+                    computedTrimp = 80,
+                    trimpDisplay = "80",
+                    gainedStrain = 0.3f,
+                    gainedStrainDisplay = "0.3",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("ride-1")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(RouteDataState.Available, state.routeUiState.state)
+            assertFalse(state.isPaceMode)
+            assertEquals(2, state.paceSpeedChartData.size)
+            assertTrue(state.paceSpeedChartData.first().second > 0.0)
+        }
+
+    @Test
+    fun `loadWorkout with PERMISSION_REQUIRED sets RouteDataState PermissionRequired`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-perm",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    routeState = RouteState.PERMISSION_REQUIRED,
+                )
+
+            coEvery { workoutRepository.getById("run-perm") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-perm") } returns emptyList()
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-perm")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(RouteDataState.PermissionRequired, state.routeUiState.state)
+            assertTrue(state.paceSpeedChartData.isEmpty())
+            assertTrue(state.elevationChartData.isEmpty())
+        }
+
+    @Test
+    fun `loadWorkout with no route sets RouteDataState NotAvailable`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-no-route",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    routeState = RouteState.NOT_AVAILABLE,
+                )
+
+            coEvery { workoutRepository.getById("run-no-route") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-no-route") } returns emptyList()
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-no-route")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(RouteDataState.NotAvailable, state.routeUiState.state)
+            assertTrue(state.paceSpeedChartData.isEmpty())
+            assertTrue(state.elevationChartData.isEmpty())
         }
 }

@@ -35,6 +35,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 fun WorkoutDetailRoute(
     workoutId: String,
     onBack: () -> Unit,
+    onRequestRoutePermission: () -> Unit = {},
     viewModel: WorkoutDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -67,6 +68,7 @@ fun WorkoutDetailRoute(
         } else {
             WorkoutDetailScreen(
                 uiState = uiState,
+                onGrantPermissionClick = onRequestRoutePermission,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -76,6 +78,7 @@ fun WorkoutDetailRoute(
 @Composable
 fun WorkoutDetailScreen(
     uiState: WorkoutDetailUiState,
+    onGrantPermissionClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val workout = uiState.workout ?: return
@@ -96,6 +99,20 @@ fun WorkoutDetailScreen(
             gainedStrainDisplay = uiState.gainedStrainDisplay,
             ras = uiState.ras,
             classification = uiState.classification,
+            unitSystem = uiState.unitSystem,
+        )
+
+        RouteContourCard(
+            uiState = uiState.routeUiState,
+            onGrantPermissionClick = onGrantPermissionClick,
+        )
+
+        WorkoutPerformanceCharts(
+            paceSpeedData = uiState.paceSpeedChartData,
+            elevationData = uiState.elevationChartData,
+            isPaceMode = uiState.isPaceMode,
+            unitSystem = uiState.unitSystem,
+            parentScrollInProgress = { scrollState.isScrollInProgress },
         )
 
         TrimpBreakdownChart(

@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination
@@ -357,9 +358,16 @@ fun MainNavHost(
         }
         composable<AppDestination.WorkoutDetail> { backStackEntry ->
             val detail: AppDestination.WorkoutDetail = backStackEntry.toRoute()
+            val routePermissionLauncher =
+                rememberLauncherForActivityResult(
+                    contract = PermissionController.createRequestPermissionResultContract(),
+                ) { }
             WorkoutDetailRoute(
                 workoutId = detail.workoutId,
                 onBack = { navController.popBackStack() },
+                onRequestRoutePermission = {
+                    routePermissionLauncher.launch(setOf("android.permission.health.READ_EXERCISE_ROUTES"))
+                },
             )
         }
 

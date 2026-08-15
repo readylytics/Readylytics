@@ -103,4 +103,10 @@
     <string name="workout_tooltip_avg_pace">Average pace over the duration of the workout.</string>
     <string name="workout_tooltip_avg_speed">Average speed over the duration of the workout.</string>
     <string name="workout_tooltip_elevation_gain">Total positive vertical ascent accumulated during the workout.</string>
+    <string name="chart_accessibility_pace_summary">Pace profile line chart showing workout pace along distance.</string>
+    <string name="chart_accessibility_speed_summary">Speed profile line chart showing workout speed along distance.</string>
+    <string name="chart_accessibility_elevation_summary">Elevation profile line chart showing altitude along distance.</string>
+    <string name="chart_accessibility_selected_pace">Selected: %1$s at %2$s</string>
+    <string name="chart_accessibility_selected_speed">Selected: %1$s at %2$s</string>
+    <string name="chart_accessibility_selected_elevation">Selected: %1$s at %2$s</string>
 </resources>
