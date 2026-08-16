@@ -3,8 +3,11 @@ package app.readylytics.health.feature.workouts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -96,16 +99,97 @@ fun WorkoutDetailScreen(
                 .padding(MaterialTheme.spacing.medium),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
-        WorkoutMetricsDisplay(
-            workout = workout,
-            computedTrimp = uiState.computedTrimp,
-            gainedStrain = uiState.gainedStrain,
-            gainedStrainDisplay = uiState.gainedStrainDisplay,
-            ras = uiState.ras,
-            classification = uiState.classification,
-            unitSystem = uiState.unitSystem,
-            displayElevationGainMeters = uiState.displayElevationGainMeters,
-        )
+        WorkoutDetailHeader(workout)
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                TrainingLoadTile(
+                    computedTrimp = uiState.computedTrimp,
+                    workout = workout,
+                    modifier = Modifier.weight(1f),
+                )
+                AvgPulseTile(
+                    workout = workout,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                GainedStrainTile(
+                    gainedStrain = uiState.gainedStrain,
+                    gainedStrainDisplay = uiState.gainedStrainDisplay,
+                    modifier = Modifier.weight(1f),
+                )
+                RasTile(
+                    ras = uiState.ras,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                OverallLoadTile(
+                    classification = uiState.classification,
+                    modifier = Modifier.weight(1f),
+                )
+                IntensityTile(
+                    classification = uiState.classification,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            val hasGpsMetrics =
+                workout.totalDistanceMeters != null ||
+                    workout.avgSpeedKmh != null ||
+                    workout.elevationGainMeters != null ||
+                    uiState.displayElevationGainMeters != null
+
+            if (hasGpsMetrics) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                ) {
+                    DistanceTile(
+                        workout = workout,
+                        unitSystem = uiState.unitSystem,
+                        modifier = Modifier.weight(1f),
+                    )
+                    AvgPaceSpeedTile(
+                        workout = workout,
+                        unitSystem = uiState.unitSystem,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                val elevationGain = uiState.displayElevationGainMeters ?: workout.elevationGainMeters
+                if (elevationGain != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                    ) {
+                        ElevationGainTile(
+                            elevationGainMeters = elevationGain,
+                            unitSystem = uiState.unitSystem,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+
+        ZoneBreakdownCard(workout)
 
         RouteContourCard(
             uiState = uiState.routeUiState,

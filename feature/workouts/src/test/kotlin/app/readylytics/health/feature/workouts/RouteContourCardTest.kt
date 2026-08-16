@@ -1,5 +1,13 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -7,8 +15,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.readylytics.health.core.designsystem.FitDashboardTheme
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.repository.WorkoutData
+import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.util.ProjectedPoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -131,7 +141,7 @@ class RouteContourCardTest {
 
         composeRule.setContent {
             FitDashboardTheme {
-                WorkoutMetricsDisplay(
+                WorkoutMetricsDisplayHarness(
                     workout = workout,
                     computedTrimp = 45,
                     gainedStrain = 10.5f,
@@ -177,7 +187,7 @@ class RouteContourCardTest {
 
         composeRule.setContent {
             FitDashboardTheme {
-                WorkoutMetricsDisplay(
+                WorkoutMetricsDisplayHarness(
                     workout = workout,
                     computedTrimp = 80,
                     gainedStrain = 14.0f,
@@ -222,7 +232,7 @@ class RouteContourCardTest {
 
         composeRule.setContent {
             FitDashboardTheme {
-                WorkoutMetricsDisplay(
+                WorkoutMetricsDisplayHarness(
                     workout = workout,
                     computedTrimp = 35,
                     gainedStrain = 8.0f,
@@ -239,5 +249,79 @@ class RouteContourCardTest {
         composeRule.onNodeWithText("Avg. Pace", useUnmergedTree = true).assertDoesNotExist()
         composeRule.onNodeWithText("Avg. Speed", useUnmergedTree = true).assertDoesNotExist()
         composeRule.onNodeWithText("Elevation Gain", useUnmergedTree = true).assertDoesNotExist()
+    }
+}
+
+@Composable
+private fun WorkoutMetricsDisplayHarness(
+    workout: WorkoutData,
+    computedTrimp: Int?,
+    gainedStrain: Float?,
+    gainedStrainDisplay: String,
+    ras: Float?,
+    classification: WorkoutLoadClassification?,
+    unitSystem: UnitSystem = UnitSystem.METRIC,
+    displayElevationGainMeters: Float? = null,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        WorkoutDetailHeader(workout)
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                TrainingLoadTile(computedTrimp, workout, Modifier.weight(1f))
+                AvgPulseTile(workout, Modifier.weight(1f))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                GainedStrainTile(gainedStrain, gainedStrainDisplay, Modifier.weight(1f))
+                RasTile(ras, Modifier.weight(1f))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                OverallLoadTile(classification, Modifier.weight(1f))
+                IntensityTile(classification, Modifier.weight(1f))
+            }
+
+            val hasGpsMetrics =
+                workout.totalDistanceMeters != null ||
+                    workout.avgSpeedKmh != null ||
+                    workout.elevationGainMeters != null ||
+                    displayElevationGainMeters != null
+
+            if (hasGpsMetrics) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                ) {
+                    DistanceTile(workout, unitSystem, Modifier.weight(1f))
+                    AvgPaceSpeedTile(workout, unitSystem, Modifier.weight(1f))
+                }
+
+                val elevationGain = displayElevationGainMeters ?: workout.elevationGainMeters
+                if (elevationGain != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                    ) {
+                        ElevationGainTile(elevationGain, unitSystem, Modifier.weight(1f))
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+
+        ZoneBreakdownCard(workout)
     }
 }
