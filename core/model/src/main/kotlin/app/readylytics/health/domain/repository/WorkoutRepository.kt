@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.repository
 
+import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import kotlinx.coroutines.flow.Flow
 
 data class WorkoutData(
@@ -16,6 +18,10 @@ data class WorkoutData(
     val trimp: Float,
     val avgHr: Float,
     val deviceName: String? = null,
+    val totalDistanceMeters: Float? = null,
+    val avgSpeedKmh: Float? = null,
+    val elevationGainMeters: Float? = null,
+    val routeState: String = RouteState.NOT_AVAILABLE,
 )
 
 interface WorkoutRepository {
@@ -33,6 +39,8 @@ interface WorkoutRepository {
     ): List<WorkoutData>
 
     suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
+
+    suspend fun getRoutePoints(workoutId: String): List<WorkoutRoutePoint>
 
     fun observeSince(fromMs: Long): Flow<List<WorkoutData>>
 }

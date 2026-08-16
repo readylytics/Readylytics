@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -15,6 +17,12 @@ import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.domain.sync.SyncWorkoutRouteUseCase
+import app.readylytics.health.domain.util.ElevationGainCalculator
+import app.readylytics.health.domain.util.PaceSpeedCalculator
+import app.readylytics.health.domain.util.RouteDistanceCalculator
+import app.readylytics.health.domain.util.RouteProjector
+import app.readylytics.health.domain.util.RouteSimplifier
 import app.readylytics.health.feature.workouts.mappers.ChartDataMapper
 import app.readylytics.health.feature.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.feature.workouts.mappers.RecoveryMetricsMapper
@@ -36,6 +44,35 @@ data class HeartRatePoint(
     val bpm: Int,
 )
 
+/** 1-2-5 ladder of scale-bar lengths, in metres. */
+private val SCALE_BAR_STEPS_METERS =
+    doubleArrayOf(
+        10.0,
+        20.0,
+        50.0,
+        100.0,
+        200.0,
+        500.0,
+        1_000.0,
+        2_000.0,
+        5_000.0,
+        10_000.0,
+        20_000.0,
+        50_000.0,
+        100_000.0,
+        200_000.0,
+        500_000.0,
+    )
+
+/**
+ * Largest 1-2-5 step that fits in half the route's longest dimension, so the bar always occupies
+ * a readable 20-50% of the drawn contour instead of a hardcoded dp width.
+ */
+internal fun pickScaleBarMeters(maxDimensionMeters: Double): Double {
+    val target = maxDimensionMeters / 2.0
+    return SCALE_BAR_STEPS_METERS.lastOrNull { it <= target } ?: SCALE_BAR_STEPS_METERS.first()
+}
+
 @Immutable
 data class WorkoutDetailUiState(
     val workout: WorkoutData? = null,
@@ -52,6 +89,12 @@ data class WorkoutDetailUiState(
     val gainedStrainDisplay: String = "—",
     val ras: Float? = null,
     val classification: WorkoutLoadClassification? = null,
+    val routeUiState: RouteUiState = RouteUiState(),
+    val paceSpeedChartData: List<Pair<Double, Double>> = emptyList(),
+    val elevationChartData: List<Pair<Double, Double>> = emptyList(),
+    val displayElevationGainMeters: Float? = null,
+    val isPaceMode: Boolean = false,
+    val unitSystem: UnitSystem = UnitSystem.METRIC,
     val isLoading: Boolean = true,
 )
 
@@ -65,6 +108,7 @@ class WorkoutDetailViewModel
         private val dailySummaryRepository: DailySummaryRepository,
         private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
+        private val syncWorkoutRouteUseCase: SyncWorkoutRouteUseCase,
         private val savedStateHandle: SavedStateHandle,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
@@ -77,14 +121,28 @@ class WorkoutDetailViewModel
             }
         }
 
+        fun onRoutePermissionResult() {
+            val workoutId = savedStateHandle.get<String>("workoutId") ?: return
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true) }
+                syncWorkoutRouteUseCase(workoutId)
+                loadWorkout(workoutId)
+            }
+        }
+
         fun loadWorkout(workoutId: String) {
             savedStateHandle["workoutId"] = workoutId
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
-                val workout = workoutRepository.getById(workoutId)
+                var workout = workoutRepository.getById(workoutId)
                 if (workout == null) {
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
+                }
+
+                if (workout.routeState == RouteState.PERMISSION_REQUIRED && hcRepo.hasExerciseRoutesPermission()) {
+                    syncWorkoutRouteUseCase(workoutId)
+                    workout = workoutRepository.getById(workoutId) ?: workout
                 }
 
                 withContext(defaultDispatcher) {
@@ -157,6 +215,125 @@ class WorkoutDetailViewModel
                                 },
                         )
 
+                    val routePoints = workoutRepository.getRoutePoints(workoutId)
+                    val isPaceMode = PaceSpeedCalculator.isPaceActivity(workout.exerciseType)
+                    val routeUiState: RouteUiState
+                    val paceSpeedChartData: List<Pair<Double, Double>>
+                    val elevationChartData: List<Pair<Double, Double>>
+                    var displayElevationGainMeters: Float? = null
+
+                    if (workout.routeState == RouteState.PERMISSION_REQUIRED) {
+                        routeUiState = RouteUiState(state = RouteDataState.PermissionRequired)
+                        paceSpeedChartData = emptyList()
+                        elevationChartData = emptyList()
+                    } else if (routePoints.isNotEmpty()) {
+                        val sortedPoints = routePoints.sortedBy { it.timestampMs }
+                        val projectionResult = RouteProjector.project(sortedPoints)
+                        val simplifiedPoints = RouteSimplifier.simplify(projectionResult.points)
+
+                        // RouteProjector normalises both axes by maxDimension, so the drawn square
+                        // side == maxDimension. The bar is therefore expressed as a fraction of
+                        // that side and sized against the real canvas in RouteContourCard --
+                        // a fixed dp width would make the legend misstate the distance.
+                        val maxDimension = maxOf(projectionResult.widthMeters, projectionResult.heightMeters)
+                        val (scaleLabel, scaleWidthFraction) =
+                            if (maxDimension > 0.0) {
+                                val scaleMeters = pickScaleBarMeters(maxDimension)
+                                val label =
+                                    if (scaleMeters >= 1000.0) {
+                                        "${(scaleMeters / 1000.0).toInt()} km"
+                                    } else {
+                                        "${scaleMeters.toInt()} m"
+                                    }
+                                Pair(label, (scaleMeters / maxDimension).coerceIn(0.0, 1.0).toFloat())
+                            } else {
+                                Pair("", 0f)
+                            }
+
+                        routeUiState =
+                            RouteUiState(
+                                state = RouteDataState.Available,
+                                projectedPoints = simplifiedPoints,
+                                scaleLabel = scaleLabel,
+                                scaleWidthFraction = scaleWidthFraction,
+                            )
+
+                        var cumDistM = 0.0
+                        val cumDistKmList = DoubleArray(sortedPoints.size)
+                        cumDistKmList[0] = 0.0
+                        for (i in 1 until sortedPoints.size) {
+                            cumDistM +=
+                                RouteDistanceCalculator.haversineMeters(
+                                    sortedPoints[i - 1].latitude,
+                                    sortedPoints[i - 1].longitude,
+                                    sortedPoints[i].latitude,
+                                    sortedPoints[i].longitude,
+                                )
+                            cumDistKmList[i] = kotlin.math.round(cumDistM) / 1000.0
+                        }
+
+                        val paceSpeedList = mutableListOf<Pair<Double, Double>>()
+
+                        val validAltitudes =
+                            ElevationGainCalculator.filterAltitudePlaceholders(
+                                sortedPoints.mapNotNull { it.altitude },
+                            )
+                        displayElevationGainMeters =
+                            if (validAltitudes.size >= 2) {
+                                ElevationGainCalculator.calculateAscent(validAltitudes).toFloat()
+                            } else {
+                                workout.elevationGainMeters
+                            }
+
+                        if (sortedPoints.size > 1) {
+                            val dt0 = (sortedPoints[1].timestampMs - sortedPoints[0].timestampMs) / 1000.0
+                            val dist0 =
+                                RouteDistanceCalculator.haversineMeters(
+                                    sortedPoints[0].latitude,
+                                    sortedPoints[0].longitude,
+                                    sortedPoints[1].latitude,
+                                    sortedPoints[1].longitude,
+                                )
+                            val speedMps0 = if (dt0 > 0) dist0 / dt0 else 0.0
+                            val val0 =
+                                if (isPaceMode) {
+                                    PaceSpeedCalculator.speedMpsToPaceMinKm(speedMps0)
+                                } else {
+                                    PaceSpeedCalculator.speedMpsToSpeedKmh(speedMps0)
+                                }
+                            paceSpeedList.add(Pair(0.0, val0))
+
+                            for (i in 1 until sortedPoints.size) {
+                                val dt = (sortedPoints[i].timestampMs - sortedPoints[i - 1].timestampMs) / 1000.0
+                                val dist =
+                                    RouteDistanceCalculator.haversineMeters(
+                                        sortedPoints[i - 1].latitude,
+                                        sortedPoints[i - 1].longitude,
+                                        sortedPoints[i].latitude,
+                                        sortedPoints[i].longitude,
+                                    )
+                                val speedMps = if (dt > 0) dist / dt else 0.0
+                                val valI =
+                                    if (isPaceMode) {
+                                        PaceSpeedCalculator.speedMpsToPaceMinKm(speedMps)
+                                    } else {
+                                        PaceSpeedCalculator.speedMpsToSpeedKmh(speedMps)
+                                    }
+                                paceSpeedList.add(Pair(cumDistKmList[i], valI))
+                            }
+                        }
+
+                        paceSpeedChartData = paceSpeedList
+                        elevationChartData =
+                            ElevationGainCalculator.smoothElevationProfile(
+                                cumDistKmList.zip(sortedPoints.map { it.altitude }),
+                            )
+                    } else {
+                        routeUiState = RouteUiState(state = RouteDataState.NotAvailable)
+                        paceSpeedChartData = emptyList()
+                        elevationChartData = emptyList()
+                    }
+
                     _uiState.update { currentState ->
                         currentState.copy(
                             workout = workout,
@@ -173,6 +350,12 @@ class WorkoutDetailViewModel
                             gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
                             ras = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
                             classification = displayMetrics.classification,
+                            routeUiState = routeUiState,
+                            paceSpeedChartData = paceSpeedChartData,
+                            elevationChartData = elevationChartData,
+                            displayElevationGainMeters = displayElevationGainMeters,
+                            isPaceMode = isPaceMode,
+                            unitSystem = prefs.unitSystem,
                             isLoading = false,
                         )
                     }

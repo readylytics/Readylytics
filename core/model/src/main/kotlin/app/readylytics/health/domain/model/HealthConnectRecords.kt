@@ -50,6 +50,38 @@ data class DomainExerciseSessionRecord(
     val endTime: Instant,
     val exerciseType: String,
     val deviceName: String,
+    val routePoints: List<DomainRouteLocation> = emptyList(),
+    val totalDistanceMeters: Double? = null,
+    val avgSpeedMps: Double? = null,
+    val elevationGainMeters: Double? = null,
+    val routeState: String = RouteState.NOT_AVAILABLE,
+)
+
+data class DomainRouteLocation(
+    val latitude: Double,
+    val longitude: Double,
+    val altitudeMeters: Double?,
+    val time: Instant,
+    val horizontalAccuracyMeters: Float?,
+    val verticalAccuracyMeters: Float?,
+)
+
+object RouteState {
+    const val IMPORTED = "IMPORTED"
+    const val PERMISSION_REQUIRED = "PERMISSION_REQUIRED"
+    const val NOT_AVAILABLE = "NOT_AVAILABLE"
+}
+
+/**
+ * A Health Connect interval record carrying a single cumulative quantity (metres of distance,
+ * metres of elevation gained) over its own time span. Kept provider-agnostic so the attribution
+ * rule in `SessionTotalsResolver` stays pure Kotlin.
+ */
+data class DomainIntervalTotal(
+    val startTime: Instant,
+    val endTime: Instant,
+    val value: Double,
+    val originPackage: String,
 )
 
 data class DomainStepsRecord(

@@ -3,6 +3,9 @@ package app.readylytics.health.data.healthconnect
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -17,12 +20,15 @@ import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord
+import app.readylytics.health.domain.model.DomainIntervalTotal
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStage
 import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
+import app.readylytics.health.domain.model.RouteState
 
 fun SleepSessionRecord.toDomain(): DomainSleepSessionRecord =
     DomainSleepSessionRecord(
@@ -74,14 +80,76 @@ fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
         deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
     )
 
-fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord =
-    DomainExerciseSessionRecord(
+fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord = toDomain(exerciseRouteResult)
+
+/**
+ * @param totalDistanceMeters authoritative distance the recording app wrote as a separate
+ * `DistanceRecord` over this session's window, resolved by [SessionTotalsResolver]. Null falls the
+ * mapper back to integrating the GPS polyline, which reads ~1-3% short.
+ * @param elevationGainMeters same, for `ElevationGainedRecord`.
+ */
+fun ExerciseSessionRecord.toDomain(
+    routeResult: ExerciseRouteResult?,
+    totalDistanceMeters: Double? = null,
+    elevationGainMeters: Double? = null,
+): DomainExerciseSessionRecord {
+    val durationSeconds = (endTime.toEpochMilli() - startTime.toEpochMilli()) / 1000.0
+    return DomainExerciseSessionRecord(
         id = metadata.id,
         startTime = startTime,
         endTime = endTime,
         exerciseType = exerciseType.toString(),
         deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+        routePoints = routeResult.toDomainRoutePoints(),
+        totalDistanceMeters = totalDistanceMeters,
+        // Derived from the same distance rather than read separately, so the displayed pace/speed
+        // can never disagree with the displayed distance.
+        avgSpeedMps =
+            totalDistanceMeters
+                ?.takeIf { durationSeconds > 0.0 }
+                ?.let { it / durationSeconds },
+        elevationGainMeters = elevationGainMeters,
+        routeState = routeResult.toRouteState(),
     )
+}
+
+/** Health Connect interval records carrying one cumulative quantity, for session attribution. */
+internal fun DistanceRecord.toIntervalTotal(): DomainIntervalTotal =
+    DomainIntervalTotal(
+        startTime = startTime,
+        endTime = endTime,
+        value = distance.inMeters,
+        originPackage = metadata.dataOrigin.packageName,
+    )
+
+internal fun ElevationGainedRecord.toIntervalTotal(): DomainIntervalTotal =
+    DomainIntervalTotal(
+        startTime = startTime,
+        endTime = endTime,
+        value = elevation.inMeters,
+        originPackage = metadata.dataOrigin.packageName,
+    )
+
+internal fun ExerciseRouteResult?.toDomainRoutePoints(): List<DomainRouteLocation> {
+    val data = this as? ExerciseRouteResult.Data ?: return emptyList()
+    return data.exerciseRoute.route.map { location ->
+        DomainRouteLocation(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            altitudeMeters = location.altitude?.inMeters,
+            time = location.time,
+            horizontalAccuracyMeters = location.horizontalAccuracy?.inMeters?.toFloat(),
+            verticalAccuracyMeters = location.verticalAccuracy?.inMeters?.toFloat(),
+        )
+    }
+}
+
+internal fun ExerciseRouteResult?.toRouteState(): String =
+    when (this) {
+        is ExerciseRouteResult.Data -> RouteState.IMPORTED
+        is ExerciseRouteResult.ConsentRequired -> RouteState.PERMISSION_REQUIRED
+        else -> RouteState.NOT_AVAILABLE
+    }
 
 fun StepsRecord.toDomain(): DomainStepsRecord =
     DomainStepsRecord(

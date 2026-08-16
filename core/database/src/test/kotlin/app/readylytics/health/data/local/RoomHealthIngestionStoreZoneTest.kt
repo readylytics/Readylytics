@@ -61,6 +61,7 @@ class RoomHealthIngestionStoreZoneTest {
             heartRateDao = noOpDao(),
             hrvDao = noOpDao(),
             workoutDao = noOpDao(),
+            workoutRoutePointDao = noOpDao(),
             weightRecordDao = noOpDao(),
             bodyFatRecordDao = noOpDao(),
             bloodPressureRecordDao = noOpDao(),

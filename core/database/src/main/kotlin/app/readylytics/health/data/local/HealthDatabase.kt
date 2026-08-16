@@ -19,6 +19,7 @@ import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.AuditEventEntity
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
@@ -35,6 +36,7 @@ import app.readylytics.health.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 
 @Database(
     entities = [
@@ -54,6 +56,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
         AuditEventEntity::class,
         StepRecordEntity::class,
         HrMinuteBucketEntity::class,
+        WorkoutRoutePointEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -91,7 +94,9 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun minuteBucketDao(): MinuteBucketDao
 
+    abstract fun workoutRoutePointDao(): WorkoutRoutePointDao
+
     companion object {
-        const val DATABASE_VERSION = 10
+        const val DATABASE_VERSION = 11
     }
 }

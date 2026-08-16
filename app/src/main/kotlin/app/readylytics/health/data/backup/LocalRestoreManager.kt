@@ -20,6 +20,7 @@ import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.PhysiologyProfileProto
@@ -237,6 +238,7 @@ class LocalRestoreManager
             val heartRateDao = healthDatabase.heartRateDao()
             val hrvDao = healthDatabase.hrvDao()
             val workoutDao = healthDatabase.workoutDao()
+            val workoutRoutePointDao = healthDatabase.workoutRoutePointDao()
             val dailySummaryDao = healthDatabase.dailySummaryDao()
             val weightRecordDao = healthDatabase.weightRecordDao()
             val bodyFatRecordDao = healthDatabase.bodyFatRecordDao()
@@ -344,6 +346,22 @@ class LocalRestoreManager
                             }
                         }
                         if (batch.isNotEmpty()) workoutDao.upsertAll(batch)
+                        reader.endArray()
+                    }
+                    // Exported after "workouts", so the parent rows the FK points at already
+                    // exist by the time this branch runs. workoutDao.deleteAll() above already
+                    // cascaded the old rows away, so no separate clear is needed here.
+                    "workoutRoutePoints" -> {
+                        reader.beginArray()
+                        val batch = mutableListOf<WorkoutRoutePointEntity>()
+                        while (reader.hasNext()) {
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
+                            if (batch.size >= 500) {
+                                workoutRoutePointDao.insertAll(batch)
+                                batch.clear()
+                            }
+                        }
+                        if (batch.isNotEmpty()) workoutRoutePointDao.insertAll(batch)
                         reader.endArray()
                     }
                     "dailySummaries" -> {

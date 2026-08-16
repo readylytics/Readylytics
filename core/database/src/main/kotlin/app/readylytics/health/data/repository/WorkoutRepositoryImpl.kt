@@ -1,7 +1,10 @@
 package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +17,7 @@ class WorkoutRepositoryImpl
     @Inject
     constructor(
         private val dao: WorkoutDao,
+        private val routePointDao: WorkoutRoutePointDao,
     ) : WorkoutRepository {
         override suspend fun getById(id: String): WorkoutData? = dao.getById(id)?.let { mapToDomain(it) }
 
@@ -32,6 +36,9 @@ class WorkoutRepositoryImpl
 
         override suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int =
             dao.countByTimeRange(fromMs, toMs)
+
+        override suspend fun getRoutePoints(workoutId: String): List<WorkoutRoutePoint> =
+            routePointDao.getRoutePoints(workoutId).map { it.toDomain() }
 
         override fun observeSince(fromMs: Long): Flow<List<WorkoutData>> =
             dao.observeSince(fromMs).map { list ->
@@ -53,5 +60,21 @@ class WorkoutRepositoryImpl
                 trimp = entity.trimp,
                 avgHr = entity.avgHr,
                 deviceName = entity.deviceName,
+                totalDistanceMeters = entity.totalDistanceMeters,
+                avgSpeedKmh = entity.avgSpeedKmh,
+                elevationGainMeters = entity.elevationGainMeters,
+                routeState = entity.routeState,
+            )
+
+        private fun WorkoutRoutePointEntity.toDomain() =
+            WorkoutRoutePoint(
+                id = id,
+                workoutId = workoutId,
+                latitude = latitude,
+                longitude = longitude,
+                altitude = altitude,
+                timestampMs = timestampMs,
+                horizontalAccuracy = horizontalAccuracy,
+                verticalAccuracy = verticalAccuracy,
             )
     }

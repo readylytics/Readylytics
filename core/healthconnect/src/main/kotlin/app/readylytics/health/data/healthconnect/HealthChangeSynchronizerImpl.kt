@@ -612,6 +612,10 @@ private fun WorkoutInput.toEntity() =
         trimp = trimp,
         avgHr = avgHr,
         deviceName = deviceName,
+        totalDistanceMeters = totalDistanceMeters,
+        avgSpeedKmh = avgSpeedKmh,
+        elevationGainMeters = elevationGainMeters,
+        routeState = routeState,
     )
 
 private fun WorkoutRecordEntity.toInput() =
@@ -629,4 +633,8 @@ private fun WorkoutRecordEntity.toInput() =
         trimp = trimp,
         avgHr = avgHr,
         deviceName = deviceName,
+        totalDistanceMeters = totalDistanceMeters,
+        avgSpeedKmh = avgSpeedKmh,
+        elevationGainMeters = elevationGainMeters,
+        routeState = routeState,
     )

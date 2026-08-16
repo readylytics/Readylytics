@@ -193,6 +193,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
+        includeDetails: Boolean,
     ): List<DomainExerciseSessionRecord> {
         translateCritical(FakeOp.Exercise)
         val total = totalInRange(exerciseCount, from, to)
@@ -296,6 +297,12 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     override suspend fun hasOxygenSaturationPermission(): Boolean =
         granted.contains(HealthPermission.getReadPermission(OxygenSaturationRecord::class))
+
+    override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? = null
+
+    override suspend fun hasExerciseRoutesPermission(): Boolean =
+        granted.contains("android.permission.health.READ_EXERCISE_ROUTES") ||
+            granted.contains("com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES")
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
         lastDiscoveryWindowDays = windowDays

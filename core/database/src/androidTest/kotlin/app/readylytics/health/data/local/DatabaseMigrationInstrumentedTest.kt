@@ -218,6 +218,56 @@ class DatabaseMigrationInstrumentedTest {
         }
     }
 
+    @Test
+    fun migrate10To11CreatesWorkoutRoutePointsAndAddsWorkoutColumns() {
+        helper.createDatabase(TEST_DATABASE, 10).apply {
+            execSQL(
+                "INSERT INTO workout_records (id, startTime, endTime, exerciseType, durationMinutes, " +
+                    "zone1Minutes, zone2Minutes, zone3Minutes, zone4Minutes, zone5Minutes, trimp, avgHr) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                arrayOf<Any>("w1", 1_000L, 2_000L, "RUNNING", 30, 0f, 0f, 0f, 0f, 0f, 15f, 140f),
+            )
+            close()
+        }
+
+        val database =
+            helper.runMigrationsAndValidate(
+                TEST_DATABASE,
+                11,
+                true,
+                *DatabaseMigrations.all,
+            )
+
+        // Existing workout row survives; new columns are additive with routeState defaulted.
+        database.query(
+            "SELECT id, routeState, totalDistanceMeters, avgSpeedKmh, elevationGainMeters " +
+                "FROM workout_records WHERE id = 'w1'",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("w1", cursor.getString(0))
+            assertEquals("NOT_AVAILABLE", cursor.getString(1))
+            assertTrue(cursor.isNull(2))
+            assertTrue(cursor.isNull(3))
+            assertTrue(cursor.isNull(4))
+        }
+
+        // New route table exists and accepts rows with the cascade FK.
+        database.execSQL(
+            "INSERT INTO workout_route_points (workoutId, latitude, longitude, altitude, timestampMs, " +
+                "horizontalAccuracy, verticalAccuracy) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            arrayOf<Any>("w1", 52.52, 13.405, 34.5, 1_000L, 5f, 2f),
+        )
+        database.query(
+            "SELECT workoutId, latitude, longitude, altitude FROM workout_route_points WHERE workoutId = 'w1'",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("w1", cursor.getString(0))
+            assertEquals(52.52, cursor.getDouble(1), 0.0001)
+            assertEquals(13.405, cursor.getDouble(2), 0.0001)
+            assertEquals(34.5, cursor.getDouble(3), 0.0001)
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "audit-migration-test"
     }

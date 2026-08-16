@@ -76,4 +76,39 @@
     <string name="message_no_hr_data">No HR data available</string>
     <string name="label_minutes">Minutes</string>
     <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>
+
+    <!-- GPS & Performance Details -->
+    <string name="workout_metric_distance">Distance</string>
+    <string name="workout_metric_avg_pace">Avg. Pace</string>
+    <string name="workout_metric_avg_speed">Avg. Speed</string>
+    <string name="workout_metric_elevation_gain">Elevation Gain</string>
+    <string name="workout_metric_pace_unit_min_km">min/km</string>
+    <string name="workout_metric_pace_unit_min_mi">min/mi</string>
+    <string name="workout_metric_speed_unit_kmh">km/h</string>
+    <string name="workout_metric_speed_unit_mph">mph</string>
+    <string name="workout_metric_distance_unit_km">km</string>
+    <string name="workout_metric_distance_unit_mi">mi</string>
+    <string name="workout_metric_distance_unit_m">m</string>
+    <string name="workout_metric_elevation_unit_m">m</string>
+    <string name="workout_metric_elevation_unit_ft">ft</string>
+    <string name="workout_route_title">Route Contour</string>
+    <string name="workout_route_permission_required_title">Route data requires permission</string>
+    <string name="workout_route_permission_required_desc">Grant exercise route permissions in Health Connect to view GPS routes.</string>
+    <string name="workout_route_grant_permission">Grant permission</string>
+    <string name="workout_route_scale_format">%1$s</string>
+    <string name="workout_route_grid_legend">Grid: %1$s</string>
+    <string name="workout_route_grid_content_description">Route contour with a distance grid; each square is %1$s across.</string>
+    <string name="workout_chart_pace_title">Pace Profile</string>
+    <string name="workout_chart_speed_title">Speed Profile</string>
+    <string name="workout_chart_elevation_title">Elevation Profile</string>
+    <string name="workout_tooltip_distance">Total distance covered during the workout.</string>
+    <string name="workout_tooltip_avg_pace">Average pace over the duration of the workout.</string>
+    <string name="workout_tooltip_avg_speed">Average speed over the duration of the workout.</string>
+    <string name="workout_tooltip_elevation_gain">Total positive vertical ascent accumulated during the workout.</string>
+    <string name="chart_accessibility_pace_summary">Pace profile line chart showing workout pace along distance.</string>
+    <string name="chart_accessibility_speed_summary">Speed profile line chart showing workout speed along distance.</string>
+    <string name="chart_accessibility_elevation_summary">Elevation profile line chart showing altitude along distance.</string>
+    <string name="chart_accessibility_selected_pace">Selected: %1$s at %2$s</string>
+    <string name="chart_accessibility_selected_speed">Selected: %1$s at %2$s</string>
+    <string name="chart_accessibility_selected_elevation">Selected: %1$s at %2$s</string>
 </resources>

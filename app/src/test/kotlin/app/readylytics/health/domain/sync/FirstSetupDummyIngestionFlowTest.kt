@@ -15,6 +15,7 @@ import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
@@ -278,6 +279,15 @@ class FirstSetupDummyIngestionFlowTest {
             startMs: Long,
             endMs: Long,
         ): Int = 0
+
+        override suspend fun persistSingleWorkoutRoute(
+            workoutId: String,
+            routePoints: List<WorkoutRoutePoint>,
+            routeState: String,
+            totalDistanceMeters: Float?,
+            avgSpeedKmh: Float?,
+            elevationGainMeters: Float?,
+        ) {}
     }
 
     private class FakeFirstSetupHealthConnectRepository : HealthConnectRepository {
@@ -325,6 +335,7 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
+            includeDetails: Boolean,
         ): List<DomainExerciseSessionRecord> = listOf(workoutSession)
 
         override suspend fun readStepsRecords(
@@ -381,6 +392,14 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun hasBloodPressurePermission(): Boolean = false
 
         override suspend fun hasOxygenSaturationPermission(): Boolean = false
+
+        override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
+            listOf(workoutSession).firstOrNull {
+                it.id ==
+                    id
+            }
+
+        override suspend fun hasExerciseRoutesPermission(): Boolean = true
 
         private companion object {
             val sleepStart: Instant = Instant.parse("2026-06-28T22:00:00Z")

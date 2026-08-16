@@ -54,7 +54,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v10) │   16 entities — single source of truth
+│  HealthDatabase (SQLite v11) │   17 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -244,7 +244,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `SleepDataMapper`            | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/SleepDataMapper.kt`     | `DomainSleepSessionRecord` → `SleepSessionInput` + `List<SleepStageInput>` (sums deep/REM/light/awake, computes efficiency). **HC-006/WP-11:** when `stages` is empty (a stage-less HC session), `durationMinutes` falls back to the raw session span (`endTime - startTime`) instead of the stage-minute sum (which would be 0) — see 2.5's note on the Architecture reweight. |
 | `HeartRateMapper`            | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/HeartRateMapper.kt`     | `List<DomainHeartRateRecord>` → `List<HeartRateInput>`; assigns `recordType` (SLEEP / EXERCISE / RESTING) and `sessionId` via `SessionLinkSweep`. |
 | `HrvMapper`                  | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/HrvMapper.kt`           | RMSSD records → `List<HrvInput>`; links to sleep session or marks RESTING via `SessionLinkSweep`.                                                                        |
-| `WorkoutMapper`              | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/WorkoutMapper.kt`               | `DomainExerciseSessionRecord` → `WorkoutInput`; derives elapsed `durationMinutes` only. Zone minutes/avg HR/TRIMP are zero at this stage — populated later by `ZoneThresholds.computeMetrics` during the reconcile pass (see 1.2.1). Workout load/intensity categories are **not** persisted here. |
+| `WorkoutMapper`              | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/WorkoutMapper.kt`               | `DomainExerciseSessionRecord` → `WorkoutInput`; derives elapsed `durationMinutes` only. Zone minutes/avg HR/TRIMP are zero at this stage — populated later by `ZoneThresholds.computeMetrics` during the reconcile pass (see 1.2.1). Workout load/intensity categories are **not** persisted here. Maps the session's route points into `WorkoutInput.routePoints` (→ `workout_route_points` rows, §1.4) and, when Health Connect supplies no direct distance/speed/elevation aggregates, derives fallback `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters` from the route via `RouteDistanceCalculator` (`core/model/.../domain/util/RouteDistanceCalculator.kt`, pure haversine path sum + 3 m ascent-anchored elevation gain). `routeState` (IMPORTED / PERMISSION_REQUIRED / NOT_AVAILABLE) is captured verbatim from `ExerciseRouteResult`. |
 | `StepsMapper`                | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/StepsMapper.kt`         | `DomainStepsRecord` or aggregate count → `StepRecordInput`.                                                                                       |
 | `WeightDataMapper`           | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/WeightDataMapper.kt`           | `DomainWeightRecord` → `WeightRecordEntity` (kg).                                                                                                  |
 | `BodyFatDataMapper`          | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyFatDataMapper.kt`          | `DomainBodyFatRecord` → `BodyFatRecordEntity` (%).                                                                                                 |
@@ -252,7 +252,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 10)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 11)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
@@ -330,6 +330,48 @@ rebuilds `heart_rate_records` and `hrv_records` to reference the dimension id vi
 `sourceRecordId` TEXT on every row. Idempotency moves to the unique `(sourceRecordRef, timestampMs)`
 index; the base UUID is recovered by taking everything up to the first `_` of the legacy
 `sourceRecordId` (`<uuid>_<timestampMs>`). See §2.6 and the 3-tier lifecycle note below.
+Version 11 adds the `workout_route_points` table (17th entity, `Migration10To11`): normalized route
+points per workout (`(workoutId, timestampMs)` index, cascade-deleted with the parent workout). It
+adds no new primary scoring input; route points and the route-derived
+`workout_records.totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters`/`routeState` columns are
+display/insight data. Route points are populated by `HealthConnectRepositoryImpl.readExerciseSessions`
+— Health Connect bulk `readRecords` does **not** return exercise routes, so each session is additionally
+fetched via `readRecord` and the `exerciseRouteResult` is mapped through `ExerciseSessionRecord.toDomain(routeResult)`
+(`core/healthconnect/.../HealthConnectRecordConverters.kt`); a per-session route failure degrades to
+`NoData` (`NOT_AVAILABLE`) so a missing/revoked route permission never aborts an exercise sync pass.
+That per-record read costs one extra IPC round-trip per session, so `readExerciseSessions` takes an
+`includeDetails` flag (default `true`). Ingestion (`HealthIngestionCoordinator`) passes `true`;
+`discoverDevices` passes `false`, because device discovery only reads `deviceName` and would otherwise
+issue one route read per workout in its scan window.
+
+**Workout distance and elevation come from separate records, not the session.** An
+`ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
+`ElevationGainedRecord` over the same window. Integrating the GPS polyline instead
+(`RouteDistanceCalculator.pathDistanceMeters`) systematically under-reads by roughly 1-3% versus the
+source app, because chord-summing a sampled track cuts every corner. Under `includeDetails`,
+`readExerciseSessions` therefore issues **two bulk reads per window** (never per session) for those
+record types and attributes them in memory via `SessionTotalsResolver` (`core/model/.../domain/util/`,
+pure Kotlin): a total counts only if its `dataOrigin` package matches the session's **and** its
+midpoint falls inside the session — midpoint containment keeps a boundary-straddling record in exactly
+one session regardless of chunk alignment, and same-package matching prevents double-counting when a
+phone writes step-derived distance alongside a watch's GPS distance. The result populates
+`DomainExerciseSessionRecord.totalDistanceMeters`/`elevationGainMeters`, with `avgSpeedMps` derived
+from the same distance so pace can never disagree with distance. `WorkoutMapper` keeps the
+route-derived fallbacks for sources that write no such records. Both permissions
+(`READ_DISTANCE`, `READ_ELEVATION_GAINED`) are **optional** — `readIntervalTotals` swallows a
+permission error and returns an empty list, so an ungranted permission silently falls back to the
+route-derived value instead of failing the sync pass.
+The changes path (`HealthChangeSynchronizerImpl`) can never carry routes (the Changes API excludes
+them), so those workouts land with `routeState = NOT_AVAILABLE` until a full resync re-reads them.
+On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
+when route permission is granted or the user opens a workout requiring permission, it reads the session from Health Connect,
+maps route points, and updates the local Room database atomically via `HealthIngestionStore.persistSingleWorkoutRoute`.
+`workout_route_points` is part of the encrypted local backup: `LocalBackupManager` streams it as the
+`workoutRoutePoints` JSON array (written **after** `workouts`, since the FK cascades from
+`workout_records`), and `LocalRestoreManager` reloads it in that order. Without this, restore's
+`workoutDao.deleteAll()` would cascade every stored route away with no way to recover it short of a
+full historical resync. Backups predating the key simply carry no `workoutRoutePoints` array and are
+skipped by the restore reader's `else -> skipValue()` branch.
 
 **3-tier health-data lifecycle (hot → warm → cold).**
 - **Hot tier (0–90 days):** raw 1-second `heart_rate_records`/`hrv_records` keyed by integer
@@ -361,7 +403,8 @@ index; the base UUID is recovered by taking everything up to the first `_` of th
 | `HrvRecordEntity`              | `hrv_records`               | `rowId: Long` (auto)                   | `sourceRecordRef` (FK → `health_source_records.id`), `(sourceRecordRef, timestampMs)` unique; RMSSD ms, `timestampMs`, `recordType`, `sessionId`     |
 | `HealthSourceRecordEntity`     | `health_source_records`     | `id: Long` (auto)                      | `sourceRecordId` (base UUID, unique), `recordType`, `createdAtMs` — normalized source identity                                                      |
 | `HrMinuteBucketEntity`         | `hr_minute_buckets`         | `(bucketStartMs, recordType, sessionId)` | 1-minute warm-tier aggregates: `minBpm`/`maxBpm`/`avgBpm`/`sampleCount`; `sessionId` is `""` for no-session minutes                                      |
-| `WorkoutRecordEntity`          | `workout_records`           | `id: String` (HC id)                   | zone1–5 min, TRIMP, avg HR, `startTime`, `deviceName`                                                                                                     |
+| `WorkoutRecordEntity`          | `workout_records`           | `id: String` (HC id)                   | zone1–5 min, TRIMP, avg HR, `startTime`, `deviceName`, `modelTrimp`; route-derived display metrics `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters` (nullable) and `routeState` (IMPORTED/PERMISSION_REQUIRED/NOT_AVAILABLE) — display/insight fields, never scoring inputs |
+| `WorkoutRoutePointEntity`      | `workout_route_points`      | `id: Long` (auto)                      | `workoutId` (FK → `workout_records.id`, cascade delete), lat/lon/altitude, `timestampMs`, horizontal/vertical accuracy; `(workoutId, timestampMs)` indexed. Upserted alongside each workout ingest; replaced by `OnConflictStrategy.REPLACE` on identical `(workoutId, timestampMs)` — idempotent under chunked refetch |
 | `WeightRecordEntity`           | `weight_records`            | `id: String` (composite)               | kg, `timestampMs`, `deviceName`                                                                                                                           |
 | `BodyFatRecordEntity`          | `body_fat_records`          | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `BloodPressureRecordEntity`    | `blood_pressure_records`    | `id: String` (composite)               | systolic/diastolic, `timestampMs`, `deviceName`                                                                                                           |
@@ -414,6 +457,16 @@ merge rather than an unconditional replacement of every column. `RoomHealthInges
 updates Health Connect-owned workout fields for the stable workout `id` while preserving the
 existing nullable `modelTrimp`, because that column is scoring-owned derived state. New rows and
 rows already invalidated to `modelTrimp = null` remain null until their scoring day is recomputed.
+Route points ride the same workout ingest: each `WorkoutInput.routePoints` list is inserted into
+`workout_route_points` after deleting prior points for that workout ID via
+`WorkoutRoutePointDao.deleteForWorkouts(...)` in the same transaction as the parent workout,
+preventing duplicate points across repeated syncs or resync passes. The delete/insert is scoped to
+**workouts whose current pass actually produced route points** — a pass that read no route (transient
+`RemoteException`/IO error, or revoked route consent, both of which degrade to `NoData`) leaves the
+stored points untouched. For the same reason `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters`
+fall back to the existing row when the fresh input is null, and a stored `routeState = IMPORTED`
+survives a routeless pass. This mirrors `persistSingleWorkoutRoute` and keeps the ingestion
+idempotency contract (a failed pass never destroys prior valid data).
 There is no blanket `deleteAll()` in the sync path — a worker that dies mid-resync leaves prior
 valid data intact, and a retry re-runs the same range cleanly. `DailySummaryDao` additionally
 exposes `updateBaselines()` and `clearFrozenBaselinesBetween(fromMs, toExclusiveMs)` (the only
@@ -857,6 +910,7 @@ so a burst of ingest-batch invalidations collapses into one re-render.
 | `SingleBloodPressureChart` / `BloodPressureSplitChart`                                        | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/bloodpressure/`                       | Vico dual-series synchronized BP charts.                                                                                                   |
 | `HrTimelineChart` / `StepsBar`                                                                | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/`                                     | Custom `Canvas` visualizations in feature:vitals.                                                                                          |
 | `RasWeeklyBar`                                                                                | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/`                                 | Custom `Canvas` visualization in feature:workouts.                                                                                         |
+| `RouteContourCard` / `WorkoutPerformanceCharts`                                               | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/`                                 | Custom on-device `Canvas` route contour visualization (Douglas-Peucker line simplification) and pace/speed/elevation charts.               |
 | `SleepStagesChart` / `SleepArchitectureBar` / `SleepHrChart`                                  | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/`              | Sleep stage + sleep HR Canvas visualizations.                                                                                              |
 | `VicoChartTooltipOverlay` / `DataPointTooltip`                                                | `ui/components/`                                  | Touch interception + floating tooltip overlay for Vico charts.                                                                             |
 | `ReorderableCardGrid` (+ `reorder/DragController`)                                            | `ui/components/`                                  | Drag-and-drop dashboard card grid.                                                                                                         |
@@ -954,7 +1008,7 @@ checkpoint, progress starts directly at the resumed phase/offset instead of rese
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v10)                             | 16 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v10 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v11)                             | 17 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v11 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
@@ -962,7 +1016,11 @@ checkpoint, progress starts directly at the resumed phase/offset instead of rese
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |
+| `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/WorkoutRoutePointEntity.kt`                             | Storage — workout route points                      | normalized coordinates per workout; cascade-deleted with workout                          |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …)              | Storage — raw metric entities                       | upsert by stable HC id                                                                   |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteSimplifier.kt`                                            | Domain — route simplification                       | Douglas-Peucker point reduction for on-device Canvas rendering                           |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteDistanceCalculator.kt`                                    | Domain — route metrics calculation                  | haversine path distance and cumulative elevation calculations                            |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/sync/SyncWorkoutRouteUseCase.kt`                                    | Domain — on-demand workout route sync               | single-workout route retrieval from Health Connect and Room atomic persistence           |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/InsightDismissalDao.kt`                                    | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
 | `core/database/src/main/kotlin/app/readylytics/health/data/local/dao/AuditEventDao.kt`                                       | Storage — local audit DAO                           | append / observe recent metadata events                                                  |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/*.kt`                                                      | Storage — DAOs                                      | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp`                               |
@@ -1074,6 +1132,9 @@ DashboardRoute → LocalClipboardManager.setText + SnackbarHostState  (setup pro
 Key behaviors:
 - `WorkoutRepository.getInRange(fromMs, toMs)` is a thin delegation to
   `WorkoutDao.getWorkoutsInRange` (added for this feature; bounded, no schema change).
+- `WorkoutRepository.getRoutePoints(workoutId)` delegates to
+  `WorkoutRoutePointDao.getRoutePoints` and maps rows to domain `WorkoutRoutePoint` models in ascending
+  `timestampMs` order for route map / distance displays.
 - The prompt labels which Training Load source is active; `LoadSourceSelector` projects the
   active-source ATL/CTL/ratio/load/readiness columns. RAS totals are informational only.
 - `GetDailyPromptDataUseCase` parses the persisted everyday coverage confidence once and only

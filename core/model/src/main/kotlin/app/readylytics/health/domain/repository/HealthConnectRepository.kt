@@ -98,9 +98,17 @@ interface HealthConnectRepository {
         onPage: suspend (List<DomainHrvRecord>) -> Unit,
     )
 
+    /**
+     * @param includeDetails when true, each session additionally costs one Health Connect
+     * `readRecord` round-trip for its GPS route, plus two bulk reads per window for the
+     * `DistanceRecord`/`ElevationGainedRecord` totals the recording app wrote alongside the
+     * session. Callers that only need session metadata (device discovery, counts) must pass false
+     * -- otherwise a wide window turns into thousands of sequential IPC calls.
+     */
     suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
+        includeDetails: Boolean = true,
     ): List<DomainExerciseSessionRecord>
 
     suspend fun readStepsRecords(
@@ -169,4 +177,10 @@ interface HealthConnectRepository {
 
     /** Whether the optional `READ_OXYGEN_SATURATION` permission is currently granted. */
     suspend fun hasOxygenSaturationPermission(): Boolean
+
+    /** Reads a single exercise session by ID with its route data. */
+    suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord?
+
+    /** Whether the optional `READ_EXERCISE_ROUTES` permission is currently granted. */
+    suspend fun hasExerciseRoutesPermission(): Boolean
 }

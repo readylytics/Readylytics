@@ -13,6 +13,7 @@ import app.readylytics.health.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.dao.StepRecordDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
@@ -24,6 +25,9 @@ import app.readylytics.health.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.BloodPressureInput
 import app.readylytics.health.domain.sync.BodyFatInput
@@ -55,6 +59,7 @@ class RoomHealthIngestionStore
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
+        private val workoutRoutePointDao: WorkoutRoutePointDao,
         private val weightRecordDao: WeightRecordDao,
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
@@ -77,13 +82,38 @@ class RoomHealthIngestionStore
                         .filter { it.sessionId in sessionIds }
                         .map(SleepStageInput::toEntity),
                 )
+                // A pass that failed to read routes (transient RemoteException/IO error, revoked
+                // route consent) reports NOT_AVAILABLE with an empty point list. Overwriting on
+                // that would wipe previously ingested GPS data, which breaks the ingestion
+                // idempotency contract -- so the GPS columns and route points are only replaced
+                // when this pass actually produced a route. Mirrors persistSingleWorkoutRoute.
                 val workoutEntities =
                     batch.workouts.map { workout ->
-                        workout.toEntity().copy(
-                            modelTrimp = workoutDao.getModelTrimpById(workout.id),
+                        val existing = workoutDao.getById(workout.id)
+                        val fresh = workout.toEntity()
+                        fresh.copy(
+                            modelTrimp = existing?.modelTrimp,
+                            totalDistanceMeters = fresh.totalDistanceMeters ?: existing?.totalDistanceMeters,
+                            avgSpeedKmh = fresh.avgSpeedKmh ?: existing?.avgSpeedKmh,
+                            elevationGainMeters = fresh.elevationGainMeters ?: existing?.elevationGainMeters,
+                            routeState =
+                                if (workout.routePoints.isEmpty() && existing?.routeState == RouteState.IMPORTED) {
+                                    existing.routeState
+                                } else {
+                                    fresh.routeState
+                                },
                         )
                     }
                 workoutDao.upsertAll(workoutEntities)
+                val workoutsWithRoutes = batch.workouts.filter { it.routePoints.isNotEmpty() }
+                if (workoutsWithRoutes.isNotEmpty()) {
+                    workoutRoutePointDao.deleteForWorkouts(workoutsWithRoutes.map(WorkoutInput::id))
+                    workoutRoutePointDao.insertAll(
+                        workoutsWithRoutes.flatMap { workout ->
+                            workout.routePoints.map(WorkoutRoutePoint::toEntity)
+                        },
+                    )
+                }
                 weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
                 bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
                 bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))
@@ -168,6 +198,35 @@ class RoomHealthIngestionStore
         override suspend fun countWorkoutsInRange(startMs: Long, endMs: Long): Int {
             return workoutDao.countInRange(startMs, endMs)
         }
+
+        override suspend fun persistSingleWorkoutRoute(
+            workoutId: String,
+            routePoints: List<WorkoutRoutePoint>,
+            routeState: String,
+            totalDistanceMeters: Float?,
+            avgSpeedKmh: Float?,
+            elevationGainMeters: Float?,
+        ) {
+            transactionRunner.runInTransaction {
+                val existing = workoutDao.getById(workoutId)
+                if (existing != null) {
+                    workoutDao.upsertAll(
+                        listOf(
+                            existing.copy(
+                                routeState = routeState,
+                                totalDistanceMeters = totalDistanceMeters ?: existing.totalDistanceMeters,
+                                avgSpeedKmh = avgSpeedKmh ?: existing.avgSpeedKmh,
+                                elevationGainMeters = elevationGainMeters ?: existing.elevationGainMeters,
+                            ),
+                        ),
+                    )
+                }
+                workoutRoutePointDao.deleteForWorkouts(listOf(workoutId))
+                if (routePoints.isNotEmpty()) {
+                    workoutRoutePointDao.insertAll(routePoints.map(WorkoutRoutePoint::toEntity))
+                }
+            }
+        }
     }
 
 private const val TAG = "RoomHealthIngestionStore"
@@ -248,6 +307,10 @@ private fun WorkoutInput.toEntity() =
         trimp = trimp,
         avgHr = avgHr,
         deviceName = deviceName,
+        totalDistanceMeters = totalDistanceMeters,
+        avgSpeedKmh = avgSpeedKmh,
+        elevationGainMeters = elevationGainMeters,
+        routeState = routeState,
     )
 
 private fun WeightInput.toEntity() =
@@ -298,4 +361,16 @@ private fun StepRecordInput.toEntity() =
         endTime = endTime,
         count = count,
         deviceName = deviceName,
+    )
+
+private fun WorkoutRoutePoint.toEntity() =
+    WorkoutRoutePointEntity(
+        id = id,
+        workoutId = workoutId,
+        latitude = latitude,
+        longitude = longitude,
+        altitude = altitude,
+        timestampMs = timestampMs,
+        horizontalAccuracy = horizontalAccuracy,
+        verticalAccuracy = verticalAccuracy,
     )
