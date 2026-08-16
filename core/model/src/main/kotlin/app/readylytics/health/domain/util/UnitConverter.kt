@@ -172,10 +172,10 @@ object UnitConverter {
         unitSystem: UnitSystem,
     ): MetricParts? {
         if (meters <= 0f || meters.isNaN() || meters.isInfinite()) return null
-        val bounded = meters.coerceIn(0f, 15_000f)
+        if (meters > 15_000f) return null
         return when (unitSystem) {
-            UnitSystem.METRIC -> MetricParts("%.0f".format(bounded), "m")
-            UnitSystem.IMPERIAL -> MetricParts("%.0f".format(bounded * METERS_TO_FEET), "ft")
+            UnitSystem.METRIC -> MetricParts("%.0f".format(meters), "m")
+            UnitSystem.IMPERIAL -> MetricParts("%.0f".format(meters * METERS_TO_FEET), "ft")
         }
     }
 }

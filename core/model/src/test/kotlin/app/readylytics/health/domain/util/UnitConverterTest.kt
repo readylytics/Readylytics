@@ -172,7 +172,7 @@ class UnitConverterTest {
     }
 
     @Test
-    fun `elevationParts splits value from unit token and clamps absurd input`() {
+    fun `elevationParts splits value from unit token and rejects absurd input`() {
         assertEquals(
             UnitConverter.MetricParts(value = "120", unit = "m"),
             UnitConverter.elevationParts(120f, UnitSystem.METRIC),
@@ -181,10 +181,7 @@ class UnitConverterTest {
             UnitConverter.MetricParts(value = "394", unit = "ft"),
             UnitConverter.elevationParts(120f, UnitSystem.IMPERIAL),
         )
-        assertEquals(
-            UnitConverter.MetricParts(value = "15000", unit = "m"),
-            UnitConverter.elevationParts(1_000_000f, UnitSystem.METRIC),
-        )
+        assertEquals(null, UnitConverter.elevationParts(1_000_000f, UnitSystem.METRIC))
         assertEquals(null, UnitConverter.elevationParts(Float.NaN, UnitSystem.METRIC))
         assertEquals(null, UnitConverter.elevationParts(-5f, UnitSystem.METRIC))
     }

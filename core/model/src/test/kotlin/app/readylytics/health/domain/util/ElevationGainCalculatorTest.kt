@@ -67,4 +67,29 @@ class ElevationGainCalculatorTest {
         assertTrue(ElevationGainCalculator.isValidAltitude(0.0))
         assertTrue(ElevationGainCalculator.isValidAltitude(9000.0))
     }
+
+    @Test
+    fun filterAltitudePlaceholders_dropsZeroPlaceholdersWhenRouteHasRealTerrain() {
+        // Health Connect reports 0.0 for points without an altitude reading; a route with
+        // genuinely elevated terrain cannot also repeatedly sit at exactly sea level.
+        val placeholders = listOf(0.0, 0.0, 270.0, 0.0, 275.0, 0.0, 0.0, 280.0, 0.0)
+        assertEquals(
+            listOf(270.0, 275.0, 280.0),
+            ElevationGainCalculator.filterAltitudePlaceholders(placeholders),
+        )
+    }
+
+    @Test
+    fun filterAltitudePlaceholders_keepsZerosForFlatRoutes() {
+        val flat = listOf(0.0, 0.0, 1.0, 0.0, 0.0)
+        assertEquals(flat, ElevationGainCalculator.filterAltitudePlaceholders(flat))
+    }
+
+    @Test
+    fun calculateAscent_ignoresZeroPlaceholdersWhenRouteHasRealTerrain() {
+        // Without the placeholder filter these repeated 0 -> ~270m jumps would sum to a huge fake gain.
+        val altitudes = listOf(0.0, 0.0, 270.0, 0.0, 275.0, 0.0, 0.0, 280.0, 0.0)
+        val gain = ElevationGainCalculator.calculateAscent(altitudes, thresholdMeters = 3.0)
+        assertEquals(10.0, gain, 0.01)
+    }
 }
