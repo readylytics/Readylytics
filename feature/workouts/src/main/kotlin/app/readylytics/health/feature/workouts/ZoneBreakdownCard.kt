@@ -45,7 +45,7 @@ fun ZoneBreakdownCard(
             ),
         )
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
         Column(Modifier.padding(MaterialTheme.spacing.medium)) {

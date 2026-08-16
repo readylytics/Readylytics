@@ -38,7 +38,7 @@ fun WorkoutDetailHeader(
 
     val displayType = type.ifBlank { stringResource(R.string.workout_header_type_fallback) }
 
-    Column {
+    Column(modifier) {
         Text(text = displayType, style = MaterialTheme.typography.headlineMedium)
         Text(
             text = date,
