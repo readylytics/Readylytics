@@ -329,6 +329,7 @@ We read from Android Health Connect:
 - **Heart rate variability (RMSSD)** during sleep
 - **Heart rate** during exercise sessions (for training load)
 - **Exercise routes & GPS data** (optional, for offline route visualization, pace, and elevation profiles)
+- **Distance & elevation gained** (optional, so a workout shows the same figures as the app that recorded it — re-measuring the GPS track instead reads about 1–3% short)
 
 The app reads only — it never writes. You can revoke access at any time in Health Connect settings.
 

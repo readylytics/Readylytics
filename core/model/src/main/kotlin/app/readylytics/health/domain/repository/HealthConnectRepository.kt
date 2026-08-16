@@ -99,15 +99,16 @@ interface HealthConnectRepository {
     )
 
     /**
-     * @param includeRoutes when true, each session costs one extra Health Connect `readRecord`
-     * round-trip to fetch its GPS route. Callers that only need session metadata (device
-     * discovery, counts) must pass false -- otherwise a wide window turns into thousands of
-     * sequential IPC calls.
+     * @param includeDetails when true, each session additionally costs one Health Connect
+     * `readRecord` round-trip for its GPS route, plus two bulk reads per window for the
+     * `DistanceRecord`/`ElevationGainedRecord` totals the recording app wrote alongside the
+     * session. Callers that only need session metadata (device discovery, counts) must pass false
+     * -- otherwise a wide window turns into thousands of sequential IPC calls.
      */
     suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
-        includeRoutes: Boolean = true,
+        includeDetails: Boolean = true,
     ): List<DomainExerciseSessionRecord>
 
     suspend fun readStepsRecords(

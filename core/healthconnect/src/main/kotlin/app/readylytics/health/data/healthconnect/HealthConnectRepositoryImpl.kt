@@ -6,6 +6,8 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -26,6 +28,7 @@ import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord
+import app.readylytics.health.domain.model.DomainIntervalTotal
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStage
@@ -35,6 +38,7 @@ import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
+import app.readylytics.health.domain.util.SessionTotalsResolver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -93,6 +97,11 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
                 HealthPermission.getReadPermission(OxygenSaturationRecord::class),
                 HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+                // The recording app writes a workout's distance and elevation gain as separate
+                // records, not on the ExerciseSessionRecord. Without these the app can only
+                // integrate the GPS polyline, which reads ~1-3% short of the source app.
+                HealthPermission.getReadPermission(DistanceRecord::class),
+                HealthPermission.getReadPermission(ElevationGainedRecord::class),
                 "android.permission.health.READ_EXERCISE_ROUTES",
                 "com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES",
             )
@@ -313,14 +322,21 @@ class HealthConnectRepositoryImpl
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
-            includeRoutes: Boolean,
+            includeDetails: Boolean,
         ): List<DomainExerciseSessionRecord> =
             withContext(ioDispatcher) {
-                readAllPages<ExerciseSessionRecord>(from, to).map { session ->
+                val sessions = readAllPages<ExerciseSessionRecord>(from, to)
+                if (sessions.isEmpty() || !includeDetails) {
+                    return@withContext sessions.map { it.toDomain(null) }
+                }
+                // Two bulk reads for the whole window, not one per session: DistanceRecord and
+                // ElevationGainedRecord are low-volume, and attribution happens in memory.
+                val distanceTotals = readIntervalTotals<DistanceRecord>(from, to) { it.toIntervalTotal() }
+                val elevationTotals = readIntervalTotals<ElevationGainedRecord>(from, to) { it.toIntervalTotal() }
+
+                sessions.map { session ->
                     // Routes are only returned by a per-record read, so this is an extra IPC
-                    // round-trip per session. Skip it entirely when the caller does not need
-                    // route data.
-                    if (!includeRoutes) return@map session.toDomain(null)
+                    // round-trip per session.
                     val routeResult =
                         try {
                             val record =
@@ -345,9 +361,43 @@ class HealthConnectRepositoryImpl
                             }
                             ExerciseRouteResult.NoData()
                         }
-                    session.toDomain(routeResult)
+                    session.toDomain(
+                        routeResult = routeResult,
+                        totalDistanceMeters = session.resolveTotal(distanceTotals),
+                        elevationGainMeters = session.resolveTotal(elevationTotals),
+                    )
                 }
             }
+
+        /**
+         * Bulk-reads an interval record type, degrading to an empty list when its (optional)
+         * permission is not granted -- distance and elevation are enrichment, never a reason to
+         * fail an exercise sync pass.
+         */
+        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readIntervalTotals(
+            from: Instant,
+            to: Instant,
+            map: (T) -> DomainIntervalTotal,
+        ): List<DomainIntervalTotal> =
+            try {
+                readAllPages<T>(from, to).map(map)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e !is HealthConnectPermissionRevokedException && e.asHealthConnectSecurityCause() == null) throw e
+                app.readylytics.health.domain.util.logD("HealthConnectRepository") {
+                    "${T::class.simpleName} permission not granted; falling back to route-derived totals"
+                }
+                emptyList()
+            }
+
+        private fun ExerciseSessionRecord.resolveTotal(totals: List<DomainIntervalTotal>): Double? =
+            SessionTotalsResolver.totalFor(
+                sessionStart = startTime,
+                sessionEnd = endTime,
+                sessionOrigin = metadata.dataOrigin.packageName,
+                totals = totals,
+            )
 
         override suspend fun readExerciseSession(id: String): DomainExerciseSessionRecord? =
             withContext(ioDispatcher) {
@@ -357,7 +407,17 @@ class HealthConnectRepositoryImpl
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
                         "Read single exercise session $id (${record.exerciseType}) route result: ${routeResult.javaClass.simpleName}"
                     }
-                    record.toDomain(routeResult)
+                    val distanceTotals =
+                        readIntervalTotals<DistanceRecord>(record.startTime, record.endTime) { it.toIntervalTotal() }
+                    val elevationTotals =
+                        readIntervalTotals<ElevationGainedRecord>(record.startTime, record.endTime) {
+                            it.toIntervalTotal()
+                        }
+                    record.toDomain(
+                        routeResult = routeResult,
+                        totalDistanceMeters = record.resolveTotal(distanceTotals),
+                        elevationGainMeters = record.resolveTotal(elevationTotals),
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: SecurityException) {
@@ -654,7 +714,7 @@ class HealthConnectRepositoryImpl
                         val workoutRecordsDeferred =
                             // Discovery only reads deviceName -- reading routes here would add one
                             // IPC round-trip per workout and block the source picker for nothing.
-                            async { readOrEmpty { readExerciseSessions(from, to, includeRoutes = false) } }
+                            async { readOrEmpty { readExerciseSessions(from, to, includeDetails = false) } }
                         val stepsRecordsDeferred =
                             async { readOrEmpty { readStepsRecords(from, to) } }
                         val weightRecordsDeferred =

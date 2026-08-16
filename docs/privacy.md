@@ -31,6 +31,10 @@ this can include:
   saturation, if supported and permitted
 - Exercise route locations (latitude/longitude/altitude points of a workout)
   when Health Connect exposes them and route access is permitted
+- Workout distance and elevation gained, when Health Connect exposes them and
+  access is permitted. These are read so a workout shows the same distance and
+  elevation as the app that recorded it, rather than a value re-derived from the
+  GPS track
 
 Readylytics reads this data to calculate fitness and training load trends, sleep insights,
 readiness, and recovery context.

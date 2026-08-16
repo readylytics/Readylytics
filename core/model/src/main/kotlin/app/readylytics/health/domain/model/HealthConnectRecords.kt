@@ -72,6 +72,18 @@ object RouteState {
     const val NOT_AVAILABLE = "NOT_AVAILABLE"
 }
 
+/**
+ * A Health Connect interval record carrying a single cumulative quantity (metres of distance,
+ * metres of elevation gained) over its own time span. Kept provider-agnostic so the attribution
+ * rule in `SessionTotalsResolver` stays pure Kotlin.
+ */
+data class DomainIntervalTotal(
+    val startTime: Instant,
+    val endTime: Instant,
+    val value: Double,
+    val originPackage: String,
+)
+
 data class DomainStepsRecord(
     val id: String,
     val startTime: Instant,

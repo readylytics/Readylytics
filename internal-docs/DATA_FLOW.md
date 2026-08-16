@@ -340,9 +340,27 @@ fetched via `readRecord` and the `exerciseRouteResult` is mapped through `Exerci
 (`core/healthconnect/.../HealthConnectRecordConverters.kt`); a per-session route failure degrades to
 `NoData` (`NOT_AVAILABLE`) so a missing/revoked route permission never aborts an exercise sync pass.
 That per-record read costs one extra IPC round-trip per session, so `readExerciseSessions` takes an
-`includeRoutes` flag (default `true`). Ingestion (`HealthIngestionCoordinator`) passes `true`;
+`includeDetails` flag (default `true`). Ingestion (`HealthIngestionCoordinator`) passes `true`;
 `discoverDevices` passes `false`, because device discovery only reads `deviceName` and would otherwise
 issue one route read per workout in its scan window.
+
+**Workout distance and elevation come from separate records, not the session.** An
+`ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
+`ElevationGainedRecord` over the same window. Integrating the GPS polyline instead
+(`RouteDistanceCalculator.pathDistanceMeters`) systematically under-reads by roughly 1-3% versus the
+source app, because chord-summing a sampled track cuts every corner. Under `includeDetails`,
+`readExerciseSessions` therefore issues **two bulk reads per window** (never per session) for those
+record types and attributes them in memory via `SessionTotalsResolver` (`core/model/.../domain/util/`,
+pure Kotlin): a total counts only if its `dataOrigin` package matches the session's **and** its
+midpoint falls inside the session — midpoint containment keeps a boundary-straddling record in exactly
+one session regardless of chunk alignment, and same-package matching prevents double-counting when a
+phone writes step-derived distance alongside a watch's GPS distance. The result populates
+`DomainExerciseSessionRecord.totalDistanceMeters`/`elevationGainMeters`, with `avgSpeedMps` derived
+from the same distance so pace can never disagree with distance. `WorkoutMapper` keeps the
+route-derived fallbacks for sources that write no such records. Both permissions
+(`READ_DISTANCE`, `READ_ELEVATION_GAINED`) are **optional** — `readIntervalTotals` swallows a
+permission error and returns an empty list, so an ungranted permission silently falls back to the
+route-derived value instead of failing the sync pass.
 The changes path (`HealthChangeSynchronizerImpl`) can never carry routes (the Changes API excludes
 them), so those workouts land with `routeState = NOT_AVAILABLE` until a full resync re-reads them.
 On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
