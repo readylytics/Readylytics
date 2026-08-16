@@ -9,6 +9,7 @@ import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
+import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,7 @@ class UISettingsViewModel
         private val settingsRepo: UserPreferencesReader,
         private val displaySettings: DisplaySettings,
         private val healthDataRefresh: HealthDataRefresh,
+        private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository,
     ) : ViewModel() {
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -137,6 +139,8 @@ class UISettingsViewModel
                         }
                     }
                 }
+                SettingsEvent.WorkoutDetailLayoutsResetConfirmed ->
+                    viewModelScope.launch { workoutDetailLayoutRepository.resetAll() }
                 SettingsEvent.ResetTrimpToProfileDefaults ->
                     viewModelScope.launch {
                         val profile = settingsRepo.userPreferences.first().physiologyProfile

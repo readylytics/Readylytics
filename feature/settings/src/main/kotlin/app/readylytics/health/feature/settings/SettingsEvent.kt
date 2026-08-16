@@ -281,4 +281,6 @@ sealed interface SettingsEvent {
     data object DashboardGlobalDisplayModeDialogDismissed : SettingsEvent
 
     data object DashboardGlobalDisplayModeResetRequested : SettingsEvent
+
+    data object WorkoutDetailLayoutsResetConfirmed : SettingsEvent
 }

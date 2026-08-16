@@ -263,6 +263,12 @@
 <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g.
         100-120%%).</string>
 <string name="threshold_rhr_warning_label">RHR Warning</string>
+<string name="workout_detail_layouts_section_header">Workout details</string>
+<string name="workout_detail_layouts_reset_button">Reset all workout detail layouts</string>
+<string name="workout_detail_layouts_reset_desc">Returns the workout detail screen to the default layout for every workout type.</string>
+<string name="workout_detail_layouts_reset_dialog_title">Reset workout detail layouts?</string>
+<string name="workout_detail_layouts_reset_dialog_body">Every workout type returns to the default layout. Customizations you made per type are discarded. This cannot be undone.</string>
+<string name="workout_detail_layouts_reset_dialog_confirm">Reset</string>
 <plurals name="accessibility_circadian_threshold_state">
         <item quantity="one">Current value: %1$d minute</item>
         <item quantity="other">Current value: %1$d minutes</item>
