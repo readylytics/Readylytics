@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,11 +28,19 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.util.ProjectedPoint
 
 private val CONTOUR_PADDING = 16.dp
+
+/**
+ * Below this the distance grid stops being a reading aid and turns into noise. The scale ladder
+ * keeps cells at 20-50% of the contour, so this only ever trips on a degenerate route.
+ */
+private val MIN_GRID_CELL = 12.dp
 
 enum class RouteDataState {
     Available,
@@ -109,14 +118,25 @@ fun RouteContourCard(
                         val routeColor = MaterialTheme.colorScheme.primary
                         val startColor = Color(0xFF4CAF50)
                         val endColor = MaterialTheme.colorScheme.error
+                        val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f)
 
                         // RouteProjector emits an aspect-ratio-preserving [0,1] box, so both axes
                         // must share one scale factor. Mapping x across the full (wider) canvas
                         // would stretch the contour by the 1.4 aspect ratio.
                         val contourSideDp =
                             (minOf(maxWidth, maxHeight) - CONTOUR_PADDING * 2).coerceAtLeast(0.dp)
+                        val gridDescription =
+                            stringResource(
+                                R.string.workout_route_grid_content_description,
+                                uiState.scaleLabel,
+                            )
 
-                        Canvas(modifier = Modifier.fillMaxSize()) {
+                        Canvas(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .semantics { contentDescription = gridDescription },
+                        ) {
                             val points = uiState.projectedPoints
                             if (points.size < 2) return@Canvas
 
@@ -127,6 +147,37 @@ fun RouteContourCard(
                             val originY = paddingPx + (size.height - 2 * paddingPx - side) / 2f
 
                             fun offsetFor(p: ProjectedPoint) = Offset(originX + p.x * side, originY + p.y * side)
+
+                            // Distance grid. RouteProjector normalises by the route's longest
+                            // dimension, so the contour square's side IS that dimension -- a cell of
+                            // `side * scaleWidthFraction` therefore measures exactly `scaleLabel` on
+                            // both axes. Lines are anchored to the contour origin and extended across
+                            // the whole canvas so the reader can step off distance anywhere, not just
+                            // inside the square.
+                            val cell = side * uiState.scaleWidthFraction
+                            if (cell >= MIN_GRID_CELL.toPx()) {
+                                val gridStroke = 1.dp.toPx() / 2f
+                                var x = originX
+                                while (x >= 0f) {
+                                    drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), gridStroke)
+                                    x -= cell
+                                }
+                                x = originX + cell
+                                while (x <= size.width) {
+                                    drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), gridStroke)
+                                    x += cell
+                                }
+                                var y = originY
+                                while (y >= 0f) {
+                                    drawLine(gridColor, Offset(0f, y), Offset(size.width, y), gridStroke)
+                                    y -= cell
+                                }
+                                y = originY + cell
+                                while (y <= size.height) {
+                                    drawLine(gridColor, Offset(0f, y), Offset(size.width, y), gridStroke)
+                                    y += cell
+                                }
+                            }
 
                             val path = Path()
                             points.forEachIndexed { i, p ->
@@ -169,58 +220,44 @@ fun RouteContourCard(
                                         .padding(8.dp),
                                 horizontalAlignment = Alignment.End,
                             ) {
-                                Box {
-                                    val gridColor =
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
-                                    Canvas(modifier = Modifier.matchParentSize()) {
-                                        val cellSize = 10.dp.toPx()
-                                        var x = 0f
-                                        while (x <= size.width) {
-                                            drawLine(
-                                                color = gridColor,
-                                                start = Offset(x, 0f),
-                                                end = Offset(x, size.height),
-                                                strokeWidth = 1f,
-                                            )
-                                            x += cellSize
-                                        }
-                                        var y = 0f
-                                        while (y <= size.height) {
-                                            drawLine(
-                                                color = gridColor,
-                                                start = Offset(0f, y),
-                                                end = Offset(size.width, y),
-                                                strokeWidth = 1f,
-                                            )
-                                            y += cellSize
-                                        }
-                                    }
-                                    Column(
+                                // The decorative mini-grid that used to sit behind this label is
+                                // gone -- the real grid now spans the canvas, so the legend only
+                                // needs an opaque backdrop to stay readable on top of it.
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .background(
+                                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                shape = MaterialTheme.shapes.small,
+                                            ).padding(horizontal = 6.dp, vertical = 4.dp),
+                                    horizontalAlignment = Alignment.End,
+                                ) {
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                R.string.workout_route_grid_legend,
+                                                uiState.scaleLabel,
+                                            ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    // Exactly one grid cell wide, so the label, the bar and a
+                                    // square on the map all state the same distance.
+                                    Box(
                                         modifier =
-                                            Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                                        horizontalAlignment = Alignment.End,
+                                            Modifier
+                                                .width(contourSideDp * uiState.scaleWidthFraction)
+                                                .height(3.dp)
+                                                .padding(top = 1.dp),
                                     ) {
-                                        Text(
-                                            text = uiState.scaleLabel,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .width(contourSideDp * uiState.scaleWidthFraction)
-                                                    .height(3.dp)
-                                                    .padding(top = 1.dp),
-                                        ) {
-                                            Canvas(Modifier.fillMaxSize()) {
-                                                drawLine(
-                                                    color = routeColor,
-                                                    start = Offset(0f, size.height / 2),
-                                                    end = Offset(size.width, size.height / 2),
-                                                    strokeWidth = 2.dp.toPx(),
-                                                )
-                                            }
+                                        Canvas(Modifier.fillMaxSize()) {
+                                            drawLine(
+                                                color = routeColor,
+                                                start = Offset(0f, size.height / 2),
+                                                end = Offset(size.width, size.height / 2),
+                                                strokeWidth = 2.dp.toPx(),
+                                            )
                                         }
                                     }
                                 }

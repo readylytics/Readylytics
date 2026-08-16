@@ -96,6 +96,8 @@
     <string name="workout_route_permission_required_desc">Grant exercise route permissions in Health Connect to view GPS routes.</string>
     <string name="workout_route_grant_permission">Grant permission</string>
     <string name="workout_route_scale_format">%1$s</string>
+    <string name="workout_route_grid_legend">Grid: %1$s</string>
+    <string name="workout_route_grid_content_description">Route contour with a distance grid; each square is %1$s across.</string>
     <string name="workout_chart_pace_title">Pace Profile</string>
     <string name="workout_chart_speed_title">Speed Profile</string>
     <string name="workout_chart_elevation_title">Elevation Profile</string>

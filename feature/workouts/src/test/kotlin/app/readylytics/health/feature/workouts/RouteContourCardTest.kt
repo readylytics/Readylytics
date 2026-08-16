@@ -104,7 +104,8 @@ class RouteContourCardTest {
         }
 
         composeRule.onNodeWithText("Route Contour").assertIsDisplayed()
-        composeRule.onNodeWithText("500 m").assertIsDisplayed()
+        // The legend names the grid pitch, so a square on the map reads as a distance.
+        composeRule.onNodeWithText("Grid: 500 m").assertIsDisplayed()
     }
 
     @Test
