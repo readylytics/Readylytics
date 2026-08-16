@@ -10,7 +10,9 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -29,8 +31,8 @@ class WorkoutDetailViewModelLayoutManagementTest {
     private val layoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true)
     private val storedLayout = MutableStateFlow(SettingsDefaults.DEFAULT_WORKOUT_DETAIL_ITEMS)
 
-    private fun viewModel(): WorkoutDetailViewModel {
-        every { layoutRepository.layoutFor(any()) } returns storedLayout
+    private fun viewModel(stored: Flow<List<WorkoutDetailItemConfiguration>> = storedLayout): WorkoutDetailViewModel {
+        every { layoutRepository.layoutFor(any()) } returns stored
         return WorkoutDetailViewModel(
             workoutRepository = mockk(relaxed = true),
             hcRepo = mockk(relaxed = true),
@@ -56,9 +58,23 @@ class WorkoutDetailViewModelLayoutManagementTest {
     }
 
     @Test
-    fun `item configurations default to the shared defaults`() =
+    fun `layout configuration is collected from the repository`() =
         runTest(dispatcher) {
-            val vm = viewModel()
+            val storedWithHiddenRas =
+                SettingsDefaults.DEFAULT_WORKOUT_DETAIL_ITEMS.map {
+                    if (it.itemId == WorkoutDetailItemId.RAS) it.copy(isVisible = false) else it
+                }
+            val vm = viewModel(MutableStateFlow(storedWithHiddenRas))
+            advanceUntilIdle()
+
+            assertEquals(storedWithHiddenRas, vm.uiState.value.itemConfigurations)
+            assertFalse(vm.uiState.value.isManagingLayout)
+        }
+
+    @Test
+    fun `item configurations default to the shared defaults when nothing is stored`() =
+        runTest(dispatcher) {
+            val vm = viewModel(emptyFlow())
             advanceUntilIdle()
 
             assertEquals(SettingsDefaults.DEFAULT_WORKOUT_DETAIL_ITEMS, vm.uiState.value.itemConfigurations)
