@@ -3,8 +3,6 @@ package app.readylytics.health.feature.workouts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,8 +11,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,12 +24,19 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.ui.components.EditModeFab
+import app.readylytics.health.core.ui.components.rememberManageLayoutState
+import app.readylytics.health.core.ui.components.reorder.ReorderableGrid
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemCatalog
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
 import app.readylytics.health.feature.workouts.R
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -76,140 +83,144 @@ fun WorkoutDetailRoute(
                         viewModel.onRoutePermissionResult()
                     }
                 },
+                onToggleLayoutManagement = viewModel::onToggleLayoutManagement,
+                onCancelLayoutManagement = viewModel::onCancelLayoutManagement,
+                onToggleItemVisibility = viewModel::onToggleItemVisibility,
+                onReorderItems = viewModel::onReorderItems,
+                onResetLayoutToDefaults = viewModel::onResetLayoutToDefaults,
                 modifier = Modifier.padding(innerPadding),
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutDetailScreen(
     uiState: WorkoutDetailUiState,
     onGrantPermissionClick: () -> Unit = {},
+    onToggleLayoutManagement: () -> Unit = {},
+    onCancelLayoutManagement: () -> Unit = {},
+    onToggleItemVisibility: (WorkoutDetailItemId, Boolean) -> Unit = { _, _ -> },
+    onReorderItems: (List<WorkoutDetailItemConfiguration>) -> Unit = {},
+    onResetLayoutToDefaults: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val workout = uiState.workout ?: return
     val scrollState = rememberScrollState()
+    val manageState = rememberManageLayoutState()
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(MaterialTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-    ) {
-        WorkoutDetailHeader(workout)
+    val itemDataMap =
+        remember(uiState, onGrantPermissionClick) {
+            buildWorkoutDetailItemDataMap(
+                uiState = uiState,
+                onGrantPermissionClick = onGrantPermissionClick,
+                parentScrollInProgress = { scrollState.isScrollInProgress },
+            )
+        }
+
+    val available =
+        remember(uiState) {
+            WorkoutDetailItemAvailability.available(WorkoutDetailItemAvailability.inputFrom(uiState))
+        }
+
+    val renderedConfigs =
+        remember(uiState.itemConfigurations, uiState.isManagingLayout, available) {
+            uiState.itemConfigurations
+                .sortedBy { it.position }
+                .filter { it.isVisible && (uiState.isManagingLayout || it.itemId in available) }
+        }
+
+    val displayDataMap =
+        remember(itemDataMap, uiState.isManagingLayout, available) {
+            itemDataMap.withPlaceholders(uiState.isManagingLayout, available)
+        }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        if (manageState.isManageOpen) {
+            WorkoutDetailManagementBottomSheet(
+                layoutType = uiState.layoutType,
+                itemConfigurations = uiState.itemConfigurations,
+                onItemVisibilityChanged = onToggleItemVisibility,
+                onResetToDefaults = onResetLayoutToDefaults,
+                onDismiss = manageState.closeManage,
+                sheetState = manageState.sheetState,
+            )
+        }
 
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(MaterialTheme.spacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-            ) {
-                TrainingLoadTile(
-                    computedTrimp = uiState.computedTrimp,
-                    workout = workout,
-                    modifier = Modifier.weight(1f),
-                )
-                AvgPulseTile(
-                    workout = workout,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            WorkoutDetailHeader(workout)
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-            ) {
-                GainedStrainTile(
-                    gainedStrain = uiState.gainedStrain,
-                    gainedStrainDisplay = uiState.gainedStrainDisplay,
-                    modifier = Modifier.weight(1f),
-                )
-                RasTile(
-                    ras = uiState.ras,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            ReorderableGrid(
+                items = renderedConfigs,
+                dataMap = displayDataMap,
+                isEditing = uiState.isManagingLayout,
+                onItemReorder = onReorderItems,
+                onItemDropToRemove = { itemId -> onToggleItemVisibility(itemId, false) },
+                fullWidthIds = WorkoutDetailItemCatalog.FULL_WIDTH_ITEMS,
+            )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-            ) {
-                OverallLoadTile(
-                    classification = uiState.classification,
-                    modifier = Modifier.weight(1f),
-                )
-                IntensityTile(
-                    classification = uiState.classification,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            val hasGpsMetrics =
-                workout.totalDistanceMeters != null ||
-                    workout.avgSpeedKmh != null ||
-                    workout.elevationGainMeters != null ||
-                    uiState.displayElevationGainMeters != null
-
-            if (hasGpsMetrics) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            if (!uiState.isManagingLayout) {
+                FilledTonalButton(
+                    onClick = onToggleLayoutManagement,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = MaterialTheme.spacing.pageSectionGap),
+                    colors =
+                        ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
                 ) {
-                    DistanceTile(
-                        workout = workout,
-                        unitSystem = uiState.unitSystem,
-                        modifier = Modifier.weight(1f),
+                    Text(
+                        text = stringResource(CoreUiR.string.action_customize),
+                        style = MaterialTheme.typography.labelLarge,
                     )
-                    AvgPaceSpeedTile(
-                        workout = workout,
-                        unitSystem = uiState.unitSystem,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-
-                val elevationGain = uiState.displayElevationGainMeters ?: workout.elevationGainMeters
-                if (elevationGain != null) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                    ) {
-                        ElevationGainTile(
-                            elevationGainMeters = elevationGain,
-                            unitSystem = uiState.unitSystem,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
                 }
             }
         }
 
-        ZoneBreakdownCard(workout)
-
-        RouteContourCard(
-            uiState = uiState.routeUiState,
-            onGrantPermissionClick = onGrantPermissionClick,
+        EditModeFab(
+            isVisible = uiState.isManagingLayout,
+            onDoneClick = onToggleLayoutManagement,
+            onCancelClick = onCancelLayoutManagement,
+            onManageClick = manageState.openManage,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
         )
-
-        WorkoutPerformanceCharts(
-            paceSpeedData = uiState.paceSpeedChartData,
-            elevationData = uiState.elevationChartData,
-            isPaceMode = uiState.isPaceMode,
-            unitSystem = uiState.unitSystem,
-            parentScrollInProgress = { scrollState.isScrollInProgress },
-        )
-
-        TrimpBreakdownChart(
-            uiState.hrChartData,
-            uiState.durationMinutes,
-            parentScrollInProgress = { scrollState.isScrollInProgress },
-        )
-
-        WorkoutRecoverySection(uiState)
     }
 }
+
+/**
+ * In edit mode, ensures every detail item has a renderer in the data map so unavailable items
+ * stay draggable: real renderers for available items, a [WorkoutDetailItemPlaceholder] for the
+ * rest. Outside edit mode the map is returned unchanged and the grid drops missing ids.
+ */
+private fun Map<WorkoutDetailItemId, @Composable (WorkoutDetailItemConfiguration) -> Unit>.withPlaceholders(
+    isManagingLayout: Boolean,
+    available: Set<WorkoutDetailItemId>,
+): Map<WorkoutDetailItemId, @Composable (WorkoutDetailItemConfiguration) -> Unit> =
+    if (!isManagingLayout) {
+        this
+    } else {
+        buildMap {
+            WorkoutDetailItemId.entries.forEach { id ->
+                val renderer = this@withPlaceholders[id]
+                put(
+                    id,
+                    if (renderer != null && id in available) {
+                        renderer
+                    } else {
+                        { WorkoutDetailItemPlaceholder(label = stringResource(id.displayNameResId)) }
+                    },
+                )
+            }
+        }
+    }
