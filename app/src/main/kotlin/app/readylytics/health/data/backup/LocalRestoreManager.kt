@@ -28,6 +28,7 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
+import app.readylytics.health.data.preferences.WorkoutDetailLayoutMapper
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.audit.AuditEvent
@@ -41,7 +42,6 @@ import app.readylytics.health.domain.util.logW
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -825,7 +825,7 @@ class LocalRestoreManager
                 workoutDetailLayoutRepository.replaceAll(
                     layouts
                         .mapNotNull { (key, items) ->
-                            val type = runCatching { WorkoutLayoutType.valueOf(key) }.getOrNull()
+                            val type = WorkoutDetailLayoutMapper.typeFromKey(key)
                             if (type == null) {
                                 logW("LocalRestoreManager") {
                                     "Ignoring unknown workout layout type in backup: $key"
