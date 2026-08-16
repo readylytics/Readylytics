@@ -10,6 +10,7 @@ import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncState
+import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -75,6 +76,7 @@ class SettingsViewModelTest {
                     settingsReader,
                     displaySettings,
                     healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
                 )
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
@@ -98,6 +100,7 @@ class SettingsViewModelTest {
                     settingsReader,
                     displaySettings,
                     healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
                 )
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
@@ -116,7 +119,13 @@ class SettingsViewModelTest {
     @Test
     fun `UISettingsViewModel custom color events update state`() =
         runTest {
-            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
 
@@ -148,7 +157,13 @@ class SettingsViewModelTest {
                 mockk {
                     every { userPreferences } returns preferences
                 }
-            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
             viewModel.sharingStarted = SharingStarted.Eagerly
 
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -165,7 +180,13 @@ class SettingsViewModelTest {
     @Test
     fun `HrrToleranceSecondsChanged persists without refreshing health data`() =
         runTest {
-            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
 
@@ -184,7 +205,13 @@ class SettingsViewModelTest {
         runTest {
             // SCORE-007: the TRIMP model changes how every persisted historical day's TRIMP was
             // computed, so it must escalate to the full recompute path, not the 8-day window.
-            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
 
@@ -203,7 +230,13 @@ class SettingsViewModelTest {
     fun `StepGoalChanged still uses the recent-window refresh, not a historical recompute`() =
         runTest {
             // Confirms the split didn't over-broaden: a display-only goal isn't a scoring input.
-            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
 
@@ -220,7 +253,13 @@ class SettingsViewModelTest {
     @Test
     fun `HrrToleranceSecondsChanged rejects invalid values`() =
         runTest {
-            val viewModel = UISettingsViewModel(settingsReader, displaySettings, healthDataRefresh)
+            val viewModel =
+                UISettingsViewModel(
+                    settingsReader,
+                    displaySettings,
+                    healthDataRefresh,
+                    workoutDetailLayoutRepository = mockk<WorkoutDetailLayoutRepository>(relaxed = true),
+                )
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
 
