@@ -335,6 +335,7 @@ class FirstSetupDummyIngestionFlowTest {
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
+            includeRoutes: Boolean,
         ): List<DomainExerciseSessionRecord> = listOf(workoutSession)
 
         override suspend fun readStepsRecords(

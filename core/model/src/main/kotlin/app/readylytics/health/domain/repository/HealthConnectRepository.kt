@@ -98,9 +98,16 @@ interface HealthConnectRepository {
         onPage: suspend (List<DomainHrvRecord>) -> Unit,
     )
 
+    /**
+     * @param includeRoutes when true, each session costs one extra Health Connect `readRecord`
+     * round-trip to fetch its GPS route. Callers that only need session metadata (device
+     * discovery, counts) must pass false -- otherwise a wide window turns into thousands of
+     * sequential IPC calls.
+     */
     suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
+        includeRoutes: Boolean = true,
     ): List<DomainExerciseSessionRecord>
 
     suspend fun readStepsRecords(

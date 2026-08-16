@@ -59,8 +59,11 @@ object WorkoutMapper {
 
     private fun fallbackElevationGainMeters(points: List<DomainRouteLocation>): Float? {
         val altitudes = points.mapNotNull { it.altitudeMeters }
+        if (altitudes.size < 2) return null
+        // A flat route legitimately gains 0 m -- keep it, so the UI shows "0 m" instead of
+        // falling through to "Unavailable".
         val gain = ElevationGainCalculator.calculateAscent(altitudes, ELEVATION_GAIN_THRESHOLD_METERS)
-        return gain.takeIf { it > 0.0 }?.toFloat()
+        return gain.takeIf { it >= 0.0 }?.toFloat()
     }
 }
 

@@ -171,7 +171,9 @@ object UnitConverter {
         meters: Float,
         unitSystem: UnitSystem,
     ): MetricParts? {
-        if (meters <= 0f || meters.isNaN() || meters.isInfinite()) return null
+        // 0 m is a real measurement (a genuinely flat route), not missing data -- only negative
+        // and non-finite values mean "unavailable".
+        if (meters < 0f || meters.isNaN() || meters.isInfinite()) return null
         if (meters > 15_000f) return null
         return when (unitSystem) {
             UnitSystem.METRIC -> MetricParts("%.0f".format(meters), "m")

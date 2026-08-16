@@ -12,8 +12,13 @@ class PaceSpeedCalculatorTest {
         assertTrue(PaceSpeedCalculator.isPaceActivity("56")) // Running
         assertTrue(PaceSpeedCalculator.isPaceActivity("57")) // Running - Treadmill
         assertTrue(PaceSpeedCalculator.isPaceActivity("79")) // Walking
-        assertTrue(PaceSpeedCalculator.isPaceActivity("78")) // Hiking
-        assertTrue(PaceSpeedCalculator.isPaceActivity("34")) // Hiking
+        assertTrue(PaceSpeedCalculator.isPaceActivity("37")) // Hiking
+    }
+
+    @Test
+    fun `non-pace IDs previously mislabelled as hiking are speed activities`() {
+        assertFalse(PaceSpeedCalculator.isPaceActivity("78")) // Volleyball
+        assertFalse(PaceSpeedCalculator.isPaceActivity("34")) // Gymnastics
     }
 
     @Test

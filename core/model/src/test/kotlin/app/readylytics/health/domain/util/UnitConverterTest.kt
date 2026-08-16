@@ -184,5 +184,10 @@ class UnitConverterTest {
         assertEquals(null, UnitConverter.elevationParts(1_000_000f, UnitSystem.METRIC))
         assertEquals(null, UnitConverter.elevationParts(Float.NaN, UnitSystem.METRIC))
         assertEquals(null, UnitConverter.elevationParts(-5f, UnitSystem.METRIC))
+        // A genuinely flat route measured 0 m of ascent -- that is data, not a missing value.
+        assertEquals(
+            UnitConverter.MetricParts("0", "m"),
+            UnitConverter.elevationParts(0f, UnitSystem.METRIC),
+        )
     }
 }

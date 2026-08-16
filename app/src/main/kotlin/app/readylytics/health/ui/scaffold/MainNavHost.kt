@@ -364,8 +364,14 @@ fun MainNavHost(
                     contract =
                         androidx.health.connect.client.PermissionController
                             .createRequestPermissionResultContract(),
-                ) { _ ->
-                    pendingOnPermissionGranted?.invoke()
+                ) { granted ->
+                    val onGranted = pendingOnPermissionGranted
+                    pendingOnPermissionGranted = null
+                    // Only re-read on an actual grant -- on denial the reload would burn a full
+                    // Health Connect read and land back on the identical "Grant permission" card.
+                    if (granted.any { it.endsWith("READ_EXERCISE_ROUTES") }) {
+                        onGranted?.invoke()
+                    }
                 }
             WorkoutDetailRoute(
                 workoutId = detail.workoutId,

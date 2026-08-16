@@ -30,7 +30,7 @@ class RouteContourCardTest {
         assertEquals(RouteDataState.NotAvailable, state.state)
         assertTrue(state.projectedPoints.isEmpty())
         assertEquals("", state.scaleLabel)
-        assertEquals(0f, state.scaleWidthDp, 0.001f)
+        assertEquals(0f, state.scaleWidthFraction, 0.001f)
     }
 
     @Test
@@ -91,7 +91,7 @@ class RouteContourCardTest {
                 state = RouteDataState.Available,
                 projectedPoints = points,
                 scaleLabel = "500 m",
-                scaleWidthDp = 50f,
+                scaleWidthFraction = 0.5f,
             )
 
         composeRule.setContent {

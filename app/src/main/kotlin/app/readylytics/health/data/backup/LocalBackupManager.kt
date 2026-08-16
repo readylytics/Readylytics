@@ -297,6 +297,7 @@ class LocalBackupManager
             val heartRateDao = healthDatabase.heartRateDao()
             val hrvDao = healthDatabase.hrvDao()
             val workoutDao = healthDatabase.workoutDao()
+            val workoutRoutePointDao = healthDatabase.workoutRoutePointDao()
             val dailySummaryDao = healthDatabase.dailySummaryDao()
             val weightRecordDao = healthDatabase.weightRecordDao()
             val bodyFatRecordDao = healthDatabase.bodyFatRecordDao()
@@ -320,6 +321,7 @@ class LocalBackupManager
                             "heartRateRecords" to async { heartRateDao.count() },
                             "hrvRecords" to async { hrvDao.count() },
                             "workouts" to async { workoutDao.count() },
+                            "workoutRoutePoints" to async { workoutRoutePointDao.count() },
                             "dailySummaries" to async { dailySummaryDao.count() },
                             "weightRecords" to async { weightRecordDao.count() },
                             "bodyFatRecords" to async { bodyFatRecordDao.count() },
@@ -421,6 +423,23 @@ class LocalBackupManager
                     first = false
                 }
                 offset += 100
+            }
+            writer.write("\n  ],\n")
+
+            // Written after "workouts" so the streaming restore inserts the parent rows first --
+            // workout_route_points has an ON DELETE CASCADE foreign key onto workout_records.
+            writer.write("  \"workoutRoutePoints\": [\n")
+            offset = 0
+            first = true
+            while (true) {
+                val batch = workoutRoutePointDao.getPaged(500, offset)
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                offset += 500
             }
             writer.write("\n  ],\n")
 

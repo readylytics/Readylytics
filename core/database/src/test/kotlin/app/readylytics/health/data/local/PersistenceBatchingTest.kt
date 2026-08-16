@@ -316,6 +316,13 @@ class PersistenceBatchingTest {
             points.removeAll { it.workoutId in workoutIds }
             return before - points.size
         }
+
+        override suspend fun count(): Int = points.size
+
+        override suspend fun getPaged(
+            limit: Int,
+            offset: Int,
+        ): List<WorkoutRoutePointEntity> = points.drop(offset).take(limit)
     }
 
     private inline fun <reified T> recordingDao(

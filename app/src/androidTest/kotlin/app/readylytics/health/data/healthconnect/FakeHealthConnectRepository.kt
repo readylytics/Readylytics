@@ -193,6 +193,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
+        includeRoutes: Boolean,
     ): List<DomainExerciseSessionRecord> {
         translateCritical(FakeOp.Exercise)
         val total = totalInRange(exerciseCount, from, to)

@@ -339,11 +339,21 @@ display/insight data. Route points are populated by `HealthConnectRepositoryImpl
 fetched via `readRecord` and the `exerciseRouteResult` is mapped through `ExerciseSessionRecord.toDomain(routeResult)`
 (`core/healthconnect/.../HealthConnectRecordConverters.kt`); a per-session route failure degrades to
 `NoData` (`NOT_AVAILABLE`) so a missing/revoked route permission never aborts an exercise sync pass.
+That per-record read costs one extra IPC round-trip per session, so `readExerciseSessions` takes an
+`includeRoutes` flag (default `true`). Ingestion (`HealthIngestionCoordinator`) passes `true`;
+`discoverDevices` passes `false`, because device discovery only reads `deviceName` and would otherwise
+issue one route read per workout in its scan window.
 The changes path (`HealthChangeSynchronizerImpl`) can never carry routes (the Changes API excludes
 them), so those workouts land with `routeState = NOT_AVAILABLE` until a full resync re-reads them.
 On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
 when route permission is granted or the user opens a workout requiring permission, it reads the session from Health Connect,
 maps route points, and updates the local Room database atomically via `HealthIngestionStore.persistSingleWorkoutRoute`.
+`workout_route_points` is part of the encrypted local backup: `LocalBackupManager` streams it as the
+`workoutRoutePoints` JSON array (written **after** `workouts`, since the FK cascades from
+`workout_records`), and `LocalRestoreManager` reloads it in that order. Without this, restore's
+`workoutDao.deleteAll()` would cascade every stored route away with no way to recover it short of a
+full historical resync. Backups predating the key simply carry no `workoutRoutePoints` array and are
+skipped by the restore reader's `else -> skipValue()` branch.
 
 **3-tier health-data lifecycle (hot → warm → cold).**
 - **Hot tier (0–90 days):** raw 1-second `heart_rate_records`/`hrv_records` keyed by integer
@@ -430,9 +440,15 @@ updates Health Connect-owned workout fields for the stable workout `id` while pr
 existing nullable `modelTrimp`, because that column is scoring-owned derived state. New rows and
 rows already invalidated to `modelTrimp = null` remain null until their scoring day is recomputed.
 Route points ride the same workout ingest: each `WorkoutInput.routePoints` list is inserted into
-`workout_route_points` after deleting prior points for incoming workout IDs via
-`WorkoutRoutePointDao.deleteForWorkouts(workoutIds)` in the same transaction as the parent workout,
-preventing duplicate points across repeated syncs or resync passes.
+`workout_route_points` after deleting prior points for that workout ID via
+`WorkoutRoutePointDao.deleteForWorkouts(...)` in the same transaction as the parent workout,
+preventing duplicate points across repeated syncs or resync passes. The delete/insert is scoped to
+**workouts whose current pass actually produced route points** — a pass that read no route (transient
+`RemoteException`/IO error, or revoked route consent, both of which degrade to `NoData`) leaves the
+stored points untouched. For the same reason `totalDistanceMeters`/`avgSpeedKmh`/`elevationGainMeters`
+fall back to the existing row when the fresh input is null, and a stored `routeState = IMPORTED`
+survives a routeless pass. This mirrors `persistSingleWorkoutRoute` and keeps the ingestion
+idempotency contract (a failed pass never destroys prior valid data).
 There is no blanket `deleteAll()` in the sync path — a worker that dies mid-resync leaves prior
 valid data intact, and a retry re-runs the same range cleanly. `DailySummaryDao` additionally
 exposes `updateBaselines()` and `clearFrozenBaselinesBetween(fromMs, toExclusiveMs)` (the only

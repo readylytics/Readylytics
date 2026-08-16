@@ -44,6 +44,35 @@ data class HeartRatePoint(
     val bpm: Int,
 )
 
+/** 1-2-5 ladder of scale-bar lengths, in metres. */
+private val SCALE_BAR_STEPS_METERS =
+    doubleArrayOf(
+        10.0,
+        20.0,
+        50.0,
+        100.0,
+        200.0,
+        500.0,
+        1_000.0,
+        2_000.0,
+        5_000.0,
+        10_000.0,
+        20_000.0,
+        50_000.0,
+        100_000.0,
+        200_000.0,
+        500_000.0,
+    )
+
+/**
+ * Largest 1-2-5 step that fits in half the route's longest dimension, so the bar always occupies
+ * a readable 20-50% of the drawn contour instead of a hardcoded dp width.
+ */
+internal fun pickScaleBarMeters(maxDimensionMeters: Double): Double {
+    val target = maxDimensionMeters / 2.0
+    return SCALE_BAR_STEPS_METERS.lastOrNull { it <= target } ?: SCALE_BAR_STEPS_METERS.first()
+}
+
 @Immutable
 data class WorkoutDetailUiState(
     val workout: WorkoutData? = null,
@@ -202,28 +231,21 @@ class WorkoutDetailViewModel
                         val projectionResult = RouteProjector.project(sortedPoints)
                         val simplifiedPoints = RouteSimplifier.simplify(projectionResult.points)
 
+                        // RouteProjector normalises both axes by maxDimension, so the drawn square
+                        // side == maxDimension. The bar is therefore expressed as a fraction of
+                        // that side and sized against the real canvas in RouteContourCard --
+                        // a fixed dp width would make the legend misstate the distance.
                         val maxDimension = maxOf(projectionResult.widthMeters, projectionResult.heightMeters)
-                        val (scaleLabel, scaleWidthDp) =
+                        val (scaleLabel, scaleWidthFraction) =
                             if (maxDimension > 0.0) {
-                                val scaleMeters =
-                                    when {
-                                        maxDimension >= 10000.0 -> 5000.0
-                                        maxDimension >= 5000.0 -> 2000.0
-                                        maxDimension >= 2000.0 -> 1000.0
-                                        maxDimension >= 1000.0 -> 500.0
-                                        maxDimension >= 500.0 -> 200.0
-                                        maxDimension >= 200.0 -> 100.0
-                                        else -> 50.0
-                                    }
+                                val scaleMeters = pickScaleBarMeters(maxDimension)
                                 val label =
                                     if (scaleMeters >= 1000.0) {
                                         "${(scaleMeters / 1000.0).toInt()} km"
                                     } else {
                                         "${scaleMeters.toInt()} m"
                                     }
-                                val widthFraction = (scaleMeters / maxDimension).coerceIn(0.1, 1.0)
-                                val widthDp = (widthFraction * 120.0).toFloat().coerceIn(30f, 100f)
-                                Pair(label, widthDp)
+                                Pair(label, (scaleMeters / maxDimension).coerceIn(0.0, 1.0).toFloat())
                             } else {
                                 Pair("", 0f)
                             }
@@ -233,7 +255,7 @@ class WorkoutDetailViewModel
                                 state = RouteDataState.Available,
                                 projectedPoints = simplifiedPoints,
                                 scaleLabel = scaleLabel,
-                                scaleWidthDp = scaleWidthDp,
+                                scaleWidthFraction = scaleWidthFraction,
                             )
 
                         var cumDistM = 0.0

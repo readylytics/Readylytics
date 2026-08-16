@@ -313,9 +313,14 @@ class HealthConnectRepositoryImpl
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
+            includeRoutes: Boolean,
         ): List<DomainExerciseSessionRecord> =
             withContext(ioDispatcher) {
                 readAllPages<ExerciseSessionRecord>(from, to).map { session ->
+                    // Routes are only returned by a per-record read, so this is an extra IPC
+                    // round-trip per session. Skip it entirely when the caller does not need
+                    // route data.
+                    if (!includeRoutes) return@map session.toDomain(null)
                     val routeResult =
                         try {
                             val record =
@@ -647,7 +652,9 @@ class HealthConnectRepositoryImpl
                         val hrvRecordsDeferred =
                             async { readOrEmpty { readHrvSamples(from, to) } }
                         val workoutRecordsDeferred =
-                            async { readOrEmpty { readExerciseSessions(from, to) } }
+                            // Discovery only reads deviceName -- reading routes here would add one
+                            // IPC round-trip per workout and block the source picker for nothing.
+                            async { readOrEmpty { readExerciseSessions(from, to, includeRoutes = false) } }
                         val stepsRecordsDeferred =
                             async { readOrEmpty { readStepsRecords(from, to) } }
                         val weightRecordsDeferred =

@@ -26,6 +26,7 @@ import app.readylytics.health.data.local.entity.StepRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.BloodPressureInput
@@ -81,22 +82,38 @@ class RoomHealthIngestionStore
                         .filter { it.sessionId in sessionIds }
                         .map(SleepStageInput::toEntity),
                 )
+                // A pass that failed to read routes (transient RemoteException/IO error, revoked
+                // route consent) reports NOT_AVAILABLE with an empty point list. Overwriting on
+                // that would wipe previously ingested GPS data, which breaks the ingestion
+                // idempotency contract -- so the GPS columns and route points are only replaced
+                // when this pass actually produced a route. Mirrors persistSingleWorkoutRoute.
                 val workoutEntities =
                     batch.workouts.map { workout ->
-                        workout.toEntity().copy(
-                            modelTrimp = workoutDao.getModelTrimpById(workout.id),
+                        val existing = workoutDao.getById(workout.id)
+                        val fresh = workout.toEntity()
+                        fresh.copy(
+                            modelTrimp = existing?.modelTrimp,
+                            totalDistanceMeters = fresh.totalDistanceMeters ?: existing?.totalDistanceMeters,
+                            avgSpeedKmh = fresh.avgSpeedKmh ?: existing?.avgSpeedKmh,
+                            elevationGainMeters = fresh.elevationGainMeters ?: existing?.elevationGainMeters,
+                            routeState =
+                                if (workout.routePoints.isEmpty() && existing?.routeState == RouteState.IMPORTED) {
+                                    existing.routeState
+                                } else {
+                                    fresh.routeState
+                                },
                         )
                     }
                 workoutDao.upsertAll(workoutEntities)
-                val workoutIds = batch.workouts.map(WorkoutInput::id)
-                if (workoutIds.isNotEmpty()) {
-                    workoutRoutePointDao.deleteForWorkouts(workoutIds)
+                val workoutsWithRoutes = batch.workouts.filter { it.routePoints.isNotEmpty() }
+                if (workoutsWithRoutes.isNotEmpty()) {
+                    workoutRoutePointDao.deleteForWorkouts(workoutsWithRoutes.map(WorkoutInput::id))
+                    workoutRoutePointDao.insertAll(
+                        workoutsWithRoutes.flatMap { workout ->
+                            workout.routePoints.map(WorkoutRoutePoint::toEntity)
+                        },
+                    )
                 }
-                val routePointEntities =
-                    batch.workouts.flatMap { workout ->
-                        workout.routePoints.map(WorkoutRoutePoint::toEntity)
-                    }
-                workoutRoutePointDao.insertAll(routePointEntities)
                 weightRecordDao.upsertAll(batch.weights.map(WeightInput::toEntity))
                 bodyFatRecordDao.upsertAll(batch.bodyFatSamples.map(BodyFatInput::toEntity))
                 bloodPressureRecordDao.upsertAll(batch.bloodPressureSamples.map(BloodPressureInput::toEntity))

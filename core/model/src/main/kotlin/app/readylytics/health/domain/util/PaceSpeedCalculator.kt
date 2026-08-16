@@ -1,16 +1,23 @@
 package app.readylytics.health.domain.util
 
 object PaceSpeedCalculator {
-    // Health Connect exercise type IDs: 56 (Running), 57 (Running - Treadmill), 79 (Walking), 78 (Hiking), 34 (Hiking)
-    private val PACE_ACTIVITY_IDS = setOf("56", "57", "79", "78", "34")
-    private val PACE_ACTIVITY_NAMES = setOf("running", "walking", "hiking", "treadmill", "run", "walk", "hike")
+    // Health Connect ExerciseSessionRecord type IDs:
+    // 56 (Running), 57 (Running - Treadmill), 79 (Walking), 37 (Hiking).
+    // These match the numeric IDs stored by HealthConnectRecordConverters; do not confuse
+    // 78 (Volleyball) or 34 (Gymnastics) for Hiking.
+    private val PACE_ACTIVITY_IDS = setOf("56", "57", "79", "37")
+
+    // Fallback for sources that hand us a symbolic type instead of the numeric ID.
+    private val PACE_ACTIVITY_NAMES =
+        setOf("running", "running_treadmill", "walking", "hiking", "treadmill", "run", "walk", "hike")
 
     const val MAX_PACE_MIN_KM = 20.0
     const val PACE_CAP_MIN_PER_KM = MAX_PACE_MIN_KM
 
     fun isPaceActivity(exerciseType: String): Boolean {
-        val trimmed = exerciseType.trim().lowercase()
-        return exerciseType.trim() in PACE_ACTIVITY_IDS || trimmed in PACE_ACTIVITY_NAMES
+        val trimmed = exerciseType.trim()
+        if (trimmed in PACE_ACTIVITY_IDS) return true
+        return trimmed.lowercase().removePrefix("exercise_type_") in PACE_ACTIVITY_NAMES
     }
 
     fun speedMpsToPaceMinKm(speedMps: Double): Double {

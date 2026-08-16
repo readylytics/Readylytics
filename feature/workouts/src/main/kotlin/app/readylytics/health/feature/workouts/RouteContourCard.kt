@@ -3,6 +3,7 @@ package app.readylytics.health.feature.workouts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -30,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.domain.util.ProjectedPoint
 
+private val CONTOUR_PADDING = 16.dp
+
 enum class RouteDataState {
     Available,
     PermissionRequired,
@@ -40,7 +43,11 @@ data class RouteUiState(
     val state: RouteDataState = RouteDataState.NotAvailable,
     val projectedPoints: List<ProjectedPoint> = emptyList(),
     val scaleLabel: String = "",
-    val scaleWidthDp: Float = 0f,
+    /**
+     * Scale-bar length as a fraction of the drawn contour's square side. Sized against the real
+     * canvas at draw time so the bar's length actually matches [scaleLabel].
+     */
+    val scaleWidthFraction: Float = 0f,
 )
 
 @Composable
@@ -92,7 +99,7 @@ fun RouteContourCard(
                     }
                 }
                 RouteDataState.Available -> {
-                    Box(
+                    BoxWithConstraints(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -103,19 +110,28 @@ fun RouteContourCard(
                         val startColor = Color(0xFF4CAF50)
                         val endColor = MaterialTheme.colorScheme.error
 
+                        // RouteProjector emits an aspect-ratio-preserving [0,1] box, so both axes
+                        // must share one scale factor. Mapping x across the full (wider) canvas
+                        // would stretch the contour by the 1.4 aspect ratio.
+                        val contourSideDp =
+                            (minOf(maxWidth, maxHeight) - CONTOUR_PADDING * 2).coerceAtLeast(0.dp)
+
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val points = uiState.projectedPoints
                             if (points.size < 2) return@Canvas
 
-                            val paddingPx = 16.dp.toPx()
-                            val drawWidth = size.width - 2 * paddingPx
-                            val drawHeight = size.height - 2 * paddingPx
+                            val paddingPx = CONTOUR_PADDING.toPx()
+                            val side = minOf(size.width, size.height) - 2 * paddingPx
+                            if (side <= 0f) return@Canvas
+                            val originX = paddingPx + (size.width - 2 * paddingPx - side) / 2f
+                            val originY = paddingPx + (size.height - 2 * paddingPx - side) / 2f
+
+                            fun offsetFor(p: ProjectedPoint) = Offset(originX + p.x * side, originY + p.y * side)
 
                             val path = Path()
                             points.forEachIndexed { i, p ->
-                                val px = paddingPx + p.x * drawWidth
-                                val py = paddingPx + p.y * drawHeight
-                                if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                                val o = offsetFor(p)
+                                if (i == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y)
                             }
 
                             drawPath(
@@ -130,24 +146,22 @@ fun RouteContourCard(
                             )
 
                             // Start point dot
-                            val startP = points.first()
                             drawCircle(
                                 color = startColor,
                                 radius = 5.dp.toPx(),
-                                center = Offset(paddingPx + startP.x * drawWidth, paddingPx + startP.y * drawHeight),
+                                center = offsetFor(points.first()),
                             )
 
                             // End point dot
-                            val endP = points.last()
                             drawCircle(
                                 color = endColor,
                                 radius = 5.dp.toPx(),
-                                center = Offset(paddingPx + endP.x * drawWidth, paddingPx + endP.y * drawHeight),
+                                center = offsetFor(points.last()),
                             )
                         }
 
                         // Scale bar
-                        if (uiState.scaleLabel.isNotEmpty() && uiState.scaleWidthDp > 0f) {
+                        if (uiState.scaleLabel.isNotEmpty() && uiState.scaleWidthFraction > 0f) {
                             Column(
                                 modifier =
                                     Modifier
@@ -195,7 +209,7 @@ fun RouteContourCard(
                                         Box(
                                             modifier =
                                                 Modifier
-                                                    .width(uiState.scaleWidthDp.dp.coerceIn(30.dp, 100.dp))
+                                                    .width(contourSideDp * uiState.scaleWidthFraction)
                                                     .height(3.dp)
                                                     .padding(top = 1.dp),
                                         ) {
