@@ -1,6 +1,8 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -92,5 +94,93 @@ class WorkoutDetailItemAvailabilityTest {
         assertTrue(WorkoutDetailItemId.ELEVATION_CHART in full)
         assertTrue(WorkoutDetailItemId.TRIMP_BREAKDOWN in full)
         assertTrue(WorkoutDetailItemId.RECOVERY_HRR in full)
+    }
+
+    private fun workout(
+        totalDistanceMeters: Float? = null,
+        avgSpeedKmh: Float? = null,
+        elevationGainMeters: Float? = null,
+    ) = WorkoutData(
+        id = "run-1",
+        startTime = 0L,
+        endTime = 60_000L,
+        exerciseType = "running",
+        durationMinutes = 1,
+        zone1Minutes = 0f,
+        zone2Minutes = 0f,
+        zone3Minutes = 0f,
+        zone4Minutes = 0f,
+        zone5Minutes = 0f,
+        trimp = 0f,
+        avgHr = 0f,
+        totalDistanceMeters = totalDistanceMeters,
+        avgSpeedKmh = avgSpeedKmh,
+        elevationGainMeters = elevationGainMeters,
+    )
+
+    @Test
+    fun `inputFrom maps a missing workout to false gps flags`() {
+        val input = WorkoutDetailItemAvailability.inputFrom(WorkoutDetailUiState())
+        assertFalse(input.hasDistance)
+        assertFalse(input.hasSpeed)
+        assertFalse(input.hasElevationGain)
+        assertEquals(RouteDataState.NotAvailable, input.routeState)
+        assertFalse(input.hasPaceSpeedChartData)
+        assertFalse(input.hasElevationChartData)
+        assertFalse(input.hasHrChartData)
+        assertFalse(input.hasRecoveryData)
+    }
+
+    @Test
+    fun `inputFrom treats a zero distance as present`() {
+        val input =
+            WorkoutDetailItemAvailability.inputFrom(
+                WorkoutDetailUiState(workout = workout(totalDistanceMeters = 0f)),
+            )
+        assertTrue(input.hasDistance)
+    }
+
+    @Test
+    fun `inputFrom requires strictly positive speed`() {
+        val zero = WorkoutDetailItemAvailability.inputFrom(WorkoutDetailUiState(workout = workout(avgSpeedKmh = 0f)))
+        assertFalse(zero.hasSpeed)
+        val positive =
+            WorkoutDetailItemAvailability.inputFrom(
+                WorkoutDetailUiState(workout = workout(avgSpeedKmh = 5f)),
+            )
+        assertTrue(positive.hasSpeed)
+    }
+
+    @Test
+    fun `inputFrom falls back to workout elevation gain when the display value is absent`() {
+        val input =
+            WorkoutDetailItemAvailability.inputFrom(
+                WorkoutDetailUiState(
+                    workout = workout(elevationGainMeters = 10f),
+                    displayElevationGainMeters = null,
+                ),
+            )
+        assertTrue(input.hasElevationGain)
+    }
+
+    @Test
+    fun `inputFrom maps route chart and recovery flags through`() {
+        val input =
+            WorkoutDetailItemAvailability.inputFrom(
+                WorkoutDetailUiState(
+                    routeUiState = RouteUiState(state = RouteDataState.Available),
+                    paceSpeedChartData = listOf(1.0 to 2.0),
+                    elevationChartData = listOf(1.0 to 2.0),
+                    hrChartData = listOf(1.0 to 2.0),
+                    hrr1Min = null,
+                    hrr2Min = 5,
+                    hrr3Min = null,
+                ),
+            )
+        assertEquals(RouteDataState.Available, input.routeState)
+        assertTrue(input.hasPaceSpeedChartData)
+        assertTrue(input.hasElevationChartData)
+        assertTrue(input.hasHrChartData)
+        assertTrue(input.hasRecoveryData)
     }
 }
