@@ -73,6 +73,7 @@ class WorkoutDetailViewModelTest {
                 settingsRepo = settingsRepository,
                 getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
                 syncWorkoutRouteUseCase = syncWorkoutRouteUseCase,
+                workoutDetailLayoutRepository = mockk(relaxed = true),
                 savedStateHandle = SavedStateHandle(),
                 defaultDispatcher = testDispatcher,
             )
@@ -234,6 +235,7 @@ class WorkoutDetailViewModelTest {
                     settingsRepo = settingsRepository,
                     getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
                     syncWorkoutRouteUseCase = syncWorkoutRouteUseCase,
+                    workoutDetailLayoutRepository = mockk(relaxed = true),
                     savedStateHandle = restoredHandle,
                     defaultDispatcher = testDispatcher,
                 )
