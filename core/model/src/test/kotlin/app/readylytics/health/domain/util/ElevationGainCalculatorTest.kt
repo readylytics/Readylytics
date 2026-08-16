@@ -92,4 +92,56 @@ class ElevationGainCalculatorTest {
         val gain = ElevationGainCalculator.calculateAscent(altitudes, thresholdMeters = 3.0)
         assertEquals(10.0, gain, 0.01)
     }
+
+    @Test
+    fun smoothElevationProfile_interpolatesPlaceholdersBetweenRealReadings() {
+        val series =
+            listOf(
+                0.0 to 0.0,
+                1.0 to null,
+                2.0 to 270.0,
+                3.0 to 0.0,
+                4.0 to 280.0,
+                5.0 to null,
+            )
+        val smoothed = ElevationGainCalculator.smoothElevationProfile(series)
+        assertEquals(
+            listOf(
+                2.0 to 270.0,
+                3.0 to 275.0,
+                4.0 to 280.0,
+            ),
+            smoothed,
+        )
+    }
+
+    @Test
+    fun smoothElevationProfile_dropsLeadingAndTrailingPlaceholders() {
+        val series =
+            listOf(
+                0.0 to 0.0,
+                1.0 to 0.0,
+                2.0 to 270.0,
+                3.0 to 0.0,
+                4.0 to 0.0,
+            )
+        val smoothed = ElevationGainCalculator.smoothElevationProfile(series)
+        assertEquals(listOf(2.0 to 270.0), smoothed)
+    }
+
+    @Test
+    fun smoothElevationProfile_keepsFlatRouteZerosAsReal() {
+        val series = listOf(0.0 to 0.0, 1.0 to 0.0, 2.0 to 1.0, 3.0 to 0.0)
+        val smoothed = ElevationGainCalculator.smoothElevationProfile(series)
+        assertEquals(series.map { it.first to it.second!! }, smoothed)
+    }
+
+    @Test
+    fun smoothElevationProfile_skipsInterpolationWhenRealReadingsShareDistance() {
+        // Rounding cumulative distance to km can put two real readings at the same x; the
+        // interpolant would divide by zero and emit Infinity, which crashes the chart.
+        val series = listOf(1.2 to 270.0, 1.2 to null, 1.2 to 280.0)
+        val smoothed = ElevationGainCalculator.smoothElevationProfile(series)
+        assertEquals(listOf(1.2 to 270.0, 1.2 to 280.0), smoothed)
+    }
 }

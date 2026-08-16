@@ -539,7 +539,7 @@ class WorkoutDetailViewModelTest {
             advanceUntilIdle()
 
             val state = viewModel.uiState.value
-            assertEquals(3, state.elevationChartData.size)
+            assertEquals(4, state.elevationChartData.size)
             state.elevationChartData.forEach { (_, alt) ->
                 assertTrue("bogus altitude leaked into chart: $alt", alt <= 55.0)
             }
@@ -630,7 +630,7 @@ class WorkoutDetailViewModelTest {
             advanceUntilIdle()
 
             val state = viewModel.uiState.value
-            assertEquals(2, state.elevationChartData.size)
+            assertEquals(3, state.elevationChartData.size)
             state.elevationChartData.forEach { (_, alt) ->
                 assertTrue("zero placeholder leaked into chart: $alt", alt > 0.0)
             }

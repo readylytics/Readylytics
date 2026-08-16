@@ -109,7 +109,7 @@ fun PaceSpeedChartCard(
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             ),
     ) {
         Column(Modifier.padding(MaterialTheme.spacing.medium)) {
@@ -148,7 +148,8 @@ private fun PaceSpeedChart(
 
     val displayData =
         remember(chartData, isPaceMode, unitSystem) {
-            chartData.map { (distKm, paceOrSpeed) ->
+            chartData.mapNotNull { (distKm, paceOrSpeed) ->
+                if (paceOrSpeed.isNaN() || paceOrSpeed.isInfinite()) return@mapNotNull null
                 val dist =
                     if (unitSystem == UnitSystem.IMPERIAL) {
                         distKm * UnitConverter.KM_TO_MI.toDouble()
@@ -275,11 +276,13 @@ private fun PaceSpeedChart(
             val lo = values.minOrNull() ?: 0.0
             val hi = values.maxOrNull() ?: 0.0
             val minMargin = if (isPaceMode) 0.5 else 1.0
+            val minY = if (lo.isFinite()) (lo - minMargin).coerceAtLeast(0.0) else 0.0
+            val maxY = if (hi.isFinite()) hi + minMargin else minY + 1.0
             CartesianLayerRangeProvider.fixed(
                 minX = 0.0,
                 maxX = maxDistance.coerceAtLeast(0.1),
-                minY = (lo - minMargin).coerceAtLeast(0.0),
-                maxY = hi + minMargin,
+                minY = minY,
+                maxY = maxY,
             )
         }
 
@@ -484,7 +487,7 @@ fun ElevationChartCard(
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             ),
     ) {
         Column(Modifier.padding(MaterialTheme.spacing.medium)) {
@@ -515,7 +518,8 @@ private fun ElevationChart(
 
     val displayData =
         remember(chartData, unitSystem) {
-            chartData.map { (distKm, altM) ->
+            chartData.mapNotNull { (distKm, altM) ->
+                if (altM.isNaN() || altM.isInfinite()) return@mapNotNull null
                 val dist =
                     if (unitSystem == UnitSystem.IMPERIAL) {
                         distKm * UnitConverter.KM_TO_MI.toDouble()
@@ -622,11 +626,13 @@ private fun ElevationChart(
             val values = displayData.map { it.second }
             val lo = values.minOrNull() ?: 0.0
             val hi = values.maxOrNull() ?: 0.0
+            val minY = if (lo.isFinite()) (lo - 5.0).coerceAtLeast(0.0) else 0.0
+            val maxY = if (hi.isFinite()) hi + 5.0 else minY + 10.0
             CartesianLayerRangeProvider.fixed(
                 minX = 0.0,
                 maxX = maxDistance.coerceAtLeast(0.1),
-                minY = (lo - 5.0).coerceAtLeast(0.0),
-                maxY = hi + 5.0,
+                minY = minY,
+                maxY = maxY,
             )
         }
 

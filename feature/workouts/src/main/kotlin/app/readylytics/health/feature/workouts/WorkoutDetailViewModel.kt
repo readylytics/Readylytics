@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.workouts
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -252,19 +251,11 @@ class WorkoutDetailViewModel
                         }
 
                         val paceSpeedList = mutableListOf<Pair<Double, Double>>()
-                        val elevationList = mutableListOf<Pair<Double, Double>>()
 
                         val validAltitudes =
                             ElevationGainCalculator.filterAltitudePlaceholders(
                                 sortedPoints.mapNotNull { it.altitude },
                             )
-                        Log.d(
-                            TAG,
-                            "altStats n=${validAltitudes.size} " +
-                                "min=${validAltitudes.minOrNull()} " +
-                                "max=${validAltitudes.maxOrNull()} " +
-                                "first20=${validAltitudes.take(20)}",
-                        )
                         displayElevationGainMeters =
                             if (validAltitudes.size >= 2) {
                                 ElevationGainCalculator.calculateAscent(validAltitudes).toFloat()
@@ -310,29 +301,16 @@ class WorkoutDetailViewModel
                             }
                         }
 
-                        val plausibleAltitudeSet = validAltitudes.toSet()
-                        for (i in sortedPoints.indices) {
-                            val alt = sortedPoints[i].altitude
-                            if (alt != null && alt in plausibleAltitudeSet) {
-                                elevationList.add(Pair(cumDistKmList[i], alt))
-                            }
-                        }
-
                         paceSpeedChartData = paceSpeedList
-                        elevationChartData = elevationList
+                        elevationChartData =
+                            ElevationGainCalculator.smoothElevationProfile(
+                                cumDistKmList.zip(sortedPoints.map { it.altitude }),
+                            )
                     } else {
                         routeUiState = RouteUiState(state = RouteDataState.NotAvailable)
                         paceSpeedChartData = emptyList()
                         elevationChartData = emptyList()
                     }
-
-                    Log.d(
-                        TAG,
-                        "id=$workoutId routeState=${workout.routeState} " +
-                            "routePoints=${routePoints.size} " +
-                            "storedElev=${workout.elevationGainMeters} " +
-                            "displayElev=$displayElevationGainMeters",
-                    )
 
                     _uiState.update { currentState ->
                         currentState.copy(
@@ -362,8 +340,4 @@ class WorkoutDetailViewModel
                 }
             }
         }
-
-    private companion object {
-        const val TAG = "WorkoutDetail"
     }
-}

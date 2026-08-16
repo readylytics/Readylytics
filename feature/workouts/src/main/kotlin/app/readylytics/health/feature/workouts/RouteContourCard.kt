@@ -56,7 +56,7 @@ fun RouteContourCard(
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             ),
     ) {
         Column(
@@ -155,26 +155,59 @@ fun RouteContourCard(
                                         .padding(8.dp),
                                 horizontalAlignment = Alignment.End,
                             ) {
-                                Text(
-                                    text = uiState.scaleLabel,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(uiState.scaleWidthDp.dp.coerceIn(30.dp, 100.dp))
-                                            .height(3.dp)
-                                            .padding(top = 1.dp),
-                                ) {
-                                    Canvas(Modifier.fillMaxSize()) {
-                                        drawLine(
-                                            color = routeColor,
-                                            start = Offset(0f, size.height / 2),
-                                            end = Offset(size.width, size.height / 2),
-                                            strokeWidth = 2.dp.toPx(),
+                                Box {
+                                    val gridColor =
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+                                    Canvas(modifier = Modifier.matchParentSize()) {
+                                        val cellSize = 10.dp.toPx()
+                                        var x = 0f
+                                        while (x <= size.width) {
+                                            drawLine(
+                                                color = gridColor,
+                                                start = Offset(x, 0f),
+                                                end = Offset(x, size.height),
+                                                strokeWidth = 1f,
+                                            )
+                                            x += cellSize
+                                        }
+                                        var y = 0f
+                                        while (y <= size.height) {
+                                            drawLine(
+                                                color = gridColor,
+                                                start = Offset(0f, y),
+                                                end = Offset(size.width, y),
+                                                strokeWidth = 1f,
+                                            )
+                                            y += cellSize
+                                        }
+                                    }
+                                    Column(
+                                        modifier =
+                                            Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                                        horizontalAlignment = Alignment.End,
+                                    ) {
+                                        Text(
+                                            text = uiState.scaleLabel,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
+                                        Spacer(Modifier.height(2.dp))
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .width(uiState.scaleWidthDp.dp.coerceIn(30.dp, 100.dp))
+                                                    .height(3.dp)
+                                                    .padding(top = 1.dp),
+                                        ) {
+                                            Canvas(Modifier.fillMaxSize()) {
+                                                drawLine(
+                                                    color = routeColor,
+                                                    start = Offset(0f, size.height / 2),
+                                                    end = Offset(size.width, size.height / 2),
+                                                    strokeWidth = 2.dp.toPx(),
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
