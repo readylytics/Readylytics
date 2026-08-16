@@ -104,6 +104,7 @@ fun WorkoutDetailScreen(
             ras = uiState.ras,
             classification = uiState.classification,
             unitSystem = uiState.unitSystem,
+            displayElevationGainMeters = uiState.displayElevationGainMeters,
         )
 
         RouteContourCard(

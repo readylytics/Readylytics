@@ -456,6 +456,97 @@ class WorkoutDetailViewModelTest {
         }
 
     @Test
+    fun `loadWorkout excludes bogus GPS altitudes from elevation series and recomputes display gain`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-filtered",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    elevationGainMeters = 1_000_000f,
+                    routeState = RouteState.IMPORTED,
+                )
+            val routePoints =
+                listOf(
+                    WorkoutRoutePoint(
+                        workoutId = "run-filtered",
+                        latitude = 52.5200,
+                        longitude = 13.4050,
+                        altitude = 45.0,
+                        timestampMs = startMs,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "run-filtered",
+                        latitude = 52.5210,
+                        longitude = 13.4060,
+                        altitude = 50.0,
+                        timestampMs = startMs + 10_000L,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "run-filtered",
+                        latitude = 52.5220,
+                        longitude = 13.4070,
+                        altitude = 1_000_000.0,
+                        timestampMs = startMs + 20_000L,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "run-filtered",
+                        latitude = 52.5230,
+                        longitude = 13.4080,
+                        altitude = 55.0,
+                        timestampMs = startMs + 30_000L,
+                    ),
+                )
+
+            coEvery { workoutRepository.getById("run-filtered") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-filtered") } returns routePoints
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-filtered")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(3, state.elevationChartData.size)
+            state.elevationChartData.forEach { (_, alt) ->
+                assertTrue("bogus altitude leaked into chart: $alt", alt <= 55.0)
+            }
+            assertEquals(10f, state.displayElevationGainMeters!!, 0.001f)
+        }
+
+    @Test
     fun `loadWorkout with cycling activity sets isPaceMode false and computes speed series`() =
         runTest {
             val date = LocalDate.of(2026, 6, 9)
@@ -756,5 +847,93 @@ class WorkoutDetailViewModelTest {
             advanceUntilIdle()
 
             coVerify(exactly = 1) { syncWorkoutRouteUseCase.invoke("run-auto-sync") }
+        }
+
+    @Test
+    fun `loadWorkout formats chart data with bounded x precision`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-precision",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    routeState = RouteState.IMPORTED,
+                )
+            val routePoints =
+                listOf(
+                    WorkoutRoutePoint(
+                        workoutId = "run-precision",
+                        timestampMs = startMs,
+                        latitude = 37.7749295,
+                        longitude = -122.4194155,
+                        altitude = 12.3456,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "run-precision",
+                        timestampMs = startMs + 10000,
+                        latitude = 37.7750123,
+                        longitude = -122.4195789,
+                        altitude = 15.6789,
+                    ),
+                    WorkoutRoutePoint(
+                        workoutId = "run-precision",
+                        timestampMs = startMs + 20000,
+                        latitude = 37.7751987,
+                        longitude = -122.4196123,
+                        altitude = 18.9123,
+                    ),
+                )
+
+            coEvery { workoutRepository.getById("run-precision") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-precision") } returns routePoints
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-precision")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue(state.paceSpeedChartData.isNotEmpty())
+            assertTrue(state.elevationChartData.isNotEmpty())
+            state.paceSpeedChartData.forEach { (x, _) ->
+                val decimals = x.toString().substringAfter(".", "").length
+                assertTrue("x-value $x should have <= 4 decimal places", decimals <= 4)
+            }
+            state.elevationChartData.forEach { (x, _) ->
+                val decimals = x.toString().substringAfter(".", "").length
+                assertTrue("x-value $x should have <= 4 decimal places", decimals <= 4)
+            }
         }
 }

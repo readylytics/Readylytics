@@ -1,7 +1,9 @@
 package app.readylytics.health.feature.workouts
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.readylytics.health.core.designsystem.FitDashboardTheme
@@ -141,11 +143,14 @@ class RouteContourCardTest {
         }
 
         composeRule.onNodeWithText("Distance", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("5.0 km", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("5.0", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("km", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("Avg. Pace", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("6:00 /km", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("6:00", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("min/km", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("Elevation Gain", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("50 m", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("50", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("m", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -184,11 +189,13 @@ class RouteContourCardTest {
         }
 
         composeRule.onNodeWithText("Distance", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("25.0 km", useUnmergedTree = true).assertExists()
+        composeRule.onAllNodesWithText("25.0", useUnmergedTree = true).assertCountEquals(2)
+        composeRule.onNodeWithText("km", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("Avg. Speed", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("25.0 km/h", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("km/h", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("Elevation Gain", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("120 m", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("120", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("m", useUnmergedTree = true).assertExists()
     }
 
     @Test

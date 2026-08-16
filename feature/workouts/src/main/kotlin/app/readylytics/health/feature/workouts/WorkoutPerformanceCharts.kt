@@ -148,19 +148,24 @@ private fun PaceSpeedChart(
 
     val displayData =
         remember(chartData, isPaceMode, unitSystem) {
-            if (unitSystem == UnitSystem.IMPERIAL) {
-                chartData.map { (distKm, paceOrSpeed) ->
-                    val distMi = distKm * UnitConverter.KM_TO_MI.toDouble()
-                    val convertedVal =
+            chartData.map { (distKm, paceOrSpeed) ->
+                val dist =
+                    if (unitSystem == UnitSystem.IMPERIAL) {
+                        distKm * UnitConverter.KM_TO_MI.toDouble()
+                    } else {
+                        distKm
+                    }
+                val convertedVal =
+                    if (unitSystem == UnitSystem.IMPERIAL) {
                         if (isPaceMode) {
                             paceOrSpeed * UnitConverter.MI_PER_KM.toDouble()
                         } else {
                             paceOrSpeed * UnitConverter.KM_TO_MI.toDouble()
                         }
-                    distMi to convertedVal
-                }
-            } else {
-                chartData
+                    } else {
+                        paceOrSpeed
+                    }
+                (kotlin.math.round(dist * 1000.0) / 1000.0) to convertedVal
             }
         }
 
@@ -441,6 +446,7 @@ private fun PaceSpeedChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    getXStep = { _, _, _ -> 0.1 },
                 ),
             modelProducer = modelProducer,
             zoomState =
@@ -509,14 +515,20 @@ private fun ElevationChart(
 
     val displayData =
         remember(chartData, unitSystem) {
-            if (unitSystem == UnitSystem.IMPERIAL) {
-                chartData.map { (distKm, altM) ->
-                    val distMi = distKm * UnitConverter.KM_TO_MI.toDouble()
-                    val altFt = altM * UnitConverter.METERS_TO_FEET.toDouble()
-                    distMi to altFt
-                }
-            } else {
-                chartData
+            chartData.map { (distKm, altM) ->
+                val dist =
+                    if (unitSystem == UnitSystem.IMPERIAL) {
+                        distKm * UnitConverter.KM_TO_MI.toDouble()
+                    } else {
+                        distKm
+                    }
+                val alt =
+                    if (unitSystem == UnitSystem.IMPERIAL) {
+                        altM * UnitConverter.METERS_TO_FEET.toDouble()
+                    } else {
+                        altM
+                    }
+                (kotlin.math.round(dist * 1000.0) / 1000.0) to alt
             }
         }
 
@@ -759,6 +771,7 @@ private fun ElevationChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    getXStep = { _, _, _ -> 0.1 },
                 ),
             modelProducer = modelProducer,
             zoomState =

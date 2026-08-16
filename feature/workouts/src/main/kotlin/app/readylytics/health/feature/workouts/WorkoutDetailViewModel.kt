@@ -18,6 +18,7 @@ import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.sync.SyncWorkoutRouteUseCase
+import app.readylytics.health.domain.util.ElevationGainCalculator
 import app.readylytics.health.domain.util.PaceSpeedCalculator
 import app.readylytics.health.domain.util.RouteDistanceCalculator
 import app.readylytics.health.domain.util.RouteProjector
@@ -62,6 +63,7 @@ data class WorkoutDetailUiState(
     val routeUiState: RouteUiState = RouteUiState(),
     val paceSpeedChartData: List<Pair<Double, Double>> = emptyList(),
     val elevationChartData: List<Pair<Double, Double>> = emptyList(),
+    val displayElevationGainMeters: Float? = null,
     val isPaceMode: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val isLoading: Boolean = true,
@@ -189,6 +191,7 @@ class WorkoutDetailViewModel
                     val routeUiState: RouteUiState
                     val paceSpeedChartData: List<Pair<Double, Double>>
                     val elevationChartData: List<Pair<Double, Double>>
+                    var displayElevationGainMeters: Float? = null
 
                     if (workout.routeState == RouteState.PERMISSION_REQUIRED) {
                         routeUiState = RouteUiState(state = RouteDataState.PermissionRequired)
@@ -244,11 +247,22 @@ class WorkoutDetailViewModel
                                     sortedPoints[i].latitude,
                                     sortedPoints[i].longitude,
                                 )
-                            cumDistKmList[i] = cumDistM / 1000.0
+                            cumDistKmList[i] = kotlin.math.round(cumDistM) / 1000.0
                         }
 
                         val paceSpeedList = mutableListOf<Pair<Double, Double>>()
                         val elevationList = mutableListOf<Pair<Double, Double>>()
+
+                        val validAltitudes =
+                            sortedPoints
+                                .mapNotNull { it.altitude }
+                                .filter(ElevationGainCalculator::isValidAltitude)
+                        displayElevationGainMeters =
+                            if (validAltitudes.size >= 2) {
+                                ElevationGainCalculator.calculateAscent(validAltitudes).toFloat()
+                            } else {
+                                workout.elevationGainMeters
+                            }
 
                         if (sortedPoints.size > 1) {
                             val dt0 = (sortedPoints[1].timestampMs - sortedPoints[0].timestampMs) / 1000.0
@@ -290,7 +304,7 @@ class WorkoutDetailViewModel
 
                         for (i in sortedPoints.indices) {
                             val alt = sortedPoints[i].altitude
-                            if (alt != null) {
+                            if (alt != null && ElevationGainCalculator.isValidAltitude(alt)) {
                                 elevationList.add(Pair(cumDistKmList[i], alt))
                             }
                         }
@@ -322,6 +336,7 @@ class WorkoutDetailViewModel
                             routeUiState = routeUiState,
                             paceSpeedChartData = paceSpeedChartData,
                             elevationChartData = elevationChartData,
+                            displayElevationGainMeters = displayElevationGainMeters,
                             isPaceMode = isPaceMode,
                             unitSystem = prefs.unitSystem,
                             isLoading = false,

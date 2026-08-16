@@ -108,23 +108,84 @@ class UnitConverterTest {
 
     @Test
     fun `formatPace renders minutes per km for metric`() {
-        assertEquals("5:30 /km", UnitConverter.formatPace(5.5f, UnitSystem.METRIC))
+        assertEquals("5:30 min/km", UnitConverter.formatPace(5.5f, UnitSystem.METRIC))
     }
 
     @Test
     fun `formatPace converts to minutes per mile for imperial`() {
-        assertEquals("8:03 /mi", UnitConverter.formatPace(5f, UnitSystem.IMPERIAL))
+        assertEquals("8:03 min/mi", UnitConverter.formatPace(5f, UnitSystem.IMPERIAL))
     }
 
     @Test
     fun `formatPace caps at 20 minutes per km`() {
-        assertEquals("20:00 /km", UnitConverter.formatPace(20f, UnitSystem.METRIC))
-        assertEquals("20:00 /km", UnitConverter.formatPace(45f, UnitSystem.METRIC))
+        assertEquals("20:00 min/km", UnitConverter.formatPace(20f, UnitSystem.METRIC))
+        assertEquals("20:00 min/km", UnitConverter.formatPace(45f, UnitSystem.METRIC))
     }
 
     @Test
     fun `formatElevation shows meters for metric and feet for imperial`() {
         assertEquals("120 m", UnitConverter.formatElevation(120f, UnitSystem.METRIC))
         assertEquals("394 ft", UnitConverter.formatElevation(120f, UnitSystem.IMPERIAL))
+    }
+
+    @Test
+    fun `distanceParts splits value from unit token`() {
+        assertEquals(
+            UnitConverter.MetricParts(value = "5.2", unit = "km"),
+            UnitConverter.distanceParts(5200f, UnitSystem.METRIC),
+        )
+        assertEquals(
+            UnitConverter.MetricParts(value = "820", unit = "m"),
+            UnitConverter.distanceParts(820f, UnitSystem.METRIC),
+        )
+        assertEquals(
+            UnitConverter.MetricParts(value = "1.0", unit = "mi"),
+            UnitConverter.distanceParts(1609.344f, UnitSystem.IMPERIAL),
+        )
+        assertEquals(null, UnitConverter.distanceParts(0f, UnitSystem.METRIC))
+    }
+
+    @Test
+    fun `speedParts splits value from unit token`() {
+        assertEquals(
+            UnitConverter.MetricParts(value = "36.0", unit = "km/h"),
+            UnitConverter.speedParts(36f, UnitSystem.METRIC),
+        )
+        assertEquals(
+            UnitConverter.MetricParts(value = "22.4", unit = "mph"),
+            UnitConverter.speedParts(36f, UnitSystem.IMPERIAL),
+        )
+        assertEquals(null, UnitConverter.speedParts(0f, UnitSystem.METRIC))
+    }
+
+    @Test
+    fun `paceParts splits value from unit token`() {
+        assertEquals(
+            UnitConverter.MetricParts(value = "5:30", unit = "min/km"),
+            UnitConverter.paceParts(5.5f, UnitSystem.METRIC),
+        )
+        assertEquals(
+            UnitConverter.MetricParts(value = "8:03", unit = "min/mi"),
+            UnitConverter.paceParts(5f, UnitSystem.IMPERIAL),
+        )
+        assertEquals(null, UnitConverter.paceParts(0f, UnitSystem.METRIC))
+    }
+
+    @Test
+    fun `elevationParts splits value from unit token and clamps absurd input`() {
+        assertEquals(
+            UnitConverter.MetricParts(value = "120", unit = "m"),
+            UnitConverter.elevationParts(120f, UnitSystem.METRIC),
+        )
+        assertEquals(
+            UnitConverter.MetricParts(value = "394", unit = "ft"),
+            UnitConverter.elevationParts(120f, UnitSystem.IMPERIAL),
+        )
+        assertEquals(
+            UnitConverter.MetricParts(value = "15000", unit = "m"),
+            UnitConverter.elevationParts(1_000_000f, UnitSystem.METRIC),
+        )
+        assertEquals(null, UnitConverter.elevationParts(Float.NaN, UnitSystem.METRIC))
+        assertEquals(null, UnitConverter.elevationParts(-5f, UnitSystem.METRIC))
     }
 }

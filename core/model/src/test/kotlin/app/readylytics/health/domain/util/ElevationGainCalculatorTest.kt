@@ -2,6 +2,8 @@ package app.readylytics.health.domain.util
 
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ElevationGainCalculatorTest {
 
@@ -52,5 +54,17 @@ class ElevationGainCalculatorTest {
         val altitudes = listOf(100.0, 1_000_000.0, 105.0, 110.0)
         val gain = ElevationGainCalculator.calculateAscent(altitudes, thresholdMeters = 3.0)
         assertEquals(10.0, gain, 0.01)
+    }
+
+    @Test
+    fun isValidAltitude_rejectsNonFiniteAndOutOfRangeValues() {
+        assertFalse(ElevationGainCalculator.isValidAltitude(Double.NaN))
+        assertFalse(ElevationGainCalculator.isValidAltitude(Double.POSITIVE_INFINITY))
+        assertFalse(ElevationGainCalculator.isValidAltitude(Double.NEGATIVE_INFINITY))
+        assertFalse(ElevationGainCalculator.isValidAltitude(-501.0))
+        assertFalse(ElevationGainCalculator.isValidAltitude(9001.0))
+        assertTrue(ElevationGainCalculator.isValidAltitude(-500.0))
+        assertTrue(ElevationGainCalculator.isValidAltitude(0.0))
+        assertTrue(ElevationGainCalculator.isValidAltitude(9000.0))
     }
 }

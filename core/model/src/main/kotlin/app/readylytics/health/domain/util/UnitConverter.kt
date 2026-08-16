@@ -87,16 +87,28 @@ object UnitConverter {
     fun formatDistance(
         meters: Float,
         unitSystem: UnitSystem,
-    ): String {
-        if (meters <= 0f) return "—"
+    ): String =
+        distanceParts(meters, unitSystem)?.let { "${it.value} ${it.unit}" } ?: "—"
+
+    /** Numeric value and display unit token, for UIs that place the unit in its own slot. */
+    data class MetricParts(
+        val value: String,
+        val unit: String,
+    )
+
+    fun distanceParts(
+        meters: Float,
+        unitSystem: UnitSystem,
+    ): MetricParts? {
+        if (meters <= 0f) return null
         return when (unitSystem) {
             UnitSystem.METRIC ->
-                if (meters < 1000f) "%.0f m".format(meters)
-                else "%.1f km".format(meters / 1000f)
+                if (meters < 1000f) MetricParts("%.0f".format(meters), "m")
+                else MetricParts("%.1f".format(meters / 1000f), "km")
             UnitSystem.IMPERIAL -> {
                 val miles = meters * KM_TO_MI / 1000f
-                if (miles < 0.1f) "%.0f ft".format(meters * METERS_TO_FEET)
-                else "%.1f mi".format(miles)
+                if (miles < 0.1f) MetricParts("%.0f".format(meters * METERS_TO_FEET), "ft")
+                else MetricParts("%.1f".format(miles), "mi")
             }
         }
     }
@@ -104,19 +116,31 @@ object UnitConverter {
     fun formatSpeed(
         kmh: Float,
         unitSystem: UnitSystem,
-    ): String {
-        if (kmh <= 0f) return "—"
+    ): String =
+        speedParts(kmh, unitSystem)?.let { "${it.value} ${it.unit}" } ?: "—"
+
+    fun speedParts(
+        kmh: Float,
+        unitSystem: UnitSystem,
+    ): MetricParts? {
+        if (kmh <= 0f) return null
         return when (unitSystem) {
-            UnitSystem.METRIC -> "%.1f km/h".format(kmh)
-            UnitSystem.IMPERIAL -> "%.1f mph".format(kmh * KM_TO_MI)
+            UnitSystem.METRIC -> MetricParts("%.1f".format(kmh), "km/h")
+            UnitSystem.IMPERIAL -> MetricParts("%.1f".format(kmh * KM_TO_MI), "mph")
         }
     }
 
     fun formatPace(
         minKm: Float,
         unitSystem: UnitSystem,
-    ): String {
-        if (minKm <= 0f) return "—"
+    ): String =
+        paceParts(minKm, unitSystem)?.let { "${it.value} ${it.unit}" } ?: "—"
+
+    fun paceParts(
+        minKm: Float,
+        unitSystem: UnitSystem,
+    ): MetricParts? {
+        if (minKm <= 0f) return null
         val capped = minKm.coerceAtMost(PACE_CAP_MIN_PER_KM)
         val minPerUnit =
             when (unitSystem) {
@@ -131,21 +155,27 @@ object UnitConverter {
         }
         val unit =
             when (unitSystem) {
-                UnitSystem.METRIC -> "km"
-                UnitSystem.IMPERIAL -> "mi"
+                UnitSystem.METRIC -> "min/km"
+                UnitSystem.IMPERIAL -> "min/mi"
             }
-        return "$minutes:${seconds.toString().padStart(2, '0')} /$unit"
+        return MetricParts("$minutes:${seconds.toString().padStart(2, '0')}", unit)
     }
 
     fun formatElevation(
         meters: Float,
         unitSystem: UnitSystem,
-    ): String {
-        if (meters <= 0f || meters.isNaN() || meters.isInfinite()) return "—"
+    ): String =
+        elevationParts(meters, unitSystem)?.let { "${it.value} ${it.unit}" } ?: "—"
+
+    fun elevationParts(
+        meters: Float,
+        unitSystem: UnitSystem,
+    ): MetricParts? {
+        if (meters <= 0f || meters.isNaN() || meters.isInfinite()) return null
         val bounded = meters.coerceIn(0f, 15_000f)
         return when (unitSystem) {
-            UnitSystem.METRIC -> "%.0f m".format(bounded)
-            UnitSystem.IMPERIAL -> "%.0f ft".format(bounded * METERS_TO_FEET)
+            UnitSystem.METRIC -> MetricParts("%.0f".format(bounded), "m")
+            UnitSystem.IMPERIAL -> MetricParts("%.0f".format(bounded * METERS_TO_FEET), "ft")
         }
     }
 }

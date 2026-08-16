@@ -46,6 +46,7 @@ fun WorkoutMetricsDisplay(
     ras: Float?,
     classification: WorkoutLoadClassification?,
     unitSystem: UnitSystem = UnitSystem.METRIC,
+    displayElevationGainMeters: Float? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         WorkoutHeader(workout)
@@ -149,24 +150,38 @@ fun WorkoutMetricsDisplay(
             val hasGpsMetrics =
                 workout.totalDistanceMeters != null ||
                     workout.avgSpeedKmh != null ||
-                    workout.elevationGainMeters != null
+                    workout.elevationGainMeters != null ||
+                    displayElevationGainMeters != null
 
             if (hasGpsMetrics) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 ) {
+                    val distanceParts =
+                        workout.totalDistanceMeters?.let { UnitConverter.distanceParts(it, unitSystem) }
                     UniversalWorkoutMetricCard(
                         title = stringResource(R.string.workout_metric_distance),
                         valueText =
-                            workout.totalDistanceMeters?.let {
-                                UnitConverter.formatDistance(it, unitSystem)
-                            } ?: stringResource(R.string.workout_metric_unavailable),
+                            distanceParts?.value
+                                ?: stringResource(R.string.workout_metric_unavailable),
+                        secondaryText = distanceParts?.unit?.let { unitLabel(it) },
                         status = MetricStatus.NEUTRAL,
                         tooltip = stringResource(R.string.workout_tooltip_distance),
                         modifier = Modifier.weight(1f),
                     )
                     val isPace = PaceSpeedCalculator.isPaceActivity(workout.exerciseType)
+                    val paceParts =
+                        if (isPace) {
+                            workout.avgSpeedKmh?.takeIf { it > 0f }?.let { kmh ->
+                                val paceMinKm = PaceSpeedCalculator.speedMpsToPaceMinKm(kmh / 3.6).toFloat()
+                                UnitConverter.paceParts(paceMinKm, unitSystem)
+                            }
+                        } else {
+                            workout.avgSpeedKmh?.takeIf { it > 0f }?.let { kmh ->
+                                UnitConverter.speedParts(kmh, unitSystem)
+                            }
+                        }
                     UniversalWorkoutMetricCard(
                         title =
                             if (isPace) {
@@ -175,16 +190,9 @@ fun WorkoutMetricsDisplay(
                                 stringResource(R.string.workout_metric_avg_speed)
                             },
                         valueText =
-                            if (isPace) {
-                                workout.avgSpeedKmh?.takeIf { it > 0f }?.let { kmh ->
-                                    val paceMinKm = PaceSpeedCalculator.speedMpsToPaceMinKm(kmh / 3.6).toFloat()
-                                    UnitConverter.formatPace(paceMinKm, unitSystem)
-                                } ?: stringResource(R.string.workout_metric_unavailable)
-                            } else {
-                                workout.avgSpeedKmh?.takeIf { it > 0f }?.let { kmh ->
-                                    UnitConverter.formatSpeed(kmh, unitSystem)
-                                } ?: stringResource(R.string.workout_metric_unavailable)
-                            },
+                            paceParts?.value
+                                ?: stringResource(R.string.workout_metric_unavailable),
+                        secondaryText = paceParts?.unit?.let { unitLabel(it) },
                         status = MetricStatus.NEUTRAL,
                         tooltip =
                             if (isPace) {
@@ -196,15 +204,19 @@ fun WorkoutMetricsDisplay(
                     )
                 }
 
-                val elevationGain = workout.elevationGainMeters
+                val elevationGain = displayElevationGainMeters ?: workout.elevationGainMeters
                 if (elevationGain != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     ) {
+                        val elevationParts = UnitConverter.elevationParts(elevationGain, unitSystem)
                         UniversalWorkoutMetricCard(
                             title = stringResource(R.string.workout_metric_elevation_gain),
-                            valueText = UnitConverter.formatElevation(elevationGain, unitSystem),
+                            valueText =
+                                elevationParts?.value
+                                    ?: stringResource(R.string.workout_metric_unavailable),
+                            secondaryText = elevationParts?.unit?.let { unitLabel(it) },
                             status = MetricStatus.NEUTRAL,
                             tooltip = stringResource(R.string.workout_tooltip_elevation_gain),
                             modifier = Modifier.weight(1f),
@@ -218,6 +230,20 @@ fun WorkoutMetricsDisplay(
         ZoneBreakdownCard(workout)
     }
 }
+
+@Composable
+private fun unitLabel(unit: String): String =
+    when (unit) {
+        "km" -> stringResource(R.string.workout_metric_distance_unit_km)
+        "m" -> stringResource(R.string.workout_metric_distance_unit_m)
+        "mi" -> stringResource(R.string.workout_metric_distance_unit_mi)
+        "ft" -> stringResource(R.string.workout_metric_elevation_unit_ft)
+        "min/km" -> stringResource(R.string.workout_metric_pace_unit_min_km)
+        "min/mi" -> stringResource(R.string.workout_metric_pace_unit_min_mi)
+        "km/h" -> stringResource(R.string.workout_metric_speed_unit_kmh)
+        "mph" -> stringResource(R.string.workout_metric_speed_unit_mph)
+        else -> unit
+    }
 
 @Composable
 private fun WorkoutHeader(workout: WorkoutData) {
