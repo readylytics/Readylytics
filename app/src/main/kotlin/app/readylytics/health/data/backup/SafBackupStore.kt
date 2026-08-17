@@ -57,6 +57,11 @@ class SafBackupStore(
         val staged =
             dir.createFile("application/zip", "$name.rotating")
                 ?: error("Could not stage re-encrypted backup")
+        // Once the staged document is renamed into place it IS the live backup, and its
+        // DocumentFile URI follows the rename. The cleanup below must not delete it after
+        // that point, or a failure in the trailing `.bak` removal would destroy the archive
+        // that was just published successfully.
+        var published = false
         try {
             val writeSuccess =
                 context.contentResolver.openOutputStream(staged.uri)?.use { output ->
@@ -87,14 +92,16 @@ class SafBackupStore(
                         },
                     )
                 }
+                published = true
                 existing.delete()
             } else {
                 check(staged.renameTo(name)) {
                     "Could not finalize re-encrypted backup"
                 }
+                published = true
             }
         } catch (e: Throwable) {
-            staged.delete()
+            if (!published) staged.delete()
             throw e
         }
     }
