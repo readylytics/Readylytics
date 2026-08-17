@@ -179,17 +179,17 @@ STEP 11 TARGET, QUANTIFIED
   step's PR is a regression introduced by that step.
 
 ================================================================================
-7. STATIC ANALYSIS — detekt not yet installed
+7. STATIC ANALYSIS — detekt baseline (generated Step 08, 2026-08-17)
 ================================================================================
-  Step 08 adds detekt and generates config/detekt/baseline.xml. When it lands,
-  append the per-rule violation counts here. Steps 14, 15, 17 and 18 each
-  remove entries from that baseline; the delta is how their success is
-  measured.
+  Step 08 adds detekt and generates config/detekt/baseline.xml. Steps 14, 15,
+  17 and 18 each remove entries from this baseline; the delta is how their
+  success is measured.
 
-    LongMethod                : (pending step 08)
-    LongParameterList         : (pending step 08)
-    CyclomaticComplexMethod   : (pending step 08)
-    SwallowedException        : (pending step 08)
+    LongMethod                : 183
+    LongParameterList         : 35
+    CyclomaticComplexMethod   : 53
+    SwallowedException        : 24
+    Total Baseline Issues     : 1638
 
 ================================================================================
 8. STRUCTURAL COUNTS AT BASELINE

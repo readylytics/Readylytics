@@ -2,9 +2,9 @@
 
 **Baseline:** branch `main` @ `63254e2f` — 2026-08-17
 **Scope:** 20 self-contained steps across 5 phases (5 P0, 9 P1, 6 P2)
-**Status:** Phase 0 and Phase 1 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and Phase 1 outcomes below.
-All verification commands green; 2,956 unit tests pass (+17 tests); aggregate coverage
-63.75% instruction (+0.17%); 6 lint warnings (-6 warnings), 0 errors, 0 fatal. Phase 2 cleared to start.
+**Status:** Phase 0, Phase 1, and Phase 2 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and Phase 1 & 2 outcomes below.
+All verification commands green; 2,957 unit tests pass (+1 Konsist test); detekt static analysis baseline established;
+Phase 3 cleared to start.
 
 Every step names its files, its exact change, its verification command, and its
 done-condition. No step requires context outside itself except the steps listed
@@ -78,8 +78,8 @@ step 13 are the proof that nothing moved numerically.
 | 05a | ~~Extract `BackupStore` seam (pure refactor)~~ ✅ **done 2026-08-17** | P0 | 1–1.5 d | 01 |
 | 05b | ~~Atomic backup re-encryption + 2 tests~~ ✅ **done 2026-08-17** | P0 | 1 d | 05a |
 | 06 | ~~No plaintext during key rotation~~ ✅ **done 2026-08-17** | P0 | 4–6 h | 05b |
-| 07 | Konsist cancellation rule (function-granular) | P1 | 3 h | 03, 04 |
-| 08 | detekt + baseline | P1 | 4 h | — |
+| 07 | ~~Konsist cancellation rule (function-granular)~~ ✅ **done 2026-08-17** | P1 | 3 h | 03, 04 |
+| 08 | ~~detekt + baseline~~ ✅ **done 2026-08-17** | P1 | 4 h | — |
 | 09 | Extract `core:database-schema` | P1 | 3–4 d | 08 |
 | 10 | Distribute Hilt modules | P1 | 2–3 d | 09 |
 | 11 | Relocate 48 tests | P1 | 2 d | 09, 10 |
@@ -757,7 +757,7 @@ rotate-then-restore round trip from step 05b still succeeds.
 
 Lock in Phase 1 before refactoring.
 
-## Step 07 — Add a Konsist rule that fails the build on swallowed cancellation
+## Step 07 — Add a Konsist rule that fails the build on swallowed cancellation ✅ DONE 2026-08-17
 
 **Severity:** P1 · **Effort:** 3 h · **Blocked by:** 03, 04
 
@@ -828,9 +828,15 @@ green; reverting step 03's rethrow makes it fail naming
 `catch (e: Exception)` to the non-suspend `UserPreferences.toProto()` does **not**
 make it fail.
 
+### Outcome
+
+- **Commit**: `95cbcf3f` (`test(arch): add Konsist rule prohibiting swallowed CancellationException in suspend functions`)
+- **Fix**: Added `@Test fun \`suspend functions do not swallow CancellationException\`()` in `CleanArchTest.kt` using function-granular AST inspection on suspend modifier.
+- **Tests & Verification**: Verified `./gradlew :app:testDebugUnitTest --tests "*CleanArchTest*"` passes. Verified synthetic suspend function catching `Exception` without rethrowing `CancellationException` causes rule failure, while non-suspend catch sites remain allowed.
+
 ---
 
-## Step 08 — Add detekt with a baseline pinned at today's state
+## Step 08 — Add detekt with a baseline pinned at today's state ✅ DONE 2026-08-17
 
 **Severity:** P1 · **Effort:** 4 h · **Blocked by:** —
 
@@ -893,6 +899,14 @@ remove entries from this baseline; that delta is how their success is measured.
 
 **Done when.** `./gradlew detekt` passes on unmodified `main`, and adding a
 throwaway 70-line function makes it fail.
+
+### Outcome
+
+- **Commit**: `044a6502` (`build(detekt): integrate detekt static analysis with frozen baseline and CI workflow`)
+- **Fix**: Added detekt 1.23.8 to version catalog, build-logic convention plugin, and root/app build configs. Created `config/detekt/detekt.yml` configuring complexity and exception rules. Generated `config/detekt/baseline.xml` and wired detekt step into `.github/workflows/ci.yml`.
+- **Tests & Verification**: Verified `./gradlew detekt` passes across all 15 modules. Verified synthetic 70-line function fails with `LongMethod`. Recorded rule breakdown in `internal-docs/plans/remediation-baseline.txt`.
+
+> ✅ Phase 2 complete on 2026-08-17. Phase 3 is cleared to start.
 
 ---
 
