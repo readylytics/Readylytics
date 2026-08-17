@@ -364,7 +364,7 @@ git commit -m "refactor(core:scoring): move scoring DI (provides + binds) home (
 - Create: `core/database/src/main/kotlin/app/readylytics/health/di/RepositoryModule.kt`
 - Modify: `app/src/main/kotlin/app/readylytics/health/di/RepositoryModule.kt` (trim to 9 binds)
 
-- [ ] **Step 4a: Create `core/database/.../di/RepositoryModule.kt` with the 15 impl-home binds**
+- [ ] **Step 4a: Create `core/database/.../di/RepositoryModule.kt` with the 14 impl-home binds**
 
 ```kotlin
 package app.readylytics.health.di

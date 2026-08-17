@@ -10,14 +10,14 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-internal data class ExistingDatabaseState(
+data class ExistingDatabaseState(
     val userVersion: Int,
     val hasMigrationMetadata: Boolean,
 )
 
 @Singleton
 class DatabaseReadinessGate
-    internal constructor(
+    constructor(
         private val dbFile: File,
         private val inspectExistingDatabase: (File) -> ExistingDatabaseState,
     ) : DatabaseReadinessInspector {
@@ -76,7 +76,7 @@ class DatabaseReadinessGate
             }
         }
 
-        internal companion object {
+        companion object {
             const val DATABASE_NAME = "health_dashboard.db"
 
             // Tracks HealthDatabase.DATABASE_VERSION directly (both are compile-time constants, so

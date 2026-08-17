@@ -140,7 +140,7 @@ abstract class DatabaseModule {
     }
 }
 
-internal fun requireDatabaseReady(databaseReadinessGate: DatabaseReadinessGate) {
+fun requireDatabaseReady(databaseReadinessGate: DatabaseReadinessGate) {
     check(databaseReadinessGate.inspect() == DatabaseReadiness.Ready) {
         "HealthDatabase cannot open before the external v7 migration is complete"
     }
