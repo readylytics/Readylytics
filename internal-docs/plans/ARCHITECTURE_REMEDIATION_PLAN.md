@@ -668,12 +668,13 @@ is green, and the on-device rotate-then-restore round trip succeeds.
 
 ### Outcome
 
-- **Commit**: `09400bca` (`fix(backup): atomic backup re-encryption and close ZipFile resource leaks`)
+- **Commit**: `09400bca` (`fix(backup): atomic backup re-encryption and close ZipFile resource leaks`), followed up by `c4df761e` (`fix(backup): address Phase 1 backup store follow-ups (P1-1 through P2-6)`)
 - **Fix**:
-  - `SafBackupStore`: Implemented staging write to `$name.rotating`, verified staging file length matches source before deleting existing archive, and atomically renamed staged file.
-  - `FileBackupStore`: Atomic rename with verified copy+delete fallback.
+  - `SafBackupStore`: Implemented staging write to `$name.rotating`, verified staging file length matches source, guarded existing backup with `$name.bak` rename before replacing, restored `$name.bak` on staged rename failure, and safely handled cleanup via `try/catch` (P1-2, P2-6).
+  - `FileBackupStore`: Atomic rename with verified intermediate temporary file staging and guaranteed cleanup, never deleting target prior to rename (P1-1).
+  - `BackupStoreFactory`: Eliminated `path!!` in favor of safe `path ?: error(...)` (P2-5).
   - `LocalBackupManager`: Wrapped `ZipFile` instances in `use { }` blocks during archive extraction, archive re-encryption, and backup creation (`createZip`) to prevent file descriptor leaks. Hoisted `treeUri` resolution outside backup loops.
-- **Tests & Verification**: Added `FakeBackupStore` and unit tests in `LocalBackupManagerTest.kt` (`reencryptBackups failure preserves original backup and returns failure`, `reencryptBackups never calls publish with zero length source`). Verified `./gradlew :app:testDebugUnitTest --tests "*LocalBackup*" --tests "*LocalRestore*"`.
+- **Tests & Verification**: Added `FakeBackupStore` and unit tests in `LocalBackupManagerTest.kt` (`reencryptBackups failure preserves original backup and returns failure` with actual decryption verification, `reencryptBackups partial publish preserves original backup and returns failure`, and `reencryptBackups never calls publish with zero length source`) as well as `FileBackupStoreTest.kt` (`publish_failedRename_preservesExistingTarget`). Verified `./gradlew :app:testDebugUnitTest --tests "*LocalBackup*" --tests "*LocalRestore*" --tests "*BackupStore*"`.
 
 ---
 
