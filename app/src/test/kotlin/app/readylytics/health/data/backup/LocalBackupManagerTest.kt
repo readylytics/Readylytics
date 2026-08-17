@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.exception.ZipException
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.AesKeyStrength
 import net.lingala.zip4j.model.enums.EncryptionMethod
@@ -785,8 +786,84 @@ class LocalBackupManagerTest {
             assertNotNull(restoredBytes)
             val checkZipFile = File(context.cacheDir, "check_orig.zip").apply { writeBytes(restoredBytes) }
             val checkZip = ZipFile(checkZipFile, "old_password".toCharArray())
-            assertTrue(checkZip.isValidZipFile)
+            val header = checkZip.fileHeaders.first()
+            val content = checkZip.getInputStream(header).bufferedReader().readText()
+            assertEquals("""{"version":1}""", content)
             checkZip.close()
+
+            // and the negative: the new password must NOT open it
+            val wrongZip = ZipFile(checkZipFile, "new_password".toCharArray())
+            assertFailsWith<ZipException> {
+                wrongZip.getInputStream(wrongZip.fileHeaders.first()).readBytes()
+            }
+            wrongZip.close()
+            checkZipFile.delete()
+        }
+
+    @Test
+    fun `reencryptBackups partial publish preserves original backup and returns failure`() =
+        runTest {
+            val fakeStore = FakeBackupStore()
+            val sampleZipFile = File(context.cacheDir, "sample_test_partial.zip")
+            val zip = ZipFile(sampleZipFile, "old_password".toCharArray())
+            val tempPlain =
+                File(context.cacheDir, "backup_2026-05-15_100000.json").apply { writeText("""{"version":1}""") }
+            zip.addFile(
+                tempPlain,
+                ZipParameters().apply {
+                    isEncryptFiles = true
+                    encryptionMethod = EncryptionMethod.AES
+                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                },
+            )
+            zip.close()
+            tempPlain.delete()
+
+            val originalBytes = sampleZipFile.readBytes()
+            sampleZipFile.delete()
+            fakeStore.files["backup_2026-05-15_100000.zip"] = originalBytes
+            fakeStore.partialPublish = true
+
+            val testManager =
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                    backupStoreFactory =
+                        object : BackupStoreFactory {
+                            override fun create(customUri: Uri?): BackupStore = fakeStore
+
+                            override fun createDefault(): BackupStore = fakeStore
+                        },
+                )
+
+            val result = testManager.reencryptBackups("old_password", "new_password")
+            assertTrue(result.isFailure, "reencryptBackups should fail when partial publish fails")
+
+            // Assert original archive is preserved and opens with OLD password
+            val restoredBytes = fakeStore.files["backup_2026-05-15_100000.zip"]
+            assertNotNull(restoredBytes)
+            val checkZipFile = File(context.cacheDir, "check_orig_partial.zip").apply { writeBytes(restoredBytes) }
+            val checkZip = ZipFile(checkZipFile, "old_password".toCharArray())
+            val header = checkZip.fileHeaders.first()
+            val content = checkZip.getInputStream(header).bufferedReader().readText()
+            assertEquals("""{"version":1}""", content)
+            checkZip.close()
+
+            // and the negative: the new password must NOT open it
+            val wrongZip = ZipFile(checkZipFile, "new_password".toCharArray())
+            assertFailsWith<ZipException> {
+                wrongZip.getInputStream(wrongZip.fileHeaders.first()).readBytes()
+            }
+            wrongZip.close()
             checkZipFile.delete()
         }
 

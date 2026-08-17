@@ -50,9 +50,8 @@ class FileBackupStore(
             check(tempTarget.length() == source.length()) {
                 "Failed to copy complete backup to temporary file (${tempTarget.length()} vs ${source.length()})"
             }
-            val renamed = tempTarget.renameTo(target) || (target.delete() && tempTarget.renameTo(target))
-            check(renamed) {
-                "Could not replace $target with rotated backup"
+            check(tempTarget.renameTo(target)) {
+                "Could not replace $target with rotated backup; original left in place"
             }
             source.delete()
         } finally {

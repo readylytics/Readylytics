@@ -57,43 +57,45 @@ class SafBackupStore(
         val staged =
             dir.createFile("application/zip", "$name.rotating")
                 ?: error("Could not stage re-encrypted backup")
-        val writeSuccess =
-            try {
+        try {
+            val writeSuccess =
                 context.contentResolver.openOutputStream(staged.uri)?.use { output ->
                     source.inputStream().use { it.copyTo(output) }
                 } != null
-            } catch (e: Exception) {
-                staged.delete()
-                throw e
+            if (!writeSuccess) {
+                error("Could not write re-encrypted backup")
             }
-        if (!writeSuccess) {
-            staged.delete()
-            error("Could not write re-encrypted backup")
-        }
 
-        check(staged.length() == source.length()) {
+            check(staged.length() == source.length()) {
+                "Staged backup is truncated (${staged.length()} vs ${source.length()}); original kept"
+            }
+            val existing = dir.findFile(name)
+            if (existing != null) {
+                val backupName = "$name.bak"
+                dir.findFile(backupName)?.delete()
+                check(existing.renameTo(backupName)) {
+                    "Could not backup existing file before replacement"
+                }
+                if (!staged.renameTo(name)) {
+                    val restored = existing.renameTo(name)
+                    error(
+                        if (restored) {
+                            "Could not finalize re-encrypted backup; original restored"
+                        } else {
+                            "Could not finalize re-encrypted backup and could not restore " +
+                                "original — it remains as $backupName"
+                        },
+                    )
+                }
+                existing.delete()
+            } else {
+                check(staged.renameTo(name)) {
+                    "Could not finalize re-encrypted backup"
+                }
+            }
+        } catch (e: Throwable) {
             staged.delete()
-            "Staged backup is truncated (${staged.length()} vs ${source.length()}); original kept"
-        }
-        val existing = dir.findFile(name)
-        if (existing != null) {
-            val backupName = "$name.bak"
-            dir.findFile(backupName)?.delete()
-            check(existing.renameTo(backupName)) {
-                staged.delete()
-                "Could not backup existing file before replacement"
-            }
-            if (!staged.renameTo(name)) {
-                existing.renameTo(name)
-                staged.delete()
-                error("Could not finalize re-encrypted backup")
-            }
-            existing.delete()
-        } else {
-            check(staged.renameTo(name)) {
-                staged.delete()
-                "Could not finalize re-encrypted backup"
-            }
+            throw e
         }
     }
 

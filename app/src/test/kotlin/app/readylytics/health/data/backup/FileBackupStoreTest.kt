@@ -99,6 +99,33 @@ class FileBackupStoreTest {
         }
 
     @Test
+    fun publish_failedRename_preservesExistingTarget() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val backupDir = tempFolder.newFolder("backups_failed_rename")
+            val store = FileBackupStore(context, backupDir)
+
+            val targetName = "backup_2026_01_01.zip"
+            val targetDir =
+                File(backupDir, targetName).apply {
+                    mkdirs()
+                    File(this, "inner.txt").writeText("cannot overwrite directory with file")
+                }
+
+            val source =
+                tempFolder.newFile("source_failed.zip").apply {
+                    writeText("new payload")
+                }
+
+            assertFailsWith<IllegalStateException> {
+                store.publish(source, targetName)
+            }
+
+            assertTrue(targetDir.exists(), "Existing target must not be deleted when rename fails")
+            assertFalse(File(backupDir, "$targetName.tmp").exists(), "Temporary file must be cleaned up")
+        }
+
+    @Test
     fun delete_removesFileSuccessfully() =
         runTest {
             val context = ApplicationProvider.getApplicationContext<Context>()

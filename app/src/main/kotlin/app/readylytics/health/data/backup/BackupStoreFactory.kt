@@ -22,7 +22,11 @@ class DefaultBackupStoreFactory
         override fun create(customUri: Uri?): BackupStore =
             when {
                 customUri == null -> FileBackupStore(context)
-                customUri.scheme == "file" -> FileBackupStore(context, File(customUri.path!!))
+                customUri.scheme == "file" ->
+                    FileBackupStore(
+                        context,
+                        File(customUri.path ?: error("Backup directory URI has no file path")),
+                    )
                 else -> SafBackupStore(context, customUri)
             }
 
