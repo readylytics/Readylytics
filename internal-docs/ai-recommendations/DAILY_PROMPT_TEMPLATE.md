@@ -14,7 +14,7 @@ This is the **per-day user-turn prompt**. It assumes `BASE_SYSTEM_PROMPT.md` is
 already loaded as the system prompt for the conversation. `{{placeholder}}` values are
 filled in per request; field names are taken verbatim from `DailySummary`
 (`core/model/src/main/kotlin/app/readylytics/health/domain/model/DailySummary.kt`),
-`WorkoutRecordEntity` (`core/model/src/main/kotlin/app/readylytics/health/data/local/entity/WorkoutRecordEntity.kt`),
+`WorkoutRecordEntity` (`core/database-schema/src/main/kotlin/app/readylytics/health/data/local/entity/WorkoutRecordEntity.kt`),
 and `WorkoutLoadMetrics` (`core/scoring/src/main/kotlin/app/readylytics/health/domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt`).
 
 A block written as `{{#each ...}}` denotes a repeatable section (render once per item

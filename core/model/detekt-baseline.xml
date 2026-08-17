@@ -9,39 +9,16 @@
     <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
     <ID>MaxLineLength:AppLog.kt$ScopedLogger$inline fun error(throwable: Throwable? = null, msg: () -&gt; String)</ID>
     <ID>MaxLineLength:AppLog.kt$ScopedLogger$inline fun warn(throwable: Throwable? = null, msg: () -&gt; String)</ID>
-    <ID>MaxLineLength:BloodPressureRecordDao.kt$BloodPressureRecordDao$"DELETE FROM blood_pressure_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:BloodPressureRecordDao.kt$BloodPressureRecordDao$"SELECT * FROM blood_pressure_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset"</ID>
-    <ID>MaxLineLength:BodyFatRecordDao.kt$BodyFatRecordDao$"DELETE FROM body_fat_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:BodyFatRecordDao.kt$BodyFatRecordDao$"SELECT * FROM body_fat_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset"</ID>
-    <ID>MaxLineLength:BodyTemperatureRecordDao.kt$BodyTemperatureRecordDao$"DELETE FROM body_temperature_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:BodyTemperatureRecordDao.kt$BodyTemperatureRecordDao$"SELECT * FROM body_temperature_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset"</ID>
-    <ID>MaxLineLength:DailySummaryDao.kt$DailySummaryDao$"SELECT * FROM daily_summaries WHERE dateMidnightMs &gt;= :fromMs ORDER BY dateMidnightMs ASC LIMIT :limit OFFSET :offset"</ID>
-    <ID>MaxLineLength:DailySummaryDao.kt$DailySummaryDao$"SELECT CAST(ROUND(totalRasWorkoutOnly) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs"</ID>
     <ID>MaxLineLength:ElevationGainCalculatorTest.kt$ElevationGainCalculatorTest$// Starts at 200m, descends to 100m, climbs to 150m (50m gain), descends to 80m, climbs to 120m (40m gain) -&gt; total 90m</ID>
     <ID>MaxLineLength:HealthConnectRepository.kt$HealthConnectRepository$/** Permission required for [PeriodicHealthSyncWorker][app.readylytics.health.workers.PeriodicHealthSyncWorker] to read data while the app is backgrounded. */</ID>
     <ID>MaxLineLength:HealthZone.kt$// HRV — higher is better: above optimalMin=OPTIMAL, down to neutralMin=NEUTRAL, down to warningMin=WARNING, below=CRITICAL</ID>
-    <ID>MaxLineLength:HeartRateDao.kt$HeartRateDao$"AND (timestampMs &gt; :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef &gt; :lastSourceRecordRef)) "</ID>
-    <ID>MaxLineLength:HeartRateDao.kt$HeartRateDao$"DELETE FROM heart_rate_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:HeartRateDao.kt$HeartRateDao$"SELECT * FROM heart_rate_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit OFFSET :offset"</ID>
-    <ID>MaxLineLength:HeartRateDao.kt$HeartRateDao$@Query("SELECT * FROM heart_rate_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC")</ID>
     <ID>MaxLineLength:HrrToleranceRule.kt$HrrToleranceRule$"Recovery match window: ${SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS}–${SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS} s"</ID>
-    <ID>MaxLineLength:HrvDao.kt$HrvDao$"AND (timestampMs &gt; :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef &gt; :lastSourceRecordRef)) "</ID>
-    <ID>MaxLineLength:HrvDao.kt$HrvDao$"DELETE FROM hrv_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:HrvDao.kt$HrvDao$"SELECT * FROM hrv_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit OFFSET :offset"</ID>
-    <ID>MaxLineLength:OxygenSaturationRecordDao.kt$OxygenSaturationRecordDao$"DELETE FROM oxygen_saturation_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:OxygenSaturationRecordDao.kt$OxygenSaturationRecordDao$"SELECT * FROM oxygen_saturation_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset"</ID>
     <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = false, position = 3, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
     <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.HRV, isVisible = true, position = 1, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
     <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = false, position = 2, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
     <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
     <ID>MaxLineLength:SleepMetricCardManagementDelegate.kt$SleepMetricCardManagementDelegate$fun</ID>
-    <ID>MaxLineLength:SleepSessionDao.kt$SleepSessionDao$"DELETE FROM sleep_sessions WHERE endTime &gt;= :fromMs AND endTime &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:SleepSessionDao.kt$SleepSessionDao$"SELECT * FROM sleep_sessions WHERE endTime &gt;= :fromMs AND endTime &lt; :toMs ORDER BY endTime ASC, id ASC LIMIT 1"</ID>
     <ID>MaxLineLength:VitalAssessmentTest.kt$VitalAssessmentTest$assertEquals(MetricStatus.CALIBRATING, summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))</ID>
-    <ID>MaxLineLength:WeightRecordDao.kt$WeightRecordDao$"DELETE FROM weight_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:WeightRecordDao.kt$WeightRecordDao$"SELECT * FROM weight_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset"</ID>
-    <ID>MaxLineLength:WorkoutDao.kt$WorkoutDao$"DELETE FROM workout_records WHERE startTime &gt;= :fromMs AND startTime &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:WorkoutDao.kt$WorkoutDao$"SELECT SUM(avgHr * durationMinutes) / CAST(SUM(durationMinutes) AS FLOAT) FROM workout_records WHERE startTime &gt;= :fromMs AND startTime &lt; :toMs AND durationMinutes &gt; 0"</ID>
     <ID>MaxLineLength:WorkoutMapper.kt$WorkoutMapper$?:</ID>
     <ID>MayBeConst:SettingsDefaults.kt$SettingsDefaults$val HEIGHT_CM: Float? = 175f</ID>
     <ID>MemberNameEqualsClassName:ZoneThresholds.kt$ZoneThresholds$fun zoneThresholds( z1Min: Int = 95, z1Max: Int = 114, z2Max: Int = 133, z3Max: Int = 152, z4Max: Int = 171, ): IntArray</ID>
@@ -63,29 +40,19 @@
     <ID>ReturnCount:WorkoutLayoutTypeMapper.kt$WorkoutLayoutTypeMapper$fun fromExerciseType(raw: String): WorkoutLayoutType</ID>
     <ID>SwallowedException:ErrorBoundary.kt$e: Exception</ID>
     <ID>TooGenericExceptionThrown:Result.kt$throw Exception(reason)</ID>
-    <ID>TooManyFunctions:BloodPressureRecordDao.kt$BloodPressureRecordDao</ID>
-    <ID>TooManyFunctions:BodyFatRecordDao.kt$BodyFatRecordDao</ID>
-    <ID>TooManyFunctions:BodyTemperatureRecordDao.kt$BodyTemperatureRecordDao</ID>
     <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
-    <ID>TooManyFunctions:DailySummaryDao.kt$DailySummaryDao</ID>
     <ID>TooManyFunctions:DateRangeService.kt$DateRangeService</ID>
     <ID>TooManyFunctions:FeatureSettingsPorts.kt$DisplaySettings</ID>
     <ID>TooManyFunctions:HealthConnectRepository.kt$HealthConnectRepository</ID>
     <ID>TooManyFunctions:HealthMetricsService.kt$HealthMetricsService</ID>
-    <ID>TooManyFunctions:HeartRateDao.kt$HeartRateDao</ID>
-    <ID>TooManyFunctions:HrvDao.kt$HrvDao</ID>
     <ID>TooManyFunctions:LoadSourceSelector.kt$LoadSourceSelector</ID>
     <ID>TooManyFunctions:MetricFormatter.kt$MetricFormatter</ID>
     <ID>TooManyFunctions:MetricStatusExtensions.kt$app.readylytics.health.domain.model.MetricStatusExtensions.kt</ID>
-    <ID>TooManyFunctions:OxygenSaturationRecordDao.kt$OxygenSaturationRecordDao</ID>
     <ID>TooManyFunctions:PreferenceService.kt$PreferenceService</ID>
     <ID>TooManyFunctions:Result.kt$app.readylytics.health.domain.model.Result.kt</ID>
     <ID>TooManyFunctions:ScoringHistoryRepository.kt$ScoringHistoryRepository</ID>
-    <ID>TooManyFunctions:SleepSessionDao.kt$SleepSessionDao</ID>
     <ID>TooManyFunctions:UnitConverter.kt$UnitConverter</ID>
     <ID>TooManyFunctions:VitalAssessment.kt$app.readylytics.health.domain.model.VitalAssessment.kt</ID>
-    <ID>TooManyFunctions:WeightRecordDao.kt$WeightRecordDao</ID>
-    <ID>TooManyFunctions:WorkoutDao.kt$WorkoutDao</ID>
     <ID>UnusedPrivateProperty:BodyTemperatureBaselineCalculatorTest.kt$BodyTemperatureBaselineCalculatorTest$val fourteenDays = List(14) { 36.5f } + List(0) { }</ID>
     <ID>UnusedPrivateProperty:SleepCardCatalogTest.kt$SleepCardCatalogTest$private val topGauge = SleepTopCardConfiguration(SleepTopCardId.SLEEP_DURATION_GAUGE)</ID>
   </CurrentIssues>
