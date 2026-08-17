@@ -164,8 +164,15 @@ class ScoringRepositoryImpl
         ): WalkForwardBaselineContext =
             WalkForwardBaselineContext(baselineComputer.prefetchWalkForwardSessions(startDate, endDate, zoneId))
 
-        override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary =
-            computeDailySummary(targetDate, settingsRepo.userPreferences.first())
+        override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
+            // The private overload persists modelTrimp back to workout_records
+            // (see L278), so this path is not read-only and must serialize with
+            // the walk-forward recompute like computeAndPersistDailySummary does.
+            val prefs = settingsRepo.userPreferences.first()
+            return calculationMutex.withLock {
+                computeDailySummary(targetDate, prefs)
+            }
+        }
 
         private suspend fun computeDailySummary(
             targetDate: LocalDate,

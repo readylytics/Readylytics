@@ -13,7 +13,10 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.*
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -48,32 +51,34 @@ class ScoringRepositoryImplTest {
 
     private lateinit var repo: ScoringRepositoryImpl
 
+    private fun createRepo(dispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()): ScoringRepositoryImpl =
+        ScoringRepositoryImpl(
+            workoutDao,
+            sleepSessionDao,
+            dailySummaryDao,
+            settingsRepo,
+            scoringCalculator,
+            baselineComputer,
+            BuildLoadSeriesUseCase(scoringCalculator),
+            AssembleEverydayLoadInputUseCase(),
+            computeSleepMetricsUseCase,
+            scoringConfigFactory,
+            computeWorkoutTrimpUseCase,
+            heartRateDao,
+            minuteBucketDao,
+            weightRecordDao,
+            bodyFatRecordDao,
+            bloodPressureRecordDao,
+            oxygenSaturationRecordDao,
+            bodyTemperatureRecordDao,
+            sleepPercentileRhrCalculator,
+            scoringHistoryRepository,
+            dispatcher,
+        )
+
     @Before
     fun setup() {
-        repo =
-            ScoringRepositoryImpl(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                settingsRepo,
-                scoringCalculator,
-                baselineComputer,
-                BuildLoadSeriesUseCase(scoringCalculator),
-                AssembleEverydayLoadInputUseCase(),
-                computeSleepMetricsUseCase,
-                scoringConfigFactory,
-                computeWorkoutTrimpUseCase,
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
-                sleepPercentileRhrCalculator,
-                scoringHistoryRepository,
-                UnconfinedTestDispatcher(),
-            )
+        repo = createRepo()
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null
@@ -518,5 +523,67 @@ class ScoringRepositoryImplTest {
             // the sleep score for an otherwise-identical day.
             val summaryWithoutBodyTemp = entitySlot.captured.copy(avgSleepingBodyTemp = null)
             assertEquals(entitySlot.captured.sleepScore, summaryWithoutBodyTemp.sleepScore)
+        }
+
+    @Test
+    fun `computeDailySummary and computeAndPersistDailySummary serialize via calculationMutex`() =
+        runTest {
+            repo = createRepo(UnconfinedTestDispatcher(testScheduler))
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            val concurrentCalls =
+                java.util.concurrent.atomic
+                    .AtomicInteger(0)
+            val maxConcurrentCalls =
+                java.util.concurrent.atomic
+                    .AtomicInteger(0)
+
+            val mockWorkout =
+                WorkoutRecordEntity(
+                    id = "w1",
+                    startTime = todayMs + 1000,
+                    endTime = todayMs + 2000,
+                    exerciseType = "running",
+                    durationMinutes = 15,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 0f,
+                    zone3Minutes = 0f,
+                    zone4Minutes = 0f,
+                    zone5Minutes = 0f,
+                    trimp = 10f,
+                    modelTrimp = 0f,
+                    avgHr = 140f,
+                )
+
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns listOf(mockWorkout)
+            coEvery {
+                computeWorkoutTrimpUseCase.execute(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
+                Result.success(12f)
+            coEvery { workoutDao.upsertAll(any()) } coAnswers {
+                val current = concurrentCalls.incrementAndGet()
+                maxConcurrentCalls.updateAndGet { maxOf(it, current) }
+                delay(50)
+                concurrentCalls.decrementAndGet()
+            }
+
+            val job1 = async { repo.computeDailySummary(today) }
+            val job2 = async { repo.computeAndPersistDailySummary(today, null) }
+
+            job1.await()
+            job2.await()
+
+            assertEquals(1, maxConcurrentCalls.get(), "Database writes on compute paths must not execute concurrently")
         }
 }
