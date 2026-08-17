@@ -5,6 +5,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.workers.WorkerScheduler
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.Period
@@ -35,6 +36,8 @@ class UserUseCase
                 // Queue one durable historical pass after every affected preference has been persisted.
                 workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 Result.success(Unit)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")
             }
@@ -48,6 +51,8 @@ class UserUseCase
                     workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
                 Result.success(Unit)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Result.failure("Failed to calculate max HR", "MAX_HR_CALC_ERROR")
             }
