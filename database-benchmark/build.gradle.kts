@@ -58,4 +58,5 @@ dependencies {
     implementation(libs.sqlcipher.android)
     implementation(project(":core:database"))
     implementation(project(":core:model"))
+    implementation(project(":core:database-schema"))
 }

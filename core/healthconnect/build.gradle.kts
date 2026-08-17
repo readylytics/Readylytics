@@ -65,6 +65,7 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
 
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":core:database-schema"))
     implementation(project(":core:scoring"))
     implementation(project(":core:database"))
 

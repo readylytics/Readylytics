@@ -255,8 +255,12 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 ### 1.4 Room storage — `HealthDatabase` (`@Database(version = 11)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
-entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
-`core/model/src/main/kotlin/app/readylytics/health/data/local/dao/`. **The database is the single source of truth; the UI never reads Health
+entities in `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
+`core/database-schema/src/main/kotlin/app/readylytics/health/data/local/dao/`. All Room DAO interfaces
+and entities live in `core:database-schema` (`app.readylytics.health.data.local.{dao,entity}`).
+`core:database` keeps `HealthDatabase`, `AuditEventDao`/`AuditEventEntity`, `Converters`, migrations,
+and the generated DAO impls. `core:healthconnect` mappers import DAOs/entities from
+`core:database-schema`. **The database is the single source of truth; the UI never reads Health
 Connect directly.**
 
 `DatabaseMigrations` registers only the small Room migrations v1→v2, v2→v3, v3→v4, v4→v5,
@@ -674,7 +678,7 @@ result.
 - **I_TRIMP** — individualized exponential TRIMP (Manzi et al.).
 
 **SCORE-001 — one persisted TRIMP series feeds workout-only ATL/CTL, not two.**
-`WorkoutRecordEntity` (`core/model/.../data/local/entity/WorkoutRecordEntity.kt`) carries two
+`WorkoutRecordEntity` (`core/database-schema/.../data/local/entity/WorkoutRecordEntity.kt`) carries two
 independent per-workout values that must not be confused:
 
 - `trimp` — zone-minutes ("zone TRIMP"), computed at reconcile time by `ZoneThresholds.computeMetrics`
@@ -1038,17 +1042,17 @@ checkpoint, progress starts directly at the resumed phase/offset instead of rese
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |
 | `app/src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt`                                               | Storage — scoped encrypted DB access                | opens raw SQLCipher DB only inside a callback and zeroes plaintext key bytes              |
-| `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
-| `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |
-| `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/WorkoutRoutePointEntity.kt`                             | Storage — workout route points                      | normalized coordinates per workout; cascade-deleted with workout                          |
-| `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …)              | Storage — raw metric entities                       | upsert by stable HC id                                                                   |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteSimplifier.kt`                                            | Domain — route simplification                       | Douglas-Peucker point reduction for on-device Canvas rendering                           |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteDistanceCalculator.kt`                                    | Domain — route metrics calculation                  | haversine path distance and cumulative elevation calculations                            |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/sync/SyncWorkoutRouteUseCase.kt`                                    | Domain — on-demand workout route sync               | single-workout route retrieval from Health Connect and Room atomic persistence           |
-| `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/InsightDismissalDao.kt`                                    | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/dao/AuditEventDao.kt`                                       | Storage — local audit DAO                           | append / observe recent metadata events                                                  |
-| `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/*.kt`                                                      | Storage — DAOs                                      | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp`                               |
+| `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`             | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
+| `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`         | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                       | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |
+| `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/entity/WorkoutRoutePointEntity.kt`        | Storage — workout route points                      | normalized coordinates per workout; cascade-deleted with workout                          |
+| `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …) | Storage — raw metric entities                  | upsert by stable HC id                                                                   |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteSimplifier.kt`                                 | Domain — route simplification                       | Douglas-Peucker point reduction for on-device Canvas rendering                           |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/util/RouteDistanceCalculator.kt`                         | Domain — route metrics calculation                  | haversine path distance and cumulative elevation calculations                            |
+| `core/model/src/main/kotlin/app/readylytics/health/domain/sync/SyncWorkoutRouteUseCase.kt`                         | Domain — on-demand workout route sync               | single-workout route retrieval from Health Connect and Room atomic persistence           |
+| `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/dao/InsightDismissalDao.kt`               | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/dao/AuditEventDao.kt`                            | Storage — local audit DAO                           | append / observe recent metadata events                                                  |
+| `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/dao/*.kt`                                 | Storage — DAOs                                      | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp`                               |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/InsightType.kt`                                              | Domain — insight model                              | enum class and RecoveryFlag mapper                                                       |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/dashboard/InsightDeriver.kt`                                       | Domain — insight logic                              | derives active set + ordered visible queue/current insight                               |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/repository/ScoringRepository.kt`                                   | Processing — coordinator contract                   | `computeDailySummary(day)`                                                               |

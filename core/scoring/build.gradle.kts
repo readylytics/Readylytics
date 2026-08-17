@@ -65,6 +65,7 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
 dependencies {
     implementation(project(":core:model"))
     implementation(libs.androidx.core.ktx)
+    testImplementation(project(":core:database-schema"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

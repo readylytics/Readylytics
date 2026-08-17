@@ -21,7 +21,7 @@ plugins {
 
 val coverageProjects = listOf(
     ":app",
-    ":core:model", ":core:scoring", ":core:database", ":core:healthconnect",
+    ":core:model", ":core:database-schema", ":core:scoring", ":core:database", ":core:healthconnect",
     ":core:designsystem", ":core:ui",
     ":feature:about", ":feature:insights", ":feature:sleep", ":feature:workouts",
     ":feature:vitals", ":feature:dashboard", ":feature:settings", ":feature:onboarding",

@@ -335,6 +335,7 @@ dependencies {
     implementation(project(":feature:vitals"))
     implementation(project(":feature:workouts"))
     implementation(project(":core:model"))
+    implementation(project(":core:database-schema"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:ui"))
     implementation(project(":core:scoring"))
