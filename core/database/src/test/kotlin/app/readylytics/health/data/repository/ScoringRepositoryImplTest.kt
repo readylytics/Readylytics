@@ -6,7 +6,7 @@ import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.repository.ScoringHistoryRepository

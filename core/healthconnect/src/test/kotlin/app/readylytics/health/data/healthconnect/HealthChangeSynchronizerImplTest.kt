@@ -13,7 +13,7 @@ import app.readylytics.health.data.local.dao.*
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.WeightRecordEntity
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.repository.TransactionRunner

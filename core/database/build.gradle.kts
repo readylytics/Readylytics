@@ -13,6 +13,9 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
     }
+    testFixtures {
+        enable = true
+    }
 }
 
 dependencies {
@@ -37,9 +40,21 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.junit)
     testImplementation(libs.mockk)
+
+    testFixturesImplementation(project(":core:model"))
+    testFixturesImplementation(project(":core:database-schema"))
+    testFixturesImplementation(project(":core:scoring"))
+    testFixturesImplementation(libs.room.runtime)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.room.testing)
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgs("-Xshare:off", "-Djdk.attach.allowAttachSelf=true")
+    systemProperty("robolectric.coverage.enabled", "true")
+    systemProperty("update.golden", providers.systemProperty("update.golden").getOrElse("false"))
 }

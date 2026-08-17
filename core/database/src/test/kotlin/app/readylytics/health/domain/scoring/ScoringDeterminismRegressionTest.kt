@@ -12,7 +12,7 @@ import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.repository.ScoringHistoryRepository

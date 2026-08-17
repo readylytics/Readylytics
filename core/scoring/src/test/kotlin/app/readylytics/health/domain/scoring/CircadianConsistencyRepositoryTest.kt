@@ -1,9 +1,9 @@
 package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import io.mockk.every

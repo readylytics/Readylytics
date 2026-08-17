@@ -13,4 +13,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.room.runtime)
     implementation(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.junit)
+    testImplementation(kotlin("test"))
 }
