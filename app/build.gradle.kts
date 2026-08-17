@@ -296,10 +296,8 @@ detekt {
     allRules = false
     parallel = true
     config.setFrom(rootProject.layout.projectDirectory.file("config/detekt/detekt.yml"))
-    baseline =
-        rootProject.layout.projectDirectory
-            .file("config/detekt/baseline.xml")
-            .asFile
+    // Per-module baseline — see the comment in readylytics.kotlin-android-conventions.gradle.kts.
+    baseline = layout.projectDirectory.file("detekt-baseline.xml").asFile
 }
 
 jacoco {

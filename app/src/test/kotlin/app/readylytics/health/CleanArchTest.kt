@@ -236,6 +236,15 @@ class CleanArchTest {
 
     @Test
     fun `suspend functions do not swallow CancellationException`() {
+        // `catch (e: Throwable)` swallows cancellation exactly as completely as
+        // `catch (e: Exception)`, so both are in scope.
+        val broadCatch = Regex("""catch \(\w+: (?:Exception|Throwable)\)""")
+        val exceptionCatch = Regex("""catch \(\w+: Exception\)""")
+        // A `catch (t: Throwable) { … throw t }` re-raises whatever it caught, cancellation
+        // included, so it is compliant without naming CancellationException. The backreference
+        // requires the *same* variable be rethrown — `throw somethingElse` does not count.
+        val rethrowsCaughtThrowable = Regex("""catch \((\w+): Throwable\)[\s\S]*?throw \1\b""")
+
         val violations =
             Konsist
                 .scopeFromProject()
@@ -246,13 +255,24 @@ class CleanArchTest {
                             it.containingFile.path.contains("\\src\\main\\")
                     )
                 }.filter { it.hasSuspendModifier }
-                .filter { it.text.contains(Regex("""catch \(\w+: Exception\)""")) }
-                .filter { !it.text.contains("CancellationException") }
-                .map { "${it.containingFile.name}:${it.name}() swallows CancellationException" }
+                .filter { broadCatch.containsMatchIn(it.text) }
+                .filter { function ->
+                    val text = function.text
+                    when {
+                        // Explicit cancellation handling anywhere in the function.
+                        text.contains("CancellationException") -> false
+                        // A bare `catch (… : Exception)` can never be excused by a rethrow
+                        // elsewhere; it must name CancellationException.
+                        exceptionCatch.containsMatchIn(text) -> true
+                        // Throwable-only: compliant iff every such catch rethrows what it caught.
+                        else -> !rethrowsCaughtThrowable.containsMatchIn(text)
+                    }
+                }.map { "${it.containingFile.name}:${it.name}() swallows CancellationException" }
 
         org.junit.Assert.assertTrue(
-            "Suspend functions must rethrow CancellationException before " +
-                "catching Exception. Violations:\n${violations.joinToString("\n")}",
+            "Suspend functions must rethrow CancellationException before catching " +
+                "Exception/Throwable (or rethrow the caught Throwable unchanged). " +
+                "Violations:\n${violations.joinToString("\n")}",
             violations.isEmpty(),
         )
     }

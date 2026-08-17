@@ -852,10 +852,18 @@ down.
 ```
 gradle/libs.versions.toml                                                  — add version + plugin alias
 build-logic/src/main/kotlin/readylytics.kotlin-android-conventions.gradle.kts — apply to every module
-config/detekt/detekt.yml                                                   — new
-config/detekt/baseline.xml                                                 — new, generated
+config/detekt/detekt.yml                                                   — new, shared config
+<module>/detekt-baseline.xml                                               — new, generated PER MODULE
 .github/workflows/ci.yml                                                   — new step
 ```
+
+> **Do not use a single shared baseline file.** `detektBaseline` is a
+> per-*project* task. Point all 15 modules at one `config/detekt/baseline.xml`
+> and each overwrites the last, so the file only ever holds one module's
+> findings — regenerating yields ~40 entries and `./gradlew detekt` fails
+> immediately. The first implementation of this step hit exactly that, and the
+> committed baseline could not be reproduced by the command that made it. The
+> shared *config* is correct; only the baseline must be per-module.
 
 **Catalog entries:**
 
@@ -880,9 +888,20 @@ findings:
 **Generate the baseline, then wire CI:**
 
 ```bash
-./gradlew detektBaseline      # writes config/detekt/baseline.xml
+./gradlew detektBaseline      # writes <module>/detekt-baseline.xml for each module
 ./gradlew detekt              # must now be green
 ```
+
+**Also disable the rules the project has already opted out of.** `detekt.yml`
+only *overrides* the rules it names; every other default stays active. Leaving
+them on froze 996 noise entries that buried the ~300 real ones:
+
+| Rule | Entries | Why disable |
+| --- | --- | --- |
+| `MagicNumber` | 694 | scoring coefficients; they *are* the domain |
+| `FunctionNaming` | 280 | `.editorconfig` disables ktlint's equivalent |
+| `WildcardImport` | 22 | `.editorconfig` disables ktlint's equivalent |
+| `RethrowCaughtException` | 1 | flags the exact pattern step 07's Konsist rule **requires** — the two gates would contradict each other |
 
 ```yaml
 # .github/workflows/ci.yml, insert after the ktlint step:
@@ -903,8 +922,27 @@ throwaway 70-line function makes it fail.
 ### Outcome
 
 - **Commit**: `044a6502` (`build(detekt): integrate detekt static analysis with frozen baseline and CI workflow`)
-- **Fix**: Added detekt 1.23.8 to version catalog, build-logic convention plugin, and root/app build configs. Created `config/detekt/detekt.yml` configuring complexity and exception rules. Generated `config/detekt/baseline.xml` and wired detekt step into `.github/workflows/ci.yml`.
-- **Tests & Verification**: Verified `./gradlew detekt` passes across all 15 modules. Verified synthetic 70-line function fails with `LongMethod`. Recorded rule breakdown in `internal-docs/plans/remediation-baseline.txt`.
+- **Fix**: Added detekt 1.23.8 to version catalog, build-logic convention plugin, and root/app build configs. Created `config/detekt/detekt.yml` configuring complexity and exception rules, and wired the detekt step into `.github/workflows/ci.yml`.
+- **Review follow-up**: the initial integration used one shared
+  `config/detekt/baseline.xml`, which could not be regenerated (per-project task,
+  every module overwrote the last) and froze 996 noise entries from rules the
+  project had deliberately opted out of. Corrected to per-module
+  `<module>/detekt-baseline.xml` plus four rule disables; baseline **1638 → 641**,
+  reconciling exactly. See `remediation-baseline.txt` §10a.
+- **Tests & Verification**: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease`
+  BUILD SUCCESSFUL; 2,962 tests / 0 failures; lint 12 W / 0 E (Phase 0 baseline
+  unchanged); `detektBaseline` now round-trips.
+
+### Step 07 review follow-up
+
+The rule as first written matched only `catch (… : Exception)`.
+`catch (… : Throwable)` swallows cancellation identically and was invisible to
+it — all four existing sites happened to handle cancellation correctly, so no
+live defect, but the rule could not prevent the next one. Widened to cover both,
+with a backreferenced escape hatch so `catch (t: Throwable) { …; throw t }`
+(the `SafBackupStore.publish` shape) stays compliant without naming
+`CancellationException`. Verified by mutation — suspend+Throwable-swallow now
+fails, suspend+Throwable-rethrow passes, non-suspend+Exception still passes.
 
 > ✅ Phase 2 complete on 2026-08-17. Phase 3 is cleared to start.
 

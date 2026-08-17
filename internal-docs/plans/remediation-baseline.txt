@@ -181,15 +181,17 @@ STEP 11 TARGET, QUANTIFIED
 ================================================================================
 7. STATIC ANALYSIS — detekt baseline (generated Step 08, 2026-08-17)
 ================================================================================
-  Step 08 adds detekt and generates config/detekt/baseline.xml. Steps 14, 15,
-  17 and 18 each remove entries from this baseline; the delta is how their
-  success is measured.
+  Step 08 adds detekt. Steps 14, 15, 17 and 18 each remove entries from this
+  baseline; the delta is how their success is measured.
+
+  SUPERSEDED — the figures below were the first cut and are kept for the record.
+  See section 10 for the corrected, reproducible baseline.
 
     LongMethod                : 183
     LongParameterList         : 35
     CyclomaticComplexMethod   : 53
     SwallowedException        : 24
-    Total Baseline Issues     : 1638
+    Total Baseline Issues     : 1638   (single shared config/detekt/baseline.xml)
 
 ================================================================================
 8. STRUCTURAL COUNTS AT BASELINE
@@ -231,6 +233,89 @@ STEP 11 TARGET, QUANTIFIED
   via `git checkout --`, so nothing was lost, and the baseline above was
   captured on the restored tree. Cause not identified. Flagged for the repo
   owner rather than silently ignored.
+
+================================================================================
+10. RE-CAPTURE AFTER PHASE 1 + PHASE 2 — 2026-08-17
+================================================================================
+Commit range : 63254e2f..HEAD (phases 1 and 2 plus review follow-ups)
+Verified with: ./gradlew ktlintCheck detekt testDebugUnitTest lintRelease
+Result       : BUILD SUCCESSFUL in 2m 26s
+
+  METRIC                          PHASE 0      NOW    NOTE
+  unit tests                         2939     2962    +23, 0 failures/errors
+  lint                          12 W / 0 E  12 W/0E   unchanged
+  ktlint                             clean    clean
+  detekt                               n/a    green   641 baselined
+
+10a. DETEKT BASELINE — CORRECTED
+  The first cut (section 7) was wrong in two ways, both fixed during the Phase 2
+  review:
+
+  (1) UNREPRODUCIBLE. `detektBaseline` is a per-PROJECT task, but the convention
+      plugin and app/build.gradle.kts pointed all 15 modules at one shared
+      config/detekt/baseline.xml. Every module overwrote the last, so the file
+      only ever held one module's findings. Regenerating it produced 40 entries
+      and `./gradlew detekt` failed immediately — the committed 1638-entry file
+      could not be reproduced by the command that supposedly created it.
+      FIX: per-module <module>/detekt-baseline.xml; config stays shared.
+      config/detekt/baseline.xml is deleted.
+
+  (2) NOISE. 996 of the 1638 entries came from rules the project had already
+      deliberately opted out of, which buried the ~300 that matter:
+        MagicNumber            694  (scoring coefficients; they ARE the domain)
+        FunctionNaming         280  (.editorconfig disables ktlint's equivalent)
+        WildcardImport          22  (.editorconfig disables ktlint's equivalent)
+        RethrowCaughtException   1  (flags the exact pattern the Konsist
+                                     cancellation rule REQUIRES — direct
+                                     conflict between the two gates)
+      FIX: all four disabled in config/detekt/detekt.yml with reasons inline.
+
+  Reconciliation: 1638 - 694 - 280 - 22 - 1 = 641. Exact.
+
+  CORRECTED BASELINE — 641 entries across 15 per-module files
+    LongMethod                183     UseCheckOrError            10
+    MaxLineLength              78     LargeClass                  9
+    ReturnCount                61     MatchingDeclarationName     8
+    TooManyFunctions           57     DestructuringDecl...        8
+    CyclomaticComplexMethod    53     others (<=5 each)          37
+    LongParameterList          35
+    SwallowedException         24
+    UnusedPrivateProperty      21
+    UnusedPrivateMember        15
+    UnusedParameter            14
+    ExplicitItLambdaParameter  12
+    ComplexCondition           11
+                                      TOTAL                     641
+
+  Complexity-rule entries (LongMethod, CyclomaticComplexMethod,
+  LongParameterList, LargeClass, TooManyFunctions): 337 of 641.
+  Only 24 of those 337 have a scheduled owner in the plan:
+    LocalRestoreManager.kt        8   step 17-adjacent
+    LocalBackupManager.kt         5   step 17
+    ScoringRepositoryImpl.kt      5   step 14
+    WorkoutPerformanceCharts.kt   4   step 19
+    WorkoutsViewModel.kt          2   step 18
+
+10b. HOW TO WORK THE BASELINE DOWN (read before any cleanup PR)
+  Baselined entries CAN be cleared in later PRs — that is the point. But:
+  - detekt does NOT fail on stale baseline entries. Fixing the code leaves the
+    entry behind; the count only drops when the baseline is regenerated.
+  - A wholesale `./gradlew detektBaseline` silently RE-FREEZES any new
+    violations introduced since, destroying the ratchet.
+  - Therefore: clean one module, regenerate only that module
+    (`./gradlew :core:scoring:detektBaseline`), and review the diff.
+
+10c. OPEN, NOT ADDRESSED
+  - detekt analyses test sources. Several top offenders are tests
+    (WorkoutDetailViewModelTest 9, WorkoutsViewModelTest 4,
+    ScoringPointInTimeRegressionTest 4, GetWorkoutDisplayMetricsUseCaseTest 4)
+    where LongMethod is mostly noise. Consider excluding src/test.
+  - Step 05b's on-device rotate-then-restore verification has NOT been run.
+    Every SAF path is exercised in tests via Uri.fromFile -> RawDocumentFile,
+    never the TreeDocumentFile/DocumentsProvider code that runs in production.
+    Untested anywhere: DocumentFile.renameTo on a staged document under One UI,
+    and whether staged.length() reports the true size before the provider
+    flushes — both load-bearing for the truncation check.
 
 ================================================================================
 END OF BASELINE
