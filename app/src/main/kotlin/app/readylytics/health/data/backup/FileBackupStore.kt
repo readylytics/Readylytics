@@ -41,11 +41,24 @@ class FileBackupStore(
         backupDir.mkdirs()
         val target = File(backupDir, name)
         check(source.length() > 0) { "Cannot publish empty backup" }
-        check(
-            source.renameTo(target) ||
-                (source.copyTo(target, overwrite = true).length() == source.length() && source.delete()),
-        ) {
-            "Could not replace $target with rotated backup"
+        if (source.renameTo(target)) {
+            return
+        }
+        val tempTarget = File(backupDir, "$name.tmp")
+        try {
+            source.copyTo(tempTarget, overwrite = true)
+            check(tempTarget.length() == source.length()) {
+                "Failed to copy complete backup to temporary file (${tempTarget.length()} vs ${source.length()})"
+            }
+            val renamed = tempTarget.renameTo(target) || (target.delete() && tempTarget.renameTo(target))
+            check(renamed) {
+                "Could not replace $target with rotated backup"
+            }
+            source.delete()
+        } finally {
+            if (tempTarget.exists()) {
+                tempTarget.delete()
+            }
         }
     }
 

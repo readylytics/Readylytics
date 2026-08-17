@@ -38,6 +38,10 @@ class SafBackupStore(
 
     override suspend fun read(location: BackupLocation): InputStream {
         val uri = location.value.toUri()
+        if (uri.scheme == "file") {
+            val file = File(uri.path ?: error("Invalid file location"))
+            return file.inputStream()
+        }
         return context.contentResolver.openInputStream(uri)
             ?: throw IllegalStateException("Could not read backup")
     }
@@ -53,9 +57,19 @@ class SafBackupStore(
         val staged =
             dir.createFile("application/zip", "$name.rotating")
                 ?: error("Could not stage re-encrypted backup")
-        context.contentResolver.openOutputStream(staged.uri)?.use { output ->
-            source.inputStream().use { it.copyTo(output) }
-        } ?: error("Could not write re-encrypted backup")
+        val writeSuccess =
+            try {
+                context.contentResolver.openOutputStream(staged.uri)?.use { output ->
+                    source.inputStream().use { it.copyTo(output) }
+                } != null
+            } catch (e: Exception) {
+                staged.delete()
+                throw e
+            }
+        if (!writeSuccess) {
+            staged.delete()
+            error("Could not write re-encrypted backup")
+        }
 
         check(staged.length() == source.length()) {
             staged.delete()
@@ -63,18 +77,35 @@ class SafBackupStore(
         }
         val existing = dir.findFile(name)
         if (existing != null) {
-            check(existing.delete()) {
+            val backupName = "$name.bak"
+            dir.findFile(backupName)?.delete()
+            check(existing.renameTo(backupName)) {
                 staged.delete()
-                "Could not replace original backup"
+                "Could not backup existing file before replacement"
             }
-        }
-        check(staged.renameTo(name)) {
-            "Could not finalize re-encrypted backup"
+            if (!staged.renameTo(name)) {
+                existing.renameTo(name)
+                staged.delete()
+                error("Could not finalize re-encrypted backup")
+            }
+            existing.delete()
+        } else {
+            check(staged.renameTo(name)) {
+                staged.delete()
+                "Could not finalize re-encrypted backup"
+            }
         }
     }
 
     override suspend fun delete(location: BackupLocation) {
         val uri = location.value.toUri()
+        if (uri.scheme == "file") {
+            val file = File(uri.path ?: error("Invalid file location"))
+            if (file.exists() && !file.delete()) {
+                throw IllegalStateException("Failed to delete SAF document")
+            }
+            return
+        }
         val documentFile = DocumentFile.fromSingleUri(context, uri)
         if (documentFile?.delete() == false) {
             val root = getTreeDocumentFile()
