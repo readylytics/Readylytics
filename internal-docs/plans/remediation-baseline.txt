@@ -6,6 +6,23 @@ Commit   : 63254e2f1f880fa6d26327c59938d57b1759e89a  ("workout detail
            customization (#233)")
 Branch   : main
 Tree     : clean except untracked ARCHITECTURE_REMEDIATION_PLAN.md
+
+STILL VALID AT : f4608f7f ("add plan and phase 0")
+  That commit adds only ARCHITECTURE_REMEDIATION_PLAN.md and this file — no
+  Kotlin, no Gradle, no resources. Every figure below derives from source and
+  build configuration, so none of them moved. Do not re-run Phase 0 for a
+  docs-only commit.
+
+WHEN TO RE-CAPTURE
+  Only after a step lands source changes, and then only the commands that step
+  could have affected — not all six. Guide:
+    source or test change      -> testDebugUnitTest (+ the affected module's
+                                  jacocoCoverageVerification --rerun-tasks)
+    build.gradle.kts change    -> the task that config governs
+    new/changed Composable     -> lint lintRelease
+    step 09/10/11 (modules)    -> full sweep; module topology changed
+  Append the new figures under a dated heading rather than overwriting these —
+  the point of a baseline is the trend.
 Toolchain: OpenJDK 17.0.20 (Homebrew), AGP 9.3.1, Kotlin 2.3.21, Gradle
            configuration-cache ON, parallel ON, build-cache OFF
 Host     : darwin 25.6.0
@@ -190,7 +207,12 @@ STEP 11 TARGET, QUANTIFIED
   @Module files in :app / in all other modules            9 / 0
   :app test classes whose subject is elsewhere         48 / 143
   Bare `catch (… : Exception)` without cancellation
-      handling, total / in a suspend body                 19 / 5
+      handling, total / genuine cancellation risks        19 / 3
+      (verified against the AST: enclosing function must suspend AND the try
+       block must contain a suspension point. The three are
+       ComputeSleepMetricsUseCase:605 (step 03) and UserUseCase:38,:51
+       (step 04). A file-level grep reports 19 and is wrong; see the plan's
+       step 04 table.)
   writeJsonStreaming copy-pasted paging blocks              14
   WorkoutsViewModel chained .combine operators               6
 

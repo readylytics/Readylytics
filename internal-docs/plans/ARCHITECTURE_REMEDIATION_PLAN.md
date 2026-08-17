@@ -1,7 +1,7 @@
 # Architecture Remediation Plan
 
 **Baseline:** branch `main` @ `63254e2f` — 2026-08-17
-**Scope:** 19 self-contained steps across 5 phases (4 P0, 9 P1, 6 P2)
+**Scope:** 20 self-contained steps across 5 phases (5 P0, 9 P1, 6 P2)
 **Status:** Phase 0 complete — see [`remediation-baseline.txt`](remediation-baseline.txt).
 All six baseline commands green; 2,939 unit tests pass; aggregate coverage
 63.58% instruction; 12 lint warnings, 0 errors. Phase 1 cleared to start.
@@ -25,6 +25,14 @@ that produced it. They change scope, so they are stated before the steps.
 | `ComputeWorkoutTrimpUseCase:113` swallows cancellation | `execute` is **not** a suspend function — no suspension points, so `CancellationException` cannot originate inside it. Only the discarded `e` is a real defect. | Step 3 fixes it for diagnostics only. `ComputeSleepMetricsUseCase` (`suspend operator fun invoke`, L46) is the sole cancellation risk on the walk-forward path. |
 | `ci.log`/`logcat.log` need a gitignore entry | `.gitignore` line 11 is `*.log`. Already covered. | Item dropped entirely. |
 | Modules whose tests emigrated are "gated at nothing" | Root `jacocoTestReport` aggregates exec data from all 15 modules, so misplaced tests still count toward the 30% instruction floor. Per-package floors exist for `domain.scoring` (80%), `domain.sync` (70%), `workers` (60%). | Step 12 adds a floor for `data.repository` rather than restoring gates that were never absent. |
+
+### Corrections made after review of the draft plan (2026-08-17)
+
+| Claim in the draft | Actual | Effect |
+| --- | --- | --- |
+| Step 04 covers 4 files / 5 cancellation sites | **3 of the 5 are non-suspend** and cannot receive cancellation. `SecureFileLogSink:90` sits in `override fun log()`; `UserPreferencesSerializer:134` sits in the non-suspend top-level `UserPreferences.toProto()`, not in `readFrom`/`writeTo` (which catch only `InvalidProtocolBufferException`); `LocalBackupViewModel:248` is in a `launch{}` lambda but its `try` wraps only the non-suspend `EncryptionManager.decrypt()`. | Step 04 rescoped to **`UserUseCase.kt:38` and `:51` only**. The three non-risk catches move to step 19 as over-broad-catch narrowing. |
+| Step 07's Konsist rule may be file-granular; false positives are a cheap trade | A redundant rethrow in a *non-suspend* function is exactly the unreachable branch step 03 forbids. The file-granular rule would have made the plan self-contradicting — and it was the reason the step 04 list was wrong. | Rule rewritten to scope on `functions().filter { it.hasSuspendModifier }`. No allowlist needed. |
+| Step 05's two failure-path tests are writable as specified | `LocalBackupManager` calls `File.renameTo`, `ContentResolver` and `DocumentFile` directly with no injection point. Neither failure is deterministically reproducible under Robolectric. The scheme branch is duplicated at **six** sites and `pruneOldBackups:733` already carries a `// Support for file:// URIs (e.g. in tests)` branch in production code. | Step 05 split into **05a** (extract `BackupStore`, pure refactor) and **05b** (the atomicity fix plus the two tests, now trivially writable against a fake store). |
 
 ---
 
@@ -66,10 +74,11 @@ step 13 are the proof that nothing moved numerically.
 | 01 | ~~Record baseline~~ ✅ **done 2026-08-17** | — | 20 min | — |
 | 02 | Lock the read path | P0 | 1–2 h | 01 |
 | 03 | Scoring use-case exception handling | P0 | 1 h | 01 |
-| 04 | Cancellation sweep, 4 files | P0 | 2–3 h | 01 |
-| 05 | Atomic backup re-encryption | P0 | 1 d | 01 |
-| 06 | No plaintext during key rotation | P0 | 4–6 h | 05 |
-| 07 | Konsist cancellation rule | P1 | 3 h | 03, 04 |
+| 04 | Cancellation fix, `UserUseCase` (2 sites) | P0 | 1 h | 01 |
+| 05a | Extract `BackupStore` seam (pure refactor) | P0 | 1–1.5 d | 01 |
+| 05b | Atomic backup re-encryption + 2 tests | P0 | 1 d | 05a |
+| 06 | No plaintext during key rotation | P0 | 4–6 h | 05b |
+| 07 | Konsist cancellation rule (function-granular) | P1 | 3 h | 03, 04 |
 | 08 | detekt + baseline | P1 | 4 h | — |
 | 09 | Extract `core:database-schema` | P1 | 3–4 d | 08 |
 | 10 | Distribute Hilt modules | P1 | 2–3 d | 09 |
@@ -83,9 +92,14 @@ step 13 are the proof that nothing moved numerically.
 | 18 | `WorkoutsStateFactory` | P2 | 2–3 d | 08 |
 | 19 | Housekeeping batch | P2 | 1 d | — |
 
-**Critical path:** `01 → 05 → 06` for the P0s (≈2 days), then
-`08 → 09 → 10 → 11 → 12` for the module boundary (≈2 weeks), with
-`13 → 14 → 15` runnable in parallel by a second person once step 02 has landed.
+**Critical path:** `01 → 05a → 05b → 06` for the P0s (≈3 days — the backup chain
+is now the long pole; steps 02, 03 and 04 are a few hours combined and run
+alongside it), then `08 → 09 → 10 → 11 → 12` for the module boundary (≈2 weeks),
+with `13 → 14 → 15` runnable in parallel by a second person once step 02 lands.
+
+**20 steps**, counting 05a and 05b separately. Numbering is deliberately *not*
+renumbered past 05 — every "Blocked by" reference elsewhere in this document
+stays valid.
 
 ---
 
@@ -168,7 +182,8 @@ Phase 1 — otherwise every subsequent verification is uninterpretable.
 
 # Phase 1 — Correctness defects
 
-Steps 02–06. Steps 02, 03, 04 and 05 are mutually independent; 06 follows 05.
+Steps 02–06. Steps 02, 03, 04 and 05a are mutually independent and can run in
+parallel; the backup chain `05a → 05b → 06` is the long pole at ~3 days.
 
 ## Step 02 — Serialize the database write on the read-only compute path
 
@@ -334,27 +349,46 @@ on `app.readylytics.health.domain.scoring`.
 
 ---
 
-## Step 04 — Sweep the four remaining suspend functions that absorb cancellation
+## Step 04 — Stop `UserUseCase` absorbing cancellation
 
-**Severity:** P0 · **Effort:** 2–3 h · **Blocked by:** 01
+**Severity:** P0 · **Effort:** 1 h · **Blocked by:** 01
 
-**Scope.** Of the 19 files with a bare `catch (… : Exception)` and no
-`CancellationException` handling, only five have a `suspend` body where
-cancellation can actually arrive. Step 03 covered the first. The rest are this
-step. The other fourteen are non-suspend and out of scope.
+**Scope — verified against the AST, not by grep.** The repo has 19 files with a
+bare `catch (… : Exception)` and no `CancellationException` handling. Only **two
+sites, in one file**, are genuine cancellation risks. Step 03 covered the third
+(`ComputeSleepMetricsUseCase`). Everything else is out of scope.
 
-**Files and lines.**
+A site is a risk only when **both** hold: the *enclosing* function or coroutine
+lambda suspends, **and** the `try` block actually contains a suspension point.
+File-level grep for `suspend` establishes neither. An earlier draft of this step
+listed four files on that basis; three were wrong, including one whose catch sits
+in a non-suspend top-level extension function 34 lines below the last suspend
+function in the file.
+
+| Site | Enclosing function | suspend? | Suspension point in `try`? | Risk |
+| --- | --- | --- | --- | --- |
+| `SecureFileLogSink.kt:90` | `override fun log()` L70 | no | — | no |
+| `UserPreferencesSerializer.kt:134` | `fun UserPreferences.toProto()` L100 | no | — | no |
+| `UserUseCase.kt:38` | `override suspend fun updateBirthday()` L22 | **yes** | **yes** — 3 suspend calls | **YES** |
+| `UserUseCase.kt:51` | `override suspend fun calculateAndSetMaxHr()` L42 | **yes** | **yes** — `.first()` | **YES** |
+| `LocalBackupViewModel.kt:248` | `viewModelScope.launch {}` L240 | lambda | no — `decrypt()` is `override fun` | no |
+
+**Files and lines — the actual scope.**
 
 ```
-app/src/main/kotlin/app/readylytics/health/util/SecureFileLogSink.kt
-    catch L90, suspend fun readLogsDecrypted L144
-app/src/main/kotlin/app/readylytics/health/data/preferences/UserPreferencesSerializer.kt
-    catch L134, suspend readFrom L75 / writeTo L83
 app/src/main/kotlin/app/readylytics/health/domain/user/UserUseCase.kt
-    catch L38 and L51, suspend fun L22 / L42
-feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/LocalBackupViewModel.kt
-    catch L248
+    catch L38, inside  override suspend fun updateBirthday(date: LocalDate)  L22
+    catch L51, inside  override suspend fun calculateAndSetMaxHr()           L42
 ```
+
+**Why `updateBirthday` is the one that matters.** Its `try` wraps
+`settingsRepo.updateBirthday(date)`,
+`scoringRepository.computeAndPersistDailySummary()` — which takes
+`calculationMutex` — and `settingsRepo.userPreferences.first()`. If the caller's
+scope is cancelled part-way, the current code turns that into
+`Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")`. The user
+is shown a save failure for merely navigating away, and the preference writes
+that did land are never signalled as partial.
 
 **Pattern to apply at each site:**
 
@@ -370,33 +404,115 @@ feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/LocalBa
 and `:254-256` already do exactly this. Copy that shape rather than inventing a
 variant.
 
-**Judgement call at `UserPreferencesSerializer:134`.** This is a DataStore
-`Serializer`. Its `readFrom` is expected to throw `CorruptionException` for
-genuinely corrupt data, and DataStore relies on that. Rethrowing
-`CancellationException` is still correct and does not disturb that contract —
-but confirm the existing catch is not the mechanism that produces the corruption
-fallback before you touch it. If it is, add the cancellation clause and leave
-everything else alone.
+**Do not touch the three non-risk sites.** Adding a `CancellationException`
+rethrow to a non-suspend function creates a branch that cannot be reached and
+misleads the next reader — the same reasoning step 03 applies to
+`ComputeWorkoutTrimpUseCase`. The plan must not contradict itself. The
+file-level grep will keep listing those files; that is a defect in the grep, and
+step 07 fixes it by making the rule function-granular.
 
-**Judgement call at `LocalBackupViewModel:248`.** This is `catch (_: Exception)`
-inside a `viewModelScope` coroutine. Swallowing cancellation on ViewModel clear
-is comparatively harmless, but it also means a backup coroutine keeps running
-its `finally` logic after the screen is gone. Apply the same pattern for
-consistency.
+**The three non-risk catches are still over-broad**, but that is a separate,
+lower-severity concern. Narrowing them is a step 19 housekeeping item:
 
-**Done when.** `./gradlew testDebugUnitTest` is green and this command returns
-only the fourteen non-suspend files:
+| Site | Should catch | Currently catches |
+| --- | --- | --- |
+| `UserPreferencesSerializer.kt:134` — `LocalDate.parse` | `DateTimeParseException` | `Exception` |
+| `LocalBackupViewModel.kt:248` — `decrypt` | `GeneralSecurityException` | `Exception` |
+| `SecureFileLogSink.kt:90` — file append | `IOException` | `Exception` |
+
+**Done when.** `./gradlew :app:testDebugUnitTest` is green, and this returns
+exactly the two `UserUseCase` lines and nothing else:
 
 ```bash
-grep -rL CancellationException \
-  $(grep -rl "catch (.*: Exception)" --include=*.kt app core feature)
+awk '/override suspend fun/{s=1} /^    fun |^fun /{s=0} s && /catch \(.*: Exception\)/{print FILENAME": "NR": "$0}' \
+  app/src/main/kotlin/app/readylytics/health/domain/user/UserUseCase.kt
 ```
+
+The whole-repo check belongs to step 07's Konsist rule, which understands
+function boundaries. Do not gate this step on a repo-wide grep.
 
 ---
 
-## Step 05 — Make backup re-encryption atomic and make its failures visible
+## Step 05a — Extract a `BackupStore` seam
 
-**Severity:** P0 · **Effort:** 1 d · **Blocked by:** 01
+**Severity:** P0 (enabler) · **Effort:** 1–1.5 d · **Blocked by:** 01
+
+**Why this exists.** Step 05b needs two failure-path tests that the current class
+cannot support: `LocalBackupManager` calls `File.renameTo`, `ContentResolver`, and
+`DocumentFile` directly, with no injection point. Forcing a `renameTo` failure or a
+mid-copy SAF write failure deterministically is not practical against the real
+APIs under Robolectric.
+
+**But this is not a test-only seam.** The scheme branch is already duplicated at
+six sites:
+
+```
+createBackup        L101/108  vs  L116-119
+deleteBackup        L148      vs  L163
+reencryptBackups    L195      vs  L200      (read)
+reencryptBackups    L229      vs  L234      (write)
+listBackups         L683      vs  L699
+pruneOldBackups     L729      vs  L733
+```
+
+and `pruneOldBackups:733` already carries a branch that exists purely for tests:
+
+```kotlin
+} else {
+    // Support for file:// URIs (e.g. in tests)
+    customUri.path?.let { DocumentFile.fromFile(File(it)) }
+}
+```
+
+The missing seam has already been paid for, in the worst available currency. This
+step is the decomposition the class has been missing; testability falls out of it.
+
+**Files.**
+
+```
+app/src/main/kotlin/app/readylytics/health/data/backup/LocalBackupManager.kt
+app/src/main/kotlin/app/readylytics/health/data/backup/BackupStore.kt        — new
+app/src/main/kotlin/app/readylytics/health/data/backup/FileBackupStore.kt    — new
+app/src/main/kotlin/app/readylytics/health/data/backup/SafBackupStore.kt     — new
+app/src/main/kotlin/app/readylytics/health/di/…                              — binding
+```
+
+**Interface.**
+
+```kotlin
+interface BackupStore {
+    suspend fun list(): List<BackupFileInfo>
+    suspend fun read(location: BackupLocation): InputStream
+    /** Publishes [source] as [name], replacing any existing entry atomically. */
+    suspend fun publish(source: File, name: String)
+    suspend fun delete(location: BackupLocation)
+}
+```
+
+Two implementations — `FileBackupStore` (internal `filesDir/backups`) and
+`SafBackupStore` (tree URI) — selected **once** from `backupDirectoryUri` instead
+of re-branched at six call sites.
+
+**Constraints for this step:**
+
+- **Pure refactor. No behaviour change.** `publish` initially keeps today's
+  semantics, bugs included — the atomicity fix is step 05b. Doing both at once
+  means the existing tests cannot serve as the safety net.
+- The existing `LocalBackupManagerTest` must stay green **without modification**.
+  If it needs changing, behaviour changed and something went wrong.
+- Delete the `// Support for file:// URIs (e.g. in tests)` branch at L733. If it
+  survives this step, the seam was not actually taken.
+
+**Done when.** `./gradlew :app:testDebugUnitTest --tests "*LocalBackup*" --tests
+"*LocalRestore*"` is green with the test file unchanged; `grep -c 'scheme ==' 
+LocalBackupManager.kt` returns `0`; and `codegraph index` has been run for the
+three new files.
+
+---
+
+## Step 05b — Make backup re-encryption atomic and make its failures visible
+
+**Severity:** P0 · **Effort:** 1 d · **Blocked by:** 05a
 
 **Defects — four in one method:**
 
@@ -414,9 +530,14 @@ grep -rL CancellationException \
 **Files.**
 
 ```
-app/src/main/kotlin/app/readylytics/health/data/backup/LocalBackupManager.kt
-    reencryptBackups L177-267, createZip L280-294
+app/src/main/kotlin/app/readylytics/health/data/backup/FileBackupStore.kt  — publish()
+app/src/main/kotlin/app/readylytics/health/data/backup/SafBackupStore.kt   — publish()
+app/src/main/kotlin/app/readylytics/health/data/backup/LocalBackupManager.kt — ZipFile leaks
 ```
+
+After 05a the fix lives inside each store's `publish`, so the two backends no
+longer share one tangled branch. Line references below are to the pre-05a code,
+for tracing the defect only.
 
 **Before** — L226-234:
 
@@ -473,18 +594,36 @@ if (backupUri.scheme == "content") {
   Hoist it once above the `backups.forEach` loop rather than reading preferences
   per backup.
 
-**Tests to add.** In
-`app/src/test/kotlin/app/readylytics/health/data/backup/LocalBackupManagerTest.kt`:
+**Tests to add — now writable, because of 05a.** Both use a `FakeBackupStore`
+implementing the four-method interface; neither touches `File.renameTo`,
+`ContentResolver`, or `DocumentFile`:
 
-- a fake filesystem where `renameTo` returns `false` — assert `reencryptBackups`
-  returns `Result.failure`, not success;
-- a run where the staged write throws mid-copy — assert the original file still
-  opens with the *old* password.
+- `publish` returns/throws a failure — assert `reencryptBackups` returns
+  `Result.failure`, **and** that a subsequent `read` still yields an archive that
+  opens with the *old* password. Asserting the failure alone is not enough; the
+  defect is that the original is destroyed, not merely that the call fails.
+- `publish` throws part-way through consuming `source` — same two assertions.
+  This is the SAF truncate-then-write scenario in backend-independent form.
 
-> **Manual verification required.** This step touches the only copy of the
-> user's health data. Before merging, run on a device: create a backup, set a
+A third test worth adding while the fake is in front of you: assert `publish` is
+never called with a `source` whose length is 0, which is the shape a truncated
+staged write would take.
+
+> **Do not test this by forcing a real `File.renameTo` failure.** It is
+> technically possible — make the target an existing non-empty directory named
+> `backup_*.zip` and `rename(2)` fails with `EISDIR`, and `listBackups`'s
+> file-scheme filter checks only the name, not `isFile`, so such a directory is
+> listed. That test would exercise POSIX semantics rather than this code, and it
+> would silently stop testing anything the day someone adds `isFile` to that
+> filter — which they should, since `pruneOldBackups` already does and the
+> inconsistency is a latent bug of its own. Note it; fix it in 05a.
+
+> **Manual verification still required, even with the fake.** The fake proves
+> the error handling; it cannot prove the assumptions about SAF. Real
+> `DocumentsProvider` semantics — in particular whether `DocumentFile.renameTo`
+> on a staged document behaves as assumed on Samsung's One UI — is exactly what
+> a fake abstracts away. Before merging, run on a device: create a backup, set a
 > password, rotate it, then restore from the rotated backup on a fresh install.
-> Automated tests cannot cover the SAF document-provider semantics.
 >
 > Device confirmed available at baseline: Samsung **SM-A576B**, Android 16
 > (API 36), serial `R5GL23J6G5E`. Use the debug build
@@ -500,7 +639,7 @@ is green, and the on-device rotate-then-restore round trip succeeds.
 
 ## Step 06 — Stop writing the health export to disk in plaintext during key rotation
 
-**Severity:** P0 · **Effort:** 4–6 h · **Blocked by:** 05
+**Severity:** P0 · **Effort:** 4–6 h · **Blocked by:** 05b
 
 **Defect.** `LocalBackupManager.kt:206` — `zipFile.extractAll(tempDir.absolutePath)`
 decrypts the entire backup (every sleep session, heart-rate sample, and workout)
@@ -561,7 +700,7 @@ that true — check the wording and update it in the same PR.
 **Done when.** A rotation run produces no `.json` file in
 `cacheDir/reencrypt_temp` at any point (verify with a debug-build file watcher or
 a test asserting the directory stays empty of `*.json`), and the
-rotate-then-restore round trip from step 05 still succeeds.
+rotate-then-restore round trip from step 05b still succeeds.
 
 ---
 
@@ -589,7 +728,7 @@ at L194. It scans `Konsist.scopeFromProject()`, filters to `/src/main/`,
 regex-matches `file.text`, and asserts the violation list is empty with a message
 naming each offender. Copy that structure exactly.
 
-**Rule to add:**
+**Rule to add — scope on functions, not files.**
 
 ```kotlin
 @Test
@@ -597,15 +736,12 @@ fun `suspend functions do not swallow CancellationException`() {
     val violations =
         Konsist
             .scopeFromProject()
-            .files
-            .filter { it.path.contains("/src/main/") }
-            .filter { it.text.contains("suspend ") }
+            .functions(includeNested = true, includeLocal = true)
+            .filter { it.containingFile.path.contains("/src/main/") }
+            .filter { it.hasSuspendModifier }
             .filter { it.text.contains(Regex("""catch \(\w+: Exception\)""")) }
             .filter { !it.text.contains("CancellationException") }
-            .map {
-                "${it.name}: suspend body catches Exception without " +
-                    "rethrowing CancellationException"
-            }
+            .map { "${it.containingFile.name}:${it.name}() swallows CancellationException" }
 
     org.junit.Assert.assertTrue(
         "Suspend functions must rethrow CancellationException before " +
@@ -615,17 +751,33 @@ fun `suspend functions do not swallow CancellationException`() {
 }
 ```
 
-> **This rule is file-granular, not function-granular.** Konsist reads text, so a
-> file containing both a suspend function and an unrelated non-suspend
-> `catch (e: Exception)` will trip it. That is the correct trade: the false
-> positive costs one redundant rethrow, the false negative costs a hung resync.
-> Run the rule before writing it into CI and fix whatever it finds — steps 03 and
-> 04 should have cleared everything except possibly `SecureFileStore.kt` and
-> `SqlCipherKeyManager.kt`.
+> **Why function-granular and not file-granular.** An earlier draft of this rule
+> scanned `files` and accepted the false positives, on the reasoning that "the
+> false positive costs one redundant rethrow, the false negative costs a hung
+> resync." That reasoning was wrong. A redundant rethrow in a **non-suspend**
+> function is not a harmless cost — it is precisely the unreachable, misleading
+> branch that step 03 forbids, so the file-granular rule would have forced the
+> plan to contradict itself. Three of the five sites the file-level grep
+> surfaced for step 04 turned out to be non-suspend. `hasSuspendModifier` is an
+> AST property; use it.
+
+**Known residual imprecision, and why it is acceptable.** This rule still flags a
+suspend function whose `try` happens to contain no suspension point (so
+cancellation cannot actually arrive there). That is a much smaller set, and a
+rethrow in a genuinely-suspending function is defensible rather than misleading —
+any future edit that adds a suspending call inside that `try` makes it load
+bearing. Accept those; do not allowlist them.
+
+**Run it before wiring it in.** After steps 03 and 04 the rule should be green.
+If it names anything else, that is a real finding — investigate rather than
+allowlist. Candidates worth checking by hand because they contain both suspend
+functions and broad catches: `SecureFileStore.kt`, `SqlCipherKeyManager.kt`.
 
 **Done when.** `./gradlew :app:testDebugUnitTest --tests "*CleanArchTest*"` is
-green, and reverting step 03's rethrow makes it fail with
-`ComputeSleepMetricsUseCase.kt` named in the message.
+green; reverting step 03's rethrow makes it fail naming
+`ComputeSleepMetricsUseCase.kt:invoke()`; and adding a bare
+`catch (e: Exception)` to the non-suspend `UserPreferences.toProto()` does **not**
+make it fail.
 
 ---
 
@@ -1335,6 +1487,20 @@ Each of these is a separate commit; none depends on the others.
   `hilt-android`, `kotlinx-coroutines-android`, and `buildConfig = true` (used at
   `ComputeSleepMetricsUseCase.kt:22`). Swap to `javax.inject` only,
   `kotlinx-coroutines-core`, and a plain constant for the BuildConfig flag.
+
+- **Narrow the three over-broad catches step 04 deliberately left alone.** Each
+  sits in a non-suspend function, so none is a cancellation risk — but each
+  swallows more than it means to. `UserPreferencesSerializer.kt:134` wraps
+  `LocalDate.parse` and should catch `DateTimeParseException`;
+  `LocalBackupViewModel.kt:248` wraps `EncryptionManager.decrypt` and should
+  catch `GeneralSecurityException`; `SecureFileLogSink.kt:90` wraps a file append
+  and should catch `IOException`. Do **not** add `CancellationException`
+  rethrows to any of them — see step 04.
+
+- **Fix `listBackups`' file-scheme filter.** It selects on name only
+  (`startsWith("backup_") && endsWith(".zip")`), while `pruneOldBackups` also
+  checks `isFile`. A directory named `backup_x.zip` is therefore listed as a
+  backup. Add `&& f.isFile` for consistency.
 
 - **Review the two unindexed entities.** `InsightDismissalEntity` and
   `StepRecordEntity` declare no `indices`, the only two of seventeen. Check their
