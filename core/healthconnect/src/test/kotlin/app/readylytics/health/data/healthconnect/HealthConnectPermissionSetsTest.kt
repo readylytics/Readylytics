@@ -43,4 +43,18 @@ class HealthConnectPermissionSetsTest {
     fun backgroundReadPermission_isRequestableByHealthConnectContract() {
         assertTrue(repo.backgroundReadPermission.startsWith(permissionPrefix))
     }
+
+    /**
+     * Health Connect files exercise routes under "Additional access", not the data-type list, and
+     * silently drops them from a bulk permission request -- the user is never asked. Putting the
+     * permission back into a requested set makes onboarding advertise a grant it cannot deliver.
+     * Routes are obtained per workout via `ExerciseRouteRequestContract`.
+     */
+    @Test
+    fun exerciseRoutes_isNotRequestedThroughThePermissionSheet() {
+        assertTrue(
+            repo.allPermissions.none { it.endsWith("READ_EXERCISE_ROUTES") },
+            "READ_EXERCISE_ROUTES cannot be granted through the bulk permission sheet",
+        )
+    }
 }

@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.health
 
+import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
@@ -9,29 +10,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.contracts.ExerciseRouteRequestContract
 import app.readylytics.health.data.healthconnect.toDomainRoutePoints
 import app.readylytics.health.domain.model.DomainRouteLocation
 
-/** Bulk "all exercise routes" permission -- same Health Connect sheet as READ_HEALTH_DATA_HISTORY. */
-private const val READ_EXERCISE_ROUTES = "android.permission.health.READ_EXERCISE_ROUTES"
+/**
+ * Opens Health Connect on this app's page, where "Additional access" holds the tri-state
+ * "Access exercise routes" setting (Always allow / Ask every time / Don't allow). This is the only
+ * surface that can grant routes permanently -- the bulk permission sheet omits them entirely.
+ */
+private const val ACTION_MANAGE_HEALTH_PERMISSIONS = "android.health.connect.action.MANAGE_HEALTH_PERMISSIONS"
+private const val EXTRA_PACKAGE_NAME = "android.intent.extra.PACKAGE_NAME"
 
 /**
- * Builds the "grant route access" action for a single workout, escalating from cheap to specific:
+ * Builds the "grant route access" action for a single workout.
  *
- * 1. Request the bulk [READ_EXERCISE_ROUTES] permission. One grant covers every workout forever, and
- *    it is the same sheet the user already saw during onboarding.
- * 2. If that comes back denied -- the user hard-denied it earlier, or this device's Health Connect
- *    predates the permission, in which case the OS resolves the request without showing anything --
- *    fall back to the per-session consent dialog (`ExerciseRouteRequestContract`), which works on
- *    every supported version but only covers this one workout.
- * 3. If neither launcher can start, deep-link into Health Connect settings.
+ * Requesting `READ_EXERCISE_ROUTES` through the normal permission sheet does nothing: Health Connect
+ * files routes under "Additional access" rather than the data-type list, and a request for it is
+ * silently dropped without ever asking the user. The supported flow is the per-session consent dialog
+ * ([ExerciseRouteRequestContract]), which matches the platform's own "Ask every time" default.
  *
- * The two paths hand back different things. The bulk grant makes the route readable, so the caller
- * gets an empty list and lets its normal session re-read pick the polyline up. The per-session
- * dialog is a one-time grant that returns the polyline in its result -- a later read still reports
- * `ConsentRequired` -- so those points are passed back and must be persisted directly.
+ * That dialog is a one-time grant returning the polyline in its result -- re-reading the session
+ * afterwards still reports `ConsentRequired` -- so the points are converted here and handed to the
+ * caller to persist. If the dialog cannot start at all, fall back to deep-linking into Health Connect
+ * so the user can switch routes to "Always allow", which makes the session re-read carry the route
+ * and stops the prompt from reappearing per workout.
  *
  * Lives in the app module because feature modules may not import Health Connect types.
  */
@@ -51,55 +54,23 @@ fun rememberExerciseRouteRequest(workoutId: String): ((List<DomainRouteLocation>
             }
         }
 
-    val bulkPermissionLauncher =
-        rememberLauncherForActivityResult(
-            PermissionController.createRequestPermissionResultContract(),
-        ) { granted ->
-            if (granted.contains(READ_EXERCISE_ROUTES)) {
-                val onGranted = pendingOnGranted
-                pendingOnGranted = null
-                onGranted?.invoke(emptyList())
-            } else {
-                launchOrFallBack(
-                    launch = { perSessionConsentLauncher.launch(workoutId) },
-                    onFailure = {
-                        pendingOnGranted = null
-                        openHealthConnectSettings(context::startActivity)
-                    },
-                )
-            }
-        }
-
     return { onGranted ->
         pendingOnGranted = onGranted
-        launchOrFallBack(
-            // Only `android.permission.health.*` strings may go in: the request contract rejects any
-            // other prefix with IllegalArgumentException("Unsupported health connect permission").
-            launch = { bulkPermissionLauncher.launch(setOf(READ_EXERCISE_ROUTES)) },
-            onFailure = {
-                launchOrFallBack(
-                    launch = { perSessionConsentLauncher.launch(workoutId) },
-                    onFailure = {
-                        pendingOnGranted = null
-                        openHealthConnectSettings(context::startActivity)
-                    },
-                )
-            },
-        )
+        try {
+            perSessionConsentLauncher.launch(workoutId)
+        } catch (_: Exception) {
+            pendingOnGranted = null
+            openExerciseRoutesSettings(context)
+        }
     }
 }
 
-private inline fun launchOrFallBack(
-    launch: () -> Unit,
-    onFailure: () -> Unit,
-) {
-    try {
-        launch()
-    } catch (_: Exception) {
-        onFailure()
-    }
-}
-
-private fun openHealthConnectSettings(startActivity: (Intent) -> Unit) {
-    runCatching { startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)) }
+private fun openExerciseRoutesSettings(context: Context) {
+    val appPage =
+        Intent(ACTION_MANAGE_HEALTH_PERMISSIONS)
+            .putExtra(EXTRA_PACKAGE_NAME, context.packageName)
+    runCatching { context.startActivity(appPage) }
+        .recoverCatching {
+            context.startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS))
+        }
 }

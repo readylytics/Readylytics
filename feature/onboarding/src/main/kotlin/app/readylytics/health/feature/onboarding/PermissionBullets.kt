@@ -53,7 +53,9 @@ internal fun healthPermissionLabelRes(permission: String): Int? =
         HealthPermission.getReadPermission(ExerciseSessionRecord::class) -> R.string.onboarding_hc_permission_exercise
         HealthPermission.getReadPermission(StepsRecord::class) -> R.string.onboarding_hc_permission_steps
         "android.permission.health.READ_HEALTH_DATA_HISTORY" -> R.string.onboarding_hc_permission_history
-        "android.permission.health.READ_EXERCISE_ROUTES" -> R.string.onboarding_hc_permission_exercise_routes
+        // No READ_EXERCISE_ROUTES bullet: Health Connect keeps routes out of the bulk permission
+        // sheet, so onboarding can never actually obtain it. Advertising it here would promise a
+        // grant the sheet does not offer. Routes are requested per workout from the detail screen.
         HealthPermission.getReadPermission(DistanceRecord::class) -> R.string.onboarding_hc_permission_distance
         HealthPermission.getReadPermission(
             ElevationGainedRecord::class,
