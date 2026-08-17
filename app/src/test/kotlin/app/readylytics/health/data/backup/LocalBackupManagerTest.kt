@@ -837,6 +837,72 @@ class LocalBackupManagerTest {
             assertTrue(fakeStore.lastPublishedSourceLength > 0, "Source length must be > 0")
         }
 
+    @Test
+    fun `reencryptBackups does not write plaintext JSON files to tempDir during rotation`() =
+        runTest {
+            val sampleZipFile = File(context.cacheDir, "sample_stream_test.zip")
+            val zip = ZipFile(sampleZipFile, "old_pass".toCharArray())
+            val tempPlain =
+                File(context.cacheDir, "plain_stream.json").apply { writeText("""{"sensitiveHealthData":123}""") }
+            zip.addFile(
+                tempPlain,
+                ZipParameters().apply {
+                    isEncryptFiles = true
+                    encryptionMethod = EncryptionMethod.AES
+                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                },
+            )
+            zip.close()
+            tempPlain.delete()
+
+            val fakeStore =
+                FakeBackupStore(
+                    files = mutableMapOf("backup_2026-05-15_100000.zip" to sampleZipFile.readBytes()),
+                )
+            sampleZipFile.delete()
+
+            val tempDir = File(context.cacheDir, "reencrypt_temp")
+
+            val testManager =
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                    backupStoreFactory =
+                        object : BackupStoreFactory {
+                            override fun create(customUri: Uri?): BackupStore = fakeStore
+
+                            override fun createDefault(): BackupStore = fakeStore
+                        },
+                )
+
+            val result = testManager.reencryptBackups("old_pass", "new_pass")
+            assertTrue(result.isSuccess)
+
+            val jsonFiles = tempDir.listFiles { f -> f.name.endsWith(".json") }
+            assertTrue(jsonFiles.isNullOrEmpty(), "No plaintext JSON files must exist in tempDir")
+
+            val newBytes = fakeStore.files["backup_2026-05-15_100000.zip"]
+            assertNotNull(newBytes)
+            val checkZipFile = File(context.cacheDir, "check_reencrypted.zip").apply { writeBytes(newBytes) }
+            val checkZip = ZipFile(checkZipFile, "new_pass".toCharArray())
+            assertTrue(checkZip.isValidZipFile)
+            val header = checkZip.fileHeaders.firstOrNull { it.fileName == "plain_stream.json" }
+            assertNotNull(header)
+            val content = checkZip.getInputStream(header).bufferedReader().readText()
+            assertEquals("""{"sensitiveHealthData":123}""", content)
+            checkZip.close()
+            checkZipFile.delete()
+        }
+
     private class FakeAuditTrailRepository : AuditTrailRepository {
         val events = mutableListOf<AuditEvent>()
         var appendFailure: (AuditEvent) -> Throwable? = { null }

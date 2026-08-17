@@ -144,44 +144,42 @@ class LocalBackupManager
                     try {
                         backups.forEach { info ->
                             val tempZip = File(tempDir, info.name)
-                            val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
                             val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
 
-                            // 1. Copy to temp zip
+                            // 1. Copy source to temp zip
                             store.read(info.location).use { input ->
                                 tempZip.outputStream().use { output -> input.copyTo(output) }
                             }
 
-                            // 2. Extract
-                            ZipFile(tempZip, oldPassword?.toCharArray()).use { zipFile ->
-                                zipFile.extractAll(tempDir.absolutePath)
-                            }
-
-                            // 3. Re-zip with new password to separate temp path (atomic write)
-                            val tempZipForNew = File(tempDir, "temp_new_plain.zip")
-                            ZipFile(tempZipForNew, newPassword?.toCharArray()).use { newZip ->
-                                val parameters =
-                                    ZipParameters().apply {
-                                        if (newPassword != null) {
-                                            isEncryptFiles = true
-                                            encryptionMethod = EncryptionMethod.AES
-                                            aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                            // 2. Stream entries directly to new zip with new password (no plaintext JSON on disk)
+                            ZipFile(tempZip, oldPassword?.toCharArray()).use { source ->
+                                net.lingala.zip4j.io.outputstream
+                                    .ZipOutputStream(
+                                        newZipPath.outputStream(),
+                                        newPassword?.toCharArray(),
+                                    ).use { sink ->
+                                        source.fileHeaders.forEach { header ->
+                                            sink.putNextEntry(
+                                                ZipParameters().apply {
+                                                    fileNameInZip = header.fileName
+                                                    if (newPassword != null) {
+                                                        isEncryptFiles = true
+                                                        encryptionMethod = EncryptionMethod.AES
+                                                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                                                    }
+                                                },
+                                            )
+                                            source.getInputStream(header).use { it.copyTo(sink) }
+                                            sink.closeEntry()
                                         }
                                     }
-                                newZip.addFile(tempJson, parameters)
                             }
 
-                            if (!tempZipForNew.renameTo(newZipPath)) {
-                                tempZipForNew.copyTo(newZipPath, overwrite = true)
-                                tempZipForNew.delete()
-                            }
-
-                            // 4. Overwrite original
+                            // 3. Publish re-encrypted archive atomically
                             store.publish(newZipPath, info.name)
 
-                            // 5. Cleanup per-backup temp files
+                            // 4. Cleanup temp zip files
                             tempZip.delete()
-                            tempJson.delete()
                             newZipPath.delete()
                         }
                     } finally {
