@@ -40,6 +40,10 @@ jobs:
       - name: Check formatting (ktlint)
         run: ./gradlew ktlintCheck
 
+      - name: Static analysis (detekt)
+        if: ${{ !cancelled() }}
+        run: ./gradlew detekt
+
       - name: Run lint
         if: ${{ !cancelled() }}
         run: ./gradlew lint lintRelease

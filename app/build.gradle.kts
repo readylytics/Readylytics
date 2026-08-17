@@ -54,6 +54,7 @@ abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.androidx.baselineprofile)
+    alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -288,6 +289,17 @@ play {
 
 ktlint {
     version.set("1.5.0")
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    parallel = true
+    config.setFrom(rootProject.layout.projectDirectory.file("config/detekt/detekt.yml"))
+    baseline =
+        rootProject.layout.projectDirectory
+            .file("config/detekt/baseline.xml")
+            .asFile
 }
 
 jacoco {
