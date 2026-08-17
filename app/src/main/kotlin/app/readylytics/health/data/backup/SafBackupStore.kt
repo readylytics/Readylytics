@@ -46,15 +46,31 @@ class SafBackupStore(
         source: File,
         name: String,
     ) {
+        check(source.length() > 0) { "Cannot publish empty backup" }
         val dir =
             getTreeDocumentFile()
-                ?: throw IllegalStateException("Could not access custom backup directory")
-        val file =
-            dir.createFile("application/zip", name)
-                ?: throw IllegalStateException("Could not create backup file in custom directory")
-        context.contentResolver.openOutputStream(file.uri)?.use { os ->
-            source.inputStream().use { it.copyTo(os) }
-        } ?: throw IllegalStateException("Could not write backup file")
+                ?: error("Could not access backup directory")
+        val staged =
+            dir.createFile("application/zip", "$name.rotating")
+                ?: error("Could not stage re-encrypted backup")
+        context.contentResolver.openOutputStream(staged.uri)?.use { output ->
+            source.inputStream().use { it.copyTo(output) }
+        } ?: error("Could not write re-encrypted backup")
+
+        check(staged.length() == source.length()) {
+            staged.delete()
+            "Staged backup is truncated (${staged.length()} vs ${source.length()}); original kept"
+        }
+        val existing = dir.findFile(name)
+        if (existing != null) {
+            check(existing.delete()) {
+                staged.delete()
+                "Could not replace original backup"
+            }
+        }
+        check(staged.renameTo(name)) {
+            "Could not finalize re-encrypted backup"
+        }
     }
 
     override suspend fun delete(location: BackupLocation) {

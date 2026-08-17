@@ -153,22 +153,23 @@ class LocalBackupManager
                             }
 
                             // 2. Extract
-                            val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
-                            zipFile.extractAll(tempDir.absolutePath)
+                            ZipFile(tempZip, oldPassword?.toCharArray()).use { zipFile ->
+                                zipFile.extractAll(tempDir.absolutePath)
+                            }
 
                             // 3. Re-zip with new password to separate temp path (atomic write)
                             val tempZipForNew = File(tempDir, "temp_new_plain.zip")
-                            val newZip = ZipFile(tempZipForNew, newPassword?.toCharArray())
-                            val parameters =
-                                ZipParameters().apply {
-                                    if (newPassword != null) {
-                                        isEncryptFiles = true
-                                        encryptionMethod = EncryptionMethod.AES
-                                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                            ZipFile(tempZipForNew, newPassword?.toCharArray()).use { newZip ->
+                                val parameters =
+                                    ZipParameters().apply {
+                                        if (newPassword != null) {
+                                            isEncryptFiles = true
+                                            encryptionMethod = EncryptionMethod.AES
+                                            aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                                        }
                                     }
-                                }
-                            newZip.addFile(tempJson, parameters)
-                            newZip.close()
+                                newZip.addFile(tempJson, parameters)
+                            }
 
                             if (!tempZipForNew.renameTo(newZipPath)) {
                                 tempZipForNew.copyTo(newZipPath, overwrite = true)
@@ -210,32 +211,22 @@ class LocalBackupManager
                 }
             }
 
-        private fun moveTempZipToFinal(
-            tempZipFile: File,
-            finalFile: File,
-        ) {
-            finalFile.delete()
-            if (!tempZipFile.renameTo(finalFile)) {
-                tempZipFile.copyTo(finalFile, overwrite = true)
-                tempZipFile.delete()
-            }
-        }
-
         private fun createZip(
             inputFile: File,
             zipFile: File,
             password: String?,
         ) {
-            val zip = ZipFile(zipFile, password?.toCharArray())
-            val parameters =
-                ZipParameters().apply {
-                    if (password != null) {
-                        isEncryptFiles = true
-                        encryptionMethod = EncryptionMethod.AES
-                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+            ZipFile(zipFile, password?.toCharArray()).use { zip ->
+                val parameters =
+                    ZipParameters().apply {
+                        if (password != null) {
+                            isEncryptFiles = true
+                            encryptionMethod = EncryptionMethod.AES
+                            aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                        }
                     }
-                }
-            zip.addFile(inputFile, parameters)
+                zip.addFile(inputFile, parameters)
+            }
         }
 
         private suspend fun writeJsonStreaming(outputStream: OutputStream) {
