@@ -233,4 +233,27 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `suspend functions do not swallow CancellationException`() {
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .functions(includeNested = true, includeLocal = true)
+                .filter {
+                    (
+                        it.containingFile.path.contains("/src/main/") ||
+                            it.containingFile.path.contains("\\src\\main\\")
+                    )
+                }.filter { it.hasSuspendModifier }
+                .filter { it.text.contains(Regex("""catch \(\w+: Exception\)""")) }
+                .filter { !it.text.contains("CancellationException") }
+                .map { "${it.containingFile.name}:${it.name}() swallows CancellationException" }
+
+        org.junit.Assert.assertTrue(
+            "Suspend functions must rethrow CancellationException before " +
+                "catching Exception. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }

@@ -702,7 +702,7 @@ class LocalRestoreManager
                     backup.birthDate?.let {
                         try {
                             java.time.LocalDate.parse(it)
-                        } catch (e: Exception) {
+                        } catch (e: java.time.format.DateTimeParseException) {
                             null
                         }
                     }

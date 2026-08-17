@@ -140,6 +140,8 @@ class HealthConnectRepositoryImpl
                 val granted =
                     try {
                         client.permissionController.getGrantedPermissions()
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                             "Failed to get granted permissions"
@@ -204,6 +206,8 @@ class HealthConnectRepositoryImpl
                     val granted = client.permissionController.getGrantedPermissions()
                     granted.contains("android.permission.health.READ_EXERCISE_ROUTES") ||
                         granted.contains("com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES")
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Failed to check exercise routes permission"
@@ -221,6 +225,8 @@ class HealthConnectRepositoryImpl
                     client.permissionController
                         .getGrantedPermissions()
                         .contains(HealthPermission.getReadPermission(T::class))
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Failed to check $label permission"
