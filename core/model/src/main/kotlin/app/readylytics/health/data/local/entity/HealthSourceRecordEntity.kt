@@ -3,7 +3,13 @@ package app.readylytics.health.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
+// @Serializable is load-bearing — see the note on HrMinuteBucketEntity. This table is
+// populated by SourceRecordDao.getOrCreateSourceRef on every ingested Health Connect
+// record, so it is non-empty for every real user and its absence broke backup for all
+// of them while the test suite stayed green.
+@Serializable
 @Entity(
     tableName = "health_source_records",
     indices = [

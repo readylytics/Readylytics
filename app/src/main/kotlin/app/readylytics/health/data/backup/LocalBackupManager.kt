@@ -13,6 +13,7 @@ import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
@@ -108,6 +109,9 @@ class LocalBackupManager
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // The UI turns this into a bare "Backup failed"; without a log the cause
+                    // never reaches logcat and the failure is undiagnosable on a real device.
+                    logE("LocalBackupManager", e) { "createBackup failed" }
                     Result.failure(e)
                 } finally {
                     tempJsonFile?.delete()
@@ -124,6 +128,7 @@ class LocalBackupManager
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    logE("LocalBackupManager", e) { "deleteBackup failed for $uri" }
                     Result.failure(e)
                 }
             }
@@ -197,6 +202,9 @@ class LocalBackupManager
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // The audit trail records only the exception class name; the message and
+                    // stack are what actually identify a provider-specific SAF failure.
+                    logE("LocalBackupManager", e) { "reencryptBackups failed" }
                     auditTrailRepository.appendBestEffort(
                         "LocalBackupManager",
                         AuditEvent(
