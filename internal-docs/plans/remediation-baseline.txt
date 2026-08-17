@@ -1,0 +1,215 @@
+================================================================================
+PHASE 0 BASELINE — Architecture Remediation Plan
+================================================================================
+Captured : 2026-08-17 07:21 UTC
+Commit   : 63254e2f1f880fa6d26327c59938d57b1759e89a  ("workout detail
+           customization (#233)")
+Branch   : main
+Tree     : clean except untracked ARCHITECTURE_REMEDIATION_PLAN.md
+Toolchain: OpenJDK 17.0.20 (Homebrew), AGP 9.3.1, Kotlin 2.3.21, Gradle
+           configuration-cache ON, parallel ON, build-cache OFF
+Host     : darwin 25.6.0
+Device   : Samsung SM-A576B, Android 16 (API 36), serial R5GL23J6G5E
+           installed: app.readylytics.health (PRODUCTION — do not uninstall)
+                      app.readylytics.health.local.grl3lb (debug)
+
+This file is the reference every later step verifies against. "Same as before"
+is meaningless without it. Re-capture only if a step deliberately changes one of
+these numbers, and say so in the step's PR description.
+
+================================================================================
+1. COMMAND RESULTS
+================================================================================
+  step             rc   duration
+  ---------------- --   --------
+  clean             0        23s
+  ktlintCheck       0        17s
+  testDebugUnitTest 0       230s   (3m 50s; 503 tasks, 492 executed)
+  jacocoTestReport
+    + Verification  0        14s
+  per-module jacoco 0         2s   (see note 4a — was skipped, later forced)
+  lint lintRelease  0       157s   (2m 36s; 1089 tasks, 717 executed)
+
+ALL SIX GREEN. Phase 1 may proceed.
+
+Raw logs (session scratchpad, not committed):
+  clean.log ktlintCheck.log unitTests.log jacoco.log jacocoModules.log lint.log
+
+================================================================================
+2. UNIT TESTS — 2,939 tests, 0 failures, 0 errors, 0 skipped
+================================================================================
+  MODULE                 CLASSES   TESTS  FAIL  ERR  SKIP   TIME_S
+  app                        150    1031     0    0     0     97.2
+  core/model                  63     612     0    0     0      1.9
+  core/scoring                71     532     0    0     0      5.3
+  core/ui                     22     162     0    0     0     12.6
+  feature/dashboard           11     151     0    0     0     18.8
+  feature/vitals              13     125     0    0     0     16.5
+  feature/workouts            12     108     0    0     0     19.4
+  feature/sleep               10      54     0    0     0     15.8
+  feature/settings             8      52     0    0     0      7.9
+  core/database               10      36     0    0     0      0.5
+  core/healthconnect          10      35     0    0     0      3.8
+  feature/onboarding           6      33     0    0     0      6.3
+  core/designsystem            1       4     0    0     0      7.1
+  feature/insights             2       3     0    0     0      0.2
+  feature/about                1       1     0    0     0      2.1
+  ---------------------------------------------------------------
+  TOTAL                      390    2939     0    0     0    215.6
+
+STEP 11 TARGET, QUANTIFIED
+  :app holds 35% of all tests (1031/2939) and 45% of test wall time
+  (97.2s/215.6s), while :core:database — which owns ScoringRepositoryImpl,
+  856 lines — holds 36 tests in 0.5s. 48 of :app's 143 test classes have
+  their subject in another module.
+
+  After step 11, expect roughly:
+    :app          down to ~95 classes
+    :core:scoring, :core:model, :core:healthconnect, :core:database  up
+    TOTAL test count unchanged at 2939   <-- this is the invariant to check
+    Aggregate coverage unchanged at 63.58% instruction  <-- likewise
+
+================================================================================
+3. COVERAGE — aggregate (root jacocoTestReport, all 15 modules)
+================================================================================
+  COUNTER        COVERED   MISSED    RATIO
+  INSTRUCTION      71741    41093   63.58%   <-- gate is 30%, margin +33.6
+  BRANCH            3060     2592   54.14%
+  LINE             10195     5769   63.86%
+  COMPLEXITY        3367     3345   50.16%
+  METHOD            2316     1770   56.68%
+  CLASS              582      405   58.97%
+
+  INVARIANT FOR STEPS 11 AND 12: 63.58% instruction must not drop. Moving a
+  test between modules does not change the aggregate, because the root report
+  merges exec data from every module in `coverageProjects`.
+
+================================================================================
+4. COVERAGE — per-package gates
+================================================================================
+  PACKAGE                                   OWNER                LINE%  FLOOR  MARGIN
+  app/readylytics/health/domain/scoring     core:scoring        88.60%    80%   +8.6
+  app/readylytics/health/domain/sync        core:healthconnect  88.98%    70%  +19.0
+  app/readylytics/health/workers            root                91.87%    60%  +31.9
+  app/readylytics/health/data/repository    NONE                62.68%     —      —
+
+  4a. NOTE ON THE PER-MODULE GATES
+      In the scripted run, :core:scoring:jacocoCoverageVerification and
+      :core:healthconnect:jacocoCoverageVerification both reported
+      BUILD SUCCESSFUL in 2s with every task UP-TO-DATE — i.e. Gradle skipped
+      them. `./gradlew clean` wipes build/ but not the task-history database in
+      .gradle/, so a prior session's verdict was reused.
+
+      Forced re-run to confirm they are real:
+        ./gradlew :core:scoring:jacocoCoverageVerification \
+                  :core:healthconnect:jacocoCoverageVerification --rerun-tasks
+        -> BUILD SUCCESSFUL in 32s, both tasks executed, both pass.
+
+      CONCLUSION: the gates work. But a green `jacocoCoverageVerification` is
+      not by itself evidence that coverage was evaluated. When step 12 changes a
+      floor, verify with --rerun-tasks or the result is meaningless.
+
+  4b. STEP 12 — FLOOR FOR data.repository
+      Measured 62.68%. Plan originally proposed 70%, which would fail on day
+      one. Set the floor to 60% (achieved value rounded down to the nearest 5%,
+      per the step's own rule). Plan corrected accordingly.
+
+================================================================================
+5. COVERAGE — lowest-covered packages >= 200 lines
+================================================================================
+  Context for later steps. Not targets in themselves; low unit-test coverage in
+  a package with instrumented tests (data/migration) is expected.
+
+    7.67%    313 lines  data/migration        (V7 migrator — androidTest only)
+    8.37%    227 lines  domain/service
+   20.69%    203 lines  domain/sleep
+   25.93%    378 lines  domain/util
+   33.60%    375 lines  data/security
+   33.66%   1031 lines  data/healthconnect    <-- largest real gap
+   40.07%    292 lines  domain/dashboard
+   59.55%    492 lines  data/local
+   62.66%   1066 lines  domain/model
+   62.68%    962 lines  data/repository       <-- step 12 target
+   64.17%    240 lines  crashreport
+   65.21%   1627 lines  data/preferences
+   68.06%   1271 lines  data/backup           <-- steps 5 and 6 add tests here
+   75.79%    252 lines  data/mapper
+   80.43%    276 lines  domain/scoring/strategies
+   88.60%   1815 lines  domain/scoring
+   88.98%   1234 lines  domain/sync
+   89.96%    249 lines  data/local/entity
+   91.87%    406 lines  workers
+   96.41%    418 lines  domain/scoring/sleep
+
+  data/healthconnect at 33.66% over 1,031 lines is the single largest
+  untested surface in the codebase. It is the ingestion mapper layer. Not in
+  this plan's scope — filed here so it is not forgotten.
+
+================================================================================
+6. ANDROID LINT — 12 warnings, 0 errors, 0 fatal (30 reports parsed)
+================================================================================
+  MODULE               FATAL  ERROR  WARN  INFO
+  core/ui                  0      0     6     0
+  feature/onboarding       0      0     2     0
+  feature/vitals           0      0     2     0
+  feature/workouts         0      0     2     0
+
+  BY ISSUE ID
+    10  Warning  ModifierParameter
+     2  Warning  EmptySuperCall
+
+  No step in this plan is expected to change these. A new lint warning in a
+  step's PR is a regression introduced by that step.
+
+================================================================================
+7. STATIC ANALYSIS — detekt not yet installed
+================================================================================
+  Step 08 adds detekt and generates config/detekt/baseline.xml. When it lands,
+  append the per-rule violation counts here. Steps 14, 15, 17 and 18 each
+  remove entries from that baseline; the delta is how their success is
+  measured.
+
+    LongMethod                : (pending step 08)
+    LongParameterList         : (pending step 08)
+    CyclomaticComplexMethod   : (pending step 08)
+    SwallowedException        : (pending step 08)
+
+================================================================================
+8. STRUCTURAL COUNTS AT BASELINE
+================================================================================
+  Gradle modules                                          15
+  Main-source Kotlin files                            ~1,100
+  Test files                                             ~410
+  Files over the 400-line project target                    33
+  Files over the 800-line hard limit                         3
+      LocalRestoreManager.kt          860
+      ScoringRepositoryImpl.kt        856
+      WorkoutPerformanceCharts.kt     815
+  ScoringRepositoryImpl constructor parameters              21
+  computeDailySummary length                          490 lines (L170-L660)
+  @Module files in :app / in all other modules            9 / 0
+  :app test classes whose subject is elsewhere         48 / 143
+  Bare `catch (… : Exception)` without cancellation
+      handling, total / in a suspend body                 19 / 5
+  writeJsonStreaming copy-pasted paging blocks              14
+  WorkoutsViewModel chained .combine operators               6
+
+  These are the numbers steps 09-19 are meant to move. Re-measure at the end.
+
+================================================================================
+9. INCIDENT DURING CAPTURE
+================================================================================
+  Two tracked files were found deleted from the working tree partway through
+  this session, before the baseline run:
+
+      internal-docs/plans/M3_COMPLIANCE_AUDIT.md
+      internal-docs/plans/M3_TOP_APP_BAR_PLAN.md
+
+  The deletion was not committed. Both were restored byte-identically from HEAD
+  via `git checkout --`, so nothing was lost, and the baseline above was
+  captured on the restored tree. Cause not identified. Flagged for the repo
+  owner rather than silently ignored.
+
+================================================================================
+END OF BASELINE
+================================================================================
