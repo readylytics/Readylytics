@@ -79,9 +79,4 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.core)
-    testImplementation(libs.androidx.junit)
-    testImplementation(testFixtures(project(":core:database")))
-    testImplementation(libs.room.runtime)
 }

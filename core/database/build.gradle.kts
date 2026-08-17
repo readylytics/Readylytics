@@ -13,9 +13,6 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
     }
-    testFixtures {
-        enable = true
-    }
 }
 
 dependencies {
@@ -42,11 +39,6 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.mockk)
-
-    testFixturesImplementation(project(":core:model"))
-    testFixturesImplementation(project(":core:database-schema"))
-    testFixturesImplementation(project(":core:scoring"))
-    testFixturesImplementation(libs.room.runtime)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
