@@ -24,10 +24,6 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.AdaptiveRhrBaselineProvider
-import app.readylytics.health.domain.scoring.CompositeScoringCalculator
-import app.readylytics.health.domain.scoring.RhrBaselineProvider
-import app.readylytics.health.domain.scoring.ScoringCalculator
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -80,14 +76,6 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindScoringRepository(impl: ScoringRepositoryImpl): ScoringRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindScoringCalculator(impl: CompositeScoringCalculator): ScoringCalculator
-
-    @Binds
-    @Singleton
-    abstract fun bindRhrBaselineProvider(impl: AdaptiveRhrBaselineProvider): RhrBaselineProvider
 
     @Binds
     @Singleton
