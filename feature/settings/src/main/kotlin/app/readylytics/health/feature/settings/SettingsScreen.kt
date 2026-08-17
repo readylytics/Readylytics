@@ -512,6 +512,8 @@ fun SettingsScreen(
                                 uiState = dashboardCardsState,
                                 onEvent = onDashboardCardsEvent,
                             )
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
+                            WorkoutDetailLayoutSettingsSection(onEvent = onUIEvent)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))

@@ -8,6 +8,7 @@ import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
 import kotlinx.serialization.Serializable
 
 internal object BackupSchemaPolicy {
@@ -179,4 +180,5 @@ data class UserPreferencesBackup(
     val workoutCards: List<CardConfiguration>? = null,
     val workoutCharts: List<WorkoutChartConfiguration>? = null,
     val workoutHistory: List<WorkoutHistoryConfiguration>? = null,
+    val workoutDetailLayouts: Map<String, List<WorkoutDetailItemConfiguration>>? = null,
 )

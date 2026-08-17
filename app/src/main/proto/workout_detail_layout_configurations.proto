@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package app.readylytics.health.data.preferences;
+
+option java_package = "app.readylytics.health.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "WorkoutDetailLayoutConfigurationsProtoFile";
+
+message WorkoutDetailItemConfigurationProto {
+    string item_id = 1;
+    bool is_visible = 2;
+    int32 position = 3;
+}
+
+message WorkoutDetailLayoutProto {
+    repeated WorkoutDetailItemConfigurationProto items = 1;
+}
+
+message WorkoutDetailLayoutConfigurationsProto {
+    // Keyed by WorkoutLayoutType.name. Sparse: a type appears only once customized.
+    map<string, WorkoutDetailLayoutProto> layouts_by_type = 1;
+    int32 version = 2;
+}

@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -129,6 +130,14 @@ internal fun ElevationGainedRecord.toIntervalTotal(): DomainIntervalTotal =
         value = elevation.inMeters,
         originPackage = metadata.dataOrigin.packageName,
     )
+
+/**
+ * Converts the route handed back by `ExerciseRouteRequestContract` (per-session consent dialog).
+ * Public because the launcher lives in the app module -- feature modules must never see Health
+ * Connect types, so the app module converts to domain before passing the points inwards.
+ */
+fun ExerciseRoute.toDomainRoutePoints(): List<DomainRouteLocation> =
+    ExerciseRouteResult.Data(this).toDomainRoutePoints()
 
 internal fun ExerciseRouteResult?.toDomainRoutePoints(): List<DomainRouteLocation> {
     val data = this as? ExerciseRouteResult.Data ?: return emptyList()

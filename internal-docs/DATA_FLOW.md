@@ -366,6 +366,31 @@ them), so those workouts land with `routeState = NOT_AVAILABLE` until a full res
 On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
 when route permission is granted or the user opens a workout requiring permission, it reads the session from Health Connect,
 maps route points, and updates the local Room database atomically via `HealthIngestionStore.persistSingleWorkoutRoute`.
+**Exercise routes are not a normal Health Connect permission.** `android.permission.health.READ_EXERCISE_ROUTES` is
+declared in `android.health.connect.HealthPermissions` like any data-type permission, but Health Connect keeps it out of
+the bulk permission sheet: it appears only under the app's **"Additional access"** page (beside background and past-data
+access) as a tri-state **Always allow / Ask every time / Don't allow**, defaulting to "Ask every time". Requesting it
+alongside data types is silently dropped — verified on a clean install, where every requested data-type permission came
+back with the `USER_SET` flag while routes came back with no user decision recorded at all. It is therefore **excluded
+from `optionalPermissions`** and from the onboarding permission bullets (`PermissionBullets.healthPermissionLabelRes`),
+while remaining **declared in `AndroidManifest.xml`** — that declaration is what makes the "Access exercise routes" row
+exist at all (guarded by `HealthConnectManifestPermissionsTest`).
+
+A workout sitting at `routeState = PERMISSION_REQUIRED` therefore has two ways out.
+**(a) User set routes to "Always allow"** in Health Connect settings: `WorkoutDetailViewModel.loadWorkout` sees
+`hasExerciseRoutesPermission()` return true, re-runs the use case, and the session re-read carries the route — the grant
+card never appears.
+**(b) Grant card → per-session consent dialog:** tapping the card runs `rememberExerciseRouteRequest`
+(`app/.../ui/health/ExerciseRoutePermissionRequest.kt` — the launcher lives in the app module because feature modules may
+not import Health Connect types), which launches `ExerciseRouteRequestContract` for this session id, matching the
+platform's own "Ask every time" default. That dialog is a one-time grant returning the polyline in its own result;
+re-reading the session afterwards still reports `ConsentRequired`. So the app module converts via
+`ExerciseRoute.toDomainRoutePoints()` (`core/healthconnect/.../HealthConnectRecordConverters.kt`) and passes the points
+through `WorkoutDetailViewModel.onRoutePermissionResult` into `SyncWorkoutRouteUseCase(workoutId, grantedRoutePoints)`,
+which substitutes them onto the session (`routeState = IMPORTED`) before `WorkoutMapper` derives
+distance/speed/elevation. An empty/absent granted list leaves the session read untouched. If the dialog cannot start, the
+helper deep-links to the "Additional access" page via `android.health.connect.action.MANAGE_HEALTH_PERMISSIONS` +
+`android.intent.extra.PACKAGE_NAME`, where the user can switch routes to "Always allow" and stop the per-workout prompt.
 `workout_route_points` is part of the encrypted local backup: `LocalBackupManager` streams it as the
 `workoutRoutePoints` JSON array (written **after** `workouts`, since the FK cascades from
 `workout_records`), and `LocalRestoreManager` reloads it in that order. Without this, restore's

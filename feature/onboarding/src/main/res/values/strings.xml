@@ -36,7 +36,6 @@
     <string name="onboarding_hc_permission_blood_pressure">Blood Pressure</string>
     <string name="onboarding_hc_permission_oxygen_saturation">Oxygen Saturation</string>
     <string name="onboarding_hc_permission_body_temperature">Body Temperature</string>
-    <string name="onboarding_hc_permission_exercise_routes">Exercise Routes &amp; GPS</string>
     <string name="onboarding_hc_permission_distance">Distance</string>
     <string name="onboarding_hc_permission_elevation_gained">Elevation Gained</string>
     <string name="onboarding_required_permissions_label">Required</string>

@@ -102,8 +102,15 @@ class HealthConnectRepositoryImpl
                 // integrate the GPS polyline, which reads ~1-3% short of the source app.
                 HealthPermission.getReadPermission(DistanceRecord::class),
                 HealthPermission.getReadPermission(ElevationGainedRecord::class),
-                "android.permission.health.READ_EXERCISE_ROUTES",
-                "com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES",
+                // READ_EXERCISE_ROUTES is deliberately absent. Health Connect does not expose routes
+                // in the bulk data-type permission sheet -- it lives under "Additional access"
+                // (alongside background and past-data access) as a tri-state Always allow / Ask every
+                // time / Don't allow, defaulting to "Ask every time". Requesting it here is silently
+                // dropped: on a clean install every other permission comes back USER_SET while routes
+                // comes back with no user decision at all. Routes are obtained per workout through
+                // ExerciseRouteRequestContract instead (see ui/health/ExerciseRoutePermissionRequest).
+                // It must stay declared in AndroidManifest.xml -- that declaration is what makes the
+                // "Access exercise routes" row appear in Health Connect settings.
             )
 
         override val allPermissions: Set<String> =

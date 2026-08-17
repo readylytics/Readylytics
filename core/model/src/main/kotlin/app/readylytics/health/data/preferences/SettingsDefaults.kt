@@ -17,6 +17,8 @@ import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.domain.workouts.WorkoutChartId
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.domain.workouts.WorkoutHistoryId
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -210,6 +212,32 @@ object SettingsDefaults {
         listOf(
             WorkoutHistoryConfiguration(WorkoutHistoryId.WORKOUT_LIST, isVisible = true, position = 0),
         )
+
+    /**
+     * Shared default layout for the workout detail screen, used by every
+     * [app.readylytics.health.domain.workouts.detail.WorkoutLayoutType] that has no stored
+     * customization. Order reproduces the pre-customization visual order of the screen.
+     */
+    val DEFAULT_WORKOUT_DETAIL_ITEMS =
+        listOf(
+            WorkoutDetailItemId.TRAINING_LOAD,
+            WorkoutDetailItemId.AVG_PULSE,
+            WorkoutDetailItemId.GAINED_STRAIN,
+            WorkoutDetailItemId.RAS,
+            WorkoutDetailItemId.OVERALL_LOAD,
+            WorkoutDetailItemId.INTENSITY,
+            WorkoutDetailItemId.DISTANCE,
+            WorkoutDetailItemId.AVG_PACE_SPEED,
+            WorkoutDetailItemId.ELEVATION_GAIN,
+            WorkoutDetailItemId.ZONE_BREAKDOWN,
+            WorkoutDetailItemId.ROUTE_CONTOUR,
+            WorkoutDetailItemId.PACE_SPEED_CHART,
+            WorkoutDetailItemId.ELEVATION_CHART,
+            WorkoutDetailItemId.TRIMP_BREAKDOWN,
+            WorkoutDetailItemId.RECOVERY_HRR,
+        ).mapIndexed { index, id ->
+            WorkoutDetailItemConfiguration(itemId = id, isVisible = true, position = index)
+        }
 }
 
 fun normalizeCoreMergeGapMinutes(value: Int): Int =

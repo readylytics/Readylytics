@@ -4,7 +4,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.di.DefaultDispatcher
+import app.readylytics.health.domain.layout.LayoutManagementDelegate
+import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.preferences.UnitSystem
@@ -23,14 +26,22 @@ import app.readylytics.health.domain.util.PaceSpeedCalculator
 import app.readylytics.health.domain.util.RouteDistanceCalculator
 import app.readylytics.health.domain.util.RouteProjector
 import app.readylytics.health.domain.util.RouteSimplifier
+import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.domain.workouts.detail.WorkoutLayoutTypeMapper
 import app.readylytics.health.feature.workouts.mappers.ChartDataMapper
 import app.readylytics.health.feature.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.feature.workouts.mappers.RecoveryMetricsMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -96,8 +107,12 @@ data class WorkoutDetailUiState(
     val isPaceMode: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val isLoading: Boolean = true,
+    val layoutType: WorkoutLayoutType = WorkoutLayoutType.OTHER,
+    val itemConfigurations: List<WorkoutDetailItemConfiguration> = SettingsDefaults.DEFAULT_WORKOUT_DETAIL_ITEMS,
+    val isManagingLayout: Boolean = false,
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class WorkoutDetailViewModel
     @Inject
@@ -109,11 +124,23 @@ class WorkoutDetailViewModel
         private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val syncWorkoutRouteUseCase: SyncWorkoutRouteUseCase,
+        private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository,
         private val savedStateHandle: SavedStateHandle,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
+
+        private val layoutType = MutableStateFlow(WorkoutLayoutType.OTHER)
+
+        private val layoutDelegate =
+            LayoutManagementDelegate(
+                defaultConfigurations = SettingsDefaults.DEFAULT_WORKOUT_DETAIL_ITEMS,
+                persist = { configs -> workoutDetailLayoutRepository.updateLayout(layoutType.value, configs) },
+                scope = viewModelScope,
+                withVisibility = { config, visible -> config.copy(isVisible = visible) },
+                withPosition = { config, pos -> config.copy(position = pos) },
+            )
 
         init {
             savedStateHandle.get<String>("workoutId")?.let { id ->
@@ -121,11 +148,57 @@ class WorkoutDetailViewModel
             }
         }
 
-        fun onRoutePermissionResult() {
+        init {
+            viewModelScope.launch {
+                layoutType
+                    .flatMapLatest { type -> workoutDetailLayoutRepository.layoutFor(type) }
+                    .combine(layoutDelegate.state) { stored, managementState ->
+                        (managementState.pendingConfigs ?: stored) to managementState.isManaging
+                    }.collect { (configs, isManaging) ->
+                        _uiState.update {
+                            it.copy(itemConfigurations = configs, isManagingLayout = isManaging)
+                        }
+                    }
+            }
+        }
+
+        fun onToggleLayoutManagement() {
+            if (_uiState.value.isManagingLayout) {
+                layoutDelegate.saveChanges()
+            } else {
+                layoutDelegate.enterEditMode(_uiState.value.itemConfigurations)
+            }
+        }
+
+        fun onCancelLayoutManagement() {
+            layoutDelegate.cancelChanges()
+        }
+
+        fun onToggleItemVisibility(
+            itemId: WorkoutDetailItemId,
+            visible: Boolean,
+        ) {
+            layoutDelegate.onToggleVisibility(_uiState.value.itemConfigurations, itemId, visible)
+        }
+
+        fun onReorderItems(newOrder: List<WorkoutDetailItemConfiguration>) {
+            layoutDelegate.onReorder(_uiState.value.itemConfigurations, newOrder)
+        }
+
+        fun onResetLayoutToDefaults() {
+            layoutDelegate.onResetToDefaults()
+        }
+
+        /**
+         * @param grantedRoutePoints polyline returned by the per-session consent dialog. Empty when
+         * the user granted the bulk `READ_EXERCISE_ROUTES` permission instead, in which case the
+         * session re-read inside [syncWorkoutRouteUseCase] carries the route.
+         */
+        fun onRoutePermissionResult(grantedRoutePoints: List<DomainRouteLocation> = emptyList()) {
             val workoutId = savedStateHandle.get<String>("workoutId") ?: return
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
-                syncWorkoutRouteUseCase(workoutId)
+                syncWorkoutRouteUseCase(workoutId, grantedRoutePoints.takeIf { it.isNotEmpty() })
                 loadWorkout(workoutId)
             }
         }
@@ -139,6 +212,8 @@ class WorkoutDetailViewModel
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
                 }
+
+                layoutType.value = WorkoutLayoutTypeMapper.fromExerciseType(workout.exerciseType)
 
                 if (workout.routeState == RouteState.PERMISSION_REQUIRED && hcRepo.hasExerciseRoutesPermission()) {
                     syncWorkoutRouteUseCase(workoutId)
@@ -356,6 +431,7 @@ class WorkoutDetailViewModel
                             displayElevationGainMeters = displayElevationGainMeters,
                             isPaceMode = isPaceMode,
                             unitSystem = prefs.unitSystem,
+                            layoutType = layoutType.value,
                             isLoading = false,
                         )
                     }

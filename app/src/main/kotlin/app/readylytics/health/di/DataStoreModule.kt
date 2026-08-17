@@ -135,6 +135,21 @@ object DataStoreModule {
 
     @Provides
     @Singleton
+    fun provideWorkoutDetailLayoutConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<WorkoutDetailLayoutConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = WorkoutDetailLayoutConfigurationsSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    WorkoutDetailLayoutConfigurationsSerializer.defaultValue
+                },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { context.dataStoreFile("workout_detail_layout_configurations.pb") },
+        )
+
+    @Provides
+    @Singleton
     fun provideUserPreferencesDataStore(
         @ApplicationContext context: Context,
         @ApplicationScope appScope: CoroutineScope,

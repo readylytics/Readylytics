@@ -15,6 +15,7 @@ import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -50,6 +51,7 @@ class LocalBackupManager
         private val vitalsLayoutRepository: VitalsLayoutRepository,
         private val sleepLayoutRepository: SleepLayoutRepository,
         private val workoutsLayoutRepository: WorkoutsLayoutRepository,
+        private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -563,6 +565,8 @@ class LocalBackupManager
             val workoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
             val workoutCharts = workoutsLayoutRepository.workoutChartConfigurations().first()
             val workoutHistory = workoutsLayoutRepository.workoutHistoryConfigurations().first()
+            val workoutDetailLayouts =
+                workoutDetailLayoutRepository.allLayouts().first().mapKeys { it.key.name }
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
@@ -667,6 +671,7 @@ class LocalBackupManager
                     workoutCards = workoutCards,
                     workoutCharts = workoutCharts,
                     workoutHistory = workoutHistory,
+                    workoutDetailLayouts = workoutDetailLayouts,
                 )
             writer.write(json.encodeToString(backup))
         }

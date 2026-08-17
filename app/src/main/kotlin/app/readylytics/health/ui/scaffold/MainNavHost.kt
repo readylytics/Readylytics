@@ -67,6 +67,7 @@ import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
 import app.readylytics.health.ui.crashreport.CrashReportViewModel
 import app.readylytics.health.ui.crashreport.OversizedReportDialog
+import app.readylytics.health.ui.health.rememberExerciseRouteRequest
 import app.readylytics.health.ui.logcat.LogcatCaptureViewModel
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
@@ -357,42 +358,11 @@ fun MainNavHost(
         }
         composable<AppDestination.WorkoutDetail> { backStackEntry ->
             val detail: AppDestination.WorkoutDetail = backStackEntry.toRoute()
-            val context = LocalContext.current
-            var pendingOnPermissionGranted by remember { mutableStateOf<(() -> Unit)?>(null) }
-            val routePermissionLauncher =
-                rememberLauncherForActivityResult(
-                    contract =
-                        androidx.health.connect.client.PermissionController
-                            .createRequestPermissionResultContract(),
-                ) { granted ->
-                    val onGranted = pendingOnPermissionGranted
-                    pendingOnPermissionGranted = null
-                    // Only re-read on an actual grant -- on denial the reload would burn a full
-                    // Health Connect read and land back on the identical "Grant permission" card.
-                    if (granted.any { it.endsWith("READ_EXERCISE_ROUTES") }) {
-                        onGranted?.invoke()
-                    }
-                }
+            val requestRoutePermission = rememberExerciseRouteRequest(detail.workoutId)
             WorkoutDetailRoute(
                 workoutId = detail.workoutId,
                 onBack = { navController.popBackStack() },
-                onRequestRoutePermission = { onGranted ->
-                    pendingOnPermissionGranted = onGranted
-                    try {
-                        routePermissionLauncher.launch(
-                            setOf(
-                                "android.permission.health.READ_EXERCISE_ROUTES",
-                                "com.google.android.apps.healthdata.permission.READ_EXERCISE_ROUTES",
-                            ),
-                        )
-                    } catch (_: Exception) {
-                        val intent =
-                            android.content.Intent(
-                                androidx.health.connect.client.HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS,
-                            )
-                        context.startActivity(intent)
-                    }
-                },
+                onRequestRoutePermission = requestRoutePermission,
             )
         }
 

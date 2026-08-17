@@ -28,6 +28,7 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
+import app.readylytics.health.data.preferences.WorkoutDetailLayoutMapper
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.audit.AuditEvent
@@ -39,6 +40,7 @@ import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -67,6 +69,7 @@ class LocalRestoreManager
         private val vitalsLayoutRepository: VitalsLayoutRepository,
         private val sleepLayoutRepository: SleepLayoutRepository,
         private val workoutsLayoutRepository: WorkoutsLayoutRepository,
+        private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
@@ -817,6 +820,22 @@ class LocalRestoreManager
             }
             backup.workoutHistory?.let {
                 workoutsLayoutRepository.updateWorkoutHistoryConfigurations(it)
+            }
+            backup.workoutDetailLayouts?.let { layouts ->
+                workoutDetailLayoutRepository.replaceAll(
+                    layouts
+                        .mapNotNull { (key, items) ->
+                            val type = WorkoutDetailLayoutMapper.typeFromKey(key)
+                            if (type == null) {
+                                logW("LocalRestoreManager") {
+                                    "Ignoring unknown workout layout type in backup: $key"
+                                }
+                                null
+                            } else {
+                                type to items
+                            }
+                        }.toMap(),
+                )
             }
             backup.backgroundSyncEnabled?.let { enabled ->
                 if (enabled) {

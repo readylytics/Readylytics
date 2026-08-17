@@ -64,12 +64,13 @@ class PermissionBulletsTest {
         )
     }
 
+    /**
+     * Health Connect keeps exercise routes out of the bulk permission sheet (they sit under
+     * "Additional access"), so onboarding cannot obtain the grant and must not advertise it.
+     */
     @Test
-    fun healthPermissionLabelRes_mapsExerciseRoutesPermission() {
-        assertEquals(
-            R.string.onboarding_hc_permission_exercise_routes,
-            healthPermissionLabelRes("android.permission.health.READ_EXERCISE_ROUTES"),
-        )
+    fun healthPermissionLabelRes_doesNotOfferExerciseRoutesDuringOnboarding() {
+        assertNull(healthPermissionLabelRes("android.permission.health.READ_EXERCISE_ROUTES"))
     }
 
     @Test

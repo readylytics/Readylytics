@@ -26,6 +26,7 @@ import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
@@ -60,6 +61,7 @@ class LocalBackupManagerTest {
     private lateinit var vitalsLayoutRepo: VitalsLayoutRepository
     private lateinit var sleepLayoutRepo: SleepLayoutRepository
     private lateinit var workoutsLayoutRepo: WorkoutsLayoutRepository
+    private lateinit var workoutDetailLayoutRepo: WorkoutDetailLayoutRepository
     private lateinit var auditTrailRepository: FakeAuditTrailRepository
     private lateinit var manager: LocalBackupManager
     private lateinit var backupDir: File
@@ -119,6 +121,10 @@ class LocalBackupManagerTest {
                 every { workoutChartConfigurations() } returns flowOf(emptyList())
                 every { workoutHistoryConfigurations() } returns flowOf(emptyList())
             }
+        workoutDetailLayoutRepo =
+            mockk<WorkoutDetailLayoutRepository>(relaxed = true).apply {
+                every { allLayouts() } returns flowOf(emptyMap())
+            }
         auditTrailRepository = FakeAuditTrailRepository()
         manager =
             LocalBackupManager(
@@ -129,6 +135,7 @@ class LocalBackupManagerTest {
                 vitalsLayoutRepo,
                 sleepLayoutRepo,
                 workoutsLayoutRepo,
+                workoutDetailLayoutRepo,
                 encryptionManager,
                 auditTrailRepository,
                 Dispatchers.Unconfined,
@@ -598,6 +605,7 @@ class LocalBackupManagerTest {
                     vitalsLayoutRepo,
                     sleepLayoutRepo,
                     workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
                     encryptionManager,
                     auditTrailRepository,
                     Dispatchers.Unconfined,
@@ -662,6 +670,7 @@ class LocalBackupManagerTest {
                     vitalsLayoutRepo,
                     sleepLayoutRepo,
                     workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
                     encryptionManager,
                     auditTrailRepository,
                     Dispatchers.Unconfined,

@@ -111,4 +111,24 @@
     <string name="chart_accessibility_selected_pace">Selected: %1$s at %2$s</string>
     <string name="chart_accessibility_selected_speed">Selected: %1$s at %2$s</string>
     <string name="chart_accessibility_selected_elevation">Selected: %1$s at %2$s</string>
+
+    <!-- Workout Detail Customization -->
+    <string name="workout_detail_item_pace_speed">Avg. Pace / Speed</string>
+    <string name="workout_detail_item_pace_speed_chart">Pace / Speed profile</string>
+    <string name="workout_detail_manage_layout">Customize %1$s layout</string>
+    <string name="workout_detail_manage_items_section_title">Items</string>
+    <string name="workout_detail_item_unavailable">No data for this workout</string>
+    <string name="workout_layout_type_running">Running</string>
+    <string name="workout_layout_type_walking">Walking</string>
+    <string name="workout_layout_type_cycling">Cycling</string>
+    <string name="workout_layout_type_swimming">Swimming</string>
+    <string name="workout_layout_type_strength">Strength</string>
+    <string name="workout_layout_type_hiking">Hiking</string>
+    <string name="workout_layout_type_yoga">Yoga</string>
+    <string name="workout_layout_type_pilates">Pilates</string>
+    <string name="workout_layout_type_elliptical">Elliptical</string>
+    <string name="workout_layout_type_rowing">Rowing</string>
+    <string name="workout_layout_type_stairs">Stairs</string>
+    <string name="workout_layout_type_hiit">HIIT</string>
+    <string name="workout_layout_type_other">Other workouts</string>
 </resources>
