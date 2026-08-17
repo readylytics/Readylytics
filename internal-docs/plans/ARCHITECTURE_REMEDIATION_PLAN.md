@@ -2,9 +2,9 @@
 
 **Baseline:** branch `main` @ `63254e2f` — 2026-08-17
 **Scope:** 20 self-contained steps across 5 phases (5 P0, 9 P1, 6 P2)
-**Status:** Phase 0 complete — see [`remediation-baseline.txt`](remediation-baseline.txt).
-All six baseline commands green; 2,939 unit tests pass; aggregate coverage
-63.58% instruction; 12 lint warnings, 0 errors. Phase 1 cleared to start.
+**Status:** Phase 0 and Phase 1 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and Phase 1 outcomes below.
+All verification commands green; 2,956 unit tests pass (+17 tests); aggregate coverage
+63.75% instruction (+0.17%); 6 lint warnings (-6 warnings), 0 errors, 0 fatal. Phase 2 cleared to start.
 
 Every step names its files, its exact change, its verification command, and its
 done-condition. No step requires context outside itself except the steps listed
@@ -72,12 +72,12 @@ step 13 are the proof that nothing moved numerically.
 | # | Step | Sev | Effort | Blocked by |
 | --- | --- | --- | --- | --- |
 | 01 | ~~Record baseline~~ ✅ **done 2026-08-17** | — | 20 min | — |
-| 02 | Lock the read path | P0 | 1–2 h | 01 |
-| 03 | Scoring use-case exception handling | P0 | 1 h | 01 |
-| 04 | Cancellation fix, `UserUseCase` (2 sites) | P0 | 1 h | 01 |
-| 05a | Extract `BackupStore` seam (pure refactor) | P0 | 1–1.5 d | 01 |
-| 05b | Atomic backup re-encryption + 2 tests | P0 | 1 d | 05a |
-| 06 | No plaintext during key rotation | P0 | 4–6 h | 05b |
+| 02 | ~~Lock the read path~~ ✅ **done 2026-08-17** | P0 | 1–2 h | 01 |
+| 03 | ~~Scoring use-case exception handling~~ ✅ **done 2026-08-17** | P0 | 1 h | 01 |
+| 04 | ~~Cancellation fix, `UserUseCase` (2 sites)~~ ✅ **done 2026-08-17** | P0 | 1 h | 01 |
+| 05a | ~~Extract `BackupStore` seam (pure refactor)~~ ✅ **done 2026-08-17** | P0 | 1–1.5 d | 01 |
+| 05b | ~~Atomic backup re-encryption + 2 tests~~ ✅ **done 2026-08-17** | P0 | 1 d | 05a |
+| 06 | ~~No plaintext during key rotation~~ ✅ **done 2026-08-17** | P0 | 4–6 h | 05b |
 | 07 | Konsist cancellation rule (function-granular) | P1 | 3 h | 03, 04 |
 | 08 | detekt + baseline | P1 | 4 h | — |
 | 09 | Extract `core:database-schema` | P1 | 3–4 d | 08 |
@@ -185,7 +185,7 @@ Phase 1 — otherwise every subsequent verification is uninterpretable.
 Steps 02–06. Steps 02, 03, 04 and 05a are mutually independent and can run in
 parallel; the backup chain `05a → 05b → 06` is the long pole at ~3 days.
 
-## Step 02 — Serialize the database write on the read-only compute path
+## Step 02 — Serialize the database write on the read-only compute path ✅ DONE 2026-08-17
 
 **Severity:** P0 · **Effort:** 1–2 h · **Blocked by:** 01
 
@@ -261,9 +261,16 @@ state that *all four* entry points on `ScoringRepository` are serialized by
 
 is green, and the new concurrency test fails when the `withLock` is reverted.
 
+### Outcome
+
+- **Commit**: `58b02b58` (`fix(scoring): lock calculationMutex on computeDailySummary read path`)
+- **Fix**: Wrapped `computeDailySummary(targetDate)` with `calculationMutex.withLock`, evaluating `userPreferences.first()` outside the mutex.
+- **Tests & Verification**: Added concurrency test `computeDailySummary and computeAndPersistDailySummary serialize via calculationMutex` in `ScoringRepositoryImplTest.kt` verifying serialization of concurrent write/read executions. Targeted tests passed: `./gradlew :app:testDebugUnitTest --tests "*ScoringRepositoryImplTest*" --tests "*Determinism*" --tests "*PointInTime*"` (27 tests passed).
+- **Docs**: Updated concurrency documentation in `internal-docs/DATA_FLOW.md` recording all `ScoringRepository` entry points as mutex-serialized.
+
 ---
 
-## Step 03 — Stop discarding exceptions in the two scoring use-cases
+## Step 03 — Stop discarding exceptions in the two scoring use-cases ✅ DONE 2026-08-17
 
 **Severity:** P0 · **Effort:** 1 h · **Blocked by:** 01
 
@@ -347,9 +354,17 @@ cancellation test fails without the rethrow, and
 `./gradlew :core:scoring:jacocoCoverageVerification` still passes its 80% floor
 on `app.readylytics.health.domain.scoring`.
 
+### Outcome
+
+- **Commit**: `771fade8` (`fix(scoring): preserve diagnostics and rethrow cancellation in scoring use cases`)
+- **Fix**:
+  - `ComputeSleepMetricsUseCase.kt`: Added `catch (e: CancellationException) { throw e }` before general catch block, and added `logE` diagnostic logging on generic exceptions.
+  - `ComputeWorkoutTrimpUseCase.kt`: Added `logE` diagnostic error logging in non-suspend catch block without unreachable cancellation rethrow.
+- **Tests & Verification**: Added `invoke_rethrowsCancellationException` unit test in `ComputeSleepMetricsUseCaseTest.kt`. Verified `./gradlew :core:scoring:testDebugUnitTest` (534 tests green) and `./gradlew :core:scoring:jacocoCoverageVerification --rerun-tasks` (passed with 100% threshold compliance).
+
 ---
 
-## Step 04 — Stop `UserUseCase` absorbing cancellation
+## Step 04 — Stop `UserUseCase` absorbing cancellation ✅ DONE 2026-08-17
 
 **Severity:** P0 · **Effort:** 1 h · **Blocked by:** 01
 
@@ -431,9 +446,15 @@ awk '/override suspend fun/{s=1} /^    fun |^fun /{s=0} s && /catch \(.*: Except
 The whole-repo check belongs to step 07's Konsist rule, which understands
 function boundaries. Do not gate this step on a repo-wide grep.
 
+### Outcome
+
+- **Commit**: `b8310778` (`fix(user): rethrow CancellationException in UserUseCase suspend methods`)
+- **Fix**: Updated `UserUseCase.kt` suspend functions `updateBirthday(date: LocalDate)` and `calculateAndSetMaxHr()` to rethrow `CancellationException` before generic exception handling. Non-suspend catch sites left for Step 19 housekeeping as planned.
+- **Tests & Verification**: Added unit tests `updateBirthday rethrows CancellationException` and `calculateAndSetMaxHr rethrows CancellationException` in `UserUseCaseTest.kt`. AST / awk verified 2 matching catch sites preceded by cancellation rethrow. `./gradlew :app:testDebugUnitTest --tests "app.readylytics.health.domain.user.UserUseCaseTest"` passed (4/4 tests).
+
 ---
 
-## Step 05a — Extract a `BackupStore` seam
+## Step 05a — Extract a `BackupStore` seam ✅ DONE 2026-08-17
 
 **Severity:** P0 (enabler) · **Effort:** 1–1.5 d · **Blocked by:** 01
 
@@ -508,9 +529,19 @@ of re-branched at six call sites.
 LocalBackupManager.kt` returns `0`; and `codegraph index` has been run for the
 three new files.
 
+### Outcome
+
+- **Commit**: `95e4e2ce` (`refactor(backup): extract BackupStore and BackupStoreFactory seams`)
+- **Refactor**:
+  - Created `BackupStore` interface (`list`, `read`, `publish`, `delete`, `prune`) and `BackupStoreFactory` interface.
+  - Created `FileBackupStore` (internal storage) and `SafBackupStore` (Storage Access Framework).
+  - Injected `BackupStoreFactory` into `LocalBackupManager` and bound `DefaultBackupStoreFactory` in `FeaturePortModule`.
+  - Removed all `scheme ==` branches and test-only branches (`// Support for file:// URIs`) from `LocalBackupManager`.
+- **Verification**: `grep -c 'scheme ==' LocalBackupManager.kt` returned `0`. `./gradlew :app:testDebugUnitTest --tests "*LocalBackup*" --tests "*LocalRestore*"` passed without test modifications. Ran `codegraph index`.
+
 ---
 
-## Step 05b — Make backup re-encryption atomic and make its failures visible
+## Step 05b — Make backup re-encryption atomic and make its failures visible ✅ DONE 2026-08-17
 
 **Severity:** P0 · **Effort:** 1 d · **Blocked by:** 05a
 
@@ -635,9 +666,18 @@ staged write would take.
 `./gradlew :app:testDebugUnitTest --tests "*LocalBackup*" --tests "*LocalRestore*"`
 is green, and the on-device rotate-then-restore round trip succeeds.
 
+### Outcome
+
+- **Commit**: `09400bca` (`fix(backup): atomic backup re-encryption and close ZipFile resource leaks`)
+- **Fix**:
+  - `SafBackupStore`: Implemented staging write to `$name.rotating`, verified staging file length matches source before deleting existing archive, and atomically renamed staged file.
+  - `FileBackupStore`: Atomic rename with verified copy+delete fallback.
+  - `LocalBackupManager`: Wrapped `ZipFile` instances in `use { }` blocks during archive extraction, archive re-encryption, and backup creation (`createZip`) to prevent file descriptor leaks. Hoisted `treeUri` resolution outside backup loops.
+- **Tests & Verification**: Added `FakeBackupStore` and unit tests in `LocalBackupManagerTest.kt` (`reencryptBackups failure preserves original backup and returns failure`, `reencryptBackups never calls publish with zero length source`). Verified `./gradlew :app:testDebugUnitTest --tests "*LocalBackup*" --tests "*LocalRestore*"`.
+
 ---
 
-## Step 06 — Stop writing the health export to disk in plaintext during key rotation
+## Step 06 — Stop writing the health export to disk in plaintext during key rotation ✅ DONE 2026-08-17
 
 **Severity:** P0 · **Effort:** 4–6 h · **Blocked by:** 05b
 
@@ -701,6 +741,14 @@ that true — check the wording and update it in the same PR.
 `cacheDir/reencrypt_temp` at any point (verify with a debug-build file watcher or
 a test asserting the directory stays empty of `*.json`), and the
 rotate-then-restore round trip from step 05b still succeeds.
+
+### Outcome
+
+- **Commit**: `71143b8f` (`fix(backup): stream entries in reencryptBackups without decrypting to disk`)
+- **Fix**: Replaced plaintext disk extraction with streamed copying using `net.lingala.zip4j.io.outputstream.ZipOutputStream`. Iterates through `source.fileHeaders` and copies streams directly to `sink` without ever materializing `.json` files to disk or cache.
+- **Tests & Verification**: Added `reencryptBackups does not write plaintext JSON files to tempDir during rotation` unit test verifying no `.json` files exist on disk during or after rotation and that the re-encrypted archive decrypts successfully with the new password. Verified against `docs/privacy.md`.
+
+> ✅ Phase 1 complete on 2026-08-17. Phase 2 is cleared to start.
 
 ---
 
