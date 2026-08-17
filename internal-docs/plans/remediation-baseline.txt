@@ -318,5 +318,47 @@ Result       : BUILD SUCCESSFUL in 2m 26s
     flushes — both load-bearing for the truncation check.
 
 ================================================================================
+11. RE-CAPTURE AFTER PHASE 3 — 2026-08-17
+===============================================================================
+Commit range : 50e1f6b4..07702ee8 (phase 3, steps 09-12)
+Verified with: ./gradlew testDebugUnitTest lintRelease (pre-commit gate)
+
+  METRIC                         PHASE 0   PHASE 2     NOW    NOTE
+  unit tests                       2939     2962     2971   +9; 0 failures/errors
+  lint                         12 W / 0 E  12 W/0E   n/c     no lint change expected
+
+TEST-COUNT INVARIANT (steps 09-12)
+  2,971 tests / 0 failed held throughout every step of phase 3. Moving tests
+  between modules changes the per-module distribution only; the total is the
+  invariant and it never moved.
+
+STEP 11 — APP-SCOPED EXCEPTIONS (tests that legitimately stay in :app)
+  workers/*, VMs, wiring, backup/restore, layout/card repos, serializers,
+  DatabaseMigrationTest, DatabaseMigrationModelsTest, EncryptionManagerTest,
+  DocumentationDriftTest, CleanArchTest, ProductionReadinessStaticTest,
+  DatabaseReadyStartupInitializerTest, PreferencesPrewarmerTest,
+  CrashReportShareIntentTest, FeaturePortBindingTest, DatabaseKeyRotatorTest,
+  DatabaseMigrationControllerTest, UserUseCaseTest, HealthDeviceRepositoryTest,
+  SettingsRepositoryTest, LocalBackup*/LocalRestore*, SecureFileLogSinkTest,
+  V7DatabaseMigrator*, CanonicalMetricDisplayAuditTest, WorkerSchedulerTest
+
+STEP 12 — data.repository LINE FLOOR
+  Floor set to 0.60 on package app.readylytics.health.data.repository (in
+  :core:database). Measured at gate time: 66.08% (637/964). Floor proven real:
+  raising to 0.70 fails ("ratio is 0.6, expected 0.7"); reverting to 0.60
+  passes.
+
+OPEN, NOT ADDRESSED
+  (a) :core:scoring and :core:healthconnect jacoco floors are VACUOUS — their
+      jacocoCoverageVerification tasks use classDirectories =
+      tmp/kotlin-classes/debug, which is EMPTY under modern AGP/Kotlin; the rule
+      matches nothing. Fixing the path reveals :core:scoring's real
+      domain.scoring coverage is ~40% vs its 0.80 floor — needs a decision on
+      those floors.
+  (b) mockk/ByteBuddy self-attach is FLAKY on macOS/JDK17 (~half of full runs;
+      ExceptionInInitializerError in ByteBuddyAgent). Pre-existing; :app has the
+      identical -Djdk.attach.allowAttachSelf=true -Xshare:off jvmArgs.
+
+===============================================================================
 END OF BASELINE
 ================================================================================

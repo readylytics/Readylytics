@@ -2,9 +2,9 @@
 
 **Baseline:** branch `main` @ `63254e2f` — 2026-08-17
 **Scope:** 20 self-contained steps across 5 phases (5 P0, 9 P1, 6 P2)
-**Status:** Phase 0, Phase 1, and Phase 2 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and Phase 1 & 2 outcomes below.
-All verification commands green; 2,957 unit tests pass (+1 Konsist test); detekt static analysis baseline established;
-Phase 3 cleared to start.
+**Status:** Phase 0, Phase 1, Phase 2, and Phase 3 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and the phase outcomes below.
+All verification commands green; 2,971 unit tests pass; detekt static analysis baseline established;
+Phase 4 cleared to start.
 
 Every step names its files, its exact change, its verification command, and its
 done-condition. No step requires context outside itself except the steps listed
@@ -80,10 +80,10 @@ step 13 are the proof that nothing moved numerically.
 | 06 | ~~No plaintext during key rotation~~ ✅ **done 2026-08-17** | P0 | 4–6 h | 05b |
 | 07 | ~~Konsist cancellation rule (function-granular)~~ ✅ **done 2026-08-17** | P1 | 3 h | 03, 04 |
 | 08 | ~~detekt + baseline~~ ✅ **done 2026-08-17** | P1 | 4 h | — |
-| 09 | Extract `core:database-schema` | P1 | 3–4 d | 08 |
-| 10 | Distribute Hilt modules | P1 | 2–3 d | 09 |
-| 11 | Relocate 48 tests | P1 | 2 d | 09, 10 |
-| 12 | Repository coverage floor | P1 | 2 h | 11 |
+| 09 | ~~Extract `core:database-schema`~~ ✅ **done 2026-08-17** | P1 | 3–4 d | 08 |
+| 10 | ~~Distribute Hilt modules~~ ✅ **done 2026-08-17** | P1 | 2–3 d | 09 |
+| 11 | ~~Relocate 48 tests~~ ✅ **done 2026-08-17** | P1 | 2 d | 09, 10 |
+| 12 | ~~Repository coverage floor~~ ✅ **done 2026-08-17** | P1 | 2 h | 11 |
 | 13 | Golden-snapshot test | P1 | 2 d | 02 |
 | 14 | Extract compute pipeline | P1 | 4–5 d | 13 |
 | 15 | Collapse duplicate overloads | P2 | 3 h | 14 |
@@ -952,7 +952,7 @@ fails, suspend+Throwable-rethrow passes, non-suspend+Exception still passes.
 
 Strictly sequential.
 
-## Step 09 — Extract `core:database-schema` out of `core:model`
+## Step 09 — Extract `core:database-schema` out of `core:model` ✅ DONE 2026-08-17
 
 **Severity:** P1 · **Effort:** 3–4 d · **Blocked by:** 08
 
@@ -1016,9 +1016,19 @@ be updated in this PR. Run `codegraph sync` after the move.
 nothing; and `:core:database-schema` appears in no feature module's dependency
 list.
 
+### Outcome
+
+- **Commit**: `721d0a42` (`refactor(core): extract core:database-schema module for DAOs and entities (phase 3 step 09)`); follow-up `4d22de4e`.
+- **Module**: new `:core:database-schema` (`app.readylytics.health.core.databaseschema`; `readylytics.android-library-conventions` + kotlin.serialization; deps `core:model`, `androidx.core.ktx`, `room.runtime`, `kotlinx.serialization.json`; no Room compiler/ksp/hilt).
+- **Moved**: 34 files via `git mv` (17 DAO interfaces incl `SleepHrSample.kt`, 17 entities incl `LocalDateSerializer.kt`) from `core:model/.../data/local/{dao,entity}`; package names unchanged.
+- **Consumers**: `core:database`, `core:healthconnect`, `app`, `database-benchmark` get `implementation(project(":core:database-schema"))`; `core:scoring` gets `testImplementation`. `implementation(libs.room.runtime)` removed from `core:model`.
+- **Room schema** `core/database/schemas/` byte-identical (verified); added to root `coverageProjects`; `:core:database-schema:detektBaseline` generated.
+- **Docs**: `internal-docs/DATA_FLOW.md` updated; follow-up `4d22de4e` regenerated `:core:model:detektBaseline` (86→53 entries) and fixed a stale path in `internal-docs/ai-recommendations/DAILY_PROMPT_TEMPLATE.md`.
+- **Verification**: `./gradlew testDebugUnitTest lintRelease` green; `grep -rn "data.local.dao\|data.local.entity" feature/*/src/main` returns nothing.
+
 ---
 
-## Step 10 — Move Hilt modules into the modules whose implementations they bind
+## Step 10 — Move Hilt modules into the modules whose implementations they bind ✅ DONE 2026-08-17
 
 **Severity:** P1 · **Effort:** 2–3 d · **Blocked by:** 09
 
@@ -1066,9 +1076,18 @@ Do that as commit one of this step.
 from a core module, and `grep -rl "@Module" core/*/src/main` lists at least three
 modules.
 
+### Outcome
+
+- **Commits**: `63d62cb4` (db infra + DatabaseModule), `5e1d7184` (HealthConnectModule), `71c3ac2e` (ScoringModule + ScoringBindsModule), `8d751f34` (RepositoryModule split).
+- **Infra to `core:database`**: `KeyProvider`, `AndroidKeystoreKeyProvider`, `SqlCipherKeyManager` (data/security), `DatabaseReadinessGate` (data/migration), `DatabaseModule` (di) + 3 tests. `requireDatabaseReady` made public; `ExistingDatabaseState`/`DatabaseReadinessGate` inject-less ctor + companion `CURRENT_DATABASE_VERSION` widened internal→public so in-app `DatabaseMigrationModelsTest` keeps compiling. Added core:database `testOptions` + robolectric/androidx.test.core/androidx.junit/mockk deps + `robolectric.properties` (sdk=34).
+- **`HealthConnectModule`** → `core:healthconnect/di`; **`ScoringModule` + new `ScoringBindsModule`** (`ScoringCalculator`, `RhrBaselineProvider`) → `core:scoring/di`.
+- **`RepositoryModule` split**: core:database gets `DatabaseRepositoryModule` (16 @Binds — 10 `data/repository/*Impl` + `RoomAuditTrailRepository` + `RoomHealthIngestionStore` + `SelectedSourcePrunerImpl` + `SessionLinkReconcilerImpl` + `SelectedDateRepository` + `SleepSessionRepositoryImpl`); the 2 scoring binds → `ScoringBindsModule`; app `RepositoryModule` trimmed to 9 preference binds.
+- **Deviation from plan**: plan assumed 14 binds and class name `RepositoryModule` in both modules; execution renamed core:database's to `DatabaseRepositoryModule` (JVM FQN collision) and added 2 more core:database impls found in `FeaturePortModule`/`UtilModule`.
+- **Verification**: `./gradlew assembleDebug testDebugUnitTest` green; `grep -rl "@Module" core/*/src/main` lists ≥3 modules.
+
 ---
 
-## Step 11 — Relocate the 48 tests that live in `:app` but test other modules
+## Step 11 — Relocate the 48 tests that live in `:app` but test other modules ✅ DONE 2026-08-17
 
 **Severity:** P1 · **Effort:** 2 d · **Blocked by:** 09, 10
 
@@ -1126,9 +1145,17 @@ sees the whole project.
 `./gradlew testDebugUnitTest` is green; and the aggregate coverage percentage
 recorded in step 01 has not dropped.
 
+### Outcome
+
+- **Commits**: `9e7c5d85` (`test: relocate 76 misplaced unit tests to owning core modules (step 11)`), `a6f68342` (`refactor(core:database): move DailyRecomputeSupport home to keep golden fixtures whole (step 11 fix)`).
+- **Moved**: 76 test files + 4 support files — core:database (44+3), core:database-schema (1, `DomainModelTest`), core:model (19), core:healthconnect (10+1), core:scoring (2). Package names unchanged. 11 `SettingsRepository` + 3 `EncryptionManager` one-line import fixes (data.*→domain.*).
+- **Deviations (all correct, verified)**: `WorkerSchedulerTest` + `CanonicalMetricDisplayAuditTest` stayed in app (app-scoped subject / repo-wide audit); `FullHistoricalResyncUseCaseTest` merged into pre-existing core:healthconnect file (5 tests); `WorkoutMapperTest` replaced a stale 46-byte stub in core:model; `SelectedSourcePrunerImplTest`→core:database and `SessionLinkerTest`→core:model (done-when caught them); `ScoringRepositoryN1Test` physically at `domain/scoring/`; core:database gained `testImplementation(libs.androidx.junit)` + `tasks.withType<Test>` jvmArgs (`-Xshare:off`, `-Djdk.attach.allowAttachSelf=true`) mirroring app; golden resource `scoring_walk_forward_golden.json` moved.
+- **Critical**: to keep the `domain/scoring/golden/` fixtures whole in core:database (a later step adds `ScoringGoldenSnapshotTest` there), `DailyRecomputeSupport` (production, @Singleton) moved from core:healthconnect → core:database — pure move, only core:model deps — so `WalkForwardTransactionEquivalenceTest` could stay in core:database. A transient `testFixtures` approach was reverted.
+- **Invariant held**: 2,971 / 0 failed throughout.
+
 ---
 
-## Step 12 — Add a coverage floor for the repository layer
+## Step 12 — Add a coverage floor for the repository layer ✅ DONE 2026-08-17
 
 **Severity:** P1 · **Effort:** 2 h · **Blocked by:** 11
 
@@ -1196,7 +1223,18 @@ or register an aggregating lifecycle task.
 passes, and raising the floor to 70% then rerunning makes it fail (proving the
 gate evaluates rather than skips).
 
+### Outcome
+
+- **Commit**: `07702ee8` (`build(core:database): enforce 60% line floor on data.repository package (step 12)`).
+- **Added**: `id("jacoco")` + `enableUnitTestCoverage` + `jacocoCoverageVerification` (PACKAGE `app.readylytics.health.data.repository`, LINE ≥ 0.60) + a `jacocoTestReport` to `core:database`.
+- **Correction**: the `core:healthconnect`/`core:scoring` jacoco tasks (whose shape the plan said to copy) use `classDirectories` = `tmp/kotlin-classes/debug`, which is EMPTY under modern AGP/Kotlin — their floors are VACUOUS (rule matches nothing). core:database fixed to use the correct `intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes`. Real measured `data.repository` LINE coverage = **66.08%** (637/964).
+- **Floor proven real**: raise to 0.70 → FAIL ("ratio is 0.6, expected 0.7"); revert to 0.60 → PASS.
+- **CI**: `.github/workflows/ci.yml` "Enforce coverage gate" step now runs `./gradlew jacocoCoverageVerification :core:database:jacocoCoverageVerification`.
+- **Note**: mockk/ByteBuddy self-attach is FLAKY on this macOS/JDK17 env (~half of full runs; `ExceptionInInitializerError` in `ByteBuddyAgent`), pre-existing (app has identical `-Djdk.attach.allowAttachSelf=true -Xshare:off` jvmArgs). Not introduced by this phase.
+
 ---
+
+> ✅ Phase 3 complete on 2026-08-17. Phase 4 is cleared to start.
 
 # Phase 4 — The god object
 
