@@ -34,6 +34,7 @@ import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.components.reorder.ReorderableGrid
+import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemCatalog
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
@@ -45,7 +46,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 fun WorkoutDetailRoute(
     workoutId: String,
     onBack: () -> Unit,
-    onRequestRoutePermission: (onGranted: () -> Unit) -> Unit = {},
+    onRequestRoutePermission: (onGranted: (List<DomainRouteLocation>) -> Unit) -> Unit = {},
     viewModel: WorkoutDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,8 +80,8 @@ fun WorkoutDetailRoute(
             WorkoutDetailScreen(
                 uiState = uiState,
                 onGrantPermissionClick = {
-                    onRequestRoutePermission {
-                        viewModel.onRoutePermissionResult()
+                    onRequestRoutePermission { grantedRoutePoints ->
+                        viewModel.onRoutePermissionResult(grantedRoutePoints)
                     }
                 },
                 onToggleLayoutManagement = viewModel::onToggleLayoutManagement,

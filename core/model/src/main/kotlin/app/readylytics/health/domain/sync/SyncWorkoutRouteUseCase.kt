@@ -1,6 +1,8 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.sync.mappers.WorkoutMapper
 import javax.inject.Inject
@@ -13,11 +15,27 @@ class SyncWorkoutRouteUseCase
         private val hcRepo: HealthConnectRepository,
         private val healthIngestionStore: HealthIngestionStore,
     ) {
-        suspend operator fun invoke(workoutId: String): Result<Unit> {
+        /**
+         * @param grantedRoutePoints route handed back by the per-session consent dialog
+         * (`ExerciseRouteRequestContract`). That dialog returns the polyline directly as a one-time
+         * grant -- re-reading the session afterwards still yields `ConsentRequired` -- so the points
+         * must be injected here rather than fetched again. Null/empty keeps whatever the session
+         * read produced.
+         */
+        suspend operator fun invoke(
+            workoutId: String,
+            grantedRoutePoints: List<DomainRouteLocation>? = null,
+        ): Result<Unit> {
             val session =
                 hcRepo.readExerciseSession(workoutId)
                     ?: return Result.failure("Workout session not found in Health Connect: $workoutId")
-            val workoutInput = WorkoutMapper.mapExerciseSession(session)
+            val resolvedSession =
+                if (grantedRoutePoints.isNullOrEmpty()) {
+                    session
+                } else {
+                    session.copy(routePoints = grantedRoutePoints, routeState = RouteState.IMPORTED)
+                }
+            val workoutInput = WorkoutMapper.mapExerciseSession(resolvedSession)
             healthIngestionStore.persistSingleWorkoutRoute(
                 workoutId = workoutInput.id,
                 routePoints = workoutInput.routePoints,

@@ -366,6 +366,23 @@ them), so those workouts land with `routeState = NOT_AVAILABLE` until a full res
 On-demand single workout route sync is provided by `SyncWorkoutRouteUseCase` (`core/model/.../domain/sync/SyncWorkoutRouteUseCase.kt`):
 when route permission is granted or the user opens a workout requiring permission, it reads the session from Health Connect,
 maps route points, and updates the local Room database atomically via `HealthIngestionStore.persistSingleWorkoutRoute`.
+A workout sitting at `routeState = PERMISSION_REQUIRED` has three ways out, in escalating order.
+**(a) Bulk permission already granted:** `android.permission.health.READ_EXERCISE_ROUTES` is requested during onboarding
+as part of `optionalPermissions` (same Health Connect sheet as `READ_HEALTH_DATA_HISTORY` — both live in
+`android.health.connect.HealthPermissions`). `WorkoutDetailViewModel.loadWorkout` checks `hasExerciseRoutesPermission()`
+and re-runs the use case, whose session re-read then carries the route, so the grant card never appears.
+**(b) Grant card → bulk request:** tapping the card runs `rememberExerciseRouteRequest`
+(`app/.../ui/health/ExerciseRoutePermissionRequest.kt` — the launchers live in the app module because feature modules may
+not import Health Connect types), which first re-requests the bulk permission. A grant hands an **empty** point list back
+to `WorkoutDetailViewModel.onRoutePermissionResult`, and the normal session re-read supplies the polyline.
+**(c) Per-session consent fallback:** if the bulk request comes back denied — hard-denied earlier, or the device's Health
+Connect predates the permission, in which case the OS resolves it without showing anything — the same helper launches
+`ExerciseRouteRequestContract` for this session id. That dialog works on every supported version but is a one-time grant
+that returns the polyline in its own result; re-reading the session afterwards still reports `ConsentRequired`. So the app
+module converts via `ExerciseRoute.toDomainRoutePoints()` (`core/healthconnect/.../HealthConnectRecordConverters.kt`) and
+passes the points into `SyncWorkoutRouteUseCase(workoutId, grantedRoutePoints)`, which substitutes them onto the session
+(`routeState = IMPORTED`) before `WorkoutMapper` derives distance/speed/elevation. An empty/absent granted list leaves the
+session read untouched. If neither launcher can start, the helper deep-links to Health Connect settings.
 `workout_route_points` is part of the encrypted local backup: `LocalBackupManager` streams it as the
 `workoutRoutePoints` JSON array (written **after** `workouts`, since the FK cascades from
 `workout_records`), and `LocalRestoreManager` reloads it in that order. Without this, restore's

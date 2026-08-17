@@ -123,4 +123,96 @@ class SyncWorkoutRouteUseCaseTest {
             }
             assertEquals(RouteState.PERMISSION_REQUIRED, routeStateSlot.captured)
         }
+
+    @Test
+    fun `invoke persists granted route points over a consent-required session`() =
+        runTest {
+            val start = Instant.parse("2026-08-15T10:00:00Z")
+            val end = Instant.parse("2026-08-15T10:30:00Z")
+            val session =
+                DomainExerciseSessionRecord(
+                    id = "workout-789",
+                    startTime = start,
+                    endTime = end,
+                    exerciseType = "56",
+                    deviceName = "Pixel Watch",
+                    routePoints = emptyList(),
+                    routeState = RouteState.PERMISSION_REQUIRED,
+                )
+            val granted =
+                listOf(
+                    DomainRouteLocation(
+                        time = start,
+                        latitude = 37.7749,
+                        longitude = -122.4194,
+                        altitudeMeters = 10.0,
+                        horizontalAccuracyMeters = 5f,
+                        verticalAccuracyMeters = 3f,
+                    ),
+                    DomainRouteLocation(
+                        time = end,
+                        latitude = 37.7850,
+                        longitude = -122.4194,
+                        altitudeMeters = 25.0,
+                        horizontalAccuracyMeters = 5f,
+                        verticalAccuracyMeters = 3f,
+                    ),
+                )
+
+            coEvery { hcRepo.readExerciseSession("workout-789") } returns session
+
+            val result = useCase.invoke("workout-789", grantedRoutePoints = granted)
+
+            assertTrue(result.isSuccess)
+            val routeStateSlot = slot<String>()
+            val distanceSlot = slot<Float?>()
+            coVerify(exactly = 1) {
+                healthIngestionStore.persistSingleWorkoutRoute(
+                    workoutId = "workout-789",
+                    routePoints = match { it.size == 2 },
+                    routeState = capture(routeStateSlot),
+                    totalDistanceMeters = captureNullable(distanceSlot),
+                    avgSpeedKmh = any(),
+                    elevationGainMeters = any(),
+                )
+            }
+            assertEquals(RouteState.IMPORTED, routeStateSlot.captured)
+            // Derived from the granted polyline, since the session itself carried no distance.
+            assertTrue((distanceSlot.captured ?: 0f) > 0f)
+        }
+
+    @Test
+    fun `invoke ignores empty granted route points and keeps the session route state`() =
+        runTest {
+            val start = Instant.parse("2026-08-15T10:00:00Z")
+            val end = Instant.parse("2026-08-15T10:30:00Z")
+            val session =
+                DomainExerciseSessionRecord(
+                    id = "workout-000",
+                    startTime = start,
+                    endTime = end,
+                    exerciseType = "56",
+                    deviceName = "Pixel Watch",
+                    routePoints = emptyList(),
+                    routeState = RouteState.PERMISSION_REQUIRED,
+                )
+
+            coEvery { hcRepo.readExerciseSession("workout-000") } returns session
+
+            val result = useCase.invoke("workout-000", grantedRoutePoints = emptyList())
+
+            assertTrue(result.isSuccess)
+            val routeStateSlot = slot<String>()
+            coVerify(exactly = 1) {
+                healthIngestionStore.persistSingleWorkoutRoute(
+                    workoutId = "workout-000",
+                    routePoints = match { it.isEmpty() },
+                    routeState = capture(routeStateSlot),
+                    totalDistanceMeters = any(),
+                    avgSpeedKmh = any(),
+                    elevationGainMeters = any(),
+                )
+            }
+            assertEquals(RouteState.PERMISSION_REQUIRED, routeStateSlot.captured)
+        }
 }

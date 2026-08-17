@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -885,6 +886,76 @@ class WorkoutDetailViewModelTest {
             advanceUntilIdle()
 
             coVerify(atLeast = 1) { syncWorkoutRouteUseCase.invoke("run-perm-test") }
+        }
+
+    @Test
+    fun `onRoutePermissionResult forwards the route granted by the per-session consent dialog`() =
+        runTest {
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(10)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-granted-route",
+                    startTime = startMs,
+                    endTime = startMs + 30 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 5f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 5f,
+                    zone5Minutes = 0f,
+                    trimp = 60f,
+                    avgHr = 150f,
+                    routeState = RouteState.PERMISSION_REQUIRED,
+                )
+            val granted =
+                listOf(
+                    DomainRouteLocation(
+                        time = Instant.ofEpochMilli(startMs),
+                        latitude = 37.7749,
+                        longitude = -122.4194,
+                        altitudeMeters = 10.0,
+                        horizontalAccuracyMeters = 5f,
+                        verticalAccuracyMeters = 3f,
+                    ),
+                )
+
+            coEvery { workoutRepository.getById("run-granted-route") } returns workout
+            coEvery { workoutRepository.getRoutePoints("run-granted-route") } returns emptyList()
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 60f,
+                    computedTrimp = 60,
+                    trimpDisplay = "60",
+                    gainedStrain = 0.2f,
+                    gainedStrainDisplay = "0.2",
+                    classification = null,
+                )
+
+            viewModel.loadWorkout("run-granted-route")
+            advanceUntilIdle()
+
+            viewModel.onRoutePermissionResult(granted)
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) {
+                syncWorkoutRouteUseCase.invoke("run-granted-route", granted)
+            }
         }
 
     @Test

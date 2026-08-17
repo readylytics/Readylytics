@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.layout.LayoutManagementDelegate
+import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.preferences.UnitSystem
@@ -188,11 +189,16 @@ class WorkoutDetailViewModel
             layoutDelegate.onResetToDefaults()
         }
 
-        fun onRoutePermissionResult() {
+        /**
+         * @param grantedRoutePoints polyline returned by the per-session consent dialog. Empty when
+         * the user granted the bulk `READ_EXERCISE_ROUTES` permission instead, in which case the
+         * session re-read inside [syncWorkoutRouteUseCase] carries the route.
+         */
+        fun onRoutePermissionResult(grantedRoutePoints: List<DomainRouteLocation> = emptyList()) {
             val workoutId = savedStateHandle.get<String>("workoutId") ?: return
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
-                syncWorkoutRouteUseCase(workoutId)
+                syncWorkoutRouteUseCase(workoutId, grantedRoutePoints.takeIf { it.isNotEmpty() })
                 loadWorkout(workoutId)
             }
         }
