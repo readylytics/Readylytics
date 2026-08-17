@@ -3,7 +3,6 @@ package app.readylytics.health.data.backup
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
@@ -55,6 +54,7 @@ class LocalBackupManager
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context),
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
         private val json = Json { encodeDefaults = true }
@@ -63,9 +63,6 @@ class LocalBackupManager
             withContext(ioDispatcher) {
                 var tempJsonFile: File? = null
                 var tempZipFile: File? = null
-                var partialDefaultFile: File? = null
-                var partialSafFile: DocumentFile? = null
-                var backupCompleted = false
                 try {
                     val prefs = settingsRepository.userPreferences.first()
                     val customUri = prefs.backupDirectoryUri?.toUri()
@@ -92,32 +89,12 @@ class LocalBackupManager
                         } ?: throw IllegalStateException("Backup password not set")
 
                     // 3. Create ZIP file
-                    val finalFile: File?
                     tempZipFile = File(context.cacheDir, zipFilename)
                     createZip(jsonFile, tempZipFile, password)
 
-                    if (customUri != null) {
-                        val dir =
-                            DocumentFile.fromTreeUri(context, customUri)
-                                ?: throw IllegalStateException("Could not access custom backup directory")
-                        val file =
-                            dir.createFile("application/zip", zipFilename)
-                                ?: throw IllegalStateException("Could not create backup file in custom directory")
-                        partialSafFile = file
-
-                        context.contentResolver.openOutputStream(file.uri)?.use { os ->
-                            tempZipFile.inputStream().use { it.copyTo(os) }
-                        } ?: throw IllegalStateException("Could not write backup file")
-                        backupCompleted = true
-                        finalFile = null
-                    } else {
-                        defaultBackupDir.mkdirs()
-                        val file = File(defaultBackupDir, zipFilename)
-                        partialDefaultFile = file
-                        moveTempZipToFinal(tempZipFile, file)
-                        backupCompleted = true
-                        finalFile = file
-                    }
+                    val store = backupStoreFactory.create(customUri)
+                    store.publish(tempZipFile, zipFilename)
+                    val finalFile = if (customUri != null) null else File(defaultBackupDir, zipFilename)
 
                     auditTrailRepository.appendBestEffort(
                         "LocalBackupManager",
@@ -135,37 +112,14 @@ class LocalBackupManager
                 } finally {
                     tempJsonFile?.delete()
                     tempZipFile?.delete()
-                    if (!backupCompleted) {
-                        partialDefaultFile?.delete()
-                        partialSafFile?.delete()
-                    }
                 }
             }
 
         suspend fun deleteBackup(uri: Uri): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    if (uri.scheme == "content") {
-                        val documentFile = DocumentFile.fromSingleUri(context, uri)
-                        if (documentFile?.delete() == false) {
-                            val prefs = settingsRepository.userPreferences.first()
-                            val customUri = prefs.backupDirectoryUri?.toUri()
-                            if (customUri != null) {
-                                val root = DocumentFile.fromTreeUri(context, customUri)
-                                val file = root?.findFile(documentFile.name ?: "")
-                                if (file?.delete() == false) {
-                                    throw IllegalStateException("Failed to delete SAF document")
-                                }
-                            } else {
-                                throw IllegalStateException("Failed to delete document")
-                            }
-                        }
-                    } else if (uri.scheme == "file") {
-                        val file = File(uri.path!!)
-                        if (file.exists() && !file.delete()) {
-                            throw IllegalStateException("Failed to delete local file")
-                        }
-                    }
+                    val store = backupStoreFactory.create(uri)
+                    store.delete(BackupLocation(uri.toString()))
                     Result.success(Unit)
                 } catch (e: CancellationException) {
                     throw e
@@ -180,7 +134,10 @@ class LocalBackupManager
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    val backups = listBackups()
+                    val prefs = settingsRepository.userPreferences.first()
+                    val customUri = prefs.backupDirectoryUri?.toUri()
+                    val store = backupStoreFactory.create(customUri)
+                    val backups = store.list()
                     val tempDir = File(context.cacheDir, "reencrypt_temp")
                     tempDir.mkdirs()
 
@@ -189,17 +146,10 @@ class LocalBackupManager
                             val tempZip = File(tempDir, info.name)
                             val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
                             val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
-                            val backupUri = info.location.value.toUri()
 
                             // 1. Copy to temp zip
-                            if (backupUri.scheme == "content") {
-                                context.contentResolver.openInputStream(backupUri)?.use { input ->
-                                    tempZip.outputStream().use { output -> input.copyTo(output) }
-                                } ?: throw IllegalStateException("Could not read backup")
-                            } else {
-                                File(backupUri.path!!).inputStream().use { input ->
-                                    tempZip.outputStream().use { output -> input.copyTo(output) }
-                                }
+                            store.read(info.location).use { input ->
+                                tempZip.outputStream().use { output -> input.copyTo(output) }
                             }
 
                             // 2. Extract
@@ -225,14 +175,8 @@ class LocalBackupManager
                                 tempZipForNew.delete()
                             }
 
-                            // 4. Overwrite original (atomic rename-swap)
-                            if (backupUri.scheme == "content") {
-                                context.contentResolver.openOutputStream(backupUri, "wt")?.use { output ->
-                                    newZipPath.inputStream().use { it.copyTo(output) }
-                                } ?: throw IllegalStateException("Could not write re-encrypted backup")
-                            } else {
-                                newZipPath.renameTo(File(backupUri.path!!))
-                            }
+                            // 4. Overwrite original
+                            store.publish(newZipPath, info.name)
 
                             // 5. Cleanup per-backup temp files
                             tempZip.delete()
@@ -680,64 +624,14 @@ class LocalBackupManager
             withContext(ioDispatcher) {
                 val prefs = settingsRepository.userPreferences.first()
                 val customUri = prefs.backupDirectoryUri?.toUri()
-
-                if (customUri != null) {
-                    val dir = DocumentFile.fromTreeUri(context, customUri)
-                    dir
-                        ?.listFiles()
-                        ?.filter { it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true }
-                        ?.map {
-                            BackupFileInfo(
-                                it.name!!,
-                                it.lastModified(),
-                                it.length(),
-                                BackupLocation(it.uri.toString()),
-                            )
-                        }?.sortedByDescending { it.lastModified }
-                        ?: emptyList()
-                } else {
-                    defaultBackupDir.mkdirs()
-                    defaultBackupDir
-                        .listFiles { f -> f.name.startsWith("backup_") && f.name.endsWith(".zip") }
-                        ?.map {
-                            BackupFileInfo(
-                                it.name,
-                                it.lastModified(),
-                                it.length(),
-                                BackupLocation(Uri.fromFile(it).toString()),
-                            )
-                        }?.sortedByDescending { it.lastModified }
-                        ?: emptyList()
-                }
+                val store = backupStoreFactory.create(customUri)
+                store.list()
             }
 
-        private fun pruneOldBackups(customUri: Uri?) {
-            val now = System.currentTimeMillis()
-
-            // 1. Prune internal directory
-            if (defaultBackupDir.exists()) {
-                defaultBackupDir
-                    .listFiles { f ->
-                        f.name.startsWith("backup_") && f.name.endsWith(".zip") && f.isFile
-                    }?.filter { now - it.lastModified() > RETENTION_PERIOD_MS }
-                    ?.forEach { it.delete() }
-            }
-
-            // 2. Prune custom SAF directory if provided
+        private suspend fun pruneOldBackups(customUri: Uri?) {
+            backupStoreFactory.createDefault().prune(RETENTION_PERIOD_MS)
             if (customUri != null) {
-                val treeDir =
-                    if (customUri.scheme == "content") {
-                        DocumentFile.fromTreeUri(context, customUri)
-                    } else {
-                        // Support for file:// URIs (e.g. in tests)
-                        customUri.path?.let { DocumentFile.fromFile(File(it)) }
-                    }
-                treeDir
-                    ?.listFiles()
-                    ?.filter {
-                        it.isFile && it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true
-                    }?.filter { now - it.lastModified() > RETENTION_PERIOD_MS }
-                    ?.forEach { it.delete() }
+                backupStoreFactory.create(customUri).prune(RETENTION_PERIOD_MS)
             }
         }
 

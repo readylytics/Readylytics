@@ -89,4 +89,10 @@ abstract class FeaturePortModule {
     @Binds
     @Singleton
     abstract fun bindUserProfileActions(impl: UserUseCase): UserProfileActions
+
+    @Binds
+    @Singleton
+    abstract fun bindBackupStoreFactory(
+        impl: app.readylytics.health.data.backup.DefaultBackupStoreFactory,
+    ): app.readylytics.health.data.backup.BackupStoreFactory
 }
