@@ -50,7 +50,7 @@ class DataSourceSettingsViewModel
         private val persistedDeviceByDataType =
             settingsReader.userPreferences.map { it.deviceByDataType }.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
+                started = sharingStarted,
                 initialValue = emptyMap(),
             )
 
