@@ -12,11 +12,13 @@ import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
@@ -189,11 +191,20 @@ class ScoringWalkForwardBenchmark {
         val settingsRepo = BenchmarkFakeSettingsRepository(prefs)
         val scoringRepository =
             ScoringRepositoryImpl(
-                workoutDao = db.workoutDao(),
-                sleepSessionDao = db.sleepSessionDao(),
-                dailySummaryDao = db.dailySummaryDao(),
+                dataLoader =
+                    ScoringDayDataLoader(
+                        db.workoutDao(),
+                        db.sleepSessionDao(),
+                        db.dailySummaryDao(),
+                        db.heartRateDao(),
+                        db.minuteBucketDao(),
+                        db.weightRecordDao(),
+                        db.bodyFatRecordDao(),
+                        db.bloodPressureRecordDao(),
+                        db.oxygenSaturationRecordDao(),
+                        db.bodyTemperatureRecordDao(),
+                    ),
                 settingsRepo = settingsRepo,
-                scoringCalculator = scoringCalculator,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
                 assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
@@ -201,14 +212,7 @@ class ScoringWalkForwardBenchmark {
                 scoringConfigFactory = scoringConfigFactory,
                 computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
                 resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
-                heartRateDao = db.heartRateDao(),
-                minuteBucketDao = db.minuteBucketDao(),
-                weightRecordDao = db.weightRecordDao(),
-                bodyFatRecordDao = db.bodyFatRecordDao(),
-                bloodPressureRecordDao = db.bloodPressureRecordDao(),
-                oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
-                bodyTemperatureRecordDao = db.bodyTemperatureRecordDao(),
-                sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
+                assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
                 scoringHistoryRepository = scoringHistoryRepository,
                 defaultDispatcher = kotlinx.coroutines.Dispatchers.Default,
             )

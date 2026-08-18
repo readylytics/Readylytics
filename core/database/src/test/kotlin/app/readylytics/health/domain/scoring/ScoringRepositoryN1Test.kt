@@ -18,6 +18,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.security.EncryptionManager
@@ -175,9 +176,18 @@ class ScoringRepositoryN1Test {
 
         repo =
             ScoringRepositoryImpl(
-                workoutDao = workoutDao,
-                sleepSessionDao = sleepSessionDao,
-                dailySummaryDao = dailySummaryDao,
+                dataLoader = ScoringDayDataLoader(
+                    workoutDao,
+                    sleepSessionDao,
+                    dailySummaryDao,
+                    heartRateDao,
+                    minuteBucketDao,
+                    weightRecordDao,
+                    bodyFatRecordDao,
+                    bloodPressureRecordDao,
+                    oxygenSaturationRecordDao,
+                    bodyTemperatureRecordDao,
+                ),
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
@@ -187,13 +197,6 @@ class ScoringRepositoryN1Test {
                 computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
                 resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
                 assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
-                heartRateDao = heartRateDao,
-                minuteBucketDao = minuteBucketDao,
-                weightRecordDao = weightRecordDao,
-                bodyFatRecordDao = bodyFatRecordDao,
-                bloodPressureRecordDao = bloodPressureRecordDao,
-                oxygenSaturationRecordDao = oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao = bodyTemperatureRecordDao,
                 scoringHistoryRepository = scoringHistoryRepository,
                 defaultDispatcher = UnconfinedTestDispatcher(),
             )

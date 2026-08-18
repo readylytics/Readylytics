@@ -8,6 +8,7 @@ import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
@@ -185,9 +186,12 @@ class GoldenFixtureWalkForwardTest {
             val settingsRepo = FakeSettingsRepository(prefs)
             val scoringRepository =
                 ScoringRepositoryImpl(
-                    workoutDao = db.workoutDao(),
-                    sleepSessionDao = db.sleepSessionDao(),
-                    dailySummaryDao = db.dailySummaryDao(),
+                    dataLoader = ScoringDayDataLoader(
+                        db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
+                        db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
+                        db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
+                        db.bodyTemperatureRecordDao(),
+                    ),
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,
                     buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
@@ -197,13 +201,6 @@ class GoldenFixtureWalkForwardTest {
                     computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
                     resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
                     assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
-                    heartRateDao = db.heartRateDao(),
-                    minuteBucketDao = db.minuteBucketDao(),
-                    weightRecordDao = db.weightRecordDao(),
-                    bodyFatRecordDao = db.bodyFatRecordDao(),
-                    bloodPressureRecordDao = db.bloodPressureRecordDao(),
-                    oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
-                    bodyTemperatureRecordDao = db.bodyTemperatureRecordDao(),
                     scoringHistoryRepository = scoringHistoryRepository,
                     defaultDispatcher = UnconfinedTestDispatcher(),
                 )

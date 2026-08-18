@@ -64,9 +64,18 @@ class ScoringRepositoryBiphasicIntegrationTest {
 
     private val repo =
         ScoringRepositoryImpl(
-            workoutDao,
-            sleepSessionDao,
-            dailySummaryDao,
+            ScoringDayDataLoader(
+                workoutDao,
+                sleepSessionDao,
+                dailySummaryDao,
+                heartRateDao,
+                minuteBucketDao,
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
+            ),
             settingsRepo,
             baselineComputer,
             BuildLoadSeriesUseCase(scoringCalculator),
@@ -76,13 +85,6 @@ class ScoringRepositoryBiphasicIntegrationTest {
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             ResolveDailyBaselinesUseCase(baselineComputer),
             AssembleDailySummaryUseCase(),
-            heartRateDao,
-            minuteBucketDao,
-            weightRecordDao,
-            bodyFatRecordDao,
-            bloodPressureRecordDao,
-            oxygenSaturationRecordDao,
-            bodyTemperatureRecordDao,
             scoringHistoryRepository,
             UnconfinedTestDispatcher(),
         )

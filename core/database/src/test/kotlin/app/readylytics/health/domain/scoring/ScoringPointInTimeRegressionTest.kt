@@ -8,6 +8,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.model.TimestampedTrimp
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
@@ -53,9 +54,18 @@ class ScoringPointInTimeRegressionTest {
     fun setup() {
         repo =
             ScoringRepositoryImpl(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
+                ScoringDayDataLoader(
+                    workoutDao,
+                    sleepSessionDao,
+                    dailySummaryDao,
+                    heartRateDao,
+                    minuteBucketDao,
+                    weightRecordDao,
+                    bodyFatRecordDao,
+                    bloodPressureRecordDao,
+                    oxygenSaturationRecordDao,
+                    bodyTemperatureRecordDao,
+                ),
                 settingsRepo,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
@@ -65,13 +75,6 @@ class ScoringPointInTimeRegressionTest {
                 ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
                 scoringHistoryRepository,
                 UnconfinedTestDispatcher(),
             )

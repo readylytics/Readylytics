@@ -48,14 +48,25 @@ class ScoringRepositoryImplTest {
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
+    private val dataLoader =
+        ScoringDayDataLoader(
+            workoutDao,
+            sleepSessionDao,
+            dailySummaryDao,
+            heartRateDao,
+            minuteBucketDao,
+            weightRecordDao,
+            bodyFatRecordDao,
+            bloodPressureRecordDao,
+            oxygenSaturationRecordDao,
+            bodyTemperatureRecordDao,
+        )
 
     private lateinit var repo: ScoringRepositoryImpl
 
     private fun createRepo(dispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()): ScoringRepositoryImpl =
         ScoringRepositoryImpl(
-            workoutDao,
-            sleepSessionDao,
-            dailySummaryDao,
+            dataLoader,
             settingsRepo,
             baselineComputer,
             BuildLoadSeriesUseCase(scoringCalculator),
@@ -65,13 +76,6 @@ class ScoringRepositoryImplTest {
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             ResolveDailyBaselinesUseCase(baselineComputer),
             AssembleDailySummaryUseCase(),
-            heartRateDao,
-            minuteBucketDao,
-            weightRecordDao,
-            bodyFatRecordDao,
-            bloodPressureRecordDao,
-            oxygenSaturationRecordDao,
-            bodyTemperatureRecordDao,
             scoringHistoryRepository,
             dispatcher,
         )

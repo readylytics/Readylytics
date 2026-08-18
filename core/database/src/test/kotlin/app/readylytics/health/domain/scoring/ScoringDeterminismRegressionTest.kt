@@ -14,6 +14,7 @@ import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
@@ -70,9 +71,18 @@ class ScoringDeterminismRegressionTest {
     fun setup() {
         repo =
             ScoringRepositoryImpl(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
+                ScoringDayDataLoader(
+                    workoutDao,
+                    sleepSessionDao,
+                    dailySummaryDao,
+                    heartRateDao,
+                    minuteBucketDao,
+                    weightRecordDao,
+                    bodyFatRecordDao,
+                    bloodPressureRecordDao,
+                    oxygenSaturationRecordDao,
+                    bodyTemperatureRecordDao,
+                ),
                 settingsRepo,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
@@ -82,13 +92,6 @@ class ScoringDeterminismRegressionTest {
                 ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
                 ResolveDailyBaselinesUseCase(baselineComputer),
                 AssembleDailySummaryUseCase(),
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
                 scoringHistoryRepository,
                 UnconfinedTestDispatcher(),
             )
