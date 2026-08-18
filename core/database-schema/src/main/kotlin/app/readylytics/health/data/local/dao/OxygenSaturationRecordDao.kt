@@ -70,6 +70,22 @@ interface OxygenSaturationRecordDao {
         offset: Int,
     ): List<OxygenSaturationRecordEntity>
 
+    @Query(
+        "SELECT * FROM oxygen_saturation_records " +
+            "WHERE timestampMs >= :fromMs AND (" +
+            "  timestampMs > :afterTs OR " +
+            "  (timestampMs = :afterTs AND id > :afterId)" +
+            ") " +
+            "ORDER BY timestampMs ASC, id ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageAfter(
+        fromMs: Long,
+        afterTs: Long,
+        afterId: String,
+        limit: Int,
+    ): List<OxygenSaturationRecordEntity>
+
     @Query("DELETE FROM oxygen_saturation_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 

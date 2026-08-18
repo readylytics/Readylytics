@@ -19,6 +19,22 @@ interface StepRecordDao {
         offset: Int,
     ): List<StepRecordEntity>
 
+    @Query(
+        "SELECT * FROM step_records " +
+            "WHERE startTime >= :fromMs AND (" +
+            "  startTime > :afterTs OR " +
+            "  (startTime = :afterTs AND id > :afterId)" +
+            ") " +
+            "ORDER BY startTime ASC, id ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageAfter(
+        fromMs: Long,
+        afterTs: Long,
+        afterId: String,
+        limit: Int,
+    ): List<StepRecordEntity>
+
     @Query("SELECT * FROM step_records WHERE id = :id")
     suspend fun getById(id: String): StepRecordEntity?
 

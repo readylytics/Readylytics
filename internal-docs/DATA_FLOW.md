@@ -54,7 +54,7 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
                │   columns in place, near-no-op on identical re-ingest; others: @Upsert on stable id
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v11) │   17 entities — single source of truth
+│  HealthDatabase (SQLite v12) │   17 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -252,7 +252,7 @@ so re-ingestion is idempotent, but entity construction itself happens one layer 
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 | `BodyTemperatureDataMapper`  | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`  | `DomainBodyTemperatureRecord` → `BodyTemperatureRecordEntity` (°C). Ingested through `HealthIngestionCoordinator` exactly like the other optional-permission metrics — same upsert/idempotency contract, no special-casing. |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 11)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 12)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/database-schema/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
@@ -347,6 +347,11 @@ That per-record read costs one extra IPC round-trip per session, so `readExercis
 `includeDetails` flag (default `true`). Ingestion (`HealthIngestionCoordinator`) passes `true`;
 `discoverDevices` passes `false`, because device discovery only reads `deviceName` and would otherwise
 issue one route read per workout in its scan window.
+Version 12 (`Migration11To12`) adds the `index_step_records_startTime` index on `step_records` (`startTime`)
+for keyset pagination, efficient range queries, and retention cleanup; keyset `pageAfter` methods added to all
+13 backup-facing DAOs (`HeartRateDao`, `HrvDao`, `SleepSessionDao`, `WorkoutDao`, `DailySummaryDao`, `WeightRecordDao`,
+`BodyFatRecordDao`, `BloodPressureRecordDao`, `OxygenSaturationRecordDao`, `BodyTemperatureRecordDao`, `StepRecordDao`,
+`MinuteBucketDao`, `WorkoutRoutePointDao`).
 
 **Workout distance and elevation come from separate records, not the session.** An
 `ExerciseSessionRecord` carries no distance — the recording app writes `DistanceRecord` and
@@ -1049,7 +1054,7 @@ checkpoint, progress starts directly at the resumed phase/offset instead of rese
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v11)                             | 17 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v11 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v12)                             | 17 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v12 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/V7DatabaseMigrator.kt`                                               | Storage — resumable external v7 migration           | preflight; 10k keyset copy/checkpoint; per-index transactions; validated atomic cutover  |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/migration/DatabaseMigrationModels.kt`                                 | Domain — migration contracts                        | readiness inspector/state; phase/progress/result models                                  |

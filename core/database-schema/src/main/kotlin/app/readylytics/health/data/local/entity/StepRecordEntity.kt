@@ -1,6 +1,7 @@
 package app.readylytics.health.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
@@ -12,7 +13,10 @@ import kotlinx.serialization.Serializable
  * from this table.
  */
 @Serializable
-@Entity(tableName = "step_records")
+@Entity(
+    tableName = "step_records",
+    indices = [Index(value = ["startTime"])],
+)
 data class StepRecordEntity(
     @PrimaryKey val id: String,
     val startTime: Long,

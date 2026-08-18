@@ -25,6 +25,22 @@ interface HeartRateDao {
 
     @Query(
         "SELECT * FROM heart_rate_records " +
+            "WHERE timestampMs >= :fromMs AND (" +
+            "  timestampMs > :afterTs OR " +
+            "  (timestampMs = :afterTs AND sourceRecordRef > :afterRef)" +
+            ") " +
+            "ORDER BY timestampMs ASC, sourceRecordRef ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageAfter(
+        fromMs: Long,
+        afterTs: Long,
+        afterRef: Long,
+        limit: Int,
+    ): List<HeartRateRecordEntity>
+
+    @Query(
+        "SELECT * FROM heart_rate_records " +
             "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
             "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef > :lastSourceRecordRef)) " +
             "ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit",

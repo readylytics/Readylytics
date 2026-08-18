@@ -29,4 +29,14 @@ interface WorkoutRoutePointDao {
         limit: Int,
         offset: Int,
     ): List<WorkoutRoutePointEntity>
+
+    @Query(
+        "SELECT * FROM workout_route_points WHERE id > :afterId " +
+            "ORDER BY id ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageAfter(
+        afterId: Long,
+        limit: Int,
+    ): List<WorkoutRoutePointEntity>
 }

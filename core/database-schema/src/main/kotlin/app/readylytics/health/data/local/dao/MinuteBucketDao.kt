@@ -67,6 +67,22 @@ interface MinuteBucketDao {
         offset: Int,
     ): List<HrMinuteBucketEntity>
 
+    @Query(
+        "SELECT * FROM hr_minute_buckets WHERE (" +
+            "  bucketStartMs > :afterTs OR " +
+            "  (bucketStartMs = :afterTs AND recordType > :afterRecordType) OR " +
+            "  (bucketStartMs = :afterTs AND recordType = :afterRecordType AND sessionId > :afterSessionId)" +
+            ") " +
+            "ORDER BY bucketStartMs ASC, recordType ASC, sessionId ASC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageAfter(
+        afterTs: Long,
+        afterRecordType: String,
+        afterSessionId: String,
+        limit: Int,
+    ): List<HrMinuteBucketEntity>
+
     @Query("DELETE FROM hr_minute_buckets")
     suspend fun deleteAll(): Int
 }
