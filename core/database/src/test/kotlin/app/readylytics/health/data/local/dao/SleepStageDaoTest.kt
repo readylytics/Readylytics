@@ -276,4 +276,37 @@ class SleepStageDaoTest {
 
             assertEquals(0, result.size, "Expected stages to be cascade-deleted")
         }
+
+    @Test
+    fun `getStagesForSession returns stages ordered by start time`() =
+        runTest {
+            val sessionId = "session-order"
+            val session =
+                SleepSessionEntity(
+                    id = sessionId,
+                    startTime = 0,
+                    endTime = 6_000_000,
+                    durationMinutes = 100,
+                    efficiency = 85f,
+                    deepSleepMinutes = 30,
+                    lightSleepMinutes = 40,
+                    remSleepMinutes = 20,
+                    awakeMinutes = 10,
+                    sleepScore = 85f,
+                    startZoneOffsetSeconds = null,
+                    endZoneOffsetSeconds = null,
+                    deviceName = "Test Device",
+                )
+            sessionDao.upsertAll(listOf(session))
+            dao.upsertAll(
+                listOf(
+                    SleepStageEntity(sessionId = sessionId, stageType = "DEEP", startTime = 2_000L, endTime = 3_000L, durationMinutes = 1),
+                    SleepStageEntity(sessionId = sessionId, stageType = "AWAKE", startTime = 1_000L, endTime = 2_000L, durationMinutes = 1),
+                ),
+            )
+
+            val stages = dao.getStagesForSession(sessionId)
+
+            assertEquals(listOf(1_000L, 2_000L), stages.map { it.startTime })
+        }
 }

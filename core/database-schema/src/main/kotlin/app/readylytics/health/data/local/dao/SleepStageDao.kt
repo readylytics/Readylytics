@@ -14,6 +14,9 @@ interface SleepStageDao {
     @Query("SELECT * FROM sleep_stages WHERE sessionId = :sessionId ORDER BY startTime ASC")
     fun observeStagesForSession(sessionId: String): Flow<List<SleepStageEntity>>
 
+    @Query("SELECT * FROM sleep_stages WHERE sessionId = :sessionId ORDER BY startTime ASC")
+    suspend fun getStagesForSession(sessionId: String): List<SleepStageEntity>
+
     @Query("DELETE FROM sleep_stages WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String): Int
 

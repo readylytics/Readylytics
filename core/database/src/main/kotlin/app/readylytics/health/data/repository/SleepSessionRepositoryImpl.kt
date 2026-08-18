@@ -2,6 +2,7 @@ package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
+import app.readylytics.health.data.local.entity.SleepStageEntity
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.SleepStageData
@@ -9,6 +10,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private fun List<SleepStageEntity>.toSleepStageData(): List<SleepStageData> =
+    map { entity ->
+        SleepStageData(
+            stageType = entity.stageType,
+            startTime = entity.startTime,
+            endTime = entity.endTime,
+            durationMinutes = entity.durationMinutes,
+        )
+    }
 
 @Singleton
 class SleepSessionRepositoryImpl
@@ -61,16 +72,10 @@ class SleepSessionRepositoryImpl
         override suspend fun countSince(fromMs: Long): Int = dao.countSince(fromMs)
 
         override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> =
-            stageDao.observeStagesForSession(sessionId).map { entities ->
-                entities.map { entity ->
-                    SleepStageData(
-                        stageType = entity.stageType,
-                        startTime = entity.startTime,
-                        endTime = entity.endTime,
-                        durationMinutes = entity.durationMinutes,
-                    )
-                }
-            }
+            stageDao.observeStagesForSession(sessionId).map { entities -> entities.toSleepStageData() }
+
+        override suspend fun getSessionStages(sessionId: String): List<SleepStageData> =
+            stageDao.getStagesForSession(sessionId).toSleepStageData()
 
         override fun observeFirstSessionEndingInRange(
             fromMs: Long,
