@@ -16,43 +16,19 @@
     <ID>CyclomaticComplexMethod:UserPreferencesMapper.kt$fun UserPreferencesProto.toDomainModel(): UserPreferences</ID>
     <ID>CyclomaticComplexMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
-    <ID>EmptyFunctionBlock:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest.RecordingHealthIngestionStore${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
-    <ID>EmptyFunctionBlock:SqlCipherKeyManagerTest.kt$SqlCipherKeyManagerTest.&lt;no name provided&gt;${}</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.baselineObservationCount }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.hrvMuMssd }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.hrvSigmaMssd }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.nocturnalHrv }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.readinessWorkoutOnly }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.restingHeartRate }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.rhrBpm }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.rhrSigma }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.sRest }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.sleepScore }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zLnHrv }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zRhr }</ID>
-    <ID>FunctionOnlyReturningConstant:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$private fun goldenResourceRelativePath(): String</ID>
     <ID>ImplicitDefaultLocale:LoadTestResult.kt$LoadTestResult$String.format("%.0f", operationsPerSecond)</ID>
     <ID>ImplicitDefaultLocale:LoadTestResult.kt$LoadTestResult$String.format("%.2f", successRate)</ID>
     <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is CancellationException</ID>
     <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is ZipException</ID>
     <ID>InstanceOfCheckForException:PeriodicHealthSyncWorker.kt$PeriodicHealthSyncWorker$e is HealthConnectPermissionRevokedException</ID>
     <ID>InstanceOfCheckForException:PeriodicHealthSyncWorker.kt$PeriodicHealthSyncWorker$e is SecurityException</ID>
-    <ID>LargeClass:BackfillBaselinesUseCaseTest.kt$BackfillBaselinesUseCaseTest</ID>
     <ID>LargeClass:LocalBackupManagerTest.kt$LocalBackupManagerTest</ID>
     <ID>LargeClass:LocalRestoreManager.kt$LocalRestoreManager</ID>
     <ID>LongMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
-    <ID>LongMethod:BaselineComputerBackfillEquivalenceTest.kt$BaselineComputerBackfillEquivalenceTest$@Before fun setup()</ID>
-    <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm adapts percentile based on sample count`()</ID>
-    <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm filters sessions with less than 10 samples`()</ID>
-    <ID>LongMethod:BaselineComputerWalkForwardEquivalenceTest.kt$BaselineComputerWalkForwardEquivalenceTest$@Before fun setup()</ID>
     <ID>LongMethod:CrashReportPrompt.kt$@Composable fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel())</ID>
     <ID>LongMethod:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;$override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto</ID>
     <ID>LongMethod:DatabaseRecoveryScreen.kt$@Composable fun DatabaseRecoveryScreen( onResetDatabase: () -&gt; Unit, onRestoreBackup: (Uri, onResult: (Boolean, String?) -&gt; Unit) -&gt; Unit, )</ID>
-    <ID>LongMethod:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest$@Test fun `daily sync persists deterministic dummy sleep workout hr and hrv batch`()</ID>
-    <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$private fun addNight( sleepSessions: MutableList&lt;SleepSessionEntity&gt;, sleepStages: MutableList&lt;SleepStageEntity&gt;, heartRateRows: MutableList&lt;HeartRateRecordEntity&gt;, wakeDay: LocalDate, deviceName: String, stageLess: Boolean, )</ID>
-    <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$suspend fun build( db: HealthDatabase, startDate: LocalDate, endDate: LocalDate, ): BuildResult</ID>
-    <ID>LongMethod:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$@Test fun `walk-forward recompute matches golden fixture`()</ID>
     <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writeJsonStreaming(outputStream: OutputStream)</ID>
     <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writePreferences(writer: BufferedWriter)</ID>
     <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$suspend fun reencryptBackups( oldPassword: String?, newPassword: String?, ): Result&lt;Unit&gt;</ID>
@@ -66,29 +42,13 @@
     <ID>LongMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:ProductionReadinessStaticTest.kt$ProductionReadinessStaticTest$@Test fun `data backup and transfer exclusions are fully configured`()</ID>
-    <ID>LongMethod:RetentionCleanupTest.kt$RetentionCleanupTest$@Test fun testRetentionCleanup()</ID>
-    <ID>LongMethod:RollingWindowTest.kt$RollingWindowTest$@Test fun `getTrimpInRange feeds local-date aggregation`()</ID>
-    <ID>LongMethod:RollingWindowTest.kt$RollingWindowTest$@Test fun `getWorkoutsInRange filters correctly`()</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun everydayAndWorkoutOnlyVariantsArePersistedIndependently()</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun everydayAtlCtlInjectionDoesNotContaminateWorkoutOnlySeries()</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun historicalAtlCtlIsDstSafeAndStableAcrossRepeatedCompute()</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun verifyHistoricalRecomputationIsStableAfterPreferencesChange()</ID>
-    <ID>LongMethod:ScoringRepositoryBiphasicIntegrationTest.kt$ScoringRepositoryBiphasicIntegrationTest$@Test fun `biphasic scoring aggregates sleep totals but keeps recovery inputs on core cluster`()</ID>
-    <ID>LongMethod:ScoringRepositoryImplTest.kt$ScoringRepositoryImplTest$@Test fun `computeDailySummary returns different baseline for consecutive days`()</ID>
-    <ID>LongMethod:ScoringRepositoryN1Test.kt$ScoringRepositoryN1Test$@Before fun setUp()</ID>
-    <ID>LongMethod:ScoringRepositoryN1Test.kt$ScoringRepositoryN1Test$@Test fun `profile differentiation produces different RAS gains`()</ID>
-    <ID>LongMethod:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest$private suspend fun computeForScope( label: String, fixture: Fixture, scopeDays: Int?, existingTargetSummary: DailySummaryEntity? = null, ): ScopeResult</ID>
-    <ID>LongMethod:SelectedSourcePrunerImplTest.kt$SelectedSourcePrunerImplTest$@Test fun pruneDeletesNonMatchingDevicesWithinRange()</ID>
     <ID>LongMethod:SyncViewModel.kt$SyncViewModel$fun onAppForeground()</ID>
-    <ID>LongMethod:SyntheticDatasetGenerator.kt$SyntheticDatasetGenerator$suspend fun generate( db: HealthDatabase, endDate: LocalDate, config: Config = Config(), ): GenerationSummary</ID>
     <ID>LongMethod:UserPreferencesMapper.kt$fun UserPreferencesProto.toDomainModel(): UserPreferences</ID>
     <ID>LongMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>LongMethod:V7DatabaseMigrator.kt$V7DatabaseMigrator$private suspend fun runStateMachine(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit)</ID>
-    <ID>LongMethod:WalkForwardTransactionEquivalenceTest.kt$WalkForwardTransactionEquivalenceTest$private suspend fun runWalkForward(wrapInTransaction: Boolean): RunOutput</ID>
     <ID>LongParameterList:LocalBackupManager.kt$LocalBackupManager$( @param:ApplicationContext private val context: Context, private val healthDatabase: HealthDatabase, private val settingsRepository: SettingsRepository, private val cardConfigurationRepository: CardConfigurationRepository, private val vitalsLayoutRepository: VitalsLayoutRepository, private val sleepLayoutRepository: SleepLayoutRepository, private val workoutsLayoutRepository: WorkoutsLayoutRepository, private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository, private val encryptionManager: EncryptionManager, private val auditTrailRepository: AuditTrailRepository, @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher, private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context), )</ID>
     <ID>LongParameterList:LocalRestoreManager.kt$LocalRestoreManager$( @param:ApplicationContext private val context: Context, private val healthDatabase: HealthDatabase, private val settingsRepository: SettingsRepository, private val cardConfigurationRepository: CardConfigurationRepository, private val vitalsLayoutRepository: VitalsLayoutRepository, private val sleepLayoutRepository: SleepLayoutRepository, private val workoutsLayoutRepository: WorkoutsLayoutRepository, private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository, private val workerScheduler: WorkerScheduler, private val encryptionManager: EncryptionManager, private val auditTrailRepository: AuditTrailRepository, @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher, )</ID>
     <ID>MaxLineLength:LocalBackupManagerTest.kt$LocalBackupManagerTest$// Note: createBackup might fail because of missing content resolver support for file:// outputstream in Robolectric</ID>
-    <ID>MaxLineLength:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest$"Rounded readinessWorkoutOnly must not flip when a live-computed day is recomputed from its frozen summary."</ID>
     <ID>NestedBlockDepth:FeatureResourceOwnershipTest.kt$FeatureResourceOwnershipTest$@Test fun `string resources have one owning module`()</ID>
     <ID>NestedBlockDepth:LocalRestoreManager.kt$LocalRestoreManager$private fun readManifest(zipFile: ZipFile): BackupManifest</ID>
     <ID>NestedBlockDepth:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun performStreamingRestore( reader: JsonReader, schemaVersion: Int, onPreferencesParsed: (UserPreferencesBackup) -&gt; Unit, )</ID>
@@ -99,9 +59,7 @@
     <ID>ReturnCount:DatabaseReadyStartupInitializer.kt$DatabaseReadyStartupInitializer$suspend fun initializeIfReady(readiness: DatabaseReadiness): StartupInitializationResult</ID>
     <ID>ReturnCount:LogSlotStoreTest.kt$LogSlotStoreTest.AdAwareSecureFileStore$override fun readText( file: File, associatedData: ByteArray, ): String</ID>
     <ID>ReturnCount:MainNavHost.kt$private fun getTabIndex(destination: NavDestination?): Int</ID>
-    <ID>ReturnCount:SqlCipherKeyManager.kt$SqlCipherKeyManager$fun migrateIfNeeded(dbFile: File)</ID>
     <ID>ReturnCount:V7DatabaseMigrator.kt$V7DatabaseMigrator$suspend fun migrate(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit): V7MigrationResult</ID>
-    <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule.Companion$(*DatabaseMigrations.all)</ID>
     <ID>SwallowedException:BirthdayCheckWorker.kt$BirthdayCheckWorker$e: Exception</ID>
     <ID>SwallowedException:CrashReportShareIntent.kt$e: PackageManager.NameNotFoundException</ID>
     <ID>SwallowedException:DataCleanupWorker.kt$DataCleanupWorker$e: Exception</ID>
@@ -116,40 +74,29 @@
     <ID>SwallowedException:UserPreferencesSerializer.kt$e: Exception</ID>
     <ID>SwallowedException:UserUseCase.kt$UserUseCase$e: Exception</ID>
     <ID>ThrowsCount:SyncViewModel.kt$SyncViewModel$fun onAppForeground()</ID>
-    <ID>TooGenericExceptionThrown:DatabaseReadinessGateTest.kt$DatabaseReadinessGateTest$throw RuntimeException("disk error")</ID>
     <ID>TooGenericExceptionThrown:EncryptionManager.kt$EncryptionManager$throw RuntimeException("Failed to generate master key", ex)</ID>
-    <ID>TooGenericExceptionThrown:ErrorBoundaryTest.kt$ErrorBoundaryTest$throw RuntimeException("still failing")</ID>
-    <ID>TooGenericExceptionThrown:SqlCipherKeyManager.kt$SqlCipherKeyManager$throw RuntimeException("SQLCipher migration failed", e)</ID>
     <ID>TooManyFunctions:CrashReportShareIntent.kt$app.readylytics.health.crashreport.CrashReportShareIntent.kt</ID>
-    <ID>TooManyFunctions:DatabaseModule.kt$DatabaseModule$Companion</ID>
     <ID>TooManyFunctions:FeaturePortModule.kt$FeaturePortModule</ID>
     <ID>TooManyFunctions:LocalRestoreManager.kt$LocalRestoreManager</ID>
     <ID>TooManyFunctions:LogSlotStore.kt$LogSlotStore</ID>
     <ID>TooManyFunctions:PhysiologyPreferences.kt$PhysiologyPreferences</ID>
-    <ID>TooManyFunctions:RepositoryModule.kt$RepositoryModule</ID>
     <ID>TooManyFunctions:SettingsRepository.kt$SettingsRepository : SettingsRepositoryUserPreferencesReaderAboutPreferencesPhysiologySettingsHeartRateZoneSettingsSleepSettingsThresholdSettingsDisplaySettingsSyncSettingsDeviceSettingsBackupSettings</ID>
     <ID>TooManyFunctions:SleepPreferences.kt$SleepPreferences</ID>
-    <ID>TooManyFunctions:SqlCipherKeyManager.kt$SqlCipherKeyManager</ID>
     <ID>TooManyFunctions:SyncPreferences.kt$SyncPreferences</ID>
     <ID>TooManyFunctions:UIPreferences.kt$UIPreferences</ID>
     <ID>TooManyFunctions:V7DatabaseMigrator.kt$V7DatabaseMigrator</ID>
     <ID>UnusedParameter:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$file: File</ID>
     <ID>UnusedParameter:LogcatCaptureStoreImpl.kt$LogcatCaptureStoreImpl$durationMinutes: Int</ID>
-    <ID>UnusedParameter:SqlCipherKeyManager.kt$SqlCipherKeyManager$dbFile: File? = null</ID>
     <ID>UnusedPrivateMember:PhysiologyPreferences.kt$PhysiologyPreferences$private fun Int.toValidRestMinutes()</ID>
-    <ID>UnusedPrivateProperty:BaselineComputerBackfillEquivalenceTest.kt$BaselineComputerBackfillEquivalenceTest$val expectedRhr = baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)</ID>
     <ID>UnusedPrivateProperty:CardConfigurationRepositoryTest.kt$CardConfigurationRepositoryTest$val repo = CardConfigurationRepositoryImpl(dataStore, testScope)</ID>
     <ID>UnusedPrivateProperty:HealthDeviceRepositoryTest.kt$HealthDeviceRepositoryTest$val dbDevices = listOf("Device1", "Device2")</ID>
     <ID>UnusedPrivateProperty:LocalRestoreManager.kt$LocalRestoreManager$val name = reader.nextName()</ID>
     <ID>UnusedPrivateProperty:LocalRestoreManager.kt$LocalRestoreManager$val token = reader.peek()</ID>
-    <ID>UnusedPrivateProperty:ScoringRepositoryBiphasicIntegrationTest.kt$ScoringRepositoryBiphasicIntegrationTest$val dayMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()</ID>
     <ID>UseCheckOrError:FileBackupStore.kt$FileBackupStore$throw IllegalStateException("Failed to delete local file")</ID>
     <ID>UseCheckOrError:LocalBackupManager.kt$LocalBackupManager$throw IllegalStateException("Backup password not set")</ID>
     <ID>UseCheckOrError:LocalRestoreManager.kt$LocalRestoreManager$throw IllegalStateException("Could not open backup URI")</ID>
     <ID>UseCheckOrError:LocalRestoreManager.kt$LocalRestoreManager$throw IllegalStateException("No JSON file found in backup ZIP")</ID>
     <ID>UseCheckOrError:SafBackupStore.kt$SafBackupStore$throw IllegalStateException("Could not read backup")</ID>
     <ID>UseCheckOrError:SafBackupStore.kt$SafBackupStore$throw IllegalStateException("Failed to delete SAF document")</ID>
-    <ID>UseCheckOrError:SqlCipherKeyManager.kt$SqlCipherKeyManager$throw IllegalStateException("Encrypted key not found in preferences")</ID>
-    <ID>UseCheckOrError:SqlCipherKeyManager.kt$SqlCipherKeyManager$throw IllegalStateException("Encryption IV not found in preferences")</ID>
   </CurrentIssues>
 </SmellBaseline>

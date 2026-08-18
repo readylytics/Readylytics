@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
 plugins {
     id("readylytics.android-library-conventions")
     id("readylytics.room-conventions")
@@ -55,6 +57,14 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-Xshare:off", "-Djdk.attach.allowAttachSelf=true")
     systemProperty("robolectric.coverage.enabled", "true")
     systemProperty("update.golden", providers.systemProperty("update.golden").getOrElse("false"))
+    // Without excluding jdk.internal.*, Jacoco instruments JDK internals and breaks the
+    // Java-agent self-attach MockK's inline mocking performs, surfacing as
+    // AttachNotSupportedException -> "Could not initialize class JvmMockKGateway" across
+    // every mockk-using test. Mirrors the :app configuration.
+    configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 }
 
 val fileFilter =

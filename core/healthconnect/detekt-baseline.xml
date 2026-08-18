@@ -4,9 +4,11 @@
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
     <ID>CyclomaticComplexMethod:ResyncRangeUseCase.kt$ResyncRangeUseCase$suspend fun run( startDate: LocalDate, endDate: LocalDate, chunkDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, skipIngestAndPrune: Boolean = false, ): Result&lt;Unit&gt;</ID>
+    <ID>EmptyFunctionBlock:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest.RecordingHealthIngestionStore${}</ID>
     <ID>InstanceOfCheckForException:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$e !is HealthConnectPermissionRevokedException</ID>
     <ID>LargeClass:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl : HealthConnectRepository</ID>
     <ID>LongMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
+    <ID>LongMethod:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest$@Test fun `daily sync persists deterministic dummy sleep workout hr and hrv batch`()</ID>
     <ID>LongMethod:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
     <ID>LongMethod:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$private suspend fun upsertRecord( dataType: HealthDataType, record: Record, prefs: app.readylytics.health.data.preferences.UserPreferences, )</ID>
     <ID>LongMethod:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$override suspend fun discoverDevices(windowDays: Int): List&lt;String&gt;</ID>
@@ -26,6 +28,7 @@
     <ID>MaxLineLength:StepCountFetcherRangeTest.kt$StepCountFetcherRangeTest$startDate.atStartOfDay(zoneId).toInstant() to startDate.plusDays(10).atStartOfDay(zoneId).toInstant()</ID>
     <ID>MaxLineLength:SyncWorkoutRouteUseCaseTest.kt$SyncWorkoutRouteUseCaseTest$coVerify(exactly = 0) { healthIngestionStore.persistSingleWorkoutRoute(any(), any(), any(), any(), any(), any()) }</ID>
     <ID>NestedBlockDepth:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
+    <ID>NewLineAtEndOfFile:FullHistoricalResyncUseCaseTest.kt$app.readylytics.health.domain.sync.FullHistoricalResyncUseCaseTest.kt</ID>
     <ID>ReturnCount:DeviceLabel.kt$DeviceLabel$fun from( device: Device?, dataOrigin: DataOrigin, ): String</ID>
     <ID>ReturnCount:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
     <ID>ReturnCount:StepCountFetcher.kt$StepCountFetcher$suspend fun fetchRange( startDate: LocalDate, endDate: LocalDate, chunkDays: Int, stepsDevice: String?, zoneId: ZoneId, ): Map&lt;LocalDate, Long&gt;</ID>
