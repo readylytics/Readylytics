@@ -100,6 +100,25 @@ interface WeightRecordDao {
 
     @Query(
         """
+        SELECT * FROM weight_records
+        WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (
+          timestampMs < :beforeTs OR
+          (timestampMs = :beforeTs AND id < :beforeId)
+        )
+        ORDER BY timestampMs DESC, id DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun pageAfterByTimeRange(
+        fromMs: Long,
+        toMs: Long,
+        beforeTs: Long,
+        beforeId: String,
+        limit: Int,
+    ): List<WeightRecordEntity>
+
+    @Query(
+        """
         SELECT COUNT(*) FROM weight_records
         WHERE timestampMs >= :fromMs AND timestampMs < :toMs
         """,

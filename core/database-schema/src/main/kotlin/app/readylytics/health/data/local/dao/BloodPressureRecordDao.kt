@@ -93,6 +93,25 @@ interface BloodPressureRecordDao {
     """)
     suspend fun getPagedByTimeRange(fromMs: Long, toMs: Long, limit: Int, offset: Int): List<BloodPressureRecordEntity>
 
+    @Query(
+        """
+        SELECT * FROM blood_pressure_records
+        WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (
+          timestampMs < :beforeTs OR
+          (timestampMs = :beforeTs AND id < :beforeId)
+        )
+        ORDER BY timestampMs DESC, id DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun pageAfterByTimeRange(
+        fromMs: Long,
+        toMs: Long,
+        beforeTs: Long,
+        beforeId: String,
+        limit: Int,
+    ): List<BloodPressureRecordEntity>
+
     @Query("""
         SELECT COUNT(*) FROM blood_pressure_records
         WHERE timestampMs >= :fromMs AND timestampMs < :toMs

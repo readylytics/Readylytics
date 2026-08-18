@@ -47,6 +47,23 @@ interface WorkoutDao {
     ): List<WorkoutRecordEntity>
 
     @Query(
+        "SELECT * FROM workout_records " +
+            "WHERE startTime >= :fromMs AND startTime < :toMs AND (" +
+            "  startTime < :beforeTs OR " +
+            "  (startTime = :beforeTs AND id < :beforeId)" +
+            ") " +
+            "ORDER BY startTime DESC, id DESC " +
+            "LIMIT :limit",
+    )
+    suspend fun pageAfterInRange(
+        fromMs: Long,
+        toMs: Long,
+        beforeTs: Long,
+        beforeId: String,
+        limit: Int,
+    ): List<WorkoutRecordEntity>
+
+    @Query(
         "SELECT * FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs " +
             "ORDER BY startTime DESC, id DESC LIMIT :limit OFFSET :offset",
     )

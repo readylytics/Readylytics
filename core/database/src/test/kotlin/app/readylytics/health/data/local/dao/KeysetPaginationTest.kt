@@ -4,10 +4,13 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
 import app.readylytics.health.data.local.entity.StepRecordEntity
+import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -24,6 +27,9 @@ class KeysetPaginationTest {
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var stepDao: StepRecordDao
+    private lateinit var weightDao: WeightRecordDao
+    private lateinit var bodyFatDao: BodyFatRecordDao
+    private lateinit var bloodPressureDao: BloodPressureRecordDao
 
     @Before
     fun setUp() {
@@ -37,6 +43,9 @@ class KeysetPaginationTest {
         hrvDao = db.hrvDao()
         workoutDao = db.workoutDao()
         stepDao = db.stepRecordDao()
+        weightDao = db.weightRecordDao()
+        bodyFatDao = db.bodyFatRecordDao()
+        bloodPressureDao = db.bloodPressureRecordDao()
     }
 
     @After
@@ -225,6 +234,82 @@ class KeysetPaginationTest {
                 )
             assertEquals(1, page2.size)
             assertEquals(3L, page2[0].sourceRecordRef)
+        }
+
+    @Test
+    fun `workout pageAfterInRange returns newest-first within half-open window`() =
+        runTest {
+            val records = (1..5).map { workoutEntity("w$it", startTime = it * 1000L) }
+            workoutDao.upsertAll(records)
+
+            // [2000, 5000): records 2, 3, 4 -> DESC: w4, w3, w2
+            val page1 = workoutDao.pageAfterInRange(2000L, 5000L, Long.MAX_VALUE, "\uFFFF", 2)
+            assertEquals(2, page1.size)
+            assertEquals("w4", page1[0].id)
+            assertEquals("w3", page1[1].id)
+
+            val page2 = workoutDao.pageAfterInRange(2000L, 5000L, page1.last().startTime, page1.last().id, 2)
+            assertEquals(1, page2.size)
+            assertEquals("w2", page2[0].id)
+
+            assertEquals(3, (page1 + page2).map { it.id }.distinct().size)
+        }
+
+    @Test
+    fun `weight pageAfterByTimeRange returns newest-first within half-open window`() =
+        runTest {
+            val records = (1..5).map { WeightRecordEntity("wt$it", timestampMs = it * 1000L, weightKg = 70f + it) }
+            weightDao.upsertAll(records)
+
+            // [2000, 5000): records 2, 3, 4 -> DESC: wt4, wt3, wt2
+            val page1 = weightDao.pageAfterByTimeRange(2000L, 5000L, Long.MAX_VALUE, "\uFFFF", 2)
+            assertEquals(2, page1.size)
+            assertEquals("wt4", page1[0].id)
+            assertEquals("wt3", page1[1].id)
+
+            val page2 = weightDao.pageAfterByTimeRange(2000L, 5000L, page1.last().timestampMs, page1.last().id, 2)
+            assertEquals(1, page2.size)
+            assertEquals("wt2", page2[0].id)
+
+            assertEquals(3, (page1 + page2).map { it.id }.distinct().size)
+        }
+
+    @Test
+    fun `bodyFat pageAfterByTimeRange returns newest-first within half-open window`() =
+        runTest {
+            val records = (1..5).map { BodyFatRecordEntity("bf$it", timestampMs = it * 1000L, bodyFatPercent = 15f + it) }
+            bodyFatDao.upsertAll(records)
+
+            // [2000, 5000): records 2, 3, 4 -> DESC: bf4, bf3, bf2
+            val page1 = bodyFatDao.pageAfterByTimeRange(2000L, 5000L, Long.MAX_VALUE, "\uFFFF", 2)
+            assertEquals(2, page1.size)
+            assertEquals("bf4", page1[0].id)
+            assertEquals("bf3", page1[1].id)
+
+            val page2 = bodyFatDao.pageAfterByTimeRange(2000L, 5000L, page1.last().timestampMs, page1.last().id, 2)
+            assertEquals(1, page2.size)
+            assertEquals("bf2", page2[0].id)
+
+            assertEquals(3, (page1 + page2).map { it.id }.distinct().size)
+        }
+
+    @Test
+    fun `bloodPressure pageAfterByTimeRange returns newest-first within half-open window`() =
+        runTest {
+            val records = (1..5).map { BloodPressureRecordEntity("bp$it", timestampMs = it * 1000L, systolicMmHg = 120 + it, diastolicMmHg = 80 + it) }
+            bloodPressureDao.upsertAll(records)
+
+            // [2000, 5000): records 2, 3, 4 -> DESC: bp4, bp3, bp2
+            val page1 = bloodPressureDao.pageAfterByTimeRange(2000L, 5000L, Long.MAX_VALUE, "\uFFFF", 2)
+            assertEquals(2, page1.size)
+            assertEquals("bp4", page1[0].id)
+            assertEquals("bp3", page1[1].id)
+
+            val page2 = bloodPressureDao.pageAfterByTimeRange(2000L, 5000L, page1.last().timestampMs, page1.last().id, 2)
+            assertEquals(1, page2.size)
+            assertEquals("bp2", page2[0].id)
+
+            assertEquals(3, (page1 + page2).map { it.id }.distinct().size)
         }
 
     private fun hrEntity(

@@ -100,6 +100,25 @@ interface BodyFatRecordDao {
 
     @Query(
         """
+        SELECT * FROM body_fat_records
+        WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (
+          timestampMs < :beforeTs OR
+          (timestampMs = :beforeTs AND id < :beforeId)
+        )
+        ORDER BY timestampMs DESC, id DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun pageAfterByTimeRange(
+        fromMs: Long,
+        toMs: Long,
+        beforeTs: Long,
+        beforeId: String,
+        limit: Int,
+    ): List<BodyFatRecordEntity>
+
+    @Query(
+        """
         SELECT COUNT(*) FROM body_fat_records
         WHERE timestampMs >= :fromMs AND timestampMs < :toMs
         """,
