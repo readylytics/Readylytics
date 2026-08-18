@@ -359,6 +359,56 @@ OPEN, NOT ADDRESSED
       ExceptionInInitializerError in ByteBuddyAgent). Pre-existing; :app has the
       identical -Djdk.attach.allowAttachSelf=true -Xshare:off jvmArgs.
 
-===============================================================================
+================================================================================
+12. RE-CAPTURE AFTER PHASE 4 — 2026-08-18
+================================================================================
+Commit range : 71c3919a..01098edc (phase 4, steps 13-15)
+Verified with: ./gradlew testDebugUnitTest :core:database:jacocoCoverageVerification --rerun-tasks lintRelease (pre-commit gate)
+
+  METRIC                         PHASE 0   PHASE 3     NOW    NOTE
+  unit tests                       2939     2971     2991   +20; 0 failures/errors
+  lint                         12 W / 0 E  12 W/0E  12 W/0E   unchanged (0 errors, 0 fatal)
+
+TEST-COUNT INVARIANT & EXTENSIONS
+  2,991 unit tests across 397 test classes (0 failures, 0 errors, 0 skipped).
+  New test suites added in Phase 4:
+    - ScoringGoldenSnapshotTest (6 golden characterization tests)
+    - ComputeDailyTrimpUseCaseTest (2 tests)
+    - ResolveDailyBaselinesUseCaseTest (8 tests)
+    - AssembleDailySummaryUseCaseTest (4 tests)
+
+SCORING REPOSITORY DECOMPOSITION & STRUCTURAL REDUCTIONS
+  - ScoringRepositoryImpl.kt length reduced from 856 lines -> 768 lines (comfortably below 800 hard limit).
+  - computeDailySummary decomposed from 490 lines -> ~114 lines.
+  - Mutable `var summary` reassignment chains completely eliminated.
+  - CyclomaticComplexMethod on computeDailySummary eliminated (0 remaining in core:database).
+  - 3 pure-Kotlin domain use cases extracted to core:scoring:
+      ComputeDailyTrimpUseCase, ResolveDailyBaselinesUseCase, AssembleDailySummaryUseCase.
+  - computeAndPersistDailySummary overloads collapsed onto single private helper.
+
+DETEKT BASELINE TOTALS
+  Total Baseline Issues: 657 across 16 module baseline files.
+  Rule breakdown:
+    LongMethod                    : 185
+    MaxLineLength                 : 89
+    ReturnCount                   : 61
+    TooManyFunctions              : 57
+    CyclomaticComplexMethod       : 52
+    LongParameterList             : 40
+    SwallowedException            : 24
+    UnusedPrivateProperty         : 19
+    UnusedPrivateMember           : 15
+    UnusedParameter               : 14
+    ExplicitItLambdaParameter     : 12
+    ComplexCondition              : 11
+    LargeClass                    : 9
+    others (<=8 each)             : 83
+
+COVERAGE & REGRESSION INVARIANTS
+  - :core:database:jacocoCoverageVerification passes with --rerun-tasks (enforces >=60% line floor on data.repository).
+  - All 6 golden snapshot fixtures in core/database/src/test/resources/golden/ pass with 100% exact float matching.
+  - 0 scoring drift across all determinism and regression suites.
+
+================================================================================
 END OF BASELINE
 ================================================================================

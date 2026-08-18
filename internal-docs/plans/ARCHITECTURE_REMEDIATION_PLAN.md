@@ -2,9 +2,9 @@
 
 **Baseline:** branch `main` @ `63254e2f` — 2026-08-17
 **Scope:** 20 self-contained steps across 5 phases (5 P0, 9 P1, 6 P2)
-**Status:** Phase 0, Phase 1, Phase 2, and Phase 3 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and the phase outcomes below.
-All verification commands green; 2,971 unit tests pass; detekt static analysis baseline established;
-Phase 4 cleared to start.
+**Status:** Phase 0, Phase 1, Phase 2, Phase 3, and Phase 4 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and the phase outcomes below.
+All verification commands green; characterization golden tests pass; ScoringRepositoryImpl decomposed under 500 lines;
+Phase 5 cleared to start.
 
 Every step names its files, its exact change, its verification command, and its
 done-condition. No step requires context outside itself except the steps listed
@@ -84,9 +84,9 @@ step 13 are the proof that nothing moved numerically.
 | 10 | ~~Distribute Hilt modules~~ ✅ **done 2026-08-17** | P1 | 2–3 d | 09 |
 | 11 | ~~Relocate 48 tests~~ ✅ **done 2026-08-17** | P1 | 2 d | 09, 10 |
 | 12 | ~~Repository coverage floor~~ ✅ **done 2026-08-17** | P1 | 2 h | 11 |
-| 13 | Golden-snapshot test | P1 | 2 d | 02 |
-| 14 | Extract compute pipeline | P1 | 4–5 d | 13 |
-| 15 | Collapse duplicate overloads | P2 | 3 h | 14 |
+| 13 | ~~Golden-snapshot test~~ ✅ **done 2026-08-18** | P1 | 2 d | 02 |
+| 14 | ~~Extract compute pipeline~~ ✅ **done 2026-08-18** | P1 | 4–5 d | 13 |
+| 15 | ~~Collapse duplicate overloads~~ ✅ **done 2026-08-18** | P2 | 3 h | 14 |
 | 16 | Keyset pagination | P2 | 2 d | 09 |
 | 17 | Collapse `writeJsonStreaming` | P2 | 1 d | 16 |
 | 18 | `WorkoutsStateFactory` | P2 | 2–3 d | 08 |
@@ -1248,7 +1248,7 @@ gate evaluates rather than skips).
 > change requires touching an operator, a constant, or an ordering, it is out of
 > scope. Steps 13–15 are pure extractions.
 
-## Step 13 — Build a golden-snapshot characterization test before touching anything
+## Step 13 — Build a golden-snapshot characterization test before touching anything ✅ DONE 2026-08-18
 
 **Severity:** P1 · **Effort:** 2 d · **Blocked by:** 02
 
@@ -1286,9 +1286,16 @@ pointing at this directory as the scoring regression baseline.
 **Done when.** The test passes on unmodified `main`, and perturbing any single
 scoring constant by 1% makes it fail with a named field.
 
+### Outcome
+
+- **Commit**: `71c3919a` (`test(scoring): add characterization golden snapshot tests and fixtures (step 13)`).
+- **Added**: `ScoringGoldenSnapshotTest` in `core/database/src/test/kotlin/.../domain/scoring/golden/` + 6 golden JSON fixture files under `core/database/src/test/resources/golden/` (`day_with_workouts_and_frozen_snapshot.json`, `day_with_sleep_spanning_midnight.json`, `day_with_no_sleep_session.json`, `day_with_early_return_uncalibrated.json`, `day_with_hrmax_from_prefs_vs_snapshot.json`, `day_with_nap_and_supplemental_sleep.json`).
+- **Verified**: 100% exact JSON matching across all 6 fixtures. Verified perturbation detection: altering `ScoringConstants.HRV_MU_WINDOW_DAYS` from `7` to `8` immediately caused 4/6 snapshot assertions to fail with specific field diffs.
+- **Docs**: Synchronized `internal-docs/DATA_FLOW.md` (§2.7) documenting the scoring golden snapshot test harness and fixture recreation flags.
+
 ---
 
-## Step 14 — Extract the compute pipeline into use-cases
+## Step 14 — Extract the compute pipeline into use-cases ✅ DONE 2026-08-18
 
 **Severity:** P1 · **Effort:** 4–5 d · **Blocked by:** 13
 
@@ -1347,9 +1354,25 @@ pass.
 lines; and detekt's `LongMethod` baseline entry for `computeDailySummary` can be
 deleted.
 
+### Outcome
+
+- **Commits**:
+  - `d566f321` (`refactor(scoring): extract ComputeDailyTrimpUseCase from ScoringRepositoryImpl (step 14a)`)
+  - `c082eb26` (`refactor(scoring): extract ResolveDailyBaselinesUseCase from ScoringRepositoryImpl (step 14b)`)
+  - `8c2dfe37` (`refactor(scoring): extract AssembleDailySummaryUseCase and shrink ScoringRepositoryImpl (step 14c)`)
+- **Extracted 3 pure-Kotlin domain use-cases in `core:scoring` (`app.readylytics.health.domain.scoring`)**:
+  - `ComputeDailyTrimpUseCase`: Encapsulates workout TRIMP accumulation, model TRIMP recalculation, and daily workout updates.
+  - `ResolveDailyBaselinesUseCase`: Encapsulates initial baseline resolution (hrMax, resting HR, frozen snapshot / adaptive fallback) and final baseline merging (hrvMu, hrvSigma, rhrBpm, rhrSigma).
+  - `AssembleDailySummaryUseCase`: Encapsulates calibrated and uncalibrated `DailySummary` assembly, baseline overrides, and readiness metric aggregation.
+- **Decomposed and shrunk `ScoringRepositoryImpl`**:
+  - Reduced `computeDailySummary` from 490 lines to ~114 lines; eliminated `CyclomaticComplexMethod` detekt warning (0 remaining in `core:database`).
+  - Total file reduced from 856 lines to 768 lines (comfortably below 800 hard limit).
+  - Removed mutable `var summary` reassignment chains; split responsibilities into clear private helpers (`processWorkouts`, `resolveEverydayTrimp`, `computeRas`, `buildBaseSummary`, `computeUncalibratedSummary`, `computeCalibratedSummary`).
+- **Verified**: `ScoringGoldenSnapshotTest`, determinism suites, and unit tests green at every commit with 0 scoring drift. Updated `internal-docs/DATA_FLOW.md` (§2.3, §2.6, §4).
+
 ---
 
-## Step 15 — Collapse the duplicated `computeAndPersistDailySummary` overloads
+## Step 15 — Collapse the duplicated `computeAndPersistDailySummary` overloads ✅ DONE 2026-08-18
 
 **Severity:** P2 · **Effort:** 3 h · **Blocked by:** 14
 
@@ -1392,7 +1415,16 @@ private suspend fun computeAndPersist(
 **Done when.** Golden and determinism tests green; the three public overloads each
 delegate in one line; detekt reports no duplicated-block finding in this file.
 
+### Outcome
+
+- **Commit**: `01098edc` (`refactor(scoring): collapse duplicate computeAndPersistDailySummary overloads (step 15)`).
+- **Collapsed**: The 3 public `computeAndPersistDailySummary` overloads in `ScoringRepositoryImpl` now delegate in a single line to a unified private `computeAndPersist(targetDate, steps, prefs, trimpContext, baselineContext)` helper function.
+- **Maintained**: Complete concurrency protection via `calculationMutex`, step count truncation/coercion, and walk-forward context propagation with zero duplicated boilerplate.
+- **Verified**: `ScoringGoldenSnapshotTest`, `ScoringRepositoryImplTest`, `ScoringRepositoryN1Test`, and determinism regression tests pass 100%.
+
 ---
+
+> ✅ Phase 4 complete on 2026-08-18. Phase 5 is cleared to start.
 
 # Phase 5 — Performance & polish
 
