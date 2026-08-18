@@ -410,5 +410,29 @@ COVERAGE & REGRESSION INVARIANTS
   - 0 scoring drift across all determinism and regression suites.
 
 ================================================================================
+13. RE-CAPTURE AFTER PHASE 6 — 2026-08-18
+================================================================================
+Commit range : 1153f6bd..0fc96503 (phase 6, steps 20-22)
+Verified with: ./gradlew :core:database:testDebugUnitTest --rerun-tasks :core:database:detekt (pre-commit gate)
+
+  METRIC                         PHASE 0   PHASE 4     NOW    NOTE
+  ScoringRepositoryImpl lines       856       768     440    -328 lines (-42.7%)
+  constructor params                 21        21      10    -11 params (-52.4%)
+  unit tests                       2939      2991    3008    +17 tests, 0 failures/errors
+  golden fixtures diff                0         0       0    fixtures untouched, 0 drift
+  core:database detekt            green     green   green    clean against baseline
+
+SCORING REPOSITORY DECOMPOSITION & COLLABORATOR EXTRACTION
+  - Step 20: Extracted `ScoringDayDataLoader` (10 DAOs consolidated into single data loader,
+    returning immutable `ScoringDayInputs` data model).
+  - Step 21: Extracted `ReadinessSummaryCoordinator` to own readiness calculation,
+    sleep aggregation mapping, and calibrated/uncalibrated summary assembly.
+  - Line count down from 768 -> 440 lines (close to the 400-line soft target, comfortably
+    below 800 hard limit).
+  - Constructor parameter count down from 21 -> 10 (target was <= 11).
+  - All 6 golden snapshot fixtures pass with 0 drift (100% exact float matching).
+  - 3,008 total unit tests pass across the project with 0 failures, 0 errors, 0 skipped.
+
+================================================================================
 END OF BASELINE
 ================================================================================
