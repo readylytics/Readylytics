@@ -21,14 +21,6 @@ interface WorkoutDao {
 
     fun observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
-    @Query(
-        "SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime ASC LIMIT :limit OFFSET :offset",
-    )
-    suspend fun getPaged(
-        fromMs: Long,
-        limit: Int,
-        offset: Int,
-    ): List<WorkoutRecordEntity>
 
     @Query(
         "SELECT * FROM workout_records " +

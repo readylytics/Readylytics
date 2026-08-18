@@ -61,11 +61,6 @@ interface MinuteBucketDao {
     @Query("SELECT COUNT(*) FROM hr_minute_buckets")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM hr_minute_buckets ORDER BY bucketStartMs ASC LIMIT :limit OFFSET :offset")
-    suspend fun getPaged(
-        limit: Int,
-        offset: Int,
-    ): List<HrMinuteBucketEntity>
 
     @Query(
         "SELECT * FROM hr_minute_buckets WHERE (" +

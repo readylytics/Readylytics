@@ -160,7 +160,11 @@ class LocalBackupSerializationRegressionTest {
                 ),
             ),
         )
-        assertEquals(1, db.minuteBucketDao().getPaged(10, 0).size, "fixture must leave the table non-empty")
+        assertEquals(
+            1,
+            db.minuteBucketDao().pageAfter(Long.MIN_VALUE, "", "", 10).size,
+            "fixture must leave the table non-empty",
+        )
     }
 
     private fun readBackupJson(zip: File): JSONObject {

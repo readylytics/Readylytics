@@ -19,14 +19,6 @@ interface BodyTemperatureRecordDao {
     @Upsert
     suspend fun upsertAll(records: List<BodyTemperatureRecordEntity>)
 
-    @Query(
-        "SELECT * FROM body_temperature_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
-    )
-    suspend fun getPaged(
-        fromMs: Long,
-        limit: Int,
-        offset: Int,
-    ): List<BodyTemperatureRecordEntity>
 
     @Query(
         "SELECT * FROM body_temperature_records " +

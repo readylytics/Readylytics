@@ -61,14 +61,6 @@ interface OxygenSaturationRecordDao {
     @Upsert
     suspend fun upsertAll(records: List<OxygenSaturationRecordEntity>)
 
-    @Query(
-        "SELECT * FROM oxygen_saturation_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
-    )
-    suspend fun getPaged(
-        fromMs: Long,
-        limit: Int,
-        offset: Int,
-    ): List<OxygenSaturationRecordEntity>
 
     @Query(
         "SELECT * FROM oxygen_saturation_records " +

@@ -70,16 +70,13 @@ class OffsetPaginationTest {
         }
 
     @Test
-    fun `getPagedInRange orders descending unlike legacy ascending getPaged`() =
+    fun `getPagedInRange orders descending`() =
         runTest {
             val records = (1..3).map { workoutEntity("w$it", startTime = it * 1000L) }
             dao.upsertAll(records)
 
             val pagedRange = dao.getPagedInRange(0L, 4000L, 10, 0)
             assertEquals(listOf("w3", "w2", "w1"), pagedRange.map { it.id })
-
-            val legacyPaged = dao.getPaged(0L, 10, 0)
-            assertEquals(listOf("w1", "w2", "w3"), legacyPaged.map { it.id })
         }
 
     @Test

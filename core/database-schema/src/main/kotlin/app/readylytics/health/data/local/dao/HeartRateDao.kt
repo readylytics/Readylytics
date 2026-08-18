@@ -14,14 +14,6 @@ interface HeartRateDao {
     @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC")
     suspend fun getSince(fromMs: Long): List<HeartRateRecordEntity>
 
-    @Query(
-        "SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit OFFSET :offset",
-    )
-    suspend fun getPaged(
-        fromMs: Long,
-        limit: Int,
-        offset: Int,
-    ): List<HeartRateRecordEntity>
 
     @Query(
         "SELECT * FROM heart_rate_records " +

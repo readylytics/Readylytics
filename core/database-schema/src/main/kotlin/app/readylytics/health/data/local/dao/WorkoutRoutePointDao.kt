@@ -23,12 +23,6 @@ interface WorkoutRoutePointDao {
     @Query("SELECT COUNT(*) FROM workout_route_points")
     suspend fun count(): Int
 
-    /** Stable ordering by primary key so backup export can page without skipping rows. */
-    @Query("SELECT * FROM workout_route_points ORDER BY id ASC LIMIT :limit OFFSET :offset")
-    suspend fun getPaged(
-        limit: Int,
-        offset: Int,
-    ): List<WorkoutRoutePointEntity>
 
     @Query(
         "SELECT * FROM workout_route_points WHERE id > :afterId " +

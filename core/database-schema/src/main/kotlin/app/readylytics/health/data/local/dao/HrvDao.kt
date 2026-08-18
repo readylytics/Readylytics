@@ -26,14 +26,6 @@ interface HrvDao {
     @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC")
     suspend fun getSince(fromMs: Long): List<HrvRecordEntity>
 
-    @Query(
-        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit OFFSET :offset",
-    )
-    suspend fun getPaged(
-        fromMs: Long,
-        limit: Int,
-        offset: Int,
-    ): List<HrvRecordEntity>
 
     @Query(
         "SELECT * FROM hrv_records " +

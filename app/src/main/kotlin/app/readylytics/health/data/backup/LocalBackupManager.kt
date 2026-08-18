@@ -4,6 +4,19 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
+import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
+import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.local.entity.StepRecordEntity
+import app.readylytics.health.data.local.entity.WeightRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
@@ -22,6 +35,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -235,6 +250,28 @@ class LocalBackupManager
             }
         }
 
+        private suspend inline fun <reified T : Any> writeTable(
+            writer: BufferedWriter,
+            name: String,
+            crossinline page: suspend () -> List<T>,
+            crossinline advance: (T) -> Unit,
+        ) {
+            writer.write("  \"$name\": [\n")
+            var first = true
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val batch = page()
+                if (batch.isEmpty()) break
+                batch.forEach {
+                    if (!first) writer.write(",\n")
+                    writer.write("    ${json.encodeToString(it)}")
+                    first = false
+                }
+                advance(batch.last())
+            }
+            writer.write("\n  ]")
+        }
+
         private suspend fun writeJsonStreaming(outputStream: OutputStream) {
             val sleepSessionDao = healthDatabase.sleepSessionDao()
             val heartRateDao = healthDatabase.heartRateDao()
@@ -284,24 +321,25 @@ class LocalBackupManager
             writePreferences(writer)
             writer.write(",\n")
 
-            writer.write("  \"sleepSessions\": [\n")
-            var offset = 0
-            var first = true
-            while (true) {
-                val batch = sleepSessionDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Sleep sessions ---
+            var sleepAfterTs = Long.MIN_VALUE
+            var sleepAfterId = ""
+            writeTable<SleepSessionEntity>(
+                writer,
+                "sleepSessions",
+                page = { sleepSessionDao.pageAfter(0, sleepAfterTs, sleepAfterId, 100) },
+                advance = {
+                    sleepAfterTs = it.startTime
+                    sleepAfterId = it.id
+                },
+            )
+            writer.write(",\n")
 
+            // --- Health source records (non-paged, small table) ---
             writer.write("  \"healthSourceRecords\": [\n")
+            currentCoroutineContext().ensureActive()
             val sourceRecords = sourceRecordDao.getAll()
-            first = true
+            var first = true
             sourceRecords.forEach {
                 if (!first) writer.write(",\n")
                 writer.write("    ${json.encodeToString(it)}")
@@ -309,189 +347,170 @@ class LocalBackupManager
             }
             writer.write("\n  ],\n")
 
-            writer.write("  \"heartRateRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = heartRateDao.getPaged(0, 500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ],\n")
+            // --- Heart rate records (composite cursor) ---
+            var hrAfterTs = Long.MIN_VALUE
+            var hrAfterRef = Long.MIN_VALUE
+            writeTable<HeartRateRecordEntity>(
+                writer,
+                "heartRateRecords",
+                page = { heartRateDao.pageAfter(0, hrAfterTs, hrAfterRef, 500) },
+                advance = {
+                    hrAfterTs = it.timestampMs
+                    hrAfterRef = it.sourceRecordRef
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"hrvRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = hrvDao.getPaged(0, 500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ],\n")
+            // --- HRV records ---
+            var hrvAfterTs = Long.MIN_VALUE
+            var hrvAfterRef = Long.MIN_VALUE
+            writeTable<HrvRecordEntity>(
+                writer,
+                "hrvRecords",
+                page = { hrvDao.pageAfter(0, hrvAfterTs, hrvAfterRef, 500) },
+                advance = {
+                    hrvAfterTs = it.timestampMs
+                    hrvAfterRef = it.sourceRecordRef
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"hrMinuteBuckets\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = minuteBucketDao.getPaged(500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ],\n")
+            // --- HR minute buckets ---
+            var mbAfterTs = Long.MIN_VALUE
+            var mbAfterRecordType = ""
+            var mbAfterSessionId = ""
+            writeTable<HrMinuteBucketEntity>(
+                writer,
+                "hrMinuteBuckets",
+                page = { minuteBucketDao.pageAfter(mbAfterTs, mbAfterRecordType, mbAfterSessionId, 500) },
+                advance = {
+                    mbAfterTs = it.bucketStartMs
+                    mbAfterRecordType = it.recordType
+                    mbAfterSessionId =
+                        it.sessionId
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"workouts\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = workoutDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Workouts ---
+            var workoutAfterTs = Long.MIN_VALUE
+            var workoutAfterId = ""
+            writeTable<WorkoutRecordEntity>(
+                writer,
+                "workouts",
+                page = { workoutDao.pageAfter(0, workoutAfterTs, workoutAfterId, 100) },
+                advance = {
+                    workoutAfterTs = it.startTime
+                    workoutAfterId = it.id
+                },
+            )
+            writer.write(",\n")
 
             // Written after "workouts" so the streaming restore inserts the parent rows first --
             // workout_route_points has an ON DELETE CASCADE foreign key onto workout_records.
-            writer.write("  \"workoutRoutePoints\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = workoutRoutePointDao.getPaged(500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ],\n")
+            var routeAfterId = Long.MIN_VALUE
+            writeTable<WorkoutRoutePointEntity>(
+                writer,
+                "workoutRoutePoints",
+                page = { workoutRoutePointDao.pageAfter(routeAfterId, 500) },
+                advance = { routeAfterId = it.id },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"dailySummaries\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = dailySummaryDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Daily summaries ---
+            var summaryAfterTs = Long.MIN_VALUE
+            writeTable<DailySummaryEntity>(
+                writer,
+                "dailySummaries",
+                page = { dailySummaryDao.pageAfter(0, summaryAfterTs, 100) },
+                advance = { summaryAfterTs = it.dateMidnightMs },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"weightRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = weightRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Weight records ---
+            var weightAfterTs = Long.MIN_VALUE
+            var weightAfterId = ""
+            writeTable<WeightRecordEntity>(
+                writer,
+                "weightRecords",
+                page = { weightRecordDao.pageAfter(0, weightAfterTs, weightAfterId, 100) },
+                advance = {
+                    weightAfterTs = it.timestampMs
+                    weightAfterId = it.id
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"bodyFatRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = bodyFatRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Body fat records ---
+            var bodyFatAfterTs = Long.MIN_VALUE
+            var bodyFatAfterId = ""
+            writeTable<BodyFatRecordEntity>(
+                writer,
+                "bodyFatRecords",
+                page = { bodyFatRecordDao.pageAfter(0, bodyFatAfterTs, bodyFatAfterId, 100) },
+                advance = {
+                    bodyFatAfterTs = it.timestampMs
+                    bodyFatAfterId = it.id
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"bloodPressureRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = bloodPressureRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Blood pressure records ---
+            var bpAfterTs = Long.MIN_VALUE
+            var bpAfterId = ""
+            writeTable<BloodPressureRecordEntity>(
+                writer,
+                "bloodPressureRecords",
+                page = { bloodPressureRecordDao.pageAfter(0, bpAfterTs, bpAfterId, 100) },
+                advance = {
+                    bpAfterTs = it.timestampMs
+                    bpAfterId = it.id
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"oxygenSaturationRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = oxygenSaturationRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Oxygen saturation records ---
+            var o2AfterTs = Long.MIN_VALUE
+            var o2AfterId = ""
+            writeTable<OxygenSaturationRecordEntity>(
+                writer,
+                "oxygenSaturationRecords",
+                page = { oxygenSaturationRecordDao.pageAfter(0, o2AfterTs, o2AfterId, 100) },
+                advance = {
+                    o2AfterTs = it.timestampMs
+                    o2AfterId = it.id
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"bodyTemperatureRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = bodyTemperatureRecordDao.getPaged(0, 100, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 100
-            }
-            writer.write("\n  ],\n")
+            // --- Body temperature records ---
+            var tempAfterTs = Long.MIN_VALUE
+            var tempAfterId = ""
+            writeTable<BodyTemperatureRecordEntity>(
+                writer,
+                "bodyTemperatureRecords",
+                page = { bodyTemperatureRecordDao.pageAfter(0, tempAfterTs, tempAfterId, 100) },
+                advance = {
+                    tempAfterTs = it.timestampMs
+                    tempAfterId = it.id
+                },
+            )
+            writer.write(",\n")
 
-            writer.write("  \"stepRecords\": [\n")
-            offset = 0
-            first = true
-            while (true) {
-                val batch = stepRecordDao.getPaged(0, 500, offset)
-                if (batch.isEmpty()) break
-                batch.forEach {
-                    if (!first) writer.write(",\n")
-                    writer.write("    ${json.encodeToString(it)}")
-                    first = false
-                }
-                offset += 500
-            }
-            writer.write("\n  ]\n")
+            // --- Step records ---
+            var stepAfterTs = Long.MIN_VALUE
+            var stepAfterId = ""
+            writeTable<StepRecordEntity>(
+                writer,
+                "stepRecords",
+                page = { stepRecordDao.pageAfter(0, stepAfterTs, stepAfterId, 500) },
+                advance = {
+                    stepAfterTs = it.startTime
+                    stepAfterId = it.id
+                },
+            )
 
-            writer.write("}\n")
+            writer.write("\n}\n")
             writer.flush()
         }
 

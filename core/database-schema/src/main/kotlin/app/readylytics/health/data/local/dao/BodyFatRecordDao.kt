@@ -63,14 +63,6 @@ interface BodyFatRecordDao {
     @Upsert
     suspend fun upsertAll(records: List<BodyFatRecordEntity>)
 
-    @Query(
-        "SELECT * FROM body_fat_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
-    )
-    suspend fun getPaged(
-        fromMs: Long,
-        limit: Int,
-        offset: Int,
-    ): List<BodyFatRecordEntity>
 
     @Query(
         "SELECT * FROM body_fat_records " +

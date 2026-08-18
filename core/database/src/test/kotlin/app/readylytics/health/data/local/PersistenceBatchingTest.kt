@@ -319,10 +319,6 @@ class PersistenceBatchingTest {
 
         override suspend fun count(): Int = points.size
 
-        override suspend fun getPaged(
-            limit: Int,
-            offset: Int,
-        ): List<WorkoutRoutePointEntity> = points.drop(offset).take(limit)
 
         override suspend fun pageAfter(
             afterId: Long,
