@@ -94,19 +94,16 @@ class ScoringRepositoryImpl
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,
             steps: Long?,
-        ) = computeAndPersistDailySummary(targetDate, steps, settingsRepo.userPreferences.first())
+        ) {
+            computeAndPersistDailySummary(targetDate, steps, settingsRepo.userPreferences.first())
+        }
 
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,
             steps: Long?,
             prefs: UserPreferences,
         ) {
-            calculationMutex.withLock {
-                val zoneId = prefs.scoringZone()
-                val computed = computeDailySummary(targetDate, prefs)
-                val summary = if (steps != null) computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) else computed
-                persist(summary, zoneId)
-            }
+            computeAndPersist(targetDate, steps, prefs, null, null)
         }
 
         override suspend fun computeAndPersistDailySummary(
@@ -116,12 +113,25 @@ class ScoringRepositoryImpl
             trimpContext: WalkForwardTrimpContext,
             baselineContext: WalkForwardBaselineContext,
         ) {
-            calculationMutex.withLock {
-                val zoneId = prefs.scoringZone()
-                val computed = computeDailySummary(targetDate, prefs, trimpContext, baselineContext)
-                val summary = if (steps != null) computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) else computed
-                persist(summary, zoneId)
-            }
+            computeAndPersist(targetDate, steps, prefs, trimpContext, baselineContext)
+        }
+
+        private suspend fun computeAndPersist(
+            targetDate: LocalDate,
+            steps: Long?,
+            prefs: UserPreferences,
+            trimpContext: WalkForwardTrimpContext? = null,
+            baselineContext: WalkForwardBaselineContext? = null,
+        ) = calculationMutex.withLock {
+            val zoneId = prefs.scoringZone()
+            val computed = computeDailySummary(targetDate, prefs, trimpContext, baselineContext)
+            val summary =
+                if (steps != null) {
+                    computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                } else {
+                    computed
+                }
+            persist(summary, zoneId)
         }
 
         override suspend fun fetchWalkForwardTrimpContext(
