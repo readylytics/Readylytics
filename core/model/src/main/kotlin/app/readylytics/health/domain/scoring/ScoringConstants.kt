@@ -81,6 +81,9 @@ object ScoringConstants {
         const val EFF_POOR_SCORE = 40f
         const val EFF_VERY_POOR_SCORE = 15f
 
+        // Minimum awake-segment length that counts as a discrete awakening (1.5 minutes).
+        const val MIN_AWAKENING_DURATION_MS = 90_000L
+
         const val DURATION_OPTIMAL_RATIO = 0.9f
         const val DURATION_NEUTRAL_RATIO = 0.8f
         const val DURATION_WARNING_RATIO = 0.7f
