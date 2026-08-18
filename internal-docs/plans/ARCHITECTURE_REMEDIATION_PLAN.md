@@ -1733,6 +1733,25 @@ Each of these is a separate commit; none depends on the others.
 **Done when.** Each sub-item is either merged or explicitly declined with a
 one-line reason recorded in `internal-docs/plans/remediation-baseline.txt`.
 
+### Outcome
+
+- **Done**: build cache enabled — commit `ab15774` (`org.gradle.caching=true`).
+- **Deferred — `core:scoring` → `kotlin("jvm")`.** Blocked by a Kotlin compiler
+  incompatibility. The standalone `kotlin("jvm")` compiler (`kotlin-compiler-embeddable`
+  2.3.21 / 2.4.10) crashes in the classpath-snapshot shrink
+  (`shrinkAndSaveClasspathSnapshot`) when its classpath includes a sibling module's
+  large-metadata class (e.g. `DailySummary`). Root cause: this project compiles
+  Android modules with AGP 9.3.1's built-in Kotlin (`android.builtInKotlin=true`,
+  `kotlin-compiler-32.3.1`), a different compiler build whose snapshot format is
+  incompatible with the standalone compiler. The `kotlin.incremental.useClasspathSnapshot`
+  escape hatch is removed in 2.3.x, and no stable AGP beyond 9.3.1 exists (only
+  9.4.0-RC / 9.5.0-alpha), so a clean fix needs an AGP upgrade we've declined until
+  it is stable. Revisit when AGP 9.4 goes stable — full self-contained migration
+  steps live in `internal-docs/plans/CORE_SCORING_JVM_MIGRATION.md`.
+- **Not started**: the remaining Step 19 sub-items (narrow catches, `listBackups`
+  filter, entity indices, lint warnings, `SharingStarted.Eagerly` audit, FQ-type
+  cleanup, `isReturnDefaultValues`, package alignment) are unchanged from this plan.
+
 ---
 
 ---
