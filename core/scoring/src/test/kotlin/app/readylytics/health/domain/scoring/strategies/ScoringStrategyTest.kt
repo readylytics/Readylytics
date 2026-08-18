@@ -209,6 +209,34 @@ class SleepScoringStrategyTest {
     }
 
     @Test
+    fun `suspicious stages still degrade weights even when fragmentation data is available`() {
+        // Isolates the stagesSuspicious conjunct in `stageDataUsable = !stagesSuspicious &&
+        // fragmentation != null`: fragmentation data IS present here, so only stagesSuspicious can be
+        // driving the degraded branch. Without this test, a mutation deleting `!stagesSuspicious &&`
+        // from that condition would pass the full suite.
+        val score =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 92f,
+                deepSleepMinutes = 0,
+                remSleepMinutes = 0,
+                goalSleepHours = 8f,
+                sRest = 60f,
+                userAge = 35,
+                stagesSuspicious = true,
+                sleepTargets = null,
+                fragmentation = SleepFragmentation.NONE,
+            )
+
+        val expectedDuration = sleepStrategy.computeDurationSubScore(480, 92f, 8f)
+        val profile = SleepScoreWeightProfile.BALANCED
+        val expected =
+            profile.degradedDurationWeight * expectedDuration + profile.degradedRestorationWeight * 60f
+
+        assertEquals(expected, score, 0.01f)
+    }
+
+    @Test
     fun `poor regularity applies at most an eight percent penalty`() {
         fun scoreFor(regularity: Float?) =
             sleepStrategy.computeSleepScore(
