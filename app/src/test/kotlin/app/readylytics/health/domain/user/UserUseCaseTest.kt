@@ -4,14 +4,18 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.workers.WorkerScheduler
+import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
+import kotlin.test.assertFailsWith
 
 class UserUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
@@ -45,5 +49,29 @@ class UserUseCaseTest {
             useCase.updateBirthday(birthday)
 
             verify(exactly = 1) { workerScheduler.scheduleResyncWorker(recomputeOnly = true) }
+        }
+
+    @Test
+    fun `updateBirthday rethrows CancellationException`() =
+        runTest {
+            coEvery { settingsRepo.updateBirthday(any()) } throws
+                CancellationException("Job cancelled")
+
+            assertFailsWith<CancellationException> {
+                useCase.updateBirthday(birthday)
+            }
+        }
+
+    @Test
+    fun `calculateAndSetMaxHr rethrows CancellationException`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flow {
+                    throw CancellationException("Job cancelled")
+                }
+
+            assertFailsWith<CancellationException> {
+                useCase.calculateAndSetMaxHr()
+            }
         }
 }

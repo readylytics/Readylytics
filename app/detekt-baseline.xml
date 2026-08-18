@@ -1,0 +1,102 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$prefix == "androidx.health.connect." &amp;&amp; ( source.name == "DataSettings.kt" || source.name == "OnboardingRoute.kt" || source.name == "PermissionBullets.kt" ) &amp;&amp; ( line.contains("androidx.health.connect.client.PermissionController") || line.contains("androidx.health.connect.client.permission.HealthPermission") || line.contains("androidx.health.connect.client.HealthConnectClient") || line.contains("androidx.health.connect.client.records.") )</ID>
+    <ID>ComplexCondition:LocalRestoreManager.kt$LocalRestoreManager$backup.zone1MinBpm != null &amp;&amp; backup.zone1MaxBpm != null &amp;&amp; backup.zone2MaxBpm != null &amp;&amp; backup.zone3MaxBpm != null &amp;&amp; backup.zone4MaxBpm != null</ID>
+    <ID>ComplexCondition:LocalRestoreManager.kt$LocalRestoreManager$backup.zone1MinPercent != null &amp;&amp; backup.zone1MaxPercent != null &amp;&amp; backup.zone2MaxPercent != null &amp;&amp; backup.zone3MaxPercent != null &amp;&amp; backup.zone4MaxPercent != null</ID>
+    <ID>CyclomaticComplexMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
+    <ID>CyclomaticComplexMethod:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$@Test fun `existing feature sources have no forbidden imports`()</ID>
+    <ID>CyclomaticComplexMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writeJsonStreaming(outputStream: OutputStream)</ID>
+    <ID>CyclomaticComplexMethod:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun performStreamingRestore( reader: JsonReader, schemaVersion: Int, onPreferencesParsed: (UserPreferencesBackup) -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun restorePreferences( backup: UserPreferencesBackup, providedPassword: String?, )</ID>
+    <ID>CyclomaticComplexMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
+    <ID>CyclomaticComplexMethod:SyncViewModel.kt$SyncViewModel$fun onAppForeground()</ID>
+    <ID>CyclomaticComplexMethod:UserPreferencesMapper.kt$fun UserPreferencesProto.toDomainModel(): UserPreferences</ID>
+    <ID>CyclomaticComplexMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
+    <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
+    <ID>ImplicitDefaultLocale:LoadTestResult.kt$LoadTestResult$String.format("%.0f", operationsPerSecond)</ID>
+    <ID>ImplicitDefaultLocale:LoadTestResult.kt$LoadTestResult$String.format("%.2f", successRate)</ID>
+    <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is CancellationException</ID>
+    <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is ZipException</ID>
+    <ID>InstanceOfCheckForException:PeriodicHealthSyncWorker.kt$PeriodicHealthSyncWorker$e is HealthConnectPermissionRevokedException</ID>
+    <ID>InstanceOfCheckForException:PeriodicHealthSyncWorker.kt$PeriodicHealthSyncWorker$e is SecurityException</ID>
+    <ID>LargeClass:LocalBackupManagerTest.kt$LocalBackupManagerTest</ID>
+    <ID>LargeClass:LocalRestoreManager.kt$LocalRestoreManager</ID>
+    <ID>LongMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
+    <ID>LongMethod:CrashReportPrompt.kt$@Composable fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel())</ID>
+    <ID>LongMethod:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;$override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto</ID>
+    <ID>LongMethod:DatabaseRecoveryScreen.kt$@Composable fun DatabaseRecoveryScreen( onResetDatabase: () -&gt; Unit, onRestoreBackup: (Uri, onResult: (Boolean, String?) -&gt; Unit) -&gt; Unit, )</ID>
+    <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writeJsonStreaming(outputStream: OutputStream)</ID>
+    <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writePreferences(writer: BufferedWriter)</ID>
+    <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$suspend fun reencryptBackups( oldPassword: String?, newPassword: String?, ): Result&lt;Unit&gt;</ID>
+    <ID>LongMethod:LocalBackupManagerTest.kt$LocalBackupManagerTest$@Before fun setUp()</ID>
+    <ID>LongMethod:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun performStreamingRestore( reader: JsonReader, schemaVersion: Int, onPreferencesParsed: (UserPreferencesBackup) -&gt; Unit, )</ID>
+    <ID>LongMethod:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun restorePreferences( backup: UserPreferencesBackup, providedPassword: String?, )</ID>
+    <ID>LongMethod:LocalRestoreManager.kt$LocalRestoreManager$suspend fun applyRestore( backupUri: Uri, providedPassword: String? = null, ): RestoreResult</ID>
+    <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresSleepTopCardsChartsAndMetricCards()</ID>
+    <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresVitalsCardsAndCharts()</ID>
+    <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
+    <ID>LongMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
+    <ID>LongMethod:ProductionReadinessStaticTest.kt$ProductionReadinessStaticTest$@Test fun `data backup and transfer exclusions are fully configured`()</ID>
+    <ID>LongMethod:SyncViewModel.kt$SyncViewModel$fun onAppForeground()</ID>
+    <ID>LongMethod:UserPreferencesMapper.kt$fun UserPreferencesProto.toDomainModel(): UserPreferences</ID>
+    <ID>LongMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
+    <ID>LongMethod:V7DatabaseMigrator.kt$V7DatabaseMigrator$private suspend fun runStateMachine(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit)</ID>
+    <ID>LongParameterList:LocalBackupManager.kt$LocalBackupManager$( @param:ApplicationContext private val context: Context, private val healthDatabase: HealthDatabase, private val settingsRepository: SettingsRepository, private val cardConfigurationRepository: CardConfigurationRepository, private val vitalsLayoutRepository: VitalsLayoutRepository, private val sleepLayoutRepository: SleepLayoutRepository, private val workoutsLayoutRepository: WorkoutsLayoutRepository, private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository, private val encryptionManager: EncryptionManager, private val auditTrailRepository: AuditTrailRepository, @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher, private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context), )</ID>
+    <ID>LongParameterList:LocalRestoreManager.kt$LocalRestoreManager$( @param:ApplicationContext private val context: Context, private val healthDatabase: HealthDatabase, private val settingsRepository: SettingsRepository, private val cardConfigurationRepository: CardConfigurationRepository, private val vitalsLayoutRepository: VitalsLayoutRepository, private val sleepLayoutRepository: SleepLayoutRepository, private val workoutsLayoutRepository: WorkoutsLayoutRepository, private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository, private val workerScheduler: WorkerScheduler, private val encryptionManager: EncryptionManager, private val auditTrailRepository: AuditTrailRepository, @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher, )</ID>
+    <ID>MaxLineLength:LocalBackupManagerTest.kt$LocalBackupManagerTest$// Note: createBackup might fail because of missing content resolver support for file:// outputstream in Robolectric</ID>
+    <ID>NestedBlockDepth:FeatureResourceOwnershipTest.kt$FeatureResourceOwnershipTest$@Test fun `string resources have one owning module`()</ID>
+    <ID>NestedBlockDepth:LocalRestoreManager.kt$LocalRestoreManager$private fun readManifest(zipFile: ZipFile): BackupManifest</ID>
+    <ID>NestedBlockDepth:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun performStreamingRestore( reader: JsonReader, schemaVersion: Int, onPreferencesParsed: (UserPreferencesBackup) -&gt; Unit, )</ID>
+    <ID>ReturnCount:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$private fun resolveAuditedFile(pathFromRepoRoot: String): File</ID>
+    <ID>ReturnCount:DataCleanupWorker.kt$DataCleanupWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:DatabaseMigrationController.kt$DatabaseMigrationControllerImpl$private fun mapState(workInfos: List&lt;WorkInfo&gt;): DatabaseMigrationUiState</ID>
+    <ID>ReturnCount:DatabaseReadyStartupInitializer.kt$DatabaseReadyStartupCoordinator$private suspend fun initializeWithRetry( states: StateFlow&lt;DatabaseMigrationUiState&gt;, readiness: DatabaseReadiness, )</ID>
+    <ID>ReturnCount:DatabaseReadyStartupInitializer.kt$DatabaseReadyStartupInitializer$suspend fun initializeIfReady(readiness: DatabaseReadiness): StartupInitializationResult</ID>
+    <ID>ReturnCount:LogSlotStoreTest.kt$LogSlotStoreTest.AdAwareSecureFileStore$override fun readText( file: File, associatedData: ByteArray, ): String</ID>
+    <ID>ReturnCount:MainNavHost.kt$private fun getTabIndex(destination: NavDestination?): Int</ID>
+    <ID>ReturnCount:V7DatabaseMigrator.kt$V7DatabaseMigrator$suspend fun migrate(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit): V7MigrationResult</ID>
+    <ID>SwallowedException:BirthdayCheckWorker.kt$BirthdayCheckWorker$e: Exception</ID>
+    <ID>SwallowedException:CrashReportShareIntent.kt$e: PackageManager.NameNotFoundException</ID>
+    <ID>SwallowedException:DataCleanupWorker.kt$DataCleanupWorker$e: Exception</ID>
+    <ID>SwallowedException:DataRollupWorker.kt$DataRollupWorker$e: Exception</ID>
+    <ID>SwallowedException:DatabaseKeyRotatorTest.kt$DatabaseKeyRotatorTest$e: IllegalStateException</ID>
+    <ID>SwallowedException:DocumentationDriftTest.kt$DocumentationDriftTest$e: Throwable</ID>
+    <ID>SwallowedException:EncryptionManager.kt$EncryptionManager$e: Exception</ID>
+    <ID>SwallowedException:LocalBackupManager.kt$LocalBackupManager$e: Exception</ID>
+    <ID>SwallowedException:LogcatCaptureStoreImpl.kt$LogcatCaptureStoreImpl$e: IOException</ID>
+    <ID>SwallowedException:SyncViewModel.kt$SyncViewModel$e: HealthConnectPermissionRevokedException</ID>
+    <ID>SwallowedException:UserPreferencesMapper.kt$e: Exception</ID>
+    <ID>SwallowedException:UserPreferencesSerializer.kt$e: Exception</ID>
+    <ID>SwallowedException:UserUseCase.kt$UserUseCase$e: Exception</ID>
+    <ID>ThrowsCount:SyncViewModel.kt$SyncViewModel$fun onAppForeground()</ID>
+    <ID>TooGenericExceptionThrown:EncryptionManager.kt$EncryptionManager$throw RuntimeException("Failed to generate master key", ex)</ID>
+    <ID>TooManyFunctions:CrashReportShareIntent.kt$app.readylytics.health.crashreport.CrashReportShareIntent.kt</ID>
+    <ID>TooManyFunctions:FeaturePortModule.kt$FeaturePortModule</ID>
+    <ID>TooManyFunctions:LocalRestoreManager.kt$LocalRestoreManager</ID>
+    <ID>TooManyFunctions:LogSlotStore.kt$LogSlotStore</ID>
+    <ID>TooManyFunctions:PhysiologyPreferences.kt$PhysiologyPreferences</ID>
+    <ID>TooManyFunctions:SettingsRepository.kt$SettingsRepository : SettingsRepositoryUserPreferencesReaderAboutPreferencesPhysiologySettingsHeartRateZoneSettingsSleepSettingsThresholdSettingsDisplaySettingsSyncSettingsDeviceSettingsBackupSettings</ID>
+    <ID>TooManyFunctions:SleepPreferences.kt$SleepPreferences</ID>
+    <ID>TooManyFunctions:SyncPreferences.kt$SyncPreferences</ID>
+    <ID>TooManyFunctions:UIPreferences.kt$UIPreferences</ID>
+    <ID>TooManyFunctions:V7DatabaseMigrator.kt$V7DatabaseMigrator</ID>
+    <ID>UnusedParameter:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$file: File</ID>
+    <ID>UnusedParameter:LogcatCaptureStoreImpl.kt$LogcatCaptureStoreImpl$durationMinutes: Int</ID>
+    <ID>UnusedPrivateMember:PhysiologyPreferences.kt$PhysiologyPreferences$private fun Int.toValidRestMinutes()</ID>
+    <ID>UnusedPrivateProperty:CardConfigurationRepositoryTest.kt$CardConfigurationRepositoryTest$val repo = CardConfigurationRepositoryImpl(dataStore, testScope)</ID>
+    <ID>UnusedPrivateProperty:HealthDeviceRepositoryTest.kt$HealthDeviceRepositoryTest$val dbDevices = listOf("Device1", "Device2")</ID>
+    <ID>UnusedPrivateProperty:LocalRestoreManager.kt$LocalRestoreManager$val name = reader.nextName()</ID>
+    <ID>UnusedPrivateProperty:LocalRestoreManager.kt$LocalRestoreManager$val token = reader.peek()</ID>
+    <ID>UseCheckOrError:FileBackupStore.kt$FileBackupStore$throw IllegalStateException("Failed to delete local file")</ID>
+    <ID>UseCheckOrError:LocalBackupManager.kt$LocalBackupManager$throw IllegalStateException("Backup password not set")</ID>
+    <ID>UseCheckOrError:LocalRestoreManager.kt$LocalRestoreManager$throw IllegalStateException("Could not open backup URI")</ID>
+    <ID>UseCheckOrError:LocalRestoreManager.kt$LocalRestoreManager$throw IllegalStateException("No JSON file found in backup ZIP")</ID>
+    <ID>UseCheckOrError:SafBackupStore.kt$SafBackupStore$throw IllegalStateException("Could not read backup")</ID>
+    <ID>UseCheckOrError:SafBackupStore.kt$SafBackupStore$throw IllegalStateException("Failed to delete SAF document")</ID>
+  </CurrentIssues>
+</SmellBaseline>

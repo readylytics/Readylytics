@@ -1,0 +1,22 @@
+{
+    "dateMidnightMs": 1781474400000,
+    "nocturnalHrv": 56,
+    "sleepDurationMinutes": 480,
+    "deepSleepPercent": 18.75,
+    "remSleepPercent": 18.75,
+    "hrvBaseline": 57,
+    "restingHeartRate": 52,
+    "isCalibrating": true,
+    "rhrBpm": 52.0,
+    "snapshotCalibrationPhase": "CALIBRATION",
+    "trimpWorkoutOnly": 0.0,
+    "trimpEverydayHr": 0.0,
+    "rasWorkoutOnly": 0.0,
+    "rasEverydayHr": 0.0,
+    "totalRasWorkoutOnly": 0.0,
+    "totalRasEverydayHr": 0.0,
+    "everydayCoverageMinutes": 1,
+    "everydayLoadConfidence": "LOW",
+    "supplementalSleepDurationMinutes": 0,
+    "napCount": 0
+}

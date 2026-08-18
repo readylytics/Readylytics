@@ -319,10 +319,11 @@ class PersistenceBatchingTest {
 
         override suspend fun count(): Int = points.size
 
-        override suspend fun getPaged(
+
+        override suspend fun pageAfter(
+            afterId: Long,
             limit: Int,
-            offset: Int,
-        ): List<WorkoutRoutePointEntity> = points.drop(offset).take(limit)
+        ): List<WorkoutRoutePointEntity> = points.filter { it.id > afterId }.sortedBy { it.id }.take(limit)
     }
 
     private inline fun <reified T> recordingDao(

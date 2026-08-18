@@ -32,11 +32,6 @@ interface SleepSessionRepository {
 
     suspend fun getSince(fromMs: Long): List<SleepSessionData>
 
-    suspend fun getPaged(
-        fromMs: Long,
-        limit: Int,
-        offset: Int,
-    ): List<SleepSessionData>
 
     suspend fun countSince(fromMs: Long): Int
 

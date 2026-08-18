@@ -140,7 +140,7 @@ class ProductionReadinessStaticTest {
     fun `local backup stages encrypted zip before publishing default backup file`() {
         val source = sourceFile("src/main/kotlin/app/readylytics/health/data/backup/LocalBackupManager.kt").readText()
 
-        assertTrue(source.contains("moveTempZipToFinal(tempZipFile, file)"))
+        assertTrue(source.contains("store.publish(tempZipFile, zipFilename)"))
         assertFalse(source.contains("createZip(jsonFile, file, password)"))
     }
 

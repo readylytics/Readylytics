@@ -178,39 +178,6 @@ class SleepSessionRepositoryImplTest {
             assertEquals("s3", result!!.id)
         }
 
-    @Test
-    fun getPaged_firstPage_returnsLimitedResults() =
-        runTest {
-            dao.upsertAll(
-                listOf(
-                    session("s1", t1Start),
-                    session("s2", t2Start),
-                    session("s3", t3Start),
-                ),
-            )
-
-            val page = repo.getPaged(fromMs = t1Start, limit = 2, offset = 0)
-
-            assertEquals(2, page.size)
-        }
-
-    @Test
-    fun getPaged_secondPage_returnsRemainder() =
-        runTest {
-            dao.upsertAll(
-                listOf(
-                    session("s1", t1Start),
-                    session("s2", t2Start),
-                    session("s3", t3Start),
-                ),
-            )
-
-            val page = repo.getPaged(fromMs = t1Start, limit = 2, offset = 2)
-
-            assertEquals(1, page.size)
-            assertEquals("s3", page[0].id)
-        }
-
     // ---- upsert / update ----
 
     @Test

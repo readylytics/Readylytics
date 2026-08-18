@@ -18,6 +18,7 @@ import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.core.scoring.BuildConfig
 import app.readylytics.health.domain.util.stdev
 import java.time.Instant
@@ -28,6 +29,7 @@ import javax.inject.Singleton
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 
 @Singleton
 class ComputeSleepMetricsUseCase
@@ -602,7 +604,10 @@ class ComputeSleepMetricsUseCase
                         sRest = sRest,
                     ),
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                logE("ComputeSleepMetrics", e) { "Sleep metrics failed for $targetDate" }
                 Result.failure("Failed to compute sleep metrics", "SLEEP_METRICS_ERROR")
             }
     }

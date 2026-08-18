@@ -74,8 +74,8 @@ fun <Id : Any, Config : ReorderableItem<Id>> ReorderableGrid(
     onItemReorder: (List<Config>) -> Unit,
     onItemDropToRemove: (Id) -> Unit,
     fullWidthIds: Set<Id>,
-    fixedHeightIds: Set<Id> = emptySet(),
     modifier: Modifier = Modifier,
+    fixedHeightIds: Set<Id> = emptySet(),
     verticalSpacing: Dp = MaterialTheme.spacing.small,
     controller: DragController<Id>? = null,
 ) {

@@ -42,7 +42,6 @@ class SyncLogViewModel
         }
 
         override fun onCleared() {
-            super.onCleared()
             stopPolling()
         }
     }

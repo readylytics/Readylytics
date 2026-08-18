@@ -1,0 +1,60 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:DailyMetricsMapper.kt$DailyMetricsMapper$systolic == null || diastolic == null || systolic == 0 || diastolic == 0</ID>
+    <ID>CyclomaticComplexMethod:ElevationGainCalculator.kt$ElevationGainCalculator$fun smoothElevationProfile(series: List&lt;Pair&lt;Double, Double?&gt;&gt;): List&lt;Pair&lt;Double, Double&gt;&gt;</ID>
+    <ID>LoopWithTooManyJumpStatements:ElevationGainCalculator.kt$ElevationGainCalculator$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SessionTotalsResolver.kt$SessionTotalsResolver$for</ID>
+    <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
+    <ID>MaxLineLength:AppLog.kt$ScopedLogger$inline fun error(throwable: Throwable? = null, msg: () -&gt; String)</ID>
+    <ID>MaxLineLength:AppLog.kt$ScopedLogger$inline fun warn(throwable: Throwable? = null, msg: () -&gt; String)</ID>
+    <ID>MaxLineLength:ElevationGainCalculatorTest.kt$ElevationGainCalculatorTest$// Starts at 200m, descends to 100m, climbs to 150m (50m gain), descends to 80m, climbs to 120m (40m gain) -&gt; total 90m</ID>
+    <ID>MaxLineLength:HealthConnectRepository.kt$HealthConnectRepository$/** Permission required for [PeriodicHealthSyncWorker][app.readylytics.health.workers.PeriodicHealthSyncWorker] to read data while the app is backgrounded. */</ID>
+    <ID>MaxLineLength:HealthZone.kt$// HRV — higher is better: above optimalMin=OPTIMAL, down to neutralMin=NEUTRAL, down to warningMin=WARNING, below=CRITICAL</ID>
+    <ID>MaxLineLength:HrrToleranceRule.kt$HrrToleranceRule$"Recovery match window: ${SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS}–${SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS} s"</ID>
+    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = false, position = 3, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
+    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.HRV, isVisible = true, position = 1, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
+    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = false, position = 2, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
+    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
+    <ID>MaxLineLength:SleepMetricCardManagementDelegate.kt$SleepMetricCardManagementDelegate$fun</ID>
+    <ID>MaxLineLength:VitalAssessmentTest.kt$VitalAssessmentTest$assertEquals(MetricStatus.CALIBRATING, summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))</ID>
+    <ID>MaxLineLength:WorkoutMapper.kt$WorkoutMapper$?:</ID>
+    <ID>MayBeConst:SettingsDefaults.kt$SettingsDefaults$val HEIGHT_CM: Float? = 175f</ID>
+    <ID>MemberNameEqualsClassName:ZoneThresholds.kt$ZoneThresholds$fun zoneThresholds( z1Min: Int = 95, z1Max: Int = 114, z2Max: Int = 133, z3Max: Int = 152, z4Max: Int = 171, ): IntArray</ID>
+    <ID>NestedBlockDepth:ElevationGainCalculator.kt$ElevationGainCalculator$fun calculateAscent( altitudes: List&lt;Double&gt;, thresholdMeters: Double = DEFAULT_THRESHOLD_METERS, ): Double</ID>
+    <ID>NewLineAtEndOfFile:VitalsChartConfiguration.kt$app.readylytics.health.domain.vitals.VitalsChartConfiguration.kt</ID>
+    <ID>NewLineAtEndOfFile:VitalsChartId.kt$app.readylytics.health.domain.vitals.VitalsChartId.kt</ID>
+    <ID>NewLineAtEndOfFile:VitalsLayoutRepository.kt$app.readylytics.health.domain.vitals.VitalsLayoutRepository.kt</ID>
+    <ID>ReturnCount:BmiService.kt$BmiService$fun calculateBmi( weight: Float, height: Float, units: UnitSystem, ): Result&lt;BmiData&gt;</ID>
+    <ID>ReturnCount:DateRangeService.kt$DateRangeService$fun slidingWindows( range: DateRange, windowDays: Int, ): Result&lt;List&lt;DateRange&gt;&gt;</ID>
+    <ID>ReturnCount:ElevationGainCalculator.kt$ElevationGainCalculator$fun smoothElevationProfile(series: List&lt;Pair&lt;Double, Double?&gt;&gt;): List&lt;Pair&lt;Double, Double&gt;&gt;</ID>
+    <ID>ReturnCount:HealthMetricsService.kt$HealthMetricsService$fun calculateBmi( weightKg: Float, heightCm: Float, ): Result&lt;Float&gt;</ID>
+    <ID>ReturnCount:MetricStatusExtensions.kt$fun DailySummary.restingHrStatus( optimalThreshold: Float, warningThreshold: Float, ): MetricStatus</ID>
+    <ID>ReturnCount:PermittedRecommendationMapper.kt$PermittedRecommendationMapper$fun resolve(status: MetricStatus, flags: List&lt;RecoveryFlag&gt;): PermittedRecommendation</ID>
+    <ID>ReturnCount:RouteSimplifier.kt$RouteSimplifier$fun simplify( points: List&lt;ProjectedPoint&gt;, maxPoints: Int = 200, ): List&lt;ProjectedPoint&gt;</ID>
+    <ID>ReturnCount:SessionLinkSweep.kt$SessionLinkSweep$fun resolve(sampleMs: Long): SampleLink</ID>
+    <ID>ReturnCount:SessionLinker.kt$SessionLinker$fun resolve( sampleMs: Long, sleepSessions: List&lt;SessionSpan&gt;, workoutSessions: List&lt;SessionSpan&gt;, ): SampleLink</ID>
+    <ID>ReturnCount:SleepArchitectureValidator.kt$SleepArchitectureValidator$override fun validate(value: SleepStageFractions): ValidationResult</ID>
+    <ID>ReturnCount:UnitConverter.kt$UnitConverter$fun elevationParts( meters: Float, unitSystem: UnitSystem, ): MetricParts?</ID>
+    <ID>ReturnCount:WorkoutLayoutTypeMapper.kt$WorkoutLayoutTypeMapper$fun fromExerciseType(raw: String): WorkoutLayoutType</ID>
+    <ID>SwallowedException:ErrorBoundary.kt$e: Exception</ID>
+    <ID>TooGenericExceptionThrown:ErrorBoundaryTest.kt$ErrorBoundaryTest$throw RuntimeException("still failing")</ID>
+    <ID>TooGenericExceptionThrown:Result.kt$throw Exception(reason)</ID>
+    <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
+    <ID>TooManyFunctions:DateRangeService.kt$DateRangeService</ID>
+    <ID>TooManyFunctions:FeatureSettingsPorts.kt$DisplaySettings</ID>
+    <ID>TooManyFunctions:HealthConnectRepository.kt$HealthConnectRepository</ID>
+    <ID>TooManyFunctions:HealthMetricsService.kt$HealthMetricsService</ID>
+    <ID>TooManyFunctions:LoadSourceSelector.kt$LoadSourceSelector</ID>
+    <ID>TooManyFunctions:MetricFormatter.kt$MetricFormatter</ID>
+    <ID>TooManyFunctions:MetricStatusExtensions.kt$app.readylytics.health.domain.model.MetricStatusExtensions.kt</ID>
+    <ID>TooManyFunctions:PreferenceService.kt$PreferenceService</ID>
+    <ID>TooManyFunctions:Result.kt$app.readylytics.health.domain.model.Result.kt</ID>
+    <ID>TooManyFunctions:ScoringHistoryRepository.kt$ScoringHistoryRepository</ID>
+    <ID>TooManyFunctions:UnitConverter.kt$UnitConverter</ID>
+    <ID>TooManyFunctions:VitalAssessment.kt$app.readylytics.health.domain.model.VitalAssessment.kt</ID>
+    <ID>UnusedPrivateProperty:BodyTemperatureBaselineCalculatorTest.kt$BodyTemperatureBaselineCalculatorTest$val fourteenDays = List(14) { 36.5f } + List(0) { }</ID>
+    <ID>UnusedPrivateProperty:SleepCardCatalogTest.kt$SleepCardCatalogTest$private val topGauge = SleepTopCardConfiguration(SleepTopCardId.SLEEP_DURATION_GAUGE)</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -655,11 +655,14 @@ class LocalRestoreManager
                     clearRhrBaselineOverride()
                 }
 
-                backup.syncPreference?.let {
-                    try {
-                        syncPreference = SyncPreferenceProto.valueOf(it)
-                    } catch (e: IllegalArgumentException) {
-                        logW("LocalRestoreManager", e) { "Ignoring invalid sync preference in backup settings" }
+                backup.syncPreference?.let { raw ->
+                    val resolved = resolveProtoEnum(raw, "SYNC_", SyncPreferenceProto::valueOf)
+                    if (resolved != null) {
+                        syncPreference = resolved
+                    } else {
+                        logW(
+                            "LocalRestoreManager",
+                        ) { "Ignoring unrecognised sync preference '$raw' in backup settings" }
                     }
                 }
                 backup.syncIntervalHours?.let { syncIntervalHours = it }
@@ -702,7 +705,7 @@ class LocalRestoreManager
                     backup.birthDate?.let {
                         try {
                             java.time.LocalDate.parse(it)
-                        } catch (e: Exception) {
+                        } catch (e: java.time.format.DateTimeParseException) {
                             null
                         }
                     }
@@ -734,19 +737,23 @@ class LocalRestoreManager
                 backup.restingHrBeforeMinutes?.let { restingHrBeforeMinutes = it }
                 backup.restingHrAfterMinutes?.let { restingHrAfterMinutes = it }
 
-                backup.appTheme?.let {
-                    try {
-                        appTheme = AppThemeProto.valueOf(it)
-                    } catch (e: IllegalArgumentException) {
-                        logW("LocalRestoreManager", e) { "Ignoring invalid app theme in backup settings" }
+                backup.appTheme?.let { raw ->
+                    val resolved = resolveProtoEnum(raw, "THEME_", AppThemeProto::valueOf)
+                    if (resolved != null) {
+                        appTheme = resolved
+                    } else {
+                        logW("LocalRestoreManager") { "Ignoring unrecognised app theme '$raw' in backup settings" }
                     }
                 }
 
-                backup.backupSchedule?.let {
-                    try {
-                        backupSchedule = BackupScheduleProto.valueOf(it)
-                    } catch (e: IllegalArgumentException) {
-                        logW("LocalRestoreManager", e) { "Ignoring invalid backup schedule in backup settings" }
+                backup.backupSchedule?.let { raw ->
+                    val resolved = resolveProtoEnum(raw, "BACKUP_", BackupScheduleProto::valueOf)
+                    if (resolved != null) {
+                        backupSchedule = resolved
+                    } else {
+                        logW(
+                            "LocalRestoreManager",
+                        ) { "Ignoring unrecognised backup schedule '$raw' in backup settings" }
                     }
                 }
 
@@ -764,11 +771,14 @@ class LocalRestoreManager
                 backup.collapseAdvanced?.let { collapseAdvanced = it }
                 backup.aboutDismissed?.let { aboutDismissed = it }
 
-                backup.physiologyProfile?.let {
-                    try {
-                        physiologyProfile = PhysiologyProfileProto.valueOf(it)
-                    } catch (e: IllegalArgumentException) {
-                        logW("LocalRestoreManager", e) { "Ignoring invalid physiology profile in backup settings" }
+                backup.physiologyProfile?.let { raw ->
+                    val resolved = resolveProtoEnum(raw, "PROFILE_", PhysiologyProfileProto::valueOf)
+                    if (resolved != null) {
+                        physiologyProfile = resolved
+                    } else {
+                        logW(
+                            "LocalRestoreManager",
+                        ) { "Ignoring unrecognised physiology profile '$raw' in backup settings" }
                     }
                 }
 
@@ -844,9 +854,9 @@ class LocalRestoreManager
                     workerScheduler.cancelPeriodicSync()
                 }
             }
-            backup.backupSchedule?.let {
-                runCatching { BackupScheduleProto.valueOf(it) }
-                    .onSuccess { schedule -> workerScheduler.scheduleBackupWorker(schedule.toDomain()) }
+            backup.backupSchedule?.let { raw ->
+                resolveProtoEnum(raw, "BACKUP_", BackupScheduleProto::valueOf)
+                    ?.let { schedule -> workerScheduler.scheduleBackupWorker(schedule.toDomain()) }
             }
         }
 
@@ -858,3 +868,28 @@ class LocalRestoreManager
                 BackupScheduleProto.UNRECOGNIZED -> app.readylytics.health.data.preferences.BackupSchedule.MANUAL
             }
     }
+
+/**
+ * Resolves a proto enum constant from the name a backup actually stores.
+ *
+ * Backups store the **domain** enum name (`BY_TIME`, `DARK`, `DAILY`, `ATHLETE`) while the proto
+ * enums are prefixed (`SYNC_BY_TIME`, `THEME_DARK`, `BACKUP_DAILY`, `PROFILE_ATHLETE`). A plain
+ * `Proto.valueOf(raw)` therefore threw for *every* value, and the caller's catch quietly reset the
+ * preference to its default — silently losing the user's sync mode, theme, backup schedule and,
+ * most importantly, physiology profile, which feeds `snapshotProfile`/`hrvSigmaPrior` in the
+ * scoring engine.
+ *
+ * Resolving here rather than fixing the writer is deliberate: backups already written by released
+ * versions contain the unprefixed form and must keep restoring correctly. The prefixed branch
+ * covers any backup that stores the proto name instead.
+ *
+ * Internal rather than private so RestorePreferenceEnumRoundTripTest exercises this exact
+ * implementation instead of a copy that could drift from it.
+ */
+internal fun <T> resolveProtoEnum(
+    raw: String,
+    prefix: String,
+    valueOf: (String) -> T,
+): T? =
+    runCatching { valueOf(raw) }.getOrNull()
+        ?: runCatching { valueOf(prefix + raw) }.getOrNull()

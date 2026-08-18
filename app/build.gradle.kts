@@ -54,6 +54,7 @@ abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.androidx.baselineprofile)
+    alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -163,7 +164,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         testOptions {
-            unitTests.isReturnDefaultValues = true
+            // Unstubbed Android framework calls must throw, not silently return 0/null — a frozen
+            // SystemClock had already left HealthDeviceRepository's 5-minute TTL untested.
+            unitTests.isReturnDefaultValues = false
             unitTests.isIncludeAndroidResources = true
         }
     }
@@ -290,6 +293,15 @@ ktlint {
     version.set("1.5.0")
 }
 
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    parallel = true
+    config.setFrom(rootProject.layout.projectDirectory.file("config/detekt/detekt.yml"))
+    // Per-module baseline — see the comment in readylytics.kotlin-android-conventions.gradle.kts.
+    baseline = layout.projectDirectory.file("detekt-baseline.xml").asFile
+}
+
 jacoco {
     toolVersion = "0.8.11"
 }
@@ -325,6 +337,7 @@ dependencies {
     implementation(project(":feature:vitals"))
     implementation(project(":feature:workouts"))
     implementation(project(":core:model"))
+    implementation(project(":core:database-schema"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:ui"))
     implementation(project(":core:scoring"))

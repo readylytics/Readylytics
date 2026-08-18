@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.HeartRateFormulas
+import app.readylytics.health.domain.util.logE
 import java.time.Instant
 import javax.inject.Inject
 
@@ -111,6 +112,9 @@ class ComputeWorkoutTrimpUseCase
                 }
                 Result.success(computedTrimp)
             } catch (e: Exception) {
+                logE("ComputeWorkoutTrimp", e) {
+                    "TRIMP failed for workout $workoutStartTime..$workoutEndTime"
+                }
                 Result.failure("Failed to compute workout TRIMP", "TRIMP_COMPUTATION_ERROR")
             }
 

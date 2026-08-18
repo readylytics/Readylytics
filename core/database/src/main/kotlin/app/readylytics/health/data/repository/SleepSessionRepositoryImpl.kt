@@ -57,28 +57,6 @@ class SleepSessionRepositoryImpl
                 )
             }
 
-        override suspend fun getPaged(
-            fromMs: Long,
-            limit: Int,
-            offset: Int,
-        ): List<SleepSessionData> =
-            dao.getPaged(fromMs, limit, offset).map { entity ->
-                SleepSessionData(
-                    id = entity.id,
-                    deviceName = entity.deviceName,
-                    startTime = entity.startTime,
-                    endTime = entity.endTime,
-                    durationMinutes = entity.durationMinutes,
-                    efficiency = entity.efficiency,
-                    deepSleepMinutes = entity.deepSleepMinutes,
-                    lightSleepMinutes = entity.lightSleepMinutes,
-                    remSleepMinutes = entity.remSleepMinutes,
-                    awakeMinutes = entity.awakeMinutes,
-                    sleepScore = entity.sleepScore,
-                    startZoneOffsetSeconds = entity.startZoneOffsetSeconds,
-                    endZoneOffsetSeconds = entity.endZoneOffsetSeconds,
-                )
-            }
 
         override suspend fun countSince(fromMs: Long): Int = dao.countSince(fromMs)
 

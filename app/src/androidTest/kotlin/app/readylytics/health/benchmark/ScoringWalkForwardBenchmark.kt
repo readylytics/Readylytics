@@ -12,17 +12,22 @@ import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
+import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
@@ -185,28 +190,44 @@ class ScoringWalkForwardBenchmark {
             )
         val prefs = UserPreferences(scoringZoneId = zoneId.id)
         val settingsRepo = BenchmarkFakeSettingsRepository(prefs)
+        val dataLoader =
+            ScoringDayDataLoader(
+                db.workoutDao(),
+                db.sleepSessionDao(),
+                db.dailySummaryDao(),
+                db.heartRateDao(),
+                db.minuteBucketDao(),
+                db.weightRecordDao(),
+                db.bodyFatRecordDao(),
+                db.bloodPressureRecordDao(),
+                db.oxygenSaturationRecordDao(),
+                db.bodyTemperatureRecordDao(),
+            )
+        val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
+        val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
+        val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
+        val readinessSummaryCoordinator =
+            ReadinessSummaryCoordinator(
+                dataLoader = dataLoader,
+                scoringHistoryRepository = scoringHistoryRepository,
+                baselineComputer = baselineComputer,
+                buildLoadSeriesUseCase = buildLoadSeriesUseCase,
+                computeSleepMetricsUseCase = computeSleepMetricsUseCase,
+                resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+                assembleDailySummaryUseCase = assembleDailySummaryUseCase,
+            )
+
         val scoringRepository =
             ScoringRepositoryImpl(
-                workoutDao = db.workoutDao(),
-                sleepSessionDao = db.sleepSessionDao(),
-                dailySummaryDao = db.dailySummaryDao(),
+                dataLoader = dataLoader,
                 settingsRepo = settingsRepo,
-                scoringCalculator = scoringCalculator,
                 baselineComputer = baselineComputer,
-                buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
-                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
-                computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
-                computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
-                heartRateDao = db.heartRateDao(),
-                minuteBucketDao = db.minuteBucketDao(),
-                weightRecordDao = db.weightRecordDao(),
-                bodyFatRecordDao = db.bodyFatRecordDao(),
-                bloodPressureRecordDao = db.bloodPressureRecordDao(),
-                oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
-                bodyTemperatureRecordDao = db.bodyTemperatureRecordDao(),
-                sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
+                computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                 scoringHistoryRepository = scoringHistoryRepository,
+                readinessSummaryCoordinator = readinessSummaryCoordinator,
                 defaultDispatcher = kotlinx.coroutines.Dispatchers.Default,
             )
 

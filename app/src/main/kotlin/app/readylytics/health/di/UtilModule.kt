@@ -5,12 +5,10 @@ import app.readylytics.health.data.backup.LocalBackupServiceImpl
 import app.readylytics.health.data.backup.LocalRestoreServiceImpl
 import app.readylytics.health.data.crashreport.CrashReportStoreImpl
 import app.readylytics.health.data.logcat.LogcatCaptureStoreImpl
-import app.readylytics.health.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.domain.crashreport.CrashReportStore
 import app.readylytics.health.domain.logcat.LogcatCaptureStore
-import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.Binds
@@ -48,10 +46,6 @@ abstract class UtilModule {
     @Binds
     @Singleton
     abstract fun bindLogcatCaptureStore(impl: LogcatCaptureStoreImpl): LogcatCaptureStore
-
-    @Binds
-    @Singleton
-    abstract fun bindSleepSessionRepository(impl: SleepSessionRepositoryImpl): SleepSessionRepository
 
     @Binds
     @Singleton

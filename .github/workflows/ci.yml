@@ -40,6 +40,10 @@ jobs:
       - name: Check formatting (ktlint)
         run: ./gradlew ktlintCheck
 
+      - name: Static analysis (detekt)
+        if: ${{ !cancelled() }}
+        run: ./gradlew detekt
+
       - name: Run lint
         if: ${{ !cancelled() }}
         run: ./gradlew lint lintRelease
@@ -52,9 +56,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: ./gradlew jacocoTestReport
 
-      - name: Enforce coverage gate (>= 30%)
+      - name: Enforce coverage gates (aggregate + core:database repository floor)
         if: ${{ !cancelled() }}
-        run: ./gradlew jacocoCoverageVerification
+        run: ./gradlew jacocoCoverageVerification :core:database:jacocoCoverageVerification
 
       # --- Artifact Upload Phase ---
 

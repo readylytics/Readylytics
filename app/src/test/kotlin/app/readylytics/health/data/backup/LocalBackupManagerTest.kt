@@ -12,6 +12,8 @@ import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
+import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
@@ -37,6 +39,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.exception.ZipException
+import net.lingala.zip4j.model.ZipParameters
+import net.lingala.zip4j.model.enums.AesKeyStrength
+import net.lingala.zip4j.model.enums.EncryptionMethod
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -684,6 +690,294 @@ class LocalBackupManagerTest {
                     .listFiles { file -> file.name.startsWith("backup_") && file.name.endsWith(".json") }
                     .orEmpty()
             assertFalse(leakedJson.any(), "Plaintext backup JSON temp files must be removed after failure")
+        }
+
+    class FakeBackupStore(
+        var files: MutableMap<String, ByteArray> = mutableMapOf(),
+        var failPublish: Boolean = false,
+        var partialPublish: Boolean = false,
+    ) : BackupStore {
+        var lastPublishedSourceLength: Long = -1
+
+        override suspend fun list(): List<BackupFileInfo> =
+            files.map { (name, bytes) ->
+                BackupFileInfo(
+                    name = name,
+                    lastModified = System.currentTimeMillis(),
+                    sizeBytes = bytes.size.toLong(),
+                    location = BackupLocation("fake://$name"),
+                )
+            }
+
+        override suspend fun read(location: BackupLocation): java.io.InputStream {
+            val name = location.value.removePrefix("fake://")
+            val bytes = files[name] ?: error("File not found")
+            return bytes.inputStream()
+        }
+
+        override suspend fun publish(
+            source: File,
+            name: String,
+        ) {
+            lastPublishedSourceLength = source.length()
+            if (failPublish) throw java.io.IOException("Disk full / rename failed")
+            if (partialPublish) throw java.io.IOException("SAF stream closed mid-write")
+            files[name] = source.readBytes()
+        }
+
+        override suspend fun delete(location: BackupLocation) {
+            val name = location.value.removePrefix("fake://")
+            files.remove(name)
+        }
+
+        override suspend fun prune(retentionPeriodMs: Long) {}
+    }
+
+    @Test
+    fun `reencryptBackups failure preserves original backup and returns failure`() =
+        runTest {
+            val fakeStore = FakeBackupStore()
+            val sampleZipFile = File(context.cacheDir, "sample_test.zip")
+            val zip = ZipFile(sampleZipFile, "old_password".toCharArray())
+            val tempPlain =
+                File(context.cacheDir, "backup_2026-05-15_100000.json").apply { writeText("""{"version":1}""") }
+            zip.addFile(
+                tempPlain,
+                ZipParameters().apply {
+                    isEncryptFiles = true
+                    encryptionMethod = EncryptionMethod.AES
+                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                },
+            )
+            zip.close()
+            tempPlain.delete()
+
+            val originalBytes = sampleZipFile.readBytes()
+            sampleZipFile.delete()
+            fakeStore.files["backup_2026-05-15_100000.zip"] = originalBytes
+            fakeStore.failPublish = true
+
+            val testManager =
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                    backupStoreFactory =
+                        object : BackupStoreFactory {
+                            override fun create(customUri: Uri?): BackupStore = fakeStore
+
+                            override fun createDefault(): BackupStore = fakeStore
+                        },
+                )
+
+            val result = testManager.reencryptBackups("old_password", "new_password")
+            assertTrue(result.isFailure, "reencryptBackups should fail when publish fails")
+
+            // Assert original archive is preserved and opens with OLD password
+            val restoredBytes = fakeStore.files["backup_2026-05-15_100000.zip"]
+            assertNotNull(restoredBytes)
+            val checkZipFile = File(context.cacheDir, "check_orig.zip").apply { writeBytes(restoredBytes) }
+            val checkZip = ZipFile(checkZipFile, "old_password".toCharArray())
+            val header = checkZip.fileHeaders.first()
+            val content = checkZip.getInputStream(header).bufferedReader().readText()
+            assertEquals("""{"version":1}""", content)
+            checkZip.close()
+
+            // and the negative: the new password must NOT open it
+            val wrongZip = ZipFile(checkZipFile, "new_password".toCharArray())
+            assertFailsWith<ZipException> {
+                wrongZip.getInputStream(wrongZip.fileHeaders.first()).readBytes()
+            }
+            wrongZip.close()
+            checkZipFile.delete()
+        }
+
+    @Test
+    fun `reencryptBackups partial publish preserves original backup and returns failure`() =
+        runTest {
+            val fakeStore = FakeBackupStore()
+            val sampleZipFile = File(context.cacheDir, "sample_test_partial.zip")
+            val zip = ZipFile(sampleZipFile, "old_password".toCharArray())
+            val tempPlain =
+                File(context.cacheDir, "backup_2026-05-15_100000.json").apply { writeText("""{"version":1}""") }
+            zip.addFile(
+                tempPlain,
+                ZipParameters().apply {
+                    isEncryptFiles = true
+                    encryptionMethod = EncryptionMethod.AES
+                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                },
+            )
+            zip.close()
+            tempPlain.delete()
+
+            val originalBytes = sampleZipFile.readBytes()
+            sampleZipFile.delete()
+            fakeStore.files["backup_2026-05-15_100000.zip"] = originalBytes
+            fakeStore.partialPublish = true
+
+            val testManager =
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                    backupStoreFactory =
+                        object : BackupStoreFactory {
+                            override fun create(customUri: Uri?): BackupStore = fakeStore
+
+                            override fun createDefault(): BackupStore = fakeStore
+                        },
+                )
+
+            val result = testManager.reencryptBackups("old_password", "new_password")
+            assertTrue(result.isFailure, "reencryptBackups should fail when partial publish fails")
+
+            // Assert original archive is preserved and opens with OLD password
+            val restoredBytes = fakeStore.files["backup_2026-05-15_100000.zip"]
+            assertNotNull(restoredBytes)
+            val checkZipFile = File(context.cacheDir, "check_orig_partial.zip").apply { writeBytes(restoredBytes) }
+            val checkZip = ZipFile(checkZipFile, "old_password".toCharArray())
+            val header = checkZip.fileHeaders.first()
+            val content = checkZip.getInputStream(header).bufferedReader().readText()
+            assertEquals("""{"version":1}""", content)
+            checkZip.close()
+
+            // and the negative: the new password must NOT open it
+            val wrongZip = ZipFile(checkZipFile, "new_password".toCharArray())
+            assertFailsWith<ZipException> {
+                wrongZip.getInputStream(wrongZip.fileHeaders.first()).readBytes()
+            }
+            wrongZip.close()
+            checkZipFile.delete()
+        }
+
+    @Test
+    fun `reencryptBackups never calls publish with zero length source`() =
+        runTest {
+            val fakeStore = FakeBackupStore()
+            val sampleZipFile = File(context.cacheDir, "sample_test2.zip")
+            val zip = ZipFile(sampleZipFile, "old_password".toCharArray())
+            val tempPlain =
+                File(context.cacheDir, "backup_2026-05-15_100000.json").apply { writeText("""{"version":1}""") }
+            zip.addFile(
+                tempPlain,
+                ZipParameters().apply {
+                    isEncryptFiles = true
+                    encryptionMethod = EncryptionMethod.AES
+                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                },
+            )
+            zip.close()
+            tempPlain.delete()
+            fakeStore.files["backup_2026-05-15_100000.zip"] = sampleZipFile.readBytes()
+            sampleZipFile.delete()
+
+            val testManager =
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                    backupStoreFactory =
+                        object : BackupStoreFactory {
+                            override fun create(customUri: Uri?): BackupStore = fakeStore
+
+                            override fun createDefault(): BackupStore = fakeStore
+                        },
+                )
+
+            val result = testManager.reencryptBackups("old_password", "new_password")
+            assertTrue(result.isSuccess)
+            assertTrue(fakeStore.lastPublishedSourceLength > 0, "Source length must be > 0")
+        }
+
+    @Test
+    fun `reencryptBackups does not write plaintext JSON files to tempDir during rotation`() =
+        runTest {
+            val sampleZipFile = File(context.cacheDir, "sample_stream_test.zip")
+            val zip = ZipFile(sampleZipFile, "old_pass".toCharArray())
+            val tempPlain =
+                File(context.cacheDir, "plain_stream.json").apply { writeText("""{"sensitiveHealthData":123}""") }
+            zip.addFile(
+                tempPlain,
+                ZipParameters().apply {
+                    isEncryptFiles = true
+                    encryptionMethod = EncryptionMethod.AES
+                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                },
+            )
+            zip.close()
+            tempPlain.delete()
+
+            val fakeStore =
+                FakeBackupStore(
+                    files = mutableMapOf("backup_2026-05-15_100000.zip" to sampleZipFile.readBytes()),
+                )
+            sampleZipFile.delete()
+
+            val tempDir = File(context.cacheDir, "reencrypt_temp")
+
+            val testManager =
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    vitalsLayoutRepo,
+                    sleepLayoutRepo,
+                    workoutsLayoutRepo,
+                    workoutDetailLayoutRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                    backupStoreFactory =
+                        object : BackupStoreFactory {
+                            override fun create(customUri: Uri?): BackupStore = fakeStore
+
+                            override fun createDefault(): BackupStore = fakeStore
+                        },
+                )
+
+            val result = testManager.reencryptBackups("old_pass", "new_pass")
+            assertTrue(result.isSuccess)
+
+            val jsonFiles = tempDir.listFiles { f -> f.name.endsWith(".json") }
+            assertTrue(jsonFiles.isNullOrEmpty(), "No plaintext JSON files must exist in tempDir")
+
+            val newBytes = fakeStore.files["backup_2026-05-15_100000.zip"]
+            assertNotNull(newBytes)
+            val checkZipFile = File(context.cacheDir, "check_reencrypted.zip").apply { writeBytes(newBytes) }
+            val checkZip = ZipFile(checkZipFile, "new_pass".toCharArray())
+            assertTrue(checkZip.isValidZipFile)
+            val header = checkZip.fileHeaders.firstOrNull { it.fileName == "plain_stream.json" }
+            assertNotNull(header)
+            val content = checkZip.getInputStream(header).bufferedReader().readText()
+            assertEquals("""{"sensitiveHealthData":123}""", content)
+            checkZip.close()
+            checkZipFile.delete()
         }
 
     private class FakeAuditTrailRepository : AuditTrailRepository {

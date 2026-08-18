@@ -1,8 +1,6 @@
 package app.readylytics.health.di
 
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.repository.SelectedDateRepository
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.preferences.AboutPreferences
 import app.readylytics.health.domain.preferences.BackupSettings
 import app.readylytics.health.domain.preferences.DeviceSettings
@@ -72,10 +70,6 @@ abstract class FeaturePortModule {
 
     @Binds
     @Singleton
-    abstract fun bindSelectedDateStore(impl: SelectedDateRepository): SelectedDateStore
-
-    @Binds
-    @Singleton
     abstract fun bindForegroundSyncGateway(impl: ForegroundSyncController): ForegroundSyncGateway
 
     @Binds
@@ -89,4 +83,10 @@ abstract class FeaturePortModule {
     @Binds
     @Singleton
     abstract fun bindUserProfileActions(impl: UserUseCase): UserProfileActions
+
+    @Binds
+    @Singleton
+    abstract fun bindBackupStoreFactory(
+        impl: app.readylytics.health.data.backup.DefaultBackupStoreFactory,
+    ): app.readylytics.health.data.backup.BackupStoreFactory
 }

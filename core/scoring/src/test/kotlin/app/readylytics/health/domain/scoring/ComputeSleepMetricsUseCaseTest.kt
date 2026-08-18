@@ -2,9 +2,25 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
-import org.junit.Test
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
+import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
+import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
+import app.readylytics.health.domain.security.EncryptionManager
+import io.mockk.coEvery
+import io.mockk.mockk
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.test.runTest
+import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -149,4 +165,62 @@ class ComputeSleepMetricsUseCaseTest {
             )
         assertNull(summary.rhrBpm)
     }
+
+    @Test
+    fun invoke_rethrowsCancellationException() =
+        runTest {
+            val baselineComputer = mockk<BaselineComputer>(relaxed = true)
+            val scoringHistoryRepository = mockk<ScoringHistoryRepository>()
+            val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
+            val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
+            val encryptionManager = mockk<EncryptionManager>(relaxed = true)
+            val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
+            val currentNightHrvResolver = mockk<CurrentNightHrvResolver>(relaxed = true)
+            val sleepNadirAnalyzer = mockk<SleepNadirAnalyzer>(relaxed = true)
+            val hrCoverageValidator = mockk<HrCoverageValidator>(relaxed = true)
+
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } throws
+                CancellationException("Test cancellation")
+
+            val useCase =
+                ComputeSleepMetricsUseCase(
+                    baselineComputer = baselineComputer,
+                    scoringHistoryRepository = scoringHistoryRepository,
+                    scoringCalculator = scoringCalculator,
+                    scoringConfigFactory = scoringConfigFactory,
+                    encryptionManager = encryptionManager,
+                    hrvResolver = currentNightHrvResolver,
+                    sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
+                    nadirAnalyzer = sleepNadirAnalyzer,
+                    coverageValidator = hrCoverageValidator,
+                )
+
+            val session =
+                SleepSession(
+                    id = "session-1",
+                    startTime = 1000L,
+                    endTime = 2000L,
+                    durationMinutes = 480,
+                    efficiency = 85f,
+                    deepSleepMinutes = 90,
+                    remSleepMinutes = 120,
+                    lightSleepMinutes = 270,
+                    awakeMinutes = 20,
+                )
+
+            assertFailsWith<CancellationException> {
+                useCase(
+                    session = session,
+                    dayMidnight = Instant.ofEpochMilli(0),
+                    targetDate = LocalDate.of(2026, 5, 31),
+                    prefs = UserPreferences(),
+                    summary = DailySummary(date = LocalDate.of(2026, 5, 31)),
+                    loadScore = 50f,
+                    loadScoreEverydayHr = null,
+                    zoneId = ZoneId.systemDefault(),
+                    rhrBaselineValue = 60f,
+                    dayEndMs = 86400000L,
+                )
+            }
+        }
 }

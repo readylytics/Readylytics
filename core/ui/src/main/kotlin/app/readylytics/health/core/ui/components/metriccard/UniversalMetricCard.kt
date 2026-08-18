@@ -61,9 +61,9 @@ fun UniversalMetricCard(
     presentation: UniversalMetricPresentation,
     specification: UniversalMetricCardSpec,
     requestedMode: UniversalCardDisplayMode,
+    modifier: Modifier = Modifier,
     isEditing: Boolean = false,
     onModeSelected: (UniversalCardDisplayMode) -> Unit = {},
-    modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
     val modeStringRes =
