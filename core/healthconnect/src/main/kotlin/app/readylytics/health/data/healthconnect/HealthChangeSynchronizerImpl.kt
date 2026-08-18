@@ -24,6 +24,7 @@ import app.readylytics.health.data.mapper.BodyTemperatureDataMapper
 import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
 import app.readylytics.health.data.mapper.WeightDataMapper
 import app.readylytics.health.data.local.entity.SleepStageEntity
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.scoringZone
@@ -192,7 +193,7 @@ class HealthChangeSynchronizerImpl
             affectedDates: MutableSet<LocalDate>,
             selectedDevice: String?,
             zoneId: ZoneId,
-            prefs: app.readylytics.health.data.preferences.UserPreferences,
+            prefs: UserPreferences,
         ) {
             for (change in changes) {
                 when (change) {
@@ -226,7 +227,7 @@ class HealthChangeSynchronizerImpl
         private suspend fun upsertRecord(
             dataType: HealthDataType,
             record: Record,
-            prefs: app.readylytics.health.data.preferences.UserPreferences,
+            prefs: UserPreferences,
         ) {
             when (dataType) {
                 HealthDataType.SLEEP -> {

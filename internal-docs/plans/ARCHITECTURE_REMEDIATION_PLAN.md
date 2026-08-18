@@ -1783,6 +1783,138 @@ one-line reason recorded in `internal-docs/plans/remediation-baseline.txt`.
 ### Outcome
 
 - **Done**: build cache enabled — commit `ab15774` (`org.gradle.caching=true`).
+- **Done 2026-08-18** (this pass):
+  - `listBackups` file-scheme filter now checks `isFile`, matching `pruneOldBackups`.
+  - Fully-qualified `java.time.Instant.ofEpochMilli` in `ScoringRepositoryImpl` replaced with
+    a normal import (there was no name collision; the FQ form was leftover).
+  - Lint warnings cleared to zero: 5 x `ModifierParameter` (moved `modifier` to be the first
+    optional parameter in `EditModeFab`, `ReorderableGrid`, `UniversalMetricCard`,
+    `VitalsTrendSection`, `WorkoutDetailScreen` — all call sites verified to use named
+    arguments first) and 1 x `EmptySuperCall` (dropped a no-op `super.onCleared()`).
+  - Over-broad catches reviewed. Only **one** was a genuine narrow:
+    `UserPreferencesSerializer.toProto` now catches `DateTimeParseException` rather than
+    `Exception`. The other two were misdiagnosed in the original review:
+    `LocalBackupViewModel:248` wrapped `EncryptionManager.decrypt`, which already catches
+    internally and returns `null`, so the `try/catch` was **unreachable** and was removed
+    outright; `SecureFileLogSink:90` is the logging sink itself running detached in
+    `scope.launch`, where a broad catch is correct by design — narrowing it would let a
+    failed log write escape into the scope handler. It keeps the broad catch with a comment
+    explaining why.
+- **Not needed — `InsightDismissalEntity` index.** The original review flagged it as one of
+  two entities without `indices`. It is a false positive: its primary key is composite
+  (`["dateMidnightMs", "type"]`) and both DAO queries filter on `dateMidnightMs` alone — the
+  *leading* column — which SQLite's implicit primary-key index already serves. Adding an
+  index would be redundant. No schema change, no migration. (`StepRecordEntity`, the other
+  entity flagged, did gain an index in Step 16a where it was genuinely needed.)
+
+### Instrumented (device) suite — two pre-existing failures, neither caused by this branch
+
+Verified on device SM-A576B / Android 16 (API 36) on 2026-08-18. Full branch run:
+`:app:connectedDebugAndroidTest` + `:core:database:connectedDebugAndroidTest` — 196 tests,
+12 skipped, **6 failed**. `:core:database` passed cleanly; every failure is in `:app`.
+
+**Regression check.** `git diff origin/main..HEAD` touches *none* of `MainScaffold`,
+the navigation graph, or `app/src/main/kotlin/app/readylytics/health/ui/` — zero files.
+The same five UI tests were then run against a clean `origin/main` worktree on the same
+device: **all five fail there too** (the branch fails three of the five). These are
+pre-existing, not remediation damage.
+
+1. **`ScoringWalkForwardBenchmark` × 3** (`recomputeSingleDay`, `ingestBatchPersist`,
+   `reconcileThirtyDayWindow`) —
+   `AssertionError: ERRORS (not suppressed): ACTIVITY-MISSING DEBUGGABLE NOT-AOT-COMPILED`.
+   This is androidx.benchmark refusing to emit numbers from a debuggable, non-AOT build. It
+   is a *placement* bug: the file is a **micro**benchmark (`BenchmarkRule`,
+   `measureRepeated`, `libs.androidx.benchmark.junit4`) sitting in `app/src/androidTest`,
+   so it is picked up by every ordinary `connectedDebugAndroidTest` run and can never pass
+   there. It has failed since it was written — `app/build.gradle.kts` has never set
+   `androidx.benchmark.suppressErrors`.
+   **Do not "fix" this by adding `suppressErrors` to `:app`.** That would make the suite
+   green while producing timings from a debuggable build that are wrong by one to two orders
+   of magnitude — a performance guard that silently guards nothing. The correct fix is a
+   dedicated `com.android.library` module with the `androidx.benchmark` plugin and a
+   non-debuggable build type. Note the existing `:benchmark` module is **not** the target:
+   it is `com.android.test` with `targetProjectPath = ":app"` (macrobenchmark, separate
+   process) and cannot reach Room/scoring classes in-process the way this test needs.
+2. **`MainScaffoldTest` × 4 and `RootNavigationTest.verifyTabSwitching`** —
+   `ComposeTimeoutException: Condition still not satisfied after 10000 ms` and
+   `AppNotIdleException: Looped for 4270 iterations over 60 SECONDS`
+   (`MAIN_LOOPER_HAS_IDLED` never satisfied, Choreographer frame callback always pending).
+   Both classes drive the **real** `MainActivity` through `createAndroidComposeRule`, so
+   they run against whatever real DataStore/Room state the device happens to hold, then
+   assert on the hardcoded English literal `"Dashboard"`. Which subset fails is therefore
+   state-dependent — the branch run (app data already present from the Step 05b work) failed
+   3 of 5, the `origin/main` run (freshly installed, no data) failed all 5. The likely
+   mechanism is that a fresh install lands on onboarding, so no navigation item ever
+   renders; the never-idling looper points at a permanently running animation on that
+   screen.
+   **Fix:** give the tests deterministic state instead of borrowing the device's — either a
+   Hilt test runner with a seeded DataStore/DB, or render `MainScaffold` inside a plain
+   `ComponentActivity` rather than launching `MainActivity`. Also replace the `"Dashboard"`
+   literal with `stringResource`/test tags, per the project's own strings rule.
+
+Neither blocks the merge of this branch: both are on `main` today and this branch does not
+touch the code under test. Both should be scheduled as their own work items.
+
+### Step 19 — still outstanding
+
+- **`SharingStarted.Eagerly` audit — DONE 2026-08-18, no code change warranted.** The
+  audit was performed per-site and the original finding did not survive it. Four of the five
+  production sites are correct as written and must not be downgraded:
+  - `DashboardCardsSettingsViewModel.kt:47`, `:54` and `DataSourceSettingsViewModel.kt:60`
+    back `noticeDismissed` / `currentGlobalMode` / `deviceChangeNoticeDismissed`, each with
+    `initialValue = false`. All three are scoped to `viewModelScope`, so "process lifetime"
+    was wrong — they are bounded by the ViewModel. Downgrading to `WhileSubscribed(5000)`
+    makes the flow go cold after the last subscriber and re-emit `false` on resubscribe
+    *before* the preference reloads, which flashes an already-dismissed notice back onto the
+    screen. `Eagerly` here is load-bearing.
+  - `DatabaseMigrationController.kt:44` must know migration readiness *before* any subscriber
+    attaches. Correct as-is.
+  - `SelectedDateRepository.kt:60` is the one genuine candidate: `appScope`, keeping six DAO
+    observations hot for the process lifetime. It is **not** a mechanical change — its
+    `initialValue` is `null`, and a cold-restart re-emit can flip dependent UI into
+    "Calibrating". Any change needs a test pinning resubscribe behaviour first. Left as-is.
+- **Bypassed test seam in the settings ViewModels — new finding, not yet fixed.**
+  `DashboardCardsSettingsViewModel` and `DataSourceSettingsViewModel` each declare
+  `var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)` as a test seam
+  (`SettingsViewModelTest` sets it to `Eagerly` to force flows hot), but **four of the six
+  `stateIn` call sites ignore the property and hard-code a strategy**. The seam silently does
+  nothing where it matters. The fix is *not* to route the notice flags through it — their
+  `Eagerly` is required per the bullet above — but either to delete the seam as misleading or
+  to make the sites that legitimately vary honour it. Decide before touching either VM again.
+- **`unitTests.isReturnDefaultValues` — DONE 2026-08-18, now `false`.** The "unknown number
+  of failures" was measured rather than guessed: flipping it to `false` in the only two
+  modules that set it (`app`, `core:database` — every other module already ran strict,
+  since `false` is the AGP default) produced **8 failures, all in one class**
+  (`HealthDeviceRepositoryTest`), all from a single root cause:
+  `RuntimeException: Method elapsedRealtime in android.os.SystemClock not mocked`.
+  That is precisely the bug the flag hides. `HealthDeviceRepository` keys its five-minute
+  device cache off `SystemClock.elapsedRealtime()`, which the flag was making return `0`
+  forever — so the clock never advanced and **the TTL was completely untested**; the eight
+  "cache" tests only ever proved that a frozen cache stays warm, and no expiry test existed.
+  Fixed by adding a `@VisibleForTesting internal var elapsedRealtimeMs: () -> Long` seam on
+  the repository (all three call sites now go through it), driving it from the test, and
+  adding `getAvailableDevices refetches once the TTL has elapsed`, which pins the boundary on
+  both sides (valid *at* `CACHE_TTL_MS`, refetched at `CACHE_TTL_MS + 1`).
+  Both `build.gradle.kts` files carry a comment so the flag is not flipped back.
+  Full gate after the change: **3,009 tests, 0 failures.**
+- **`listBackups`' file-scheme filter — already fixed.** Re-checked on 2026-08-18:
+  `FileBackupStore.kt:20` and `:76` both already carry `&& f.isFile`, and `SafBackupStore.kt`
+  checks `it.isFile` at both of its sites. No change needed.
+- **Fully-qualified type workarounds — DONE 2026-08-18.** The two sites the plan named in
+  `ScoringRepositoryImpl` no longer exist; Phase 6 removed them along with the code that held
+  them. A sweep for the same smell found three survivors in production code —
+  `HealthChangeSynchronizerImpl.kt:195` and `:229`, and `DashboardFlowIntermediate.kt:43`,
+  all spelling out `app.readylytics.health.data.preferences.UserPreferences` inline. None was
+  an actual import collision (neither file imports a competing `UserPreferences`), so all
+  three were replaced with a normal import. Remaining `java.time.Instant.ofEpochMilli`
+  occurrences are all in test files and left alone.
+- **`core:scoring` → `kotlin("jvm")` — blocked on an external release.** See
+  `internal-docs/plans/CORE_SCORING_JVM_MIGRATION.md`, which is self-contained and whose
+  claims were verified against the tree on 2026-08-18 (zero `android.*`/`androidx.*` imports
+  in `core:scoring` main, exactly two dagger-importing files, one `BuildConfig` reference,
+  exactly the three named test files importing `data.local.entity`, and `core:model` free of
+  both Android and dagger). Precondition is **AGP 9.4.0 stable**, which is outside this
+  project's control and has no date — this is not ordinary backlog.
 - **Deferred — `core:scoring` → `kotlin("jvm")`.** Blocked by a Kotlin compiler
   incompatibility. The standalone `kotlin("jvm")` compiler (`kotlin-compiler-embeddable`
   2.3.21 / 2.4.10) crashes in the classpath-snapshot shrink
@@ -1795,9 +1927,9 @@ one-line reason recorded in `internal-docs/plans/remediation-baseline.txt`.
   9.4.0-RC / 9.5.0-alpha), so a clean fix needs an AGP upgrade we've declined until
   it is stable. Revisit when AGP 9.4 goes stable — full self-contained migration
   steps live in `internal-docs/plans/CORE_SCORING_JVM_MIGRATION.md`.
-- **Not started**: the remaining Step 19 sub-items (narrow catches, `listBackups`
-  filter, entity indices, lint warnings, `SharingStarted.Eagerly` audit, FQ-type
-  cleanup, `isReturnDefaultValues`, package alignment) are unchanged from this plan.
+- **Still not started**: only the *optional* package/module alignment sub-item, plus the
+  two follow-ups this section opens (`SelectedDateRepository`'s `Eagerly`, and the bypassed
+  `sharingStarted` test seam). Everything else in Step 19 is resolved above.
 
 ---
 

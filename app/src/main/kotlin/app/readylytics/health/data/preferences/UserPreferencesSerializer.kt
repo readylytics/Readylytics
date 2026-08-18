@@ -8,6 +8,7 @@ import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
     override val defaultValue: UserPreferencesProto =
@@ -131,8 +132,8 @@ fun UserPreferences.toProto(): UserPreferencesProto {
                     setBirthDay(date.dayOfMonth)
                     setBirthMonth(date.monthValue)
                     setBirthYear(date.year)
-                } catch (e: Exception) {
-                    // If parsing fails, keep default values
+                } catch (e: DateTimeParseException) {
+                    // Malformed stored birthDate: keep the proto defaults.
                 }
             }
         }.setHrvOptimalThreshold(domain.hrvOptimalThreshold)

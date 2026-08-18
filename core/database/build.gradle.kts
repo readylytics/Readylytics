@@ -18,7 +18,9 @@ android {
         }
     }
     testOptions {
-        unitTests.isReturnDefaultValues = true
+        // Unstubbed Android framework calls must throw, not silently return 0/null — a frozen
+        // SystemClock had already left HealthDeviceRepository's 5-minute TTL untested.
+        unitTests.isReturnDefaultValues = false
         unitTests.isIncludeAndroidResources = true
     }
 }

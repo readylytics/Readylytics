@@ -1,6 +1,7 @@
 package app.readylytics.health.data.device
 
 import android.os.SystemClock
+import androidx.annotation.VisibleForTesting
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
@@ -41,6 +42,17 @@ class HealthDeviceRepository
             fun isExpired(nowMs: Long): Boolean = nowMs - timestampMs > CACHE_TTL_MS
         }
 
+        /**
+         * Monotonic time source, injected as a seam so unit tests can drive TTL expiry.
+         *
+         * `SystemClock` is an Android framework class with no JVM implementation. Under
+         * `unitTests.isReturnDefaultValues = true` it silently returned `0` on every call, so
+         * the clock never advanced and the five-minute TTL below could not be exercised at
+         * all — the cache tests only ever proved that a frozen cache stays warm.
+         */
+        @VisibleForTesting
+        internal var elapsedRealtimeMs: () -> Long = { SystemClock.elapsedRealtime() }
+
         // Flow-based cache (better than manual Mutex + mutable var)
         private val deviceCache = MutableStateFlow<CacheEntry?>(null)
 
@@ -56,7 +68,7 @@ class HealthDeviceRepository
          */
         suspend fun getAvailableDevices(): List<String> {
             // Check if cached and not expired
-            val now = SystemClock.elapsedRealtime()
+            val now = elapsedRealtimeMs()
             val cached = deviceCache.value
             if (cached != null && !cached.isExpired(now)) {
                 return cached.devices
@@ -66,7 +78,7 @@ class HealthDeviceRepository
             return fetchMutex.withLock {
                 // Double-check after acquiring lock in case another coroutine fetched
                 val rechecked = deviceCache.value
-                if (rechecked != null && !rechecked.isExpired(SystemClock.elapsedRealtime())) {
+                if (rechecked != null && !rechecked.isExpired(elapsedRealtimeMs())) {
                     return@withLock rechecked.devices
                 }
                 fetchAndCacheDevices()
@@ -95,7 +107,7 @@ class HealthDeviceRepository
                 ).filterNot { it.isBlank() }.distinct().sorted()
 
             // Cache with timestamp for TTL tracking (using elapsedRealtime for monotonic clock)
-            deviceCache.value = CacheEntry(allDevices, SystemClock.elapsedRealtime())
+            deviceCache.value = CacheEntry(allDevices, elapsedRealtimeMs())
 
             return allDevices
         }

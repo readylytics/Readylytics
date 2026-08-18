@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TreeMap
@@ -274,7 +275,7 @@ class ScoringRepositoryImpl
                         currentModelTrimp = workout.modelTrimp,
                         samples = workoutHrSamples.map { sample ->
                             ComputeWorkoutTrimpUseCase.HeartRateSample(
-                                java.time.Instant.ofEpochMilli(sample.timestampMs),
+                                Instant.ofEpochMilli(sample.timestampMs),
                                 sample.beatsPerMinute,
                             )
                         },

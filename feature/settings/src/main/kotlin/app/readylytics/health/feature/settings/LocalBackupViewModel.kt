@@ -243,11 +243,10 @@ class LocalBackupViewModel
                             if (currentHash == null) {
                                 event.test.isEmpty()
                             } else {
-                                try {
-                                    encryptionManager.decrypt(currentHash) == event.test
-                                } catch (_: Exception) {
-                                    false
-                                }
+                                // EncryptionManager.decrypt already catches internally and returns
+                                // null on failure, so this cannot throw; a null result compares
+                                // false against the entered password, which is the desired outcome.
+                                encryptionManager.decrypt(currentHash) == event.test
                             }
                         transientState.update { it.copy(passwordVerificationResult = matches) }
                     }

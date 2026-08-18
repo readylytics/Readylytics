@@ -99,13 +99,13 @@ fun WorkoutDetailRoute(
 @Composable
 fun WorkoutDetailScreen(
     uiState: WorkoutDetailUiState,
+    modifier: Modifier = Modifier,
     onGrantPermissionClick: () -> Unit = {},
     onToggleLayoutManagement: () -> Unit = {},
     onCancelLayoutManagement: () -> Unit = {},
     onToggleItemVisibility: (WorkoutDetailItemId, Boolean) -> Unit = { _, _ -> },
     onReorderItems: (List<WorkoutDetailItemConfiguration>) -> Unit = {},
     onResetLayoutToDefaults: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val workout = uiState.workout ?: return
     val scrollState = rememberScrollState()

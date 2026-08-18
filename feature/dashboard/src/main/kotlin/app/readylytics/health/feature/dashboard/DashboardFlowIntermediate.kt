@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard
 
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
@@ -40,7 +41,7 @@ import java.time.ZoneId
 data class DashboardBasicInputs(
     val selectedDate: LocalDate,
     val summary: DailySummary?,
-    val userPreferences: app.readylytics.health.data.preferences.UserPreferences,
+    val userPreferences: UserPreferences,
     val circadianResult: CircadianConsistencyResult?,
     val rasSummaries: List<DailySummary>,
     val dismissedInsightTypes: Set<InsightType> = emptySet(),

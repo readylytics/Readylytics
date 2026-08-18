@@ -33,6 +33,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 @Composable
 internal fun VitalsTrendSection(
     chartInputs: VitalsChartInputs,
+    modifier: Modifier = Modifier,
     chartConfigurations: List<VitalsChartConfiguration> =
         VitalsChartId.entries.mapIndexed { index, chartId -> VitalsChartConfiguration(chartId, true, index) },
     isEditing: Boolean = false,
@@ -41,7 +42,6 @@ internal fun VitalsTrendSection(
     chartScrollState: VicoScrollState,
     chartZoomState: VicoZoomState,
     parentScrollInProgress: () -> Boolean,
-    modifier: Modifier = Modifier,
 ) {
     val chartDataMap =
         VitalsChartId.entries.associateWith { chartId ->

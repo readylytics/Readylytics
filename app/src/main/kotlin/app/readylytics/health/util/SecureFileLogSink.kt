@@ -88,6 +88,10 @@ class SecureFileLogSink(
             try {
                 bufferLog(level, tag, message, throwable, context)
             } catch (e: Exception) {
+                // Deliberately broad: this is the logging sink itself, running detached in
+                // `scope.launch`. bufferLog does file I/O, formatting and sanitisation, so a
+                // narrower type would let an unexpected failure escape into the scope's handler
+                // and take down logging (or the app) because a log line could not be written.
                 Log.e("SecureFileLogSink", "Failed to write log to file", e)
             }
         }

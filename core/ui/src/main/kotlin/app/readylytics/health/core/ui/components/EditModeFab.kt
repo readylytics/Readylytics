@@ -45,8 +45,8 @@ fun EditModeFab(
     isVisible: Boolean,
     onDoneClick: () -> Unit,
     onCancelClick: () -> Unit,
-    onManageClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onManageClick: (() -> Unit)? = null,
 ) {
     AnimatedVisibility(
         visible = isVisible,
