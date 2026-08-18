@@ -57,10 +57,11 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-Xshare:off", "-Djdk.attach.allowAttachSelf=true")
     systemProperty("robolectric.coverage.enabled", "true")
     systemProperty("update.golden", providers.systemProperty("update.golden").getOrElse("false"))
-    // Without excluding jdk.internal.*, Jacoco instruments JDK internals and breaks the
-    // Java-agent self-attach MockK's inline mocking performs, surfacing as
-    // AttachNotSupportedException -> "Could not initialize class JvmMockKGateway" across
-    // every mockk-using test. Mirrors the :app configuration.
+    // Keeps Jacoco out of JDK internals, mirroring the :app configuration. NOTE: this was
+    // initially believed to fix the MockK AttachNotSupportedException flake; testing disproved
+    // that (1 green / 1 red across two runs). The actual fix is the byte-buddy-agent preload in
+    // readylytics.kotlin-android-conventions.gradle.kts. This block is retained on its own
+    // merits, not as the flake fix.
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
         excludes = listOf("jdk.internal.*")

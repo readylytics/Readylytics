@@ -1,10 +1,26 @@
 # Architecture Remediation Plan
 
 **Baseline:** branch `main` @ `63254e2f` — 2026-08-17
-**Scope:** 20 self-contained steps across 5 phases (5 P0, 9 P1, 6 P2)
+**Scope:** 23 self-contained steps across 6 phases (5 P0, 9 P1, 9 P2)
 **Status:** Phase 0, Phase 1, Phase 2, Phase 3, and Phase 4 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and the phase outcomes below.
-All verification commands green; characterization golden tests pass; ScoringRepositoryImpl decomposed under 500 lines;
-Phase 5 cleared to start.
+Characterization golden tests pass and scoring output is unchanged. `ScoringRepositoryImpl`
+went **863 -> 767 lines** and `computeDailySummary` is decomposed into three use cases, but the
+step-14 targets of **<500 lines** and a reduced constructor were **not met** — the constructor is
+still at **21 dependencies** (two collaborators left, three use cases arrived). Further
+decomposition is deferred; see Step 14 Outcome.
+
+The remaining decomposition is scheduled as **Phase 6** (Steps 20–22) rather than left implied.
+
+**Test-suite flakiness — RESOLVED 2026-08-18.** `:core:database:testDebugUnitTest` had been failing
+~2 runs in 3 with a MockK inline-agent self-attach failure (`AttachNotSupportedException`, 110
+cascading failures). Fixed in `readylytics.kotlin-android-conventions.gradle.kts` by preloading
+`byte-buddy-agent` as `-javaagent`, so the agent never self-attaches. Note for anyone touching it:
+the configuration must be **detached** (plain JVM jar, no Android variant attributes) and resolved
+**eagerly into a String** (the configuration cache cannot serialise a live `Configuration`).
+Caveat on the record: every "all tests green" gate in phases 3 and 4 was evaluated *before* this
+fix, against an unreliable suite. The golden and determinism tests were never among the flaky ones,
+so the Phase 4 scoring conclusions stand, but the broader green claims from those phases were
+weaker than they appeared.
 
 Every step names its files, its exact change, its verification command, and its
 done-condition. No step requires context outside itself except the steps listed
@@ -91,6 +107,9 @@ step 13 are the proof that nothing moved numerically.
 | 17 | Collapse `writeJsonStreaming` | P2 | 1 d | 16 |
 | 18 | `WorkoutsStateFactory` | P2 | 2–3 d | 08 |
 | 19 | Housekeeping batch | P2 | 1 d | — |
+| 20 | Extract `ScoringDayDataLoader` | P2 | 3–4 d | 15 |
+| 21 | Move remaining pure helpers to `core:scoring` | P2 | 2 d | 20 |
+| 22 | Verify decomposition targets and record | P2 | 3 h | 21 |
 
 **Critical path:** `01 → 05a → 05b → 06` for the P0s (≈3 days — the backup chain
 is now the long pole; steps 02, 03 and 04 are a few hours combined and run
@@ -1715,6 +1734,90 @@ Each of these is a separate commit; none depends on the others.
 one-line reason recorded in `internal-docs/plans/remediation-baseline.txt`.
 
 ---
+
+---
+
+# Phase 6 — Finish the `ScoringRepositoryImpl` decomposition
+
+Phase 4 delivered the *method* decomposition: the 490-line `computeDailySummary`
+is gone, replaced by 30 focused functions, and scoring output is provably
+unchanged. It did **not** deliver the *class* decomposition. Measured after
+Phase 4:
+
+- **767 lines** (target was <500; project hard limit is 800, soft target 400)
+- **21 constructor dependencies** — unchanged from the god-object baseline, because
+  two collaborators left and three use cases arrived
+- longest remaining methods: `computeDailySummary` 120, `computeCalibratedSummary` 89,
+  `computeUncalibratedSummary` 55, `resolveSleepAggregation` 51, `processWorkouts` 41
+
+**The seam is data access, not method length.** Ten of the 21 constructor
+parameters are DAOs. The class is simultaneously a data-gathering layer and a
+scoring orchestrator, and that is what keeps both numbers high. Splitting along
+that seam — not slicing more methods — is what finishes the job.
+
+**Prerequisite already in place:** `ScoringGoldenSnapshotTest` plus its six
+fixtures, created in Step 13 and never regenerated. Phase 6 uses the same rule as
+Phase 4 — *no expression is rewritten, only relocated* — and the golden fixtures
+are the proof. **Do not regenerate them.** A changed golden value means the
+refactor changed the math and must be reverted, not re-baselined.
+
+## Step 20 — Extract `ScoringDayDataLoader`
+
+**Severity:** P2 · **Effort:** 3–4 d · **Blocked by:** 15
+
+Create a collaborator in `core:database` that owns the ten DAOs and returns one
+immutable record of everything a scoring day needs:
+
+```kotlin
+data class ScoringDayInputs(
+    val workouts: List<WorkoutRecordEntity>,
+    val exerciseHrSamples: List<HeartRateRecordEntity>,
+    val minuteBuckets: List<HrMinuteBucketRow>,
+    val sleepAggregate: SleepDayAggregate?,
+    val frozenSummary: DailySummaryEntity?,
+    val avgSpo2: Float?,
+    val avgBodyTemp: Float?,
+)
+```
+
+`ScoringRepositoryImpl` then takes `ScoringDayDataLoader` in place of ten DAOs,
+and `mergedMinuteBuckets`, `exerciseSamplesForWorkout`, `resolveAvgSpo`,
+`resolveAvgBodyTemp` and the DAO half of `resolveSleepAggregation` move with them.
+
+Expected: **21 → ~11 constructor parameters**, ~180 lines relocated.
+
+## Step 21 — Move the remaining pure helpers to `core:scoring`
+
+**Severity:** P2 · **Effort:** 2 d · **Blocked by:** 20
+
+`toSleepDaySegment`, `aggregateEfficiency`, `sumRasLastSixDays` and the
+non-DAO half of `resolveSleepAggregation` are pure functions sitting in a
+repository. They belong beside the other sleep-day logic in
+`core:scoring/domain/scoring/sleep/`. `computeCalibratedSummary` (89) and
+`computeUncalibratedSummary` (55) should fold into the existing
+`AssembleDailySummaryUseCase` rather than remaining as repository methods.
+
+Expected: **~767 → under 400 lines**, meeting the project's own file-size target
+rather than the ad-hoc <500 from Step 14.
+
+## Step 22 — Verify and record
+
+**Severity:** P2 · **Effort:** 3 h · **Blocked by:** 21
+
+**Done when — all four, measured not asserted:**
+
+```bash
+wc -l core/database/src/main/kotlin/app/readylytics/health/data/repository/ScoringRepositoryImpl.kt   # < 400
+./gradlew :core:database:testDebugUnitTest --rerun-tasks     # golden + determinism green
+./gradlew detekt                                            # LongMethod entries for this file gone
+git diff --stat core/database/src/test/resources/golden/     # EMPTY — fixtures untouched
+```
+
+Constructor parameter count ≤ 11, verified by reading the constructor, not by
+assertion in prose. Record the achieved numbers in `remediation-baseline.txt`
+under a dated heading — and if a target is missed, record the miss rather than
+restating the target. Step 14 was reported as "decomposed under 500 lines" when
+the file was 767; that is the failure mode this step exists to avoid repeating.
 
 ## Provenance
 
