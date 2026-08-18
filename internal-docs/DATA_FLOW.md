@@ -888,6 +888,16 @@ are independent: Readiness always derives from `strainLoadSourceMode`, never fro
 `EverydayHeartRateLoadCalculator.kt` / `ScoringConstants` — see ABOUT.md for the
 user-facing description of `coverageMinutes`, `validBucketCount`, and confidence tiers.
 
+### 2.7 Scoring Regression Testing & Golden Fixtures
+
+To guard scoring calculations against unintended architectural or algorithmic regressions, the repository maintains characterization golden snapshot fixtures:
+
+| Test Suite | Path | Responsibility |
+| :--- | :--- | :--- |
+| `ScoringGoldenSnapshotTest` | `core/database/src/test/kotlin/app/readylytics/health/domain/scoring/golden/ScoringGoldenSnapshotTest.kt` | Locks 6 representative single-day execution paths against checked-in JSON fixtures in `core/database/src/test/resources/golden/` (`day_with_workouts_and_frozen_snapshot.json`, `day_with_sleep_spanning_midnight.json`, `day_with_no_sleep_session.json`, `day_with_early_return_uncalibrated.json`, `day_with_hrmax_from_prefs_vs_snapshot.json`, `day_with_nap_and_supplemental_sleep.json`). Uses mock-free fakes and in-memory `HealthDatabase`. Regenerated via `-Dupdate.golden=true`. |
+| `GoldenFixtureWalkForwardTest` | `core/database/src/test/kotlin/app/readylytics/health/domain/scoring/golden/GoldenFixtureWalkForwardTest.kt` | Multi-year walk-forward regression test locking end-to-end multi-day scoring state against `core/database/src/test/resources/golden/scoring_walk_forward_golden.json`. |
+| `ScoringEquivalenceGoldenTest` | `core/database/src/test/kotlin/app/readylytics/health/domain/scoring/golden/ScoringEquivalenceGoldenTest.kt` | Verifies mathematical equivalence between hot-tier (raw 1s samples) and warm-tier (1-minute bucket rollups) TRIMP and sleep percentile RHR calculation paths. |
+
 ---
 
 ## 3. Presentation Layer (Calculated States → UI)
