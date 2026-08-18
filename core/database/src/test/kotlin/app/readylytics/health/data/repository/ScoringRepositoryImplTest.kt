@@ -64,21 +64,30 @@ class ScoringRepositoryImplTest {
 
     private lateinit var repo: ScoringRepositoryImpl
 
-    private fun createRepo(dispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()): ScoringRepositoryImpl =
-        ScoringRepositoryImpl(
+    private fun createRepo(dispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()): ScoringRepositoryImpl {
+        val readinessSummaryCoordinator =
+            ReadinessSummaryCoordinator(
+                dataLoader,
+                scoringHistoryRepository,
+                baselineComputer,
+                BuildLoadSeriesUseCase(scoringCalculator),
+                computeSleepMetricsUseCase,
+                ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleDailySummaryUseCase(),
+            )
+        return ScoringRepositoryImpl(
             dataLoader,
             settingsRepo,
             baselineComputer,
-            BuildLoadSeriesUseCase(scoringCalculator),
-            AssembleEverydayLoadInputUseCase(),
-            computeSleepMetricsUseCase,
             scoringConfigFactory,
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             ResolveDailyBaselinesUseCase(baselineComputer),
-            AssembleDailySummaryUseCase(),
+            AssembleEverydayLoadInputUseCase(),
             scoringHistoryRepository,
+            readinessSummaryCoordinator,
             dispatcher,
         )
+    }
 
     @Before
     fun setup() {

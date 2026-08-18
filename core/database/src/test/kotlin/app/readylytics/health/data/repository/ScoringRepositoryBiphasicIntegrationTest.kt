@@ -62,30 +62,42 @@ class ScoringRepositoryBiphasicIntegrationTest {
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
-    private val repo =
-        ScoringRepositoryImpl(
-            ScoringDayDataLoader(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                heartRateDao,
-                minuteBucketDao,
-                weightRecordDao,
-                bodyFatRecordDao,
-                bloodPressureRecordDao,
-                oxygenSaturationRecordDao,
-                bodyTemperatureRecordDao,
-            ),
-            settingsRepo,
+    private val dataLoader =
+        ScoringDayDataLoader(
+            workoutDao,
+            sleepSessionDao,
+            dailySummaryDao,
+            heartRateDao,
+            minuteBucketDao,
+            weightRecordDao,
+            bodyFatRecordDao,
+            bloodPressureRecordDao,
+            oxygenSaturationRecordDao,
+            bodyTemperatureRecordDao,
+        )
+
+    private val readinessSummaryCoordinator =
+        ReadinessSummaryCoordinator(
+            dataLoader,
+            scoringHistoryRepository,
             baselineComputer,
             BuildLoadSeriesUseCase(scoringCalculator),
-            AssembleEverydayLoadInputUseCase(),
             computeSleepMetricsUseCase,
+            ResolveDailyBaselinesUseCase(baselineComputer),
+            AssembleDailySummaryUseCase(),
+        )
+
+    private val repo =
+        ScoringRepositoryImpl(
+            dataLoader,
+            settingsRepo,
+            baselineComputer,
             scoringConfigFactory,
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             ResolveDailyBaselinesUseCase(baselineComputer),
-            AssembleDailySummaryUseCase(),
+            AssembleEverydayLoadInputUseCase(),
             scoringHistoryRepository,
+            readinessSummaryCoordinator,
             UnconfinedTestDispatcher(),
         )
 

@@ -14,6 +14,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
@@ -93,23 +94,36 @@ class ScoringGoldenSnapshotTest {
                 coverageValidator = HrCoverageValidator(),
             )
 
+        val dataLoader = ScoringDayDataLoader(
+            db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
+            db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
+            db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
+            db.bodyTemperatureRecordDao(),
+        )
+        val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
+        val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
+        val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
+        val readinessSummaryCoordinator =
+            ReadinessSummaryCoordinator(
+                dataLoader = dataLoader,
+                scoringHistoryRepository = scoringHistoryRepository,
+                baselineComputer = baselineComputer,
+                buildLoadSeriesUseCase = buildLoadSeriesUseCase,
+                computeSleepMetricsUseCase = computeSleepMetricsUseCase,
+                resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+                assembleDailySummaryUseCase = assembleDailySummaryUseCase,
+            )
+
         return ScoringRepositoryImpl(
-            dataLoader = ScoringDayDataLoader(
-                db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-                db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-                db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
-                db.bodyTemperatureRecordDao(),
-            ),
+            dataLoader = dataLoader,
             settingsRepo = settingsRepository,
             baselineComputer = baselineComputer,
-            buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
-            assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
-            computeSleepMetricsUseCase = computeSleepMetricsUseCase,
             scoringConfigFactory = scoringConfigFactory,
             computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-            resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
-            assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
+            resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+            assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
             scoringHistoryRepository = scoringHistoryRepository,
+            readinessSummaryCoordinator = readinessSummaryCoordinator,
             defaultDispatcher = UnconfinedTestDispatcher(),
         )
     }

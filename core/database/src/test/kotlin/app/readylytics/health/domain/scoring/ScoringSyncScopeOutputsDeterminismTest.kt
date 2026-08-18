@@ -20,6 +20,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
@@ -325,30 +326,44 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 coverageValidator = coverageValidator,
             )
 
+        val dataLoader =
+            ScoringDayDataLoader(
+                workoutDao,
+                sleepSessionDao,
+                dailySummaryDao,
+                heartRateDao,
+                minuteBucketDao,
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
+            )
+        val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
+        val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
+        val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
+        val readinessSummaryCoordinator =
+            ReadinessSummaryCoordinator(
+                dataLoader = dataLoader,
+                scoringHistoryRepository = scoringHistoryRepository,
+                baselineComputer = baselineComputer,
+                buildLoadSeriesUseCase = buildLoadSeriesUseCase,
+                computeSleepMetricsUseCase = computeSleepMetricsUseCase,
+                resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+                assembleDailySummaryUseCase = assembleDailySummaryUseCase,
+            )
+
         val repo =
             ScoringRepositoryImpl(
-                dataLoader = ScoringDayDataLoader(
-                    workoutDao,
-                    sleepSessionDao,
-                    dailySummaryDao,
-                    heartRateDao,
-                    minuteBucketDao,
-                    weightRecordDao,
-                    bodyFatRecordDao,
-                    bloodPressureRecordDao,
-                    oxygenSaturationRecordDao,
-                    bodyTemperatureRecordDao,
-                ),
+                dataLoader = dataLoader,
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
-                buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
-                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
-                computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
                 computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
-                assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
+                resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+                assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                 scoringHistoryRepository = scoringHistoryRepository,
+                readinessSummaryCoordinator = readinessSummaryCoordinator,
                 defaultDispatcher = UnconfinedTestDispatcher(),
             )
 

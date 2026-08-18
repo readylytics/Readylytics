@@ -8,6 +8,7 @@ import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
@@ -184,24 +185,38 @@ class GoldenFixtureWalkForwardTest {
                 )
 
             val settingsRepo = FakeSettingsRepository(prefs)
+            val dataLoader =
+                ScoringDayDataLoader(
+                    db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
+                    db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
+                    db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
+                    db.bodyTemperatureRecordDao(),
+                )
+            val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
+            val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
+            val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
+            val readinessSummaryCoordinator =
+                ReadinessSummaryCoordinator(
+                    dataLoader = dataLoader,
+                    scoringHistoryRepository = scoringHistoryRepository,
+                    baselineComputer = baselineComputer,
+                    buildLoadSeriesUseCase = buildLoadSeriesUseCase,
+                    computeSleepMetricsUseCase = computeSleepMetricsUseCase,
+                    resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+                    assembleDailySummaryUseCase = assembleDailySummaryUseCase,
+                )
+
             val scoringRepository =
                 ScoringRepositoryImpl(
-                    dataLoader = ScoringDayDataLoader(
-                        db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-                        db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-                        db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
-                        db.bodyTemperatureRecordDao(),
-                    ),
+                    dataLoader = dataLoader,
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,
-                    buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
-                    assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
-                    computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                     scoringConfigFactory = scoringConfigFactory,
                     computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
-                    resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
-                    assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
+                    resolveDailyBaselinesUseCase = resolveDailyBaselinesUseCase,
+                    assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                     scoringHistoryRepository = scoringHistoryRepository,
+                    readinessSummaryCoordinator = readinessSummaryCoordinator,
                     defaultDispatcher = UnconfinedTestDispatcher(),
                 )
             // WP-11/HC-006 fix: this fixture's stage-less-night scenario (`stageLessNightDate`)

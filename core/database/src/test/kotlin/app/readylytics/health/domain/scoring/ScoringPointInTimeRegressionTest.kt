@@ -8,6 +8,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.model.TimestampedTrimp
@@ -52,30 +53,40 @@ class ScoringPointInTimeRegressionTest {
 
     @Before
     fun setup() {
-        repo =
-            ScoringRepositoryImpl(
-                ScoringDayDataLoader(
-                    workoutDao,
-                    sleepSessionDao,
-                    dailySummaryDao,
-                    heartRateDao,
-                    minuteBucketDao,
-                    weightRecordDao,
-                    bodyFatRecordDao,
-                    bloodPressureRecordDao,
-                    oxygenSaturationRecordDao,
-                    bodyTemperatureRecordDao,
-                ),
-                settingsRepo,
+        val dataLoader =
+            ScoringDayDataLoader(
+                workoutDao,
+                sleepSessionDao,
+                dailySummaryDao,
+                heartRateDao,
+                minuteBucketDao,
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
+            )
+        val readinessSummaryCoordinator =
+            ReadinessSummaryCoordinator(
+                dataLoader,
+                scoringHistoryRepository,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
-                AssembleEverydayLoadInputUseCase(),
                 computeSleepMetricsUseCase,
+                ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleDailySummaryUseCase(),
+            )
+        repo =
+            ScoringRepositoryImpl(
+                dataLoader,
+                settingsRepo,
+                baselineComputer,
                 scoringConfigFactory,
                 ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
                 ResolveDailyBaselinesUseCase(baselineComputer),
-                AssembleDailySummaryUseCase(),
+                AssembleEverydayLoadInputUseCase(),
                 scoringHistoryRepository,
+                readinessSummaryCoordinator,
                 UnconfinedTestDispatcher(),
             )
     }
