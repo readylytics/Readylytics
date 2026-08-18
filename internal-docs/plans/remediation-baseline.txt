@@ -378,7 +378,7 @@ TEST-COUNT INVARIANT & EXTENSIONS
     - AssembleDailySummaryUseCaseTest (4 tests)
 
 SCORING REPOSITORY DECOMPOSITION & STRUCTURAL REDUCTIONS
-  - ScoringRepositoryImpl.kt length reduced from 856 lines -> 768 lines (comfortably below 800 hard limit).
+  - ScoringRepositoryImpl.kt length reduced from 856 lines -> 767 lines (comfortably below 800 hard limit).
   - computeDailySummary decomposed from 490 lines -> ~114 lines.
   - Mutable `var summary` reassignment chains completely eliminated.
   - CyclomaticComplexMethod on computeDailySummary eliminated (0 remaining in core:database).
@@ -416,7 +416,8 @@ Commit range : 1153f6bd..0fc96503 (phase 6, steps 20-22)
 Verified with: ./gradlew :core:database:testDebugUnitTest --rerun-tasks :core:database:detekt (pre-commit gate)
 
   METRIC                         PHASE 0   PHASE 4     NOW    NOTE
-  ScoringRepositoryImpl lines       856       768     440    -328 lines (-42.7%)
+  ScoringRepositoryImpl lines       856       767     440    -327 lines (-42.6%)
+                                                            (target <400 — MISSED by 40)
   constructor params                 21        21      10    -11 params (-52.4%)
   unit tests                       2939      2991    3008    +17 tests, 0 failures/errors
   golden fixtures diff                0         0       0    fixtures untouched, 0 drift
@@ -427,7 +428,8 @@ SCORING REPOSITORY DECOMPOSITION & COLLABORATOR EXTRACTION
     returning immutable `ScoringDayInputs` data model).
   - Step 21: Extracted `ReadinessSummaryCoordinator` to own readiness calculation,
     sleep aggregation mapping, and calibrated/uncalibrated summary assembly.
-  - Line count down from 768 -> 440 lines (close to the 400-line soft target, comfortably
+  - Line count down from 767 -> 440 lines. Target was <400 — MISSED by 40. Residue is
+    resolveEverydayTrimp / computeRas / buildBaseSummary, out of scope for steps 20-21. Well
     below 800 hard limit).
   - Constructor parameter count down from 21 -> 10 (target was <= 11).
   - All 6 golden snapshot fixtures pass with 0 drift (100% exact float matching).

@@ -143,107 +143,86 @@ internal fun buildRasBreakdown(
     }
 }
 
-internal fun buildWorkoutsState(
-    scoringCalculator: ScoringCalculator,
-    latestSummary: DailySummary?,
-    trimpSummaries: List<DailySummary>,
-    rasSummaries: List<DailySummary>,
-    prefs: UserPreferences,
-    range: TimeRange,
-    selectedDate: LocalDate,
-    zoneId: ZoneId,
-    recentWorkouts: List<WorkoutDisplayItem>,
-    currentPage: Int,
-    totalPages: Int,
-    earliestLocalDate: LocalDate?,
-    workoutOnlyGains: List<Float> = emptyList(),
-    todayStrainIncrease: Float? = null,
-): WorkoutsUiState {
-    val displayStartDayDate = selectedDate.minusDays(range.days.toLong() - 1)
-    val displayStartDayMs =
-        displayStartDayDate
-            .atStartOfDay(zoneId)
-            .toInstant()
-            .toEpochMilli()
+/** Inputs for [buildWorkoutsState]. Bundled rather than passed as 14 positional parameters:
+ *  the function is a wide UI-state assembler, and a record keeps the call sites readable and
+ *  keeps detekt's LongParameterList/LongMethod honest about real complexity. */
+internal data class WorkoutsStateInputs(
+    val scoringCalculator: ScoringCalculator,
+    val latestSummary: DailySummary?,
+    val trimpSummaries: List<DailySummary>,
+    val rasSummaries: List<DailySummary>,
+    val prefs: UserPreferences,
+    val range: TimeRange,
+    val selectedDate: LocalDate,
+    val zoneId: ZoneId,
+    val recentWorkouts: List<WorkoutDisplayItem>,
+    val currentPage: Int,
+    val totalPages: Int,
+    val earliestLocalDate: LocalDate?,
+    val workoutOnlyGains: List<Float> = emptyList(),
+    val todayStrainIncrease: Float? = null,
+)
 
-    val ctx =
-        buildRangeContext(
-            scoringCalculator = scoringCalculator,
-            trimpSummaries = trimpSummaries,
-            prefs = prefs,
-            displayStartDayDate = displayStartDayDate,
-            selectedDate = selectedDate,
-            zoneId = zoneId,
+internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
+    with(inputs) {
+        val ctx =
+            buildRangeContext(
+                scoringCalculator = scoringCalculator,
+                trimpSummaries = trimpSummaries,
+                prefs = prefs,
+                range = range,
+                selectedDate = selectedDate,
+                zoneId = zoneId,
+            )
+
+        val (dailyTrimp, dailyStrainRatio) =
+            buildDailySeries(
+                scoringCalculator = scoringCalculator,
+                displayDayMidnights = ctx.displayDayMidnights,
+                trimpByDay = ctx.trimpByDay,
+                ctlSeries = ctx.ctlSeries,
+                atlSeries = ctx.atlSeries,
+                earliestLocalDate = earliestLocalDate,
+                zoneId = zoneId,
+            )
+
+        val series =
+            buildPaddedSeries(
+                dailyTrimp = dailyTrimp,
+                dailyStrainRatio = dailyStrainRatio,
+                range = range,
+                displayStartDayDate = ctx.displayStartDayDate,
+                selectedDate = selectedDate,
+            )
+
+        val yesterdayMetrics =
+            rasSummaries
+                .firstOrNull { it.date == selectedDate.minusDays(1) }
+                ?.let { DailyMetricsMapper.toMetrics(it, prefs) }
+        val dataTenureDaysForDate =
+            earliestLocalDate
+                ?.let { ChronoUnit.DAYS.between(it, selectedDate).toInt() + 1 }
+                ?: 0
+
+        val resolvedTodayStrainIncrease =
+            resolveTodayStrainIncrease(
+                todayStrainIncrease = todayStrainIncrease,
+                scoringCalculator = scoringCalculator,
+                prefs = prefs,
+                ctx = ctx,
+                selectedDate = selectedDate,
+                dataTenureDaysForDate = dataTenureDaysForDate,
+                workoutOnlyGains = workoutOnlyGains,
+            )
+
+        assembleWorkoutsUiState(
+            inputs = inputs,
+            series = series,
+            displayStartDayMs = ctx.displayStartDayMs,
+            yesterdayMetrics = yesterdayMetrics,
+            resolvedTodayStrainIncrease = resolvedTodayStrainIncrease,
         )
-
-    val (dailyTrimp, dailyStrainRatio) =
-        buildDailySeries(
-            scoringCalculator = scoringCalculator,
-            displayDayMidnights = ctx.displayDayMidnights,
-            trimpByDay = ctx.trimpByDay,
-            ctlSeries = ctx.ctlSeries,
-            atlSeries = ctx.atlSeries,
-            earliestLocalDate = earliestLocalDate,
-            zoneId = zoneId,
-        )
-
-    val series =
-        buildPaddedSeries(
-            dailyTrimp = dailyTrimp,
-            dailyStrainRatio = dailyStrainRatio,
-            range = range,
-            displayStartDayDate = displayStartDayDate,
-            selectedDate = selectedDate,
-        )
-
-    val yesterday = selectedDate.minusDays(1)
-    val yesterdaySummary = rasSummaries.firstOrNull { it.date == yesterday }
-    val yesterdayMetrics = yesterdaySummary?.let { DailyMetricsMapper.toMetrics(it, prefs) }
-
-    val dataTenureDaysForDate =
-        if (earliestLocalDate != null) {
-            ChronoUnit.DAYS.between(earliestLocalDate, selectedDate).toInt() + 1
-        } else {
-            0
-        }
-
-    val resolvedTodayStrainIncrease =
-        resolveTodayStrainIncrease(
-            todayStrainIncrease = todayStrainIncrease,
-            scoringCalculator = scoringCalculator,
-            prefs = prefs,
-            ctx = ctx,
-            selectedDate = selectedDate,
-            dataTenureDaysForDate = dataTenureDaysForDate,
-            workoutOnlyGains = workoutOnlyGains,
-        )
-
-    return WorkoutsUiState(
-        latestSummary = latestSummary,
-        latestMetrics = latestSummary?.let { DailyMetricsMapper.toMetrics(it, prefs) },
-        dailyTrimp = series.paddedTrimp,
-        dailyStrainRatio = series.paddedStrain,
-        recentWorkouts = recentWorkouts,
-        selectedRange = range,
-        selectedDate = selectedDate,
-        rangeStartMs = displayStartDayMs,
-        rasDailyBreakdown = buildRasBreakdown(selectedDate, rasSummaries, prefs),
-        todayRasScore =
-            latestSummary?.let {
-                LoadSourceSelector.selectDailyRas(
-                    it,
-                    prefs.rasSourceMode,
-                )
-            },
-        currentPage = currentPage,
-        totalPages = totalPages,
-        yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
-        yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
-        todayStrainIncrease = resolvedTodayStrainIncrease,
-        trimpPeriodSummary = series.trimpSummary,
-        strainRatioPeriodSummary = series.strainSummary,
-    )
-}
+    }
 
 /** Daily TRIMP and strain-ratio series for the displayed range. Extracted verbatim from
  *  buildWorkoutsState; no expression changed. */
@@ -397,10 +376,16 @@ private fun buildRangeContext(
     scoringCalculator: ScoringCalculator,
     trimpSummaries: List<DailySummary>,
     prefs: UserPreferences,
-    displayStartDayDate: LocalDate,
+    range: TimeRange,
     selectedDate: LocalDate,
     zoneId: ZoneId,
 ): RangeContext {
+    val displayStartDayDate = selectedDate.minusDays(range.days.toLong() - 1)
+    val displayStartDayMs =
+        displayStartDayDate
+            .atStartOfDay(zoneId)
+            .toInstant()
+            .toEpochMilli()
     val trimpByDate: Map<LocalDate, Float> =
         trimpSummaries.associate { summary ->
             summary.date to
@@ -439,13 +424,60 @@ private fun buildRangeContext(
             displayStartDayDate,
             selectedDate,
         )
-    return RangeContext(trimpByDate, trimpByDay, displayDayMidnights, ctlSeries, atlSeries)
+    return RangeContext(
+        displayStartDayDate,
+        displayStartDayMs,
+        trimpByDate,
+        trimpByDay,
+        displayDayMidnights,
+        ctlSeries,
+        atlSeries,
+    )
 }
 
 private data class RangeContext(
+    val displayStartDayDate: LocalDate,
+    val displayStartDayMs: Long,
     val trimpByDate: Map<LocalDate, Float>,
     val trimpByDay: Map<Long, Float>,
     val displayDayMidnights: List<Long>,
     val ctlSeries: Map<LocalDate, Float>,
     val atlSeries: Map<LocalDate, Float>,
 )
+
+/** Final [WorkoutsUiState] assembly. Extracted verbatim from buildWorkoutsState; no
+ *  expression changed. */
+private fun assembleWorkoutsUiState(
+    inputs: WorkoutsStateInputs,
+    series: PaddedSeries,
+    displayStartDayMs: Long,
+    yesterdayMetrics: DailyMetrics?,
+    resolvedTodayStrainIncrease: Float?,
+): WorkoutsUiState =
+    with(inputs) {
+        WorkoutsUiState(
+            latestSummary = latestSummary,
+            latestMetrics = latestSummary?.let { DailyMetricsMapper.toMetrics(it, prefs) },
+            dailyTrimp = series.paddedTrimp,
+            dailyStrainRatio = series.paddedStrain,
+            recentWorkouts = recentWorkouts,
+            selectedRange = range,
+            selectedDate = selectedDate,
+            rangeStartMs = displayStartDayMs,
+            rasDailyBreakdown = buildRasBreakdown(selectedDate, rasSummaries, prefs),
+            todayRasScore =
+                latestSummary?.let {
+                    LoadSourceSelector.selectDailyRas(
+                        it,
+                        prefs.rasSourceMode,
+                    )
+                },
+            currentPage = currentPage,
+            totalPages = totalPages,
+            yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
+            yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
+            todayStrainIncrease = resolvedTodayStrainIncrease,
+            trimpPeriodSummary = series.trimpSummary,
+            strainRatioPeriodSummary = series.strainSummary,
+        )
+    }

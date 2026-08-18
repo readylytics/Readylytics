@@ -2,9 +2,12 @@
 
 **Baseline:** branch `main` @ `63254e2f` — 2026-08-17
 **Scope:** 23 self-contained steps across 6 phases (5 P0, 9 P1, 9 P2)
-**Status:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, and Phase 6 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and the phase outcomes below.
+**Status:** Phases 0-6 complete — see [`remediation-baseline.txt`](remediation-baseline.txt) and the phase outcomes below.
 Characterization golden tests pass and scoring output is unchanged. `ScoringRepositoryImpl`
-went **863 -> 440 lines** and constructor dependencies went **21 -> 10** across Steps 20–22.
+went **767 -> 440 lines** and constructor dependencies **21 -> 10** across Steps 20-22, with all
+ten DAOs moved out. The <400-line target was **missed by 40 lines**; `resolveEverydayTrimp`,
+`computeRas` and `buildBaseSummary` remain in the repository. The <=11 constructor target was met.
+(For the full arc: the file was 863 lines before Phase 4.)
 
 > ✅ Phase 6 complete on 2026-08-18.
 
@@ -101,10 +104,10 @@ step 13 are the proof that nothing moved numerically.
 | 13 | ~~Golden-snapshot test~~ ✅ **done 2026-08-18** | P1 | 2 d | 02 |
 | 14 | ~~Extract compute pipeline~~ ✅ **done 2026-08-18** | P1 | 4–5 d | 13 |
 | 15 | ~~Collapse duplicate overloads~~ ✅ **done 2026-08-18** | P2 | 3 h | 14 |
-| 16 | Keyset pagination | P2 | 2 d | 09 |
-| 17 | Collapse `writeJsonStreaming` | P2 | 1 d | 16 |
-| 18 | `WorkoutsStateFactory` | P2 | 2–3 d | 08 |
-| 19 | Housekeeping batch | P2 | 1 d | — |
+| 16 | ~~Keyset pagination~~ ✅ **done 2026-08-18** | P2 | 2 d | 09 |
+| 17 | ~~Collapse `writeJsonStreaming`~~ ✅ **done 2026-08-18** | P2 | 1 d | 16 |
+| 18 | ~~`WorkoutsStateFactory`~~ ✅ **done 2026-08-18** (partial — see Outcome) | P2 | 2–3 d | 08 |
+| 19 | ~~Housekeeping batch~~ ✅ **done 2026-08-18** (1 of 8 sub-items; rest deferred) | P2 | 1 d | — |
 | 20 | ~~Extract `ScoringDayDataLoader`~~ ✅ **done 2026-08-18** | P2 | 3–4 d | 15 |
 | 21 | ~~Move remaining pure helpers to `core:scoring`~~ ✅ **done 2026-08-18** | P2 | 2 d | 20 |
 | 22 | ~~Verify decomposition targets and record~~ ✅ **done 2026-08-18** | P2 | 3 h | 21 |
@@ -1383,7 +1386,7 @@ deleted.
   - `AssembleDailySummaryUseCase`: Encapsulates calibrated and uncalibrated `DailySummary` assembly, baseline overrides, and readiness metric aggregation.
 - **Decomposed and shrunk `ScoringRepositoryImpl`**:
   - Reduced `computeDailySummary` from 490 lines to ~114 lines; eliminated `CyclomaticComplexMethod` detekt warning (0 remaining in `core:database`).
-  - Total file reduced from 856 lines to 768 lines (comfortably below 800 hard limit).
+  - Total file reduced from 856 lines to 767 lines (comfortably below 800 hard limit).
   - Removed mutable `var summary` reassignment chains; split responsibilities into clear private helpers (`processWorkouts`, `resolveEverydayTrimp`, `computeRas`, `buildBaseSummary`, `computeUncalibratedSummary`, `computeCalibratedSummary`).
 - **Verified**: `ScoringGoldenSnapshotTest`, determinism suites, and unit tests green at every commit with 0 scoring drift. Updated `internal-docs/DATA_FLOW.md` (§2.3, §2.6, §4).
 
@@ -1529,6 +1532,19 @@ duplicate-timestamp DAO test passes.
 
 ---
 
+### Outcome
+
+- **Commits**: `9ce032f9` (16a — `pageAfter` on 13 DAOs + `StepRecord` index),
+  `cb2ea173` (16b — DESC keyset methods for UI-facing range queries).
+- **The composite cursor was implemented correctly**, which is the part that mattered:
+  `WHERE timestampMs > :afterTs OR (timestampMs = :afterTs AND sourceRecordRef > :afterRef)`
+  `ORDER BY timestampMs ASC, sourceRecordRef ASC`. A single-column cursor would have silently
+  dropped samples sharing a millisecond — common in Health Connect data.
+- `KeysetPaginationTest` added, including the duplicate-timestamp case.
+- `LocalBackupManager` rewired to `pageAfter` throughout; OFFSET paging is gone from the
+  backup path, so backup cost is no longer O(n²) in sample count.
+
+
 ## Step 17 — Collapse `writeJsonStreaming`'s fourteen copy-pasted paging loops
 
 **Severity:** P2 · **Effort:** 1 d · **Blocked by:** 16
@@ -1616,6 +1632,20 @@ and `LocalBackupManagerTest` is green.
 
 ---
 
+### Outcome
+
+- **Commit**: `8222030a`.
+- 14 copy-pasted `while (true) { getPaged(...) }` blocks collapsed to **one** generic inline
+  helper; `grep -c "while (true)"` on the file returns 1.
+- `currentCoroutineContext().ensureActive()` added inside the loop, so a cancelled backup now
+  stops instead of running to completion — a bug fixed incidentally by the collapse.
+- **Verified**: all 14 entities written by the backup carry `@Serializable`, so the generic
+  `encodeToString` does not reintroduce the runtime-serializer failure fixed in Phase 1.
+- `writeJsonStreaming` is 241 lines, not the <120 this step specified. The residue is 14 call
+  sites plus their per-table encode lambdas, which is irreducible; the duplication itself is
+  gone. Target recorded as missed rather than restated.
+
+
 ## Step 18 — Split `WorkoutsViewModel` using the `VitalsStateFactory` pattern
 
 **Severity:** P2 · **Effort:** 2–3 d · **Blocked by:** 08
@@ -1655,6 +1685,25 @@ has direct unit tests with no `TestScope`, and
 `./gradlew :feature:workouts:testDebugUnitTest` is green.
 
 ---
+
+### Outcome — partial
+
+- **Commit**: `740f7b4d`.
+- **Achieved**: `WorkoutsViewModel` 716 → 396 lines (under the 400 target).
+  `WorkoutsStateFactory` extracted (349 lines) with **10 tests and zero `runTest`** — pure and
+  directly testable, which was this step's primary goal.
+- **Not achieved**: the 5-deep `.combine` chain at `WorkoutsViewModel:243-260` is unchanged.
+  Reducing the flow layering was this step's second stated rationale.
+- **New debt created and then repaid**: the extraction *moved* a 173-line method rather than
+  decomposing it, so detekt flagged `buildWorkoutsState` as `LongMethod` (173),
+  `CyclomaticComplexMethod` (22) and `LongParameterList` (14). A follow-up decomposed it to
+  **79 lines** with complexity under 15 via four verbatim helper extractions
+  (`buildRangeContext`, `buildDailySeries`, `buildPaddedSeries`, `resolveTodayStrainIncrease`).
+  Two violations remain open: `LongMethod` (79 vs 60) and `LongParameterList` (14 vs 8), both
+  stemming from the 14-parameter signature of a UI-state assembler.
+- `CombinedParams` survives, but legitimately — it is now used with `.scan()` for change
+  detection, not as a workaround for `combine`'s arity limit.
+
 
 ## Step 19 — Housekeeping batch
 
@@ -1754,6 +1803,12 @@ one-line reason recorded in `internal-docs/plans/remediation-baseline.txt`.
 
 ---
 
+> ✅ Phase 5 complete on 2026-08-18 — Steps 16 and 17 fully; Step 18 partial; Step 19
+> one sub-item of eight (build cache), `core:scoring` JVM conversion deferred on a Kotlin/AGP
+> compiler incompatibility, six sub-items not started.
+
+---
+
 # Phase 6 — Finish the `ScoringRepositoryImpl` decomposition
 
 Phase 4 delivered the *method* decomposition: the 490-line `computeDailySummary`
@@ -1834,7 +1889,7 @@ rather than the ad-hoc <500 from Step 14.
 - Re-routed `assembleCalibratedSummary` and `assembleUncalibratedSummary` through `AssembleDailySummaryUseCase`.
 - Bound `ReadinessSummaryCoordinator` in `DatabaseRepositoryModule`.
 - Added unit test suite `ReadinessSummaryCoordinatorTest` (7 tests).
-- Reduced `ScoringRepositoryImpl.kt` down to 440 lines (close to the 400-line soft target, well below 800-line hard limit).
+- `ScoringRepositoryImpl.kt` reduced to **440 lines**. The <400-line target was **missed by 40**; the residue is `resolveEverydayTrimp`, `computeRas` and `buildBaseSummary`, which were not in scope for Steps 20-21. Well below the 800-line hard limit.
 - All characterization golden fixtures and determinism regression tests passed with zero drift.
 
 ## Step 22 — Verify and record
@@ -1860,7 +1915,7 @@ the file was 767; that is the failure mode this step exists to avoid repeating.
 
 - **Done**: verified and recorded on 2026-08-18.
 - Measured results:
-  - `ScoringRepositoryImpl.kt`: **440 lines** (down from 768 lines, -42.7%; comfortably below 800 hard limit).
+  - `ScoringRepositoryImpl.kt`: **440 lines** (down from 767; -42.6%). Target was <400 — **missed by 40**.
   - Constructor dependencies: **10 parameters** (down from 21, meeting the $\le 11$ target).
   - Test suite: **3,008 total unit tests** (283 in `:core:database`), 0 failures, 0 errors, 0 skipped.
   - Golden fixtures: `git diff --stat core/database/src/test/resources/golden/` is **empty** (0 diff, 0 drift, 100% exact float matching).

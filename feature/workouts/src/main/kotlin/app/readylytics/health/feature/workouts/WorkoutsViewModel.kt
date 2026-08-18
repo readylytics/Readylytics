@@ -221,19 +221,21 @@ class WorkoutsViewModel
                         val workoutOnlyGains = loadWorkoutOnlyGains(window, prefs, trimpSummaries)
 
                         buildWorkoutsState(
-                            scoringCalculator = scoringCalculator,
-                            latestSummary = latest,
-                            trimpSummaries = trimpSummaries,
-                            rasSummaries = rasSummaries,
-                            prefs = prefs,
-                            range = params.range,
-                            selectedDate = params.date,
-                            zoneId = zoneId,
-                            recentWorkouts = recentItems,
-                            currentPage = clampedPage,
-                            totalPages = totalPages,
-                            earliestLocalDate = earliestLocalDate,
-                            workoutOnlyGains = workoutOnlyGains,
+                            WorkoutsStateInputs(
+                                scoringCalculator = scoringCalculator,
+                                latestSummary = latest,
+                                trimpSummaries = trimpSummaries,
+                                rasSummaries = rasSummaries,
+                                prefs = prefs,
+                                range = params.range,
+                                selectedDate = params.date,
+                                zoneId = zoneId,
+                                recentWorkouts = recentItems,
+                                currentPage = clampedPage,
+                                totalPages = totalPages,
+                                earliestLocalDate = earliestLocalDate,
+                                workoutOnlyGains = workoutOnlyGains,
+                            ),
                         )
                     }
                 }.distinctUntilChanged()

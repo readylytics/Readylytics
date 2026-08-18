@@ -31,18 +31,20 @@ class WorkoutsStateFactoryTest {
     fun `buildWorkoutsState pads daily trimp and daily strain ratio to 7 days for SEVEN_DAYS range`() {
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = null,
-                trimpSummaries = emptyList(),
-                rasSummaries = emptyList(),
-                prefs = UserPreferences(),
-                range = TimeRange.SEVEN_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = null,
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = null,
+                    trimpSummaries = emptyList(),
+                    rasSummaries = emptyList(),
+                    prefs = UserPreferences(),
+                    range = TimeRange.SEVEN_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = null,
+                ),
             )
 
         assertEquals(7, result.dailyTrimp.size)
@@ -55,18 +57,20 @@ class WorkoutsStateFactoryTest {
     fun `buildWorkoutsState pads daily trimp and daily strain ratio to 30 days for THIRTY_DAYS range`() {
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = null,
-                trimpSummaries = emptyList(),
-                rasSummaries = emptyList(),
-                prefs = UserPreferences(),
-                range = TimeRange.THIRTY_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = null,
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = null,
+                    trimpSummaries = emptyList(),
+                    rasSummaries = emptyList(),
+                    prefs = UserPreferences(),
+                    range = TimeRange.THIRTY_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = null,
+                ),
             )
 
         assertEquals(30, result.dailyTrimp.size)
@@ -85,18 +89,20 @@ class WorkoutsStateFactoryTest {
 
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = null,
-                trimpSummaries = summaries,
-                rasSummaries = emptyList(),
-                prefs = UserPreferences(),
-                range = TimeRange.SEVEN_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = selectedDate.minusDays(5), // 6 days tenure < 7
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = null,
+                    trimpSummaries = summaries,
+                    rasSummaries = emptyList(),
+                    prefs = UserPreferences(),
+                    range = TimeRange.SEVEN_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = selectedDate.minusDays(5), // 6 days tenure < 7
+                ),
             )
 
         val lastPoint = result.dailyStrainRatio.last()
@@ -115,18 +121,20 @@ class WorkoutsStateFactoryTest {
 
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = null,
-                trimpSummaries = summaries,
-                rasSummaries = emptyList(),
-                prefs = UserPreferences(),
-                range = TimeRange.SEVEN_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = selectedDate.minusDays(6), // 7 days tenure >= 7
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = null,
+                    trimpSummaries = summaries,
+                    rasSummaries = emptyList(),
+                    prefs = UserPreferences(),
+                    range = TimeRange.SEVEN_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = selectedDate.minusDays(6), // 7 days tenure >= 7
+                ),
             )
 
         val lastPoint = result.dailyStrainRatio.last()
@@ -145,18 +153,20 @@ class WorkoutsStateFactoryTest {
 
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = latest,
-                trimpSummaries = listOf(latest),
-                rasSummaries = emptyList(),
-                prefs = UserPreferences(),
-                range = TimeRange.SEVEN_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = selectedDate.minusDays(10),
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = latest,
+                    trimpSummaries = listOf(latest),
+                    rasSummaries = emptyList(),
+                    prefs = UserPreferences(),
+                    range = TimeRange.SEVEN_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = selectedDate.minusDays(10),
+                ),
             )
 
         assertEquals(latest, result.latestSummary)
@@ -176,18 +186,20 @@ class WorkoutsStateFactoryTest {
 
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = null,
-                trimpSummaries = emptyList(),
-                rasSummaries = listOf(yesterdaySummary),
-                prefs = UserPreferences(),
-                range = TimeRange.SEVEN_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = null,
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = null,
+                    trimpSummaries = emptyList(),
+                    rasSummaries = listOf(yesterdaySummary),
+                    prefs = UserPreferences(),
+                    range = TimeRange.SEVEN_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = null,
+                ),
             )
 
         assertEquals(0.85f, result.yesterdayStrainRatio!!, 0.001f)
@@ -212,18 +224,20 @@ class WorkoutsStateFactoryTest {
 
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = null,
-                trimpSummaries = summaries,
-                rasSummaries = emptyList(),
-                prefs = prefs,
-                range = TimeRange.SEVEN_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = selectedDate.minusDays(10),
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = null,
+                    trimpSummaries = summaries,
+                    rasSummaries = emptyList(),
+                    prefs = prefs,
+                    range = TimeRange.SEVEN_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = selectedDate.minusDays(10),
+                ),
             )
 
         // 1.5f - 1.2f = 0.3f
@@ -237,19 +251,21 @@ class WorkoutsStateFactoryTest {
 
         val result =
             buildWorkoutsState(
-                scoringCalculator = scoringCalculator,
-                latestSummary = null,
-                trimpSummaries = emptyList(),
-                rasSummaries = emptyList(),
-                prefs = prefs,
-                range = TimeRange.SEVEN_DAYS,
-                selectedDate = selectedDate,
-                zoneId = zoneId,
-                recentWorkouts = emptyList(),
-                currentPage = 1,
-                totalPages = 1,
-                earliestLocalDate = selectedDate.minusDays(10),
-                workoutOnlyGains = workoutGains,
+                WorkoutsStateInputs(
+                    scoringCalculator = scoringCalculator,
+                    latestSummary = null,
+                    trimpSummaries = emptyList(),
+                    rasSummaries = emptyList(),
+                    prefs = prefs,
+                    range = TimeRange.SEVEN_DAYS,
+                    selectedDate = selectedDate,
+                    zoneId = zoneId,
+                    recentWorkouts = emptyList(),
+                    currentPage = 1,
+                    totalPages = 1,
+                    earliestLocalDate = selectedDate.minusDays(10),
+                    workoutOnlyGains = workoutGains,
+                ),
             )
 
         assertEquals(0.30f, result.todayStrainIncrease!!, 0.001f)
