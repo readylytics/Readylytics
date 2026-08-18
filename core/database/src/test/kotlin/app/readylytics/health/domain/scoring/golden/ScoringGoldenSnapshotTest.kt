@@ -17,6 +17,7 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
@@ -96,7 +97,6 @@ class ScoringGoldenSnapshotTest {
             sleepSessionDao = db.sleepSessionDao(),
             dailySummaryDao = db.dailySummaryDao(),
             settingsRepo = settingsRepository,
-            scoringCalculator = scoringCalculator,
             baselineComputer = baselineComputer,
             buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
             assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
@@ -104,6 +104,7 @@ class ScoringGoldenSnapshotTest {
             scoringConfigFactory = scoringConfigFactory,
             computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
             resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
+            assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
             heartRateDao = db.heartRateDao(),
             minuteBucketDao = db.minuteBucketDao(),
             weightRecordDao = db.weightRecordDao(),
@@ -111,7 +112,6 @@ class ScoringGoldenSnapshotTest {
             bloodPressureRecordDao = db.bloodPressureRecordDao(),
             oxygenSaturationRecordDao = db.oxygenSaturationRecordDao(),
             bodyTemperatureRecordDao = db.bodyTemperatureRecordDao(),
-            sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
             scoringHistoryRepository = scoringHistoryRepository,
             defaultDispatcher = UnconfinedTestDispatcher(),
         )

@@ -57,7 +57,6 @@ class ScoringRepositoryImplTest {
             sleepSessionDao,
             dailySummaryDao,
             settingsRepo,
-            scoringCalculator,
             baselineComputer,
             BuildLoadSeriesUseCase(scoringCalculator),
             AssembleEverydayLoadInputUseCase(),
@@ -65,6 +64,7 @@ class ScoringRepositoryImplTest {
             scoringConfigFactory,
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             ResolveDailyBaselinesUseCase(baselineComputer),
+            AssembleDailySummaryUseCase(),
             heartRateDao,
             minuteBucketDao,
             weightRecordDao,
@@ -72,7 +72,6 @@ class ScoringRepositoryImplTest {
             bloodPressureRecordDao,
             oxygenSaturationRecordDao,
             bodyTemperatureRecordDao,
-            sleepPercentileRhrCalculator,
             scoringHistoryRepository,
             dispatcher,
         )

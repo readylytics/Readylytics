@@ -62,7 +62,6 @@ class ScoringDeterminismRegressionTest {
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
-    private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
@@ -75,7 +74,6 @@ class ScoringDeterminismRegressionTest {
                 sleepSessionDao,
                 dailySummaryDao,
                 settingsRepo,
-                scoringCalculator,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
                 AssembleEverydayLoadInputUseCase(),
@@ -83,6 +81,7 @@ class ScoringDeterminismRegressionTest {
                 scoringConfigFactory,
                 ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
                 ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleDailySummaryUseCase(),
                 heartRateDao,
                 minuteBucketDao,
                 weightRecordDao,
@@ -90,7 +89,6 @@ class ScoringDeterminismRegressionTest {
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
-                sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
                 UnconfinedTestDispatcher(),
             )

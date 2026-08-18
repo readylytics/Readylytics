@@ -45,7 +45,6 @@ class ScoringPointInTimeRegressionTest {
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
-    private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
@@ -58,7 +57,6 @@ class ScoringPointInTimeRegressionTest {
                 sleepSessionDao,
                 dailySummaryDao,
                 settingsRepo,
-                scoringCalculator,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
                 AssembleEverydayLoadInputUseCase(),
@@ -66,6 +64,7 @@ class ScoringPointInTimeRegressionTest {
                 scoringConfigFactory,
                 ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
                 ResolveDailyBaselinesUseCase(baselineComputer),
+                AssembleDailySummaryUseCase(),
                 heartRateDao,
                 minuteBucketDao,
                 weightRecordDao,
@@ -73,7 +72,6 @@ class ScoringPointInTimeRegressionTest {
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
-                sleepPercentileRhrCalculator,
                 scoringHistoryRepository,
                 UnconfinedTestDispatcher(),
             )

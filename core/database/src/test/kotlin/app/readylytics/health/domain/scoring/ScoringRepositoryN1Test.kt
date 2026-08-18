@@ -179,7 +179,6 @@ class ScoringRepositoryN1Test {
                 sleepSessionDao = sleepSessionDao,
                 dailySummaryDao = dailySummaryDao,
                 settingsRepo = settingsRepo,
-                scoringCalculator = scoringCalculator,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator),
                 assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
@@ -187,6 +186,7 @@ class ScoringRepositoryN1Test {
                 scoringConfigFactory = scoringConfigFactory,
                 computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
                 resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
+                assembleDailySummaryUseCase = AssembleDailySummaryUseCase(),
                 heartRateDao = heartRateDao,
                 minuteBucketDao = minuteBucketDao,
                 weightRecordDao = weightRecordDao,
@@ -194,7 +194,6 @@ class ScoringRepositoryN1Test {
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao = bodyTemperatureRecordDao,
-                sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 scoringHistoryRepository = scoringHistoryRepository,
                 defaultDispatcher = UnconfinedTestDispatcher(),
             )

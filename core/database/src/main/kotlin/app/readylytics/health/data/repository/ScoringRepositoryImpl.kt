@@ -10,47 +10,47 @@ import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.local.reconstructTimestampedSamples
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.preferences.scoringZone
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.domain.scoring.LongInterval
 import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
-import app.readylytics.health.domain.scoring.ScoringCalculator
+import app.readylytics.health.domain.scoring.ScoringConfig
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.TrimpDateBucketer
-import app.readylytics.health.domain.scoring.components.Phase
 import app.readylytics.health.domain.scoring.sleep.SleepDayAggregate
 import app.readylytics.health.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
-import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.logD
-import app.readylytics.health.di.DefaultDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -58,7 +58,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import java.util.TreeMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,7 +71,6 @@ class ScoringRepositoryImpl
         private val sleepSessionDao: SleepSessionDao,
         private val dailySummaryDao: DailySummaryDao,
         private val settingsRepo: SettingsRepository,
-        private val scoringCalculator: ScoringCalculator,
         private val baselineComputer: BaselineComputer,
         private val buildLoadSeriesUseCase: BuildLoadSeriesUseCase,
         private val assembleEverydayLoadInputUseCase: AssembleEverydayLoadInputUseCase,
@@ -80,6 +78,7 @@ class ScoringRepositoryImpl
         private val scoringConfigFactory: ScoringConfigFactory,
         private val computeDailyTrimpUseCase: ComputeDailyTrimpUseCase,
         private val resolveDailyBaselinesUseCase: ResolveDailyBaselinesUseCase,
+        private val assembleDailySummaryUseCase: AssembleDailySummaryUseCase,
         private val heartRateDao: HeartRateDao,
         private val minuteBucketDao: MinuteBucketDao,
         private val weightRecordDao: WeightRecordDao,
@@ -87,7 +86,6 @@ class ScoringRepositoryImpl
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
-        private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
         private val scoringHistoryRepository: ScoringHistoryRepository,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ScoringRepository {
@@ -96,9 +94,7 @@ class ScoringRepositoryImpl
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,
             steps: Long?,
-        ) {
-            computeAndPersistDailySummary(targetDate, steps, settingsRepo.userPreferences.first())
-        }
+        ) = computeAndPersistDailySummary(targetDate, steps, settingsRepo.userPreferences.first())
 
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,
@@ -107,14 +103,8 @@ class ScoringRepositoryImpl
         ) {
             calculationMutex.withLock {
                 val zoneId = prefs.scoringZone()
-                val summary =
-                    computeDailySummary(targetDate, prefs).let { computed ->
-                        if (steps != null) {
-                            computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-                        } else {
-                            computed
-                        }
-                    }
+                val computed = computeDailySummary(targetDate, prefs)
+                val summary = if (steps != null) computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) else computed
                 persist(summary, zoneId)
             }
         }
@@ -128,14 +118,8 @@ class ScoringRepositoryImpl
         ) {
             calculationMutex.withLock {
                 val zoneId = prefs.scoringZone()
-                val summary =
-                    computeDailySummary(targetDate, prefs, trimpContext, baselineContext).let { computed ->
-                        if (steps != null) {
-                            computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-                        } else {
-                            computed
-                        }
-                    }
+                val computed = computeDailySummary(targetDate, prefs, trimpContext, baselineContext)
+                val summary = if (steps != null) computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) else computed
                 persist(summary, zoneId)
             }
         }
@@ -145,17 +129,11 @@ class ScoringRepositoryImpl
             endDate: LocalDate,
             zoneId: ZoneId,
         ): WalkForwardTrimpContext {
-            val fromMs =
-                startDate
-                    .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
+            val fromMs = startDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2).atStartOfDay(zoneId).toInstant().toEpochMilli()
             val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
             return WalkForwardTrimpContext(
                 dailyTrimpByDate = TreeMap(TrimpDateBucketer.bucket(workoutDao.getTrimpPoints(fromMs, toMs), zoneId)),
-                everydayTrimpByDate =
-                    TreeMap(TrimpDateBucketer.bucket(dailySummaryDao.getEverydayTrimpPoints(fromMs, toMs), zoneId)),
+                everydayTrimpByDate = TreeMap(TrimpDateBucketer.bucket(dailySummaryDao.getEverydayTrimpPoints(fromMs, toMs), zoneId)),
             )
         }
 
@@ -167,42 +145,25 @@ class ScoringRepositoryImpl
             WalkForwardBaselineContext(baselineComputer.prefetchWalkForwardSessions(startDate, endDate, zoneId))
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary {
-            // The private overload persists modelTrimp back to workout_records
-            // (see L278), so this path is not read-only and must serialize with
-            // the walk-forward recompute like computeAndPersistDailySummary does.
             val prefs = settingsRepo.userPreferences.first()
-            return calculationMutex.withLock {
-                computeDailySummary(targetDate, prefs)
-            }
+            return calculationMutex.withLock { computeDailySummary(targetDate, prefs) }
         }
 
         private suspend fun computeDailySummary(
             targetDate: LocalDate,
-            prefs: app.readylytics.health.data.preferences.UserPreferences,
+            prefs: UserPreferences,
             trimpContext: WalkForwardTrimpContext? = null,
             baselineContext: WalkForwardBaselineContext? = null,
         ): DailySummary =
             withContext(defaultDispatcher) {
                 val zoneId = prefs.scoringZone()
-                val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
-                val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
-                val dayMidnightMs = dayMidnight.toEpochMilli()
-                val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
-                val sleepDayPolicy =
-                    SleepDayPolicy(
-                        coreMergeGapMinutes = prefs.coreMergeGapMinutes,
-                        supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
-                        minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
-                        supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
-                        scoringZoneId = zoneId,
-                    )
-
-                // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
+                val dayMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                val nextDayMidnightMs = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                val sleepDayPolicy = createSleepDayPolicy(prefs, zoneId)
                 val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId)
 
                 val initialBaselines =
                     resolveDailyBaselinesUseCase.resolveInitialBaselines(
-                        targetDate = targetDate,
                         dayMidnightMs = dayMidnightMs,
                         nextDayMidnightMs = nextDayMidnightMs,
                         prefs = prefs,
@@ -210,438 +171,440 @@ class ScoringRepositoryImpl
                         sleepDayPolicy = sleepDayPolicy,
                         prefetchedSessions = baselineContext?.sessions,
                     )
-                val hrMax = initialBaselines.hrMax
-                val frozenHrMax = initialBaselines.frozenHrMax
-                val frozenRasScalingFactor = initialBaselines.frozenRasScalingFactor
-                val rhrBaselineValue = initialBaselines.rhrBaselineValue
-                val frozenSnapshot = initialBaselines.frozenSnapshot
-
-                val installDateFromPrefs = LocalDate.ofEpochDay(prefs.installDate / 86400000)
                 val scoringConfig =
                     scoringConfigFactory.build(
                         userPreferences = prefs,
-                        installDate = installDateFromPrefs,
+                        installDate = LocalDate.ofEpochDay(prefs.installDate / 86400000),
                         currentDate = targetDate,
                     )
 
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
 
-                val workouts = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
-                val allDayExerciseHrSamples =
-                    if (workouts.isNotEmpty()) {
-                        val minStart = workouts.minOf { it.startTime }
-                        val maxEnd = workouts.maxOf { it.endTime }
-                        heartRateDao
-                            .getByTimeRange(minStart, maxEnd)
-                            .filter { it.recordType == RecordType.EXERCISE.name }
-                            .sortedBy { it.timestampMs }
-                    } else {
-                        emptyList()
-                    }
-                val workoutInputs =
-                    workouts.map { workout ->
-                        val workoutHrSamples = exerciseSamplesForWorkout(workout, allDayExerciseHrSamples)
-                        ComputeDailyTrimpUseCase.WorkoutInput(
-                            id = workout.id,
-                            startTime = workout.startTime,
-                            endTime = workout.endTime,
-                            storedTrimp = workout.trimp,
-                            currentModelTrimp = workout.modelTrimp,
-                            samples =
-                                workoutHrSamples.map { sample ->
-                                    ComputeWorkoutTrimpUseCase.HeartRateSample(
-                                        java.time.Instant.ofEpochMilli(sample.timestampMs),
-                                        sample.beatsPerMinute,
-                                    )
-                                },
-                        )
-                    }
-                val dailyTrimpResult =
-                    computeDailyTrimpUseCase.execute(
-                        workouts = workoutInputs,
-                        prefs = prefs,
-                        rhrBaselineValue = rhrBaselineValue,
-                        frozenHrMax = frozenHrMax,
-                    )
-                val dailyTrimpRaw = dailyTrimpResult.totalDailyTrimpRaw
-                if (dailyTrimpResult.workoutModelTrimpUpdates.isNotEmpty()) {
-                    val updateMap = dailyTrimpResult.workoutModelTrimpUpdates.associate { it.workoutId to it.modelTrimp }
-                    val workoutEntitiesToUpdate =
-                        workouts.filter { it.id in updateMap }.map { workout ->
-                            workout.copy(modelTrimp = updateMap[workout.id])
-                        }
-                    workoutDao.upsertAll(workoutEntitiesToUpdate)
-                }
+                val (workouts, dailyTrimpRaw) =
+                    processWorkouts(dayMidnightMs, nextDayMidnightMs, initialBaselines.rhrBaselineValue, initialBaselines.frozenHrMax, prefs)
 
-                // Sleep intervals are resolved before the everyday-HR block because the load calculator
-                // must exclude every sleep segment contributing to this score day. Recovery metrics still
-                // run only against the core cluster via currentSessionIds.
                 val aggregatedSleep = resolveSleepAggregation(targetDate, zoneId, prefs)
                 val session = aggregatedSleep?.scoringSession ?: sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
 
-                // Everyday-HR load variant: waking, non-workout, non-sleep minutes (interval
-                // exclusion handled inside the calculator). PERF-006/WP-21: buckets are
-                // pre-averaged and plausibility-filtered in SQL (getMinuteBuckets), not fetched as
-                // raw per-sample rows and bucketed in Kotlin.
-                val everydayHrBuckets = mergedMinuteBuckets(dayMidnightMs, nextDayMidnightMs)
-                val sleepIntervalsMs =
-                    aggregatedSleep?.allSleepIntervals
-                        ?: if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
-                val workoutIntervalsMs = workouts.map { LongInterval(it.startTime, it.endTime) }
                 val everydayResult =
-                    assembleEverydayLoadInputUseCase.execute(
-                        dayStartMs = dayMidnightMs,
-                        dayEndMs = nextDayMidnightMs,
-                        hrBuckets = everydayHrBuckets,
-                        sleepIntervalsMs = sleepIntervalsMs,
-                        workoutIntervalsMs = workoutIntervalsMs,
-                        workoutOnlyTrimp = dailyTrimpRaw,
-                        rhrBaseline = rhrBaselineValue,
-                        hrMax = hrMax,
+                    resolveEverydayTrimp(
+                        dayMidnightMs = dayMidnightMs,
+                        nextDayMidnightMs = nextDayMidnightMs,
+                        workouts = workouts,
+                        session = session,
+                        aggregatedSleep = aggregatedSleep,
+                        dailyTrimpRaw = dailyTrimpRaw,
+                        rhrBaselineValue = initialBaselines.rhrBaselineValue,
+                        hrMax = initialBaselines.hrMax,
                         prefs = prefs,
                     )
                 val trimpEverydayHr = everydayResult.totalEverydayTrimp
-                val everydayCoverageMinutes = everydayResult.coverageMinutes
-                val everydayLoadConfidence = everydayResult.confidence.name
 
-                // PERF-002/WP-20: publish today's freshly computed TRIMP values into the shared
-                // walk-forward context (if any) as soon as they're known, regardless of whether the
-                // calibration branch below returns early -- future days in the same run must see
-                // this day's contribution exactly as a fresh DB query would. `trimpEverydayHr` is
-                // always persisted (every recomputed day gets a daily_summaries row), matching
-                // DailySummaryDao.getEverydayTrimpPoints' `IS NOT NULL` filter unconditionally.
-                // `dailyTrimpRaw` only becomes a real WorkoutDao.getTrimpPoints row when a workout
-                // exists for the day -- gate on that so a zero-workout day doesn't synthesize a
-                // bucket key no DB query would ever produce (which would shift a later day's
-                // `earliestDataDate` and change its EMA result).
-                trimpContext?.let { ctx ->
-                    ctx.everydayTrimpByDate[targetDate] = trimpEverydayHr
-                    if (workouts.isNotEmpty()) {
-                        ctx.dailyTrimpByDate[targetDate] = dailyTrimpRaw
-                    }
-                }
+                publishTrimpToContext(trimpContext, targetDate, trimpEverydayHr, dailyTrimpRaw, workouts.isNotEmpty())
 
-                // Enforce 75-point daily cap. Standard RAS is pure load, no readiness penalty.
-                // Round daily RAS to 1 decimal place to ensure display consistency.
-                val scalingFactor = frozenRasScalingFactor ?: scoringConfig.rasScalingFactor
-                val dailyRasRaw = RasCalculator.calculateDailyRas(dailyTrimpRaw, scalingFactor)
-                val dailyRas = round(dailyRasRaw * 10f) / 10f
-                val dailyRasEverydayHr =
-                    round(RasCalculator.calculateDailyRas(trimpEverydayHr, scalingFactor) * 10f) / 10f
+                val scalingFactor = initialBaselines.frozenRasScalingFactor ?: scoringConfig.rasScalingFactor
+                val rasTotals = computeRas(dailyTrimpRaw, trimpEverydayHr, scalingFactor, targetDate, zoneId)
 
-                val last6DaysRasWorkoutOnly = sumRasLastSixDays(targetDate, zoneId) { it.rasWorkoutOnly }
-                val last6DaysRasEverydayHr = sumRasLastSixDays(targetDate, zoneId) { it.rasEverydayHr }
-                // Total RAS is rounded to nearest integer to match the UI's simple sum of rounded daily values.
-                val totalRasWorkoutOnly = round(dailyRas + last6DaysRasWorkoutOnly)
-                val totalRasEverydayHr = round(dailyRasEverydayHr + last6DaysRasEverydayHr)
-
-                @Suppress("SENSELESS_COMPARISON")
-                val dailyTrimpPresent = dailyTrimpRaw != null
-                logD("ScoringRepository") {
-                    "RAS calculation completed: workoutsFound=${workouts.isNotEmpty()}, dailyTrimpPresent=$dailyTrimpPresent"
-                }
-
-                val latestWeight = weightRecordDao.getLatestUpTo(nextDayMidnightMs)
-                val latestBodyFat = bodyFatRecordDao.getLatestUpTo(nextDayMidnightMs)
-                val latestBP = bloodPressureRecordDao.getLatestUpTo(nextDayMidnightMs)
-
-                var summary =
-                    (
-                        scoringHistoryRepository
-                            .getDailySummaryByDate(dayMidnightMs, zoneId)
-                            ?.let { DailySummaryMapper.toEntity(it, zoneId) }
-                            ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
-                    ).copy(
-                        trimpWorkoutOnly = dailyTrimpRaw,
+                val baseSummary =
+                    buildBaseSummary(
+                        targetDate = targetDate,
+                        dailySummary = dailySummary,
+                        dailyTrimpRaw = dailyTrimpRaw,
                         trimpEverydayHr = trimpEverydayHr,
-                        rasWorkoutOnly = dailyRas,
-                        rasEverydayHr = dailyRasEverydayHr,
-                        totalRasWorkoutOnly = totalRasWorkoutOnly,
-                        totalRasEverydayHr = totalRasEverydayHr,
-                        everydayCoverageMinutes = everydayCoverageMinutes,
-                        everydayLoadConfidence = everydayLoadConfidence,
-                        weightKg = latestWeight?.weightKg,
-                        bodyFatPercent = latestBodyFat?.bodyFatPercent,
-                        bloodPressureSystolic = latestBP?.systolicMmHg,
-                        bloodPressureDiastolic = latestBP?.diastolicMmHg,
-                        supplementalSleepDurationMinutes = aggregatedSleep?.aggregate?.supplementalSleepDurationMinutes,
-                        napCount = aggregatedSleep?.aggregate?.supplementalBlocks?.size,
+                        rasTotals = rasTotals,
+                        everydayResult = everydayResult,
+                        nextDayMidnightMs = nextDayMidnightMs,
+                        aggregatedSleep = aggregatedSleep,
                     )
 
                 val isCalibrated =
-                    dailySummary?.baselineCalculatedAtDate != null ||
-                        baselineComputer
-                            .computeHrvWindowsBetween(
+                    isCalibrated(dailySummary, dayMidnightMs, nextDayMidnightMs, sleepDayPolicy, baselineContext?.sessions, session != null)
+
+                val avgSpo2 = resolveAvgSpo2(session)
+                val avgBodyTemp = resolveAvgBodyTemp(session)
+
+                val finalSummary =
+                    if (!isCalibrated) {
+                        val calibHrvBaseline =
+                            baselineComputer.computeHrvBaselineBetween(
                                 fromMs = dayMidnightMs,
                                 toMs = nextDayMidnightMs,
+                                hrvBaselineOverride = prefs.hrvBaselineOverride,
                                 sleepDayPolicy = sleepDayPolicy,
                                 prefetchedSessions = baselineContext?.sessions,
-                            )?.validHistoricalDayCount
-                            ?.plus(if (session != null) 1 else 0)
-                            ?.let { it >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION }
-                            ?: false
-
-                val avgSpo2 =
-                    if (session != null) {
-                        val spo2Samples = oxygenSaturationRecordDao.getByTimeRange(session.startTime, session.endTime)
-                        if (spo2Samples.isNotEmpty()) {
-                            spo2Samples
-                                .asSequence()
-                                .map { it.percentage }
-                                .average()
-                                .toFloat()
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
-                    }
-
-                val avgBodyTemp =
-                    if (session != null) {
-                        val bodyTempSamples = bodyTemperatureRecordDao.getByTimeRange(session.startTime, session.endTime)
-                        if (bodyTempSamples.isNotEmpty()) {
-                            bodyTempSamples
-                                .asSequence()
-                                .map { it.celsius }
-                                .average()
-                                .toFloat()
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
-                    }
-
-                if (!isCalibrated) {
-                    if (session != null) {
-                        val hrvValues =
-                            if (currentSessionIds.size <= 1) {
-                                scoringHistoryRepository.getSleepRmssdForSession(session.id)
-                            } else {
-                                scoringHistoryRepository
-                                    .getSleepRmssdForSessionsMap(currentSessionIds.toList())
-                                    .values
-                                    .flatten()
-                            }
-                        val avgHrv =
-                            if (hrvValues.isNotEmpty()) {
-                                (hrvValues.sum() / hrvValues.size).toInt()
-                            } else {
-                                null
-                            }
-                        val sleepHrSamples =
-                            if (currentSessionIds.size <= 1) {
-                                scoringHistoryRepository.getSleepHrSamplesForSession(session.id)
-                            } else {
-                                scoringHistoryRepository
-                                    .getSleepHrProjectionForSessions(currentSessionIds.toList())
-                                    .map { it.beatsPerMinute }
-                                    .sorted()
-                            }
-                        val avgRhr =
-                            if (sleepHrSamples.isNotEmpty()) {
-                                val idx =
-                                    Math
-                                        .round((prefs.restingHrPercentile / 100.0) * (sleepHrSamples.size - 1))
-                                        .toInt()
-                                        .coerceIn(0, sleepHrSamples.size - 1)
-                                sleepHrSamples[idx]
-                            } else {
-                                null
-                            }
-                        summary =
-                            summary.copy(
-                                nocturnalHrv = avgHrv,
-                                restingHeartRate = avgRhr,
-                                sleepDurationMinutes = session.durationMinutes,
-                                deepSleepPercent =
-                                    if (session.durationMinutes > 0) {
-                                        session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f
-                                    } else {
-                                        null
-                                    },
-                                remSleepPercent =
-                                    if (session.durationMinutes > 0) {
-                                        session.remSleepMinutes / session.durationMinutes.toFloat() * 100f
-                                    } else {
-                                        null
-                                    },
-                                isCalibrating = true,
-                                avgSleepingSpo2 = avgSpo2,
-                                avgSleepingBodyTemp = avgBodyTemp,
-                                snapshotCalibrationPhase = Phase.CALIBRATION.name,
                             )
+                        computeUncalibratedSummary(
+                            session = session,
+                            currentSessionIds = currentSessionIds,
+                            baseSummary = baseSummary,
+                            avgSpo2 = avgSpo2,
+                            avgBodyTemp = avgBodyTemp,
+                            calibHrvBaseline = calibHrvBaseline,
+                            rhrBaselineValue = initialBaselines.rhrBaselineValue,
+                            prefs = prefs,
+                        )
                     } else {
-                        summary =
-                            summary.copy(
-                                isCalibrating = true,
-                                avgSleepingSpo2 = avgSpo2,
-                                avgSleepingBodyTemp = avgBodyTemp,
-                                snapshotCalibrationPhase = Phase.CALIBRATION.name,
-                            )
-                    }
-
-                    // Bounded baselines during calibration prevent default-50bpm display on dashboard.
-                    val calibHrvBaseline =
-                        baselineComputer.computeHrvBaselineBetween(
-                            fromMs = dayMidnightMs,
-                            toMs = nextDayMidnightMs,
-                            hrvBaselineOverride = prefs.hrvBaselineOverride,
+                        computeCalibratedSummary(
+                            targetDate = targetDate,
+                            zoneId = zoneId,
+                            nextDayMidnightMs = nextDayMidnightMs,
+                            session = session,
+                            currentSessionIds = currentSessionIds,
+                            baseSummary = baseSummary,
+                            dailyTrimpRaw = dailyTrimpRaw,
+                            trimpEverydayHr = trimpEverydayHr,
+                            avgSpo2 = avgSpo2,
+                            avgBodyTemp = avgBodyTemp,
+                            initialBaselines = initialBaselines,
+                            scoringConfig = scoringConfig,
+                            prefs = prefs,
                             sleepDayPolicy = sleepDayPolicy,
-                            prefetchedSessions = baselineContext?.sessions,
+                            trimpContext = trimpContext,
+                            baselineContext = baselineContext,
                         )
+                    }
 
-                    // Calibration bypasses computeSleepMetricsUseCase; collect directly to populate restingHrBaseline + rhrRatio
-                    val rhrWakeResult =
-                        if (session != null) {
-                            sleepPercentileRhrCalculator.collect(
-                                session = SleepSessionMapper.toDomain(session),
-                                dayMidnight = dayMidnight,
-                                percentile = prefs.restingHrPercentile,
-                                currentSessionIds = currentSessionIds,
-                            )
-                        } else {
-                            null
-                        }
+                logTelemetry(scoringConfig, prefs, rasTotals.last6DaysRasWorkoutOnly, finalSummary.totalRasWorkoutOnly)
+                finalSummary
+            }
 
-                    summary =
-                        summary.copy(
-                            hrvBaseline = calibHrvBaseline,
-                            rhrBpm = rhrBaselineValue,
-                        )
+        private fun createSleepDayPolicy(prefs: UserPreferences, zoneId: ZoneId): SleepDayPolicy =
+            SleepDayPolicy(
+                coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                scoringZoneId = zoneId,
+            )
 
-                    val updatedAudit =
-                        scoringConfig.auditTrail.copy(
-                            appliedSf = scoringConfig.rasScalingFactor,
-                            physiologyProfile = prefs.physiologyProfile.name,
-                            rasTotalPre = last6DaysRasWorkoutOnly,
-                            rasTotalPost = summary.totalRasWorkoutOnly,
-                        )
-                    logD("ScoringConfig") { "Telemetry: $updatedAudit" }
-
-                    return@withContext DailySummaryMapper.toDomain(summary, zoneId)
+        private suspend fun processWorkouts(
+            dayMidnightMs: Long,
+            nextDayMidnightMs: Long,
+            rhrBaselineValue: Float,
+            frozenHrMax: Float?,
+            prefs: UserPreferences,
+        ): Pair<List<WorkoutRecordEntity>, Float> {
+            val workouts = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
+            val allDayExerciseHrSamples =
+                if (workouts.isNotEmpty()) {
+                    heartRateDao.getByTimeRange(workouts.minOf { it.startTime }, workouts.maxOf { it.endTime })
+                        .filter { it.recordType == RecordType.EXERCISE.name }
+                        .sortedBy { it.timestampMs }
+                } else {
+                    emptyList()
                 }
-
-                // PERF-002/WP-20: fromDate is a fixed 84-day-lookback anchor identical to the DB
-                // query's window this replaces (WorkoutDao.getTrimpPoints /
-                // DailySummaryDao.getEverydayTrimpPoints's `startTime/dateMidnightMs >= ctlFetchFrom`
-                // bound), so slicing a shared walk-forward map for `[fromDate, targetDate]` returns
-                // exactly what a fresh per-day query would have. SCORE-005: today's freshly computed
-                // value is always injected directly (already true in the shared context via the
-                // publish step above; re-applied here too since the single-day fallback path below
-                // has no such prior write) -- mirrors the everyday-HR series and keeps this read
-                // independent of the upsertAll above being visible through this exact query.
-                val fromDate = targetDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
-                val dailyTrimpByDate =
-                    (
-                        trimpContext?.dailyTrimpByDate?.subMap(fromDate, true, targetDate, true)
-                            ?: TrimpDateBucketer.bucket(
-                                workoutDao.getTrimpPoints(
-                                    fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                                    nextDayMidnightMs,
-                                ),
-                                zoneId,
+            val workoutInputs =
+                workouts.map { workout ->
+                    val workoutHrSamples = exerciseSamplesForWorkout(workout, allDayExerciseHrSamples)
+                    ComputeDailyTrimpUseCase.WorkoutInput(
+                        id = workout.id,
+                        startTime = workout.startTime,
+                        endTime = workout.endTime,
+                        storedTrimp = workout.trimp,
+                        currentModelTrimp = workout.modelTrimp,
+                        samples = workoutHrSamples.map { sample ->
+                            ComputeWorkoutTrimpUseCase.HeartRateSample(
+                                java.time.Instant.ofEpochMilli(sample.timestampMs),
+                                sample.beatsPerMinute,
                             )
-                    ).toMutableMap().apply { put(targetDate, dailyTrimpRaw) }
-
-                // Everyday-HR ATL/CTL: same batched-vs-fallback resolution as above. A defensive copy
-                // (toMutableMap) ensures the workout-only series above is never mutated/contaminated.
-                val everydayTrimpByDate =
-                    (
-                        trimpContext?.everydayTrimpByDate?.subMap(fromDate, true, targetDate, true)
-                            ?: TrimpDateBucketer.bucket(
-                                dailySummaryDao.getEverydayTrimpPoints(
-                                    fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                                    nextDayMidnightMs,
-                                ),
-                                zoneId,
-                            )
-                    ).toMutableMap().apply { put(targetDate, trimpEverydayHr) }
-
-                val loadSeries = buildLoadSeriesUseCase.execute(targetDate, dailyTrimpByDate, everydayTrimpByDate)
-
-                summary =
-                    summary.copy(
-                        atlWorkoutOnly = loadSeries.atl,
-                        ctlWorkoutOnly = loadSeries.ctl,
-                        strainRatioWorkoutOnly = loadSeries.strainRatio,
-                        loadScoreWorkoutOnly = loadSeries.loadScore,
-                        atlEverydayHr = loadSeries.atlEverydayHr,
-                        ctlEverydayHr = loadSeries.ctlEverydayHr,
-                        strainRatioEverydayHr = loadSeries.strainRatioEverydayHr,
-                        loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
+                        },
                     )
+                }
+            val dailyTrimpResult = computeDailyTrimpUseCase.execute(workoutInputs, prefs, rhrBaselineValue, frozenHrMax)
+            if (dailyTrimpResult.workoutModelTrimpUpdates.isNotEmpty()) {
+                val updateMap = dailyTrimpResult.workoutModelTrimpUpdates.associate { it.workoutId to it.modelTrimp }
+                workoutDao.upsertAll(workouts.filter { it.id in updateMap }.map { it.copy(modelTrimp = updateMap[it.id]) })
+            }
+            return workouts to dailyTrimpResult.totalDailyTrimpRaw
+        }
 
-                val computedHrvBaseline =
-                    baselineComputer.computeHrvBaselineBetween(
+        private suspend fun resolveEverydayTrimp(
+            dayMidnightMs: Long,
+            nextDayMidnightMs: Long,
+            workouts: List<WorkoutRecordEntity>,
+            session: SleepSessionEntity?,
+            aggregatedSleep: SleepAggregationContext?,
+            dailyTrimpRaw: Float,
+            rhrBaselineValue: Float,
+            hrMax: Float,
+            prefs: UserPreferences,
+        ): EverydayHrLoadResult {
+            val everydayHrBuckets = mergedMinuteBuckets(dayMidnightMs, nextDayMidnightMs)
+            val sleepIntervalsMs = aggregatedSleep?.allSleepIntervals
+                ?: if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
+            val workoutIntervalsMs = workouts.map { LongInterval(it.startTime, it.endTime) }
+            return assembleEverydayLoadInputUseCase.execute(
+                dayStartMs = dayMidnightMs,
+                dayEndMs = nextDayMidnightMs,
+                hrBuckets = everydayHrBuckets,
+                sleepIntervalsMs = sleepIntervalsMs,
+                workoutIntervalsMs = workoutIntervalsMs,
+                workoutOnlyTrimp = dailyTrimpRaw,
+                rhrBaseline = rhrBaselineValue,
+                hrMax = hrMax,
+                prefs = prefs,
+            )
+        }
+
+        private fun publishTrimpToContext(
+            trimpContext: WalkForwardTrimpContext?,
+            targetDate: LocalDate,
+            trimpEverydayHr: Float,
+            dailyTrimpRaw: Float,
+            hasWorkouts: Boolean,
+        ) {
+            trimpContext?.let { ctx ->
+                ctx.everydayTrimpByDate[targetDate] = trimpEverydayHr
+                if (hasWorkouts) ctx.dailyTrimpByDate[targetDate] = dailyTrimpRaw
+            }
+        }
+
+        private suspend fun computeRas(
+            dailyTrimpRaw: Float,
+            trimpEverydayHr: Float,
+            scalingFactor: Float,
+            targetDate: LocalDate,
+            zoneId: ZoneId,
+        ): RasTotals {
+            val dailyRas = round(RasCalculator.calculateDailyRas(dailyTrimpRaw, scalingFactor) * 10f) / 10f
+            val dailyRasEverydayHr = round(RasCalculator.calculateDailyRas(trimpEverydayHr, scalingFactor) * 10f) / 10f
+            val last6DaysRasWorkoutOnly = sumRasLastSixDays(targetDate, zoneId) { it.rasWorkoutOnly }
+            val last6DaysRasEverydayHr = sumRasLastSixDays(targetDate, zoneId) { it.rasEverydayHr }
+            return RasTotals(
+                dailyRas = dailyRas,
+                dailyRasEverydayHr = dailyRasEverydayHr,
+                totalRasWorkoutOnly = round(dailyRas + last6DaysRasWorkoutOnly),
+                totalRasEverydayHr = round(dailyRasEverydayHr + last6DaysRasEverydayHr),
+                last6DaysRasWorkoutOnly = last6DaysRasWorkoutOnly,
+            )
+        }
+
+        private data class RasTotals(
+            val dailyRas: Float,
+            val dailyRasEverydayHr: Float,
+            val totalRasWorkoutOnly: Float,
+            val totalRasEverydayHr: Float,
+            val last6DaysRasWorkoutOnly: Float,
+        )
+
+        private suspend fun buildBaseSummary(
+            targetDate: LocalDate,
+            dailySummary: DailySummary?,
+            dailyTrimpRaw: Float,
+            trimpEverydayHr: Float,
+            rasTotals: RasTotals,
+            everydayResult: EverydayHrLoadResult,
+            nextDayMidnightMs: Long,
+            aggregatedSleep: SleepAggregationContext?,
+        ): DailySummary {
+            val latestWeight = weightRecordDao.getLatestUpTo(nextDayMidnightMs)
+            val latestBodyFat = bodyFatRecordDao.getLatestUpTo(nextDayMidnightMs)
+            val latestBP = bloodPressureRecordDao.getLatestUpTo(nextDayMidnightMs)
+
+            return (dailySummary ?: DailySummary(date = targetDate)).copy(
+                trimpWorkoutOnly = dailyTrimpRaw,
+                trimpEverydayHr = trimpEverydayHr,
+                rasWorkoutOnly = rasTotals.dailyRas,
+                rasEverydayHr = rasTotals.dailyRasEverydayHr,
+                totalRasWorkoutOnly = rasTotals.totalRasWorkoutOnly,
+                totalRasEverydayHr = rasTotals.totalRasEverydayHr,
+                everydayCoverageMinutes = everydayResult.coverageMinutes,
+                everydayLoadConfidence = everydayResult.confidence.name,
+                weightKg = latestWeight?.weightKg,
+                bodyFatPercent = latestBodyFat?.bodyFatPercent,
+                bloodPressureSystolic = latestBP?.systolicMmHg,
+                bloodPressureDiastolic = latestBP?.diastolicMmHg,
+                supplementalSleepDurationMinutes = aggregatedSleep?.aggregate?.supplementalSleepDurationMinutes,
+                napCount = aggregatedSleep?.aggregate?.supplementalBlocks?.size,
+            )
+        }
+
+        private suspend fun isCalibrated(
+            dailySummary: DailySummary?,
+            dayMidnightMs: Long,
+            nextDayMidnightMs: Long,
+            sleepDayPolicy: SleepDayPolicy,
+            prefetchedSessions: List<SleepSession>?,
+            hasSession: Boolean,
+        ): Boolean =
+            dailySummary?.baselineCalculatedAtDate != null ||
+                baselineComputer
+                    .computeHrvWindowsBetween(
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
-                        hrvBaselineOverride = prefs.hrvBaselineOverride,
                         sleepDayPolicy = sleepDayPolicy,
-                        prefetchedSessions = baselineContext?.sessions,
-                    )
-                summary = summary.copy(hrvBaseline = computedHrvBaseline)
+                        prefetchedSessions = prefetchedSessions,
+                    )?.validHistoricalDayCount
+                    ?.plus(if (hasSession) 1 else 0)
+                    ?.let { it >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION }
+                    ?: false
 
-                if (session != null) {
-                    val sleepMetricsResult =
-                        computeSleepMetricsUseCase(
-                            session = SleepSessionMapper.toDomain(session),
-                            dayMidnight = dayMidnight,
-                            targetDate = targetDate,
-                            prefs = prefs,
-                            summary = DailySummaryMapper.toDomain(summary, zoneId),
-                            loadScore = loadSeries.loadScore,
-                            loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
-                            zoneId = zoneId,
-                            rhrBaselineValue = rhrBaselineValue,
-                            dayEndMs = nextDayMidnightMs,
-                            currentSessionIds = currentSessionIds,
-                        )
-                    summary = sleepMetricsResult.getOrNull()?.let { DailySummaryMapper.toEntity(it, zoneId) } ?: summary
-                }
+        private suspend fun resolveAvgSpo2(session: SleepSessionEntity?): Float? {
+            if (session == null) return null
+            val spo2Samples = oxygenSaturationRecordDao.getByTimeRange(session.startTime, session.endTime)
+            return if (spo2Samples.isNotEmpty()) spo2Samples.asSequence().map { it.percentage }.average().toFloat() else null
+        }
 
-                val finalBaselines =
-                    resolveDailyBaselinesUseCase.resolveFinalBaselines(
-                        frozenSnapshot = frozenSnapshot,
-                        summaryHrvMuMssd = summary.hrvMuMssd,
-                        summaryHrvSigmaMssd = summary.hrvSigmaMssd,
-                        summaryRhrSigma = summary.rhrSigma,
-                        rhrBaselineValue = rhrBaselineValue,
-                    )
+        private suspend fun resolveAvgBodyTemp(session: SleepSessionEntity?): Float? {
+            if (session == null) return null
+            val bodyTempSamples = bodyTemperatureRecordDao.getByTimeRange(session.startTime, session.endTime)
+            return if (bodyTempSamples.isNotEmpty()) bodyTempSamples.asSequence().map { it.celsius }.average().toFloat() else null
+        }
 
-                summary =
-                    summary.copy(
-                        hrvBaseline = computedHrvBaseline,
-                        rhrBpm = finalBaselines.rhrBpm,
-                        hrvMuMssd = finalBaselines.hrvMuMssd,
-                        hrvSigmaMssd = finalBaselines.hrvSigmaMssd,
-                        rhrSigma = finalBaselines.rhrSigma,
-                        baselineCalculatedAtDate = targetDate,
-                        avgSleepingSpo2 = avgSpo2,
-                        avgSleepingBodyTemp = avgBodyTemp,
-                        hrMax = summary.hrMax ?: hrMax,
-                        rasScalingFactor = summary.rasScalingFactor ?: scoringConfig.rasScalingFactor,
-                        snapshotProfile = summary.snapshotProfile ?: prefs.physiologyProfile.name,
-                        hrvSigmaPrior = summary.hrvSigmaPrior ?: prefs.physiologyProfile.lnSigmaPrior,
-                        baselineObservationCount = summary.baselineObservationCount,
-                    )
-
-                // Final summary remains consistent with the pre-calculated dailyRas and totalRas7d.
-                // Readiness adjustment is excluded from RAS storage to match standard RAS models and manual sums.
-
-                val updatedAudit =
-                    scoringConfig.auditTrail.copy(
-                        appliedSf = scoringConfig.rasScalingFactor,
-                        physiologyProfile = prefs.physiologyProfile.name,
-                        rasTotalPre = last6DaysRasWorkoutOnly,
-                        rasTotalPost = summary.totalRasWorkoutOnly,
-                    )
-                logD("ScoringConfig") { "Telemetry: $updatedAudit" }
-
-                DailySummaryMapper.toDomain(summary, zoneId)
+        private suspend fun computeUncalibratedSummary(
+            session: SleepSessionEntity?,
+            currentSessionIds: Set<String>,
+            baseSummary: DailySummary,
+            avgSpo2: Float?,
+            avgBodyTemp: Float?,
+            calibHrvBaseline: Int?,
+            rhrBaselineValue: Float,
+            prefs: UserPreferences,
+        ): DailySummary {
+            if (session == null) {
+                return assembleDailySummaryUseCase.assembleUncalibrated(
+                    baseSummary = baseSummary,
+                    hasSession = false,
+                    avgSpo2 = avgSpo2,
+                    avgBodyTemp = avgBodyTemp,
+                    calibHrvBaseline = calibHrvBaseline,
+                    rhrBaselineValue = rhrBaselineValue,
+                )
             }
+            val hrvValues = if (currentSessionIds.size <= 1) {
+                scoringHistoryRepository.getSleepRmssdForSession(session.id)
+            } else {
+                scoringHistoryRepository.getSleepRmssdForSessionsMap(currentSessionIds.toList()).values.flatten()
+            }
+            val avgHrv = if (hrvValues.isNotEmpty()) (hrvValues.sum() / hrvValues.size).toInt() else null
+            val sleepHrSamples = if (currentSessionIds.size <= 1) {
+                scoringHistoryRepository.getSleepHrSamplesForSession(session.id)
+            } else {
+                scoringHistoryRepository.getSleepHrProjectionForSessions(currentSessionIds.toList()).map { it.beatsPerMinute }.sorted()
+            }
+            val avgRhr = if (sleepHrSamples.isNotEmpty()) {
+                val idx = Math.round((prefs.restingHrPercentile / 100.0) * (sleepHrSamples.size - 1)).toInt().coerceIn(0, sleepHrSamples.size - 1)
+                sleepHrSamples[idx]
+            } else {
+                null
+            }
+            val deepSleepPercent = if (session.durationMinutes > 0) session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f else null
+            val remSleepPercent = if (session.durationMinutes > 0) session.remSleepMinutes / session.durationMinutes.toFloat() * 100f else null
+
+            return assembleDailySummaryUseCase.assembleUncalibrated(
+                baseSummary = baseSummary,
+                hasSession = true,
+                avgSpo2 = avgSpo2,
+                avgBodyTemp = avgBodyTemp,
+                calibHrvBaseline = calibHrvBaseline,
+                rhrBaselineValue = rhrBaselineValue,
+                nocturnalHrv = avgHrv,
+                restingHeartRate = avgRhr,
+                sleepDurationMinutes = session.durationMinutes,
+                deepSleepPercent = deepSleepPercent,
+                remSleepPercent = remSleepPercent,
+            )
+        }
+
+        private suspend fun computeCalibratedSummary(
+            targetDate: LocalDate,
+            zoneId: ZoneId,
+            nextDayMidnightMs: Long,
+            session: SleepSessionEntity?,
+            currentSessionIds: Set<String>,
+            baseSummary: DailySummary,
+            dailyTrimpRaw: Float,
+            trimpEverydayHr: Float,
+            avgSpo2: Float?,
+            avgBodyTemp: Float?,
+            initialBaselines: ResolveDailyBaselinesUseCase.InitialBaselines,
+            scoringConfig: ScoringConfig,
+            prefs: UserPreferences,
+            sleepDayPolicy: SleepDayPolicy,
+            trimpContext: WalkForwardTrimpContext?,
+            baselineContext: WalkForwardBaselineContext?,
+        ): DailySummary {
+            val fromDate = targetDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+            val dailyTrimpByDate = (
+                trimpContext?.dailyTrimpByDate?.subMap(fromDate, true, targetDate, true)
+                    ?: TrimpDateBucketer.bucket(workoutDao.getTrimpPoints(fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(), nextDayMidnightMs), zoneId)
+            ).toMutableMap().apply { put(targetDate, dailyTrimpRaw) }
+
+            val everydayTrimpByDate = (
+                trimpContext?.everydayTrimpByDate?.subMap(fromDate, true, targetDate, true)
+                    ?: TrimpDateBucketer.bucket(dailySummaryDao.getEverydayTrimpPoints(fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(), nextDayMidnightMs), zoneId)
+            ).toMutableMap().apply { put(targetDate, trimpEverydayHr) }
+
+            val loadSeries = buildLoadSeriesUseCase.execute(targetDate, dailyTrimpByDate, everydayTrimpByDate)
+            val withLoadSummary = baseSummary.copy(
+                atlWorkoutOnly = loadSeries.atl,
+                ctlWorkoutOnly = loadSeries.ctl,
+                strainRatioWorkoutOnly = loadSeries.strainRatio,
+                loadScoreWorkoutOnly = loadSeries.loadScore,
+                atlEverydayHr = loadSeries.atlEverydayHr,
+                ctlEverydayHr = loadSeries.ctlEverydayHr,
+                strainRatioEverydayHr = loadSeries.strainRatioEverydayHr,
+                loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
+            )
+
+            val computedHrvBaseline = baselineComputer.computeHrvBaselineBetween(
+                fromMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                toMs = nextDayMidnightMs,
+                hrvBaselineOverride = prefs.hrvBaselineOverride,
+                sleepDayPolicy = sleepDayPolicy,
+                prefetchedSessions = baselineContext?.sessions,
+            )
+            val withHrvBaseline = withLoadSummary.copy(hrvBaseline = computedHrvBaseline)
+
+            val withSleepMetrics = if (session != null) {
+                computeSleepMetricsUseCase(
+                    session = SleepSessionMapper.toDomain(session),
+                    dayMidnight = targetDate.atStartOfDay(zoneId).toInstant(),
+                    targetDate = targetDate,
+                    prefs = prefs,
+                    summary = withHrvBaseline,
+                    loadScore = loadSeries.loadScore,
+                    loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
+                    zoneId = zoneId,
+                    rhrBaselineValue = initialBaselines.rhrBaselineValue,
+                    dayEndMs = nextDayMidnightMs,
+                    currentSessionIds = currentSessionIds,
+                ).getOrNull() ?: withHrvBaseline
+            } else {
+                withHrvBaseline
+            }
+
+            val finalBaselines = resolveDailyBaselinesUseCase.resolveFinalBaselines(
+                frozenSnapshot = initialBaselines.frozenSnapshot,
+                summaryHrvMuMssd = withSleepMetrics.hrvMuMssd,
+                summaryHrvSigmaMssd = withSleepMetrics.hrvSigmaMssd,
+                summaryRhrSigma = withSleepMetrics.rhrSigma,
+                rhrBaselineValue = initialBaselines.rhrBaselineValue,
+            )
+
+            return assembleDailySummaryUseCase.assembleCalibrated(
+                baseSummary = withSleepMetrics,
+                targetDate = targetDate,
+                computedHrvBaseline = computedHrvBaseline,
+                finalBaselines = finalBaselines,
+                avgSpo2 = avgSpo2,
+                avgBodyTemp = avgBodyTemp,
+                resolvedHrMax = initialBaselines.hrMax,
+                scoringConfigRasScalingFactor = scoringConfig.rasScalingFactor,
+                prefs = prefs,
+            )
+        }
+
+        private fun logTelemetry(scoringConfig: ScoringConfig, prefs: UserPreferences, rasTotalPre: Float, rasTotalPost: Float?) {
+            val updatedAudit = scoringConfig.auditTrail.copy(
+                appliedSf = scoringConfig.rasScalingFactor,
+                physiologyProfile = prefs.physiologyProfile.name,
+                rasTotalPre = rasTotalPre,
+                rasTotalPost = rasTotalPost,
+            )
+            logD("ScoringConfig") { "Telemetry: $updatedAudit" }
+        }
 
         override suspend fun persist(summary: DailySummary) =
             persist(summary, settingsRepo.userPreferences.first().scoringZone())
@@ -655,9 +618,6 @@ class ScoringRepositoryImpl
 
         override suspend fun toReadinessResult(summary: DailySummary): ReadinessResult = summary.readinessResult
 
-        // Hot and warm tiers never overlap (warm = rolled-up minutes older than the 90-day hot
-        // boundary), so a per-minute weighted merge reproduces the plain AVG exactly and keeps a
-        // day that straddles the boundary whole.
         private suspend fun mergedMinuteBuckets(
             dayStartMs: Long,
             dayEndMs: Long,
@@ -669,12 +629,11 @@ class ScoringRepositoryImpl
             val acc = LinkedHashMap<Int, Pair<Double, Int>>()
             fun add(row: HrMinuteBucketRow) {
                 val prev = acc[row.bucketIndex]
-                acc[row.bucketIndex] =
-                    if (prev == null) {
-                        row.avgBpm * row.sampleCount to row.sampleCount
-                    } else {
-                        (prev.first + row.avgBpm * row.sampleCount) to (prev.second + row.sampleCount)
-                    }
+                acc[row.bucketIndex] = if (prev == null) {
+                    row.avgBpm * row.sampleCount to row.sampleCount
+                } else {
+                    (prev.first + row.avgBpm * row.sampleCount) to (prev.second + row.sampleCount)
+                }
             }
             hot.forEach(::add)
             warm.forEach(::add)
@@ -683,9 +642,6 @@ class ScoringRepositoryImpl
                 .map { (idx, value) -> HrMinuteBucketRow(idx, value.first / value.second, value.second) }
         }
 
-        // Rebuilds a workout's exercise samples from the warm tier when its raw rows have been
-        // rolled up (hot tier empty). The reconstructed timestamped stream feeds the same
-        // ComputeWorkoutTrimpUseCase path as raw samples.
         private suspend fun exerciseSamplesForWorkout(
             workout: WorkoutRecordEntity,
             hotSamples: List<HeartRateRecordEntity>,
@@ -709,32 +665,25 @@ class ScoringRepositoryImpl
         private suspend fun resolveSleepAggregation(
             targetDate: LocalDate,
             zoneId: ZoneId,
-            prefs: app.readylytics.health.data.preferences.UserPreferences,
+            prefs: UserPreferences,
         ): SleepAggregationContext? {
-            val fetchStartMs =
-                targetDate
-                    .minusDays(1)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
+            val fetchStartMs = targetDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
             val fetchEndMs = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
             val sessions = sleepSessionDao.getOverlapping(fetchStartMs, fetchEndMs)
             if (sessions.isEmpty()) return null
 
-            val policy =
-                SleepDayPolicy(
-                    coreMergeGapMinutes = prefs.coreMergeGapMinutes,
-                    supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
-                    minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
-                    supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
-                    scoringZoneId = zoneId,
-                )
-            val aggregate =
-                SleepDayAggregator.aggregateForScoreDay(
-                    scoreDay = targetDate,
-                    segments = sessions.map(::toSleepDaySegment),
-                    policy = policy,
-                ) ?: return null
+            val policy = SleepDayPolicy(
+                coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                scoringZoneId = zoneId,
+            )
+            val aggregate = SleepDayAggregator.aggregateForScoreDay(
+                scoreDay = targetDate,
+                segments = sessions.map(::toSleepDaySegment),
+                policy = policy,
+            ) ?: return null
 
             val coreSessionIds = aggregate.coreCluster.segments.map { it.stableId }.toSet()
             val coreSessions = sessions.filter { it.id in coreSessionIds }
@@ -751,11 +700,10 @@ class ScoringRepositoryImpl
                     lightSleepMinutes = stageTotals.lightMinutes,
                     awakeMinutes = stageTotals.awakeMinutes,
                 )
-            val allSleepIntervals =
-                buildList {
-                    aggregate.coreCluster.segments.forEach { add(LongInterval(it.startTimeMs, it.endTimeMs)) }
-                    aggregate.supplementalBlocks.forEach { add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs)) }
-                }
+            val allSleepIntervals = buildList {
+                aggregate.coreCluster.segments.forEach { add(LongInterval(it.startTimeMs, it.endTimeMs)) }
+                aggregate.supplementalBlocks.forEach { add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs)) }
+            }
 
             return SleepAggregationContext(
                 aggregate = aggregate,
@@ -766,17 +714,7 @@ class ScoringRepositoryImpl
         }
 
         private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment {
-            // HC-006: defensive guard for sessions already persisted with durationMinutes = 0 by the
-            // pre-fix stage-less-session mapping (SleepDataMapper's raw-span fallback only applies to
-            // freshly ingested sessions). Without this, a recompute-only pass -- which never re-reads
-            // Health Connect -- would still see the old stored 0 and SleepDaySegment's
-            // `durationMinutes > 0` invariant would throw.
-            val durationMinutes =
-                if (session.durationMinutes > 0) {
-                    session.durationMinutes
-                } else {
-                    ((session.endTime - session.startTime) / 60_000L).toInt()
-                }
+            val durationMinutes = if (session.durationMinutes > 0) session.durationMinutes else ((session.endTime - session.startTime) / 60_000L).toInt()
             return SleepDaySegment(
                 stableId = session.id,
                 startTimeMs = session.startTime,
@@ -796,17 +734,9 @@ class ScoringRepositoryImpl
         private fun aggregateEfficiency(coreSessions: List<SleepSessionEntity>): Float {
             val weightedSessions = coreSessions.filter { it.durationMinutes > 0 }
             if (weightedSessions.isEmpty()) return 0f
-
-            val numerator =
-                weightedSessions.sumOf { session ->
-                    session.efficiency.toDouble() * session.durationMinutes.toDouble()
-                }
+            val numerator = weightedSessions.sumOf { it.efficiency.toDouble() * it.durationMinutes.toDouble() }
             val denominator = weightedSessions.sumOf { it.durationMinutes }.toDouble()
-            return if (denominator > 0.0) {
-                (numerator / denominator).toFloat()
-            } else {
-                weightedSessions.first().efficiency
-            }
+            return if (denominator > 0.0) (numerator / denominator).toFloat() else weightedSessions.first().efficiency
         }
 
         private data class SleepAggregationContext(
@@ -821,15 +751,7 @@ class ScoringRepositoryImpl
             zoneId: ZoneId,
             selector: (DailySummaryEntity) -> Float?,
         ): Float {
-            val previousDaysMs =
-                (1..6).map { i ->
-                    targetDate
-                        .minusDays(i.toLong())
-                        .atStartOfDay(zoneId)
-                        .toInstant()
-                        .toEpochMilli()
-                }
-            val summaries = dailySummaryDao.getByDates(previousDaysMs)
-            return summaries.mapNotNull(selector).sum()
+            val previousDaysMs = (1..6).map { i -> targetDate.minusDays(i.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli() }
+            return dailySummaryDao.getByDates(previousDaysMs).mapNotNull(selector).sum()
         }
     }

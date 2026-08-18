@@ -49,7 +49,6 @@ class ResolveDailyBaselinesUseCaseTest {
 
             val result =
                 useCase.resolveInitialBaselines(
-                    targetDate = date,
                     dayMidnightMs = 1000L,
                     nextDayMidnightMs = 2000L,
                     prefs = prefs,
@@ -68,12 +67,10 @@ class ResolveDailyBaselinesUseCaseTest {
     @Test
     fun `resolveInitialBaselines throws when hrMax is invalid`() =
         runTest {
-            val date = LocalDate.of(2026, 6, 1)
             val prefs = UserPreferences(autoCalculateMaxHr = false, maxHeartRate = 0, rhrBaselineOverride = 55f)
 
             assertFailsWith<IllegalStateException> {
                 useCase.resolveInitialBaselines(
-                    targetDate = date,
                     dayMidnightMs = 1000L,
                     nextDayMidnightMs = 2000L,
                     prefs = prefs,
@@ -87,12 +84,10 @@ class ResolveDailyBaselinesUseCaseTest {
     @Test
     fun `resolveInitialBaselines throws when rhrBaselineValue is invalid`() =
         runTest {
-            val date = LocalDate.of(2026, 6, 1)
             val prefs = UserPreferences(autoCalculateMaxHr = false, maxHeartRate = 190, rhrBaselineOverride = 0f)
 
             assertFailsWith<IllegalStateException> {
                 useCase.resolveInitialBaselines(
-                    targetDate = date,
                     dayMidnightMs = 1000L,
                     nextDayMidnightMs = 2000L,
                     prefs = prefs,
@@ -106,12 +101,10 @@ class ResolveDailyBaselinesUseCaseTest {
     @Test
     fun `resolveInitialBaselines uses rhrBaselineOverride when not frozen`() =
         runTest {
-            val date = LocalDate.of(2026, 6, 1)
             val prefs = UserPreferences(autoCalculateMaxHr = false, maxHeartRate = 190, rhrBaselineOverride = 58f)
 
             val result =
                 useCase.resolveInitialBaselines(
-                    targetDate = date,
                     dayMidnightMs = 1000L,
                     nextDayMidnightMs = 2000L,
                     prefs = prefs,
@@ -130,7 +123,6 @@ class ResolveDailyBaselinesUseCaseTest {
     @Test
     fun `resolveInitialBaselines computes adaptive baseline when no override or frozen baseline`() =
         runTest {
-            val date = LocalDate.of(2026, 6, 1)
             val prefs = UserPreferences(maxHeartRate = 190, rhrBaselineOverride = null)
             coEvery {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
@@ -144,7 +136,6 @@ class ResolveDailyBaselinesUseCaseTest {
 
             val result =
                 useCase.resolveInitialBaselines(
-                    targetDate = date,
                     dayMidnightMs = 1000L,
                     nextDayMidnightMs = 2000L,
                     prefs = prefs,
@@ -159,7 +150,6 @@ class ResolveDailyBaselinesUseCaseTest {
     @Test
     fun `resolveInitialBaselines uses default RHR when adaptive baseline returns null`() =
         runTest {
-            val date = LocalDate.of(2026, 6, 1)
             val prefs = UserPreferences(maxHeartRate = 190, rhrBaselineOverride = null)
             coEvery {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
@@ -173,7 +163,6 @@ class ResolveDailyBaselinesUseCaseTest {
 
             val result =
                 useCase.resolveInitialBaselines(
-                    targetDate = date,
                     dayMidnightMs = 1000L,
                     nextDayMidnightMs = 2000L,
                     prefs = prefs,

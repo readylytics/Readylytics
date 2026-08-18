@@ -17,6 +17,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
@@ -59,7 +60,6 @@ class ScoringRepositoryBiphasicIntegrationTest {
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val bodyTemperatureRecordDao = mockk<BodyTemperatureRecordDao>(relaxed = true)
-    private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
     private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private val repo =
@@ -68,7 +68,6 @@ class ScoringRepositoryBiphasicIntegrationTest {
             sleepSessionDao,
             dailySummaryDao,
             settingsRepo,
-            scoringCalculator,
             baselineComputer,
             BuildLoadSeriesUseCase(scoringCalculator),
             AssembleEverydayLoadInputUseCase(),
@@ -76,6 +75,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             scoringConfigFactory,
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             ResolveDailyBaselinesUseCase(baselineComputer),
+            AssembleDailySummaryUseCase(),
             heartRateDao,
             minuteBucketDao,
             weightRecordDao,
@@ -83,7 +83,6 @@ class ScoringRepositoryBiphasicIntegrationTest {
             bloodPressureRecordDao,
             oxygenSaturationRecordDao,
             bodyTemperatureRecordDao,
-            sleepPercentileRhrCalculator,
             scoringHistoryRepository,
             UnconfinedTestDispatcher(),
         )

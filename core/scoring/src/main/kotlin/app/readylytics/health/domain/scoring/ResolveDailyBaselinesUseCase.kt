@@ -29,7 +29,6 @@ class ResolveDailyBaselinesUseCase
         )
 
         suspend fun resolveInitialBaselines(
-            targetDate: LocalDate,
             dayMidnightMs: Long,
             nextDayMidnightMs: Long,
             prefs: UserPreferences,
@@ -54,8 +53,8 @@ class ResolveDailyBaselinesUseCase
                     )
                     ?: ScoringConstants.DEFAULT_RHR_BPM
 
-            if (hrMax <= 0f) throw IllegalStateException("HR Max is missing or invalid")
-            if (rhrBaselineValue <= 0f) throw IllegalStateException("RHR Baseline is missing or invalid")
+            check(hrMax > 0f) { "HR Max is missing or invalid" }
+            check(rhrBaselineValue > 0f) { "RHR Baseline is missing or invalid" }
 
             return InitialBaselines(
                 hrMax = hrMax,
