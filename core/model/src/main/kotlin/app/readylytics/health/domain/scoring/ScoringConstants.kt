@@ -84,6 +84,27 @@ object ScoringConstants {
         // Minimum awake-segment length that counts as a discrete awakening (1.5 minutes).
         const val MIN_AWAKENING_DURATION_MS = 90_000L
 
+        // Continuous sleep-efficiency logistic (replaces the five-band step function).
+        const val EFFICIENCY_MIDPOINT = 77.5f
+        const val EFFICIENCY_SLOPE = 0.18f
+
+        // Duration: logistic below goal (normalized so ratio 1.0 scores exactly 100),
+        // flat through the hypersomnia dead zone, Gaussian decay above it.
+        const val DURATION_LOGISTIC_SLOPE = 10f
+        const val DURATION_LOGISTIC_MIDPOINT = 0.65f
+        const val HYPERSOMNIA_SIGMA = 0.40f
+        const val DEFAULT_HYPERSOMNIA_ONSET_RATIO = 1.25f
+
+        // Fragmentation: grace zone reflects normal adult sleep (WASO 20–30 min, 1–3 brief awakenings).
+        const val WASO_GRACE_MINUTES = 20f
+        const val WASO_DECAY_PER_MINUTE = 0.010f
+        const val AWAKENING_GRACE_COUNT = 2
+        const val AWAKENING_DECAY_PER_EVENT = 0.08f
+
+        // Schedule-regularity multiplier is penalty-only: good regularity is neutral, never a bonus.
+        const val REGULARITY_FLOOR = 0.92f
+        const val REGULARITY_SPAN = 0.08f
+
         const val DURATION_OPTIMAL_RATIO = 0.9f
         const val DURATION_NEUTRAL_RATIO = 0.8f
         const val DURATION_WARNING_RATIO = 0.7f
