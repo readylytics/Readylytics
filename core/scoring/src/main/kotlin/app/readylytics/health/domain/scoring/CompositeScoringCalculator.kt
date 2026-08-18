@@ -4,6 +4,7 @@ import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.domain.scoring.components.RestorationWeights
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets
+import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
@@ -42,7 +43,12 @@ class CompositeScoringCalculator
             durationMinutes: Int,
             efficiency: Float,
             goalSleepHours: Float,
-        ): Float = sleepStrategy.computeDurationSubScore(durationMinutes, efficiency, goalSleepHours)
+            hypersomniaOnsetRatio: Float,
+        ): Float =
+            sleepStrategy.computeDurationSubScore(durationMinutes, efficiency, goalSleepHours, hypersomniaOnsetRatio)
+
+        override fun computeFragmentationSubScore(fragmentation: SleepFragmentation): Float =
+            sleepStrategy.computeFragmentationSubScore(fragmentation)
 
         override fun computeArchSubScore(
             deepSleepMinutes: Int,
@@ -130,6 +136,10 @@ class CompositeScoringCalculator
             userAge: Int,
             stagesSuspicious: Boolean,
             sleepTargets: SleepArchitectureTargets?,
+            fragmentation: SleepFragmentation?,
+            weightProfile: SleepScoreWeightProfile,
+            regularityScore: Float?,
+            hypersomniaOnsetRatio: Float,
         ): Float =
             sleepStrategy.computeSleepScore(
                 durationMinutes,
@@ -141,6 +151,10 @@ class CompositeScoringCalculator
                 userAge,
                 stagesSuspicious,
                 sleepTargets,
+                fragmentation,
+                weightProfile,
+                regularityScore,
+                hypersomniaOnsetRatio,
             )
 
         override fun computeRecoveryFlags(

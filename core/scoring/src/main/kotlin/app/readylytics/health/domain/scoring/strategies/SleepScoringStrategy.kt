@@ -3,9 +3,12 @@ package app.readylytics.health.domain.scoring.strategies
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.ScoringConstants.Restoration
 import app.readylytics.health.domain.scoring.ScoringConstants.Sleep
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.components.RestorationWeights
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargetFactory
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets
+import app.readylytics.health.domain.scoring.components.SleepContinuityCurves
+import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,22 +22,23 @@ class SleepScoringStrategy
             durationMinutes: Int,
             efficiency: Float,
             goalSleepHours: Float,
+            hypersomniaOnsetRatio: Float = Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
         ): Float {
             require(goalSleepHours > 0f) { "goalSleepHours must be > 0" }
             require(efficiency in 0f..100f) { "efficiency must be in [0, 100], was $efficiency" }
             require(durationMinutes >= 0) { "durationMinutes must be >= 0" }
-            val tstTerm = (durationMinutes / 60f / goalSleepHours).coerceIn(0f, 1f) * 100f
-            val effBanded =
-                when {
-                    efficiency >= Sleep.EFF_EXCELLENT_THRESHOLD -> Sleep.EFF_EXCELLENT_SCORE
-                    efficiency >= Sleep.EFF_GOOD_THRESHOLD -> Sleep.EFF_GOOD_SCORE
-                    efficiency >= Sleep.EFF_FAIR_THRESHOLD -> Sleep.EFF_FAIR_SCORE
-                    efficiency >= Sleep.EFF_POOR_THRESHOLD -> Sleep.EFF_POOR_SCORE
-                    else -> Sleep.EFF_VERY_POOR_SCORE
-                }
-            return (Sleep.WEIGHT_TST_IN_DURATION * tstTerm + Sleep.WEIGHT_EFF_IN_DURATION * effBanded)
+            val ratio = durationMinutes / 60f / goalSleepHours
+            val tstTerm = SleepContinuityCurves.durationTerm(ratio, hypersomniaOnsetRatio)
+            val effTerm = SleepContinuityCurves.efficiencyTerm(efficiency)
+            return (Sleep.WEIGHT_TST_IN_DURATION * tstTerm + Sleep.WEIGHT_EFF_IN_DURATION * effTerm)
                 .coerceIn(0f, 100f)
         }
+
+        fun computeFragmentationSubScore(fragmentation: SleepFragmentation): Float =
+            SleepContinuityCurves.fragmentationTerm(
+                fragmentation.wasoMinutes.coerceAtLeast(0f),
+                fragmentation.awakeningCount.coerceAtLeast(0),
+            )
 
         fun computeArchSubScore(
             deepSleepMinutes: Int,
@@ -114,15 +118,29 @@ class SleepScoringStrategy
             userAge: Int,
             stagesSuspicious: Boolean,
             sleepTargets: SleepArchitectureTargets?,
+            fragmentation: SleepFragmentation? = null,
+            weightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
+            regularityScore: Float? = null,
+            hypersomniaOnsetRatio: Float = Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
         ): Float {
             require(durationMinutes >= 0) { "durationMinutes must be >= 0" }
             require(goalSleepHours > 0f) { "goalSleepHours must be > 0" }
-            val sDur = computeDurationSubScore(durationMinutes, efficiency, goalSleepHours)
-            val sArch = computeArchSubScore(deepSleepMinutes, remSleepMinutes, durationMinutes, userAge, sleepTargets)
 
-            val durationWeight = if (stagesSuspicious) 0.75f else Sleep.WEIGHT_DURATION
-            val archWeight = if (stagesSuspicious) 0.00f else Sleep.WEIGHT_ARCHITECTURE
+            val sDur = computeDurationSubScore(durationMinutes, efficiency, goalSleepHours, hypersomniaOnsetRatio)
+            val stageDataUsable = !stagesSuspicious && fragmentation != null
 
-            return durationWeight * sDur + archWeight * sArch + Sleep.WEIGHT_RESTORATION * sRest
+            val raw =
+                if (stageDataUsable) {
+                    val sArch = computeArchSubScore(deepSleepMinutes, remSleepMinutes, durationMinutes, userAge, sleepTargets)
+                    val sFrag = computeFragmentationSubScore(fragmentation)
+                    weightProfile.durationWeight * sDur +
+                        weightProfile.architectureWeight * sArch +
+                        weightProfile.restorationWeight * sRest +
+                        weightProfile.fragmentationWeight * sFrag
+                } else {
+                    weightProfile.degradedDurationWeight * sDur + weightProfile.degradedRestorationWeight * sRest
+                }
+
+            return (raw * SleepContinuityCurves.regularityMultiplier(regularityScore)).coerceIn(0f, 100f)
         }
     }

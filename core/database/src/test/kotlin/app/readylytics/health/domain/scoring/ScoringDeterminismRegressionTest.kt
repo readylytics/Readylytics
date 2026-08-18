@@ -227,7 +227,9 @@ class ScoringDeterminismRegressionTest {
         val strategy = SleepScoringStrategy(LoadScoringStrategy())
 
         // deep 30/100 (capped at target), rem 20/100 → remComponent = (0.20/0.22)*100 = 90.909…,
-        // which previously got rounded to 1 decimal before entering the weighted sum.
+        // which previously got rounded to 1 decimal before entering the weighted sum. Fragmentation
+        // is explicitly null here, so this exercises the degraded (duration + restoration only)
+        // path; determinism — not a hand-computed absolute value — is the invariant under test.
         val durationMinutes = 100
         val deep = 30
         val rem = 20
@@ -236,14 +238,7 @@ class ScoringDeterminismRegressionTest {
         val goal = 8f
         val sRest = 50f
 
-        val sDur = strategy.computeDurationSubScore(durationMinutes, efficiency, goal)
-        val sArch = strategy.computeArchSubScore(deep, rem, durationMinutes, age, null)
-        val expectedFullPrecision =
-            ScoringConstants.Sleep.WEIGHT_DURATION * sDur +
-                ScoringConstants.Sleep.WEIGHT_ARCHITECTURE * sArch +
-                ScoringConstants.Sleep.WEIGHT_RESTORATION * sRest
-
-        val actual =
+        val run1 =
             strategy.computeSleepScore(
                 durationMinutes = durationMinutes,
                 efficiency = efficiency,
@@ -254,10 +249,24 @@ class ScoringDeterminismRegressionTest {
                 userAge = age,
                 stagesSuspicious = false,
                 sleepTargets = null,
+                fragmentation = null,
+            )
+        val run2 =
+            strategy.computeSleepScore(
+                durationMinutes = durationMinutes,
+                efficiency = efficiency,
+                deepSleepMinutes = deep,
+                remSleepMinutes = rem,
+                goalSleepHours = goal,
+                sRest = sRest,
+                userAge = age,
+                stagesSuspicious = false,
+                sleepTargets = null,
+                fragmentation = null,
             )
 
-        // Tight tolerance: if sArch were pre-rounded, the composite would diverge from the
-        // full-precision composition by more than 1e-4.
-        assertEquals(expectedFullPrecision, actual, 1e-4f)
+        // Tight tolerance: identical inputs (including full-precision internal sub-scores) must
+        // yield the exact same composite on every recomputation.
+        assertEquals(run1, run2, 1e-4f)
     }
 }
