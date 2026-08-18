@@ -6,12 +6,15 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -64,6 +67,7 @@ class CircadianConsistencyRepositoryTest {
         val sessionFlow = MutableStateFlow(sessions)
         val repository = mockk<SleepSessionRepository>()
         every { repository.observeSince(any()) } returns sessionFlow
+        coEvery { repository.getSince(any()) } returns sessions
         val settingsRepo = mockk<SettingsRepository>()
         every { settingsRepo.userPreferences } returns MutableStateFlow(prefs)
         val encryptionManager = mockk<EncryptionManager>()
@@ -189,5 +193,38 @@ class CircadianConsistencyRepositoryTest {
             val repo = buildRepo(sessions)
             val result = repo.resultFor(LocalDate.now()).first()
             assertTrue("Expected MissingData, got $result", result is CircadianConsistencyResult.MissingData)
+        }
+
+    // Inserts `nights` sessions of 480 minutes each (23:00-07:00), ending at 07:00 local on
+    // consecutive days up to and including `anchor`'s morning.
+    private fun seedRegularSessions(
+        anchor: LocalDate,
+        nights: Int,
+    ): List<SleepSessionData> =
+        (0 until nights).map { i ->
+            fakeSleepSession(id = "reg$i", bedHour = 23, wakeHour = 7, daysAgo = i, anchorDate = anchor)
+        }
+
+    @Test
+    fun `scoreFor returns the ready score`() =
+        runTest {
+            val anchor = LocalDate.of(2026, 1, 10)
+            val sessions = seedRegularSessions(anchor, nights = 10)
+            val repo = buildRepo(sessions)
+
+            val score = repo.scoreFor(anchor, defaultPrefs)
+
+            assertNotNull(score)
+            assertEquals(100f, score!!, 1f)
+        }
+
+    @Test
+    fun `scoreFor returns null while calibrating`() =
+        runTest {
+            val anchor = LocalDate.of(2026, 1, 10)
+            val sessions = seedRegularSessions(anchor, nights = 1)
+            val repo = buildRepo(sessions)
+
+            assertNull(repo.scoreFor(anchor, defaultPrefs))
         }
 }

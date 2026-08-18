@@ -76,6 +76,29 @@ class CircadianConsistencyRepository
                 }
             }
 
+        suspend fun scoreFor(
+            anchorDate: LocalDate,
+            prefs: UserPreferences,
+        ): Float? {
+            val result = resultForOnce(anchorDate, prefs)
+            return (result as? CircadianConsistencyResult.Ready)?.score
+        }
+
+        suspend fun resultForOnce(
+            anchorDate: LocalDate,
+            prefs: UserPreferences,
+        ): CircadianConsistencyResult {
+            val anchorMs =
+                anchorDate
+                    .plusDays(1)
+                    .atStartOfDay(prefs.scoringZone())
+                    .toInstant()
+                    .toEpochMilli()
+            val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
+            val sessions = sleepSessionRepository.getSince(fromMs).filter { it.endTime < anchorMs }
+            return compute(sessions, prefs, anchorDate)
+        }
+
         private fun compute(
             sessions: List<SleepSessionData>,
             prefs: UserPreferences,
