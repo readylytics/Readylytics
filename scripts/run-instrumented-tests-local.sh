@@ -28,8 +28,9 @@ echo "==> Clearing adb logcat..."
 adb logcat -c || true
 
 echo "==> Running instrumented tests with CI-equivalent benchmark suppression..."
-# Same suppressErrors set as scripts/run-instrumented-tests.sh:37-38 -- without these,
-# ScoringWalkForwardBenchmark fails locally with:
+# Same suppressErrors set as scripts/run-instrumented-tests.sh -- without these, any
+# in-process androidx.benchmark-junit4 test running under connectedDebugAndroidTest fails
+# locally with:
 #   java.lang.AssertionError: ERRORS (not suppressed): ACTIVITY-MISSING DEBUGGABLE NOT-AOT-COMPILED
 test_status=0
 ./gradlew connectedDebugAndroidTest \

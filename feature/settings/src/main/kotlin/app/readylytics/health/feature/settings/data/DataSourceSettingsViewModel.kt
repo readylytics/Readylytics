@@ -47,12 +47,13 @@ class DataSourceSettingsViewModel
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 
-        private val persistedDeviceByDataType =
+        private val persistedDeviceByDataType: StateFlow<Map<String, String>> by lazy {
             settingsReader.userPreferences.map { it.deviceByDataType }.stateIn(
                 scope = viewModelScope,
                 started = sharingStarted,
                 initialValue = emptyMap(),
             )
+        }
 
         // Eagerly is intentional, not an oversight: initialValue = false is a "not yet
         // dismissed" sentinel. Routing this through the `sharingStarted` test seam would let
