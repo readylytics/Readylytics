@@ -448,7 +448,7 @@ class SqlCipherKeyManager
         private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
         @androidx.annotation.VisibleForTesting
-        internal fun getOrCreateDbKeyForTest(dbFile: File? = null): ByteArray = getOrCreateDbKey(dbFile)
+        fun getOrCreateDbKeyForTest(dbFile: File? = null): ByteArray = getOrCreateDbKey(dbFile)
 
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"
@@ -474,13 +474,13 @@ class SqlCipherKeyManager
             private val inProcessKeyLock = ReentrantLock()
 
             @androidx.annotation.VisibleForTesting
-            internal const val PREF_FILE_NAME = "sqlcipher_key_prefs"
+            const val PREF_FILE_NAME = "sqlcipher_key_prefs"
 
             @androidx.annotation.VisibleForTesting
-            internal const val PREF_ENCRYPTED_KEY = "encrypted_key"
+            const val PREF_ENCRYPTED_KEY = "encrypted_key"
 
             @androidx.annotation.VisibleForTesting
-            internal const val PREF_IV = "encryption_iv"
+            const val PREF_IV = "encryption_iv"
 
             // SQLCipher 4 default; pinned explicitly so a freshly-ATTACHed database (which uses
             // the library's current default) and a reopened one (via the legacy
