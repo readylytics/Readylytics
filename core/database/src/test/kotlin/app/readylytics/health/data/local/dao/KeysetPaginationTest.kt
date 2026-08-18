@@ -277,7 +277,10 @@ class KeysetPaginationTest {
     @Test
     fun `bodyFat pageAfterByTimeRange returns newest-first within half-open window`() =
         runTest {
-            val records = (1..5).map { BodyFatRecordEntity("bf$it", timestampMs = it * 1000L, bodyFatPercent = 15f + it) }
+            val records =
+                (1..5).map {
+                    BodyFatRecordEntity("bf$it", timestampMs = it * 1000L, bodyFatPercent = 15f + it)
+                }
             bodyFatDao.upsertAll(records)
 
             // [2000, 5000): records 2, 3, 4 -> DESC: bf4, bf3, bf2
@@ -296,7 +299,15 @@ class KeysetPaginationTest {
     @Test
     fun `bloodPressure pageAfterByTimeRange returns newest-first within half-open window`() =
         runTest {
-            val records = (1..5).map { BloodPressureRecordEntity("bp$it", timestampMs = it * 1000L, systolicMmHg = 120 + it, diastolicMmHg = 80 + it) }
+            val records =
+                (1..5).map {
+                    BloodPressureRecordEntity(
+                        "bp$it",
+                        timestampMs = it * 1000L,
+                        systolicMmHg = 120 + it,
+                        diastolicMmHg = 80 + it,
+                    )
+                }
             bloodPressureDao.upsertAll(records)
 
             // [2000, 5000): records 2, 3, 4 -> DESC: bp4, bp3, bp2
@@ -305,7 +316,14 @@ class KeysetPaginationTest {
             assertEquals("bp4", page1[0].id)
             assertEquals("bp3", page1[1].id)
 
-            val page2 = bloodPressureDao.pageAfterByTimeRange(2000L, 5000L, page1.last().timestampMs, page1.last().id, 2)
+            val page2 =
+                bloodPressureDao.pageAfterByTimeRange(
+                    2000L,
+                    5000L,
+                    page1.last().timestampMs,
+                    page1.last().id,
+                    2,
+                )
             assertEquals(1, page2.size)
             assertEquals("bp2", page2[0].id)
 
