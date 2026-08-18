@@ -33,6 +33,7 @@ import app.readylytics.health.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
+import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.LongInterval
@@ -77,7 +78,7 @@ class ScoringRepositoryImpl
         private val assembleEverydayLoadInputUseCase: AssembleEverydayLoadInputUseCase,
         private val computeSleepMetricsUseCase: ComputeSleepMetricsUseCase,
         private val scoringConfigFactory: ScoringConfigFactory,
-        private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
+        private val computeDailyTrimpUseCase: ComputeDailyTrimpUseCase,
         private val heartRateDao: HeartRateDao,
         private val minuteBucketDao: MinuteBucketDao,
         private val weightRecordDao: WeightRecordDao,
@@ -240,49 +241,39 @@ class ScoringRepositoryImpl
                     } else {
                         emptyList()
                     }
-                var dailyTrimpRaw = 0f
-                val workoutModelTrimpUpdates = mutableListOf<WorkoutRecordEntity>()
-
-                workouts.forEach { workout ->
-                    val workoutHrSamples =
-                        exerciseSamplesForWorkout(workout, allDayExerciseHrSamples)
-
-                    val workoutAvgHr =
-                        workoutHrSamples
-                            .takeIf { it.isNotEmpty() }
-                            ?.map { it.beatsPerMinute }
-                            ?.average()
-                            ?.toFloat()
-                            ?: 0f
-                    val samples =
-                        workoutHrSamples.map { sample ->
-                            ComputeWorkoutTrimpUseCase.HeartRateSample(
-                                java.time.Instant.ofEpochMilli(sample.timestampMs),
-                                sample.beatsPerMinute,
-                            )
-                        }
-                    val workoutTrimpResult =
-                        computeWorkoutTrimpUseCase.execute(
-                            workoutStartTime = workout.startTime,
-                            workoutEndTime = workout.endTime,
-                            workoutAvgHr = workoutAvgHr,
-                            samples = samples,
-                            prefs = prefs,
-                            restingHrBaseline = rhrBaselineValue,
+                val workoutInputs =
+                    workouts.map { workout ->
+                        val workoutHrSamples = exerciseSamplesForWorkout(workout, allDayExerciseHrSamples)
+                        ComputeDailyTrimpUseCase.WorkoutInput(
+                            id = workout.id,
+                            startTime = workout.startTime,
+                            endTime = workout.endTime,
                             storedTrimp = workout.trimp,
-                            frozenHrMax = frozenHrMax,
+                            currentModelTrimp = workout.modelTrimp,
+                            samples =
+                                workoutHrSamples.map { sample ->
+                                    ComputeWorkoutTrimpUseCase.HeartRateSample(
+                                        java.time.Instant.ofEpochMilli(sample.timestampMs),
+                                        sample.beatsPerMinute,
+                                    )
+                                },
                         )
-                    val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f
-                    dailyTrimpRaw += workoutTrimp
-                    // SCORE-001: persist the user-selected-model TRIMP (Banister/Cheng/iTRIMP)
-                    // alongside the existing zone-weighted `trimp` column, so WorkoutDao.getTrimpPoints'
-                    // COALESCE(modelTrimp, trimp) can prefer it once this row has been touched.
-                    if (workout.modelTrimp != workoutTrimp) {
-                        workoutModelTrimpUpdates += workout.copy(modelTrimp = workoutTrimp)
                     }
-                }
-                if (workoutModelTrimpUpdates.isNotEmpty()) {
-                    workoutDao.upsertAll(workoutModelTrimpUpdates)
+                val dailyTrimpResult =
+                    computeDailyTrimpUseCase.execute(
+                        workouts = workoutInputs,
+                        prefs = prefs,
+                        rhrBaselineValue = rhrBaselineValue,
+                        frozenHrMax = frozenHrMax,
+                    )
+                val dailyTrimpRaw = dailyTrimpResult.totalDailyTrimpRaw
+                if (dailyTrimpResult.workoutModelTrimpUpdates.isNotEmpty()) {
+                    val updateMap = dailyTrimpResult.workoutModelTrimpUpdates.associate { it.workoutId to it.modelTrimp }
+                    val workoutEntitiesToUpdate =
+                        workouts.filter { it.id in updateMap }.map { workout ->
+                            workout.copy(modelTrimp = updateMap[workout.id])
+                        }
+                    workoutDao.upsertAll(workoutEntitiesToUpdate)
                 }
 
                 // Sleep intervals are resolved before the everyday-HR block because the load calculator

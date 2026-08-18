@@ -20,6 +20,7 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
+import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.ScoringCalculator
@@ -72,7 +73,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             AssembleEverydayLoadInputUseCase(),
             computeSleepMetricsUseCase,
             scoringConfigFactory,
-            computeWorkoutTrimpUseCase,
+            ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             heartRateDao,
             minuteBucketDao,
             weightRecordDao,

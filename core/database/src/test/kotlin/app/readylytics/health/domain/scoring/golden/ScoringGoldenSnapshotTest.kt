@@ -21,6 +21,7 @@ import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
@@ -100,7 +101,7 @@ class ScoringGoldenSnapshotTest {
             assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
             computeSleepMetricsUseCase = computeSleepMetricsUseCase,
             scoringConfigFactory = scoringConfigFactory,
-            computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
+            computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
             heartRateDao = db.heartRateDao(),
             minuteBucketDao = db.minuteBucketDao(),
             weightRecordDao = db.weightRecordDao(),

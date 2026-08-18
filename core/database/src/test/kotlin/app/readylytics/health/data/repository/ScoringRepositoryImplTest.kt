@@ -63,7 +63,7 @@ class ScoringRepositoryImplTest {
             AssembleEverydayLoadInputUseCase(),
             computeSleepMetricsUseCase,
             scoringConfigFactory,
-            computeWorkoutTrimpUseCase,
+            ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
             heartRateDao,
             minuteBucketDao,
             weightRecordDao,
