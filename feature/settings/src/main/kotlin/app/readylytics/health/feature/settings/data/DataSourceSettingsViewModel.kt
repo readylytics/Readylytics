@@ -54,6 +54,11 @@ class DataSourceSettingsViewModel
                 initialValue = emptyMap(),
             )
 
+        // Eagerly is intentional, not an oversight: initialValue = false is a "not yet
+        // dismissed" sentinel. Routing this through the `sharingStarted` test seam would let
+        // it go cold and re-emit false on resubscribe, before the real preference reloads --
+        // a dismissed notice would visibly reappear. See
+        // internal-docs/plans/POST_REMEDIATION_FOLLOWUPS.md, Item 2.
         private val deviceChangeNoticeDismissed =
             settingsReader.userPreferences.map { it.deviceChangeNoticeDismissed }.stateIn(
                 scope = viewModelScope,
