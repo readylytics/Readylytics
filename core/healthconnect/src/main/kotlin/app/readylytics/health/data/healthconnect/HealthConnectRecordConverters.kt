@@ -53,6 +53,7 @@ fun SleepSessionRecord.toDomain(): DomainSleepSessionRecord =
                             -> DomainSleepStageType.LIGHT
                             SleepSessionRecord.STAGE_TYPE_AWAKE,
                             SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
+                            SleepSessionRecord.STAGE_TYPE_OUT_OF_BED,
                             -> DomainSleepStageType.AWAKE
                             else -> DomainSleepStageType.UNKNOWN
                         },
