@@ -3,9 +3,10 @@
 > **Status:** DEFERRED — blocked on **AGP 9.4.0 stable**. Do not start until the
 > precondition in §2 is met. Written 2026-08-18.
 
-This plan is the "migration we couldn't do" for Phase 5, Step 19a of
-`ARCHITECTURE_REMEDIATION_PLAN.md`. It is self-contained: everything needed to
-execute it is below.
+This plan is the "migration we couldn't do" during the repo-wide architecture remediation that
+landed on the `feat/code-review` branch: converting `:core:scoring` from an Android library to
+a plain `kotlin("jvm")` module was attempted, hit an external blocker, and was deferred. It is
+self-contained: everything needed to execute it is below, and no other document is required.
 
 ---
 
@@ -424,8 +425,8 @@ Expected: full suite green, `lintRelease` at the phase-5 baseline (0 warnings).
 - The `core:database-schema` test dependency is resolved per §3.7 and all three
   affected tests still pass.
 - `:core:scoring:jacocoCoverageVerification` still holds its 80% floor.
-- Update `ARCHITECTURE_REMEDIATION_PLAN.md` Step 19 Outcome and remove the
-  "deferred" marker.
+- Update the **Status** line at the top of this document from deferred to done, and drop the
+  AGP-9.4.0 precondition note.
 
 ---
 
@@ -446,7 +447,6 @@ safe order to back out if something downstream breaks:
 
 ## 6. References
 
-- `ARCHITECTURE_REMEDIATION_PLAN.md` — Step 19a ("Make `core:scoring` a JVM module").
 - `docs/superpowers/plans/2026-08-18-phase5-performance-polish.md` — Task 5
   (Step 19a), the original execution plan and its deferred-outcome note.
 - Root-cause investigation (2026-08-18): `android.builtInKotlin=true` →
