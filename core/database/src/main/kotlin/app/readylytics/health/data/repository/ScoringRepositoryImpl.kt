@@ -38,6 +38,7 @@ import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.LongInterval
 import app.readylytics.health.domain.scoring.RasCalculator
+import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
@@ -48,7 +49,6 @@ import app.readylytics.health.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
-import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.di.DefaultDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
@@ -79,6 +79,7 @@ class ScoringRepositoryImpl
         private val computeSleepMetricsUseCase: ComputeSleepMetricsUseCase,
         private val scoringConfigFactory: ScoringConfigFactory,
         private val computeDailyTrimpUseCase: ComputeDailyTrimpUseCase,
+        private val resolveDailyBaselinesUseCase: ResolveDailyBaselinesUseCase,
         private val heartRateDao: HeartRateDao,
         private val minuteBucketDao: MinuteBucketDao,
         private val weightRecordDao: WeightRecordDao,
@@ -199,25 +200,21 @@ class ScoringRepositoryImpl
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
                 val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs, zoneId)
 
-                val frozenSnapshot = dailySummary?.takeIf { it.baselineCalculatedAtDate != null }
-                val frozenHrMax = frozenSnapshot?.hrMax
-                val frozenRasScalingFactor = frozenSnapshot?.rasScalingFactor
-                val hrMax = frozenHrMax ?: HeartRateFormulas.resolveMaxHeartRate(prefs)
-
-                val rhrBaselineValue =
-                    (if (dailySummary?.baselineCalculatedAtDate != null) dailySummary.rhrBpm else null)
-                        ?: prefs.rhrBaselineOverride
-                        ?: baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
-                            fromMs = dayMidnightMs,
-                            toMs = nextDayMidnightMs,
-                            percentile = prefs.restingHrPercentile,
-                            sleepDayPolicy = sleepDayPolicy,
-                            prefetchedSessions = baselineContext?.sessions,
-                        )
-                        ?: ScoringConstants.DEFAULT_RHR_BPM
-
-                if (hrMax <= 0f) throw IllegalStateException("HR Max is missing or invalid")
-                if (rhrBaselineValue <= 0f) throw IllegalStateException("RHR Baseline is missing or invalid")
+                val initialBaselines =
+                    resolveDailyBaselinesUseCase.resolveInitialBaselines(
+                        targetDate = targetDate,
+                        dayMidnightMs = dayMidnightMs,
+                        nextDayMidnightMs = nextDayMidnightMs,
+                        prefs = prefs,
+                        dailySummary = dailySummary,
+                        sleepDayPolicy = sleepDayPolicy,
+                        prefetchedSessions = baselineContext?.sessions,
+                    )
+                val hrMax = initialBaselines.hrMax
+                val frozenHrMax = initialBaselines.frozenHrMax
+                val frozenRasScalingFactor = initialBaselines.frozenRasScalingFactor
+                val rhrBaselineValue = initialBaselines.rhrBaselineValue
+                val frozenSnapshot = initialBaselines.frozenSnapshot
 
                 val installDateFromPrefs = LocalDate.ofEpochDay(prefs.installDate / 86400000)
                 val scoringConfig =
@@ -605,38 +602,22 @@ class ScoringRepositoryImpl
                     summary = sleepMetricsResult.getOrNull()?.let { DailySummaryMapper.toEntity(it, zoneId) } ?: summary
                 }
 
-                val hrvMuMssd =
-                    if (frozenSnapshot != null) {
-                        frozenSnapshot.hrvMuMssd
-                    } else {
-                        summary.hrvMuMssd
-                    }
-                val hrvSigmaMssd =
-                    if (frozenSnapshot != null) {
-                        frozenSnapshot.hrvSigmaMssd
-                    } else {
-                        summary.hrvSigmaMssd
-                    }
-                val rhrBpm =
-                    if (frozenSnapshot != null) {
-                        frozenSnapshot.rhrBpm
-                    } else {
-                        rhrBaselineValue
-                    }
-                val rhrSigma =
-                    if (frozenSnapshot != null) {
-                        frozenSnapshot.rhrSigma
-                    } else {
-                        summary.rhrSigma
-                    }
+                val finalBaselines =
+                    resolveDailyBaselinesUseCase.resolveFinalBaselines(
+                        frozenSnapshot = frozenSnapshot,
+                        summaryHrvMuMssd = summary.hrvMuMssd,
+                        summaryHrvSigmaMssd = summary.hrvSigmaMssd,
+                        summaryRhrSigma = summary.rhrSigma,
+                        rhrBaselineValue = rhrBaselineValue,
+                    )
 
                 summary =
                     summary.copy(
                         hrvBaseline = computedHrvBaseline,
-                        rhrBpm = rhrBpm,
-                        hrvMuMssd = hrvMuMssd,
-                        hrvSigmaMssd = hrvSigmaMssd,
-                        rhrSigma = rhrSigma,
+                        rhrBpm = finalBaselines.rhrBpm,
+                        hrvMuMssd = finalBaselines.hrvMuMssd,
+                        hrvSigmaMssd = finalBaselines.hrvSigmaMssd,
+                        rhrSigma = finalBaselines.rhrSigma,
                         baselineCalculatedAtDate = targetDate,
                         avgSleepingSpo2 = avgSpo2,
                         avgSleepingBodyTemp = avgBodyTemp,

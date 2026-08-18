@@ -64,6 +64,7 @@ class ScoringRepositoryImplTest {
             computeSleepMetricsUseCase,
             scoringConfigFactory,
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+            ResolveDailyBaselinesUseCase(baselineComputer),
             heartRateDao,
             minuteBucketDao,
             weightRecordDao,

@@ -337,6 +337,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
                 computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
                 heartRateDao = heartRateDao,
                 minuteBucketDao = minuteBucketDao,
                 weightRecordDao = weightRecordDao,

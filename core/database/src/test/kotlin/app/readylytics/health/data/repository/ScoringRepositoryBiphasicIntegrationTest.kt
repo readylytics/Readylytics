@@ -23,6 +23,7 @@ import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
@@ -74,6 +75,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             computeSleepMetricsUseCase,
             scoringConfigFactory,
             ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+            ResolveDailyBaselinesUseCase(baselineComputer),
             heartRateDao,
             minuteBucketDao,
             weightRecordDao,

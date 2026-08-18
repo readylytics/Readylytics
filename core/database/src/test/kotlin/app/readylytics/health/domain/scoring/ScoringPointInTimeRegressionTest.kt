@@ -65,6 +65,7 @@ class ScoringPointInTimeRegressionTest {
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
                 ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                ResolveDailyBaselinesUseCase(baselineComputer),
                 heartRateDao,
                 minuteBucketDao,
                 weightRecordDao,

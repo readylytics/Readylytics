@@ -186,6 +186,7 @@ class ScoringRepositoryN1Test {
                 computeSleepMetricsUseCase = computeSleepMetricsUseCase,
                 scoringConfigFactory = scoringConfigFactory,
                 computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(computeWorkoutTrimpUseCase),
+                resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
                 heartRateDao = heartRateDao,
                 minuteBucketDao = minuteBucketDao,
                 weightRecordDao = weightRecordDao,

@@ -15,6 +15,7 @@ import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
@@ -145,6 +146,7 @@ class WalkForwardTransactionEquivalenceTest {
                         ),
                     scoringConfigFactory = scoringConfigFactory,
                     computeDailyTrimpUseCase = ComputeDailyTrimpUseCase(ComputeWorkoutTrimpUseCase()),
+                    resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer),
                     heartRateDao = db.heartRateDao(),
                     minuteBucketDao = db.minuteBucketDao(),
                     weightRecordDao = db.weightRecordDao(),
