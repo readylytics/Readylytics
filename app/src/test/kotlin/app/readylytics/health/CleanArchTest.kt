@@ -162,7 +162,8 @@ class CleanArchTest {
                     ) &&
                         (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\")) &&
                         !it.path.contains("/feature/") &&
-                        !it.path.contains("\\feature\\")
+                        !it.path.contains("\\feature\\") &&
+                        !it.hasPackage("app.readylytics.health.feature..")
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
