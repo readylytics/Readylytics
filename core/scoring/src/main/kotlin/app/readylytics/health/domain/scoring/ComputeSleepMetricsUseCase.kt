@@ -9,6 +9,7 @@ import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.components.PhaseCalculator
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
@@ -59,6 +60,7 @@ class ComputeSleepMetricsUseCase
             rhrBaselineValue: Float,
             dayEndMs: Long,
             currentSessionIds: Set<String> = setOf(session.id),
+            prefetchedSessions: List<SleepSession>? = null,
         ): Result<DailySummary> =
             try {
                 val installDate =
@@ -283,6 +285,7 @@ class ComputeSleepMetricsUseCase
                         targetDate = targetDate,
                         prefs = prefs,
                         stagesSuspicious = stagesSuspicious,
+                        prefetchedSessions = prefetchedSessions?.map { it.toSleepSessionData() },
                     )
 
                 // Compute calibration status early for freeze gate (HIGH-1)
@@ -624,4 +627,21 @@ class ComputeSleepMetricsUseCase
                 logE("ComputeSleepMetrics", e) { "Sleep metrics failed for $targetDate" }
                 Result.failure("Failed to compute sleep metrics", "SLEEP_METRICS_ERROR")
             }
+
+        private fun SleepSession.toSleepSessionData(): SleepSessionData =
+            SleepSessionData(
+                id = id,
+                deviceName = deviceName,
+                startTime = startTime,
+                endTime = endTime,
+                durationMinutes = durationMinutes,
+                efficiency = efficiency,
+                deepSleepMinutes = deepSleepMinutes,
+                lightSleepMinutes = lightSleepMinutes,
+                remSleepMinutes = remSleepMinutes,
+                awakeMinutes = awakeMinutes,
+                sleepScore = sleepScore,
+                startZoneOffsetSeconds = startZoneOffsetSeconds,
+                endZoneOffsetSeconds = endZoneOffsetSeconds,
+            )
     }

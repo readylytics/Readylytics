@@ -239,6 +239,17 @@ class CircadianConsistencyRepositoryTest {
         }
 
     @Test
+    fun `scoreFor returns null while calibrating`() =
+        runTest {
+            val anchor = LocalDate.of(2026, 1, 10)
+            val repo = buildRepo(sessions = listOf(fakeSleepSession("1", bedHour = 23, anchorDate = anchor)))
+
+            val score = repo.scoreFor(anchor, defaultPrefs)
+
+            assertNull(score)
+        }
+
+    @Test
     fun `resultForOnce with prefetched sessions avoids the database query and matches the DB path`() =
         runTest {
             val anchor = LocalDate.of(2026, 1, 10)

@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.scoring.sleep
 
 import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.util.logE
@@ -31,6 +32,7 @@ class SleepModifierResolver
             targetDate: LocalDate,
             prefs: UserPreferences,
             stagesSuspicious: Boolean,
+            prefetchedSessions: List<SleepSessionData>? = null,
         ): SleepModifiers {
             val fragmentation =
                 if (stagesSuspicious) {
@@ -49,7 +51,11 @@ class SleepModifierResolver
 
             val regularity =
                 try {
-                    circadianConsistencyRepository.scoreFor(targetDate, prefs)
+                    if (prefetchedSessions != null) {
+                        circadianConsistencyRepository.scoreFor(targetDate, prefs, prefetchedSessions)
+                    } else {
+                        circadianConsistencyRepository.scoreFor(targetDate, prefs)
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

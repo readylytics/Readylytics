@@ -8,6 +8,7 @@ import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.security.EncryptionManager
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +25,22 @@ private const val MINUTE = 60_000L
 class SleepModifierResolverTest {
     private val date = LocalDate.of(2026, 1, 10)
     private val preferences = UserPreferences()
+
+    private val prefetched =
+        listOf(
+            SleepSessionData(
+                id = "prefetched-session",
+                deviceName = null,
+                startTime = 1_700_000_000_000L,
+                endTime = 1_700_006_400_000L,
+                durationMinutes = 400,
+                efficiency = 90f,
+                deepSleepMinutes = 90,
+                lightSleepMinutes = 180,
+                remSleepMinutes = 90,
+                awakeMinutes = 10,
+            ),
+        )
 
     private fun awake(startMin: Long, endMin: Long) =
         SleepStageData(
@@ -109,5 +126,40 @@ class SleepModifierResolverTest {
 
             assertNull(modifiers.regularityScore)
             assertEquals(0f, modifiers.fragmentation!!.wasoMinutes, 0.01f)
+        }
+
+    @Test
+    fun `resolve forwards prefetched sessions to circadian regularity`() =
+        runTest {
+            val sessionRepo =
+                object : SleepSessionRepository {
+                    override fun observeSince(fromMs: Long): Flow<List<SleepSessionData>> = emptyFlow()
+                    override suspend fun getSince(fromMs: Long): List<SleepSessionData> = emptyList()
+                    override suspend fun countSince(fromMs: Long): Int = 0
+                    override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> = emptyFlow()
+                    override suspend fun getSessionStages(sessionId: String): List<SleepStageData> = emptyList()
+                    override fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long): Flow<SleepSessionData?> = emptyFlow()
+                }
+            val circadianRepo = mockk<CircadianConsistencyRepository>()
+            coEvery { circadianRepo.scoreFor(date, preferences, prefetched) } returns 77f
+            val resolver =
+                SleepModifierResolver(
+                    sleepSessionRepository = sessionRepo,
+                    circadianConsistencyRepository = circadianRepo,
+                )
+
+            val modifiers =
+                resolver.resolve(
+                    sessionId = "session",
+                    targetDate = date,
+                    prefs = preferences,
+                    stagesSuspicious = false,
+                    prefetchedSessions = prefetched,
+                )
+
+            assertEquals(77f, modifiers.regularityScore)
+            coVerify {
+                circadianRepo.scoreFor(date, preferences, prefetched)
+            }
         }
 }
