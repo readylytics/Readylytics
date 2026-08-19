@@ -4,7 +4,7 @@
 
 **Goal:** Keep `M3MetricGaugeWithValue`'s value text vertically aligned whether a unit is present or absent, while preserving the existing gauge API and visual constants.
 
-**Architecture:** Replace the overlay's wrap-content `Column` with a private `GaugeValueUnitOverlay` based on `SubcomposeLayout`. It measures the value and optional unit independently, reports their natural combined footprint, and places the value at `unitBlockHeight / 2` so parent centering keeps the value center fixed.
+**Architecture:** Replace the overlay's wrap-content `Column` with a private `GaugeValueUnitOverlay` based on `SubcomposeLayout`. It measures the value and optional unit independently, reports a footprint of value height plus twice the unit block (unit spacing plus unit height) when a unit is present, and places the value one `unitBlockHeight` from the top so parent centering keeps the value center fixed and the unit sits exactly `unitSpacing` below the value.
 
 **Tech Stack:** Kotlin, Jetpack Compose Foundation `SubcomposeLayout`, Compose `BasicText`/`TextAutoSize`, Compose UI tests, Robolectric, Gradle.
 
@@ -60,6 +60,9 @@ Append this test inside `M3MetricGaugeTest`:
         }
         val withUnitBounds = composeTestRule.onNodeWithText("34.5").fetchSemanticsNode().boundsInRoot
         val withUnitCenterY = withUnitBounds.top + withUnitBounds.height / 2f
+
+        val unitBounds = composeTestRule.onNodeWithText("°C").fetchSemanticsNode().boundsInRoot
+        assertTrue(unitBounds.top >= withUnitBounds.bottom + 1f)
 
         composeTestRule.setContent {
             Box(modifier = Modifier.width(140.dp).height(120.dp)) {
@@ -203,25 +206,31 @@ SubcomposeLayout(modifier = modifier) { constraints ->
             null
         }
 
-    val unitBlockHeightPx =
+val unitBlockHeightPx =
         if (unitPlaceable != null) unitSpacing.roundToPx() + unitPlaceable.height else 0
-    val totalHeight = valuePlaceable.height + unitBlockHeightPx
+    val totalHeight = valuePlaceable.height + 2 * unitBlockHeightPx
     val totalWidth = maxOf(valuePlaceable.width, unitPlaceable?.width ?: 0)
 
-    layout(totalWidth, totalHeight) {
+    val boundedTotalHeight =
+        if (constraints.maxHeight != Constraints.Infinity) {
+            minOf(totalHeight, constraints.maxHeight)
+        } else {
+            totalHeight
+        }
+
+    layout(totalWidth, boundedTotalHeight) {
         valuePlaceable.placeRelative(
             x = (totalWidth - valuePlaceable.width) / 2,
-            y = unitBlockHeightPx / 2,
+            y = unitBlockHeightPx,
         )
         unitPlaceable?.placeRelative(
             x = (totalWidth - unitPlaceable.width) / 2,
-            y = totalHeight - unitPlaceable.height,
+            y = boundedTotalHeight - unitPlaceable.height,
         )
     }
-}
 ```
 
-The measure lambda is a `SubcomposeMeasureScope`, so `unitSpacing.roundToPx()` is valid without an additional density wrapper. Preserve `unitText.isNotBlank()` semantics so blank units do not create a second subcomposition or spacing block.
+The measure lambda is a `SubcomposeMeasureScope`, so `unitSpacing.roundToPx()` is valid without an additional density wrapper. Preserve `unitText.isNotBlank()` semantics so blank units do not create a second subcomposition or spacing block. The reported height is clamped to the parent's max height so a degenerate short-gauge slot cannot overflow the parent; the clamp does not move the value's vertical center.
 
 - [ ] **Step 4: Run the focused test suite**
 

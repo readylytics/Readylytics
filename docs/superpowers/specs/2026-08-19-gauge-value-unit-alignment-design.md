@@ -29,16 +29,21 @@ The overlay will:
    auto-size settings.
 2. Measure the unit text only when `unitText.isNotBlank()`, using its existing
    style, color, and auto-size settings.
-3. Report the natural combined footprint: value height plus unit height and the
-   existing unit spacing when present; width is the larger measured text width.
-4. Place the value horizontally centered at `unitBlockHeight / 2` and place the
-   unit horizontally centered at the bottom of the footprint.
+3. Report the natural combined footprint: value height plus twice the unit block
+   (unit spacing plus unit height) when a unit is present, keeping the unit block
+   balanced on both sides of the value so its vertical center stays at the
+   overlay's center; width is the larger measured text width.
+4. Place the value horizontally centered at `unitBlockHeight` from the top (its
+   vertical center then lands at the overlay's center) and place the unit
+   horizontally centered at the bottom, so the unit sits exactly `unitSpacing`
+   below the value.
 
-Because the parent centers the overlay by its total height, the value placement
-offset cancels the extra height introduced by the unit. The value's own vertical
-center therefore remains at the same parent anchor for both variants. Measuring
-actual placeables keeps this invariant valid when `TextAutoSize.StepBased` picks
-different font sizes.
+Because the unit block is counted on both sides of the value and the value is
+placed one unit block from the top, the value's vertical center lands exactly at
+the overlay's center regardless of unit presence. The parent then centers the
+overlay by its total height, so the value anchor stays fixed for both variants.
+Measuring actual placeables keeps this invariant valid when
+`TextAutoSize.StepBased` picks different font sizes.
 
 The overlay keeps the existing modifier chain:
 
@@ -51,7 +56,8 @@ Modifier
 
 The measure pass will use zero minimum constraints, retain the inherited width
 limit, and allow text height to measure naturally. Unit spacing is converted to
-pixels in the measure scope.
+pixels in the measure scope. The reported height is clamped to the parent's max
+height so a degenerate short-gauge slot cannot overflow the parent.
 
 ## Testing
 
@@ -60,7 +66,9 @@ Add a Compose regression test that renders equivalent fixed-size gauge container
 first with a unit and then without one, reads each value node's semantic bounds,
 and asserts that their vertical centers match within one pixel. This directly
 guards the alignment invariant while allowing the two values to differ in text
-content.
+content. The same test also reads the unit node's bounds and asserts it sits
+strictly below the value with at least one pixel of clearance, guarding the full
+`unitSpacing` gap.
 
 Verification will proceed from focused to broad:
 

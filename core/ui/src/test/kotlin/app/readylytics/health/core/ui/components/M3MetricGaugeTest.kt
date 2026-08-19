@@ -301,6 +301,9 @@ class M3MetricGaugeTest {
         val withUnitBounds = composeTestRule.onNodeWithText("34.5").fetchSemanticsNode().boundsInRoot
         val withUnitCenterY = withUnitBounds.top + withUnitBounds.height / 2f
 
+        val unitBounds = composeTestRule.onNodeWithText("°C").fetchSemanticsNode().boundsInRoot
+        assertTrue(unitBounds.top >= withUnitBounds.bottom + 1f)
+
         val withoutUnitBounds = composeTestRule.onNodeWithText("98").fetchSemanticsNode().boundsInRoot
         val withoutUnitCenterY = withoutUnitBounds.top + withoutUnitBounds.height / 2f
 
