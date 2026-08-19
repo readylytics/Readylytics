@@ -107,7 +107,7 @@ class HealthResyncWorker
          * version, so a killed worker leaves the stale version in place and the next launch re-enqueues.
          */
         private suspend fun persistPostRecomputeState() {
-            runCatching {
+            try {
                 val settings = settingsRepository.get()
                 val prefs = settings.userPreferences.first()
                 if (prefs.scoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION) {
@@ -118,7 +118,9 @@ class HealthResyncWorker
                     goalSleepHours = prefs.goalSleepHours,
                     hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
                 )
-            }.onFailure { e ->
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 logE(TAG, e) { "Failed to persist post-recompute scoring version/baseline" }
             }
         }

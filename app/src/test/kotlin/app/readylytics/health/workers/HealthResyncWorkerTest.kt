@@ -17,7 +17,6 @@ import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.domain.sync.ResyncPhase
 import dagger.Lazy
 import io.mockk.*
-import io.mockk.coVerify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -249,6 +248,22 @@ class HealthResyncWorkerTest {
 
             coVerify(exactly = 0) { settingsRepository.updateScoringVersion(any()) }
             coVerify(exactly = 0) { settingsRepository.updateSleepScoreRecalcBaseline(any(), any(), any()) }
+        }
+
+    @Test
+    fun `persistence failure does not fail the worker`() =
+        runBlocking {
+            coEvery { useCase.execute(any(), any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+            coEvery { settingsRepository.userPreferences } throws
+                RuntimeException("datastore io failure")
+            val result = createWorker().doWork()
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
         }
 
     private fun createWorker() =
