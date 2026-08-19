@@ -20,6 +20,7 @@ fun ContributorsSection() {
         BulletItem(stringResource(R.string.about_sleep_duration_bullet))
         BulletItem(stringResource(R.string.about_sleep_architecture_bullet))
         BulletItem(stringResource(R.string.about_sleep_restoration_bullet))
+        BulletItem(stringResource(R.string.about_sleep_fragmentation_bullet))
         BodyText(stringResource(R.string.about_stage_less_reweight))
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))

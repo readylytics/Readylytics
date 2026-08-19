@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="about_header_sleep_score">## Sleep Score</string>
-    <string name="about_sleep_score_intro">A 100-point summary of last night\'s sleep, made of three
-        parts:</string>
-    <string name="about_sleep_duration_bullet">**Duration (50%)** — how much sleep you got, compared
-        to your goal (default 8 hours, configurable). Includes a small adjustment for how efficient
+    <string name="about_sleep_score_intro">A 100-point summary of last night\'s sleep, made of four
+        parts (under the default Balanced profile):</string>
+    <string name="about_sleep_duration_bullet">**Duration (40%)** — how much sleep you got, compared
+        to your goal (default 8 hours, configurable). Includes a continuous adjustment for how efficient
         your time in bed was.</string>
-    <string name="about_sleep_architecture_bullet">**Architecture (25%)** — how much of your sleep
+    <string name="about_sleep_architecture_bullet">**Architecture (20%)** — how much of your sleep
         was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery
         happens; REM is when your brain processes memory and emotion. Targets are age-specific to
         account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).</string>
@@ -15,9 +15,12 @@
         overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the
         scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it
         normalises the skewed distribution of raw HRV data.</string>
+    <string name="about_sleep_fragmentation_bullet">**Fragmentation (15%)** — sleep continuity based on
+        Wake After Sleep Onset (WASO) and discrete awakenings (≥1.5 minutes), with a grace allowance
+        for normal wakefulness.</string>
     <string name="about_stage_less_reweight" formatted="false">If a source provides a sleep session with no stage
         records, Readylytics uses the raw session span as total sleep duration. Because Architecture
-        is unavailable, the Sleep Score reweights to Duration 75%, Architecture 0%, and Restoration 25%.
+        and Fragmentation are unavailable, the Sleep Score renormalizes the remaining sub-scores (Duration and Restoration).
         This differs from suspicious but non-empty stage data: the source supplied stages, but
         their distribution failed plausibility checks.</string>
     <string name="about_reading_score_label">**Reading the score**</string>

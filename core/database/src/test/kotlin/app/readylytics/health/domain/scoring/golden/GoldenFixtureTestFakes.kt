@@ -28,6 +28,8 @@ class FakeSettingsRepository(
     override suspend fun updateLastSyncTimestamp(timestamp: Long) = Unit
 
     override suspend fun updateBirthday(date: LocalDate) = Unit
+
+    override suspend fun updateScoringVersion(version: Int) = Unit
 }
 
 /**

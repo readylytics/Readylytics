@@ -61,25 +61,12 @@ object ScoringConstants {
     }
 
     object Sleep {
-        // REF: Buysse 1989 PSQI; Buysse 2014 RU-SATED; Knutson 2017 NSF Sleep Health Index
-        const val WEIGHT_DURATION = 0.50f
-        const val WEIGHT_ARCHITECTURE = 0.25f
-        const val WEIGHT_RESTORATION = 0.25f
         const val WEIGHT_DEEP_COMPONENT = 0.5f
         const val WEIGHT_REM_COMPONENT = 0.5f
 
         // Additive efficiency within Duration — REF: A.3; PSQI; avoids double-penalty since TST = TIB × SE
         const val WEIGHT_TST_IN_DURATION = 0.7f
         const val WEIGHT_EFF_IN_DURATION = 0.3f
-        const val EFF_EXCELLENT_THRESHOLD = 90f
-        const val EFF_EXCELLENT_SCORE = 100f
-        const val EFF_GOOD_THRESHOLD = 85f
-        const val EFF_GOOD_SCORE = 85f
-        const val EFF_FAIR_THRESHOLD = 75f
-        const val EFF_FAIR_SCORE = 65f
-        const val EFF_POOR_THRESHOLD = 65f
-        const val EFF_POOR_SCORE = 40f
-        const val EFF_VERY_POOR_SCORE = 15f
 
         // Minimum awake-segment length that counts as a discrete awakening (1.5 minutes).
         const val MIN_AWAKENING_DURATION_MS = 90_000L
