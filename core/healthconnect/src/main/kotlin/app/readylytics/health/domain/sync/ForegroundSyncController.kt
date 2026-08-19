@@ -44,11 +44,6 @@ class ForegroundSyncController
         private val _isSyncing = MutableStateFlow(false)
         override val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
-        // True only while a *background* historical resync/recompute worker is running (set by the
-        // worker bridge below), distinct from isSyncing which also covers foreground daily sync.
-        private val _isResyncing = MutableStateFlow(false)
-        override val isResyncing: StateFlow<Boolean> = _isResyncing.asStateFlow()
-
         // Phase-tagged resync progress (INGEST/PRUNE/RECONCILE/RECOMPUTE); null when no resync is running.
         private val _recalcProgress = MutableStateFlow<RecalcProgress?>(null)
         override val recalcProgress: StateFlow<RecalcProgress?> = _recalcProgress.asStateFlow()
@@ -140,7 +135,6 @@ class ForegroundSyncController
 
         fun onBackgroundRecalcStarted() {
             _isSyncing.value = true
-            _isResyncing.value = true
             _recalcProgress.value = null
         }
 
@@ -154,7 +148,6 @@ class ForegroundSyncController
 
         fun onBackgroundRecalcFinished(success: Boolean) {
             _isSyncing.value = false
-            _isResyncing.value = false
             _recalcProgress.value = null
             if (success) _syncCompletedEvent.tryEmit(Unit)
         }

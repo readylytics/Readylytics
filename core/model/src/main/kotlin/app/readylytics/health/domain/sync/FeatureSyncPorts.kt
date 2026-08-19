@@ -31,7 +31,6 @@ data class HistoricalResyncState(
 
 interface ForegroundSyncGateway {
     val isSyncing: StateFlow<Boolean>
-    val isResyncing: StateFlow<Boolean>
     val recalcProgress: StateFlow<RecalcProgress?>
     val syncCompletedEvent: SharedFlow<Unit>
 

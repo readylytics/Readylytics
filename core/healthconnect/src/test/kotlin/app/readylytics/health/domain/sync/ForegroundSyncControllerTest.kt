@@ -407,22 +407,4 @@ class ForegroundSyncControllerTest {
 
             coVerify(exactly = 1) { syncUseCase.sync(windowDays = 4, onProgress = any()) }
         }
-
-    @Test
-    fun `isResyncing toggles on background recalc start and finish`() =
-        runTest {
-            var isResyncing = false
-            val job = launch { controller.isResyncing.collect { isResyncing = it } }
-            runCurrent()
-
-            controller.onBackgroundRecalcStarted()
-            runCurrent()
-            kotlin.test.assertTrue(isResyncing)
-
-            controller.onBackgroundRecalcFinished(success = true)
-            runCurrent()
-            kotlin.test.assertFalse(isResyncing)
-
-            job.cancel()
-        }
 }
