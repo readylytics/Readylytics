@@ -8,7 +8,7 @@ import app.readylytics.health.data.local.DatabaseMigrations
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.RoomWalDiagnostics
-import app.readylytics.health.data.local.dao.AuditEventDao
+import app.readylytics.health.core.database.data.local.dao.AuditEventDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao

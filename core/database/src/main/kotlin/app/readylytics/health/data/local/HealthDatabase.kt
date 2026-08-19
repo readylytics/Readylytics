@@ -3,7 +3,7 @@ package app.readylytics.health.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import app.readylytics.health.data.local.dao.AuditEventDao
+import app.readylytics.health.core.database.data.local.dao.AuditEventDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
