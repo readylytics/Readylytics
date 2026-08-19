@@ -15,7 +15,11 @@ class CleanArchTest {
             .assertTrue { file ->
                 val hasDaoImport =
                     file.imports.any { import ->
-                        import.name.startsWith("app.readylytics.health.data.local.dao")
+                        // Matched as a contained segment (not startsWith) so this stays valid
+                        // across module renames: it catches both the legacy
+                        // `app.readylytics.health.data.local.dao` package and the current
+                        // `app.readylytics.health.core.databaseschema.data.local.dao` package.
+                        import.name.contains(".data.local.dao.")
                     }
                 !hasDaoImport
             }
@@ -51,6 +55,14 @@ class CleanArchTest {
 
     @Test
     fun `domain package does not import data package`() {
+        // Known roots of the shared data layer. Listed explicitly (rather than matching a bare
+        // ".data." segment) because "data" is also used as an unrelated sub-package name elsewhere
+        // (e.g. feature.settings.data), so a blind substring match would false-positive there.
+        val dataLayerPackagePrefixes =
+            listOf(
+                "app.readylytics.health.data.",
+                "app.readylytics.health.core.databaseschema.data.",
+            )
         // Value types that are domain-shaped but live under data.preferences for proto-schema reasons.
         // Only these specific types are allowed; data-layer impls (mappers, serializers, repos) are not.
         val allowedDataImports =
@@ -76,7 +88,7 @@ class CleanArchTest {
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
-                            import.name.startsWith("app.readylytics.health.data.") &&
+                            dataLayerPackagePrefixes.any { prefix -> import.name.startsWith(prefix) } &&
                                 import.name !in allowedDataImports
                         }.map { import -> "${file.name}: ${import.name}" }
                 }
@@ -112,7 +124,12 @@ class CleanArchTest {
                         (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
                 }.flatMap { file ->
                     val text = file.text
-                    val matches = Regex("""app\.readylytics\.health\.data\.[a-zA-Z0-9.]+""").findAll(text)
+                    // Alternation covers both the legacy `...health.data.` root and the
+                    // `...health.core.databaseschema.data.` root the Room entities/DAOs now live
+                    // under, so this stays valid across module renames.
+                    val matches =
+                        Regex("""app\.readylytics\.health\.(?:data|core\.databaseschema\.data)\.[a-zA-Z0-9.]+""")
+                            .findAll(text)
                     matches
                         .map { it.value }
                         .filter { ref ->
@@ -140,7 +157,8 @@ class CleanArchTest {
                         it.hasPackage(
                             "app.readylytics.health.domain..",
                         ) ||
-                            it.hasPackage("app.readylytics.health.data..")
+                            it.hasPackage("app.readylytics.health.data..") ||
+                            it.hasPackage("app.readylytics.health.core.databaseschema.data..")
                     ) &&
                         (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\")) &&
                         !it.path.contains("/feature/") &&
@@ -203,6 +221,7 @@ class CleanArchTest {
                     val isDomainOrDataOrVm =
                         file.hasPackage("app.readylytics.health.domain..") ||
                             file.hasPackage("app.readylytics.health.data..") ||
+                            file.hasPackage("app.readylytics.health.core.databaseschema.data..") ||
                             (file.hasPackage("app.readylytics.health.feature..") && file.name.endsWith("ViewModel.kt"))
                     isSource && !isDi && isDomainOrDataOrVm
                 }.flatMap { file ->
