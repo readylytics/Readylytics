@@ -59,4 +59,5 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:model"))
     implementation(project(":core:database-schema"))
+    implementation(project(":core:scoring"))
 }
