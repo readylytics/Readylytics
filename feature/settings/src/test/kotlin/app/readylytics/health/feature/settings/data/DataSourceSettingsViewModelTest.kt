@@ -4,6 +4,7 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncState
 import io.mockk.coEvery
@@ -47,6 +48,10 @@ class DataSourceSettingsViewModelTest {
         initialPrefs: UserPreferences = UserPreferences(),
         deviceChangeNoticeDismissed: Boolean = false,
         historicalResyncController: HistoricalResyncController = mockk(relaxed = true),
+        foregroundSyncGateway: ForegroundSyncGateway =
+            mockk {
+                every { isResyncing } returns MutableStateFlow(false)
+            },
     ): Triple<DataSourceSettingsViewModel, MutableStateFlow<Map<String, String>>, HistoricalResyncController> {
         val deviceByDataType = MutableStateFlow(initialPrefs.deviceByDataType)
         val prefsFlow =
@@ -87,7 +92,13 @@ class DataSourceSettingsViewModelTest {
                 HistoricalResyncState(running = false, current = 0, total = 0),
             )
 
-        val viewModel = DataSourceSettingsViewModel(settingsReader, deviceSettings, historicalResyncController)
+        val viewModel =
+            DataSourceSettingsViewModel(
+                settingsReader,
+                deviceSettings,
+                historicalResyncController,
+                foregroundSyncGateway,
+            )
         viewModel.sharingStarted = SharingStarted.Lazily
         return Triple(viewModel, deviceByDataType, historicalResyncController)
     }
@@ -172,6 +183,22 @@ class DataSourceSettingsViewModelTest {
             viewModel.updateDevice(HealthDataType.HEART_RATE, "Watch A")
             advanceUntilIdle()
             assertFalse(viewModel.uiState.value.hasPendingChanges)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `isResyncing follows the foreground sync gateway`() =
+        runTest(testDispatcher) {
+            val isResyncingFlow = MutableStateFlow(false)
+            val gateway = mockk<ForegroundSyncGateway> { every { isResyncing } returns isResyncingFlow }
+            val (viewModel, _, _) = buildViewModel(foregroundSyncGateway = gateway)
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+            assertFalse(viewModel.uiState.value.isResyncing)
+            isResyncingFlow.value = true
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isResyncing)
 
             job.cancel()
         }

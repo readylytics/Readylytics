@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.HistoricalResyncController
-import app.readylytics.health.domain.sync.HistoricalResyncState
 import app.readylytics.health.feature.settings.DataSourceSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -35,6 +35,7 @@ class DataSourceSettingsViewModel
         private val settingsReader: UserPreferencesReader,
         private val deviceSettings: DeviceSettings,
         private val historicalResyncController: HistoricalResyncController,
+        private val foregroundSyncGateway: ForegroundSyncGateway,
     ) : ViewModel() {
         private val availableDevicesFlow = MutableStateFlow<List<String>>(emptyList())
         private val isLoadingDevicesFlow = MutableStateFlow(true)
@@ -68,7 +69,7 @@ class DataSourceSettingsViewModel
                 persistedDeviceByDataType,
                 availableDevicesFlow,
                 pendingOverrides,
-                historicalResyncController.state,
+                foregroundSyncGateway.isResyncing,
                 showDeviceChangeNoticeFlow,
                 isLoadingDevicesFlow,
             ) { args: Array<Any?> ->
@@ -80,7 +81,7 @@ class DataSourceSettingsViewModel
 
                 @Suppress("UNCHECKED_CAST")
                 val pending = args[2] as Map<HealthDataType, String?>
-                val resyncState = args[3] as HistoricalResyncState
+                val isResyncing = args[3] as Boolean
                 val showNotice = args[4] as Boolean
                 val isLoadingDevices = args[5] as Boolean
 
@@ -92,7 +93,7 @@ class DataSourceSettingsViewModel
                     availableDevices = availableDevices,
                     deviceByDataType = effective,
                     hasPendingChanges = pending.isNotEmpty(),
-                    isResyncing = resyncState.running,
+                    isResyncing = isResyncing,
                     showDeviceChangeNotice = showNotice,
                     isLoadingDevices = isLoadingDevices,
                 )
