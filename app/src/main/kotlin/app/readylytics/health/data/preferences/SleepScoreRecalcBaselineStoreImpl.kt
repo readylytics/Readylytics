@@ -41,8 +41,7 @@ class SleepScoreRecalcBaselineStoreImpl
     ) : SleepScoreRecalcBaselineStore {
         override val baseline: Flow<SleepScoreRecalcBaseline?> =
             dataStore.data.map { proto ->
-                proto.takeIf { it.hasSleepScoreWeightProfile() || it.hasGoalSleepHours() || it.hasHypersomniaOnsetPercent() }
-                    ?.toDomain()
+                if (proto.isSet()) proto.toDomain() else null
             }
 
         override suspend fun markRecalced(
@@ -51,7 +50,8 @@ class SleepScoreRecalcBaselineStoreImpl
             hypersomniaOnsetPercent: Int,
         ) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setSleepScoreWeightProfile(weightProfile.toProto())
                     .setGoalSleepHours(goalSleepHours)
                     .setHypersomniaOnsetPercent(hypersomniaOnsetPercent)
@@ -59,6 +59,11 @@ class SleepScoreRecalcBaselineStoreImpl
             }
         }
     }
+
+private fun SleepScoreRecalcBaselineProto.isSet(): Boolean =
+    hasSleepScoreWeightProfile() ||
+        hasGoalSleepHours() ||
+        hasHypersomniaOnsetPercent()
 
 private fun SleepScoreRecalcBaselineProto.toDomain(): SleepScoreRecalcBaseline =
     SleepScoreRecalcBaseline(
@@ -69,18 +74,27 @@ private fun SleepScoreRecalcBaselineProto.toDomain(): SleepScoreRecalcBaseline =
 
 private fun SleepScoreWeightProfile.toProto(): SleepScoreWeightProfileProto =
     when (this) {
-        SleepScoreWeightProfile.BALANCED -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
-        SleepScoreWeightProfile.DURATION_FOCUSED -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
-        SleepScoreWeightProfile.RECOVERY_FOCUSED -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
-        SleepScoreWeightProfile.ARCHITECTURE_FOCUSED -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
-        SleepScoreWeightProfile.CONTINUITY_FOCUSED -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
+        SleepScoreWeightProfile.BALANCED ->
+            SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+        SleepScoreWeightProfile.DURATION_FOCUSED ->
+            SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
+        SleepScoreWeightProfile.RECOVERY_FOCUSED ->
+            SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
+        SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
+            SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
+        SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
+            SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
     }
 
 private fun SleepScoreWeightProfileProto.toDomain(): SleepScoreWeightProfile =
     when (this) {
-        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED -> SleepScoreWeightProfile.DURATION_FOCUSED
-        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED -> SleepScoreWeightProfile.RECOVERY_FOCUSED
-        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED -> SleepScoreWeightProfile.ARCHITECTURE_FOCUSED
-        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED -> SleepScoreWeightProfile.CONTINUITY_FOCUSED
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED ->
+            SleepScoreWeightProfile.DURATION_FOCUSED
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED ->
+            SleepScoreWeightProfile.RECOVERY_FOCUSED
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED ->
+            SleepScoreWeightProfile.ARCHITECTURE_FOCUSED
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED ->
+            SleepScoreWeightProfile.CONTINUITY_FOCUSED
         else -> SleepScoreWeightProfile.BALANCED
     }

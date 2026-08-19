@@ -26,18 +26,19 @@ private class FakeDataStore<T>(
 }
 
 class SleepScoreRecalcBaselineStoreImplTest {
-
     @Test
     fun `baseline is null when nothing has been recalced`() =
         runTest {
-            val store = SleepScoreRecalcBaselineStoreImpl(FakeDataStore(SleepScoreRecalcBaselineProto.getDefaultInstance()))
+            val store =
+                SleepScoreRecalcBaselineStoreImpl(FakeDataStore(SleepScoreRecalcBaselineProto.getDefaultInstance()))
             assertNull(store.baseline.first())
         }
 
     @Test
     fun `markRecalced persists and round-trips the baseline`() =
         runTest {
-            val store = SleepScoreRecalcBaselineStoreImpl(FakeDataStore(SleepScoreRecalcBaselineProto.getDefaultInstance()))
+            val store =
+                SleepScoreRecalcBaselineStoreImpl(FakeDataStore(SleepScoreRecalcBaselineProto.getDefaultInstance()))
             store.markRecalced(SleepScoreWeightProfile.RECOVERY_FOCUSED, 9f, 110)
 
             assertEquals(
@@ -50,7 +51,8 @@ class SleepScoreRecalcBaselineStoreImplTest {
     fun `unset weight profile maps to balanced`() =
         runTest {
             val proto =
-                SleepScoreRecalcBaselineProto.newBuilder()
+                SleepScoreRecalcBaselineProto
+                    .newBuilder()
                     .setGoalSleepHours(8f)
                     .setHypersomniaOnsetPercent(125)
                     .build()
