@@ -4,6 +4,7 @@ import app.readylytics.health.data.preferences.CardConfigurationRepositoryImpl
 import app.readylytics.health.data.preferences.DataStoreCircadianThresholdPreferences
 import app.readylytics.health.data.preferences.HealthChangeTokenStoreImpl
 import app.readylytics.health.data.preferences.ResyncCheckpointStoreImpl
+import app.readylytics.health.data.preferences.SleepScoreRecalcBaselineStoreImpl
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SleepLayoutRepositoryImpl
 import app.readylytics.health.data.preferences.VitalsLayoutRepositoryImpl
@@ -11,6 +12,7 @@ import app.readylytics.health.data.preferences.WorkoutDetailLayoutRepositoryImpl
 import app.readylytics.health.data.preferences.WorkoutsLayoutRepositoryImpl
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
+import app.readylytics.health.domain.preferences.SleepScoreRecalcBaselineStore
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.sync.HealthChangeTokenStore
 import app.readylytics.health.domain.sync.ResyncCheckpointStore
@@ -33,6 +35,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindResyncCheckpointStore(impl: ResyncCheckpointStoreImpl): ResyncCheckpointStore
+
+    @Binds
+    @Singleton
+    abstract fun bindSleepScoreRecalcBaselineStore(
+        impl: SleepScoreRecalcBaselineStoreImpl,
+    ): SleepScoreRecalcBaselineStore
 
     @Binds
     @Singleton

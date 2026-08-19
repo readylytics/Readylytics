@@ -378,4 +378,20 @@ object DataStoreModule {
             scope = appScope,
             produceFile = { context.dataStoreFile("resync_checkpoint.pb") },
         )
+
+    @Provides
+    @Singleton
+    fun provideSleepScoreRecalcBaselineDataStore(
+        @ApplicationContext context: Context,
+        @ApplicationScope appScope: CoroutineScope,
+    ): DataStore<SleepScoreRecalcBaselineProto> =
+        DataStoreFactory.create(
+            serializer = SleepScoreRecalcBaselineSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    SleepScoreRecalcBaselineProto.getDefaultInstance()
+                },
+            scope = appScope,
+            produceFile = { context.dataStoreFile("sleep_score_recalc_baseline.pb") },
+        )
 }

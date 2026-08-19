@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package app.readylytics.health.data.preferences;
+
+option java_package = "app.readylytics.health.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "SleepScoreRecalcBaselineProtoFile";
+
+import "user_preferences.proto";
+
+// Snapshot of the sleep-scoring inputs at the last historical recompute. Absence of all fields
+// (proto3 `optional` presence) means "never recalced", which the read boundary resolves to the
+// factory defaults.
+message SleepScoreRecalcBaselineProto {
+  optional SleepScoreWeightProfileProto sleep_score_weight_profile = 1;
+  optional float goal_sleep_hours = 2;
+  optional int32 hypersomnia_onset_percent = 3;
+}
