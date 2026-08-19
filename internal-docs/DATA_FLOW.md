@@ -1030,10 +1030,11 @@ backup, and issue-reporting controls stay enabled.
 
 **Recalculate-scores baseline.** The "Recalculate scores" button enables only while the three
 sleep-scoring inputs (weight profile, goal sleep hours, hypersomnia onset percent) differ from the
-values history was last computed with — a persisted `SleepScoreRecalcBaseline` (its own DataStore,
-`sleep_score_recalc_baseline.pb`), captured via `SleepScoreRecalcBaselineStore.markRecalced(...)` when
-the button is pressed. `SleepSettingsViewModel` exposes `hasPendingSleepScoreRecalc` from this
-comparison (baseline `null` = never recalced → compare against factory defaults).
+values history was last computed with. The baseline lives on `user_preferences` as the optional
+`lastRecalcSleepScoreWeightProfile` / `lastRecalcGoalSleepHours` / `lastRecalcHypersomniaOnsetPercent`
+fields, written by the resync worker via `SettingsRepository.updateSleepScoreRecalcBaseline(...)` on
+success (absence = "never recalced"). `SleepSettingsViewModel` exposes `hasPendingSleepScoreRecalc`
+from this comparison against those stored fields (falling back to factory defaults when unset).
 
 ---
 

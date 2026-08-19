@@ -4,8 +4,6 @@ import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
-import app.readylytics.health.domain.preferences.SleepScoreRecalcBaseline
-import app.readylytics.health.domain.preferences.SleepScoreRecalcBaselineStore
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -13,7 +11,6 @@ import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.feature.settings.R
-import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -42,7 +39,6 @@ class SleepAndThresholdSettingsViewModelTest {
     private val scoringRepo = mockk<ScoringRepository>(relaxed = true)
     private val circadianPrefs = mockk<CircadianThresholdPreferences>(relaxed = true)
     private val resyncController = mockk<HistoricalResyncController>(relaxed = true)
-    private val baselineStore = mockk<SleepScoreRecalcBaselineStore>(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var sleepViewModel: SleepSettingsViewModel
@@ -53,7 +49,6 @@ class SleepAndThresholdSettingsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { settingsReader.userPreferences } returns MutableStateFlow(UserPreferences())
         every { circadianPrefs.overrideMinutesFlow } returns MutableStateFlow(null)
-        every { baselineStore.baseline } returns MutableStateFlow(null)
 
         sleepViewModel =
             SleepSettingsViewModel(
@@ -62,7 +57,6 @@ class SleepAndThresholdSettingsViewModelTest {
                 scoringRepo,
                 resyncController,
                 kotlinx.coroutines.CoroutineScope(testDispatcher),
-                baselineStore,
             )
         thresholdViewModel =
             ThresholdSettingsViewModel(
@@ -127,7 +121,6 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
-                    baselineStore,
                 )
 
             val state =
@@ -275,7 +268,6 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
-                    baselineStore,
                 )
 
             val state =
@@ -290,7 +282,6 @@ class SleepAndThresholdSettingsViewModelTest {
     @Test
     fun `recalc pending is false at baseline`() =
         runTest {
-            every { baselineStore.baseline } returns MutableStateFlow(null)
             val vm =
                 SleepSettingsViewModel(
                     settingsReader,
@@ -298,7 +289,6 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
-                    baselineStore,
                 )
 
             val job =
@@ -312,11 +302,10 @@ class SleepAndThresholdSettingsViewModelTest {
         }
 
     @Test
-    fun `recalc pending true when goal differs from baseline`() =
+    fun `recalc pending true when goal differs from the last-recalc baseline`() =
         runTest {
             every { settingsReader.userPreferences } returns
                 MutableStateFlow(UserPreferences(goalSleepHours = 9f))
-            every { baselineStore.baseline } returns MutableStateFlow(null)
 
             val vm =
                 SleepSettingsViewModel(
@@ -325,7 +314,6 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
-                    baselineStore,
                 )
 
             val job =
@@ -339,20 +327,17 @@ class SleepAndThresholdSettingsViewModelTest {
         }
 
     @Test
-    fun `recalc pending clears after recalc`() =
+    fun `recalc pending false once the worker-recorded baseline matches live inputs`() =
         runTest {
-            val baselineFlow = MutableStateFlow<SleepScoreRecalcBaseline?>(null)
             every { settingsReader.userPreferences } returns
-                MutableStateFlow(UserPreferences(goalSleepHours = 9f))
-            every { baselineStore.baseline } returns baselineFlow
-            coEvery { baselineStore.markRecalced(any(), any(), any()) } coAnswers {
-                baselineFlow.value =
-                    SleepScoreRecalcBaseline(
-                        SleepScoreWeightProfile.BALANCED,
-                        9f,
-                        SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
-                    )
-            }
+                MutableStateFlow(
+                    UserPreferences(
+                        goalSleepHours = 9f,
+                        lastRecalcGoalSleepHours = 9f,
+                        lastRecalcSleepScoreWeightProfile = SleepScoreWeightProfile.BALANCED,
+                        lastRecalcHypersomniaOnsetPercent = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+                    ),
+                )
 
             val vm =
                 SleepSettingsViewModel(
@@ -361,7 +346,6 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
-                    baselineStore,
                 )
 
             val job =
@@ -369,12 +353,6 @@ class SleepAndThresholdSettingsViewModelTest {
                     vm.uiState.collect { }
                 }
             advanceUntilIdle()
-            assertTrue(vm.uiState.value.hasPendingSleepScoreRecalc)
-
-            vm.onEvent(SettingsEvent.RecalculateScores)
-            advanceUntilIdle()
-            coVerify { resyncController.requestScoreRecompute() }
-            coVerify { baselineStore.markRecalced(any(), any(), any()) }
 
             assertFalse(vm.uiState.value.hasPendingSleepScoreRecalc)
             job.cancel()
