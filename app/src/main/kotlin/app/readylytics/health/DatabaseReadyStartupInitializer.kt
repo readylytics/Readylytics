@@ -30,7 +30,7 @@ internal class DatabaseReadyStartupInitializer(
         if (!initialized.compareAndSet(false, true)) return StartupInitializationResult.COMPLETE
 
         return try {
-            try {
+            runNonFatal("Historical baseline backfill") {
                 val backfilled =
                     healthSyncUseCase.get().withSyncLock {
                         backfillHistoricalBaselines.get().execute()
@@ -38,14 +38,10 @@ internal class DatabaseReadyStartupInitializer(
                 if (backfilled > 0) {
                     logD(TAG) { "Backfilled $backfilled historical baselines" }
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logE(TAG, e) { "Historical baseline backfill failed" }
             }
 
             val settings = settingsRepository.get()
-            try {
+            runNonFatal("Scoring version migration check") {
                 val storedScoringVersion = settings.userPreferences.first().scoringVersion
                 if (storedScoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION) {
                     logD(TAG) {
@@ -57,10 +53,6 @@ internal class DatabaseReadyStartupInitializer(
                     // place so the next launch re-enqueues idempotently.
                     workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logE(TAG, e) { "Scoring version migration check failed" }
             }
 
             val backupSchedule = settings.backupSchedule.first()
@@ -88,6 +80,19 @@ internal class DatabaseReadyStartupInitializer(
             initialized.set(false)
             logE(TAG, e) { "Database-ready startup initialization failed" }
             StartupInitializationResult.RETRYABLE_FAILURE
+        }
+    }
+
+    private suspend fun runNonFatal(
+        actionName: String,
+        block: suspend () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE(TAG, e) { "$actionName failed" }
         }
     }
 

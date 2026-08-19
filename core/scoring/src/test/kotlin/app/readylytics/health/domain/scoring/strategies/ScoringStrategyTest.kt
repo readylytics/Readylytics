@@ -274,7 +274,10 @@ class SleepScoringStrategyTest {
                 weightProfile = profile,
             )
 
-        assertTrue(scoreFor(SleepScoreWeightProfile.CONTINUITY_FOCUSED) < scoreFor(SleepScoreWeightProfile.DURATION_FOCUSED))
+        assertTrue(
+            scoreFor(SleepScoreWeightProfile.CONTINUITY_FOCUSED) <
+                scoreFor(SleepScoreWeightProfile.DURATION_FOCUSED),
+        )
     }
 }
 

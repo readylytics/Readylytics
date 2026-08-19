@@ -68,7 +68,10 @@ class SleepModifierResolverTest {
             override suspend fun countSince(fromMs: Long): Int = 0
             override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> = emptyFlow()
             override suspend fun getSessionStages(sessionId: String): List<SleepStageData> = stages
-            override fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long): Flow<SleepSessionData?> = emptyFlow()
+            override fun observeFirstSessionEndingInRange(
+                fromMs: Long,
+                toMs: Long,
+            ): Flow<SleepSessionData?> = emptyFlow()
         }
 
         val circadianRepo = mockk<CircadianConsistencyRepository>()
@@ -86,7 +89,10 @@ class SleepModifierResolverTest {
             override suspend fun countSince(fromMs: Long): Int = 0
             override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> = emptyFlow()
             override suspend fun getSessionStages(sessionId: String): List<SleepStageData> = stages
-            override fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long): Flow<SleepSessionData?> = emptyFlow()
+            override fun observeFirstSessionEndingInRange(
+                fromMs: Long,
+                toMs: Long,
+            ): Flow<SleepSessionData?> = emptyFlow()
         }
 
         val circadianRepo = mockk<CircadianConsistencyRepository>()
@@ -138,7 +144,10 @@ class SleepModifierResolverTest {
                     override suspend fun countSince(fromMs: Long): Int = 0
                     override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> = emptyFlow()
                     override suspend fun getSessionStages(sessionId: String): List<SleepStageData> = emptyList()
-                    override fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long): Flow<SleepSessionData?> = emptyFlow()
+                    override fun observeFirstSessionEndingInRange(
+                        fromMs: Long,
+                        toMs: Long,
+                    ): Flow<SleepSessionData?> = emptyFlow()
                 }
             val circadianRepo = mockk<CircadianConsistencyRepository>()
             coEvery { circadianRepo.scoreFor(date, preferences, prefetched) } returns 77f

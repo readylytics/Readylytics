@@ -300,8 +300,20 @@ class SleepStageDaoTest {
             sessionDao.upsertAll(listOf(session))
             dao.upsertAll(
                 listOf(
-                    SleepStageEntity(sessionId = sessionId, stageType = "DEEP", startTime = 2_000L, endTime = 3_000L, durationMinutes = 1),
-                    SleepStageEntity(sessionId = sessionId, stageType = "AWAKE", startTime = 1_000L, endTime = 2_000L, durationMinutes = 1),
+                    SleepStageEntity(
+                        sessionId = sessionId,
+                        stageType = "DEEP",
+                        startTime = 2_000L,
+                        endTime = 3_000L,
+                        durationMinutes = 1,
+                    ),
+                    SleepStageEntity(
+                        sessionId = sessionId,
+                        stageType = "AWAKE",
+                        startTime = 1_000L,
+                        endTime = 2_000L,
+                        durationMinutes = 1,
+                    ),
                 ),
             )
 

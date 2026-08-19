@@ -131,7 +131,14 @@ class SleepScoringStrategy
 
             val raw =
                 if (stageDataUsable) {
-                    val sArch = computeArchSubScore(deepSleepMinutes, remSleepMinutes, durationMinutes, userAge, sleepTargets)
+                    val sArch =
+                        computeArchSubScore(
+                            deepSleepMinutes,
+                            remSleepMinutes,
+                            durationMinutes,
+                            userAge,
+                            sleepTargets,
+                        )
                     val sFrag = computeFragmentationSubScore(fragmentation)
                     weightProfile.durationWeight * sDur +
                         weightProfile.architectureWeight * sArch +

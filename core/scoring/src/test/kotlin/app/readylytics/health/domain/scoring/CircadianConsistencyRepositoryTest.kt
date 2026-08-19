@@ -278,8 +278,12 @@ class CircadianConsistencyRepositoryTest {
             val tooOld =
                 within.first().copy(
                     id = "too-old",
-                    startTime = anchorMs - ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000L - 1,
-                    endTime = anchorMs - ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000L + 1,
+                    startTime =
+                        anchorMs -
+                            ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000L - 1,
+                    endTime =
+                        anchorMs -
+                            ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000L + 1,
                 )
 
             val (repo, sessionRepo) = buildRepoWithSessionMock(within + tooOld)

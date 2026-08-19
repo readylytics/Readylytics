@@ -20,8 +20,6 @@ data class SleepFragmentation(
 
 object SleepFragmentationCalculator {
     fun compute(stages: List<SleepStageData>): SleepFragmentation {
-        if (stages.isEmpty()) return SleepFragmentation.NONE
-
         val asleep =
             stages.filter {
                 it.stageType != SleepStageType.AWAKE.value && it.stageType != SleepStageType.UNKNOWN.value

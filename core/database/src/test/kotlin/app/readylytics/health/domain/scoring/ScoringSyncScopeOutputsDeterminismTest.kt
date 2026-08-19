@@ -318,7 +318,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val sleepNadirAnalyzer = SleepNadirAnalyzer(scoringCalculator)
         val coverageValidator = HrCoverageValidator()
         val sleepSessionRepository = SleepSessionRepositoryImpl(sleepSessionDao, sleepStageDao)
-        val circadianConsistencyRepository = CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, encryptionManager)
+        val circadianConsistencyRepository =
+            CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, encryptionManager)
         val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(

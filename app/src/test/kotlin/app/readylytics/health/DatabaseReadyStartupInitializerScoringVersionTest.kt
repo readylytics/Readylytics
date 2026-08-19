@@ -91,7 +91,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         var recomputeOnlyRequests = 0
             private set
 
-        override fun scheduleDatabaseMigration() {}
+        override fun scheduleDatabaseMigration() { /* no-op */ }
 
         override fun scheduleResyncWorker(recomputeOnly: Boolean) {
             if (recomputeOnly) {
@@ -99,18 +99,18 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
             }
         }
 
-        override fun cancelResyncWorker() {}
+        override fun cancelResyncWorker() { /* no-op */ }
 
-        override fun scheduleBackupWorker(schedule: BackupSchedule) {}
+        override fun scheduleBackupWorker(schedule: BackupSchedule) { /* no-op */ }
 
-        override fun scheduleBirthdayWorker() {}
+        override fun scheduleBirthdayWorker() { /* no-op */ }
 
-        override fun schedulePeriodicSync(intervalMinutes: Long) {}
+        override fun schedulePeriodicSync(intervalMinutes: Long) { /* no-op */ }
 
-        override fun cancelPeriodicSync() {}
+        override fun cancelPeriodicSync() { /* no-op */ }
 
-        override fun scheduleDataCleanupWorker() {}
+        override fun scheduleDataCleanupWorker() { /* no-op */ }
 
-        override fun scheduleDataRollupWorker() {}
+        override fun scheduleDataRollupWorker() { /* no-op */ }
     }
 }

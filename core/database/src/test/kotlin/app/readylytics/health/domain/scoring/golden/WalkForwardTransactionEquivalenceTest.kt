@@ -135,7 +135,8 @@ class WalkForwardTransactionEquivalenceTest {
                     db.bodyTemperatureRecordDao(),
                 )
             val sleepSessionRepository = SleepSessionRepositoryImpl(db.sleepSessionDao(), db.sleepStageDao())
-            val circadianConsistencyRepository = CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, FakeEncryptionManager())
+            val circadianConsistencyRepository =
+                CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, FakeEncryptionManager())
             val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
             val computeSleepMetricsUseCase =
                 ComputeSleepMetricsUseCase(
