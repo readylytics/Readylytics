@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -244,9 +245,12 @@ fun AdvancedSettingsSection(
             trimpModelOptions.firstOrNull { it.first == trimpModel }?.second
                 ?: stringResource(R.string.advanced_trimp_banister)
         var trimpDropdownExpanded by remember { mutableStateOf(false) }
+        LaunchedEffect(isResyncing) {
+            if (isResyncing) trimpDropdownExpanded = false
+        }
         ExposedDropdownMenuBox(
             expanded = trimpDropdownExpanded,
-            onExpandedChange = { if (!isResyncing) trimpDropdownExpanded = !trimpDropdownExpanded },
+            onExpandedChange = { if (!isResyncing) trimpDropdownExpanded = it },
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -265,7 +269,7 @@ fun AdvancedSettingsSection(
                         .fillMaxWidth(),
             )
             ExposedDropdownMenu(
-                expanded = trimpDropdownExpanded,
+                expanded = trimpDropdownExpanded && !isResyncing,
                 onDismissRequest = { trimpDropdownExpanded = false },
             ) {
                 trimpModelOptions.forEach { (model, label) ->

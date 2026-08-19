@@ -24,6 +24,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -198,6 +199,9 @@ fun SleepSettingsSection(
         mutableFloatStateOf(uiState.hypersomniaOnsetPercent.toFloat())
     }
     var profileMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(isResyncing) {
+        if (isResyncing) profileMenuExpanded = false
+    }
     var coreMergeGapMinutes by remember(uiState.coreMergeGapMinutes) {
         mutableFloatStateOf(uiState.coreMergeGapMinutes.toFloat())
     }
@@ -288,7 +292,7 @@ fun SleepSettingsSection(
                             .fillMaxWidth(),
                 )
                 ExposedDropdownMenu(
-                    expanded = profileMenuExpanded,
+                    expanded = profileMenuExpanded && !isResyncing,
                     onDismissRequest = { profileMenuExpanded = false },
                 ) {
                     SleepScoreWeightProfile.entries.forEach { profile ->
