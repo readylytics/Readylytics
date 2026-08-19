@@ -10,6 +10,7 @@ import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.Lazy
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,14 +21,26 @@ import org.junit.Test
 
 class DatabaseReadyStartupInitializerScoringVersionTest {
     @Test
-    fun `stale scoring version enqueues one recompute-only pass`() =
+    fun `stale scoring version enqueues one recompute-only pass without bumping the stored version`() =
         runTest {
             val scheduler = FakeWorkerScheduler()
-            val initializer = initializerWith(storedScoringVersion = 0, scheduler = scheduler)
+            val settings = mockk<SettingsRepository>(relaxed = true)
+            val userPrefsFlow = MutableStateFlow(UserPreferences(scoringVersion = 0))
+            coEvery { settings.userPreferences } returns userPrefsFlow.asStateFlow()
+            coEvery { settings.backupSchedule } returns flowOf(BackupSchedule.DAILY)
+            coEvery { settings.backgroundSyncEnabled } returns flowOf(false)
+
+            val initializer =
+                initializerWith(
+                    storedScoringVersion = 0,
+                    scheduler = scheduler,
+                    settings = settings,
+                )
 
             initializer.initializeIfReady(DatabaseReadiness.Ready)
 
             assertEquals(1, scheduler.recomputeOnlyRequests)
+            coVerify(exactly = 0) { settings.updateScoringVersion(any()) }
         }
 
     @Test
@@ -48,6 +61,7 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
     private fun initializerWith(
         storedScoringVersion: Int,
         scheduler: FakeWorkerScheduler,
+        settings: SettingsRepository = mockk(relaxed = true),
     ): DatabaseReadyStartupInitializer {
         val healthSyncUseCase = mockk<HealthSyncUseCase>()
         coEvery { healthSyncUseCase.withSyncLock<Int>(any()) } coAnswers {
@@ -60,14 +74,9 @@ class DatabaseReadyStartupInitializerScoringVersionTest {
         val backfillLazy = Lazy { backfill }
 
         val userPrefsFlow = MutableStateFlow(UserPreferences(scoringVersion = storedScoringVersion))
-        val settings = mockk<SettingsRepository>(relaxed = true)
         coEvery { settings.userPreferences } returns userPrefsFlow.asStateFlow()
         coEvery { settings.backupSchedule } returns flowOf(BackupSchedule.DAILY)
         coEvery { settings.backgroundSyncEnabled } returns flowOf(false)
-        coEvery { settings.updateScoringVersion(any()) } coAnswers {
-            val newVer = firstArg<Int>()
-            userPrefsFlow.value = userPrefsFlow.value.copy(scoringVersion = newVer)
-        }
         val settingsLazy = Lazy { settings }
 
         return DatabaseReadyStartupInitializer(

@@ -53,7 +53,6 @@ internal class DatabaseReadyStartupInitializer(
                             "enqueueing recompute-only resync"
                     }
                     workerScheduler.scheduleResyncWorker(recomputeOnly = true)
-                    settings.updateScoringVersion(SettingsDefaults.CURRENT_SCORING_VERSION)
                 }
             } catch (e: CancellationException) {
                 throw e
