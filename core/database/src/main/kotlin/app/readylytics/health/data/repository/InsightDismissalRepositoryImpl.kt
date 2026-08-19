@@ -1,6 +1,6 @@
 package app.readylytics.health.data.repository
 
-import app.readylytics.health.data.local.dao.InsightDismissalDao
+import app.readylytics.health.core.databaseschema.data.local.dao.InsightDismissalDao
 import app.readylytics.health.core.databaseschema.data.local.entity.InsightDismissalEntity
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.repository.InsightDismissalRepository

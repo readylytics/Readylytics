@@ -1,7 +1,7 @@
 package app.readylytics.health.data.repository
 
-import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.model.WorkoutRoutePoint

@@ -1,47 +1,47 @@
-package app.readylytics.health.data.local.dao
+package app.readylytics.health.core.databaseschema.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
-import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
-interface BodyFatRecordDao {
-    @Query("SELECT * FROM body_fat_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
-    fun _observeSince(fromMs: Long): Flow<List<BodyFatRecordEntity>>
+interface WeightRecordDao {
+    @Query("SELECT * FROM weight_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    fun _observeSince(fromMs: Long): Flow<List<WeightRecordEntity>>
 
-    fun observeSince(fromMs: Long): Flow<List<BodyFatRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
+    fun observeSince(fromMs: Long): Flow<List<WeightRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
-        "SELECT * FROM body_fat_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+        "SELECT * FROM weight_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
             "ORDER BY timestampMs ASC",
     )
     fun _observeByTimeRange(
         startMs: Long,
         endMs: Long,
-    ): Flow<List<BodyFatRecordEntity>>
+    ): Flow<List<WeightRecordEntity>>
 
     fun observeByTimeRange(
         startMs: Long,
         endMs: Long,
-    ): Flow<List<BodyFatRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
+    ): Flow<List<WeightRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
 
-    @Query("SELECT * FROM body_fat_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
-    suspend fun getSince(fromMs: Long): List<BodyFatRecordEntity>
+    @Query("SELECT * FROM weight_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    suspend fun getSince(fromMs: Long): List<WeightRecordEntity>
 
     @Query(
-        "SELECT * FROM body_fat_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+        "SELECT * FROM weight_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
             "ORDER BY timestampMs ASC",
     )
     suspend fun getByTimeRange(
         startMs: Long,
         endMs: Long,
-    ): List<BodyFatRecordEntity>
+    ): List<WeightRecordEntity>
 
     @Query(
-        "SELECT * FROM body_fat_records " +
+        "SELECT * FROM weight_records " +
             "WHERE timestampMs >= :dayStartMs AND timestampMs < :dayEndMs " +
             "ORDER BY timestampMs DESC " +
             "LIMIT 1",
@@ -49,23 +49,23 @@ interface BodyFatRecordDao {
     suspend fun getLatestByDate(
         dayStartMs: Long,
         dayEndMs: Long,
-    ): BodyFatRecordEntity?
+    ): WeightRecordEntity?
 
-    @Query("SELECT * FROM body_fat_records ORDER BY timestampMs DESC LIMIT 1")
-    suspend fun getLatest(): BodyFatRecordEntity?
+    @Query("SELECT * FROM weight_records ORDER BY timestampMs DESC LIMIT 1")
+    suspend fun getLatest(): WeightRecordEntity?
 
-    @Query("SELECT * FROM body_fat_records WHERE timestampMs <= :endMs ORDER BY timestampMs DESC LIMIT 1")
-    suspend fun getLatestUpTo(endMs: Long): BodyFatRecordEntity?
+    @Query("SELECT * FROM weight_records WHERE timestampMs <= :endMs ORDER BY timestampMs DESC LIMIT 1")
+    suspend fun getLatestUpTo(endMs: Long): WeightRecordEntity?
 
-    @Query("SELECT * FROM body_fat_records WHERE timestampMs < :beforeMs ORDER BY timestampMs DESC LIMIT 1")
-    suspend fun getPrevious(beforeMs: Long): BodyFatRecordEntity?
+    @Query("SELECT * FROM weight_records WHERE timestampMs < :beforeMs ORDER BY timestampMs DESC LIMIT 1")
+    suspend fun getPrevious(beforeMs: Long): WeightRecordEntity?
 
     @Upsert
-    suspend fun upsertAll(records: List<BodyFatRecordEntity>)
+    suspend fun upsertAll(records: List<WeightRecordEntity>)
 
 
     @Query(
-        "SELECT * FROM body_fat_records " +
+        "SELECT * FROM weight_records " +
             "WHERE timestampMs >= :fromMs AND (" +
             "  timestampMs > :afterTs OR " +
             "  (timestampMs = :afterTs AND id > :afterId)" +
@@ -78,21 +78,21 @@ interface BodyFatRecordDao {
         afterTs: Long,
         afterId: String,
         limit: Int,
-    ): List<BodyFatRecordEntity>
+    ): List<WeightRecordEntity>
 
     @Query(
         """
-        SELECT * FROM body_fat_records
+        SELECT * FROM weight_records
         WHERE timestampMs >= :fromMs AND timestampMs < :toMs
         ORDER BY timestampMs DESC, id DESC
         LIMIT :limit OFFSET :offset
         """,
     )
-    suspend fun getPagedByTimeRange(fromMs: Long, toMs: Long, limit: Int, offset: Int): List<BodyFatRecordEntity>
+    suspend fun getPagedByTimeRange(fromMs: Long, toMs: Long, limit: Int, offset: Int): List<WeightRecordEntity>
 
     @Query(
         """
-        SELECT * FROM body_fat_records
+        SELECT * FROM weight_records
         WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (
           timestampMs < :beforeTs OR
           (timestampMs = :beforeTs AND id < :beforeId)
@@ -107,46 +107,46 @@ interface BodyFatRecordDao {
         beforeTs: Long,
         beforeId: String,
         limit: Int,
-    ): List<BodyFatRecordEntity>
+    ): List<WeightRecordEntity>
 
     @Query(
         """
-        SELECT COUNT(*) FROM body_fat_records
+        SELECT COUNT(*) FROM weight_records
         WHERE timestampMs >= :fromMs AND timestampMs < :toMs
         """,
     )
     suspend fun countByTimeRange(fromMs: Long, toMs: Long): Int
 
-    @Query("DELETE FROM body_fat_records WHERE timestampMs < :beforeMs")
+    @Query("DELETE FROM weight_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
-    @Query("DELETE FROM body_fat_records WHERE id = :id")
+    @Query("DELETE FROM weight_records WHERE id = :id")
     suspend fun deleteById(id: String): Int
 
-    @Query("SELECT * FROM body_fat_records WHERE id = :id")
-    suspend fun getById(id: String): BodyFatRecordEntity?
+    @Query("SELECT * FROM weight_records WHERE id = :id")
+    suspend fun getById(id: String): WeightRecordEntity?
 
     // PERF-003: sargable range predicate instead of substr() -- see HeartRateDao for the rationale.
     @Query(
-        "SELECT * FROM body_fat_records " +
+        "SELECT * FROM weight_records " +
             "WHERE id = :sourceRecordId " +
             "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`') " +
             "ORDER BY timestampMs ASC",
     )
-    suspend fun getBySourceRecordId(sourceRecordId: String): List<BodyFatRecordEntity>
+    suspend fun getBySourceRecordId(sourceRecordId: String): List<WeightRecordEntity>
 
     @Query(
-        "DELETE FROM body_fat_records " +
+        "DELETE FROM weight_records " +
             "WHERE id = :sourceRecordId " +
             "OR (id >= :sourceRecordId || '_' AND id < :sourceRecordId || '`')",
     )
     suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
 
-    @Query("SELECT COUNT(*) FROM body_fat_records")
+    @Query("SELECT COUNT(*) FROM weight_records")
     suspend fun count(): Int
 
     @Query(
-        "DELETE FROM body_fat_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+        "DELETE FROM weight_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
     )
     suspend fun deleteRecordsNotMatchingDevice(
         fromMs: Long,
@@ -154,6 +154,6 @@ interface BodyFatRecordDao {
         deviceName: String,
     ): Int
 
-    @Query("DELETE FROM body_fat_records")
+    @Query("DELETE FROM weight_records")
     suspend fun deleteAll(): Int
 }

@@ -1,17 +1,18 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.MinuteBucketDao
-import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.data.local.dao.SleepHrSample
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.WeightRecordDao
-import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.preferences.Gender
@@ -50,7 +51,7 @@ import java.time.LocalDate
 class ScoringRepositoryN1Test {
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var sleepSessionDao: SleepSessionDao
-    private lateinit var sleepStageDao: app.readylytics.health.data.local.dao.SleepStageDao
+    private lateinit var sleepStageDao: SleepStageDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var dailySummaryDao: DailySummaryDao

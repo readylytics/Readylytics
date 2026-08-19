@@ -1,4 +1,5 @@
 package app.readylytics.health.data.local.dao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 
 import android.content.Context
 import androidx.room.Room

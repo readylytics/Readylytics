@@ -1,4 +1,6 @@
 package app.readylytics.health.data.local.dao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 
 import android.content.Context
 import androidx.room.Room

@@ -9,7 +9,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
-import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity

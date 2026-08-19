@@ -1,4 +1,5 @@
 package app.readylytics.health.data.local.dao
+import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider

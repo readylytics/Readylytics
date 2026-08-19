@@ -1,4 +1,11 @@
 package app.readylytics.health.data.local.dao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider

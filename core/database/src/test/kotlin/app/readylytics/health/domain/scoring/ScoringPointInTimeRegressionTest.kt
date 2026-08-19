@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper

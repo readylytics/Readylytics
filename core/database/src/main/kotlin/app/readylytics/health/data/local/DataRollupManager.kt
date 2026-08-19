@@ -1,7 +1,7 @@
 package app.readylytics.health.data.local
 
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.domain.repository.TransactionRunner
 import javax.inject.Inject
 import javax.inject.Singleton

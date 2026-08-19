@@ -3,11 +3,11 @@ package app.readylytics.health.data.repository
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.SleepStageDao
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After

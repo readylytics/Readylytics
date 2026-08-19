@@ -1,8 +1,8 @@
 package app.readylytics.health.benchmark
 
 import android.content.Context
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors

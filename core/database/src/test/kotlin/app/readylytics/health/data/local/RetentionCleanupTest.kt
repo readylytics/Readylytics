@@ -3,7 +3,7 @@ package app.readylytics.health.data.local
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.*
 import kotlinx.coroutines.test.runTest
 import org.junit.After

@@ -7,11 +7,11 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.HeartRateRecord
 import app.readylytics.health.domain.model.SleepHrSample
 import app.readylytics.health.domain.model.SleepSession
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.MinuteBucketDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.reconstructSampleValues
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import java.time.LocalDate

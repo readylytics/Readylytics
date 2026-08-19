@@ -1,14 +1,14 @@
 package app.readylytics.health.data.local
 
-import app.readylytics.health.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.WeightRecordDao
-import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.SelectedSourcePruner

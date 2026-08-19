@@ -1,6 +1,6 @@
 package app.readylytics.health.data.repository
 
-import app.readylytics.health.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

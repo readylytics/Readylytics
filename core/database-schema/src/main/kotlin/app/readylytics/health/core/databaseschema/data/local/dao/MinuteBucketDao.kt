@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local.dao
+package app.readylytics.health.core.databaseschema.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert

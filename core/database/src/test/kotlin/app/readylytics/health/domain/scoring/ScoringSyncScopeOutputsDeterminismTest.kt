@@ -1,17 +1,18 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.data.local.dao.BodyTemperatureRecordDao
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.MinuteBucketDao
-import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.data.local.dao.SleepHrSample
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.WeightRecordDao
-import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
+import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
+import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
@@ -186,7 +187,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
 
         val workoutDao = mockk<WorkoutDao>(relaxed = true)
         val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
-        val sleepStageDao = mockk<app.readylytics.health.data.local.dao.SleepStageDao>(relaxed = true)
+        val sleepStageDao = mockk<SleepStageDao>(relaxed = true)
         val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
         val settingsRepo = mockk<SettingsRepository>(relaxed = true)
         val heartRateDao = mockk<HeartRateDao>(relaxed = true)
