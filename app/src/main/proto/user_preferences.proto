@@ -252,6 +252,14 @@ message UserPreferencesProto {
 
     // Version of the scoring formulas the stored scores were produced with.
     int32 scoring_version = 85;
+
+    // Snapshot of the three sleep-scoring inputs at the last successful historical recompute
+    // (folded in from the deleted SleepScoreRecalcBaselineStore). Absence = "never recalced",
+    // which the Sleep Settings read boundary resolves to the factory defaults. `optional` so a
+    // worker that recomputed nothing (no-op) does not suppress a genuinely pending recalculation.
+    optional SleepScoreWeightProfileProto last_recalc_sleep_score_weight_profile = 86;
+    optional float last_recalc_goal_sleep_hours = 87;
+    optional int32 last_recalc_hypersomnia_onset_percent = 88;
 }
 
 enum TrimpMethodProto {

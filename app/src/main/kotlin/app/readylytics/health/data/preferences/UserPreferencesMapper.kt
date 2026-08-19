@@ -218,6 +218,16 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             } else {
                 SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT
             },
+        lastRecalcSleepScoreWeightProfile =
+            if (hasLastRecalcSleepScoreWeightProfile()) {
+                lastRecalcSleepScoreWeightProfile.toDomainProfile()
+            } else {
+                null
+            },
+        lastRecalcGoalSleepHours =
+            if (hasLastRecalcGoalSleepHours()) lastRecalcGoalSleepHours else null,
+        lastRecalcHypersomniaOnsetPercent =
+            if (hasLastRecalcHypersomniaOnsetPercent()) lastRecalcHypersomniaOnsetPercent else null,
         scoringVersion = scoringVersion,
     )
 }

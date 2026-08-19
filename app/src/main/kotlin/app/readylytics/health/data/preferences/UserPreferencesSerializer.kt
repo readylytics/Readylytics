@@ -233,6 +233,26 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         },
     )
     builder.setHypersomniaOnsetPercent(domain.hypersomniaOnsetPercent)
+    domain.lastRecalcSleepScoreWeightProfile?.let {
+        builder.setLastRecalcSleepScoreWeightProfile(
+            when (it) {
+                SleepScoreWeightProfile.BALANCED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+                SleepScoreWeightProfile.DURATION_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
+                SleepScoreWeightProfile.RECOVERY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
+                SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
+                SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
+            },
+        )
+    }
+    domain.lastRecalcGoalSleepHours?.let { builder.setLastRecalcGoalSleepHours(it) }
+    domain.lastRecalcHypersomniaOnsetPercent?.let {
+        builder.setLastRecalcHypersomniaOnsetPercent(it)
+    }
     builder.setScoringVersion(domain.scoringVersion)
 
     return builder.build()

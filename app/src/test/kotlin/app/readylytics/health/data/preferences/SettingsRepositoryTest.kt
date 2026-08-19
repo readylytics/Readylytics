@@ -274,6 +274,32 @@ class SettingsRepositoryTest {
             assertEquals(2, prefs.scoringVersion)
         }
 
+    @Test
+    fun `recalc baseline fields persist through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    lastRecalcSleepScoreWeightProfile = SleepScoreWeightProfile.RECOVERY_FOCUSED,
+                    lastRecalcGoalSleepHours = 9.5f,
+                    lastRecalcHypersomniaOnsetPercent = 115,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.RECOVERY_FOCUSED, prefs.lastRecalcSleepScoreWeightProfile)
+            assertEquals(9.5f, prefs.lastRecalcGoalSleepHours)
+            assertEquals(115, prefs.lastRecalcHypersomniaOnsetPercent)
+        }
+
+    @Test
+    fun `recalc baseline fields are null until first historical recompute`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(null, prefs.lastRecalcSleepScoreWeightProfile)
+            assertEquals(null, prefs.lastRecalcGoalSleepHours)
+            assertEquals(null, prefs.lastRecalcHypersomniaOnsetPercent)
+        }
+
     /**
      * US-03 acceptance criterion: switching a load-source preference must never write to
      * daily_summaries. SettingsRepository (the sole owner of preference setters) has no

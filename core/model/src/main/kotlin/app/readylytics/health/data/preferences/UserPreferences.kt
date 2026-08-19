@@ -106,6 +106,9 @@ data class UserPreferences(
     val sleepScoreWeightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
     val hypersomniaOnsetPercent: Int = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
     val scoringVersion: Int = 0,
+    val lastRecalcSleepScoreWeightProfile: SleepScoreWeightProfile? = null,
+    val lastRecalcGoalSleepHours: Float? = null,
+    val lastRecalcHypersomniaOnsetPercent: Int? = null,
 )
 
 /**
