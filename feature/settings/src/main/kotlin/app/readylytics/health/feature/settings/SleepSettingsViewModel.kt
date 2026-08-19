@@ -2,10 +2,13 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.domain.preferences.SleepScoreRecalcBaselineStore
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
@@ -13,7 +16,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,29 +31,37 @@ class SleepSettingsViewModel
         private val scoringRepository: ScoringRepository,
         private val historicalResyncController: HistoricalResyncController,
         @param:ApplicationScope private val appScope: CoroutineScope,
+        private val sleepScoreRecalcBaselineStore: SleepScoreRecalcBaselineStore,
     ) : ViewModel() {
         val uiState: StateFlow<SleepSettingsState> =
-            settingsReader.userPreferences
-                .map { prefs ->
-                    SleepSettingsState(
-                        goalSleepHours = prefs.goalSleepHours,
-                        hrvBaselineOverride = prefs.hrvBaselineOverride,
-                        rhrBaselineOverride = prefs.rhrBaselineOverride,
-                        restingHrPercentile = prefs.restingHrPercentile,
-                        strainLoadSourceMode = prefs.strainLoadSourceMode,
-                        rasSourceMode = prefs.rasSourceMode,
-                        coreMergeGapMinutes = prefs.coreMergeGapMinutes,
-                        supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
-                        minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
-                        supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
-                        sleepScoreWeightProfile = prefs.sleepScoreWeightProfile,
-                        hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
-                    )
-                }.stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5000),
-                    initialValue = SleepSettingsState(),
+            combine(
+                settingsReader.userPreferences,
+                sleepScoreRecalcBaselineStore.baseline,
+            ) { prefs, baseline ->
+                SleepSettingsState(
+                    goalSleepHours = prefs.goalSleepHours,
+                    hrvBaselineOverride = prefs.hrvBaselineOverride,
+                    rhrBaselineOverride = prefs.rhrBaselineOverride,
+                    restingHrPercentile = prefs.restingHrPercentile,
+                    strainLoadSourceMode = prefs.strainLoadSourceMode,
+                    rasSourceMode = prefs.rasSourceMode,
+                    coreMergeGapMinutes = prefs.coreMergeGapMinutes,
+                    supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
+                    minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
+                    supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                    sleepScoreWeightProfile = prefs.sleepScoreWeightProfile,
+                    hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
+                    hasPendingSleepScoreRecalc =
+                        prefs.sleepScoreWeightProfile != (baseline?.weightProfile ?: SleepScoreWeightProfile.DEFAULT) ||
+                            prefs.goalSleepHours != (baseline?.goalSleepHours ?: SettingsDefaults.GOAL_SLEEP_HOURS) ||
+                            prefs.hypersomniaOnsetPercent !=
+                            (baseline?.hypersomniaOnsetPercent ?: SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT),
                 )
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = SleepSettingsState(),
+            )
 
         fun onEvent(event: SettingsEvent) {
             when (event) {
@@ -79,7 +91,15 @@ class SleepSettingsViewModel
                 }
 
                 SettingsEvent.RecalculateScores ->
-                    appScope.launch { historicalResyncController.requestScoreRecompute() }
+                    appScope.launch {
+                        historicalResyncController.requestScoreRecompute()
+                        val prefs = settingsReader.userPreferences.first()
+                        sleepScoreRecalcBaselineStore.markRecalced(
+                            weightProfile = prefs.sleepScoreWeightProfile,
+                            goalSleepHours = prefs.goalSleepHours,
+                            hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
+                        )
+                    }
 
                 is SettingsEvent.HrvBaselineChanged -> {
                     val value = event.text.toIntOrNull()?.toFloat()

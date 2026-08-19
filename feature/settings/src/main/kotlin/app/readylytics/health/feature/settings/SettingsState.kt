@@ -44,6 +44,7 @@ data class SleepSettingsState(
         SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
     val sleepScoreWeightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
     val hypersomniaOnsetPercent: Int = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+    val hasPendingSleepScoreRecalc: Boolean = false,
 )
 
 data class PhysiologySettingsState(

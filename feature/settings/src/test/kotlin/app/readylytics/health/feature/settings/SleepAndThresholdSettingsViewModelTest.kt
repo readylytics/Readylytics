@@ -1,8 +1,10 @@
 package app.readylytics.health.feature.settings
 
 import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
+import app.readylytics.health.domain.preferences.SleepScoreRecalcBaselineStore
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
@@ -25,6 +27,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -36,6 +40,7 @@ class SleepAndThresholdSettingsViewModelTest {
     private val scoringRepo = mockk<ScoringRepository>(relaxed = true)
     private val circadianPrefs = mockk<CircadianThresholdPreferences>(relaxed = true)
     private val resyncController = mockk<HistoricalResyncController>(relaxed = true)
+    private val baselineStore = mockk<SleepScoreRecalcBaselineStore>(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var sleepViewModel: SleepSettingsViewModel
@@ -46,6 +51,7 @@ class SleepAndThresholdSettingsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { settingsReader.userPreferences } returns MutableStateFlow(UserPreferences())
         every { circadianPrefs.overrideMinutesFlow } returns MutableStateFlow(null)
+        every { baselineStore.baseline } returns MutableStateFlow(null)
 
         sleepViewModel =
             SleepSettingsViewModel(
@@ -54,6 +60,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 scoringRepo,
                 resyncController,
                 kotlinx.coroutines.CoroutineScope(testDispatcher),
+                baselineStore,
             )
         thresholdViewModel =
             ThresholdSettingsViewModel(
@@ -118,6 +125,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    baselineStore,
                 )
 
             val state =
@@ -265,6 +273,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     scoringRepo,
                     resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    baselineStore,
                 )
 
             val state =
@@ -274,5 +283,55 @@ class SleepAndThresholdSettingsViewModelTest {
                 }
             assertEquals(SleepScoreWeightProfile.RECOVERY_FOCUSED, state.sleepScoreWeightProfile)
             assertEquals(110, state.hypersomniaOnsetPercent)
+        }
+
+    @Test
+    fun `recalc pending is false at baseline`() =
+        runTest {
+            every { baselineStore.baseline } returns MutableStateFlow(null)
+            val vm =
+                SleepSettingsViewModel(
+                    settingsReader,
+                    sleepSettings,
+                    scoringRepo,
+                    resyncController,
+                    kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    baselineStore,
+                )
+
+            val state = vm.uiState.first { it.goalSleepHours == SettingsDefaults.GOAL_SLEEP_HOURS }
+            assertFalse(state.hasPendingSleepScoreRecalc)
+        }
+
+    @Test
+    fun `recalc pending true when goal differs from baseline then cleared on recalc`() =
+        runTest {
+            every { settingsReader.userPreferences } returns
+                MutableStateFlow(UserPreferences(goalSleepHours = 9f))
+            every { baselineStore.baseline } returns MutableStateFlow(null)
+
+            val vm =
+                SleepSettingsViewModel(
+                    settingsReader,
+                    sleepSettings,
+                    scoringRepo,
+                    resyncController,
+                    kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    baselineStore,
+                )
+
+            val pending = vm.uiState.first { it.hasPendingSleepScoreRecalc }
+            assertTrue(pending.hasPendingSleepScoreRecalc)
+
+            vm.onEvent(SettingsEvent.RecalculateScores)
+            advanceUntilIdle()
+            coVerify { resyncController.requestScoreRecompute() }
+            coVerify {
+                baselineStore.markRecalced(
+                    SleepScoreWeightProfile.BALANCED,
+                    9f,
+                    SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+                )
+            }
         }
 }
