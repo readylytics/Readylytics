@@ -13,10 +13,11 @@ The change is limited to the reusable gauge overlay and its Compose tests:
 - `core/ui/src/main/kotlin/app/readylytics/health/core/ui/components/M3MetricGauge.kt`
 - `core/ui/src/test/kotlin/app/readylytics/health/core/ui/components/M3MetricGaugeTest.kt`
 
-The public composable signature, gauge geometry, dimensions, typography, colors,
-auto-sizing configuration, overlay width bound, vertical offset, and test tag
-remain unchanged. No Room, scoring, strings, or documentation-sync behavior is
-affected.
+The public composable signature, gauge geometry, dimensions (except
+`metricGaugeValueVerticalOffset`, reduced from `6.dp` to `2.dp` per user
+follow-up), typography, colors, auto-sizing configuration, overlay width bound,
+and test tag remain unchanged. No Room, scoring, strings, or documentation-sync
+behavior is affected.
 
 ## Design
 
