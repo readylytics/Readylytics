@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring.golden
 
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.security.EncryptionManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +31,12 @@ class FakeSettingsRepository(
     override suspend fun updateBirthday(date: LocalDate) = Unit
 
     override suspend fun updateScoringVersion(version: Int) = Unit
+
+    override suspend fun updateSleepScoreRecalcBaseline(
+        weightProfile: SleepScoreWeightProfile,
+        goalSleepHours: Float,
+        hypersomniaOnsetPercent: Int,
+    ) = Unit
 }
 
 /**

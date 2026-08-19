@@ -108,21 +108,37 @@ internal class SleepPreferences
         }
 
         suspend fun updateSleepScoreWeightProfile(profile: SleepScoreWeightProfile) {
-            val proto =
-                when (profile) {
-                    SleepScoreWeightProfile.BALANCED ->
-                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
-                    SleepScoreWeightProfile.DURATION_FOCUSED ->
-                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
-                    SleepScoreWeightProfile.RECOVERY_FOCUSED ->
-                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
-                    SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
-                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
-                    SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
-                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
-                }
-            dataStore.updateData { it.toBuilder().setSleepScoreWeightProfile(proto).build() }
+            dataStore.updateData { it.toBuilder().setSleepScoreWeightProfile(profile.toProto()).build() }
         }
+
+        suspend fun updateSleepScoreRecalcBaseline(
+            weightProfile: SleepScoreWeightProfile,
+            goalSleepHours: Float,
+            hypersomniaOnsetPercent: Int,
+        ) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setLastRecalcSleepScoreWeightProfile(weightProfile.toProto())
+                    .setLastRecalcGoalSleepHours(goalSleepHours)
+                    .setLastRecalcHypersomniaOnsetPercent(hypersomniaOnsetPercent)
+                    .build()
+            }
+        }
+
+        private fun SleepScoreWeightProfile.toProto(): SleepScoreWeightProfileProto =
+            when (this) {
+                SleepScoreWeightProfile.BALANCED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+                SleepScoreWeightProfile.DURATION_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
+                SleepScoreWeightProfile.RECOVERY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
+                SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
+                SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
+            }
 
         suspend fun updateHypersomniaOnsetPercent(percent: Int) {
             dataStore.updateData {

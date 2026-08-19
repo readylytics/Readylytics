@@ -114,6 +114,12 @@ class SettingsRepository
 
         override suspend fun updateScoringVersion(version: Int) = sleep.updateScoringVersion(version)
 
+        override suspend fun updateSleepScoreRecalcBaseline(
+            weightProfile: SleepScoreWeightProfile,
+            goalSleepHours: Float,
+            hypersomniaOnsetPercent: Int,
+        ) = sleep.updateSleepScoreRecalcBaseline(weightProfile, goalSleepHours, hypersomniaOnsetPercent)
+
         override suspend fun updateHrvBaselineOverride(rmssdMs: Float?) = physiology.updateHrvBaselineOverride(rmssdMs)
 
         override suspend fun updateRhrBaselineOverride(bpm: Float?) = physiology.updateRhrBaselineOverride(bpm)

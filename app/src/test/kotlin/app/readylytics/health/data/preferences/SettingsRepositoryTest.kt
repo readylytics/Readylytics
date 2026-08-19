@@ -319,6 +319,21 @@ class SettingsRepositoryTest {
             assertEquals(SleepScoreWeightProfile.BALANCED, prefs.lastRecalcSleepScoreWeightProfile)
         }
 
+    @Test
+    fun `updateSleepScoreRecalcBaseline persists the three snapshot fields`() =
+        runTest {
+            repository.updateSleepScoreRecalcBaseline(
+                weightProfile = SleepScoreWeightProfile.ARCHITECTURE_FOCUSED,
+                goalSleepHours = 8f,
+                hypersomniaOnsetPercent = 100,
+            )
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.ARCHITECTURE_FOCUSED, prefs.lastRecalcSleepScoreWeightProfile)
+            assertEquals(8f, prefs.lastRecalcGoalSleepHours)
+            assertEquals(100, prefs.lastRecalcHypersomniaOnsetPercent)
+        }
+
     /**
      * US-03 acceptance criterion: switching a load-source preference must never write to
      * daily_summaries. SettingsRepository (the sole owner of preference setters) has no
