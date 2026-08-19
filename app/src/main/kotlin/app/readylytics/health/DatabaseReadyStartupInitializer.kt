@@ -52,6 +52,9 @@ internal class DatabaseReadyStartupInitializer(
                         "Scoring version $storedScoringVersion < ${SettingsDefaults.CURRENT_SCORING_VERSION}; " +
                             "enqueueing recompute-only resync"
                     }
+                    // The worker owns the version bump (HealthResyncWorker.persistPostRecomputeState, on
+                    // success only). Never bump here: a killed worker must leave the stale version in
+                    // place so the next launch re-enqueues idempotently.
                     workerScheduler.scheduleResyncWorker(recomputeOnly = true)
                 }
             } catch (e: CancellationException) {
