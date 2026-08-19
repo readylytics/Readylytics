@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.feature.settings.DataSourceSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,7 +34,6 @@ class DataSourceSettingsViewModel
         private val settingsReader: UserPreferencesReader,
         private val deviceSettings: DeviceSettings,
         private val historicalResyncController: HistoricalResyncController,
-        private val foregroundSyncGateway: ForegroundSyncGateway,
     ) : ViewModel() {
         private val availableDevicesFlow = MutableStateFlow<List<String>>(emptyList())
         private val isLoadingDevicesFlow = MutableStateFlow(true)
@@ -69,7 +67,7 @@ class DataSourceSettingsViewModel
                 persistedDeviceByDataType,
                 availableDevicesFlow,
                 pendingOverrides,
-                foregroundSyncGateway.isResyncing,
+                historicalResyncController.state.map { it.running },
                 showDeviceChangeNoticeFlow,
                 isLoadingDevicesFlow,
             ) { args: Array<Any?> ->

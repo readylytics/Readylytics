@@ -4,7 +4,6 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncState
 import io.mockk.coEvery
@@ -16,7 +15,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -47,10 +45,12 @@ class DataSourceSettingsViewModelTest {
     private fun buildViewModel(
         initialPrefs: UserPreferences = UserPreferences(),
         deviceChangeNoticeDismissed: Boolean = false,
-        historicalResyncController: HistoricalResyncController = mockk(relaxed = true),
-        foregroundSyncGateway: ForegroundSyncGateway =
-            mockk {
-                every { isResyncing } returns MutableStateFlow(false)
+        historicalResyncController: HistoricalResyncController =
+            mockk(relaxed = true) {
+                every { state } returns
+                    MutableStateFlow(
+                        HistoricalResyncState(running = false, current = 0, total = 0),
+                    )
             },
     ): Triple<DataSourceSettingsViewModel, MutableStateFlow<Map<String, String>>, HistoricalResyncController> {
         val deviceByDataType = MutableStateFlow(initialPrefs.deviceByDataType)
@@ -87,17 +87,12 @@ class DataSourceSettingsViewModelTest {
                     prefsFlow.value = prefsFlow.value.copy(deviceByDataType = updated)
                 }
             }
-        every { historicalResyncController.state } returns
-            flowOf(
-                HistoricalResyncState(running = false, current = 0, total = 0),
-            )
 
         val viewModel =
             DataSourceSettingsViewModel(
                 settingsReader,
                 deviceSettings,
                 historicalResyncController,
-                foregroundSyncGateway,
             )
         viewModel.sharingStarted = SharingStarted.Lazily
         return Triple(viewModel, deviceByDataType, historicalResyncController)
@@ -188,15 +183,24 @@ class DataSourceSettingsViewModelTest {
         }
 
     @Test
-    fun `isResyncing follows the foreground sync gateway`() =
+    fun `isResyncing follows the durable resync state`() =
         runTest(testDispatcher) {
-            val isResyncingFlow = MutableStateFlow(false)
-            val gateway = mockk<ForegroundSyncGateway> { every { isResyncing } returns isResyncingFlow }
-            val (viewModel, _, _) = buildViewModel(foregroundSyncGateway = gateway)
-            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+            val resyncStateFlow =
+                MutableStateFlow(
+                    HistoricalResyncState(running = false, current = 0, total = 0),
+                )
+            val controller =
+                mockk<HistoricalResyncController>(relaxed = true) {
+                    every { state } returns resyncStateFlow
+                }
+            val (viewModel, _, _) = buildViewModel(historicalResyncController = controller)
+            val job =
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    viewModel.uiState.collect()
+                }
 
             assertFalse(viewModel.uiState.value.isResyncing)
-            isResyncingFlow.value = true
+            resyncStateFlow.value = HistoricalResyncState(running = true, current = 3, total = 3)
             advanceUntilIdle()
             assertTrue(viewModel.uiState.value.isResyncing)
 
