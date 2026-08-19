@@ -46,6 +46,14 @@ class SelectedDateRepository
         // == lastKnownToday) apart from an explicit historical pick.
         private var lastKnownToday: LocalDate = _selectedDate.value
 
+        // SharingStarted.Eagerly here is redundant, not expensive: the init block below
+        // attaches a permanent collector in appScope that never completes, so this flow
+        // already has a subscriber for the process lifetime regardless of the strategy.
+        // Do not downgrade to WhileSubscribed without first removing that collector and
+        // moving its "clamp _selectedDate up to earliest" logic into updateSelectedDate
+        // (line ~79) and selectPreviousDay (line ~116) below, both of which read
+        // earliestDate.value synchronously and would silently see null if the flow ever
+        // went cold. See internal-docs/plans/POST_REMEDIATION_FOLLOWUPS.md, Item 1.
         override val earliestDate: StateFlow<LocalDate?> =
             combine(
                 dao.observeEarliestDateMs(),

@@ -65,9 +65,9 @@ import java.time.ZoneId
  * Gradle source set `app/src/androidTest` cannot reference) -- it seeds its own smaller, self
  * -contained dataset inline.
  *
- * Runs on a connected device/emulator only (`./gradlew :app:connectedBenchmarkAndroidTest` or the
- * equivalent task once the `androidx.benchmark` Gradle plugin / `benchmark` build type are wired
- * for the `app` module -- not yet done as part of this change; see the baseline doc).
+ * Runs on a connected device/emulator only (`./gradlew :database-benchmark:connectedBenchmarkAndroidTest`;
+ * this module already has the `androidx.benchmark` Gradle plugin / `benchmark` build type wired
+ * up, see `database-benchmark/build.gradle.kts`).
  */
 @RunWith(AndroidJUnit4::class)
 class ScoringWalkForwardBenchmark {
