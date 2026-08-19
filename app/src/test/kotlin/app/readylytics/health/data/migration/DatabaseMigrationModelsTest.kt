@@ -2,7 +2,7 @@ package app.readylytics.health.data.migration
 
 import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.core.database.data.migration.ExistingDatabaseState
-import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.V7MigrationPhase

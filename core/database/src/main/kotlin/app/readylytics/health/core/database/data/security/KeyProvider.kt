@@ -1,4 +1,4 @@
-package app.readylytics.health.data.security
+package app.readylytics.health.core.database.data.security
 
 import javax.crypto.SecretKey
 

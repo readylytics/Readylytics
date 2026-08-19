@@ -2,7 +2,7 @@ package app.readylytics.health.core.database.data.migration
 
 import android.content.Context
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import dagger.hilt.android.qualifiers.ApplicationContext

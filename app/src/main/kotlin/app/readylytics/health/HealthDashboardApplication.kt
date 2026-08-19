@@ -11,9 +11,9 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import app.readylytics.health.BuildConfig
 import app.readylytics.health.benchmark.BenchmarkDataSeeder
+import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.security.SqlCipherKeyManager
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController

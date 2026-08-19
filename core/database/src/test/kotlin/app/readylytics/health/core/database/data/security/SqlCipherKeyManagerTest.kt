@@ -1,8 +1,8 @@
-package app.readylytics.health.data.security
+package app.readylytics.health.core.database.data.security
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.data.security.SqlCipherKeyManager.KeyDecryptionException
+import app.readylytics.health.core.database.data.security.SqlCipherKeyManager.KeyDecryptionException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Before

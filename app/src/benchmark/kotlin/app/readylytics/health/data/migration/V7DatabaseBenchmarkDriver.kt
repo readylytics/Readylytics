@@ -1,8 +1,8 @@
 package app.readylytics.health.data.migration
 
 import android.content.Context
-import app.readylytics.health.data.security.AndroidKeystoreKeyProvider
-import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.database.data.security.AndroidKeystoreKeyProvider
+import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.domain.migration.V7MigrationResult
 import net.zetetic.database.sqlcipher.SQLiteDatabase
