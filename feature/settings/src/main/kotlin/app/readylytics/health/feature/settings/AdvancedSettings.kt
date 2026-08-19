@@ -84,6 +84,7 @@ fun AdvancedSettingsSection(
             )
             OutlinedTextField(
                 value = hrvText,
+                enabled = !isResyncing,
                 onValueChange = { value ->
                     hrvText = value
                     val validation = SettingsValidators.HRV_BASELINE_RULE.validate(value)
@@ -106,10 +107,13 @@ fun AdvancedSettingsSection(
                 },
                 trailingIcon = {
                     if (hrvText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            hrvText = ""
-                            onEvent(SettingsEvent.HrvBaselineCleared)
-                        }) {
+                        IconButton(
+                            onClick = {
+                                hrvText = ""
+                                onEvent(SettingsEvent.HrvBaselineCleared)
+                            },
+                            enabled = !isResyncing,
+                        ) {
                             Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
                     }
@@ -120,6 +124,7 @@ fun AdvancedSettingsSection(
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             OutlinedTextField(
                 value = rhrText,
+                enabled = !isResyncing,
                 onValueChange = { value ->
                     rhrText = value
                     val validation = SettingsValidators.RHR_BASELINE_RULE.validate(value)
@@ -142,10 +147,13 @@ fun AdvancedSettingsSection(
                 },
                 trailingIcon = {
                     if (rhrText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            rhrText = ""
-                            onEvent(SettingsEvent.RhrBaselineCleared)
-                        }) {
+                        IconButton(
+                            onClick = {
+                                rhrText = ""
+                                onEvent(SettingsEvent.RhrBaselineCleared)
+                            },
+                            enabled = !isResyncing,
+                        ) {
                             Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
                     }
@@ -168,6 +176,7 @@ fun AdvancedSettingsSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = percentileValue.toFloat(),
+                    enabled = !isResyncing,
                     onValueChange = { percentileValue = it.toInt() },
                     onValueChangeFinished = {
                         val validation =
@@ -196,6 +205,7 @@ fun AdvancedSettingsSection(
             SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS.toFloat()..SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS.toFloat()
         ThresholdSliderItem(
             label = stringResource(R.string.advanced_hrr_tolerance_label),
+            enabled = !isResyncing,
             value = hrrTolerance,
             onValueChange = { hrrTolerance = it },
             onValueChangeFinished = {

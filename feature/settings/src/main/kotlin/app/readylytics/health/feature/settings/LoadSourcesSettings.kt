@@ -22,6 +22,7 @@ import app.readylytics.health.feature.settings.R
 fun LoadSourcesSection(
     uiState: SleepSettingsState,
     onEvent: (SettingsEvent) -> Unit,
+    isResyncing: Boolean = false,
 ) {
     Column {
         LoadSourcePicker(
@@ -29,6 +30,7 @@ fun LoadSourcesSection(
             selectedMode = uiState.strainLoadSourceMode,
             helpRes = R.string.load_sources_strain_help,
             onModeSelected = { onEvent(SettingsEvent.StrainLoadSourceModeChanged(it)) },
+            enabled = !isResyncing,
         )
 
         LoadSourcePicker(
@@ -36,6 +38,7 @@ fun LoadSourcesSection(
             selectedMode = uiState.rasSourceMode,
             helpRes = R.string.load_sources_ras_help,
             onModeSelected = { onEvent(SettingsEvent.RasSourceModeChanged(it)) },
+            enabled = !isResyncing,
         )
 
         Text(
@@ -67,6 +70,7 @@ private fun LoadSourcePicker(
     selectedMode: LoadSourceMode,
     helpRes: Int,
     onModeSelected: (LoadSourceMode) -> Unit,
+    enabled: Boolean = true,
 ) {
     ListItem(
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -87,6 +91,7 @@ private fun LoadSourcePicker(
             SegmentedButton(
                 selected = selectedMode == mode,
                 onClick = { onModeSelected(mode) },
+                enabled = enabled,
                 shape =
                     SegmentedButtonDefaults.itemShape(
                         index = index,

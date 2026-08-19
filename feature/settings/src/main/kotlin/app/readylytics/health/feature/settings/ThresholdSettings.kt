@@ -45,11 +45,13 @@ import kotlin.math.roundToInt
 fun ThresholdSettingsSection(
     uiState: ThresholdSettingsState,
     onEvent: (SettingsEvent) -> Unit,
+    isResyncing: Boolean = false,
 ) {
     Column {
         var hrvOptimal by remember(uiState.hrvOptimalThreshold) { mutableFloatStateOf(uiState.hrvOptimalThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_hrv_optimal_label),
+            enabled = !isResyncing,
             value = hrvOptimal,
             onValueChange = { hrvOptimal = it },
             onValueChangeFinished = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(hrvOptimal)) },
@@ -60,6 +62,7 @@ fun ThresholdSettingsSection(
         var hrvWarning by remember(uiState.hrvWarningThreshold) { mutableFloatStateOf(uiState.hrvWarningThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_hrv_warning_label),
+            enabled = !isResyncing,
             value = hrvWarning,
             onValueChange = { hrvWarning = it },
             onValueChangeFinished = { onEvent(SettingsEvent.HrvWarningThresholdChanged(hrvWarning)) },
@@ -71,6 +74,7 @@ fun ThresholdSettingsSection(
         var rhrOptimal by remember(uiState.rhrOptimalThreshold) { mutableFloatStateOf(uiState.rhrOptimalThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_rhr_optimal_label),
+            enabled = !isResyncing,
             value = rhrOptimal,
             onValueChange = { rhrOptimal = it },
             onValueChangeFinished = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(rhrOptimal)) },
@@ -81,6 +85,7 @@ fun ThresholdSettingsSection(
         var rhrWarning by remember(uiState.rhrWarningThreshold) { mutableFloatStateOf(uiState.rhrWarningThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_rhr_warning_label),
+            enabled = !isResyncing,
             value = rhrWarning,
             onValueChange = { rhrWarning = it },
             onValueChangeFinished = { onEvent(SettingsEvent.RhrWarningThresholdChanged(rhrWarning)) },
@@ -92,6 +97,7 @@ fun ThresholdSettingsSection(
             remember(uiState.bodyTempElevatedThreshold) { mutableFloatStateOf(uiState.bodyTempElevatedThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_body_temp_elevated_label),
+            enabled = !isResyncing,
             value = bodyTempElevatedThreshold,
             onValueChange = { bodyTempElevatedThreshold = it },
             onValueChangeFinished = {
@@ -111,6 +117,7 @@ fun ThresholdSettingsSection(
         }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_evaluation_period_label),
+            enabled = !isResyncing,
             value = evaluationPeriod,
             onValueChange = { evaluationPeriod = it },
             onValueChangeFinished = {
@@ -129,6 +136,7 @@ fun ThresholdSettingsSection(
         }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_baseline_window_label),
+            enabled = !isResyncing,
             value = baselineWindow,
             onValueChange = { baselineWindow = it },
             onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(baselineWindow.toInt())) },

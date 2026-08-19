@@ -376,7 +376,11 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.load_sources_section_title))
-                            LoadSourcesSection(uiState = sleepState, onEvent = onSleepEvent)
+                            LoadSourcesSection(
+                                uiState = sleepState,
+                                onEvent = onSleepEvent,
+                                isResyncing = syncState.isResyncing,
+                            )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             SectionHeader(
                                 stringResource(app.readylytics.health.core.ui.R.string.label_circadian_consistency),
@@ -392,10 +396,15 @@ fun SettingsScreen(
                                 isLoading = thresholdState.isUpdatingThreshold,
                                 error = resolvedThresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
+                                enabled = !syncState.isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_thresholds))
-                            ThresholdSettingsSection(uiState = thresholdState, onEvent = onThresholdEvent)
+                            ThresholdSettingsSection(
+                                uiState = thresholdState,
+                                onEvent = onThresholdEvent,
+                                isResyncing = syncState.isResyncing,
+                            )
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
