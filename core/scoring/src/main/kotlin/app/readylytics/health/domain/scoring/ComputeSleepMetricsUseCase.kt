@@ -347,9 +347,9 @@ class ComputeSleepMetricsUseCase
                             stagesSuspicious,
                             scoringConfig.sleepTargets,
                             sleepModifiers.fragmentation,
-                            SleepScoreWeightProfile.DEFAULT,
+                            scoringConfig.sleepWeightProfile,
                             sleepModifiers.regularityScore,
-                            ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
+                            scoringConfig.hypersomniaOnsetRatio,
                         )
 
                     val currentHrvBaseline: Float? =
