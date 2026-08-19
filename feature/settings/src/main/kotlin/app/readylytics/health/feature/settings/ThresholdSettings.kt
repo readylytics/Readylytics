@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -17,7 +17,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -312,11 +311,32 @@ fun SleepSettingsSection(
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_recalculate_scores_title)) },
-            supportingContent = { Text(stringResource(R.string.settings_recalculate_scores_description)) },
-            modifier = Modifier.clickable { onEvent(SettingsEvent.RecalculateScores) },
-        )
+        val hasChangedSleepScoringPreferences =
+            uiState.sleepScoreWeightProfile != SleepScoreWeightProfile.BALANCED ||
+                uiState.hypersomniaOnsetPercent != SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT ||
+                uiState.goalSleepHours != SettingsDefaults.GOAL_SLEEP_HOURS
+
+        Column(
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.smallMedium,
+                ),
+        ) {
+            Button(
+                onClick = { onEvent(SettingsEvent.RecalculateScores) },
+                enabled = hasChangedSleepScoringPreferences,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_recalculate_scores_title))
+            }
+            Text(
+                text = stringResource(R.string.settings_recalculate_scores_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
+            )
+        }
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 

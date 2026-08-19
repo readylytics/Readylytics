@@ -237,20 +237,6 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
             }
 
-            if (uiState.isCalibrating) {
-                item(key = "calibration_banner") {
-                    CalibrationBanner(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    horizontal = MaterialTheme.spacing.pageHorizontal,
-                                    vertical = MaterialTheme.spacing.extraSmall,
-                                ),
-                    )
-                }
-            }
-
             if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
                 item(key = "no_data_placeholder") {
                     Box(
