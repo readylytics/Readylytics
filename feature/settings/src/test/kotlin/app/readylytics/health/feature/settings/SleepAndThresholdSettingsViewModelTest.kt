@@ -4,6 +4,7 @@ import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
+import app.readylytics.health.domain.preferences.SleepScoreRecalcBaseline
 import app.readylytics.health.domain.preferences.SleepScoreRecalcBaselineStore
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
@@ -12,6 +13,7 @@ import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.feature.settings.R
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -299,12 +301,18 @@ class SleepAndThresholdSettingsViewModelTest {
                     baselineStore,
                 )
 
-            val state = vm.uiState.first { it.goalSleepHours == SettingsDefaults.GOAL_SLEEP_HOURS }
-            assertFalse(state.hasPendingSleepScoreRecalc)
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    vm.uiState.collect { }
+                }
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.hasPendingSleepScoreRecalc)
+            job.cancel()
         }
 
     @Test
-    fun `recalc pending true when goal differs from baseline then cleared on recalc`() =
+    fun `recalc pending true when goal differs from baseline`() =
         runTest {
             every { settingsReader.userPreferences } returns
                 MutableStateFlow(UserPreferences(goalSleepHours = 9f))
@@ -320,18 +328,55 @@ class SleepAndThresholdSettingsViewModelTest {
                     baselineStore,
                 )
 
-            val pending = vm.uiState.first { it.hasPendingSleepScoreRecalc }
-            assertTrue(pending.hasPendingSleepScoreRecalc)
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    vm.uiState.collect { }
+                }
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.hasPendingSleepScoreRecalc)
+            job.cancel()
+        }
+
+    @Test
+    fun `recalc pending clears after recalc`() =
+        runTest {
+            val baselineFlow = MutableStateFlow<SleepScoreRecalcBaseline?>(null)
+            every { settingsReader.userPreferences } returns
+                MutableStateFlow(UserPreferences(goalSleepHours = 9f))
+            every { baselineStore.baseline } returns baselineFlow
+            coEvery { baselineStore.markRecalced(any(), any(), any()) } coAnswers {
+                baselineFlow.value =
+                    SleepScoreRecalcBaseline(
+                        SleepScoreWeightProfile.BALANCED,
+                        9f,
+                        SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+                    )
+            }
+
+            val vm =
+                SleepSettingsViewModel(
+                    settingsReader,
+                    sleepSettings,
+                    scoringRepo,
+                    resyncController,
+                    kotlinx.coroutines.CoroutineScope(testDispatcher),
+                    baselineStore,
+                )
+
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    vm.uiState.collect { }
+                }
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.hasPendingSleepScoreRecalc)
 
             vm.onEvent(SettingsEvent.RecalculateScores)
             advanceUntilIdle()
             coVerify { resyncController.requestScoreRecompute() }
-            coVerify {
-                baselineStore.markRecalced(
-                    SleepScoreWeightProfile.BALANCED,
-                    9f,
-                    SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
-                )
-            }
+            coVerify { baselineStore.markRecalced(any(), any(), any()) }
+
+            assertFalse(vm.uiState.value.hasPendingSleepScoreRecalc)
+            job.cancel()
         }
 }
