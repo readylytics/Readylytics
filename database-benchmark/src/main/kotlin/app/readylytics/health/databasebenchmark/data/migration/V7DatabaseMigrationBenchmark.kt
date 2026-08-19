@@ -1,4 +1,4 @@
-package app.readylytics.health.data.migration
+package app.readylytics.health.databasebenchmark.data.migration
 
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.migration.V7DatabaseBenchmarkDriver
 import app.readylytics.health.databasebenchmark.di.benchmarkIoDispatcher
 import app.readylytics.health.domain.migration.V7MigrationPhase
 import app.readylytics.health.domain.migration.V7MigrationResult

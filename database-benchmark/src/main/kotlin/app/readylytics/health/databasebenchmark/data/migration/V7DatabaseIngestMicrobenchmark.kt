@@ -1,4 +1,4 @@
-package app.readylytics.health.data.migration
+package app.readylytics.health.databasebenchmark.data.migration
 
 import androidx.benchmark.ExperimentalBenchmarkConfigApi
 import androidx.benchmark.MicrobenchmarkConfig

@@ -1,8 +1,9 @@
-package app.readylytics.health.data.migration
+package app.readylytics.health.databasebenchmark.data.migration
 
 import android.content.Context
 import android.os.SystemClock
 import androidx.room.testing.MigrationTestHelper
+import app.readylytics.health.data.migration.V7DatabaseBenchmarkDriver
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SQLiteStatement
 import org.junit.Assert.assertEquals

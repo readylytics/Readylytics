@@ -177,20 +177,38 @@ class ScoringWalkForwardBenchmark {
             )
         val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
         val scoringConfigFactory = ScoringConfigFactory()
+        val sleepSessionRepository =
+            app.readylytics.health.data.repository.SleepSessionRepositoryImpl(
+                db.sleepSessionDao(),
+                db.sleepStageDao(),
+            )
+        val prefs = UserPreferences(scoringZoneId = zoneId.id)
+        val settingsRepo = BenchmarkFakeSettingsRepository(prefs)
+        val encryptionManager = BenchmarkFakeEncryptionManager()
+        val circadianConsistencyRepository =
+            app.readylytics.health.domain.scoring.CircadianConsistencyRepository(
+                sleepSessionRepository,
+                settingsRepo,
+                encryptionManager,
+            )
+        val sleepModifierResolver =
+            app.readylytics.health.domain.scoring.sleep.SleepModifierResolver(
+                sleepSessionRepository,
+                circadianConsistencyRepository,
+            )
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer = baselineComputer,
                 scoringHistoryRepository = scoringHistoryRepository,
                 scoringCalculator = scoringCalculator,
                 scoringConfigFactory = scoringConfigFactory,
-                encryptionManager = BenchmarkFakeEncryptionManager(),
+                encryptionManager = encryptionManager,
                 hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository),
                 sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
                 nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator),
                 coverageValidator = HrCoverageValidator(),
+                sleepModifierResolver = sleepModifierResolver,
             )
-        val prefs = UserPreferences(scoringZoneId = zoneId.id)
-        val settingsRepo = BenchmarkFakeSettingsRepository(prefs)
         val dataLoader =
             ScoringDayDataLoader(
                 db.workoutDao(),
