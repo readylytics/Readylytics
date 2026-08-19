@@ -18,4 +18,6 @@ data class ScoringConfig(
     val chengBeta: Float,
     val itrimB: Float,
     val hrvSaturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
+    val sleepWeightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
+    val hypersomniaOnsetRatio: Float = ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
 )

@@ -20,6 +20,9 @@ object ScoringConstants {
     const val HRV_SIGMA_BLEND_MIN_N = 7
     const val HRV_SIGMA_BLEND_MAX_N = 60
 
+    /** Lookback for circadian-consistency regularity scoring (anchor-night-1 minus 60 days). */
+    const val CIRCADIAN_CONSISTENCY_WINDOW_DAYS = 60
+
     // Valid-night input bounds — REF: Clifford 2006; Task Force 1996
     const val MIN_VALID_RMSSD_MS = 5f
     const val MAX_VALID_RMSSD_MS = 250f
@@ -61,25 +64,36 @@ object ScoringConstants {
     }
 
     object Sleep {
-        // REF: Buysse 1989 PSQI; Buysse 2014 RU-SATED; Knutson 2017 NSF Sleep Health Index
-        const val WEIGHT_DURATION = 0.50f
-        const val WEIGHT_ARCHITECTURE = 0.25f
-        const val WEIGHT_RESTORATION = 0.25f
         const val WEIGHT_DEEP_COMPONENT = 0.5f
         const val WEIGHT_REM_COMPONENT = 0.5f
 
         // Additive efficiency within Duration — REF: A.3; PSQI; avoids double-penalty since TST = TIB × SE
         const val WEIGHT_TST_IN_DURATION = 0.7f
         const val WEIGHT_EFF_IN_DURATION = 0.3f
-        const val EFF_EXCELLENT_THRESHOLD = 90f
-        const val EFF_EXCELLENT_SCORE = 100f
-        const val EFF_GOOD_THRESHOLD = 85f
-        const val EFF_GOOD_SCORE = 85f
-        const val EFF_FAIR_THRESHOLD = 75f
-        const val EFF_FAIR_SCORE = 65f
-        const val EFF_POOR_THRESHOLD = 65f
-        const val EFF_POOR_SCORE = 40f
-        const val EFF_VERY_POOR_SCORE = 15f
+
+        // Minimum awake-segment length that counts as a discrete awakening (1.5 minutes).
+        const val MIN_AWAKENING_DURATION_MS = 90_000L
+
+        // Continuous sleep-efficiency logistic (replaces the five-band step function).
+        const val EFFICIENCY_MIDPOINT = 77.5f
+        const val EFFICIENCY_SLOPE = 0.18f
+
+        // Duration: logistic below goal (normalized so ratio 1.0 scores exactly 100),
+        // flat through the hypersomnia dead zone, Gaussian decay above it.
+        const val DURATION_LOGISTIC_SLOPE = 10f
+        const val DURATION_LOGISTIC_MIDPOINT = 0.65f
+        const val HYPERSOMNIA_SIGMA = 0.40f
+        const val DEFAULT_HYPERSOMNIA_ONSET_RATIO = 1.25f
+
+        // Fragmentation: grace zone reflects normal adult sleep (WASO 20–30 min, 1–3 brief awakenings).
+        const val WASO_GRACE_MINUTES = 20f
+        const val WASO_DECAY_PER_MINUTE = 0.010f
+        const val AWAKENING_GRACE_COUNT = 2
+        const val AWAKENING_DECAY_PER_EVENT = 0.08f
+
+        // Schedule-regularity multiplier is penalty-only: good regularity is neutral, never a bonus.
+        const val REGULARITY_FLOOR = 0.92f
+        const val REGULARITY_SPAN = 0.08f
 
         const val DURATION_OPTIMAL_RATIO = 0.9f
         const val DURATION_NEUTRAL_RATIO = 0.8f

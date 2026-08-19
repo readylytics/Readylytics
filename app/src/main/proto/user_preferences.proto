@@ -61,6 +61,17 @@ enum DashboardCardDisplayModeProto {
     DASHBOARD_CARD_DISPLAY_MODE_BAR = 3;
 }
 
+enum SleepScoreWeightProfileProto {
+    SLEEP_WEIGHT_PROFILE_UNSET = 0;
+    SLEEP_WEIGHT_PROFILE_BALANCED = 1;
+    reserved 2, 3;
+    reserved "SLEEP_WEIGHT_PROFILE_LIGHT_SLEEPER", "SLEEP_WEIGHT_PROFILE_HOURS_FIRST";
+    SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED = 4;
+    SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED = 5;
+    SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED = 6;
+    SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED = 7;
+}
+
 
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
@@ -230,6 +241,25 @@ message UserPreferencesProto {
     // insight, in degrees Celsius. Not read by any scoring formula. Unset (proto3 zero value
     // via `optional` presence check) resolves to SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS.
     optional float body_temp_elevated_threshold_celsius = 82;
+
+    // Emphasis applied to the sleep-score sub-scores.
+    // SLEEP_WEIGHT_PROFILE_UNSET (proto3 zero value) resolves to SettingsDefaults.SLEEP_SCORE_WEIGHT_PROFILE.
+    SleepScoreWeightProfileProto sleep_score_weight_profile = 83;
+
+    // Percent of the sleep goal at which the oversleep penalty begins (100–125, 5% steps).
+    // Zero means unset and resolves to SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT.
+    optional int32 hypersomnia_onset_percent = 84;
+
+    // Version of the scoring formulas the stored scores were produced with.
+    int32 scoring_version = 85;
+
+    // Snapshot of the three sleep-scoring inputs at the last successful historical recompute
+    // (folded in from the deleted SleepScoreRecalcBaselineStore). Absence = "never recalced",
+    // which the Sleep Settings read boundary resolves to the factory defaults. `optional` so a
+    // worker that recomputed nothing (no-op) does not suppress a genuinely pending recalculation.
+    optional SleepScoreWeightProfileProto last_recalc_sleep_score_weight_profile = 86;
+    optional float last_recalc_goal_sleep_hours = 87;
+    optional int32 last_recalc_hypersomnia_onset_percent = 88;
 }
 
 enum TrimpMethodProto {

@@ -22,6 +22,12 @@ import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
+    const val SLEEP_SCORE_WEIGHT_PROFILE_NAME = "BALANCED"
+    const val HYPERSOMNIA_ONSET_PERCENT = 125
+    const val MIN_HYPERSOMNIA_ONSET_PERCENT = 100
+    const val MAX_HYPERSOMNIA_ONSET_PERCENT = 125
+    const val HYPERSOMNIA_ONSET_PERCENT_STEP = 5
+    const val CURRENT_SCORING_VERSION = 1
     const val CORE_MERGE_GAP_MINUTES = 180
     const val MIN_CORE_MERGE_GAP_MINUTES = 30
     const val MAX_CORE_MERGE_GAP_MINUTES = 240
@@ -274,6 +280,15 @@ fun normalizeSupplementalArchitectureCoveragePercent(value: Int): Int =
         minValue = SettingsDefaults.MIN_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
         maxValue = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
         step = SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_STEP_PERCENT,
+    )
+
+fun normalizeHypersomniaOnsetPercent(value: Int): Int =
+    normalizeSteppedPreference(
+        value = value,
+        defaultValue = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+        minValue = SettingsDefaults.MIN_HYPERSOMNIA_ONSET_PERCENT,
+        maxValue = SettingsDefaults.MAX_HYPERSOMNIA_ONSET_PERCENT,
+        step = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT_STEP,
     )
 
 private fun normalizeSteppedPreference(

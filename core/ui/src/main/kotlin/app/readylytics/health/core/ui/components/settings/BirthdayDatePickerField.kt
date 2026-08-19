@@ -29,6 +29,7 @@ fun BirthdayDatePickerField(
     onDateSelected: (LocalDate) -> Unit,
     showDialog: Boolean,
     onDialogDismiss: () -> Unit,
+    enabled: Boolean = true,
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val displayText = birthDate?.format(dateFormatter) ?: stringResource(R.string.label_not_set)
@@ -38,6 +39,7 @@ fun BirthdayDatePickerField(
             value = displayText,
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(stringResource(R.string.label_date_of_birth)) },
             modifier = Modifier.fillMaxWidth(),
         )
@@ -45,7 +47,7 @@ fun BirthdayDatePickerField(
             modifier =
                 Modifier
                     .matchParentSize()
-                    .clickable(onClick = onFieldClick),
+                    .clickable(enabled = enabled, onClick = onFieldClick),
         )
     }
 

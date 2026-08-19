@@ -258,6 +258,12 @@ class DatabaseReadyStartupInitializerTest {
 
     private fun createInitializer(): DatabaseReadyStartupInitializer {
         every { settingsRepositoryLazy.get() } returns settingsRepository
+        every { settingsRepository.userPreferences } returns
+            flowOf(
+                app.readylytics.health.data.preferences.UserPreferences(
+                    scoringVersion = app.readylytics.health.data.preferences.SettingsDefaults.CURRENT_SCORING_VERSION,
+                ),
+            )
         return DatabaseReadyStartupInitializer(
             healthSyncUseCase = healthSyncLazy,
             backfillHistoricalBaselines = backfillLazy,

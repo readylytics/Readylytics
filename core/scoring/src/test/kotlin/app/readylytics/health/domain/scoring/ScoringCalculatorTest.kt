@@ -1,6 +1,10 @@
 package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.domain.scoring.ScoringConstants.Sleep
+import app.readylytics.health.domain.scoring.components.SleepArchitectureTargetFactory
+import app.readylytics.health.domain.scoring.components.SleepContinuityCurves
+import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
@@ -117,31 +121,38 @@ class ComputeCtlTest {
     }
 }
 
-// ─── Duration sub-score (additive efficiency) ─────────────────────────────────
+// ─── Duration sub-score (continuous curves) ────────────────────────────────────
 class DurationSubScoreTest {
+    private fun expected(
+        ratio: Float,
+        efficiency: Float,
+    ): Float =
+        0.7f * SleepContinuityCurves.durationTerm(ratio, Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO) +
+            0.3f * SleepContinuityCurves.efficiencyTerm(efficiency)
+
     @Test
     fun `full goal sleep with excellent efficiency`() {
-        assertEquals(100f, calculator.computeDurationSubScore(480, 90f, 8f), DELTA)
+        assertEquals(expected(1f, 90f), calculator.computeDurationSubScore(480, 90f, 8f), DELTA)
     }
 
     @Test
     fun `full goal sleep with good efficiency`() {
-        assertEquals(95.5f, calculator.computeDurationSubScore(480, 85f, 8f), DELTA)
+        assertEquals(expected(1f, 85f), calculator.computeDurationSubScore(480, 85f, 8f), DELTA)
     }
 
     @Test
     fun `half sleep goal with fair efficiency`() {
-        assertEquals(54.5f, calculator.computeDurationSubScore(240, 80f, 8f), DELTA)
+        assertEquals(expected(0.5f, 80f), calculator.computeDurationSubScore(240, 80f, 8f), DELTA)
     }
 
     @Test
-    fun `over-sleeping clamped at 100`() {
-        assertEquals(100f, calculator.computeDurationSubScore(600, 90f, 8f), DELTA)
+    fun `over-sleeping within dead zone is not clamped early`() {
+        assertEquals(expected(1.25f, 90f), calculator.computeDurationSubScore(600, 90f, 8f), DELTA)
     }
 
     @Test
     fun `poor efficiency drags down score`() {
-        assertEquals(74.5f, calculator.computeDurationSubScore(480, 60f, 8f), DELTA)
+        assertEquals(expected(1f, 60f), calculator.computeDurationSubScore(480, 60f, 8f), DELTA)
     }
 }
 
@@ -177,21 +188,35 @@ class NightValidationTest {
     }
 }
 
-// ─── Architecture sub-score (age-banded denominators) ─────────────────────────
+// ─── Architecture sub-score (continuous age targets) ───────────────────────────
 class ArchSubScoreTest {
-    @Test
-    fun `at age-banded targets for under-30 scores 100`() {
-        assertEquals(100f, calculator.computeArchSubScore(20, 22, 100, 25), DELTA)
+    private fun expected(
+        deepMinutes: Int,
+        remMinutes: Int,
+        durationMinutes: Int,
+        age: Int,
+    ): Float {
+        val targets = SleepArchitectureTargetFactory.create(age)
+        val deepComponent =
+            (deepMinutes / durationMinutes.toFloat() / targets.deepPercentage).coerceAtMost(1f) * 100f
+        val remComponent =
+            (remMinutes / durationMinutes.toFloat() / targets.remPercentage).coerceAtMost(1f) * 100f
+        return Sleep.WEIGHT_DEEP_COMPONENT * deepComponent + Sleep.WEIGHT_REM_COMPONENT * remComponent
     }
 
     @Test
-    fun `at age-banded targets for age 40 scores 100`() {
-        assertEquals(100f, calculator.computeArchSubScore(18, 21, 100, 40), DELTA)
+    fun `at age-banded targets for under-30`() {
+        assertEquals(expected(20, 22, 100, 25), calculator.computeArchSubScore(20, 22, 100, 25), DELTA)
     }
 
     @Test
-    fun `at age-banded targets for age 70 scores 100`() {
-        assertEquals(100f, calculator.computeArchSubScore(12, 19, 100, 70), DELTA)
+    fun `at age-banded targets for age 40`() {
+        assertEquals(expected(18, 21, 100, 40), calculator.computeArchSubScore(18, 21, 100, 40), DELTA)
+    }
+
+    @Test
+    fun `at age-banded targets for age 70`() {
+        assertEquals(expected(12, 19, 100, 70), calculator.computeArchSubScore(12, 19, 100, 70), DELTA)
     }
 
     @Test
@@ -203,7 +228,7 @@ class ArchSubScoreTest {
     @Test
     fun `excess deep sleep is capped at target, not penalised`() {
         val score = calculator.computeArchSubScore(30, 20, 100, 25)
-        assertEquals(95.45f, score, DELTA)
+        assertEquals(expected(30, 20, 100, 25), score, DELTA)
     }
 
     @Test
@@ -361,6 +386,17 @@ class HrvZScoreTest {
 class SleepScoreIntegrationTest {
     @Test
     fun `weighted sum of known sub-scores at age 25`() {
+        val fragmentation = SleepFragmentation.NONE
+        val sDur = calculator.computeDurationSubScore(480, 85f, 8f)
+        val sArch = calculator.computeArchSubScore(96, 96, 480, 25, null)
+        val sFrag = calculator.computeFragmentationSubScore(fragmentation)
+        val profile = SleepScoreWeightProfile.BALANCED
+        val expected =
+            profile.durationWeight * sDur +
+                profile.architectureWeight * sArch +
+                profile.restorationWeight * 75f +
+                profile.fragmentationWeight * sFrag
+
         val score =
             calculator.computeSleepScore(
                 durationMinutes = 480,
@@ -370,22 +406,24 @@ class SleepScoreIntegrationTest {
                 goalSleepHours = 8f,
                 sRest = 75f,
                 userAge = 25,
+                fragmentation = fragmentation,
             )
-        assertEquals(90.36f, score, DELTA)
+        assertEquals(expected, score, DELTA)
     }
 
     @Test
-    fun `perfect sleep at age 25 hits benchmark targets`() {
+    fun `near-ceiling inputs approach but do not exceed 100`() {
         val score =
             calculator.computeSleepScore(
                 durationMinutes = 100,
-                efficiency = 90f,
-                deepSleepMinutes = 20,
-                remSleepMinutes = 22,
+                efficiency = 100f,
+                deepSleepMinutes = 30,
+                remSleepMinutes = 30,
                 goalSleepHours = (100f / 60f),
                 sRest = 100f,
                 userAge = 25,
+                fragmentation = SleepFragmentation.NONE,
             )
-        assertEquals(100f, score, DELTA)
+        assertTrue("score should approach the ceiling without exceeding it, was $score", score in 90f..100f)
     }
 }

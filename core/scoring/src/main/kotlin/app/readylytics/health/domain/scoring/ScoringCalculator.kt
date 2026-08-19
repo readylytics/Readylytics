@@ -4,6 +4,7 @@ import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets
+import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
 import java.time.LocalDate
 import javax.inject.Singleton
 
@@ -32,7 +33,10 @@ interface ScoringCalculator {
         durationMinutes: Int,
         efficiency: Float,
         goalSleepHours: Float,
+        hypersomniaOnsetRatio: Float = ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
     ): Float
+
+    fun computeFragmentationSubScore(fragmentation: SleepFragmentation): Float
 
     fun computeArchSubScore(
         deepSleepMinutes: Int,
@@ -95,6 +99,10 @@ interface ScoringCalculator {
         userAge: Int = 30,
         stagesSuspicious: Boolean = false,
         sleepTargets: app.readylytics.health.domain.scoring.components.SleepArchitectureTargets? = null,
+        fragmentation: SleepFragmentation? = null,
+        weightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
+        regularityScore: Float? = null,
+        hypersomniaOnsetRatio: Float = ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
     ): Float
 
     fun computeRecoveryFlags(

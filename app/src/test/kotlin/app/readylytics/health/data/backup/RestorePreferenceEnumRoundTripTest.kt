@@ -6,8 +6,10 @@ import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.PhysiologyProfileProto
+import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.SyncPreferenceProto
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -66,6 +68,20 @@ class RestorePreferenceEnumRoundTripTest {
                 "backup writes '${domain.name}'; losing it silently changes the user's scores",
             )
             assertEquals("PROFILE_${domain.name}", resolved.name)
+        }
+    }
+
+    @Test
+    fun everySleepScoreWeightProfileValueSurvivesTheRoundTrip() {
+        SleepScoreWeightProfile.entries.forEach { domain ->
+            val resolved =
+                resolveProtoEnum(
+                    domain.name,
+                    "SLEEP_WEIGHT_PROFILE_",
+                    SleepScoreWeightProfileProto::valueOf,
+                )
+            assertNotNull(resolved, "backup writes '${domain.name}'; restore must resolve it")
+            assertEquals("SLEEP_WEIGHT_PROFILE_${domain.name}", resolved.name)
         }
     }
 

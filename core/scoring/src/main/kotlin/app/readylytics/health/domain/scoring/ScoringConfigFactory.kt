@@ -55,11 +55,21 @@ class ScoringConfigFactory
 
             val auditTrail = createAuditTrail(daysSinceInstall, currentDate)
             val hrvSaturationZ = hrvSaturationZForProfile(userPreferences.physiologyProfile)
+            val sleepWeightProfile = userPreferences.sleepScoreWeightProfile
+            val hypersomniaOnsetRatio = userPreferences.hypersomniaOnsetPercent / 100f
 
             // Use SHA256 hash of configuration parameters for stable, deterministic identifier
             // This ensures consistency across JVM versions and app updates
             val paramsHash =
-                computeConfigHash(restoration, sleepTargets, emergencyFlags, circadianConsistency, hrvSaturationZ)
+                computeConfigHash(
+                    restoration,
+                    sleepTargets,
+                    emergencyFlags,
+                    circadianConsistency,
+                    hrvSaturationZ,
+                    sleepWeightProfile,
+                    hypersomniaOnsetRatio,
+                )
 
             val config =
                 ScoringConfig(
@@ -74,6 +84,8 @@ class ScoringConfigFactory
                     chengBeta = userPreferences.chengBeta,
                     itrimB = userPreferences.itrimB,
                     hrvSaturationZ = hrvSaturationZ,
+                    sleepWeightProfile = sleepWeightProfile,
+                    hypersomniaOnsetRatio = hypersomniaOnsetRatio,
                 )
 
             return config
@@ -138,6 +150,8 @@ class ScoringConfigFactory
             emergencyFlags: EmergencyFlagThresholds,
             circadianConsistency: CircadianConsistencyConfig,
             hrvSaturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
+            sleepWeightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
+            hypersomniaOnsetRatio: Float = ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
         ): Int {
             val digest = MessageDigest.getInstance("SHA-256")
             val buffer = ByteBuffer.allocate(4)
@@ -164,6 +178,10 @@ class ScoringConfigFactory
             // SleepArchitectureTargets
             update(sleepTargets.deepPercentage)
             update(sleepTargets.remPercentage)
+
+            // Sleep score settings
+            update(sleepWeightProfile.ordinal)
+            update(hypersomniaOnsetRatio)
 
             // EmergencyFlagThresholds
             update(emergencyFlags.strongRecoveryZHrvThreshold)

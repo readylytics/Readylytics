@@ -1,5 +1,6 @@
 package app.readylytics.health
 
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
 import app.readylytics.health.domain.migration.DatabaseReadiness
@@ -29,7 +30,7 @@ internal class DatabaseReadyStartupInitializer(
         if (!initialized.compareAndSet(false, true)) return StartupInitializationResult.COMPLETE
 
         return try {
-            try {
+            runNonFatal("Historical baseline backfill") {
                 val backfilled =
                     healthSyncUseCase.get().withSyncLock {
                         backfillHistoricalBaselines.get().execute()
@@ -37,13 +38,23 @@ internal class DatabaseReadyStartupInitializer(
                 if (backfilled > 0) {
                     logD(TAG) { "Backfilled $backfilled historical baselines" }
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logE(TAG, e) { "Historical baseline backfill failed" }
             }
 
             val settings = settingsRepository.get()
+            runNonFatal("Scoring version migration check") {
+                val storedScoringVersion = settings.userPreferences.first().scoringVersion
+                if (storedScoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION) {
+                    logD(TAG) {
+                        "Scoring version $storedScoringVersion < ${SettingsDefaults.CURRENT_SCORING_VERSION}; " +
+                            "enqueueing recompute-only resync"
+                    }
+                    // The worker owns the version bump (HealthResyncWorker.persistPostRecomputeState, on
+                    // success only). Never bump here: a killed worker must leave the stale version in
+                    // place so the next launch re-enqueues idempotently.
+                    workerScheduler.scheduleResyncWorker(recomputeOnly = true)
+                }
+            }
+
             val backupSchedule = settings.backupSchedule.first()
             val backgroundSyncEnabled = settings.backgroundSyncEnabled.first()
             val periodicSyncMinutes =
@@ -69,6 +80,19 @@ internal class DatabaseReadyStartupInitializer(
             initialized.set(false)
             logE(TAG, e) { "Database-ready startup initialization failed" }
             StartupInitializationResult.RETRYABLE_FAILURE
+        }
+    }
+
+    private suspend fun runNonFatal(
+        actionName: String,
+        block: suspend () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logE(TAG, e) { "$actionName failed" }
         }
     }
 

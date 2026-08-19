@@ -75,27 +75,31 @@ class ScoringComponentsTest {
     // SleepArchitectureTargetFactory tests
 
     @Test
-    fun sleepArchitectureTargetFactory_age20_returnsAgeRange18To29() {
-        val targets = SleepArchitectureTargetFactory.create(20)
-        assertEquals(SleepArchitectureTargets.AgeRange18To29::class, targets::class)
+    fun sleepArchitectureTargetFactory_age25_returnsTargetsNearRetiredAgeRange18To29Band() {
+        val targets = SleepArchitectureTargetFactory.create(25)
+        org.junit.Assert.assertEquals(0.20f, targets.deepPercentage, 0.01f)
+        org.junit.Assert.assertEquals(0.22f, targets.remPercentage, 0.01f)
     }
 
     @Test
-    fun sleepArchitectureTargetFactory_age40_returnsAgeRange30To49() {
+    fun sleepArchitectureTargetFactory_age40_returnsTargetsNearRetiredAgeRange30To49Band() {
         val targets = SleepArchitectureTargetFactory.create(40)
-        assertEquals(SleepArchitectureTargets.AgeRange30To49::class, targets::class)
+        org.junit.Assert.assertEquals(0.18f, targets.deepPercentage, 0.01f)
+        org.junit.Assert.assertEquals(0.21f, targets.remPercentage, 0.01f)
     }
 
     @Test
-    fun sleepArchitectureTargetFactory_age55_returnsAgeRange50To59() {
+    fun sleepArchitectureTargetFactory_age55_returnsTargetsNearRetiredAgeRange50To59Band() {
         val targets = SleepArchitectureTargetFactory.create(55)
-        assertEquals(SleepArchitectureTargets.AgeRange50To59::class, targets::class)
+        org.junit.Assert.assertEquals(0.15f, targets.deepPercentage, 0.01f)
+        org.junit.Assert.assertEquals(0.20f, targets.remPercentage, 0.01f)
     }
 
     @Test
-    fun sleepArchitectureTargetFactory_age65_returnsAgeRange60Plus() {
-        val targets = SleepArchitectureTargetFactory.create(65)
-        assertEquals(SleepArchitectureTargets.AgeRange60Plus::class, targets::class)
+    fun sleepArchitectureTargetFactory_age70_returnsTargetsNearRetiredAgeRange60PlusBand() {
+        val targets = SleepArchitectureTargetFactory.create(70)
+        org.junit.Assert.assertEquals(0.12f, targets.deepPercentage, 0.011f)
+        org.junit.Assert.assertEquals(0.19f, targets.remPercentage, 0.01f)
     }
 
     // ScoringConfigFactory tiered emergency flags tests

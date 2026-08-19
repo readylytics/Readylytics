@@ -1,6 +1,6 @@
 {
     "dateMidnightMs": 1781474400000,
-    "sleepScore": 81.858795,
+    "sleepScore": 76.84342,
     "nocturnalHrv": 56,
     "sleepDurationMinutes": 480,
     "deepSleepPercent": 18.75,
@@ -17,14 +17,14 @@
         "lnSigma": 0.091503814,
         "rollingMu": 4.0453157,
         "rhrDeltaBpm": 0.0,
-        "configHashCode": -849188029,
+        "configHashCode": -1109653012,
         "phaseName": "Mature"
     },
     "contributors": {
         "hrvScore": 44.545525,
         "rhrScore": 50.0,
-        "durationScore": 95.88235,
-        "architectureScore": 89.48863,
+        "durationScore": 96.00689,
+        "architectureScore": 91.1047,
         "loadContribution": 100.0
     },
     "isCalibrating": false,
@@ -53,8 +53,8 @@
     "strainRatioEverydayHr": 0.0,
     "loadScoreWorkoutOnly": 100.0,
     "loadScoreEverydayHr": 100.0,
-    "readinessWorkoutOnly": 73.03039,
-    "readinessEverydayHr": 73.03039,
+    "readinessWorkoutOnly": 71.52578,
+    "readinessEverydayHr": 71.52578,
     "everydayCoverageMinutes": 1,
     "everydayLoadConfidence": "LOW",
     "supplementalSleepDurationMinutes": 0,

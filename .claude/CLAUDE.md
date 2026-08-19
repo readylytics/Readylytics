@@ -47,7 +47,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk=26, targetSd
 ## Domain Rules & Engine
 
 - **Baselines:** Compute for all historical dates (no 30-day cutoff); snapshot frozen per day (hrMax, profile, RAS factor, HRV prior). If < 7 days data, show "Calibrating".
-- **Sleep Score:** Duration (50%), Architecture (25%), Restoration (25%).
+- **Sleep Score:** Default Balanced profile: Duration (40%), Architecture (20%), Restoration (25%), Fragmentation (15%). User-selectable weight profiles (Balanced, Duration Focused, Recovery Focused, Architecture Focused, Continuity Focused) with regularity multiplier penalty (0.92–1.00).
 - **Load Score:** Acute (7-day TRIMP avg), Chronic (42-day TRIMP avg). Output = Strain Ratio (TRIMP default).
 
 ## Component Specifications
@@ -62,7 +62,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk=26, targetSd
 ## Commands & Testing
 
 - **Tests:** Mirror source package structure. Must test boundary conditions and calculation logic. Zero Android dependencies in unit tests.
-- **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest` (and run `./gradlew lintRelease` at the end after resolving all coding tasks)
+- **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew detekt && ./gradlew testDebugUnitTest` (and run `./gradlew lintRelease` at the end after resolving all coding tasks)
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
 
 ## Documentation Sync

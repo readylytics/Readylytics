@@ -632,6 +632,12 @@ class LocalBackupManager
                     workoutCharts = workoutCharts,
                     workoutHistory = workoutHistory,
                     workoutDetailLayouts = workoutDetailLayouts,
+                    sleepScoreWeightProfile = prefs.sleepScoreWeightProfile.name,
+                    hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
+                    scoringVersion = prefs.scoringVersion,
+                    lastRecalcSleepScoreWeightProfile = prefs.lastRecalcSleepScoreWeightProfile?.name,
+                    lastRecalcGoalSleepHours = prefs.lastRecalcGoalSleepHours,
+                    lastRecalcHypersomniaOnsetPercent = prefs.lastRecalcHypersomniaOnsetPercent,
                 )
             writer.write(json.encodeToString(backup))
         }

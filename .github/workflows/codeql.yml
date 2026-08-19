@@ -56,9 +56,12 @@ jobs:
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew --no-daemon assembleDebug
+          ./gradlew --stop
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3
         with:
           category: "/language:${{matrix.language}}"
+          ram: 10240
+          threads: 2

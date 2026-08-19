@@ -61,6 +61,8 @@ interface HistoricalResyncController {
 
     suspend fun requestHistoricalResync()
 
+    suspend fun requestScoreRecompute()
+
     fun schedulePeriodicSync(intervalMinutes: Long)
 
     fun cancelPeriodicSync()

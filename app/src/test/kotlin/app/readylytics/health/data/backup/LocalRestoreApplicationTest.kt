@@ -3,6 +3,7 @@ package app.readylytics.health.data.backup
 import android.net.Uri
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.BackupScheduleProto
+import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.backup.RestoreResult
@@ -338,6 +339,55 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             builderSlot.captured(builder)
             assertEquals(BackupScheduleProto.BACKUP_WEEKLY, builder.backupSchedule)
             coVerify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.WEEKLY) }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_restoresLastRecalcSleepScoreBaseline() =
+        runTest {
+            val json = createValidBackupJson()
+            json
+                .getJSONObject("preferences")
+                .put("lastRecalcSleepScoreWeightProfile", "RECOVERY_FOCUSED")
+                .put("lastRecalcGoalSleepHours", 9.5)
+                .put("lastRecalcHypersomniaOnsetPercent", 115)
+            val zipFile = createBackupZipFile("last_recalc_baseline_backup.zip", json)
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertEquals(
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED,
+                builder.lastRecalcSleepScoreWeightProfile,
+            )
+            assertEquals(9.5f, builder.lastRecalcGoalSleepHours)
+            assertEquals(115, builder.lastRecalcHypersomniaOnsetPercent)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_missingLastRecalcFieldsLeaveThemUnset() =
+        runTest {
+            val zipFile = createBackupZipFile("last_recalc_absent_backup.zip", createValidBackupJson())
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertTrue(!builder.hasLastRecalcSleepScoreWeightProfile())
+            assertTrue(!builder.hasLastRecalcGoalSleepHours())
+            assertTrue(!builder.hasLastRecalcHypersomniaOnsetPercent())
             zipFile.delete()
         }
 

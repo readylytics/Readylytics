@@ -236,6 +236,7 @@ class ReadinessSummaryCoordinator
                     rhrBaselineValue = initialBaselines.rhrBaselineValue,
                     dayEndMs = nextDayMidnightMs,
                     currentSessionIds = currentSessionIds,
+                    prefetchedSessions = baselineContext?.sessions,
                 ).getOrNull() ?: withHrvBaseline
             } else {
                 withHrvBaseline
