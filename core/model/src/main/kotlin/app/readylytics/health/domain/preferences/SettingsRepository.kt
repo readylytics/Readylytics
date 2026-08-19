@@ -11,4 +11,5 @@ interface SettingsRepository {
     suspend fun migrateDeviceSelectionIfNeeded()
     suspend fun updateLastSyncTimestamp(timestamp: Long)
     suspend fun updateBirthday(date: LocalDate)
+    suspend fun updateScoringVersion(version: Int)
 }

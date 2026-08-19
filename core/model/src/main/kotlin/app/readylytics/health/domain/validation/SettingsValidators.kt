@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.validation
 
+import app.readylytics.health.data.preferences.SettingsDefaults
+
 object SettingsValidators {
     val BIRTHDAY_DATE_RULE = BirthdayDateRule()
 
@@ -12,6 +14,13 @@ object SettingsValidators {
         IntStepRangeRule(5, 60, 5, "Minimum segment: 5–60 min in 5-minute steps")
     val SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT_RULE =
         IntStepRangeRule(25, 100, 5, "Architecture coverage: 25–100% in 5% steps")
+    val HYPERSOMNIA_ONSET_PERCENT_RULE =
+        IntStepRangeRule(
+            SettingsDefaults.MIN_HYPERSOMNIA_ONSET_PERCENT,
+            SettingsDefaults.MAX_HYPERSOMNIA_ONSET_PERCENT,
+            SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT_STEP,
+            "Oversleep penalty: 100–125% in 5% steps",
+        )
 
     val HEART_RATE_RULE = IntRangeRule(1, 220, "HR: 1–220 bpm")
 

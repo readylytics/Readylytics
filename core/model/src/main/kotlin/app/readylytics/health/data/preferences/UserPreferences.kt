@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -102,6 +103,9 @@ data class UserPreferences(
     val supplementalArchitectureCoveragePercent: Int =
         SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
     val bodyTempElevatedThresholdCelsius: Float = SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS,
+    val sleepScoreWeightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
+    val hypersomniaOnsetPercent: Int = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+    val scoringVersion: Int = 0,
 )
 
 /**

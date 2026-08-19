@@ -26,6 +26,7 @@ import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.PhysiologyProfileProto
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.preferences.WorkoutDetailLayoutMapper
@@ -802,6 +803,18 @@ class LocalRestoreManager
                 backup.primaryDeviceName?.let { primaryDeviceName = it }
                 backup.deviceByDataType?.let { putAllDeviceByDataType(it) }
                 backup.backupDirectoryUri?.let { backupDirectoryUri = it }
+                backup.sleepScoreWeightProfile?.let { raw ->
+                    val resolved = resolveProtoEnum(raw, "SLEEP_WEIGHT_PROFILE_", SleepScoreWeightProfileProto::valueOf)
+                    if (resolved != null) {
+                        sleepScoreWeightProfile = resolved
+                    } else {
+                        logW(
+                            "LocalRestoreManager",
+                        ) { "Ignoring unrecognised sleep score weight profile '$raw' in backup settings" }
+                    }
+                }
+                backup.hypersomniaOnsetPercent?.let { hypersomniaOnsetPercent = it }
+                backup.scoringVersion?.let { scoringVersion = it }
                 encryptedProvidedPassword?.let { backupPasswordHash = it }
             }
             backup.dashboardCards?.let {

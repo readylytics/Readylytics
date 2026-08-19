@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -11,6 +12,13 @@ fun PhysiologyProfileProto.toDomainProfile(): PhysiologyProfile =
         PhysiologyProfileProto.PROFILE_ATHLETE -> PhysiologyProfile.ATHLETE
         PhysiologyProfileProto.PROFILE_SEDENTARY -> PhysiologyProfile.SEDENTARY
         else -> PhysiologyProfile.ACTIVE
+    }
+
+fun SleepScoreWeightProfileProto.toDomainProfile(): SleepScoreWeightProfile =
+    when (this) {
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_LIGHT_SLEEPER -> SleepScoreWeightProfile.LIGHT_SLEEPER
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_HOURS_FIRST -> SleepScoreWeightProfile.HOURS_FIRST
+        else -> SleepScoreWeightProfile.BALANCED
     }
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -197,6 +205,14 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
                 else -> SettingsDefaults.RAS_SOURCE_MODE
             },
+        sleepScoreWeightProfile = sleepScoreWeightProfile.toDomainProfile(),
+        hypersomniaOnsetPercent =
+            if (hasHypersomniaOnsetPercent()) {
+                normalizeHypersomniaOnsetPercent(hypersomniaOnsetPercent)
+            } else {
+                SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT
+            },
+        scoringVersion = scoringVersion,
     )
 }
 

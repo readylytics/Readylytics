@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -216,6 +217,61 @@ class SettingsRepositoryTest {
             assertEquals(1380, prefs.supplementalCutoffMinutesOfDay)
             assertEquals(60, prefs.minimumCountedSleepSegmentMinutes)
             assertEquals(100, prefs.supplementalArchitectureCoveragePercent)
+        }
+
+    @Test
+    fun `default sleep score preferences and scoring version are exposed`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.BALANCED, prefs.sleepScoreWeightProfile)
+            assertEquals(125, prefs.hypersomniaOnsetPercent)
+            assertEquals(0, prefs.scoringVersion)
+        }
+
+    @Test
+    fun `updating sleep score weight profile, oversleep onset, and scoring version persists correctly`() =
+        runTest {
+            repository.updateSleepScoreWeightProfile(SleepScoreWeightProfile.LIGHT_SLEEPER)
+            repository.updateHypersomniaOnsetPercent(110)
+            repository.updateScoringVersion(1)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.LIGHT_SLEEPER, prefs.sleepScoreWeightProfile)
+            assertEquals(110, prefs.hypersomniaOnsetPercent)
+            assertEquals(1, prefs.scoringVersion)
+        }
+
+    @Test
+    fun `hypersomnia onset percent normalizes into supported stepped range`() =
+        runTest {
+            repository.updateHypersomniaOnsetPercent(123)
+            var prefs = repository.userPreferences.first()
+            assertEquals(125, prefs.hypersomniaOnsetPercent)
+
+            repository.updateHypersomniaOnsetPercent(98)
+            prefs = repository.userPreferences.first()
+            assertEquals(100, prefs.hypersomniaOnsetPercent)
+
+            repository.updateHypersomniaOnsetPercent(107)
+            prefs = repository.userPreferences.first()
+            assertEquals(105, prefs.hypersomniaOnsetPercent)
+        }
+
+    @Test
+    fun `sleep score preferences persist through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    sleepScoreWeightProfile = SleepScoreWeightProfile.HOURS_FIRST,
+                    hypersomniaOnsetPercent = 115,
+                    scoringVersion = 2,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.HOURS_FIRST, prefs.sleepScoreWeightProfile)
+            assertEquals(115, prefs.hypersomniaOnsetPercent)
+            assertEquals(2, prefs.scoringVersion)
         }
 
     /**

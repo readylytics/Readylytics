@@ -61,6 +61,13 @@ enum DashboardCardDisplayModeProto {
     DASHBOARD_CARD_DISPLAY_MODE_BAR = 3;
 }
 
+enum SleepScoreWeightProfileProto {
+    SLEEP_WEIGHT_PROFILE_UNSET = 0;
+    SLEEP_WEIGHT_PROFILE_BALANCED = 1;
+    SLEEP_WEIGHT_PROFILE_LIGHT_SLEEPER = 2;
+    SLEEP_WEIGHT_PROFILE_HOURS_FIRST = 3;
+}
+
 
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
@@ -230,6 +237,17 @@ message UserPreferencesProto {
     // insight, in degrees Celsius. Not read by any scoring formula. Unset (proto3 zero value
     // via `optional` presence check) resolves to SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS.
     optional float body_temp_elevated_threshold_celsius = 82;
+
+    // Emphasis applied to the sleep-score sub-scores.
+    // SLEEP_WEIGHT_PROFILE_UNSET (proto3 zero value) resolves to SettingsDefaults.SLEEP_SCORE_WEIGHT_PROFILE.
+    SleepScoreWeightProfileProto sleep_score_weight_profile = 83;
+
+    // Percent of the sleep goal at which the oversleep penalty begins (100–125, 5% steps).
+    // Zero means unset and resolves to SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT.
+    optional int32 hypersomnia_onset_percent = 84;
+
+    // Version of the scoring formulas the stored scores were produced with.
+    int32 scoring_version = 85;
 }
 
 enum TrimpMethodProto {

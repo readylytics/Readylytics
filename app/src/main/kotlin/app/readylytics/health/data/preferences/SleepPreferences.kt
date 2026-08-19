@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import javax.inject.Inject
 
 internal class SleepPreferences
@@ -103,6 +104,31 @@ internal class SleepPreferences
         suspend fun updateHrrToleranceSeconds(value: Int) {
             dataStore.updateData {
                 it.toBuilder().setHrrToleranceSeconds(value.toValidHrrTolerance()).build()
+            }
+        }
+
+        suspend fun updateSleepScoreWeightProfile(profile: SleepScoreWeightProfile) {
+            val proto =
+                when (profile) {
+                    SleepScoreWeightProfile.BALANCED ->
+                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+                    SleepScoreWeightProfile.LIGHT_SLEEPER ->
+                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_LIGHT_SLEEPER
+                    SleepScoreWeightProfile.HOURS_FIRST ->
+                        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_HOURS_FIRST
+                }
+            dataStore.updateData { it.toBuilder().setSleepScoreWeightProfile(proto).build() }
+        }
+
+        suspend fun updateHypersomniaOnsetPercent(percent: Int) {
+            dataStore.updateData {
+                it.toBuilder().setHypersomniaOnsetPercent(normalizeHypersomniaOnsetPercent(percent)).build()
+            }
+        }
+
+        suspend fun updateScoringVersion(version: Int) {
+            dataStore.updateData {
+                it.toBuilder().setScoringVersion(version).build()
             }
         }
     }
