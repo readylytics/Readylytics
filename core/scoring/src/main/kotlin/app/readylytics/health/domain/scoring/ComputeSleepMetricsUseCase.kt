@@ -12,6 +12,7 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.components.PhaseCalculator
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.domain.scoring.sleep.SleepModifierResolver
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
@@ -44,6 +45,7 @@ class ComputeSleepMetricsUseCase
         private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
         private val nadirAnalyzer: SleepNadirAnalyzer,
         private val coverageValidator: HrCoverageValidator,
+        private val sleepModifierResolver: SleepModifierResolver,
     ) {
         suspend operator fun invoke(
             session: SleepSession,
@@ -275,6 +277,14 @@ class ComputeSleepMetricsUseCase
                         session.lightSleepMinutes == 0
                 val stagesSuspicious = hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
 
+                val sleepModifiers =
+                    sleepModifierResolver.resolve(
+                        sessionId = session.id,
+                        targetDate = targetDate,
+                        prefs = prefs,
+                        stagesSuspicious = stagesSuspicious,
+                    )
+
                 // Compute calibration status early for freeze gate (HIGH-1)
                 val totalValidHrvNights =
                     validHistoricalDayCount + (if (validation.canContributeToBaseline) 1 else 0)
@@ -336,6 +346,10 @@ class ComputeSleepMetricsUseCase
                             prefs.age,
                             stagesSuspicious,
                             scoringConfig.sleepTargets,
+                            sleepModifiers.fragmentation,
+                            SleepScoreWeightProfile.DEFAULT,
+                            sleepModifiers.regularityScore,
+                            ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO,
                         )
 
                     val currentHrvBaseline: Float? =

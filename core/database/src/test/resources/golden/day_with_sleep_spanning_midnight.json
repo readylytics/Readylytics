@@ -1,6 +1,6 @@
 {
     "dateMidnightMs": 1781474400000,
-    "sleepScore": 90.67178,
+    "sleepScore": 92.95542,
     "nocturnalHrv": 62,
     "sleepDurationMinutes": 495,
     "deepSleepPercent": 21.212122,
@@ -54,8 +54,8 @@
     "strainRatioEverydayHr": 0.0,
     "loadScoreWorkoutOnly": 100.0,
     "loadScoreEverydayHr": 100.0,
-    "readinessWorkoutOnly": 88.81534,
-    "readinessEverydayHr": 88.81534,
+    "readinessWorkoutOnly": 89.500435,
+    "readinessEverydayHr": 89.500435,
     "everydayCoverageMinutes": 2,
     "everydayLoadConfidence": "LOW",
     "supplementalSleepDurationMinutes": 0,

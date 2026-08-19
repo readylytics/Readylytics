@@ -8,6 +8,8 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.domain.scoring.sleep.SleepModifierResolver
+import app.readylytics.health.domain.scoring.sleep.SleepModifiers
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.security.EncryptionManager
@@ -178,6 +180,8 @@ class ComputeSleepMetricsUseCaseTest {
             val currentNightHrvResolver = mockk<CurrentNightHrvResolver>(relaxed = true)
             val sleepNadirAnalyzer = mockk<SleepNadirAnalyzer>(relaxed = true)
             val hrCoverageValidator = mockk<HrCoverageValidator>(relaxed = true)
+            val sleepModifierResolver = mockk<SleepModifierResolver>()
+            coEvery { sleepModifierResolver.resolve(any(), any(), any(), any()) } returns SleepModifiers(null, null)
 
             coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } throws
                 CancellationException("Test cancellation")
@@ -193,6 +197,7 @@ class ComputeSleepMetricsUseCaseTest {
                     sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                     nadirAnalyzer = sleepNadirAnalyzer,
                     coverageValidator = hrCoverageValidator,
+                    sleepModifierResolver = sleepModifierResolver,
                 )
 
             val session =
