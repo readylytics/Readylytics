@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -43,6 +44,11 @@ class SettingsRepositoryTest {
                 sync = mockk<SyncPreferences>(relaxed = true),
                 backup = mockk<BackupPreferences>(relaxed = true),
             )
+    }
+
+    @After
+    fun tearDown() {
+        runCatching { context.deleteFile("test_settings.pb") }
     }
 
     @Test
@@ -298,6 +304,19 @@ class SettingsRepositoryTest {
             assertEquals(null, prefs.lastRecalcSleepScoreWeightProfile)
             assertEquals(null, prefs.lastRecalcGoalSleepHours)
             assertEquals(null, prefs.lastRecalcHypersomniaOnsetPercent)
+        }
+
+    @Test
+    fun `BALANCED recalc baseline round-trips as BALANCED not null`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(
+                    lastRecalcSleepScoreWeightProfile = SleepScoreWeightProfile.BALANCED,
+                ).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(SleepScoreWeightProfile.BALANCED, prefs.lastRecalcSleepScoreWeightProfile)
         }
 
     /**
