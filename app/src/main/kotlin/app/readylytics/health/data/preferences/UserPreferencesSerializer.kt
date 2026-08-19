@@ -220,9 +220,16 @@ fun UserPreferences.toProto(): UserPreferencesProto {
     )
     builder.setSleepScoreWeightProfile(
         when (domain.sleepScoreWeightProfile) {
-            SleepScoreWeightProfile.BALANCED -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
-            SleepScoreWeightProfile.LIGHT_SLEEPER -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_LIGHT_SLEEPER
-            SleepScoreWeightProfile.HOURS_FIRST -> SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_HOURS_FIRST
+            SleepScoreWeightProfile.BALANCED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+            SleepScoreWeightProfile.DURATION_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
+            SleepScoreWeightProfile.RECOVERY_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
+            SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
+            SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
         },
     )
     builder.setHypersomniaOnsetPercent(domain.hypersomniaOnsetPercent)

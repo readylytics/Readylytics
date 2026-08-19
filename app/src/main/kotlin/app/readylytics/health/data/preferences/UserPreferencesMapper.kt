@@ -16,8 +16,14 @@ fun PhysiologyProfileProto.toDomainProfile(): PhysiologyProfile =
 
 fun SleepScoreWeightProfileProto.toDomainProfile(): SleepScoreWeightProfile =
     when (this) {
-        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_LIGHT_SLEEPER -> SleepScoreWeightProfile.LIGHT_SLEEPER
-        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_HOURS_FIRST -> SleepScoreWeightProfile.HOURS_FIRST
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED ->
+            SleepScoreWeightProfile.DURATION_FOCUSED
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED ->
+            SleepScoreWeightProfile.RECOVERY_FOCUSED
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED ->
+            SleepScoreWeightProfile.ARCHITECTURE_FOCUSED
+        SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED ->
+            SleepScoreWeightProfile.CONTINUITY_FOCUSED
         else -> SleepScoreWeightProfile.BALANCED
     }
 

@@ -491,13 +491,17 @@ private fun steppedSliderSteps(
 private fun SleepScoreWeightProfile.labelRes(): Int =
     when (this) {
         SleepScoreWeightProfile.BALANCED -> R.string.settings_sleep_profile_balanced
-        SleepScoreWeightProfile.LIGHT_SLEEPER -> R.string.settings_sleep_profile_light_sleeper
-        SleepScoreWeightProfile.HOURS_FIRST -> R.string.settings_sleep_profile_hours_first
+        SleepScoreWeightProfile.DURATION_FOCUSED -> R.string.settings_sleep_profile_duration_focused
+        SleepScoreWeightProfile.RECOVERY_FOCUSED -> R.string.settings_sleep_profile_recovery_focused
+        SleepScoreWeightProfile.ARCHITECTURE_FOCUSED -> R.string.settings_sleep_profile_architecture_focused
+        SleepScoreWeightProfile.CONTINUITY_FOCUSED -> R.string.settings_sleep_profile_continuity_focused
     }
 
 private fun SleepScoreWeightProfile.descriptionRes(): Int =
     when (this) {
         SleepScoreWeightProfile.BALANCED -> R.string.settings_sleep_profile_balanced_description
-        SleepScoreWeightProfile.LIGHT_SLEEPER -> R.string.settings_sleep_profile_light_sleeper_description
-        SleepScoreWeightProfile.HOURS_FIRST -> R.string.settings_sleep_profile_hours_first_description
+        SleepScoreWeightProfile.DURATION_FOCUSED -> R.string.settings_sleep_profile_duration_focused_description
+        SleepScoreWeightProfile.RECOVERY_FOCUSED -> R.string.settings_sleep_profile_recovery_focused_description
+        SleepScoreWeightProfile.ARCHITECTURE_FOCUSED -> R.string.settings_sleep_profile_architecture_focused_description
+        SleepScoreWeightProfile.CONTINUITY_FOCUSED -> R.string.settings_sleep_profile_continuity_focused_description
     }

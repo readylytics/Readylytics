@@ -12,8 +12,10 @@ enum class SleepScoreWeightProfile(
     val fragmentationWeight: Float,
 ) {
     BALANCED(0.40f, 0.20f, 0.25f, 0.15f),
-    LIGHT_SLEEPER(0.35f, 0.20f, 0.25f, 0.20f),
-    HOURS_FIRST(0.45f, 0.20f, 0.25f, 0.10f),
+    DURATION_FOCUSED(0.50f, 0.15f, 0.20f, 0.15f),
+    RECOVERY_FOCUSED(0.30f, 0.15f, 0.40f, 0.15f),
+    ARCHITECTURE_FOCUSED(0.30f, 0.35f, 0.20f, 0.15f),
+    CONTINUITY_FOCUSED(0.30f, 0.15f, 0.25f, 0.30f),
     ;
 
     private val degradedTotal: Float get() = durationWeight + restorationWeight

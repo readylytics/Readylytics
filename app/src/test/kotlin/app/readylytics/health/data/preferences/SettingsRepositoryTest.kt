@@ -231,12 +231,12 @@ class SettingsRepositoryTest {
     @Test
     fun `updating sleep score weight profile, oversleep onset, and scoring version persists correctly`() =
         runTest {
-            repository.updateSleepScoreWeightProfile(SleepScoreWeightProfile.LIGHT_SLEEPER)
+            repository.updateSleepScoreWeightProfile(SleepScoreWeightProfile.DURATION_FOCUSED)
             repository.updateHypersomniaOnsetPercent(110)
             repository.updateScoringVersion(1)
 
             val prefs = repository.userPreferences.first()
-            assertEquals(SleepScoreWeightProfile.LIGHT_SLEEPER, prefs.sleepScoreWeightProfile)
+            assertEquals(SleepScoreWeightProfile.DURATION_FOCUSED, prefs.sleepScoreWeightProfile)
             assertEquals(110, prefs.hypersomniaOnsetPercent)
             assertEquals(1, prefs.scoringVersion)
         }
@@ -262,14 +262,14 @@ class SettingsRepositoryTest {
         runTest {
             dataStore.updateData {
                 UserPreferences(
-                    sleepScoreWeightProfile = SleepScoreWeightProfile.HOURS_FIRST,
+                    sleepScoreWeightProfile = SleepScoreWeightProfile.RECOVERY_FOCUSED,
                     hypersomniaOnsetPercent = 115,
                     scoringVersion = 2,
                 ).toProto()
             }
 
             val prefs = repository.userPreferences.first()
-            assertEquals(SleepScoreWeightProfile.HOURS_FIRST, prefs.sleepScoreWeightProfile)
+            assertEquals(SleepScoreWeightProfile.RECOVERY_FOCUSED, prefs.sleepScoreWeightProfile)
             assertEquals(115, prefs.hypersomniaOnsetPercent)
             assertEquals(2, prefs.scoringVersion)
         }

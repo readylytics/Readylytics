@@ -209,10 +209,12 @@ class SleepAndThresholdSettingsViewModelTest {
     @Test
     fun `weight profile change is persisted without triggering a recompute`() =
         runTest {
-            sleepViewModel.onEvent(SettingsEvent.SleepScoreWeightProfileChanged(SleepScoreWeightProfile.LIGHT_SLEEPER))
+            sleepViewModel.onEvent(
+                SettingsEvent.SleepScoreWeightProfileChanged(SleepScoreWeightProfile.DURATION_FOCUSED),
+            )
             advanceUntilIdle()
 
-            coVerify { sleepSettings.updateSleepScoreWeightProfile(SleepScoreWeightProfile.LIGHT_SLEEPER) }
+            coVerify { sleepSettings.updateSleepScoreWeightProfile(SleepScoreWeightProfile.DURATION_FOCUSED) }
             coVerify { scoringRepo.computeAndPersistDailySummary() }
             coVerify(exactly = 0) { resyncController.requestScoreRecompute() }
         }
@@ -251,7 +253,7 @@ class SleepAndThresholdSettingsViewModelTest {
             every { settingsReader.userPreferences } returns
                 MutableStateFlow(
                     UserPreferences(
-                        sleepScoreWeightProfile = SleepScoreWeightProfile.HOURS_FIRST,
+                        sleepScoreWeightProfile = SleepScoreWeightProfile.RECOVERY_FOCUSED,
                         hypersomniaOnsetPercent = 110,
                     ),
                 )
@@ -267,10 +269,10 @@ class SleepAndThresholdSettingsViewModelTest {
 
             val state =
                 vm.uiState.first {
-                    it.sleepScoreWeightProfile == SleepScoreWeightProfile.HOURS_FIRST &&
+                    it.sleepScoreWeightProfile == SleepScoreWeightProfile.RECOVERY_FOCUSED &&
                         it.hypersomniaOnsetPercent == 110
                 }
-            assertEquals(SleepScoreWeightProfile.HOURS_FIRST, state.sleepScoreWeightProfile)
+            assertEquals(SleepScoreWeightProfile.RECOVERY_FOCUSED, state.sleepScoreWeightProfile)
             assertEquals(110, state.hypersomniaOnsetPercent)
         }
 }

@@ -18,19 +18,19 @@ class ScoringConfigFactorySleepTest {
         val config =
             build(
                 UserPreferences(
-                    sleepScoreWeightProfile = SleepScoreWeightProfile.LIGHT_SLEEPER,
+                    sleepScoreWeightProfile = SleepScoreWeightProfile.DURATION_FOCUSED,
                     hypersomniaOnsetPercent = 110,
                 ),
             )
 
-        assertEquals(SleepScoreWeightProfile.LIGHT_SLEEPER, config.sleepWeightProfile)
+        assertEquals(SleepScoreWeightProfile.DURATION_FOCUSED, config.sleepWeightProfile)
         assertEquals(1.10f, config.hypersomniaOnsetRatio, 0.0001f)
     }
 
     @Test
     fun `changing sleep score settings changes the config hash`() {
         val balanced = build(UserPreferences(sleepScoreWeightProfile = SleepScoreWeightProfile.BALANCED))
-        val lightSleeper = build(UserPreferences(sleepScoreWeightProfile = SleepScoreWeightProfile.LIGHT_SLEEPER))
+        val lightSleeper = build(UserPreferences(sleepScoreWeightProfile = SleepScoreWeightProfile.DURATION_FOCUSED))
         val earlierOnset = build(UserPreferences(hypersomniaOnsetPercent = 105))
 
         assertNotEquals(balanced.auditTrail.configHashCode, lightSleeper.auditTrail.configHashCode)

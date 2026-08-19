@@ -11,8 +11,14 @@ object SleepContinuityCurves {
     private val DURATION_NORMALIZER =
         sigmoid(Sleep.DURATION_LOGISTIC_SLOPE * (1f - Sleep.DURATION_LOGISTIC_MIDPOINT))
 
+    private val EFFICIENCY_NORMALIZER =
+        sigmoid(Sleep.EFFICIENCY_SLOPE * (100f - Sleep.EFFICIENCY_MIDPOINT))
+
     fun efficiencyTerm(efficiency: Float): Float =
-        100f * sigmoid(Sleep.EFFICIENCY_SLOPE * (efficiency.coerceIn(0f, 100f) - Sleep.EFFICIENCY_MIDPOINT))
+        (
+            100f * sigmoid(Sleep.EFFICIENCY_SLOPE * (efficiency.coerceIn(0f, 100f) - Sleep.EFFICIENCY_MIDPOINT)) /
+                EFFICIENCY_NORMALIZER
+        ).coerceIn(0f, 100f)
 
     fun durationTerm(
         ratio: Float,

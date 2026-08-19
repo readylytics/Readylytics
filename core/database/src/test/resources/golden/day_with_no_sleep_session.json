@@ -1,6 +1,6 @@
 {
     "dateMidnightMs": 1781474400000,
-    "sleepScore": 78.161064,
+    "sleepScore": 78.45204,
     "nocturnalHrv": 56,
     "sleepDurationMinutes": 480,
     "deepSleepPercent": 18.75,
@@ -23,7 +23,7 @@
     "contributors": {
         "hrvScore": 46.32588,
         "rhrScore": 50.0,
-        "durationScore": 97.13952,
+        "durationScore": 97.61235,
         "architectureScore": 93.190674,
         "loadContribution": 100.0
     },
@@ -53,8 +53,8 @@
     "strainRatioEverydayHr": 0.0,
     "loadScoreWorkoutOnly": 100.0,
     "loadScoreEverydayHr": 100.0,
-    "readinessWorkoutOnly": 72.566536,
-    "readinessEverydayHr": 72.566536,
+    "readinessWorkoutOnly": 72.653824,
+    "readinessEverydayHr": 72.653824,
     "everydayCoverageMinutes": 1,
     "everydayLoadConfidence": "LOW",
     "supplementalSleepDurationMinutes": 0,

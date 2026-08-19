@@ -266,10 +266,9 @@ class GoldenFixtureWalkForwardTest {
 
     private fun goldenFileCandidates(): List<File> =
         listOf(
-            // Gradle's testDebugUnitTest JVM runs with the :app module directory as its working
-            // directory, not the repo root -- this must be first, or a write falls back to the
-            // next candidate and creates a spurious app/app/... directory.
             File("src/test/resources/golden/scoring_walk_forward_golden.json"),
+            File("core/database/src/test/resources/golden/scoring_walk_forward_golden.json"),
+            File("../core/database/src/test/resources/golden/scoring_walk_forward_golden.json"),
             File("app/src/test/resources/golden/scoring_walk_forward_golden.json"),
             File("../app/src/test/resources/golden/scoring_walk_forward_golden.json"),
         )

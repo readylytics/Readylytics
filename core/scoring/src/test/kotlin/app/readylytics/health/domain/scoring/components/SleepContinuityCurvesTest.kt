@@ -16,9 +16,14 @@ class SleepContinuityCurvesTest {
     }
 
     @Test
+    fun `perfect efficiency scores exactly 100`() {
+        assertEquals(100f, SleepContinuityCurves.efficiencyTerm(100f), 0.05f)
+    }
+
+    @Test
     fun `efficiency curve matches reference points`() {
-        assertEquals(90.5f, SleepContinuityCurves.efficiencyTerm(90f), 0.2f)
-        assertEquals(38.9f, SleepContinuityCurves.efficiencyTerm(75f), 0.2f)
+        assertEquals(92.1f, SleepContinuityCurves.efficiencyTerm(90f), 0.2f)
+        assertEquals(39.6f, SleepContinuityCurves.efficiencyTerm(75f), 0.2f)
     }
 
     @Test
