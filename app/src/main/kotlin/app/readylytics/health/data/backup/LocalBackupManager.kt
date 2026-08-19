@@ -635,6 +635,9 @@ class LocalBackupManager
                     sleepScoreWeightProfile = prefs.sleepScoreWeightProfile.name,
                     hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
                     scoringVersion = prefs.scoringVersion,
+                    lastRecalcSleepScoreWeightProfile = prefs.lastRecalcSleepScoreWeightProfile?.name,
+                    lastRecalcGoalSleepHours = prefs.lastRecalcGoalSleepHours,
+                    lastRecalcHypersomniaOnsetPercent = prefs.lastRecalcHypersomniaOnsetPercent,
                 )
             writer.write(json.encodeToString(backup))
         }

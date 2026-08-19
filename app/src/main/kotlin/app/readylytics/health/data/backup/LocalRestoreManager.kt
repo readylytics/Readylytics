@@ -815,6 +815,19 @@ class LocalRestoreManager
                 }
                 backup.hypersomniaOnsetPercent?.let { hypersomniaOnsetPercent = it }
                 backup.scoringVersion?.let { scoringVersion = it }
+                backup.lastRecalcSleepScoreWeightProfile?.let { raw ->
+                    val resolved =
+                        resolveProtoEnum(raw, "SLEEP_WEIGHT_PROFILE_", SleepScoreWeightProfileProto::valueOf)
+                    if (resolved != null) {
+                        lastRecalcSleepScoreWeightProfile = resolved
+                    } else {
+                        logW(
+                            "LocalRestoreManager",
+                        ) { "Ignoring unrecognised lastRecalcSleepScoreWeightProfile '$raw' in backup settings" }
+                    }
+                }
+                backup.lastRecalcGoalSleepHours?.let { lastRecalcGoalSleepHours = it }
+                backup.lastRecalcHypersomniaOnsetPercent?.let { lastRecalcHypersomniaOnsetPercent = it }
                 encryptedProvidedPassword?.let { backupPasswordHash = it }
             }
             backup.dashboardCards?.let {
