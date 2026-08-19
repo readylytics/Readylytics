@@ -69,7 +69,8 @@ class CircadianConsistencyRepository
                         .atStartOfDay(prefs.scoringZone())
                         .toInstant()
                         .toEpochMilli()
-                val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
+                val fromMs =
+                    anchorMs - ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS.toLong() * 24 * 60 * 60 * 1000L
                 sleepSessionRepository.observeSince(fromMs).map { sessions ->
                     val filtered = sessions.filter { it.endTime < anchorMs }
                     compute(filtered, prefs, anchorDate)
@@ -79,14 +80,16 @@ class CircadianConsistencyRepository
         suspend fun scoreFor(
             anchorDate: LocalDate,
             prefs: UserPreferences,
+            prefetchedSessions: List<SleepSessionData>? = null,
         ): Float? {
-            val result = resultForOnce(anchorDate, prefs)
+            val result = resultForOnce(anchorDate, prefs, prefetchedSessions)
             return (result as? CircadianConsistencyResult.Ready)?.score
         }
 
         suspend fun resultForOnce(
             anchorDate: LocalDate,
             prefs: UserPreferences,
+            prefetchedSessions: List<SleepSessionData>? = null,
         ): CircadianConsistencyResult {
             val anchorMs =
                 anchorDate
@@ -94,8 +97,11 @@ class CircadianConsistencyRepository
                     .atStartOfDay(prefs.scoringZone())
                     .toInstant()
                     .toEpochMilli()
-            val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
-            val sessions = sleepSessionRepository.getSince(fromMs).filter { it.endTime < anchorMs }
+            val fromMs =
+                anchorMs - ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS.toLong() * 24 * 60 * 60 * 1000L
+            val sessions =
+                prefetchedSessions?.filter { it.startTime >= fromMs && it.endTime < anchorMs }
+                    ?: sleepSessionRepository.getSince(fromMs).filter { it.endTime < anchorMs }
             return compute(sessions, prefs, anchorDate)
         }
 

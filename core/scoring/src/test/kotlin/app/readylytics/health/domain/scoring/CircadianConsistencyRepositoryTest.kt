@@ -3,10 +3,12 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +32,24 @@ class CircadianConsistencyRepositoryTest {
             consistencyEvaluationDays = 7,
             consistencyBaselineDays = 14,
         )
+
+    private fun buildRepoWithSessionMock(
+        sessions: List<SleepSessionData>,
+    ): Pair<CircadianConsistencyRepository, SleepSessionRepository> {
+        val sessionRepository = mockk<SleepSessionRepository>()
+        coEvery { sessionRepository.getSince(any()) } returns sessions
+        val settingsRepo = mockk<SettingsRepository>()
+        every { settingsRepo.userPreferences } returns MutableStateFlow(defaultPrefs)
+        val encryptionManager = mockk<EncryptionManager>()
+        every { encryptionManager.decrypt(any()) } returns null
+        val repo =
+            CircadianConsistencyRepository(
+                sleepSessionRepository = sessionRepository,
+                settingsRepo = settingsRepo,
+                encryptionManager = encryptionManager,
+            )
+        return repo to sessionRepository
+    }
 
     private fun fakeSleepSession(
         id: String,
@@ -219,12 +239,48 @@ class CircadianConsistencyRepositoryTest {
         }
 
     @Test
-    fun `scoreFor returns null while calibrating`() =
+    fun `resultForOnce with prefetched sessions avoids the database query and matches the DB path`() =
         runTest {
             val anchor = LocalDate.of(2026, 1, 10)
-            val sessions = seedRegularSessions(anchor, nights = 1)
-            val repo = buildRepo(sessions)
+            val sessions = seedRegularSessions(anchor, nights = 10)
 
-            assertNull(repo.scoreFor(anchor, defaultPrefs))
+            val (prefetchRepo, sessionRepo) = buildRepoWithSessionMock(sessions)
+            val actual =
+                prefetchRepo.resultForOnce(
+                    anchor,
+                    defaultPrefs,
+                    prefetchedSessions = sessions,
+                )
+            assertTrue(actual is CircadianConsistencyResult.Ready)
+            coVerify(exactly = 0) { sessionRepo.getSince(any()) }
+
+            val (dbRepo, _) = buildRepoWithSessionMock(sessions)
+            assertEquals(dbRepo.resultForOnce(anchor, defaultPrefs), actual)
+        }
+
+    @Test
+    fun `resultForOnce with prefetched sessions filters to the 60-day window by startTime`() =
+        runTest {
+            val anchor = LocalDate.of(2026, 1, 10)
+            val anchorMs = anchor.plusDays(1).atStartOfDay(defaultPrefs.scoringZone()).toInstant().toEpochMilli()
+            val within = seedRegularSessions(anchor, nights = 3)
+            val tooOld =
+                within.first().copy(
+                    id = "too-old",
+                    startTime = anchorMs - ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000L - 1,
+                    endTime = anchorMs - ScoringConstants.CIRCADIAN_CONSISTENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000L + 1,
+                )
+
+            val (repo, sessionRepo) = buildRepoWithSessionMock(within + tooOld)
+            val actual =
+                repo.resultForOnce(
+                    anchor,
+                    defaultPrefs,
+                    prefetchedSessions = within + tooOld,
+                )
+
+            assertTrue(actual is CircadianConsistencyResult.Ready)
+            coVerify(exactly = 0) { sessionRepo.getSince(any()) }
         }
 }
+

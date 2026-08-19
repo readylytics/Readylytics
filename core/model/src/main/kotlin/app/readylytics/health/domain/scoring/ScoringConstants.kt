@@ -20,6 +20,9 @@ object ScoringConstants {
     const val HRV_SIGMA_BLEND_MIN_N = 7
     const val HRV_SIGMA_BLEND_MAX_N = 60
 
+    /** Lookback for circadian-consistency regularity scoring (anchor-night-1 minus 60 days). */
+    const val CIRCADIAN_CONSISTENCY_WINDOW_DAYS = 60
+
     // Valid-night input bounds — REF: Clifford 2006; Task Force 1996
     const val MIN_VALID_RMSSD_MS = 5f
     const val MAX_VALID_RMSSD_MS = 250f
