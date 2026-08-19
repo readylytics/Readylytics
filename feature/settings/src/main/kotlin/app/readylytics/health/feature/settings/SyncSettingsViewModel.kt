@@ -6,6 +6,7 @@ import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.SyncSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.util.logE
@@ -30,6 +31,7 @@ class SyncSettingsViewModel
         private val deviceSettings: DeviceSettings,
         private val healthDataRefresh: HealthDataRefresh,
         private val historicalResyncController: HistoricalResyncController,
+        private val foregroundSyncGateway: ForegroundSyncGateway,
     ) : ViewModel() {
         private val availableDevices = MutableStateFlow<List<String>>(emptyList())
 
@@ -40,12 +42,13 @@ class SyncSettingsViewModel
             combine(
                 settingsReader.userPreferences,
                 historicalResyncController.state,
+                foregroundSyncGateway.isResyncing,
                 availableDevices,
-            ) { prefs, resyncState, availableDevices ->
+            ) { prefs, resyncState, isResyncing, availableDevices ->
                 SyncSettingsState(
                     syncPreference = prefs.syncPreference,
                     syncIntervalHours = prefs.syncIntervalHours,
-                    isResyncing = resyncState.running,
+                    isResyncing = isResyncing,
                     resyncCurrent = resyncState.current,
                     resyncTotal = resyncState.total,
                     availableDevices = availableDevices,

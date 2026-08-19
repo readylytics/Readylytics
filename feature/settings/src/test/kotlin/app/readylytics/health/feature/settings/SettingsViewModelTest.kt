@@ -7,6 +7,7 @@ import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.SyncSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncState
@@ -32,6 +33,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -280,6 +282,11 @@ class SettingsViewModelTest {
                 mockk<HistoricalResyncController>(relaxed = true) {
                     every { state } returns flowOf(HistoricalResyncState(running = false, current = 0, total = 0))
                 }
+            val isResyncingFlow = MutableStateFlow(false)
+            val mockSyncGateway =
+                mockk<ForegroundSyncGateway> {
+                    every { isResyncing } returns isResyncingFlow
+                }
 
             val viewModel =
                 SyncSettingsViewModel(
@@ -288,6 +295,7 @@ class SettingsViewModelTest {
                     deviceSettings,
                     mockRefresh,
                     mockHistoricalResyncController,
+                    mockSyncGateway,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -296,6 +304,10 @@ class SettingsViewModelTest {
             }
 
             assertFalse(viewModel.uiState.value.isResyncing)
+            isResyncingFlow.value = true
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isResyncing)
+
             viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
             advanceUntilIdle()
 
