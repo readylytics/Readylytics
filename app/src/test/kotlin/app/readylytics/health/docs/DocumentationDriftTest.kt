@@ -171,6 +171,14 @@ class DocumentationDriftTest {
         assertAgeBandInAboutMd("60+", SleepArchitectureTargetFactory.create(70))
     }
 
+    private val ageBandTolerances =
+        mapOf(
+            "18–29" to 0.004f,
+            "30–49" to 0.004f,
+            "50–59" to 0.005f,
+            "60+" to 0.011f,
+        )
+
     private fun assertAgeBandInAboutMd(
         ageRangeLabel: String,
         targets: app.readylytics.health.domain.scoring.components.SleepArchitectureTargets,
@@ -180,8 +188,11 @@ class DocumentationDriftTest {
         val parts = row.split("|").map { it.trim() }.filter { it.isNotEmpty() }
         val deepPercent = parts[1].removeSuffix("%").toFloat() / 100f
         val remPercent = parts[2].removeSuffix("%").toFloat() / 100f
-        assertEquals(targets.deepPercentage, deepPercent, 0.011f, "Deep target mismatch for $ageRangeLabel")
-        assertEquals(targets.remPercentage, remPercent, 0.011f, "REM target mismatch for $ageRangeLabel")
+        val tolerance =
+            ageBandTolerances[ageRangeLabel]
+                ?: error("No tolerance defined for age band $ageRangeLabel")
+        assertEquals(targets.deepPercentage, deepPercent, tolerance, "Deep target mismatch for $ageRangeLabel")
+        assertEquals(targets.remPercentage, remPercent, tolerance, "REM target mismatch for $ageRangeLabel")
     }
 
     @Test
