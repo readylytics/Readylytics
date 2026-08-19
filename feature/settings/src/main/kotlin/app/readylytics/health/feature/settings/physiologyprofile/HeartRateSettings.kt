@@ -47,6 +47,7 @@ import app.readylytics.health.feature.settings.PhysiologySettingsState
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SettingsExpandState
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -60,6 +61,7 @@ fun HeartRateZoneSection(
     onExpandStateChange: (SettingsExpandState) -> Unit,
     isResyncing: Boolean = false,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     var maxHrText by rememberSaveable(uiState.maxHeartRate) {
         mutableStateOf(uiState.maxHeartRate.toString())
     }
@@ -82,7 +84,7 @@ fun HeartRateZoneSection(
             Switch(
                 checked = uiState.autoCalculateMaxHr,
                 onCheckedChange = { onEvent(SettingsEvent.AutoCalculateMaxHrChanged(it)) },
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
             )
         }
 
@@ -98,7 +100,7 @@ fun HeartRateZoneSection(
                     },
                     showDialog = showBirthdatePicker,
                     onDialogDismiss = { showBirthdatePicker = false },
-                    enabled = !isResyncing,
+                    enabled = controlsEnabled,
                 )
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraSmall))
                 Text(
@@ -112,7 +114,7 @@ fun HeartRateZoneSection(
                     expanded = genderExpanded,
                     onExpandedChange = { genderExpanded = it },
                     onGenderSelected = { onPhysiologyEvent(SettingsEvent.GenderChanged(it)) },
-                    enabled = !isResyncing,
+                    enabled = controlsEnabled,
                 )
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                 HeightInputField(
@@ -132,7 +134,7 @@ fun HeartRateZoneSection(
                 onEvent(SettingsEvent.MaxHeartRateChanged(it))
             },
             label = { Text(stringResource(R.string.hr_max_rate_label)) },
-            enabled = !uiState.autoCalculateMaxHr && !isResyncing,
+            enabled = !uiState.autoCalculateMaxHr && controlsEnabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             supportingText = {
                 if (uiState.autoCalculateMaxHr) {
@@ -162,14 +164,14 @@ fun HeartRateZoneSection(
             Switch(
                 checked = uiState.manualZoneEditing,
                 onCheckedChange = { onEvent(SettingsEvent.ManualZoneEditingChanged(it)) },
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
             )
         }
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         if (uiState.manualZoneEditing) {
-            ZoneEditingSection(uiState = uiState, onEvent = onEvent, enabled = !isResyncing)
+            ZoneEditingSection(uiState = uiState, onEvent = onEvent, enabled = controlsEnabled)
         } else {
             Text(
                 stringResource(R.string.hr_calculated_zones_header),

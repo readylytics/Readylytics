@@ -39,6 +39,7 @@ import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import app.readylytics.health.feature.settings.R
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +56,7 @@ fun AdvancedSettingsSection(
     onUIEvent: (SettingsEvent) -> Unit,
     isResyncing: Boolean = false,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     val trimpModelOptions =
         listOf(
             TrimpModel.BANISTER to stringResource(R.string.advanced_trimp_banister),
@@ -85,7 +87,7 @@ fun AdvancedSettingsSection(
             )
             OutlinedTextField(
                 value = hrvText,
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
                 onValueChange = { value ->
                     hrvText = value
                     val validation = SettingsValidators.HRV_BASELINE_RULE.validate(value)
@@ -113,7 +115,7 @@ fun AdvancedSettingsSection(
                                 hrvText = ""
                                 onEvent(SettingsEvent.HrvBaselineCleared)
                             },
-                            enabled = !isResyncing,
+                            enabled = controlsEnabled,
                         ) {
                             Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
@@ -125,7 +127,7 @@ fun AdvancedSettingsSection(
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             OutlinedTextField(
                 value = rhrText,
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
                 onValueChange = { value ->
                     rhrText = value
                     val validation = SettingsValidators.RHR_BASELINE_RULE.validate(value)
@@ -153,7 +155,7 @@ fun AdvancedSettingsSection(
                                 rhrText = ""
                                 onEvent(SettingsEvent.RhrBaselineCleared)
                             },
-                            enabled = !isResyncing,
+                            enabled = controlsEnabled,
                         ) {
                             Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
@@ -177,7 +179,7 @@ fun AdvancedSettingsSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = percentileValue.toFloat(),
-                    enabled = !isResyncing,
+                    enabled = controlsEnabled,
                     onValueChange = { percentileValue = it.toInt() },
                     onValueChangeFinished = {
                         val validation =
@@ -206,7 +208,7 @@ fun AdvancedSettingsSection(
             SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS.toFloat()..SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS.toFloat()
         ThresholdSliderItem(
             label = stringResource(R.string.advanced_hrr_tolerance_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = hrrTolerance,
             onValueChange = { hrrTolerance = it },
             onValueChangeFinished = {
@@ -231,7 +233,7 @@ fun AdvancedSettingsSection(
             steps = 20,
             displayValue = "%.2f".format(rasScaling),
             description = stringResource(R.string.advanced_ras_scaling_tooltip),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
@@ -250,7 +252,7 @@ fun AdvancedSettingsSection(
         }
         ExposedDropdownMenuBox(
             expanded = trimpDropdownExpanded,
-            onExpandedChange = { if (!isResyncing) trimpDropdownExpanded = it },
+            onExpandedChange = { if (controlsEnabled) trimpDropdownExpanded = it },
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -260,7 +262,7 @@ fun AdvancedSettingsSection(
                 value = selectedModelLabel,
                 onValueChange = {},
                 readOnly = true,
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
                 label = { Text(stringResource(R.string.advanced_training_load_label)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trimpDropdownExpanded) },
                 modifier =
@@ -269,7 +271,7 @@ fun AdvancedSettingsSection(
                         .fillMaxWidth(),
             )
             ExposedDropdownMenu(
-                expanded = trimpDropdownExpanded && !isResyncing,
+                expanded = trimpDropdownExpanded && controlsEnabled,
                 onDismissRequest = { trimpDropdownExpanded = false },
             ) {
                 trimpModelOptions.forEach { (model, label) ->
@@ -297,7 +299,7 @@ fun AdvancedSettingsSection(
                     steps = 40,
                     displayValue = "%.2f".format(multiplier),
                     description = stringResource(R.string.advanced_banister_multiplier_desc),
-                    enabled = !isResyncing,
+                    enabled = controlsEnabled,
                 )
             }
             TrimpModel.CHENG -> {
@@ -312,7 +314,7 @@ fun AdvancedSettingsSection(
                     steps = 16,
                     displayValue = "%.3f".format(beta),
                     description = stringResource(R.string.advanced_cheng_beta_desc),
-                    enabled = !isResyncing,
+                    enabled = controlsEnabled,
                 )
             }
             TrimpModel.I_TRIMP -> {
@@ -327,7 +329,7 @@ fun AdvancedSettingsSection(
                     steps = 35,
                     displayValue = "%.1f".format(b),
                     description = stringResource(R.string.advanced_itrimp_b_factor_desc),
-                    enabled = !isResyncing,
+                    enabled = controlsEnabled,
                 )
             }
         }

@@ -40,6 +40,7 @@ import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.feature.settings.R
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 import kotlin.math.roundToInt
 
 @Composable
@@ -48,11 +49,12 @@ fun ThresholdSettingsSection(
     onEvent: (SettingsEvent) -> Unit,
     isResyncing: Boolean = false,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     Column {
         var hrvOptimal by remember(uiState.hrvOptimalThreshold) { mutableFloatStateOf(uiState.hrvOptimalThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_hrv_optimal_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = hrvOptimal,
             onValueChange = { hrvOptimal = it },
             onValueChangeFinished = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(hrvOptimal)) },
@@ -63,7 +65,7 @@ fun ThresholdSettingsSection(
         var hrvWarning by remember(uiState.hrvWarningThreshold) { mutableFloatStateOf(uiState.hrvWarningThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_hrv_warning_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = hrvWarning,
             onValueChange = { hrvWarning = it },
             onValueChangeFinished = { onEvent(SettingsEvent.HrvWarningThresholdChanged(hrvWarning)) },
@@ -75,7 +77,7 @@ fun ThresholdSettingsSection(
         var rhrOptimal by remember(uiState.rhrOptimalThreshold) { mutableFloatStateOf(uiState.rhrOptimalThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_rhr_optimal_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = rhrOptimal,
             onValueChange = { rhrOptimal = it },
             onValueChangeFinished = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(rhrOptimal)) },
@@ -86,7 +88,7 @@ fun ThresholdSettingsSection(
         var rhrWarning by remember(uiState.rhrWarningThreshold) { mutableFloatStateOf(uiState.rhrWarningThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_rhr_warning_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = rhrWarning,
             onValueChange = { rhrWarning = it },
             onValueChangeFinished = { onEvent(SettingsEvent.RhrWarningThresholdChanged(rhrWarning)) },
@@ -98,7 +100,7 @@ fun ThresholdSettingsSection(
             remember(uiState.bodyTempElevatedThreshold) { mutableFloatStateOf(uiState.bodyTempElevatedThreshold) }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_body_temp_elevated_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = bodyTempElevatedThreshold,
             onValueChange = { bodyTempElevatedThreshold = it },
             onValueChangeFinished = {
@@ -118,7 +120,7 @@ fun ThresholdSettingsSection(
         }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_evaluation_period_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = evaluationPeriod,
             onValueChange = { evaluationPeriod = it },
             onValueChangeFinished = {
@@ -137,7 +139,7 @@ fun ThresholdSettingsSection(
         }
         ThresholdSliderItem(
             label = stringResource(R.string.threshold_baseline_window_label),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
             value = baselineWindow,
             onValueChange = { baselineWindow = it },
             onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(baselineWindow.toInt())) },
@@ -192,6 +194,7 @@ fun SleepSettingsSection(
     onEvent: (SettingsEvent) -> Unit,
     isResyncing: Boolean = false,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     var sleepGoalValue by remember(uiState.goalSleepHours) {
         mutableFloatStateOf(uiState.goalSleepHours)
     }
@@ -260,7 +263,7 @@ fun SleepSettingsSection(
                 },
                 valueRange = 4f..12f,
                 steps = 15,
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -276,13 +279,13 @@ fun SleepSettingsSection(
         ) {
             ExposedDropdownMenuBox(
                 expanded = profileMenuExpanded,
-                onExpandedChange = { if (!isResyncing) profileMenuExpanded = it },
+                onExpandedChange = { if (controlsEnabled) profileMenuExpanded = it },
             ) {
                 TextField(
                     value = stringResource(uiState.sleepScoreWeightProfile.labelRes()),
                     onValueChange = {},
                     readOnly = true,
-                    enabled = !isResyncing,
+                    enabled = controlsEnabled,
                     label = { Text(stringResource(R.string.settings_sleep_score_emphasis_label)) },
                     supportingText = { Text(stringResource(uiState.sleepScoreWeightProfile.descriptionRes())) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = profileMenuExpanded) },
@@ -292,7 +295,7 @@ fun SleepSettingsSection(
                             .fillMaxWidth(),
                 )
                 ExposedDropdownMenu(
-                    expanded = profileMenuExpanded && !isResyncing,
+                    expanded = profileMenuExpanded && controlsEnabled,
                     onDismissRequest = { profileMenuExpanded = false },
                 ) {
                     SleepScoreWeightProfile.entries.forEach { profile ->
@@ -324,7 +327,7 @@ fun SleepSettingsSection(
                     R.string.settings_sleep_hypersomnia_onset_value,
                     hypersomniaOnsetPercent.roundToInt(),
                 ),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
@@ -338,7 +341,7 @@ fun SleepSettingsSection(
         ) {
             Button(
                 onClick = { onEvent(SettingsEvent.RecalculateScores) },
-                enabled = uiState.hasPendingSleepScoreRecalc && !isResyncing,
+                enabled = uiState.hasPendingSleepScoreRecalc && controlsEnabled,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (isResyncing) {
@@ -376,7 +379,7 @@ fun SleepSettingsSection(
                 ),
             displayValue = stringResource(R.string.settings_sleep_minutes_value, coreMergeGapMinutes.roundToInt()),
             description = stringResource(R.string.settings_sleep_core_merge_gap_tooltip),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
         )
 
         ThresholdSliderItem(
@@ -406,7 +409,7 @@ fun SleepSettingsSection(
                     )
                 },
             description = stringResource(R.string.settings_sleep_supplemental_cutoff_tooltip),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
         )
 
         ThresholdSliderItem(
@@ -433,7 +436,7 @@ fun SleepSettingsSection(
                     minimumCountedSleepSegmentMinutes.roundToInt(),
                 ),
             description = stringResource(R.string.settings_sleep_minimum_segment_tooltip),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
         )
 
         ThresholdSliderItem(
@@ -460,7 +463,7 @@ fun SleepSettingsSection(
                     supplementalArchitectureCoveragePercent.roundToInt(),
                 ),
             description = stringResource(R.string.settings_sleep_architecture_coverage_tooltip),
-            enabled = !isResyncing,
+            enabled = controlsEnabled,
         )
     }
 }

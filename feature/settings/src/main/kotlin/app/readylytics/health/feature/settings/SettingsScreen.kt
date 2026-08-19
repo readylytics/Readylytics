@@ -59,6 +59,7 @@ import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
 import app.readylytics.health.feature.settings.common.CustomColorPicker
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 import app.readylytics.health.feature.settings.data.DataManagementSection
 import app.readylytics.health.feature.settings.data.DataSourceSettingsSection
 import app.readylytics.health.feature.settings.data.SyncSettingsSection
@@ -204,6 +205,8 @@ fun SettingsScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var pendingReportType by remember { mutableStateOf<GitHubIssueType?>(null) }
     val resolvedThresholdError = thresholdState.thresholdError.resolveOrNull()
+    val isResyncing = syncState.isResyncing
+    val controlsEnabled = resyncGateEnabled(isResyncing)
 
     val matchingSections by remember(searchQuery) {
         derivedStateOf { settingsSections.filter { sectionMatches(it, searchQuery) } }
@@ -307,7 +310,7 @@ fun SettingsScreen(
                             SectionHeader(stringResource(R.string.settings_sub_data_management))
                             DataManagementSection(
                                 uiState = uiState,
-                                isResyncing = syncState.isResyncing,
+                                isResyncing = isResyncing,
                                 onEvent = onUIEvent,
                                 onSyncEvent = onSyncEvent,
                             )
@@ -354,7 +357,7 @@ fun SettingsScreen(
                             SleepSettingsSection(
                                 uiState = sleepState,
                                 onEvent = onSleepEvent,
-                                isResyncing = syncState.isResyncing,
+                                isResyncing = isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_heart_rate_zones))
@@ -365,21 +368,21 @@ fun SettingsScreen(
                                 onPhysiologyEvent = onPhysiologyEvent,
                                 expandState = expandState,
                                 onExpandStateChange = { expandState = it },
-                                isResyncing = syncState.isResyncing,
+                                isResyncing = isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             PhysiologyProfilePicker(
                                 selectedProfile = physiologyState.physiologyProfile,
                                 onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                                enabled = !syncState.isResyncing,
+                                enabled = controlsEnabled,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.load_sources_section_title))
                             LoadSourcesSection(
                                 uiState = sleepState,
                                 onEvent = onSleepEvent,
-                                isResyncing = syncState.isResyncing,
+                                isResyncing = isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             SectionHeader(
@@ -396,14 +399,14 @@ fun SettingsScreen(
                                 isLoading = thresholdState.isUpdatingThreshold,
                                 error = resolvedThresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
-                                enabled = !syncState.isResyncing,
+                                enabled = controlsEnabled,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_thresholds))
                             ThresholdSettingsSection(
                                 uiState = thresholdState,
                                 onEvent = onThresholdEvent,
-                                isResyncing = syncState.isResyncing,
+                                isResyncing = isResyncing,
                             )
                         }
                     }
@@ -556,7 +559,7 @@ fun SettingsScreen(
                             onEvent = onSleepEvent,
                             onPhysiologyEvent = onPhysiologyEvent,
                             onUIEvent = onUIEvent,
-                            isResyncing = syncState.isResyncing,
+                            isResyncing = isResyncing,
                         )
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
