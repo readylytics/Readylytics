@@ -267,6 +267,65 @@ fun M3MetricGaugeWithValue(
 }
 
 @Composable
+private fun GaugeValueOverlayText(
+    valueText: String,
+    valueColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    BasicText(
+        text = valueText,
+        modifier = modifier,
+        style =
+            MaterialTheme.typography.headlineMedium.copy(
+                lineHeightStyle =
+                    LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Center,
+                        trim = LineHeightStyle.Trim.Both,
+                    ),
+            ),
+        color = { valueColor },
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        autoSize =
+            TextAutoSize.StepBased(
+                minFontSize = GAUGE_VALUE_MIN_FONT_SIZE,
+                maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
+                stepSize = 1.sp,
+            ),
+    )
+}
+
+@Composable
+private fun GaugeUnitOverlayText(
+    unitText: String,
+    unitColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    BasicText(
+        text = unitText,
+        modifier = modifier,
+        style =
+            MaterialTheme.typography.labelSmall.copy(
+                textAlign = TextAlign.Center,
+                lineHeightStyle =
+                    LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Center,
+                        trim = LineHeightStyle.Trim.Both,
+                    ),
+            ),
+        color = { unitColor },
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        autoSize =
+            TextAutoSize.StepBased(
+                minFontSize = GAUGE_UNIT_MIN_FONT_SIZE,
+                maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                stepSize = 1.sp,
+            ),
+    )
+}
+
+@Composable
 private fun GaugeValueUnitOverlay(
     valueText: String,
     unitText: String,
@@ -286,52 +345,13 @@ private fun GaugeValueUnitOverlay(
 
         val valuePlaceable =
             subcompose("value") {
-                BasicText(
-                    text = valueText,
-                    style =
-                        MaterialTheme.typography.headlineMedium.copy(
-                            lineHeightStyle =
-                                LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both,
-                                ),
-                        ),
-                    color = { valueColor },
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    autoSize =
-                        TextAutoSize.StepBased(
-                            minFontSize = GAUGE_VALUE_MIN_FONT_SIZE,
-                            maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
-                            stepSize = 1.sp,
-                        ),
-                )
+                GaugeValueOverlayText(valueText = valueText, valueColor = valueColor)
             }.first().measure(looseConstraints)
 
         val unitPlaceable =
             if (hasUnit) {
                 subcompose("unit") {
-                    BasicText(
-                        text = unitText,
-                        style =
-                            MaterialTheme.typography.labelSmall.copy(
-                                textAlign = TextAlign.Center,
-                                lineHeightStyle =
-                                    LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both,
-                                    ),
-                            ),
-                        color = { unitColor },
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        autoSize =
-                            TextAutoSize.StepBased(
-                                minFontSize = GAUGE_UNIT_MIN_FONT_SIZE,
-                                maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                                stepSize = 1.sp,
-                            ),
-                    )
+                    GaugeUnitOverlayText(unitText = unitText, unitColor = unitColor)
                 }.first().measure(looseConstraints)
             } else {
                 null
