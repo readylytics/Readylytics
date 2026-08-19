@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -179,6 +181,7 @@ fun ActivitySettingsSection(
 fun SleepSettingsSection(
     uiState: SleepSettingsState,
     onEvent: (SettingsEvent) -> Unit,
+    isResyncing: Boolean = false,
 ) {
     var sleepGoalValue by remember(uiState.goalSleepHours) {
         mutableFloatStateOf(uiState.goalSleepHours)
@@ -245,6 +248,7 @@ fun SleepSettingsSection(
                 },
                 valueRange = 4f..12f,
                 steps = 15,
+                enabled = !isResyncing,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -260,12 +264,13 @@ fun SleepSettingsSection(
         ) {
             ExposedDropdownMenuBox(
                 expanded = profileMenuExpanded,
-                onExpandedChange = { profileMenuExpanded = it },
+                onExpandedChange = { if (!isResyncing) profileMenuExpanded = it },
             ) {
                 TextField(
                     value = stringResource(uiState.sleepScoreWeightProfile.labelRes()),
                     onValueChange = {},
                     readOnly = true,
+                    enabled = !isResyncing,
                     label = { Text(stringResource(R.string.settings_sleep_score_emphasis_label)) },
                     supportingText = { Text(stringResource(uiState.sleepScoreWeightProfile.descriptionRes())) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = profileMenuExpanded) },
@@ -307,14 +312,10 @@ fun SleepSettingsSection(
                     R.string.settings_sleep_hypersomnia_onset_value,
                     hypersomniaOnsetPercent.roundToInt(),
                 ),
+            enabled = !isResyncing,
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
-        val hasChangedSleepScoringPreferences =
-            uiState.sleepScoreWeightProfile != SleepScoreWeightProfile.BALANCED ||
-                uiState.hypersomniaOnsetPercent != SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT ||
-                uiState.goalSleepHours != SettingsDefaults.GOAL_SLEEP_HOURS
 
         Column(
             modifier =
@@ -325,9 +326,16 @@ fun SleepSettingsSection(
         ) {
             Button(
                 onClick = { onEvent(SettingsEvent.RecalculateScores) },
-                enabled = hasChangedSleepScoringPreferences,
+                enabled = uiState.hasPendingSleepScoreRecalc && !isResyncing,
                 modifier = Modifier.fillMaxWidth(),
             ) {
+                if (isResyncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                }
                 Text(stringResource(R.string.settings_recalculate_scores_title))
             }
             Text(
@@ -356,6 +364,7 @@ fun SleepSettingsSection(
                 ),
             displayValue = stringResource(R.string.settings_sleep_minutes_value, coreMergeGapMinutes.roundToInt()),
             description = stringResource(R.string.settings_sleep_core_merge_gap_tooltip),
+            enabled = !isResyncing,
         )
 
         ThresholdSliderItem(
@@ -385,6 +394,7 @@ fun SleepSettingsSection(
                     )
                 },
             description = stringResource(R.string.settings_sleep_supplemental_cutoff_tooltip),
+            enabled = !isResyncing,
         )
 
         ThresholdSliderItem(
@@ -411,6 +421,7 @@ fun SleepSettingsSection(
                     minimumCountedSleepSegmentMinutes.roundToInt(),
                 ),
             description = stringResource(R.string.settings_sleep_minimum_segment_tooltip),
+            enabled = !isResyncing,
         )
 
         ThresholdSliderItem(
@@ -437,6 +448,7 @@ fun SleepSettingsSection(
                     supplementalArchitectureCoveragePercent.roundToInt(),
                 ),
             description = stringResource(R.string.settings_sleep_architecture_coverage_tooltip),
+            enabled = !isResyncing,
         )
     }
 }
@@ -452,6 +464,7 @@ fun ThresholdSliderItem(
     displayValue: String = "${(value * 100).roundToInt()}%",
     onValueChangeFinished: (() -> Unit)? = null,
     onReset: (() -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     Column(
         modifier =
@@ -474,6 +487,7 @@ fun ThresholdSliderItem(
             if (onReset != null) {
                 IconButton(
                     onClick = onReset,
+                    enabled = enabled,
                     modifier = Modifier.size(MaterialTheme.dimens.iconContainerLarge),
                 ) {
                     Icon(
@@ -490,6 +504,7 @@ fun ThresholdSliderItem(
             onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             steps = steps,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
         )
     }

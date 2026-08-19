@@ -11,6 +11,7 @@ fun PhysiologyProfilePicker(
     onProfileSelected: (PhysiologyProfile) -> Unit,
     modifier: Modifier = Modifier,
     label: String = "Activity Profile",
+    enabled: Boolean = true,
 ) {
     val profileLabel: (PhysiologyProfile) -> String = { profile ->
         when (profile) {
@@ -27,5 +28,6 @@ fun PhysiologyProfilePicker(
         optionLabel = profileLabel,
         onOptionSelected = onProfileSelected,
         modifier = modifier,
+        enabled = enabled,
     )
 }

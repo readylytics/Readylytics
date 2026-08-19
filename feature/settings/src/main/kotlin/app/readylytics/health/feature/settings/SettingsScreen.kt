@@ -351,7 +351,11 @@ fun SettingsScreen(
                             ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onUIEvent)
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.label_sleep))
-                            SleepSettingsSection(uiState = sleepState, onEvent = onSleepEvent)
+                            SleepSettingsSection(
+                                uiState = sleepState,
+                                onEvent = onSleepEvent,
+                                isResyncing = syncState.isResyncing,
+                            )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_heart_rate_zones))
                             HeartRateZoneSection(
@@ -361,12 +365,14 @@ fun SettingsScreen(
                                 onPhysiologyEvent = onPhysiologyEvent,
                                 expandState = expandState,
                                 onExpandStateChange = { expandState = it },
+                                isResyncing = syncState.isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             PhysiologyProfilePicker(
                                 selectedProfile = physiologyState.physiologyProfile,
                                 onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                                enabled = !syncState.isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.load_sources_section_title))
@@ -541,6 +547,7 @@ fun SettingsScreen(
                             onEvent = onSleepEvent,
                             onPhysiologyEvent = onPhysiologyEvent,
                             onUIEvent = onUIEvent,
+                            isResyncing = syncState.isResyncing,
                         )
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))

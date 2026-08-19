@@ -52,6 +52,7 @@ fun AdvancedSettingsSection(
     onEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
+    isResyncing: Boolean = false,
 ) {
     val trimpModelOptions =
         listOf(
@@ -219,6 +220,7 @@ fun AdvancedSettingsSection(
             steps = 20,
             displayValue = "%.2f".format(rasScaling),
             description = stringResource(R.string.advanced_ras_scaling_tooltip),
+            enabled = !isResyncing,
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
@@ -234,7 +236,7 @@ fun AdvancedSettingsSection(
         var trimpDropdownExpanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
             expanded = trimpDropdownExpanded,
-            onExpandedChange = { trimpDropdownExpanded = !trimpDropdownExpanded },
+            onExpandedChange = { if (!isResyncing) trimpDropdownExpanded = !trimpDropdownExpanded },
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -244,6 +246,7 @@ fun AdvancedSettingsSection(
                 value = selectedModelLabel,
                 onValueChange = {},
                 readOnly = true,
+                enabled = !isResyncing,
                 label = { Text(stringResource(R.string.advanced_training_load_label)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trimpDropdownExpanded) },
                 modifier =
@@ -280,6 +283,7 @@ fun AdvancedSettingsSection(
                     steps = 40,
                     displayValue = "%.2f".format(multiplier),
                     description = stringResource(R.string.advanced_banister_multiplier_desc),
+                    enabled = !isResyncing,
                 )
             }
             TrimpModel.CHENG -> {
@@ -294,6 +298,7 @@ fun AdvancedSettingsSection(
                     steps = 16,
                     displayValue = "%.3f".format(beta),
                     description = stringResource(R.string.advanced_cheng_beta_desc),
+                    enabled = !isResyncing,
                 )
             }
             TrimpModel.I_TRIMP -> {
@@ -308,6 +313,7 @@ fun AdvancedSettingsSection(
                     steps = 35,
                     displayValue = "%.1f".format(b),
                     description = stringResource(R.string.advanced_itrimp_b_factor_desc),
+                    enabled = !isResyncing,
                 )
             }
         }
