@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,15 +10,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +36,7 @@ import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.feature.settings.R
 import kotlin.math.roundToInt
 
@@ -163,6 +174,7 @@ fun ActivitySettingsSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("ktlint:standard:max-line-length")
 @Composable
 fun SleepSettingsSection(
@@ -172,6 +184,10 @@ fun SleepSettingsSection(
     var sleepGoalValue by remember(uiState.goalSleepHours) {
         mutableFloatStateOf(uiState.goalSleepHours)
     }
+    var hypersomniaOnsetPercent by remember(uiState.hypersomniaOnsetPercent) {
+        mutableFloatStateOf(uiState.hypersomniaOnsetPercent.toFloat())
+    }
+    var profileMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var coreMergeGapMinutes by remember(uiState.coreMergeGapMinutes) {
         mutableFloatStateOf(uiState.coreMergeGapMinutes.toFloat())
     }
@@ -229,6 +245,75 @@ fun SleepSettingsSection(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
+        Column(
+            modifier =
+                Modifier.padding(
+                    horizontal = MaterialTheme.spacing.medium,
+                    vertical = MaterialTheme.spacing.extraSmall,
+                ),
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = profileMenuExpanded,
+                onExpandedChange = { profileMenuExpanded = it },
+            ) {
+                TextField(
+                    value = stringResource(uiState.sleepScoreWeightProfile.labelRes()),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.settings_sleep_score_emphasis_label)) },
+                    supportingText = { Text(stringResource(uiState.sleepScoreWeightProfile.descriptionRes())) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = profileMenuExpanded) },
+                    modifier =
+                        Modifier
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth(),
+                )
+                ExposedDropdownMenu(
+                    expanded = profileMenuExpanded,
+                    onDismissRequest = { profileMenuExpanded = false },
+                ) {
+                    SleepScoreWeightProfile.entries.forEach { profile ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(profile.labelRes())) },
+                            onClick = {
+                                profileMenuExpanded = false
+                                onEvent(SettingsEvent.SleepScoreWeightProfileChanged(profile))
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
+        ThresholdSliderItem(
+            label = stringResource(R.string.settings_sleep_hypersomnia_onset_label),
+            value = hypersomniaOnsetPercent,
+            onValueChange = { hypersomniaOnsetPercent = it },
+            onValueChangeFinished = {
+                onEvent(SettingsEvent.HypersomniaOnsetPercentChanged(hypersomniaOnsetPercent.roundToInt()))
+            },
+            valueRange =
+                SettingsDefaults.MIN_HYPERSOMNIA_ONSET_PERCENT.toFloat()..SettingsDefaults.MAX_HYPERSOMNIA_ONSET_PERCENT.toFloat(),
+            steps = 4,
+            displayValue =
+                stringResource(
+                    R.string.settings_sleep_hypersomnia_onset_value,
+                    hypersomniaOnsetPercent.roundToInt(),
+                ),
+        )
+
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_recalculate_scores_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_recalculate_scores_description)) },
+            modifier = Modifier.clickable { onEvent(SettingsEvent.RecalculateScores) },
+        )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
@@ -339,7 +424,7 @@ fun ThresholdSliderItem(
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
-    description: String,
+    description: String? = null,
     steps: Int = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
     displayValue: String = "${(value * 100).roundToInt()}%",
     onValueChangeFinished: (() -> Unit)? = null,
@@ -354,7 +439,9 @@ fun ThresholdSliderItem(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
-            MetricTooltip(description = description)
+            if (description != null) {
+                MetricTooltip(description = description)
+            }
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = displayValue,
@@ -397,3 +484,17 @@ private fun steppedSliderSteps(
     max: Int,
     step: Int,
 ): Int = ((max - min) / step) - 1
+
+private fun SleepScoreWeightProfile.labelRes(): Int =
+    when (this) {
+        SleepScoreWeightProfile.BALANCED -> R.string.settings_sleep_profile_balanced
+        SleepScoreWeightProfile.LIGHT_SLEEPER -> R.string.settings_sleep_profile_light_sleeper
+        SleepScoreWeightProfile.HOURS_FIRST -> R.string.settings_sleep_profile_hours_first
+    }
+
+private fun SleepScoreWeightProfile.descriptionRes(): Int =
+    when (this) {
+        SleepScoreWeightProfile.BALANCED -> R.string.settings_sleep_profile_balanced_description
+        SleepScoreWeightProfile.LIGHT_SLEEPER -> R.string.settings_sleep_profile_light_sleeper_description
+        SleepScoreWeightProfile.HOURS_FIRST -> R.string.settings_sleep_profile_hours_first_description
+    }

@@ -7,6 +7,8 @@ import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.feature.settings.R
 import io.mockk.coVerify
 import io.mockk.every
@@ -33,6 +35,7 @@ class SleepAndThresholdSettingsViewModelTest {
     private val thresholdSettings = mockk<ThresholdSettings>(relaxed = true)
     private val scoringRepo = mockk<ScoringRepository>(relaxed = true)
     private val circadianPrefs = mockk<CircadianThresholdPreferences>(relaxed = true)
+    private val resyncController = mockk<HistoricalResyncController>(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var sleepViewModel: SleepSettingsViewModel
@@ -49,6 +52,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 settingsReader,
                 sleepSettings,
                 scoringRepo,
+                resyncController,
                 kotlinx.coroutines.CoroutineScope(testDispatcher),
             )
         thresholdViewModel =
@@ -112,6 +116,7 @@ class SleepAndThresholdSettingsViewModelTest {
                     settingsReader,
                     sleepSettings,
                     scoringRepo,
+                    resyncController,
                     kotlinx.coroutines.CoroutineScope(testDispatcher),
                 )
 
@@ -199,5 +204,73 @@ class SleepAndThresholdSettingsViewModelTest {
                 thresholdViewModel.consolidatedState.value.thresholdError,
             )
             job.cancel()
+        }
+
+    @Test
+    fun `weight profile change is persisted without triggering a recompute`() =
+        runTest {
+            sleepViewModel.onEvent(SettingsEvent.SleepScoreWeightProfileChanged(SleepScoreWeightProfile.LIGHT_SLEEPER))
+            advanceUntilIdle()
+
+            coVerify { sleepSettings.updateSleepScoreWeightProfile(SleepScoreWeightProfile.LIGHT_SLEEPER) }
+            coVerify { scoringRepo.computeAndPersistDailySummary() }
+            coVerify(exactly = 0) { resyncController.requestScoreRecompute() }
+        }
+
+    @Test
+    fun `off-step oversleep onset is rejected`() =
+        runTest {
+            sleepViewModel.onEvent(SettingsEvent.HypersomniaOnsetPercentChanged(103))
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { sleepSettings.updateHypersomniaOnsetPercent(any()) }
+        }
+
+    @Test
+    fun `valid oversleep onset is persisted`() =
+        runTest {
+            sleepViewModel.onEvent(SettingsEvent.HypersomniaOnsetPercentChanged(115))
+            advanceUntilIdle()
+
+            coVerify { sleepSettings.updateHypersomniaOnsetPercent(115) }
+            coVerify { scoringRepo.computeAndPersistDailySummary() }
+        }
+
+    @Test
+    fun `recalculate action enqueues a recompute-only pass`() =
+        runTest {
+            sleepViewModel.onEvent(SettingsEvent.RecalculateScores)
+            advanceUntilIdle()
+
+            coVerify { resyncController.requestScoreRecompute() }
+        }
+
+    @Test
+    fun `sleepSettingsViewModel maps sleepScoreWeightProfile and hypersomniaOnsetPercent`() =
+        runTest {
+            every { settingsReader.userPreferences } returns
+                MutableStateFlow(
+                    UserPreferences(
+                        sleepScoreWeightProfile = SleepScoreWeightProfile.HOURS_FIRST,
+                        hypersomniaOnsetPercent = 110,
+                    ),
+                )
+
+            val vm =
+                SleepSettingsViewModel(
+                    settingsReader,
+                    sleepSettings,
+                    scoringRepo,
+                    resyncController,
+                    kotlinx.coroutines.CoroutineScope(testDispatcher),
+                )
+
+            val state =
+                vm.uiState.first {
+                    it.sleepScoreWeightProfile == SleepScoreWeightProfile.HOURS_FIRST &&
+                        it.hypersomniaOnsetPercent == 110
+                }
+            assertEquals(SleepScoreWeightProfile.HOURS_FIRST, state.sleepScoreWeightProfile)
+            assertEquals(110, state.hypersomniaOnsetPercent)
         }
 }

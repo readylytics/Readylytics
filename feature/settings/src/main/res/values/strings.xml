@@ -182,6 +182,17 @@
 <string name="settings_sleep_minutes_value">%1$d min</string>
 <string name="settings_sleep_percent_value">%1$d%%</string>
 <string name="settings_sleep_time_value">%1$02d:%2$02d</string>
+<string name="settings_sleep_score_emphasis_label">Sleep score emphasis</string>
+<string name="settings_sleep_profile_balanced">Balanced</string>
+<string name="settings_sleep_profile_balanced_description">Even weighting; duration still leads.</string>
+<string name="settings_sleep_profile_light_sleeper">Light Sleeper</string>
+<string name="settings_sleep_profile_light_sleeper_description">Weights night-time wake-ups more heavily.</string>
+<string name="settings_sleep_profile_hours_first">Hours First</string>
+<string name="settings_sleep_profile_hours_first_description">Total sleep time dominates the score.</string>
+<string name="settings_sleep_hypersomnia_onset_label">Oversleep penalty starts at</string>
+<string name="settings_sleep_hypersomnia_onset_value">%1$d%% of goal</string>
+<string name="settings_recalculate_scores_title">Recalculate scores</string>
+<string name="settings_recalculate_scores_description">Rebuild every stored score from data already on this device.</string>
 <string name="load_source_option_everyday_hr">Everyday HR load</string>
 <string name="load_source_option_workout_only">Workout only</string>
 <string name="load_sources_ras_help">Controls RAS only, independent of the Strain / Training Load source above.</string>

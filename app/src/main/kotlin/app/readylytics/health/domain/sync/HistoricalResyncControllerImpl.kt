@@ -34,6 +34,10 @@ class HistoricalResyncControllerImpl
             workerScheduler.scheduleResyncWorker()
         }
 
+        override suspend fun requestScoreRecompute() {
+            workerScheduler.scheduleResyncWorker(recomputeOnly = true)
+        }
+
         override fun schedulePeriodicSync(intervalMinutes: Long) {
             workerScheduler.schedulePeriodicSync(intervalMinutes)
         }

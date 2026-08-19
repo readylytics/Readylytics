@@ -12,6 +12,7 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 
@@ -41,6 +42,8 @@ data class SleepSettingsState(
     val minimumCountedSleepSegmentMinutes: Int = SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES,
     val supplementalArchitectureCoveragePercent: Int =
         SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT,
+    val sleepScoreWeightProfile: SleepScoreWeightProfile = SleepScoreWeightProfile.DEFAULT,
+    val hypersomniaOnsetPercent: Int = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
 )
 
 data class PhysiologySettingsState(
