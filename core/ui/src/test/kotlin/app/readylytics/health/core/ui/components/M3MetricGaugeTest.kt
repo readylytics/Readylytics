@@ -1,6 +1,7 @@
 package app.readylytics.health.core.ui.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -263,5 +264,46 @@ class M3MetricGaugeTest {
         assertFalse(valueText.contains('\u2026'))
         assertEquals("142.8", valueText)
         assertTrue(valueSemantics.boundsInRoot.width <= 140.dp.value)
+    }
+
+    @Test
+    fun metricGaugeWithValue_valueTextVerticalCenter_isUnaffectedByUnitPresence() {
+        composeTestRule.setContent {
+            Row {
+                Box(modifier = Modifier.width(140.dp).height(120.dp)) {
+                    M3MetricGaugeWithValue(
+                        markerFraction = 0.6f,
+                        activeColor = Color.Green,
+                        markerColor = Color.White,
+                        valueText = "34.5",
+                        unitText = "°C",
+                        valueColor = Color.White,
+                        unitColor = Color.Gray,
+                        animateMarker = false,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                Box(modifier = Modifier.width(140.dp).height(120.dp)) {
+                    M3MetricGaugeWithValue(
+                        markerFraction = 0.6f,
+                        activeColor = Color.Green,
+                        markerColor = Color.White,
+                        valueText = "98",
+                        unitText = "",
+                        valueColor = Color.White,
+                        unitColor = Color.Gray,
+                        animateMarker = false,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        }
+        val withUnitBounds = composeTestRule.onNodeWithText("34.5").fetchSemanticsNode().boundsInRoot
+        val withUnitCenterY = withUnitBounds.top + withUnitBounds.height / 2f
+
+        val withoutUnitBounds = composeTestRule.onNodeWithText("98").fetchSemanticsNode().boundsInRoot
+        val withoutUnitCenterY = withoutUnitBounds.top + withoutUnitBounds.height / 2f
+
+        assertEquals(withoutUnitCenterY, withUnitCenterY, 1f)
     }
 }
