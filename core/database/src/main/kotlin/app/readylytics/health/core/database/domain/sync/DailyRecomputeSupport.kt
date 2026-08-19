@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.database.domain.sync
 
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository

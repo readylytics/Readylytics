@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord

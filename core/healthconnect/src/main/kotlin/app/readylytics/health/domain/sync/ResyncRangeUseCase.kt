@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result

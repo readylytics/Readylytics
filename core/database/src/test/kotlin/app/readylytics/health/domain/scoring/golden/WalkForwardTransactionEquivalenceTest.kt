@@ -30,7 +30,7 @@ import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
-import app.readylytics.health.domain.sync.DailyRecomputeSupport
+import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
