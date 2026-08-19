@@ -1,4 +1,4 @@
-package app.readylytics.health.di
+package app.readylytics.health.core.database.di
 
 import android.content.Context
 import androidx.room.Room

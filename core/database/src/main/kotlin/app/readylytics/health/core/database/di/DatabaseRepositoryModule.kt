@@ -1,4 +1,4 @@
-package app.readylytics.health.di
+package app.readylytics.health.core.database.di
 
 import app.readylytics.health.data.audit.RoomAuditTrailRepository
 import app.readylytics.health.data.local.RoomHealthIngestionStore
