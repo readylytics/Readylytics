@@ -277,6 +277,7 @@ class SleepAndThresholdSettingsViewModelTest {
                 }
             assertEquals(SleepScoreWeightProfile.RECOVERY_FOCUSED, state.sleepScoreWeightProfile)
             assertEquals(110, state.hypersomniaOnsetPercent)
+            assertTrue(state.hasPendingSleepScoreRecalc)
         }
 
     @Test
@@ -306,6 +307,66 @@ class SleepAndThresholdSettingsViewModelTest {
         runTest {
             every { settingsReader.userPreferences } returns
                 MutableStateFlow(UserPreferences(goalSleepHours = 9f))
+
+            val vm =
+                SleepSettingsViewModel(
+                    settingsReader,
+                    sleepSettings,
+                    scoringRepo,
+                    resyncController,
+                    kotlinx.coroutines.CoroutineScope(testDispatcher),
+                )
+
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    vm.uiState.collect { }
+                }
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.hasPendingSleepScoreRecalc)
+            job.cancel()
+        }
+
+    @Test
+    fun `recalc pending true when profile differs from the last-recalc baseline`() =
+        runTest {
+            every { settingsReader.userPreferences } returns
+                MutableStateFlow(
+                    UserPreferences(
+                        sleepScoreWeightProfile = SleepScoreWeightProfile.DURATION_FOCUSED,
+                        lastRecalcSleepScoreWeightProfile = SleepScoreWeightProfile.BALANCED,
+                    ),
+                )
+
+            val vm =
+                SleepSettingsViewModel(
+                    settingsReader,
+                    sleepSettings,
+                    scoringRepo,
+                    resyncController,
+                    kotlinx.coroutines.CoroutineScope(testDispatcher),
+                )
+
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    vm.uiState.collect { }
+                }
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.hasPendingSleepScoreRecalc)
+            job.cancel()
+        }
+
+    @Test
+    fun `recalc pending true when hypersomnia differs from the last-recalc baseline`() =
+        runTest {
+            every { settingsReader.userPreferences } returns
+                MutableStateFlow(
+                    UserPreferences(
+                        hypersomniaOnsetPercent = 110,
+                        lastRecalcHypersomniaOnsetPercent = SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT,
+                    ),
+                )
 
             val vm =
                 SleepSettingsViewModel(
