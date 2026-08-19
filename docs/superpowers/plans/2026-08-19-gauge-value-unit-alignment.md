@@ -303,3 +303,22 @@ git log -3 --oneline
 ```
 
 Expected: no whitespace errors, only the intended commits/files are present, and the working tree contains no unrelated changes.
+
+---
+
+## Task 4 (user follow-up): Lift the value/unit text away from the card chip
+
+**Files:**
+- Modify: `core/designsystem/src/main/kotlin/app/readylytics/health/core/designsystem/Dimens.kt` — change `metricGaugeValueVerticalOffset` from `6.dp` to `2.dp`.
+- Update: `docs/superpowers/specs/2026-08-19-gauge-value-unit-alignment-design.md` — reflect the new offset in the unchanged-items list.
+
+**Rationale:** With a delta pill / secondary chip at the bottom of a card, the value/unit text sat too close to it. The overlay is centered at the gauge anchor plus `metricGaugeValueVerticalOffset`; reducing the offset lifts the whole overlay (value and unit together) by 4dp while preserving the value-center invariant from Tasks 1-2 (both unit and unit-less variants shift by the same amount, so their centers stay equal).
+
+## Task 5 (user follow-up): Remove the calibration banner card
+
+**Files:**
+- Modify: `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardScreen.kt` — remove the `if (uiState.isCalibrating) { item(key = "calibration_banner") { CalibrationBanner(...) } }` block.
+- Delete: `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/CalibrationBanner.kt`.
+- Modify: `feature/dashboard/src/main/res/values/strings.xml` — remove the now-unused `message_calibrating_banner` string ("Calibrating — averages shown may improve as more nights are recorded.").
+
+**Rationale:** User feedback: the "Calibrating — averages..." banner was never wanted. The `DashboardUiState.isCalibrating` flag stays in the ViewModel state (still part of the domain state contract and covered by existing tests); only the banner UI is removed.
