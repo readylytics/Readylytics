@@ -217,6 +217,10 @@ fun SleepSettingsSection(
     val maxCoveragePercent = SettingsDefaults.MAX_SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT.toFloat()
     val architectureCoverageRange = minCoveragePercent..maxCoveragePercent
 
+    val minHypersomniaOnset = SettingsDefaults.MIN_HYPERSOMNIA_ONSET_PERCENT.toFloat()
+    val maxHypersomniaOnset = SettingsDefaults.MAX_HYPERSOMNIA_ONSET_PERCENT.toFloat()
+    val hypersomniaOnsetRange = minHypersomniaOnset..maxHypersomniaOnset
+
     Column {
         Column(
             modifier =
@@ -297,8 +301,7 @@ fun SleepSettingsSection(
             onValueChangeFinished = {
                 onEvent(SettingsEvent.HypersomniaOnsetPercentChanged(hypersomniaOnsetPercent.roundToInt()))
             },
-            valueRange =
-                SettingsDefaults.MIN_HYPERSOMNIA_ONSET_PERCENT.toFloat()..SettingsDefaults.MAX_HYPERSOMNIA_ONSET_PERCENT.toFloat(),
+            valueRange = hypersomniaOnsetRange,
             steps = 4,
             displayValue =
                 stringResource(
