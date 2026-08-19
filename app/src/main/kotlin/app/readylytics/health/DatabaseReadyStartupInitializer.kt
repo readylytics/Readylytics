@@ -1,5 +1,6 @@
 package app.readylytics.health
 
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
 import app.readylytics.health.domain.migration.DatabaseReadiness
@@ -44,6 +45,22 @@ internal class DatabaseReadyStartupInitializer(
             }
 
             val settings = settingsRepository.get()
+            try {
+                val storedScoringVersion = settings.userPreferences.first().scoringVersion
+                if (storedScoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION) {
+                    logD(TAG) {
+                        "Scoring version $storedScoringVersion < ${SettingsDefaults.CURRENT_SCORING_VERSION}; " +
+                            "enqueueing recompute-only resync"
+                    }
+                    workerScheduler.scheduleResyncWorker(recomputeOnly = true)
+                    settings.updateScoringVersion(SettingsDefaults.CURRENT_SCORING_VERSION)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logE(TAG, e) { "Scoring version migration check failed" }
+            }
+
             val backupSchedule = settings.backupSchedule.first()
             val backgroundSyncEnabled = settings.backgroundSyncEnabled.first()
             val periodicSyncMinutes =
