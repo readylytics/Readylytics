@@ -1,8 +1,8 @@
 package app.readylytics.health.data.local.dao
-import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
 import app.readylytics.health.data.local.HealthDatabase
 import kotlinx.coroutines.runBlocking
 import org.junit.After

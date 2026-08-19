@@ -1,9 +1,9 @@
 package app.readylytics.health.data.local.dao
-import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import kotlinx.coroutines.test.runTest

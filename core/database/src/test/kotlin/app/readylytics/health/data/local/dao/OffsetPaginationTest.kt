@@ -1,9 +1,9 @@
 package app.readylytics.health.data.local.dao
-import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import kotlinx.coroutines.test.runTest

@@ -1,10 +1,10 @@
 package app.readylytics.health.data.local.dao
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
 import kotlinx.coroutines.test.runTest
