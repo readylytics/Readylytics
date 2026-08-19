@@ -6,7 +6,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.mapper.SleepSessionMapper
+import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import io.mockk.coEvery

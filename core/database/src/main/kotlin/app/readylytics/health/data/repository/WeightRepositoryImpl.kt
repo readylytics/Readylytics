@@ -1,7 +1,7 @@
 package app.readylytics.health.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
-import app.readylytics.health.data.mapper.WeightRecordMapper
+import app.readylytics.health.core.database.data.mapper.WeightRecordMapper
 import app.readylytics.health.domain.model.WeightRecord
 import app.readylytics.health.domain.repository.WeightRepository
 import kotlinx.coroutines.flow.Flow

@@ -1,4 +1,4 @@
-package app.readylytics.health.data.mapper
+package app.readylytics.health.core.database.data.mapper
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity

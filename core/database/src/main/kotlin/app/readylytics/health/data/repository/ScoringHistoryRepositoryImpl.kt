@@ -1,8 +1,8 @@
 package app.readylytics.health.data.repository
 
-import app.readylytics.health.data.mapper.DailySummaryMapper
-import app.readylytics.health.data.mapper.HeartRateRecordMapper
-import app.readylytics.health.data.mapper.SleepSessionMapper
+import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
+import app.readylytics.health.core.database.data.mapper.HeartRateRecordMapper
+import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.HeartRateRecord
 import app.readylytics.health.domain.model.SleepHrSample

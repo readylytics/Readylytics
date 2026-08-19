@@ -11,7 +11,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEnt
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.data.mapper.DailySummaryMapper
+import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.data.repository.ReadinessSummaryCoordinator

@@ -5,7 +5,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperat
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.data.mapper.DailySummaryMapper
+import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result

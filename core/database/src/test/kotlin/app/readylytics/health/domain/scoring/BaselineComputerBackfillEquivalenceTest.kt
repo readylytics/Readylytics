@@ -8,7 +8,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import app.readylytics.health.data.mapper.DailySummaryMapper
+import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import io.mockk.coEvery
 import io.mockk.every

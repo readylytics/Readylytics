@@ -1,7 +1,7 @@
 package app.readylytics.health.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.data.mapper.BloodPressureRecordMapper
+import app.readylytics.health.core.database.data.mapper.BloodPressureRecordMapper
 import app.readylytics.health.domain.model.BloodPressureRecord
 import app.readylytics.health.domain.repository.BloodPressureRepository
 import kotlinx.coroutines.flow.Flow
