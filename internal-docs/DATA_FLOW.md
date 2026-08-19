@@ -1021,9 +1021,12 @@ Resync/Apply buttons enabled mid-resync. Instead it gates on `ForegroundSyncCont
 a dedicated `StateFlow<Boolean>` set `true`/`false` by the worker bridge `onBackgroundRecalcStarted`/
 `onBackgroundRecalcFinished` (same bridge that drives `recalcProgress`). This flag is true only while
 the background historical resync/recompute worker is actively running (distinct from `isSyncing`,
-which also covers foreground daily sync). All resync/recompute-triggering Settings controls
-(Resync button, Data-Sources Apply, Recalculate scores, HR zones, physiology profile, TRIMP/RAS
-sliders, and the sleep scoring inputs) disable while it is `true`.
+which also covers foreground daily sync). All scoring-input Settings controls — Resync button, Data-Sources
+Apply, Recalculate scores, HR zones, physiology profile, TRIMP/RAS sliders, sleep scoring inputs
+(goal/weight-profile/oversleep/merge-gap/etc.), HRV/RHR baseline overrides, resting-HR percentile,
+HRR tolerance, circadian threshold, and load-source pickers — disable while it is `true`, so no
+resync or recompute can be kicked off mid-resync. Display/theme, unit-system, retention, step-goal,
+backup, and issue-reporting controls stay enabled.
 
 **Recalculate-scores baseline.** The "Recalculate scores" button enables only while the three
 sleep-scoring inputs (weight profile, goal sleep hours, hypersomnia onset percent) differ from the
