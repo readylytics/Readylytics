@@ -2,7 +2,7 @@ package app.readylytics.health.di
 
 import android.content.Context
 import androidx.work.WorkManager
-import app.readylytics.health.data.migration.DatabaseReadinessGate
+import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import dagger.Module
 import dagger.Provides

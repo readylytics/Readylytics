@@ -1,4 +1,4 @@
-package app.readylytics.health.data.migration
+package app.readylytics.health.core.database.data.migration
 
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.security.SqlCipherKeyManager.KeyDecryptionException
