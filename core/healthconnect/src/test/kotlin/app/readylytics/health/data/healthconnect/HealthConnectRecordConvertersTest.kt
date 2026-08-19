@@ -3,10 +3,12 @@ package app.readylytics.health.data.healthconnect
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Length
 import app.readylytics.health.data.healthconnect.toDomain
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.RouteState
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -102,5 +104,30 @@ class HealthConnectRecordConvertersTest {
         val result: ExerciseRouteResult? = null
         assertEquals(RouteState.NOT_AVAILABLE, result.toRouteState())
         assertTrue(result.toDomainRoutePoints().isEmpty())
+    }
+
+    @Test
+    fun `out of bed stage maps to awake`() {
+        val start = Instant.parse("2026-01-01T23:00:00Z")
+        val record =
+            SleepSessionRecord(
+                startTime = start,
+                startZoneOffset = null,
+                endTime = start.plusSeconds(3600),
+                endZoneOffset = null,
+                stages =
+                    listOf(
+                        SleepSessionRecord.Stage(
+                            startTime = start,
+                            endTime = start.plusSeconds(600),
+                            stage = SleepSessionRecord.STAGE_TYPE_OUT_OF_BED,
+                        ),
+                    ),
+                metadata = Metadata.manualEntry(),
+            )
+
+        val domain = record.toDomain()
+
+        assertEquals(DomainSleepStageType.AWAKE, domain.stages.single().stageType)
     }
 }

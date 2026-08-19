@@ -37,6 +37,8 @@ interface SleepSessionRepository {
 
     fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>>
 
+    suspend fun getSessionStages(sessionId: String): List<SleepStageData>
+
     fun observeFirstSessionEndingInRange(
         fromMs: Long,
         toMs: Long,

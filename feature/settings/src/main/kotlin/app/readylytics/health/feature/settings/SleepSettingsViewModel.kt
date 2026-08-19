@@ -2,10 +2,13 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +27,7 @@ class SleepSettingsViewModel
         private val settingsReader: UserPreferencesReader,
         private val sleepSettings: SleepSettings,
         private val scoringRepository: ScoringRepository,
+        private val historicalResyncController: HistoricalResyncController,
         @param:ApplicationScope private val appScope: CoroutineScope,
     ) : ViewModel() {
         val uiState: StateFlow<SleepSettingsState> =
@@ -40,6 +44,15 @@ class SleepSettingsViewModel
                         supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,
                         minimumCountedSleepSegmentMinutes = prefs.minimumCountedSleepSegmentMinutes,
                         supplementalArchitectureCoveragePercent = prefs.supplementalArchitectureCoveragePercent,
+                        sleepScoreWeightProfile = prefs.sleepScoreWeightProfile,
+                        hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
+                        hasPendingSleepScoreRecalc =
+                            prefs.sleepScoreWeightProfile !=
+                                (prefs.lastRecalcSleepScoreWeightProfile ?: SleepScoreWeightProfile.DEFAULT) ||
+                                prefs.goalSleepHours !=
+                                (prefs.lastRecalcGoalSleepHours ?: SettingsDefaults.GOAL_SLEEP_HOURS) ||
+                                prefs.hypersomniaOnsetPercent !=
+                                (prefs.lastRecalcHypersomniaOnsetPercent ?: SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT),
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -54,6 +67,28 @@ class SleepSettingsViewModel
                         sleepSettings.updateGoalSleepHours(hours = event.hours)
                         scoringRepository.computeAndPersistDailySummary()
                     }
+
+                is SettingsEvent.SleepScoreWeightProfileChanged ->
+                    appScope.launch {
+                        sleepSettings.updateSleepScoreWeightProfile(event.profile)
+                        scoringRepository.computeAndPersistDailySummary()
+                    }
+
+                is SettingsEvent.HypersomniaOnsetPercentChanged -> {
+                    val isValid =
+                        SettingsValidators.HYPERSOMNIA_ONSET_PERCENT_RULE.validate(
+                            event.percent,
+                        ) is ValidationResult.Valid
+                    if (isValid) {
+                        appScope.launch {
+                            sleepSettings.updateHypersomniaOnsetPercent(event.percent)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
+                    }
+                }
+
+                SettingsEvent.RecalculateScores ->
+                    appScope.launch { historicalResyncController.requestScoreRecompute() }
 
                 is SettingsEvent.HrvBaselineChanged -> {
                     val value = event.text.toIntOrNull()?.toFloat()

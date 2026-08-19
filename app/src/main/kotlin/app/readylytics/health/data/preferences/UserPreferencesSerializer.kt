@@ -4,6 +4,7 @@ import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
@@ -71,6 +72,9 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setCustomTertiaryColor(SettingsDefaults.CUSTOM_TERTIARY_COLOR)
             .setCustomPrimaryColor(SettingsDefaults.CUSTOM_PRIMARY_COLOR)
             .setBodyTempElevatedThresholdCelsius(SettingsDefaults.BODY_TEMP_ELEVATED_THRESHOLD_CELSIUS)
+            .setSleepScoreWeightProfile(SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED)
+            .setHypersomniaOnsetPercent(SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT)
+            .setScoringVersion(0)
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -214,6 +218,42 @@ fun UserPreferences.toProto(): UserPreferencesProto {
             null -> DashboardCardDisplayModeProto.DASHBOARD_CARD_DISPLAY_MODE_UNSET
         },
     )
+    builder.setSleepScoreWeightProfile(
+        when (domain.sleepScoreWeightProfile) {
+            SleepScoreWeightProfile.BALANCED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+            SleepScoreWeightProfile.DURATION_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
+            SleepScoreWeightProfile.RECOVERY_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
+            SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
+            SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
+                SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
+        },
+    )
+    builder.setHypersomniaOnsetPercent(domain.hypersomniaOnsetPercent)
+    domain.lastRecalcSleepScoreWeightProfile?.let {
+        builder.setLastRecalcSleepScoreWeightProfile(
+            when (it) {
+                SleepScoreWeightProfile.BALANCED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED
+                SleepScoreWeightProfile.DURATION_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_DURATION_FOCUSED
+                SleepScoreWeightProfile.RECOVERY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_RECOVERY_FOCUSED
+                SleepScoreWeightProfile.ARCHITECTURE_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_ARCHITECTURE_FOCUSED
+                SleepScoreWeightProfile.CONTINUITY_FOCUSED ->
+                    SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_CONTINUITY_FOCUSED
+            },
+        )
+    }
+    domain.lastRecalcGoalSleepHours?.let { builder.setLastRecalcGoalSleepHours(it) }
+    domain.lastRecalcHypersomniaOnsetPercent?.let {
+        builder.setLastRecalcHypersomniaOnsetPercent(it)
+    }
+    builder.setScoringVersion(domain.scoringVersion)
 
     return builder.build()
 }

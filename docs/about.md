@@ -41,13 +41,22 @@ You'll see all three on your dashboard once enough data has been collected. Unti
 
 ## Sleep Score
 
-A 100-point summary of last night's sleep, made of three parts:
+A 100-point summary of last night's sleep, made of four parts (under the default **Balanced** profile):
 
-- **Duration (50%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). If you sleep in multiple segments (biphasic sleep or naps), all sleep periods count toward your total duration. Includes a small adjustment for how efficient your time in bed was.
-- **Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
+- **Duration (40%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). Scoring follows a smooth continuous logistic curve below your goal. A configurable oversleep dead zone (default 125% of goal) prevents penalizing modest sleep-ins while gently decaying scores for excessive hypersomnia. If you sleep in multiple segments (biphasic sleep or naps), all sleep periods count toward your total duration (naps add duration without altering overnight metrics). Includes a continuous adjustment for how efficient your time in bed was.
+- **Architecture (20%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-continuous to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
 - **Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalizes the skewed distribution of raw HRV data.
+- **Fragmentation (15%)** — evaluates sleep continuity using Wake After Sleep Onset (**WASO**) between sleep onset and final awakening, alongside discrete awakenings of at least 1.5 minutes. Because normal adult sleep includes brief wake periods, a grace allowance of 20 minutes of WASO and 2 awakenings is permitted before continuous exponential penalties apply.
 
-If a source provides a sleep session with no stage records, Readylytics uses the raw session span as total sleep duration. Because Architecture is unavailable, the Sleep Score reweights to Duration 75%, Architecture 0%, and Restoration 25%. This differs from suspicious but non-empty stage data: the source supplied stages, but their distribution failed plausibility checks.
+**Weight emphasis profiles**
+
+You can customize the relative emphasis of each sleep component in Settings to suit your recovery focus (Balanced, Duration Focused, Recovery Focused, Architecture Focused, or Continuity Focused). Changing your weight profile requires running the **Recalculate scores** action in Settings to apply the new weighting across your history.
+
+**Sleep Regularity multiplier**
+
+Your sleep score incorporates **Sleep Regularity** as a penalty-only multiplier between 0.92 and 1.00 derived from your circadian consistency score. Consistent sleep timing preserves 100% of your score (multiplier 1.00), while irregular schedules incur a mild proportional deduction. During baseline calibration or when circadian data is missing, the multiplier remains neutral (1.00).
+
+If a source provides a sleep session with no stage records, Readylytics uses the raw session span as total sleep duration. Because Architecture and Fragmentation are unavailable, the Sleep Score renormalizes the remaining sub-scores (Duration and Restoration) according to your active weight profile. This differs from suspicious but non-empty stage data: the source supplied stages, but their distribution failed plausibility checks.
 
 **Reading the score**
 
@@ -382,7 +391,7 @@ A few smaller modifiers shape the numbers behind the scenes. We list them here f
 - **Late-nadir penalty.** If your lowest overnight heart rate occurs in the final third of your sleep period (after 67% of total sleep time has elapsed), we apply a small 0.95 multiplier to the restoration component. A very late RHR nadir often reflects a shortened or fragmented night rather than genuine recovery.
 - **Per-profile training-load multiplier.** Your Banister training-load model uses a profile-specific multiplier when converting heart-rate-reserve intensity into TRIMP: Athlete ×1.0, Active ×1.35, Sedentary ×1.75. This reflects that the same relative effort represents a larger physiological load for someone who trains less.
 - **Readylytics Activity Score (RAS).** RAS is a PAI-style motivational activity metric with a daily cap and rolling 7-day accumulation. It is separate from the physiological Load Score: RAS never feeds Readiness, and Readiness/load continue to use TRIMP → ATL → CTL → Strain Ratio → Load Score.
-- **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Duration rises to 75% and Architecture drops to 0%, while Restoration stays at 25%. This avoids penalising you for a wearable data glitch rather than your actual sleep.
+- **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Architecture and Fragmentation drop out and the score renormalizes Duration and Restoration according to your active weight profile. This avoids penalising you for a wearable data glitch rather than your actual sleep.
 - **Missing-day handling in load averages.** Acute and chronic training-load averages (ATL/CTL) are exponential moving averages where a day with no logged exercise counts as zero TRIMP, not "no data". When you only have one day of history, that single day's value is used directly as the starting average.
 - **Estimated max heart rate.** If you haven't entered your own max heart rate, we estimate it from your age using the Tanaka formula (`208 − 0.7 × age`), which is more accurate across adult age ranges than the older "220 − age" rule of thumb.
 

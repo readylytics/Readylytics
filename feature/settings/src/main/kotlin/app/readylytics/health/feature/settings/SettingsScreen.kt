@@ -59,6 +59,7 @@ import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
 import app.readylytics.health.feature.settings.common.CustomColorPicker
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 import app.readylytics.health.feature.settings.data.DataManagementSection
 import app.readylytics.health.feature.settings.data.DataSourceSettingsSection
 import app.readylytics.health.feature.settings.data.SyncSettingsSection
@@ -204,6 +205,8 @@ fun SettingsScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var pendingReportType by remember { mutableStateOf<GitHubIssueType?>(null) }
     val resolvedThresholdError = thresholdState.thresholdError.resolveOrNull()
+    val isResyncing = syncState.isResyncing
+    val controlsEnabled = resyncGateEnabled(isResyncing)
 
     val matchingSections by remember(searchQuery) {
         derivedStateOf { settingsSections.filter { sectionMatches(it, searchQuery) } }
@@ -307,7 +310,7 @@ fun SettingsScreen(
                             SectionHeader(stringResource(R.string.settings_sub_data_management))
                             DataManagementSection(
                                 uiState = uiState,
-                                isResyncing = syncState.isResyncing,
+                                isResyncing = isResyncing,
                                 onEvent = onUIEvent,
                                 onSyncEvent = onSyncEvent,
                             )
@@ -351,7 +354,11 @@ fun SettingsScreen(
                             ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onUIEvent)
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.label_sleep))
-                            SleepSettingsSection(uiState = sleepState, onEvent = onSleepEvent)
+                            SleepSettingsSection(
+                                uiState = sleepState,
+                                onEvent = onSleepEvent,
+                                isResyncing = isResyncing,
+                            )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_heart_rate_zones))
                             HeartRateZoneSection(
@@ -361,16 +368,22 @@ fun SettingsScreen(
                                 onPhysiologyEvent = onPhysiologyEvent,
                                 expandState = expandState,
                                 onExpandStateChange = { expandState = it },
+                                isResyncing = isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             PhysiologyProfilePicker(
                                 selectedProfile = physiologyState.physiologyProfile,
                                 onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                                enabled = controlsEnabled,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.load_sources_section_title))
-                            LoadSourcesSection(uiState = sleepState, onEvent = onSleepEvent)
+                            LoadSourcesSection(
+                                uiState = sleepState,
+                                onEvent = onSleepEvent,
+                                isResyncing = isResyncing,
+                            )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
                             SectionHeader(
                                 stringResource(app.readylytics.health.core.ui.R.string.label_circadian_consistency),
@@ -386,10 +399,15 @@ fun SettingsScreen(
                                 isLoading = thresholdState.isUpdatingThreshold,
                                 error = resolvedThresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
+                                enabled = controlsEnabled,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                             SectionHeader(stringResource(R.string.settings_sub_thresholds))
-                            ThresholdSettingsSection(uiState = thresholdState, onEvent = onThresholdEvent)
+                            ThresholdSettingsSection(
+                                uiState = thresholdState,
+                                onEvent = onThresholdEvent,
+                                isResyncing = isResyncing,
+                            )
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
@@ -541,6 +559,7 @@ fun SettingsScreen(
                             onEvent = onSleepEvent,
                             onPhysiologyEvent = onPhysiologyEvent,
                             onUIEvent = onUIEvent,
+                            isResyncing = isResyncing,
                         )
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))

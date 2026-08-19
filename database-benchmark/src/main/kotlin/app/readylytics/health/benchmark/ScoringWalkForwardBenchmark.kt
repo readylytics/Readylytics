@@ -29,6 +29,7 @@ import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
@@ -326,6 +327,14 @@ private class BenchmarkFakeSettingsRepository(
     override suspend fun updateLastSyncTimestamp(timestamp: Long) = Unit
 
     override suspend fun updateBirthday(date: LocalDate) = Unit
+
+    override suspend fun updateScoringVersion(version: Int) = Unit
+
+    override suspend fun updateSleepScoreRecalcBaseline(
+        weightProfile: SleepScoreWeightProfile,
+        goalSleepHours: Float,
+        hypersomniaOnsetPercent: Int,
+    ) = Unit
 }
 
 private class BenchmarkFakeEncryptionManager : EncryptionManager {

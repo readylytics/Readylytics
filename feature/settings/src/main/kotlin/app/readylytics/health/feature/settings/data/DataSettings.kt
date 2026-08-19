@@ -52,6 +52,7 @@ import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SyncSettingsState
 import app.readylytics.health.feature.settings.UIState
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 
 @Composable
 fun SyncSettingsSection(
@@ -156,6 +157,7 @@ fun DataManagementSection(
     onEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     Column {
         RetentionSlider(
             enabled = uiState.retentionDaysEnabled,
@@ -175,7 +177,7 @@ fun DataManagementSection(
         ) {
             Button(
                 onClick = { onSyncEvent(SettingsEvent.ResyncHealthConnect) },
-                enabled = !isResyncing,
+                enabled = controlsEnabled,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (isResyncing) {

@@ -15,7 +15,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -46,7 +45,13 @@ class DataSourceSettingsViewModelTest {
     private fun buildViewModel(
         initialPrefs: UserPreferences = UserPreferences(),
         deviceChangeNoticeDismissed: Boolean = false,
-        historicalResyncController: HistoricalResyncController = mockk(relaxed = true),
+        historicalResyncController: HistoricalResyncController =
+            mockk(relaxed = true) {
+                every { state } returns
+                    MutableStateFlow(
+                        HistoricalResyncState(running = false, current = 0, total = 0),
+                    )
+            },
     ): Triple<DataSourceSettingsViewModel, MutableStateFlow<Map<String, String>>, HistoricalResyncController> {
         val deviceByDataType = MutableStateFlow(initialPrefs.deviceByDataType)
         val prefsFlow =
@@ -82,12 +87,13 @@ class DataSourceSettingsViewModelTest {
                     prefsFlow.value = prefsFlow.value.copy(deviceByDataType = updated)
                 }
             }
-        every { historicalResyncController.state } returns
-            flowOf(
-                HistoricalResyncState(running = false, current = 0, total = 0),
-            )
 
-        val viewModel = DataSourceSettingsViewModel(settingsReader, deviceSettings, historicalResyncController)
+        val viewModel =
+            DataSourceSettingsViewModel(
+                settingsReader,
+                deviceSettings,
+                historicalResyncController,
+            )
         viewModel.sharingStarted = SharingStarted.Lazily
         return Triple(viewModel, deviceByDataType, historicalResyncController)
     }
@@ -172,6 +178,31 @@ class DataSourceSettingsViewModelTest {
             viewModel.updateDevice(HealthDataType.HEART_RATE, "Watch A")
             advanceUntilIdle()
             assertFalse(viewModel.uiState.value.hasPendingChanges)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `isResyncing follows the durable resync state`() =
+        runTest(testDispatcher) {
+            val resyncStateFlow =
+                MutableStateFlow(
+                    HistoricalResyncState(running = false, current = 0, total = 0),
+                )
+            val controller =
+                mockk<HistoricalResyncController>(relaxed = true) {
+                    every { state } returns resyncStateFlow
+                }
+            val (viewModel, _, _) = buildViewModel(historicalResyncController = controller)
+            val job =
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    viewModel.uiState.collect()
+                }
+
+            assertFalse(viewModel.uiState.value.isResyncing)
+            resyncStateFlow.value = HistoricalResyncState(running = true, current = 3, total = 3)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isResyncing)
 
             job.cancel()
         }

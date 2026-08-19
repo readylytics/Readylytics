@@ -181,4 +181,10 @@ data class UserPreferencesBackup(
     val workoutCharts: List<WorkoutChartConfiguration>? = null,
     val workoutHistory: List<WorkoutHistoryConfiguration>? = null,
     val workoutDetailLayouts: Map<String, List<WorkoutDetailItemConfiguration>>? = null,
+    val sleepScoreWeightProfile: String? = null,
+    val hypersomniaOnsetPercent: Int? = null,
+    val scoringVersion: Int? = null,
+    val lastRecalcSleepScoreWeightProfile: String? = null,
+    val lastRecalcGoalSleepHours: Float? = null,
+    val lastRecalcHypersomniaOnsetPercent: Int? = null,
 )

@@ -2,10 +2,15 @@ package app.readylytics.health.domain.scoring.strategies
 
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.domain.scoring.components.SleepContinuityCurves
+import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import kotlin.math.abs
 import kotlin.math.exp
 
 private const val DELTA = 0.5f
@@ -15,15 +20,20 @@ class SleepScoringStrategyTest {
     private val sleepStrategy = SleepScoringStrategy(loadStrategy)
 
     @Test
-    fun `durationSubScore full TST excellent efficiency scores 100`() {
+    fun `durationSubScore full TST excellent efficiency scores near ceiling`() {
         val result = sleepStrategy.computeDurationSubScore(durationMinutes = 480, efficiency = 95f, goalSleepHours = 8f)
-        assertEquals(100f, result, DELTA)
+        val expected =
+            0.7f * SleepContinuityCurves.durationTerm(1f, ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO) +
+                0.3f * SleepContinuityCurves.efficiencyTerm(95f)
+        assertEquals(expected, result, DELTA)
     }
 
     @Test
     fun `durationSubScore half TST good efficiency reduced score`() {
         val result = sleepStrategy.computeDurationSubScore(durationMinutes = 240, efficiency = 85f, goalSleepHours = 8f)
-        val expected = 0.7f * 50f + 0.3f * 85f
+        val expected =
+            0.7f * SleepContinuityCurves.durationTerm(0.5f, ScoringConstants.Sleep.DEFAULT_HYPERSOMNIA_ONSET_RATIO) +
+                0.3f * SleepContinuityCurves.efficiencyTerm(85f)
         assertEquals(expected, result, DELTA)
     }
 
@@ -57,7 +67,7 @@ class SleepScoringStrategyTest {
     }
 
     @Test
-    fun `sleepScore suspicious stages arch weight dropped`() {
+    fun `sleepScore without fragmentation data uses degraded weights`() {
         val sDur = sleepStrategy.computeDurationSubScore(480, 95f, 8f)
         val sRest = 50f
         val result =
@@ -69,10 +79,11 @@ class SleepScoringStrategyTest {
                 goalSleepHours = 8f,
                 sRest = sRest,
                 userAge = 30,
-                stagesSuspicious = true,
+                stagesSuspicious = false,
                 sleepTargets = null,
             )
-        val expected = 0.75f * sDur + 0.0f + 0.25f * sRest
+        val profile = SleepScoreWeightProfile.BALANCED
+        val expected = profile.degradedDurationWeight * sDur + profile.degradedRestorationWeight * sRest
         assertEquals(expected, result, DELTA)
     }
 
@@ -96,6 +107,177 @@ class SleepScoringStrategyTest {
         val rhrScore = 50f
         val expected = 0.5f * hrvScore + 0.5f * rhrScore
         assertEquals(expected, result, DELTA)
+    }
+
+    @Test
+    fun `sleep score is continuous across the old efficiency boundary`() {
+        val fragmentation = SleepFragmentation(wasoMinutes = 15f, awakeningCount = 1)
+        val at89 =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 450,
+                efficiency = 89f,
+                deepSleepMinutes = 90,
+                remSleepMinutes = 100,
+                goalSleepHours = 8f,
+                sRest = 70f,
+                userAge = 35,
+                stagesSuspicious = false,
+                sleepTargets = null,
+                fragmentation = fragmentation,
+            )
+        val at90 =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 450,
+                efficiency = 90f,
+                deepSleepMinutes = 90,
+                remSleepMinutes = 100,
+                goalSleepHours = 8f,
+                sRest = 70f,
+                userAge = 35,
+                stagesSuspicious = false,
+                sleepTargets = null,
+                fragmentation = fragmentation,
+            )
+
+        assertTrue("delta was ${at90 - at89}", abs(at90 - at89) < 0.5f)
+    }
+
+    @Test
+    fun `hypersomnia scores below hitting the goal`() {
+        fun scoreFor(minutes: Int) =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = minutes,
+                efficiency = 92f,
+                deepSleepMinutes = 90,
+                remSleepMinutes = 100,
+                goalSleepHours = 8f,
+                sRest = 70f,
+                userAge = 35,
+                stagesSuspicious = false,
+                sleepTargets = null,
+                fragmentation = SleepFragmentation(wasoMinutes = 15f, awakeningCount = 1),
+            )
+
+        assertTrue(scoreFor(720) < scoreFor(480))
+    }
+
+    @Test
+    fun `naps within the dead zone are not penalized`() {
+        // deepSleepMinutes/remSleepMinutes are chosen so the architecture sub-score is saturated
+        // (capped at its target) at both durations — otherwise the same absolute deep/REM minutes
+        // become a smaller fraction of a longer total duration and the architecture sub-score would
+        // drift with duration, confounding this test's real target: the flat duration-term dead zone.
+        fun scoreFor(minutes: Int) =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = minutes,
+                efficiency = 92f,
+                deepSleepMinutes = 110,
+                remSleepMinutes = 125,
+                goalSleepHours = 8f,
+                sRest = 70f,
+                userAge = 35,
+                stagesSuspicious = false,
+                sleepTargets = null,
+                fragmentation = SleepFragmentation(wasoMinutes = 15f, awakeningCount = 1),
+            )
+
+        assertEquals(scoreFor(480), scoreFor(570), 0.01f)
+    }
+
+    @Test
+    fun `suspicious stages drop architecture and fragmentation and renormalize`() {
+        val score =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 92f,
+                deepSleepMinutes = 0,
+                remSleepMinutes = 0,
+                goalSleepHours = 8f,
+                sRest = 60f,
+                userAge = 35,
+                stagesSuspicious = true,
+                sleepTargets = null,
+                fragmentation = null,
+            )
+
+        val expectedDuration = sleepStrategy.computeDurationSubScore(480, 92f, 8f)
+        val profile = SleepScoreWeightProfile.BALANCED
+        val expected =
+            profile.degradedDurationWeight * expectedDuration + profile.degradedRestorationWeight * 60f
+
+        assertEquals(expected, score, 0.01f)
+    }
+
+    @Test
+    fun `suspicious stages still degrade weights even when fragmentation data is available`() {
+        // Isolates the stagesSuspicious conjunct in `stageDataUsable = !stagesSuspicious &&
+        // fragmentation != null`: fragmentation data IS present here, so only stagesSuspicious can be
+        // driving the degraded branch. Without this test, a mutation deleting `!stagesSuspicious &&`
+        // from that condition would pass the full suite.
+        val score =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 92f,
+                deepSleepMinutes = 0,
+                remSleepMinutes = 0,
+                goalSleepHours = 8f,
+                sRest = 60f,
+                userAge = 35,
+                stagesSuspicious = true,
+                sleepTargets = null,
+                fragmentation = SleepFragmentation.NONE,
+            )
+
+        val expectedDuration = sleepStrategy.computeDurationSubScore(480, 92f, 8f)
+        val profile = SleepScoreWeightProfile.BALANCED
+        val expected =
+            profile.degradedDurationWeight * expectedDuration + profile.degradedRestorationWeight * 60f
+
+        assertEquals(expected, score, 0.01f)
+    }
+
+    @Test
+    fun `poor regularity applies at most an eight percent penalty`() {
+        fun scoreFor(regularity: Float?) =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 92f,
+                deepSleepMinutes = 90,
+                remSleepMinutes = 100,
+                goalSleepHours = 8f,
+                sRest = 70f,
+                userAge = 35,
+                stagesSuspicious = false,
+                sleepTargets = null,
+                fragmentation = SleepFragmentation(wasoMinutes = 15f, awakeningCount = 1),
+                regularityScore = regularity,
+            )
+
+        assertEquals(scoreFor(null), scoreFor(100f), 0.01f)
+        assertEquals(scoreFor(null) * 0.92f, scoreFor(0f), 0.01f)
+    }
+
+    @Test
+    fun `light sleeper profile punishes fragmentation harder than hours first`() {
+        fun scoreFor(profile: SleepScoreWeightProfile) =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 92f,
+                deepSleepMinutes = 90,
+                remSleepMinutes = 100,
+                goalSleepHours = 8f,
+                sRest = 70f,
+                userAge = 35,
+                stagesSuspicious = false,
+                sleepTargets = null,
+                fragmentation = SleepFragmentation(wasoMinutes = 90f, awakeningCount = 8),
+                weightProfile = profile,
+            )
+
+        assertTrue(
+            scoreFor(SleepScoreWeightProfile.CONTINUITY_FOCUSED) <
+                scoreFor(SleepScoreWeightProfile.DURATION_FOCUSED),
+        )
     }
 }
 

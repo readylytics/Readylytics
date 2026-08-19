@@ -13,6 +13,7 @@ import app.readylytics.health.domain.preferences.SyncSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -105,6 +106,19 @@ class SettingsRepository
 
         override suspend fun updateSupplementalArchitectureCoveragePercent(percent: Int) =
             sleep.updateSupplementalArchitectureCoveragePercent(percent)
+
+        override suspend fun updateSleepScoreWeightProfile(profile: SleepScoreWeightProfile) =
+            sleep.updateSleepScoreWeightProfile(profile)
+
+        override suspend fun updateHypersomniaOnsetPercent(percent: Int) = sleep.updateHypersomniaOnsetPercent(percent)
+
+        override suspend fun updateScoringVersion(version: Int) = sleep.updateScoringVersion(version)
+
+        override suspend fun updateSleepScoreRecalcBaseline(
+            weightProfile: SleepScoreWeightProfile,
+            goalSleepHours: Float,
+            hypersomniaOnsetPercent: Int,
+        ) = sleep.updateSleepScoreRecalcBaseline(weightProfile, goalSleepHours, hypersomniaOnsetPercent)
 
         override suspend fun updateHrvBaselineOverride(rmssdMs: Float?) = physiology.updateHrvBaselineOverride(rmssdMs)
 

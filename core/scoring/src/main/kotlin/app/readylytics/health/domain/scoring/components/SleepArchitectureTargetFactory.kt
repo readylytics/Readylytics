@@ -1,11 +1,27 @@
 package app.readylytics.health.domain.scoring.components
 
 object SleepArchitectureTargetFactory {
-    fun create(ageYears: Int): SleepArchitectureTargets =
-        when {
-            ageYears in 18..29 -> SleepArchitectureTargets.AgeRange18To29()
-            ageYears in 30..49 -> SleepArchitectureTargets.AgeRange30To49()
-            ageYears in 50..59 -> SleepArchitectureTargets.AgeRange50To59()
-            else -> SleepArchitectureTargets.AgeRange60Plus()
-        }
+    private const val REFERENCE_AGE = 20f
+
+    private const val DEEP_AT_REFERENCE_AGE = 0.21f
+    private const val DEEP_DECLINE_PER_YEAR = 0.0016f
+    private const val DEEP_MIN = 0.12f
+    private const val DEEP_MAX = 0.22f
+
+    private const val REM_AT_REFERENCE_AGE = 0.22f
+    private const val REM_DECLINE_PER_YEAR = 0.0006f
+    private const val REM_MIN = 0.18f
+    private const val REM_MAX = 0.23f
+
+    fun create(ageYears: Int): SleepArchitectureTargets {
+        val yearsPastReference = ageYears.toFloat() - REFERENCE_AGE
+        return SleepArchitectureTargets(
+            deepPercentage =
+                (DEEP_AT_REFERENCE_AGE - DEEP_DECLINE_PER_YEAR * yearsPastReference)
+                    .coerceIn(DEEP_MIN, DEEP_MAX),
+            remPercentage =
+                (REM_AT_REFERENCE_AGE - REM_DECLINE_PER_YEAR * yearsPastReference)
+                    .coerceIn(REM_MIN, REM_MAX),
+        )
+    }
 }

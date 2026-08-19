@@ -12,11 +12,13 @@ import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
+import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
@@ -25,6 +27,7 @@ import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.domain.scoring.sleep.SleepModifierResolver
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
@@ -171,6 +174,11 @@ class GoldenFixtureWalkForwardTest {
                 )
             val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
             val scoringConfigFactory = ScoringConfigFactory()
+            val sleepSessionRepository = SleepSessionRepositoryImpl(db.sleepSessionDao(), db.sleepStageDao())
+            val settingsRepo = FakeSettingsRepository(prefs)
+            val circadianConsistencyRepository =
+                CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, FakeEncryptionManager())
+            val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
             val computeSleepMetricsUseCase =
                 ComputeSleepMetricsUseCase(
                     baselineComputer = baselineComputer,
@@ -182,9 +190,8 @@ class GoldenFixtureWalkForwardTest {
                     sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository),
                     nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator),
                     coverageValidator = HrCoverageValidator(),
+                    sleepModifierResolver = sleepModifierResolver,
                 )
-
-            val settingsRepo = FakeSettingsRepository(prefs)
             val dataLoader =
                 ScoringDayDataLoader(
                     db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
@@ -260,10 +267,9 @@ class GoldenFixtureWalkForwardTest {
 
     private fun goldenFileCandidates(): List<File> =
         listOf(
-            // Gradle's testDebugUnitTest JVM runs with the :app module directory as its working
-            // directory, not the repo root -- this must be first, or a write falls back to the
-            // next candidate and creates a spurious app/app/... directory.
             File("src/test/resources/golden/scoring_walk_forward_golden.json"),
+            File("core/database/src/test/resources/golden/scoring_walk_forward_golden.json"),
+            File("../core/database/src/test/resources/golden/scoring_walk_forward_golden.json"),
             File("app/src/test/resources/golden/scoring_walk_forward_golden.json"),
             File("../app/src/test/resources/golden/scoring_walk_forward_golden.json"),
         )

@@ -18,6 +18,7 @@ import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
@@ -227,7 +228,11 @@ class ScoringDeterminismRegressionTest {
         val strategy = SleepScoringStrategy(LoadScoringStrategy())
 
         // deep 30/100 (capped at target), rem 20/100 → remComponent = (0.20/0.22)*100 = 90.909…,
-        // which previously got rounded to 1 decimal before entering the weighted sum.
+        // which previously got rounded to 1 decimal before entering the weighted sum. Fragmentation
+        // data is present (SleepFragmentation.NONE) so this exercises the full-precision, non-degraded
+        // path — the one that actually calls computeArchSubScore — and asserts against a hand-composed
+        // full-precision expected value, proving the architecture sub-score enters the weighted sum
+        // without being pre-rounded.
         val durationMinutes = 100
         val deep = 30
         val rem = 20
@@ -235,13 +240,17 @@ class ScoringDeterminismRegressionTest {
         val efficiency = 95f
         val goal = 8f
         val sRest = 50f
+        val fragmentation = SleepFragmentation.NONE
 
         val sDur = strategy.computeDurationSubScore(durationMinutes, efficiency, goal)
-        val sArch = strategy.computeArchSubScore(deep, rem, durationMinutes, age, null)
+        val sArch = strategy.computeArchSubScore(deep, rem, durationMinutes, age, sleepTargets = null)
+        val sFrag = strategy.computeFragmentationSubScore(fragmentation)
+
         val expectedFullPrecision =
-            ScoringConstants.Sleep.WEIGHT_DURATION * sDur +
-                ScoringConstants.Sleep.WEIGHT_ARCHITECTURE * sArch +
-                ScoringConstants.Sleep.WEIGHT_RESTORATION * sRest
+            SleepScoreWeightProfile.BALANCED.durationWeight * sDur +
+                SleepScoreWeightProfile.BALANCED.architectureWeight * sArch +
+                SleepScoreWeightProfile.BALANCED.restorationWeight * sRest +
+                SleepScoreWeightProfile.BALANCED.fragmentationWeight * sFrag
 
         val actual =
             strategy.computeSleepScore(
@@ -254,10 +263,11 @@ class ScoringDeterminismRegressionTest {
                 userAge = age,
                 stagesSuspicious = false,
                 sleepTargets = null,
+                fragmentation = fragmentation,
             )
 
-        // Tight tolerance: if sArch were pre-rounded, the composite would diverge from the
-        // full-precision composition by more than 1e-4.
+        // Tight tolerance: the composite must match the hand-composed full-precision sum exactly —
+        // proving the architecture sub-score entered the weighted sum without being pre-rounded.
         assertEquals(expectedFullPrecision, actual, 1e-4f)
     }
 }

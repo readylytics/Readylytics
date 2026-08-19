@@ -9,6 +9,7 @@ import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 
@@ -16,6 +17,16 @@ sealed interface SettingsEvent {
     data class GoalSleepHoursChanged(
         val hours: Float,
     ) : SettingsEvent
+
+    data class SleepScoreWeightProfileChanged(
+        val profile: SleepScoreWeightProfile,
+    ) : SettingsEvent
+
+    data class HypersomniaOnsetPercentChanged(
+        val percent: Int,
+    ) : SettingsEvent
+
+    data object RecalculateScores : SettingsEvent
 
     data class HrvBaselineChanged(
         val text: String,

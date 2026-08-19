@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,6 +39,7 @@ import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import app.readylytics.health.feature.settings.R
+import app.readylytics.health.feature.settings.common.resyncGateEnabled
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +54,9 @@ fun AdvancedSettingsSection(
     onEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
+    isResyncing: Boolean = false,
 ) {
+    val controlsEnabled = resyncGateEnabled(isResyncing)
     val trimpModelOptions =
         listOf(
             TrimpModel.BANISTER to stringResource(R.string.advanced_trimp_banister),
@@ -83,6 +87,7 @@ fun AdvancedSettingsSection(
             )
             OutlinedTextField(
                 value = hrvText,
+                enabled = controlsEnabled,
                 onValueChange = { value ->
                     hrvText = value
                     val validation = SettingsValidators.HRV_BASELINE_RULE.validate(value)
@@ -105,10 +110,13 @@ fun AdvancedSettingsSection(
                 },
                 trailingIcon = {
                     if (hrvText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            hrvText = ""
-                            onEvent(SettingsEvent.HrvBaselineCleared)
-                        }) {
+                        IconButton(
+                            onClick = {
+                                hrvText = ""
+                                onEvent(SettingsEvent.HrvBaselineCleared)
+                            },
+                            enabled = controlsEnabled,
+                        ) {
                             Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
                     }
@@ -119,6 +127,7 @@ fun AdvancedSettingsSection(
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             OutlinedTextField(
                 value = rhrText,
+                enabled = controlsEnabled,
                 onValueChange = { value ->
                     rhrText = value
                     val validation = SettingsValidators.RHR_BASELINE_RULE.validate(value)
@@ -141,10 +150,13 @@ fun AdvancedSettingsSection(
                 },
                 trailingIcon = {
                     if (rhrText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            rhrText = ""
-                            onEvent(SettingsEvent.RhrBaselineCleared)
-                        }) {
+                        IconButton(
+                            onClick = {
+                                rhrText = ""
+                                onEvent(SettingsEvent.RhrBaselineCleared)
+                            },
+                            enabled = controlsEnabled,
+                        ) {
                             Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
                     }
@@ -167,6 +179,7 @@ fun AdvancedSettingsSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = percentileValue.toFloat(),
+                    enabled = controlsEnabled,
                     onValueChange = { percentileValue = it.toInt() },
                     onValueChangeFinished = {
                         val validation =
@@ -195,6 +208,7 @@ fun AdvancedSettingsSection(
             SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS.toFloat()..SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS.toFloat()
         ThresholdSliderItem(
             label = stringResource(R.string.advanced_hrr_tolerance_label),
+            enabled = controlsEnabled,
             value = hrrTolerance,
             onValueChange = { hrrTolerance = it },
             onValueChangeFinished = {
@@ -219,6 +233,7 @@ fun AdvancedSettingsSection(
             steps = 20,
             displayValue = "%.2f".format(rasScaling),
             description = stringResource(R.string.advanced_ras_scaling_tooltip),
+            enabled = controlsEnabled,
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.smallMedium))
@@ -232,9 +247,12 @@ fun AdvancedSettingsSection(
             trimpModelOptions.firstOrNull { it.first == trimpModel }?.second
                 ?: stringResource(R.string.advanced_trimp_banister)
         var trimpDropdownExpanded by remember { mutableStateOf(false) }
+        LaunchedEffect(isResyncing) {
+            if (isResyncing) trimpDropdownExpanded = false
+        }
         ExposedDropdownMenuBox(
             expanded = trimpDropdownExpanded,
-            onExpandedChange = { trimpDropdownExpanded = !trimpDropdownExpanded },
+            onExpandedChange = { if (controlsEnabled) trimpDropdownExpanded = it },
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -244,6 +262,7 @@ fun AdvancedSettingsSection(
                 value = selectedModelLabel,
                 onValueChange = {},
                 readOnly = true,
+                enabled = controlsEnabled,
                 label = { Text(stringResource(R.string.advanced_training_load_label)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trimpDropdownExpanded) },
                 modifier =
@@ -252,7 +271,7 @@ fun AdvancedSettingsSection(
                         .fillMaxWidth(),
             )
             ExposedDropdownMenu(
-                expanded = trimpDropdownExpanded,
+                expanded = trimpDropdownExpanded && controlsEnabled,
                 onDismissRequest = { trimpDropdownExpanded = false },
             ) {
                 trimpModelOptions.forEach { (model, label) ->
@@ -280,6 +299,7 @@ fun AdvancedSettingsSection(
                     steps = 40,
                     displayValue = "%.2f".format(multiplier),
                     description = stringResource(R.string.advanced_banister_multiplier_desc),
+                    enabled = controlsEnabled,
                 )
             }
             TrimpModel.CHENG -> {
@@ -294,6 +314,7 @@ fun AdvancedSettingsSection(
                     steps = 16,
                     displayValue = "%.3f".format(beta),
                     description = stringResource(R.string.advanced_cheng_beta_desc),
+                    enabled = controlsEnabled,
                 )
             }
             TrimpModel.I_TRIMP -> {
@@ -308,6 +329,7 @@ fun AdvancedSettingsSection(
                     steps = 35,
                     displayValue = "%.1f".format(b),
                     description = stringResource(R.string.advanced_itrimp_b_factor_desc),
+                    enabled = controlsEnabled,
                 )
             }
         }

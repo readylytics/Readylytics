@@ -22,10 +22,13 @@ import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.domain.scoring.sleep.SleepModifierResolver
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
@@ -47,6 +50,7 @@ import java.time.LocalDate
 class ScoringRepositoryN1Test {
     private lateinit var heartRateDao: HeartRateDao
     private lateinit var sleepSessionDao: SleepSessionDao
+    private lateinit var sleepStageDao: app.readylytics.health.data.local.dao.SleepStageDao
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var dailySummaryDao: DailySummaryDao
@@ -85,6 +89,7 @@ class ScoringRepositoryN1Test {
     fun setUp() {
         heartRateDao = mockk()
         sleepSessionDao = mockk()
+        sleepStageDao = mockk(relaxed = true)
         hrvDao = mockk()
         workoutDao = mockk()
         dailySummaryDao = mockk()
@@ -159,6 +164,9 @@ class ScoringRepositoryN1Test {
         val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository)
         val nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator)
         val coverageValidator = HrCoverageValidator()
+        val sleepModifierResolver = mockk<SleepModifierResolver>()
+        coEvery { sleepModifierResolver.resolve(any(), any(), any(), any()) } returns
+            app.readylytics.health.domain.scoring.sleep.SleepModifiers(null, null)
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer,
@@ -170,6 +178,7 @@ class ScoringRepositoryN1Test {
                 sleepPercentileRhrCalculator,
                 nadirAnalyzer,
                 coverageValidator,
+                sleepModifierResolver,
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)

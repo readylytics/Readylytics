@@ -21,7 +21,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -32,6 +31,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -273,12 +273,16 @@ class SettingsViewModelTest {
         }
 
     @Test
-    fun `SyncSettingsViewModel resync event enqueues worker`() =
+    fun `SyncSettingsViewModel resync event enqueues worker and isResyncing follows durable state`() =
         runTest {
             val mockRefresh = mockk<HealthDataRefresh>(relaxed = true)
+            val resyncStateFlow =
+                MutableStateFlow(
+                    HistoricalResyncState(running = false, current = 0, total = 0),
+                )
             val mockHistoricalResyncController =
                 mockk<HistoricalResyncController>(relaxed = true) {
-                    every { state } returns flowOf(HistoricalResyncState(running = false, current = 0, total = 0))
+                    every { state } returns resyncStateFlow
                 }
 
             val viewModel =
@@ -296,6 +300,11 @@ class SettingsViewModelTest {
             }
 
             assertFalse(viewModel.uiState.value.isResyncing)
+            resyncStateFlow.value = HistoricalResyncState(running = true, current = 5, total = 10)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isResyncing)
+            assertEquals(5, viewModel.uiState.value.resyncCurrent)
+
             viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
             advanceUntilIdle()
 

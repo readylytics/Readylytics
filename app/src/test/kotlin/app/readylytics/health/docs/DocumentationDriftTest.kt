@@ -8,8 +8,9 @@ import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.scoring.components.Phase
-import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets
+import app.readylytics.health.domain.scoring.components.SleepArchitectureTargetFactory
 import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
@@ -67,13 +68,23 @@ class DocumentationDriftTest {
 
     @Test
     fun `sleep score weights match ABOUT md`() {
-        assertEquals(0.50f, ScoringConstants.Sleep.WEIGHT_DURATION)
-        assertEquals(0.25f, ScoringConstants.Sleep.WEIGHT_ARCHITECTURE)
-        assertEquals(0.25f, ScoringConstants.Sleep.WEIGHT_RESTORATION)
+        val profile = SleepScoreWeightProfile.BALANCED
+        assertEquals(0.40f, profile.durationWeight)
+        assertEquals(0.20f, profile.architectureWeight)
+        assertEquals(0.25f, profile.restorationWeight)
+        assertEquals(0.15f, profile.fragmentationWeight)
 
-        assertTrue(aboutMd.contains("Duration (50%)"))
-        assertTrue(aboutMd.contains("Architecture (25%)"))
+        assertTrue(aboutMd.contains("Duration (40%)"))
+        assertTrue(aboutMd.contains("Architecture (20%)"))
         assertTrue(aboutMd.contains("Restoration (25%)"))
+        assertTrue(aboutMd.contains("Fragmentation (15%)"))
+    }
+
+    @Test
+    fun `fragmentation and regularity are documented`() {
+        assertTrue(aboutMd.contains("Sleep Regularity"))
+        assertTrue(aboutMd.contains("WASO"))
+        assertTrue(stringsXml.contains("Fragmentation"))
     }
 
     @Test
@@ -81,9 +92,8 @@ class DocumentationDriftTest {
         val requiredStageLessPhrases =
             listOf(
                 "raw session span",
-                "Duration 75%",
-                "Architecture 0%",
-                "Restoration 25%",
+                "renormalizes",
+                "Duration and Restoration",
             )
 
         for ((surface, text) in listOf(
@@ -155,22 +165,34 @@ class DocumentationDriftTest {
 
     @Test
     fun `age-banded deep and REM sleep targets match ABOUT md table`() {
-        assertAgeBandInAboutMd("18–29", SleepArchitectureTargets.AgeRange18To29())
-        assertAgeBandInAboutMd("30–49", SleepArchitectureTargets.AgeRange30To49())
-        assertAgeBandInAboutMd("50–59", SleepArchitectureTargets.AgeRange50To59())
-        assertAgeBandInAboutMd("60+", SleepArchitectureTargets.AgeRange60Plus())
+        assertAgeBandInAboutMd("18–29", SleepArchitectureTargetFactory.create(25))
+        assertAgeBandInAboutMd("30–49", SleepArchitectureTargetFactory.create(40))
+        assertAgeBandInAboutMd("50–59", SleepArchitectureTargetFactory.create(55))
+        assertAgeBandInAboutMd("60+", SleepArchitectureTargetFactory.create(70))
     }
+
+    private val ageBandTolerances =
+        mapOf(
+            "18–29" to 0.004f,
+            "30–49" to 0.004f,
+            "50–59" to 0.005f,
+            "60+" to 0.011f,
+        )
 
     private fun assertAgeBandInAboutMd(
         ageRangeLabel: String,
-        targets: SleepArchitectureTargets,
+        targets: app.readylytics.health.domain.scoring.components.SleepArchitectureTargets,
     ) {
-        val deepPercent = "${(targets.deepPercentage * 100).toInt()}%"
-        val remPercent = "${(targets.remPercentage * 100).toInt()}%"
         val row = aboutMd.lineSequence().firstOrNull { it.contains("| $ageRangeLabel") }
         assertTrue(row != null, "expected a table row for age range $ageRangeLabel in ABOUT.md")
-        assertTrue(row.contains(deepPercent), "row for $ageRangeLabel should contain deep target $deepPercent")
-        assertTrue(row.contains(remPercent), "row for $ageRangeLabel should contain REM target $remPercent")
+        val parts = row.split("|").map { it.trim() }.filter { it.isNotEmpty() }
+        val deepPercent = parts[1].removeSuffix("%").toFloat() / 100f
+        val remPercent = parts[2].removeSuffix("%").toFloat() / 100f
+        val tolerance =
+            ageBandTolerances[ageRangeLabel]
+                ?: error("No tolerance defined for age band $ageRangeLabel")
+        assertEquals(targets.deepPercentage, deepPercent, tolerance, "Deep target mismatch for $ageRangeLabel")
+        assertEquals(targets.remPercentage, remPercent, tolerance, "REM target mismatch for $ageRangeLabel")
     }
 
     @Test

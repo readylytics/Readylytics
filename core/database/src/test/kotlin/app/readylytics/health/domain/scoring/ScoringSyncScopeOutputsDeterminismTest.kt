@@ -24,10 +24,13 @@ import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.domain.scoring.sleep.SleepModifierResolver
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
@@ -183,6 +186,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
 
         val workoutDao = mockk<WorkoutDao>(relaxed = true)
         val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
+        val sleepStageDao = mockk<app.readylytics.health.data.local.dao.SleepStageDao>(relaxed = true)
         val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
         val settingsRepo = mockk<SettingsRepository>(relaxed = true)
         val heartRateDao = mockk<HeartRateDao>(relaxed = true)
@@ -313,6 +317,10 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository)
         val sleepNadirAnalyzer = SleepNadirAnalyzer(scoringCalculator)
         val coverageValidator = HrCoverageValidator()
+        val sleepSessionRepository = SleepSessionRepositoryImpl(sleepSessionDao, sleepStageDao)
+        val circadianConsistencyRepository =
+            CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, encryptionManager)
+        val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer = baselineComputer,
@@ -324,6 +332,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
                 nadirAnalyzer = sleepNadirAnalyzer,
                 coverageValidator = coverageValidator,
+                sleepModifierResolver = sleepModifierResolver,
             )
 
         val dataLoader =
