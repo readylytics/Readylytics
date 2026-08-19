@@ -9,8 +9,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
@@ -21,6 +24,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.flow.first
 
 /**
  * Durable, long-running worker performing either a full historical Health Connect resync (Settings
@@ -40,6 +44,7 @@ class HealthResyncWorker
         private val fullHistoricalResyncUseCase: Lazy<FullHistoricalResyncUseCase>,
         private val foregroundSyncController: Lazy<ForegroundSyncController>,
         private val databaseReadinessGate: DatabaseReadinessInspector,
+        private val settingsRepository: Lazy<SettingsRepository>,
     ) : CoroutineWorker(appContext, params) {
         // Progress notifications are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is
         // declared in the manifest and a missing runtime grant simply drops the update.
@@ -73,6 +78,7 @@ class HealthResyncWorker
 
                 if (result.isSuccess) {
                     success = true
+                    persistPostRecomputeState()
                     Result.success()
                 } else {
                     // Transient HC/IO failure: let WorkManager retry with its backoff policy.
@@ -90,6 +96,30 @@ class HealthResyncWorker
                 Result.retry()
             } finally {
                 syncController.onBackgroundRecalcFinished(success)
+            }
+        }
+
+        /**
+         * Records that this run actually applied to history: bump [UserPreferences.scoringVersion]
+         * when stale AND snapshot the sleep-scoring inputs into the `last_recalc_*` baseline. This is
+         * best-effort and idempotent — a failure here cannot corrupt already-recomputed scores, and the
+         * next successful resync re-runs it. The startup initializer intentionally no longer bumps the
+         * version, so a killed worker leaves the stale version in place and the next launch re-enqueues.
+         */
+        private suspend fun persistPostRecomputeState() {
+            runCatching {
+                val settings = settingsRepository.get()
+                val prefs = settings.userPreferences.first()
+                if (prefs.scoringVersion < SettingsDefaults.CURRENT_SCORING_VERSION) {
+                    settings.updateScoringVersion(SettingsDefaults.CURRENT_SCORING_VERSION)
+                }
+                settings.updateSleepScoreRecalcBaseline(
+                    weightProfile = prefs.sleepScoreWeightProfile,
+                    goalSleepHours = prefs.goalSleepHours,
+                    hypersomniaOnsetPercent = prefs.hypersomniaOnsetPercent,
+                )
+            }.onFailure { e ->
+                logE(TAG, e) { "Failed to persist post-recompute scoring version/baseline" }
             }
         }
 
