@@ -40,7 +40,6 @@
     <string name="sleep_session_time_range_format">%1$s → %2$s</string>
 
     <string name="manage_cards">Manage Cards</string>
-    <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
 
     <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to view details.</string>
 

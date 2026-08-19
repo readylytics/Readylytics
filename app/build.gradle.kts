@@ -205,32 +205,16 @@ android {
     }
     sourceSets {
         getByName("benchmark").apply {
-            kotlin.srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
+            kotlin.directories.addAll(listOf("src/profileSupport/kotlin", "src/profileSeed/kotlin"))
             baselineProfiles {
-                srcDir("src/release/generated/baselineProfiles")
+                directories.add("src/release/generated/baselineProfiles")
             }
         }
         configureEach {
             when (name) {
                 "nonMinifiedRelease" ->
-                    kotlin.apply {
-                        srcDirs("src/profileSupport/kotlin", "src/profileSeed/kotlin")
-                        val releaseBenchmarkStubs =
-                            setOf(
-                                project
-                                    .file(
-                                        "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkDataSeeder.kt",
-                                    ).absoluteFile,
-                                project
-                                    .file(
-                                        "src/release/kotlin/app/readylytics/health/benchmark/BenchmarkSemantics.kt",
-                                    ).absoluteFile,
-                            )
-                        (this as com.android.build.gradle.api.AndroidSourceDirectorySet).filter.exclude {
-                            it.file.absoluteFile in releaseBenchmarkStubs
-                        }
-                    }
-                "test" -> kotlin.srcDir("src/profileSeed/kotlin")
+                    kotlin.directories.addAll(listOf("src/profileSupport/kotlin", "src/profileSeed/kotlin"))
+                "test" -> kotlin.directories.add("src/profileSeed/kotlin")
             }
         }
     }
@@ -248,6 +232,12 @@ android {
         warningsAsErrors = true
         xmlReport = true
         disable += listOf("GradleDependency", "NewerVersionAvailable")
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.sources.kotlin?.addStaticSourceDirectory("src/releaseStubs/kotlin")
     }
 }
 
