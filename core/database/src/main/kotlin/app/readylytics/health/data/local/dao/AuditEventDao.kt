@@ -3,7 +3,7 @@ package app.readylytics.health.data.local.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import app.readylytics.health.data.local.entity.AuditEventEntity
+import app.readylytics.health.core.database.data.local.entity.AuditEventEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

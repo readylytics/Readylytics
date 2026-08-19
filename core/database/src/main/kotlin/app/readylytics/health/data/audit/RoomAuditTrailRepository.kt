@@ -1,7 +1,7 @@
 package app.readylytics.health.data.audit
 
 import app.readylytics.health.data.local.dao.AuditEventDao
-import app.readylytics.health.data.local.entity.AuditEventEntity
+import app.readylytics.health.core.database.data.local.entity.AuditEventEntity
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
 import kotlinx.coroutines.flow.Flow

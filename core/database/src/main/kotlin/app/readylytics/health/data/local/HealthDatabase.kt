@@ -20,7 +20,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.StepRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePointDao
-import app.readylytics.health.data.local.entity.AuditEventEntity
+import app.readylytics.health.core.database.data.local.entity.AuditEventEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
