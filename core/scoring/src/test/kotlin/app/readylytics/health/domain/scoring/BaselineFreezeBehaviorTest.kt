@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals

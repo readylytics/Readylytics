@@ -5,8 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.DataRollupManager
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import kotlinx.coroutines.runBlocking

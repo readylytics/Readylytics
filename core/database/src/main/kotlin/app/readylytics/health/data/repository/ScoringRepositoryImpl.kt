@@ -1,8 +1,8 @@
 package app.readylytics.health.data.repository
 
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
-import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailySummary

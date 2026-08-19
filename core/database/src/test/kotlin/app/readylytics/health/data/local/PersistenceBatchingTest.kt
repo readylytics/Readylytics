@@ -11,7 +11,7 @@ import app.readylytics.health.data.local.dao.SleepStageDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
-import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.HealthIngestionBatch

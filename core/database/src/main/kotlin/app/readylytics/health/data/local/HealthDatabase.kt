@@ -21,22 +21,22 @@ import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.dao.WorkoutRoutePointDao
 import app.readylytics.health.data.local.entity.AuditEventEntity
-import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
-import app.readylytics.health.data.local.entity.BodyFatRecordEntity
-import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
-import app.readylytics.health.data.local.entity.HrvRecordEntity
-import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
-import app.readylytics.health.data.local.entity.InsightDismissalEntity
-import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
-import app.readylytics.health.data.local.entity.SleepStageEntity
-import app.readylytics.health.data.local.entity.StepRecordEntity
-import app.readylytics.health.data.local.entity.WeightRecordEntity
-import app.readylytics.health.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.InsightDismissalEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 
 @Database(
     entities = [

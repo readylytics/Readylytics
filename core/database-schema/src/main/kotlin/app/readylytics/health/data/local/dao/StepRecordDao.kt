@@ -3,7 +3,7 @@ package app.readylytics.health.data.local.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
-import app.readylytics.health.data.local.entity.StepRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
 
 @Dao
 interface StepRecordDao {

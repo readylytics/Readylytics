@@ -6,7 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
-import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader

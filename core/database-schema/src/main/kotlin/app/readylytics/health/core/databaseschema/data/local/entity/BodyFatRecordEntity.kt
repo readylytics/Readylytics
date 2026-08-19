@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local.entity
+package app.readylytics.health.core.databaseschema.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.Index
@@ -7,15 +7,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 @Entity(
-    tableName = "oxygen_saturation_records",
+    tableName = "body_fat_records",
     indices = [
         Index(value = ["timestampMs"]),
         Index(value = ["timestampMs", "deviceName"]),
     ],
 )
-data class OxygenSaturationRecordEntity(
+data class BodyFatRecordEntity(
     @PrimaryKey val id: String,
     val timestampMs: Long,
-    val percentage: Float,
+    val bodyFatPercent: Float,
     val deviceName: String? = null,
 )

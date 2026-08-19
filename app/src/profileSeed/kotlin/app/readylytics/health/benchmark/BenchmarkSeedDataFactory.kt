@@ -1,7 +1,7 @@
 package app.readylytics.health.benchmark
 
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit

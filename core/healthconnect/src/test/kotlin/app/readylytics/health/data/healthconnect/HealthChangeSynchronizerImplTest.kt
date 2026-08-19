@@ -10,9 +10,9 @@ import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import app.readylytics.health.data.local.dao.*
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.HrvRecordEntity
-import app.readylytics.health.data.local.entity.WeightRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HealthDataType
@@ -186,7 +186,7 @@ class HealthChangeSynchronizerImplTest {
 
             // Mock looking up the deleted record to determine affected date
             val mockSleepEntity =
-                mockk<app.readylytics.health.data.local.entity.SleepSessionEntity>(relaxed = true) {
+                mockk<app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity>(relaxed = true) {
                     every { startTime } returns Instant.parse("2026-06-19T00:00:00Z").toEpochMilli()
                     every { endTime } returns Instant.parse("2026-06-19T08:00:00Z").toEpochMilli()
                 }
@@ -283,7 +283,7 @@ class HealthChangeSynchronizerImplTest {
             coEvery { client.getChanges(any()) } returns response
 
             val mockSleepEntity =
-                mockk<app.readylytics.health.data.local.entity.SleepSessionEntity>(relaxed = true) {
+                mockk<app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity>(relaxed = true) {
                     every { startTime } returns Instant.parse("2026-06-19T00:00:00Z").toEpochMilli()
                     every { endTime } returns Instant.parse("2026-06-19T08:00:00Z").toEpochMilli()
                 }
@@ -565,7 +565,7 @@ class HealthChangeSynchronizerImplTest {
                 seedTokens()
                 val recordId = "deleted-steps"
                 val storedRow =
-                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity(
                         id = recordId,
                         startTime = Instant.parse("2026-03-10T22:00:00Z").toEpochMilli(),
                         endTime = Instant.parse("2026-03-11T00:00:00Z").toEpochMilli(),

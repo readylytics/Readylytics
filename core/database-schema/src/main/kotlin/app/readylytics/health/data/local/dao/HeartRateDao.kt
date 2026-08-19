@@ -3,7 +3,7 @@ package app.readylytics.health.data.local.dao
 import androidx.room.Dao
 import androidx.room.MapColumn
 import androidx.room.Query
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.domain.model.HrRangeAggregate
 import kotlinx.coroutines.flow.Flow

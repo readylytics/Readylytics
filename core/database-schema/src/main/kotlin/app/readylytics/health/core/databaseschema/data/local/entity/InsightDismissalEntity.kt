@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local.entity
+package app.readylytics.health.core.databaseschema.data.local.entity
 
 import androidx.room.Entity
 

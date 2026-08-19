@@ -1,6 +1,6 @@
 package app.readylytics.health.data.mapper
 
-import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.domain.model.DomainBodyFatRecord
 
 object BodyFatDataMapper {

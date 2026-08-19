@@ -2,7 +2,7 @@ package app.readylytics.health.data.local
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

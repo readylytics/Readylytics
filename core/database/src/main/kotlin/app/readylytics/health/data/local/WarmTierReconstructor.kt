@@ -1,6 +1,6 @@
 package app.readylytics.health.data.local
 
-import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import kotlin.math.round
 
 /**

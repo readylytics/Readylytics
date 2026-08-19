@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import org.junit.Test
 import java.time.LocalDate

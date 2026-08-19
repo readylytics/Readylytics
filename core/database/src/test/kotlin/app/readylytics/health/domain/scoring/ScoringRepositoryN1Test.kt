@@ -12,8 +12,8 @@ import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
@@ -239,7 +239,7 @@ class ScoringRepositoryN1Test {
                     .toEpochMilli()
 
             val workout =
-                app.readylytics.health.data.local.entity.WorkoutRecordEntity(
+                app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity(
                     id = "w1",
                     startTime = dayMidnight + 3600000,
                     endTime = dayMidnight + 7200000,
@@ -257,7 +257,7 @@ class ScoringRepositoryN1Test {
 
             val samples =
                 (0 until 60).map { i ->
-                    app.readylytics.health.data.local.entity.HeartRateRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity(
                         sourceRecordRef = i.toLong() + 1,
                         timestampMs = workout.startTime + i * 60000L,
                         beatsPerMinute = 150,

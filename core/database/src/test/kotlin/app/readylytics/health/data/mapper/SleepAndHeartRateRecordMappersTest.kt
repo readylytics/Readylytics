@@ -1,7 +1,7 @@
 package app.readylytics.health.data.mapper
 
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

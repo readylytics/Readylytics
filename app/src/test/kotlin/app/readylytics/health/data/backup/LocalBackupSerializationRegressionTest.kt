@@ -3,9 +3,9 @@ package app.readylytics.health.data.backup
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
-import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.SettingsRepository

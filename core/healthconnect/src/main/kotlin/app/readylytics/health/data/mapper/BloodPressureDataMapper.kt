@@ -1,6 +1,6 @@
 package app.readylytics.health.data.mapper
 
-import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 
 object BloodPressureDataMapper {

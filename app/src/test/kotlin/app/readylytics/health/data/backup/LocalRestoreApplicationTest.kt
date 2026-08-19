@@ -417,7 +417,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "existing_weight",
                         timestampMs = 5000L,
                         weightKg = 72.0f,
@@ -444,7 +444,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "stale_weight",
                         timestampMs = 5000L,
                         weightKg = 72.0f,

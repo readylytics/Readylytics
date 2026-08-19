@@ -460,7 +460,7 @@ class LocalBackupManagerTest {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "w1",
                         timestampMs = 1000L,
                         weightKg = 70.5f,
@@ -469,7 +469,7 @@ class LocalBackupManagerTest {
             )
             db.bodyTemperatureRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity(
                         id = "bt1",
                         timestampMs = 1000L,
                         celsius = 36.8f,
@@ -511,7 +511,7 @@ class LocalBackupManagerTest {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "w1",
                         timestampMs = 1000L,
                         weightKg = 70.5f,
@@ -520,7 +520,7 @@ class LocalBackupManagerTest {
             )
             db.stepRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity(
                         id = "s1",
                         startTime = 1000L,
                         endTime = 2000L,

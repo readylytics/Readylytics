@@ -1,8 +1,8 @@
 package app.readylytics.health.data.mapper
 
-import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
-import app.readylytics.health.data.local.entity.BodyFatRecordEntity
-import app.readylytics.health.data.local.entity.WeightRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant

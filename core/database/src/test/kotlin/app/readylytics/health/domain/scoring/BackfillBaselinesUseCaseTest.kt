@@ -5,7 +5,7 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.MinuteBucketDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.mapper.DailySummaryMapper
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository

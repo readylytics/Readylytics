@@ -1,6 +1,6 @@
 package app.readylytics.health.data.repository
 
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.mapper.SleepSessionMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.getOrNull

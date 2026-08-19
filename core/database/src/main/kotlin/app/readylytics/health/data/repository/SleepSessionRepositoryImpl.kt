@@ -2,7 +2,7 @@ package app.readylytics.health.data.repository
 
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
-import app.readylytics.health.data.local.entity.SleepStageEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.SleepStageData
