@@ -6,7 +6,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnava
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.DailyMetricsMapper
@@ -31,6 +30,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.UnitConverter
+import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt

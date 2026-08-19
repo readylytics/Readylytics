@@ -1,7 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.GetWorkoutMetricsUseCase
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
@@ -10,6 +9,7 @@ import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext
 import app.readylytics.health.domain.util.LogLevel
+import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.After

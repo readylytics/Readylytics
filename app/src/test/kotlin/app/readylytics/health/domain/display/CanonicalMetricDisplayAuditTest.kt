@@ -13,7 +13,8 @@ class CanonicalMetricDisplayAuditTest {
                 "feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepScreen.kt",
                 "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsCardFactory.kt",
                 "feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutMetricTiles.kt",
-                "feature/dashboard/src/main/kotlin/app/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase.kt",
+                "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/" +
+                    "domain/dashboard/GetWorkoutMetricsUseCase.kt",
             ).map(::resolveAuditedFile)
 
         val missingFiles = auditedFiles.filterNot { it.exists() }
