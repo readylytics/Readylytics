@@ -1,10 +1,10 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.AboutPreferences
 import app.readylytics.health.domain.preferences.BackupSettings
 import app.readylytics.health.domain.preferences.DeviceSettings

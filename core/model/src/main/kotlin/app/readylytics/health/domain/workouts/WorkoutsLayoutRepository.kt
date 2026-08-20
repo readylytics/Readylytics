@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.workouts
 
-import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import kotlinx.coroutines.flow.Flow
 
 interface WorkoutsLayoutRepository {

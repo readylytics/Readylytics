@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.dashboard
+package app.readylytics.health.core.model.domain.dashboard
 
 object DashboardCardCatalog {
     fun spec(cardId: CardId): ModeSpec? = specs[cardId]

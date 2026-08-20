@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
@@ -8,7 +9,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScale
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.DailyMetricsMapper

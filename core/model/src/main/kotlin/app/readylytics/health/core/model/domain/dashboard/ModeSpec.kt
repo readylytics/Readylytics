@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.dashboard
+package app.readylytics.health.core.model.domain.dashboard
 
 /**
  * Visualization modes a layout item supports, plus its legacy default. Shared by the

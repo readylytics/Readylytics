@@ -2,9 +2,9 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.DashboardCardCatalog
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.SettingsDefaults
 import app.readylytics.health.domain.preferences.UserPreferencesReader

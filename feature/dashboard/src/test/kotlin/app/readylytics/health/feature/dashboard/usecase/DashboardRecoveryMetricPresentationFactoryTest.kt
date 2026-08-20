@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary

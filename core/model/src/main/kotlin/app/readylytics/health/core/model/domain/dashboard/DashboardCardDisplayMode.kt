@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.dashboard
+package app.readylytics.health.core.model.domain.dashboard
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer

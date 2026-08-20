@@ -1,10 +1,10 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.sleep.SleepLayoutRepository

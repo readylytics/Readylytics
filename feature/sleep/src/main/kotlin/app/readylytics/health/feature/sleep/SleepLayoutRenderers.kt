@@ -6,6 +6,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.ModeSpec
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.scoring.domain.scoring.toStatus
 import app.readylytics.health.core.scoring.domain.scoring.toTimeString
@@ -23,8 +25,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.ModeSpec
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.deepSleepStatus
 import app.readylytics.health.domain.model.efficiencyStatus

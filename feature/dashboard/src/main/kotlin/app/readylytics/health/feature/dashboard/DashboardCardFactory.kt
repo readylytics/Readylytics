@@ -19,6 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.scoring.domain.scoring.toStatus
 import app.readylytics.health.core.scoring.domain.scoring.toTimeString
@@ -34,10 +38,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisua
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardCatalog
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType

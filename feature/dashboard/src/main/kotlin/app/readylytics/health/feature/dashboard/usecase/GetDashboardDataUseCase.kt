@@ -1,10 +1,10 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.Result

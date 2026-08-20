@@ -2,14 +2,14 @@ package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardCatalog
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.rasStatus

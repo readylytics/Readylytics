@@ -1,9 +1,9 @@
 package app.readylytics.health.feature.vitals.overview
 
 import androidx.compose.runtime.Immutable
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration

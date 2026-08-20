@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.dashboard
+package app.readylytics.health.core.model.domain.dashboard
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

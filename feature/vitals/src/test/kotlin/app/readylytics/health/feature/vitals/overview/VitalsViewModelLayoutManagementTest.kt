@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.vitals.overview
 
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.vitals.VitalsChartId
 import io.mockk.coVerify
 import kotlinx.coroutines.ExperimentalCoroutinesApi

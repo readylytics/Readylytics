@@ -27,6 +27,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.components.CardConfigurationsList
@@ -38,8 +40,6 @@ import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.feature.vitals.R
@@ -81,6 +81,7 @@ fun VitalsRoute(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("LongMethod")
 @Composable
 fun VitalsScreen(
     uiState: VitalsUiState,
@@ -96,7 +97,7 @@ fun VitalsScreen(
     onCancelVitalsManagement: () -> Unit = {},
     onManageClick: (() -> Unit)? = null,
     onToggleVitalsCardVisibility: (CardId, Boolean) -> Unit = { _, _ -> },
-    onReorderVitalsCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
+    onReorderVitalsCards: (List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>) -> Unit = {},
     onVitalsCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
     onToggleChartVisibility: (VitalsChartId, Boolean) -> Unit = { _, _ -> },
     onReorderVitalsCharts: (List<VitalsChartConfiguration>) -> Unit = {},

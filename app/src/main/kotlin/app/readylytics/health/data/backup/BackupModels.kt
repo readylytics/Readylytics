@@ -1,7 +1,7 @@
 package app.readylytics.health.data.backup
 
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration

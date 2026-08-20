@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.layout
 
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration

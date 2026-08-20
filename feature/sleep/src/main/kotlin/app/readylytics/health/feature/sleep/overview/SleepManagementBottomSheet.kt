@@ -5,10 +5,10 @@ import androidx.compose.material3.SheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.ui.components.ManagementBottomSheet
 import app.readylytics.health.core.ui.components.ManagementItem
 import app.readylytics.health.core.ui.components.ManagementSection
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.sleep.SleepCardCatalog
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
@@ -20,7 +21,6 @@ import app.readylytics.health.core.ui.common.padBucketsToRange
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.preferences.scoringZone
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DailyMetrics

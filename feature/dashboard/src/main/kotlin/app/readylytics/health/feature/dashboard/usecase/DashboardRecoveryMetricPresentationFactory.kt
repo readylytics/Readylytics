@@ -1,12 +1,12 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.BaselineArrow
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper

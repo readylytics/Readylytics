@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
@@ -13,7 +14,6 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import java.time.LocalDate
 
 data class ThresholdSettingsState(

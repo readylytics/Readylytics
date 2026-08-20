@@ -1,7 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepLayoutRepository

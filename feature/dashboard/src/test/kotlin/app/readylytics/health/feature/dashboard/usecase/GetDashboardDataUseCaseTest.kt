@@ -1,10 +1,10 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.util.DomainLogSink
 import app.readylytics.health.core.model.domain.util.DomainLogger
 import app.readylytics.health.core.model.domain.util.LogContext
 import app.readylytics.health.core.model.domain.util.LogLevel
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result

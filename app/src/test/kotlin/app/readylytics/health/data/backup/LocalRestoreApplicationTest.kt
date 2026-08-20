@@ -1,6 +1,8 @@
 package app.readylytics.health.data.backup
 
 import android.net.Uri
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
@@ -8,8 +10,6 @@ import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreStage
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -54,7 +54,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.READINESS,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.READINESS,
                         isVisible = true,
                         position = 2,
                         requestedDisplayMode = null,
@@ -93,7 +93,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.HRV,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.HRV,
                         isVisible = true,
                         position = 3,
                         requestedDisplayMode = DashboardCardDisplayMode.BAR,
@@ -131,7 +131,7 @@ class LocalRestoreApplicationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.STEPS,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.STEPS,
                         isVisible = true,
                         position = 5,
                         requestedDisplayMode = null,

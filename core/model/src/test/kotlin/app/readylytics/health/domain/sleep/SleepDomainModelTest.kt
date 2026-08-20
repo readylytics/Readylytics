@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.sleep
 
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals

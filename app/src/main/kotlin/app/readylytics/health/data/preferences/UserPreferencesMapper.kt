@@ -1,9 +1,9 @@
 package app.readylytics.health.data.preferences
 
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import java.time.LocalDate
 import java.time.YearMonth
 

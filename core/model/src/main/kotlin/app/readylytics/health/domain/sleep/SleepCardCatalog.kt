@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.sleep
 
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.ModeSpec
-import app.readylytics.health.domain.dashboard.resolveRequestedMode
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.ModeSpec
+import app.readylytics.health.core.model.domain.dashboard.resolveRequestedMode
 
 /**
  * Sleep layout items that are mode-switchable, mirroring the dashboard [DashboardCardCatalog].

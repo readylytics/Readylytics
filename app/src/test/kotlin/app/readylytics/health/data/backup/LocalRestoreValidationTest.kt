@@ -2,10 +2,10 @@ package app.readylytics.health.data.backup
 
 import android.net.Uri
 import android.util.JsonReader
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.domain.backup.RestoreResult
-import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
@@ -375,7 +375,7 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.READINESS,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.READINESS,
                         isVisible = true,
                         position = 2,
                         requestedDisplayMode = null,
@@ -439,13 +439,13 @@ class LocalRestoreValidationTest : LocalRestoreManagerTestBase() {
             val expectedCards =
                 listOf(
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.RESTING_HR,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.RESTING_HR,
                         isVisible = true,
                         position = 0,
                         requestedDisplayMode = null,
                     ),
                     CardConfiguration(
-                        cardId = app.readylytics.health.domain.dashboard.CardId.HRV,
+                        cardId = app.readylytics.health.core.model.domain.dashboard.CardId.HRV,
                         isVisible = false,
                         position = 1,
                         requestedDisplayMode = null,

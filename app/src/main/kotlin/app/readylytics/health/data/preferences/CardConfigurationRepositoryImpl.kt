@@ -2,8 +2,8 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.di.ApplicationScope
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch

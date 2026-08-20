@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.sleep
 
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.NullableDashboardCardDisplayModeSerializer
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.NullableDashboardCardDisplayModeSerializer
 import app.readylytics.health.domain.layout.ReorderableItem
 import kotlinx.serialization.Serializable
 

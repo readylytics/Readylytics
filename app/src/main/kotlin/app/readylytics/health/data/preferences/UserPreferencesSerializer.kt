@@ -2,9 +2,9 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream

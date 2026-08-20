@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard
 
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.data.preferences.UserPreferences
@@ -9,7 +10,6 @@ import app.readylytics.health.domain.airecommendation.LoadStatePromptData
 import app.readylytics.health.domain.airecommendation.TodayPromptData
 import app.readylytics.health.domain.airecommendation.WorkoutPatternSummary
 import app.readylytics.health.domain.cache.DailyMetricCache
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType

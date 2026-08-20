@@ -3,6 +3,12 @@ package app.readylytics.health.feature.dashboard
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.DefaultDispatcher
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.core.model.domain.dashboard.CardManagementEvent
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
@@ -14,12 +20,6 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.airecommendation.DailyPromptFormatter
 import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.domain.cache.DailyMetricCache
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.dashboard.CardManagementEvent
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.insights.InsightContext
 import app.readylytics.health.domain.insights.InsightEngine

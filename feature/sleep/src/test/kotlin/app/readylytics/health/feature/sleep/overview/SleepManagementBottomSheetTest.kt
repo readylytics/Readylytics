@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.sleep.overview
 
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration

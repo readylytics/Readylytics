@@ -4,6 +4,10 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.BackupSchedule
@@ -14,10 +18,6 @@ import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
