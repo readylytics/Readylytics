@@ -298,9 +298,9 @@ tasks.withType<Detekt>().configureEach {
         xml.required.set(true)
         txt.required.set(false)
         sarif.required.set(true)
-        html.outputLocation.set(layout.buildDirectory.file("reports/detekt/${name}.html"))
-        xml.outputLocation.set(layout.buildDirectory.file("reports/detekt/${name}.xml"))
-        sarif.outputLocation.set(layout.buildDirectory.file("reports/detekt/${name}.sarif"))
+        html.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.html"))
+        xml.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.xml"))
+        sarif.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.sarif"))
     }
 }
 
