@@ -16,6 +16,13 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepChartId
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
@@ -23,13 +30,6 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepo
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.sleep.SleepChartConfiguration
-import app.readylytics.health.domain.sleep.SleepChartId
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardId
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

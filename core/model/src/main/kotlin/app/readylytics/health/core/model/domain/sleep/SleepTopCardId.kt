@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sleep
+package app.readylytics.health.core.model.domain.sleep
 
 import kotlinx.serialization.Serializable
 

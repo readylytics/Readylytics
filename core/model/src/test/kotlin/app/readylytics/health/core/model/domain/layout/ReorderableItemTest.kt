@@ -2,12 +2,12 @@ package app.readylytics.health.core.model.domain.layout
 
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
-import app.readylytics.health.domain.sleep.SleepChartConfiguration
-import app.readylytics.health.domain.sleep.SleepChartId
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepChartId
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import org.junit.Assert.assertEquals

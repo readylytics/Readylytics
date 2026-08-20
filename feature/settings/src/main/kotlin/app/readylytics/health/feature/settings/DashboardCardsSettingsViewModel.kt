@@ -8,10 +8,10 @@ import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMo
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.sleep.SleepCardCatalog
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
-import app.readylytics.health.domain.sleep.SleepCardCatalog
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

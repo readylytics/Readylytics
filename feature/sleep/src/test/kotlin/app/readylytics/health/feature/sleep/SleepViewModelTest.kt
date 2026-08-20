@@ -57,7 +57,8 @@ class SleepViewModelTest {
     private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
     private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
 
-    private val sleepLayoutRepository: app.readylytics.health.domain.sleep.SleepLayoutRepository = mockk(relaxed = true)
+    private val sleepLayoutRepository: app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository =
+        mockk(relaxed = true)
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))
     private val selectedSummaryFlow = MutableStateFlow<DailySummary?>(null)

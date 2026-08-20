@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.sleep.overview
 
 import androidx.annotation.StringRes
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.feature.sleep.R
 
 @get:StringRes

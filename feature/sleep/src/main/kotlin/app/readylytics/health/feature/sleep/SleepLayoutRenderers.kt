@@ -8,6 +8,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.dashboard.ModeSpec
+import app.readylytics.health.core.model.domain.sleep.SleepCardCatalog
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.scoring.domain.scoring.toStatus
 import app.readylytics.health.core.scoring.domain.scoring.toTimeString
@@ -31,11 +36,6 @@ import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
 import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.sleep.SleepCardCatalog
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.feature.sleep.R
 import app.readylytics.health.core.ui.R as CoreUiR
 

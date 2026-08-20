@@ -7,13 +7,13 @@ import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

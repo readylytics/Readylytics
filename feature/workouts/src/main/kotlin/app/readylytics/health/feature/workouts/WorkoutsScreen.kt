@@ -107,10 +107,18 @@ fun WorkoutsScreen(
         app.readylytics.health.core.model.domain.dashboard.CardId,
         app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode,
     ) -> Unit = { _, _ -> },
-    onToggleChartVisibility: (app.readylytics.health.domain.workouts.WorkoutChartId, Boolean) -> Unit = { _, _ -> },
-    onReorderCharts: (List<app.readylytics.health.domain.workouts.WorkoutChartConfiguration>) -> Unit = {},
-    onToggleHistoryVisibility: (app.readylytics.health.domain.workouts.WorkoutHistoryId, Boolean) -> Unit = { _, _ -> },
-    onReorderHistory: (List<app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration>) -> Unit = {},
+    onToggleChartVisibility: (
+        app.readylytics.health.core.model.domain.workouts.WorkoutChartId,
+        Boolean,
+    ) -> Unit = { _, _ -> },
+    onReorderCharts: (List<app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration>) -> Unit = {},
+    onToggleHistoryVisibility: (
+        app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId,
+        Boolean,
+    ) -> Unit = { _, _ -> },
+    onReorderHistory: (
+        List<app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration>,
+    ) -> Unit = {},
     onResetWorkoutsToDefaults: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()

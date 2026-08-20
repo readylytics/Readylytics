@@ -30,6 +30,7 @@ import app.readylytics.health.core.model.domain.backup.RestoreResult
 import app.readylytics.health.core.model.domain.backup.RestoreStage
 import app.readylytics.health.core.model.domain.backup.WrongBackupPasswordException
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.core.model.domain.util.logW
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
@@ -44,7 +45,6 @@ import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.preferences.WorkoutDetailLayoutMapper
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
