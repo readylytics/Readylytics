@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring
+package app.readylytics.health.core.database.domain.scoring
 
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
