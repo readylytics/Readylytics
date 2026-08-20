@@ -1,7 +1,10 @@
-package app.readylytics.health.domain.model
+package app.readylytics.health.core.database.domain.model
 
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.ReadinessResult
+import app.readylytics.health.domain.model.RecoveryFlag
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
