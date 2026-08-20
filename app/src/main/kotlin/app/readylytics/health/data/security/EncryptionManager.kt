@@ -25,7 +25,7 @@ class EncryptionManager
     constructor(
         @param:ApplicationContext private val context: Context,
         private val keyMetadataStore: KeyMetadataStore,
-    ) : app.readylytics.health.domain.security.EncryptionManager {
+    ) : app.readylytics.health.core.model.domain.security.EncryptionManager {
         init {
             AeadConfig.register()
         }

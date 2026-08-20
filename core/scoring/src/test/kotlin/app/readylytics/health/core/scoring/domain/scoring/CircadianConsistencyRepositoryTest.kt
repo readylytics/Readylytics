@@ -8,7 +8,7 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
-import app.readylytics.health.domain.security.EncryptionManager
+import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import io.mockk.coEvery

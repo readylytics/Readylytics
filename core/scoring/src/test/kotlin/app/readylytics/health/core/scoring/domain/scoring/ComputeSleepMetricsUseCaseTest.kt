@@ -17,7 +17,7 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierRes
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifiers
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
-import app.readylytics.health.domain.security.EncryptionManager
+import app.readylytics.health.core.model.domain.security.EncryptionManager
 import io.mockk.coEvery
 import io.mockk.mockk
 import java.time.Instant

@@ -8,7 +8,7 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.security.EncryptionManager
+import app.readylytics.health.core.model.domain.security.EncryptionManager
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

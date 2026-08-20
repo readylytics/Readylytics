@@ -26,7 +26,7 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierRes
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
-import app.readylytics.health.domain.security.EncryptionManager
+import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE

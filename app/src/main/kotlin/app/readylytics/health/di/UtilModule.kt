@@ -57,7 +57,7 @@ abstract class UtilModule {
     @Singleton
     abstract fun bindEncryptionManager(
         impl: app.readylytics.health.data.security.EncryptionManager,
-    ): app.readylytics.health.domain.security.EncryptionManager
+    ): app.readylytics.health.core.model.domain.security.EncryptionManager
 
     companion object {
         @Provides
