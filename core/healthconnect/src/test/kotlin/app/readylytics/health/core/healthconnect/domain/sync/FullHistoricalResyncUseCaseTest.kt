@@ -4,7 +4,7 @@ import app.readylytics.health.domain.sync.*
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

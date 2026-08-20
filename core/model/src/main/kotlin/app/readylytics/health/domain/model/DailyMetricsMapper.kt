@@ -2,7 +2,7 @@ package app.readylytics.health.domain.model
 
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.util.UnitConverter
+import app.readylytics.health.core.model.domain.util.UnitConverter
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.exp

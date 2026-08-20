@@ -1,14 +1,14 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.model.domain.util.DomainLogSink
+import app.readylytics.health.core.model.domain.util.DomainLogger
+import app.readylytics.health.core.model.domain.util.LogContext
+import app.readylytics.health.core.model.domain.util.LogLevel
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.util.DomainLogSink
-import app.readylytics.health.domain.util.DomainLogger
-import app.readylytics.health.domain.util.LogContext
-import app.readylytics.health.domain.util.LogLevel
 import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import io.mockk.every
 import io.mockk.mockk
@@ -22,7 +22,7 @@ import app.readylytics.health.core.ui.R as CoreUiR
 
 class GetDashboardDataUseCaseTest {
     private lateinit var getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase
-    private lateinit var resourceProvider: app.readylytics.health.domain.util.ResourceProvider
+    private lateinit var resourceProvider: app.readylytics.health.core.model.domain.util.ResourceProvider
     private lateinit var useCase: GetDashboardDataUseCase
 
     @Before

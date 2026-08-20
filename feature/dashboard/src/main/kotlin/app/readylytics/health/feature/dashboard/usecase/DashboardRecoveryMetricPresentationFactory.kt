@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
@@ -17,7 +18,6 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.rasStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.util.ResourceProvider
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR

@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.model
 
 import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.util.UnitConverter
+import app.readylytics.health.core.model.domain.util.UnitConverter
 import java.math.BigDecimal
 import kotlin.math.abs
 

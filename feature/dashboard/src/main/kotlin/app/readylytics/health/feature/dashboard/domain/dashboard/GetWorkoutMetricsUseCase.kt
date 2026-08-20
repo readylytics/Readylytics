@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.dashboard.domain.dashboard
 
+import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.strainRatioStatus
-import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.feature.dashboard.CardData
 import app.readylytics.health.feature.dashboard.DashboardAction
 import app.readylytics.health.feature.dashboard.R

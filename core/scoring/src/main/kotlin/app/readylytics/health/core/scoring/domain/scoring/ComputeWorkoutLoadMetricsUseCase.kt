@@ -9,8 +9,8 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.WorkoutData
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logW
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logW
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.max

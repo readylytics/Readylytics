@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.util
+package app.readylytics.health.core.model.domain.util
 
 enum class LogLevel { DEBUG, INFO, WARN, ERROR }
 

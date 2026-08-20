@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.util
+package app.readylytics.health.core.model.domain.util
 
 import org.junit.Test
 import kotlin.test.assertEquals

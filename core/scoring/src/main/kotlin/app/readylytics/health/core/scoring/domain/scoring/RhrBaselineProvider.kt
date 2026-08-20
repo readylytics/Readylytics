@@ -9,7 +9,7 @@ import app.readylytics.health.domain.model.PhysiologyConstants
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.util.toMidnightEpochMilli
+import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate

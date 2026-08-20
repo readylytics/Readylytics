@@ -4,8 +4,8 @@ import android.content.Context
 import android.util.Base64
 import androidx.core.content.edit
 import androidx.sqlite.db.SupportSQLiteOpenHelper
-import app.readylytics.health.domain.util.logE
-import app.readylytics.health.domain.util.logW
+import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

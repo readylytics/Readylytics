@@ -1,6 +1,6 @@
 package app.readylytics.health.data.preferences
 
-import app.readylytics.health.domain.util.toMidnightEpochMilli
+import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId

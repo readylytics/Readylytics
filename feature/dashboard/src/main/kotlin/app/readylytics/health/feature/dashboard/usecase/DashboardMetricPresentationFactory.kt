@@ -1,5 +1,7 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.model.domain.util.ResourceProvider
+import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
@@ -28,8 +30,6 @@ import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.service.HealthMetricsService
-import app.readylytics.health.domain.util.ResourceProvider
-import app.readylytics.health.domain.util.UnitConverter
 import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import java.time.LocalDate
 import javax.inject.Inject

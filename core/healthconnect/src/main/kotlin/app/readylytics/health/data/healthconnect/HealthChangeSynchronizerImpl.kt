@@ -34,8 +34,8 @@ import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOut
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
 import app.readylytics.health.domain.sync.*
 import app.readylytics.health.domain.sync.mappers.*
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import java.time.Instant

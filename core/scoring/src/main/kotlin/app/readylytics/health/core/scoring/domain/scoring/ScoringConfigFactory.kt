@@ -22,7 +22,7 @@ import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFl
 import app.readylytics.health.core.scoring.domain.scoring.components.RestorationWeights
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargetFactory
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargets
-import app.readylytics.health.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logD
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.LocalDate

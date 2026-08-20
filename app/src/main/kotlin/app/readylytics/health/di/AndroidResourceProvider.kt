@@ -1,7 +1,7 @@
 package app.readylytics.health.di
 
 import android.content.Context
-import app.readylytics.health.domain.util.ResourceProvider
+import app.readylytics.health.core.model.domain.util.ResourceProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 

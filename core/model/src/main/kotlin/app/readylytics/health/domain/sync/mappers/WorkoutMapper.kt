@@ -4,8 +4,8 @@ import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.sync.WorkoutInput
-import app.readylytics.health.domain.util.ElevationGainCalculator
-import app.readylytics.health.domain.util.RouteDistanceCalculator
+import app.readylytics.health.core.model.domain.util.ElevationGainCalculator
+import app.readylytics.health.core.model.domain.util.RouteDistanceCalculator
 
 object WorkoutMapper {
     private const val ELEVATION_GAIN_THRESHOLD_METERS = 3.0

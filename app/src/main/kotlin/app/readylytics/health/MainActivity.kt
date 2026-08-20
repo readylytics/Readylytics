@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import app.readylytics.health.benchmark.applyBenchmarkTestTagSemantics
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.crashreport.DiagnosticLogFileExport
 import app.readylytics.health.crashreport.buildLogFileShareIntent
 import app.readylytics.health.data.backup.LocalRestoreManager
@@ -30,7 +31,6 @@ import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.migration.DatabaseMigrationController
-import app.readylytics.health.domain.util.logE
 import app.readylytics.health.ui.crashreport.CrashReportPrompt
 import app.readylytics.health.ui.migration.DatabaseMigrationScreen
 import app.readylytics.health.ui.navigation.AppNavHost

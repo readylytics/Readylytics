@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
-import app.readylytics.health.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logD
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 

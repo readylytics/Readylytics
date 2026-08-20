@@ -28,8 +28,8 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.scoring.BuildConfig
 import app.readylytics.health.core.scoring.domain.util.stdev
 import java.time.Instant

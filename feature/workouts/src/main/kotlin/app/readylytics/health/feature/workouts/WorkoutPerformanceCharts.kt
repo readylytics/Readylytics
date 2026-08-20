@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -42,7 +43,6 @@ import app.readylytics.health.core.ui.components.InvisibleMarker
 import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
 import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.util.UnitConverter
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.Zoom

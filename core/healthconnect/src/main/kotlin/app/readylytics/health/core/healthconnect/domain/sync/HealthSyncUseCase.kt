@@ -4,8 +4,8 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.sync.*
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

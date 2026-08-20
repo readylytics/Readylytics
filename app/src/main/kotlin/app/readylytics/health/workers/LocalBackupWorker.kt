@@ -7,9 +7,9 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.backup.LocalBackupManager
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logE
 import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject

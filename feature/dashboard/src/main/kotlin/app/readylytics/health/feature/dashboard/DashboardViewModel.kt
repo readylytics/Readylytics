@@ -371,7 +371,7 @@ class DashboardViewModel
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            app.readylytics.health.domain.util
+                            app.readylytics.health.core.model.domain.util
                                 .logE(TAG, e) { "Failed to generate daily prompt" }
                             _errorMessage.value = UiText.StringRes(R.string.ai_recommendation_copy_failed)
                         }
@@ -392,7 +392,7 @@ class DashboardViewModel
                     // "Resync Health Connect data" button drives the full historical resync.
                     foregroundSyncController.triggerDailySync()
                 } catch (e: Exception) {
-                    app.readylytics.health.domain.util
+                    app.readylytics.health.core.model.domain.util
                         .logE(TAG, e) { "Refresh failed" }
                     _errorMessage.value = UiText.StringRes(CoreUiR.string.error_sync_failed)
                 } finally {

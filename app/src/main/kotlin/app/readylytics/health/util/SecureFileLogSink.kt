@@ -2,11 +2,11 @@ package app.readylytics.health.util
 
 import android.content.Context
 import android.util.Log
+import app.readylytics.health.core.model.domain.util.DomainLogSink
+import app.readylytics.health.core.model.domain.util.LogContext
+import app.readylytics.health.core.model.domain.util.LogLevel
 import app.readylytics.health.data.security.SecureFileStore
 import app.readylytics.health.data.security.TinkSecureFileStore
-import app.readylytics.health.domain.util.DomainLogSink
-import app.readylytics.health.domain.util.LogContext
-import app.readylytics.health.domain.util.LogLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

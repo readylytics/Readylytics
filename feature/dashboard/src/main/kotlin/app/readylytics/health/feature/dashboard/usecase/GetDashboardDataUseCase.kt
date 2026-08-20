@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
@@ -9,7 +10,6 @@ import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.util.logE
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale

@@ -6,7 +6,7 @@ import app.readylytics.health.core.scoring.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.util.toMidnightEpochMilli
+import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject

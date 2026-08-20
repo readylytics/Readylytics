@@ -3,6 +3,7 @@ package app.readylytics.health.feature.vitals.bodyfat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
@@ -25,7 +26,6 @@ import app.readylytics.health.domain.preferences.Gender
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.WeightRepository
-import app.readylytics.health.domain.util.UnitConverter
 import app.readylytics.health.feature.vitals.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher

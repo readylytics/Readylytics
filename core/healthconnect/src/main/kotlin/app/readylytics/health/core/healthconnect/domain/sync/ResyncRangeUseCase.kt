@@ -11,8 +11,8 @@ import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedEx
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.sync.*
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
-import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.logI
+import app.readylytics.health.core.model.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive

@@ -16,7 +16,7 @@ import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.model.PermittedRecommendation
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
-import app.readylytics.health.domain.util.toMidnightEpochMilli
+import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first

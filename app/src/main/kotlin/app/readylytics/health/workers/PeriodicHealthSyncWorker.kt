@@ -10,9 +10,9 @@ import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncContr
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.util.logE
 import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject

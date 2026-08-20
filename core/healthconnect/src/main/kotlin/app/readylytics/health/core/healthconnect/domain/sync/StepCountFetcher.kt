@@ -2,7 +2,7 @@ package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.sync.mappers.StepsMapper
-import app.readylytics.health.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logD
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

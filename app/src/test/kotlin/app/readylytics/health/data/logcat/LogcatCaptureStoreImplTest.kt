@@ -60,12 +60,12 @@ class LogcatCaptureStoreImplTest {
                     coroutineContext = Dispatchers.Unconfined,
                 )
             sink.log(
-                level = app.readylytics.health.domain.util.LogLevel.INFO,
+                level = app.readylytics.health.core.model.domain.util.LogLevel.INFO,
                 tag = "TestTag",
                 message = "Direct Local Log Message",
                 throwable = null,
                 context =
-                    app.readylytics.health.domain.util
+                    app.readylytics.health.core.model.domain.util
                         .LogContext(),
             )
 

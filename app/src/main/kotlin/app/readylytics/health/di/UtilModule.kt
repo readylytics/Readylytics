@@ -1,6 +1,7 @@
 package app.readylytics.health.di
 
 import android.content.Context
+import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.data.backup.LocalBackupServiceImpl
 import app.readylytics.health.data.backup.LocalRestoreServiceImpl
 import app.readylytics.health.data.crashreport.CrashReportStoreImpl
@@ -9,7 +10,6 @@ import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.domain.crashreport.CrashReportStore
 import app.readylytics.health.domain.logcat.LogcatCaptureStore
-import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.Binds
 import dagger.Module
@@ -51,7 +51,7 @@ abstract class UtilModule {
     @Singleton
     abstract fun bindTimezoneProvider(
         impl: app.readylytics.health.data.util.TimezoneProviderImpl,
-    ): app.readylytics.health.domain.util.TimezoneProvider
+    ): app.readylytics.health.core.model.domain.util.TimezoneProvider
 
     @Binds
     @Singleton

@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.RasProvider
 
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.util.toMidnightEpochMilli
+import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton

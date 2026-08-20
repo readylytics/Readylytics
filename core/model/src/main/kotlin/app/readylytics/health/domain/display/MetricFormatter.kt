@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.display
 
 import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.util.UnitConverter
+import app.readylytics.health.core.model.domain.util.UnitConverter
 import java.util.Locale
 import kotlin.math.roundToInt
 

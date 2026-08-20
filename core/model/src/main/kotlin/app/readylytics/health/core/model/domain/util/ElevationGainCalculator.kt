@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.util
+package app.readylytics.health.core.model.domain.util
 
 object ElevationGainCalculator {
     const val DEFAULT_THRESHOLD_METERS = 3.0

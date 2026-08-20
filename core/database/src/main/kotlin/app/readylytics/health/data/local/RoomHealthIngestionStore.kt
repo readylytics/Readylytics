@@ -42,7 +42,7 @@ import app.readylytics.health.domain.sync.SleepStageInput
 import app.readylytics.health.domain.sync.StepRecordInput
 import app.readylytics.health.domain.sync.WeightInput
 import app.readylytics.health.domain.sync.WorkoutInput
-import app.readylytics.health.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logD
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton

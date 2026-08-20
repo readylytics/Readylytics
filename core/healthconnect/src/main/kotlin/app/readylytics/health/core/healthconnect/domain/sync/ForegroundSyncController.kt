@@ -52,18 +52,18 @@ class ForegroundSyncController
         override val recalcProgress: StateFlow<RecalcProgress?> = _recalcProgress.asStateFlow()
 
         override suspend fun evaluateAndSync() {
-            app.readylytics.health.domain.util
+            app.readylytics.health.core.model.domain.util
                 .logD("ForegroundSyncController") { "evaluateAndSync called" }
             val prefs = settingsRepo.userPreferences.first()
             when (prefs.syncPreference) {
                 SyncPreference.NEVER -> {
-                    app.readylytics.health.domain.util.logI(
+                    app.readylytics.health.core.model.domain.util.logI(
                         "ForegroundSyncController",
                     ) { "Sync disabled by user preference" }
                     return
                 }
                 SyncPreference.ALWAYS -> {
-                    app.readylytics.health.domain.util.logD(
+                    app.readylytics.health.core.model.domain.util.logD(
                         "ForegroundSyncController",
                     ) { "Sync type: ALWAYS" }
                     runCappedCatchUpSync(prefs)
@@ -71,13 +71,13 @@ class ForegroundSyncController
                 SyncPreference.BY_TIME -> {
                     val intervalMs = prefs.syncIntervalHours * 3_600_000L
                     val timeSinceLast = System.currentTimeMillis() - prefs.lastSyncTimestamp
-                    app.readylytics.health.domain.util.logD("ForegroundSyncController") {
+                    app.readylytics.health.core.model.domain.util.logD("ForegroundSyncController") {
                         "Sync type: BY_TIME. Time since last: ${timeSinceLast / 1000}s, Interval: ${intervalMs / 1000}s"
                     }
                     if (timeSinceLast > intervalMs) {
                         runCappedCatchUpSync(prefs)
                     } else {
-                        app.readylytics.health.domain.util.logD(
+                        app.readylytics.health.core.model.domain.util.logD(
                             "ForegroundSyncController",
                         ) { "Sync skipped: interval not met" }
                     }
@@ -105,7 +105,7 @@ class ForegroundSyncController
             val windowDays = uncappedWindowDays.coerceAtMost(MAX_INLINE_RECOMPUTE_DAYS)
             executeSync(isFirstSync = false, windowDays = windowDays)
             if (uncappedWindowDays > MAX_INLINE_RECOMPUTE_DAYS) {
-                app.readylytics.health.domain.util.logI("ForegroundSyncController") {
+                app.readylytics.health.core.model.domain.util.logI("ForegroundSyncController") {
                     "Catch-up window ($uncappedWindowDays days) exceeds the inline cap " +
                         "($MAX_INLINE_RECOMPUTE_DAYS); ran the capped window and enqueued the resync worker"
                 }
@@ -114,7 +114,7 @@ class ForegroundSyncController
         }
 
         override suspend fun triggerImmediateSync() {
-            app.readylytics.health.domain.util.logD(
+            app.readylytics.health.core.model.domain.util.logD(
                 "ForegroundSyncController",
             ) { "triggerImmediateSync called" }
             executeSync(isFirstSync = true)
@@ -126,7 +126,7 @@ class ForegroundSyncController
          * which runs durably in WorkManager.
          */
         override suspend fun triggerDailySync() {
-            app.readylytics.health.domain.util.logD(
+            app.readylytics.health.core.model.domain.util.logD(
                 "ForegroundSyncController",
             ) { "triggerDailySync called (current day only)" }
             executeSync(isFirstSync = false, windowDays = 1)
@@ -170,7 +170,7 @@ class ForegroundSyncController
             windowDays: Int? = null,
         ) {
             if (!syncMutex.tryLock()) {
-                app.readylytics.health.domain.util.logD("ForegroundSyncController") {
+                app.readylytics.health.core.model.domain.util.logD("ForegroundSyncController") {
                     "Sync already in progress, skipping redundant request"
                 }
                 return
@@ -182,7 +182,7 @@ class ForegroundSyncController
                 _isSyncing.value = true
                 val result =
                     if (isFirstSync) {
-                        app.readylytics.health.domain.util.logD(
+                        app.readylytics.health.core.model.domain.util.logD(
                             "ForegroundSyncController",
                         ) { "Running catch-up sync..." }
                         syncUseCase.catchUpSync(onProgress)
@@ -197,7 +197,7 @@ class ForegroundSyncController
                 if (result is app.readylytics.health.domain.model.Result.Failure &&
                     result.code == "REQUIRES_HISTORICAL_RESYNC"
                 ) {
-                    app.readylytics.health.domain.util.logI("ForegroundSyncController") {
+                    app.readylytics.health.core.model.domain.util.logI("ForegroundSyncController") {
                         "Sync requires historical resync, enqueuing worker"
                     }
                     workerScheduler.get().scheduleResyncWorker()
@@ -208,19 +208,19 @@ class ForegroundSyncController
                     // is deferred, not escalated. No historical-worker handoff (the two-flow
                     // contract), no completion snackbar, no crash -- the next foreground/periodic
                     // sync retries the same idempotent range.
-                    app.readylytics.health.domain.util.logI("ForegroundSyncController") {
+                    app.readylytics.health.core.model.domain.util.logI("ForegroundSyncController") {
                         "Daily sync deferred (data too dense); will retry on next sync"
                     }
                 } else {
                     result.getOrThrow()
-                    app.readylytics.health.domain.util
+                    app.readylytics.health.core.model.domain.util
                         .logI("ForegroundSyncController") { "Sync success" }
                     _syncCompletedEvent.emit(Unit)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                app.readylytics.health.domain.util
+                app.readylytics.health.core.model.domain.util
                     .logE("ForegroundSyncController", e) { "Sync failed" }
                 throw e
             } finally {

@@ -2,13 +2,13 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.domain.circadian.CircadianThresholdValue
 import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import app.readylytics.health.feature.settings.R

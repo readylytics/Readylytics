@@ -5,6 +5,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.DefaultDispatcher
+import app.readylytics.health.core.model.domain.util.ElevationGainCalculator
+import app.readylytics.health.core.model.domain.util.PaceSpeedCalculator
+import app.readylytics.health.core.model.domain.util.RouteDistanceCalculator
+import app.readylytics.health.core.model.domain.util.RouteProjector
+import app.readylytics.health.core.model.domain.util.RouteSimplifier
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
@@ -22,11 +27,6 @@ import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.sync.SyncWorkoutRouteUseCase
-import app.readylytics.health.domain.util.ElevationGainCalculator
-import app.readylytics.health.domain.util.PaceSpeedCalculator
-import app.readylytics.health.domain.util.RouteDistanceCalculator
-import app.readylytics.health.domain.util.RouteProjector
-import app.readylytics.health.domain.util.RouteSimplifier
 import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId

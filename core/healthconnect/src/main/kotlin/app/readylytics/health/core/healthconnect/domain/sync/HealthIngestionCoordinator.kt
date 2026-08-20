@@ -9,7 +9,7 @@ import app.readylytics.health.domain.sync.mappers.SleepDataMapper
 import app.readylytics.health.domain.sync.mappers.WorkoutMapper
 import app.readylytics.health.domain.sync.mappers.HeartRateMapper
 import app.readylytics.health.domain.sync.mappers.HrvMapper
-import app.readylytics.health.domain.util.logD
+import app.readylytics.health.core.model.domain.util.logD
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton

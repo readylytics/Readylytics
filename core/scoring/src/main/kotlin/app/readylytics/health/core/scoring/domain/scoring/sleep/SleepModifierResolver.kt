@@ -7,7 +7,7 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.util.logE
+import app.readylytics.health.core.model.domain.util.logE
 import kotlinx.coroutines.CancellationException
 import java.time.LocalDate
 import javax.inject.Inject
