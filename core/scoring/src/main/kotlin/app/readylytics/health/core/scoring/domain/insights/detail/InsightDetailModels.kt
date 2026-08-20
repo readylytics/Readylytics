@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.insights.detail
+package app.readylytics.health.core.scoring.domain.insights.detail
 
 import app.readylytics.health.domain.model.InsightType
 
