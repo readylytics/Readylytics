@@ -1,4 +1,4 @@
-package app.readylytics.health.data.audit
+package app.readylytics.health.core.database.data.audit
 
 import app.readylytics.health.core.database.data.local.dao.AuditEventDao
 import app.readylytics.health.core.database.data.local.entity.AuditEventEntity
