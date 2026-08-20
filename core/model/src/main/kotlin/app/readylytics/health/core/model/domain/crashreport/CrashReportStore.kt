@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.crashreport
+package app.readylytics.health.core.model.domain.crashreport
 
 import java.io.File
 

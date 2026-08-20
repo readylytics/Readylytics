@@ -1,6 +1,6 @@
 package app.readylytics.health.ui.crashreport
 
-import app.readylytics.health.domain.crashreport.CrashReportStore
+import app.readylytics.health.core.model.domain.crashreport.CrashReportStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
