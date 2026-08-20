@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.common
+package app.readylytics.health.core.model.domain.common
 
 object CircadianThresholdValidator {
     const val MIN_THRESHOLD = 0

@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.common
+package app.readylytics.health.core.model.domain.common
 
 import org.junit.Test
 import kotlin.test.assertTrue
