@@ -40,7 +40,12 @@ class FeatureModuleArchitectureTest {
             listOf(
                 "app.readylytics.health.R",
                 "app.readylytics.health.data.",
+                "app.readylytics.health.core.database.data.",
+                "app.readylytics.health.core.healthconnect.data.",
+                "app.readylytics.health.core.model.data.",
+                "app.readylytics.health.core.databaseschema.data.",
                 "app.readylytics.health.workers.",
+                "app.readylytics.health.core.model.workers.",
                 "androidx.room.",
                 "androidx.health.connect.",
                 "androidx.work.",
@@ -50,9 +55,10 @@ class FeatureModuleArchitectureTest {
                 source.readLines().forEachIndexed { index, line ->
                     if (line.startsWith("import ")) {
                         forbidden.forEach { prefix ->
-                            if (prefix == "app.readylytics.health.data." &&
-                                line.contains("app.readylytics.health.data.preferences.")
-                            ) {
+                            val isAllowedPreferences =
+                                prefix.endsWith(".data.") &&
+                                    line.contains(prefix.replace(".data.", ".data.preferences."))
+                            if (isAllowedPreferences) {
                                 // allowed preferences package imports
                             } else if (
                                 prefix == "androidx.health.connect." &&

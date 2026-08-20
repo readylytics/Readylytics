@@ -6,6 +6,42 @@ import com.lemonappdev.konsist.api.verify.assertTrue
 import org.junit.Test
 
 class CleanArchTest {
+    private val domainPackageGlobs =
+        listOf(
+            "app.readylytics.health.domain..",
+            "app.readylytics.health.core.model.domain..",
+            "app.readylytics.health.core.scoring.domain..",
+            "app.readylytics.health.core.database.domain..",
+            "app.readylytics.health.core.healthconnect.domain..",
+            "app.readylytics.health.feature.dashboard.domain..",
+        )
+
+    private val dataLayerPackagePrefixes =
+        listOf(
+            "app.readylytics.health.data.",
+            "app.readylytics.health.core.database.data.",
+            "app.readylytics.health.core.healthconnect.data.",
+            "app.readylytics.health.core.model.data.",
+            "app.readylytics.health.core.databaseschema.data.",
+        )
+
+    private val dataPackageGlobs =
+        dataLayerPackagePrefixes.map { it.dropLast(1) + ".." }
+
+    private val allowedDataImports =
+        setOf(
+            "app.readylytics.health.core.model.data.preferences.UserPreferences",
+            "app.readylytics.health.core.model.data.preferences.Gender",
+            "app.readylytics.health.core.model.data.preferences.AppTheme",
+            "app.readylytics.health.core.model.data.preferences.SettingsDefaults",
+            "app.readylytics.health.core.model.data.preferences.PhysiologyProfile",
+            "app.readylytics.health.core.model.data.preferences.UnitSystem",
+            "app.readylytics.health.core.model.data.preferences.SyncPreference",
+            "app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval",
+            "app.readylytics.health.core.model.data.preferences.FallbackThemeColor",
+            "app.readylytics.health.core.model.data.preferences.BackupSchedule",
+        )
+
     @Test
     fun `ui package does not import room daos`() {
         Konsist
@@ -16,9 +52,7 @@ class CleanArchTest {
                 val hasDaoImport =
                     file.imports.any { import ->
                         // Matched as a contained segment (not startsWith) so this stays valid
-                        // across module renames: it catches both the legacy
-                        // `app.readylytics.health.data.local.dao` package and the current
-                        // `app.readylytics.health.core.databaseschema.data.local.dao` package.
+                        // across module renames: catches both legacy and renamed DAO packages.
                         import.name.contains(".data.local.dao.")
                     }
                 !hasDaoImport
@@ -39,7 +73,7 @@ class CleanArchTest {
             Konsist
                 .scopeFromProject()
                 .files
-                .filter { it.hasPackage("app.readylytics.health.domain..") }
+                .filter { file -> domainPackageGlobs.any { file.hasPackage(it) } }
                 .flatMap { file ->
                     file.imports
                         .filter { import ->
@@ -55,36 +89,13 @@ class CleanArchTest {
 
     @Test
     fun `domain package does not import data package`() {
-        // Known roots of the shared data layer. Listed explicitly (rather than matching a bare
-        // ".data." segment) because "data" is also used as an unrelated sub-package name elsewhere
-        // (e.g. feature.settings.data), so a blind substring match would false-positive there.
-        val dataLayerPackagePrefixes =
-            listOf(
-                "app.readylytics.health.data.",
-                "app.readylytics.health.core.databaseschema.data.",
-            )
-        // Value types that are domain-shaped but live under data.preferences for proto-schema reasons.
-        // Only these specific types are allowed; data-layer impls (mappers, serializers, repos) are not.
-        val allowedDataImports =
-            setOf(
-                "app.readylytics.health.core.model.data.preferences.UserPreferences",
-                "app.readylytics.health.core.model.data.preferences.Gender",
-                "app.readylytics.health.core.model.data.preferences.AppTheme",
-                "app.readylytics.health.core.model.data.preferences.SettingsDefaults",
-                "app.readylytics.health.core.model.data.preferences.PhysiologyProfile",
-                "app.readylytics.health.core.model.data.preferences.UnitSystem",
-                "app.readylytics.health.core.model.data.preferences.SyncPreference",
-                "app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval",
-                "app.readylytics.health.core.model.data.preferences.FallbackThemeColor",
-                "app.readylytics.health.core.model.data.preferences.BackupSchedule",
-            )
         val violations =
             Konsist
                 .scopeFromProject()
                 .files
-                .filter {
-                    it.hasPackage("app.readylytics.health.domain..") &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                .filter { file ->
+                    domainPackageGlobs.any { file.hasPackage(it) } &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
@@ -101,39 +112,28 @@ class CleanArchTest {
 
     @Test
     fun `domain package does not reference data package via fully-qualified names`() {
-        val allowedDataReferences =
-            setOf(
-                "app.readylytics.health.core.model.data.preferences.UserPreferences",
-                "app.readylytics.health.core.model.data.preferences.Gender",
-                "app.readylytics.health.core.model.data.preferences.AppTheme",
-                "app.readylytics.health.core.model.data.preferences.SettingsDefaults",
-                "app.readylytics.health.core.model.data.preferences.PhysiologyProfile",
-                "app.readylytics.health.core.model.data.preferences.UnitSystem",
-                "app.readylytics.health.core.model.data.preferences.SyncPreference",
-                "app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval",
-                "app.readylytics.health.core.model.data.preferences.FallbackThemeColor",
-                "app.readylytics.health.core.model.data.preferences.BackupSchedule",
-            )
+        val dataRootAlternation =
+            dataLayerPackagePrefixes
+                .map { it.removePrefix("app.readylytics.health.").removeSuffix(".").replace(".", "\\.") }
+                .sortedByDescending { it.length }
+                .joinToString("|")
+        val fqnRegex =
+            Regex("""app\.readylytics\.health\.(?:$dataRootAlternation)\.[a-zA-Z0-9.]+""")
 
         val violations =
             Konsist
                 .scopeFromProject()
                 .files
-                .filter {
-                    it.hasPackage("app.readylytics.health.domain..") &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                .filter { file ->
+                    domainPackageGlobs.any { file.hasPackage(it) } &&
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\"))
                 }.flatMap { file ->
                     val text = file.text
-                    // Alternation covers both the legacy `...health.data.` root and the
-                    // `...health.core.databaseschema.data.` root the Room entities/DAOs now live
-                    // under, so this stays valid across module renames.
-                    val matches =
-                        Regex("""app\.readylytics\.health\.(?:data|core\.databaseschema\.data)\.[a-zA-Z0-9.]+""")
-                            .findAll(text)
+                    val matches = fqnRegex.findAll(text)
                     matches
                         .map { it.value }
                         .filter { ref ->
-                            allowedDataReferences.none { allowed ->
+                            allowedDataImports.none { allowed ->
                                 ref == allowed || ref.startsWith("$allowed.")
                             }
                         }.map { violation -> "${file.name}: referenced FQN $violation" }
@@ -152,18 +152,13 @@ class CleanArchTest {
             Konsist
                 .scopeFromProject()
                 .files
-                .filter {
+                .filter { file ->
                     (
-                        it.hasPackage(
-                            "app.readylytics.health.domain..",
-                        ) ||
-                            it.hasPackage("app.readylytics.health.data..") ||
-                            it.hasPackage("app.readylytics.health.core.databaseschema.data..")
+                        domainPackageGlobs.any { file.hasPackage(it) } ||
+                            dataPackageGlobs.any { file.hasPackage(it) }
                     ) &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\")) &&
-                        !it.path.contains("/feature/") &&
-                        !it.path.contains("\\feature\\") &&
-                        !it.hasPackage("app.readylytics.health.feature..")
+                        (file.path.contains("/src/main/") || file.path.contains("\\src\\main\\")) &&
+                        !file.hasPackage("app.readylytics.health.feature..")
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
@@ -172,9 +167,9 @@ class CleanArchTest {
                 }
 
         org.junit.Assert.assertTrue(
-            "Domain and Data layers must not import feature modules. Forbidden imports:\n${violations.joinToString(
-                "\n",
-            )}",
+            "Domain and Data layers must not import feature modules. Forbidden imports:\n${
+                violations.joinToString("\n")
+            }",
             violations.isEmpty(),
         )
     }
@@ -220,9 +215,8 @@ class CleanArchTest {
                     val isSource = (path.contains("/src/main/") || path.contains("\\src\\main\\"))
                     val isDi = (path.contains("/di/") || path.contains("\\di\\"))
                     val isDomainOrDataOrVm =
-                        file.hasPackage("app.readylytics.health.domain..") ||
-                            file.hasPackage("app.readylytics.health.data..") ||
-                            file.hasPackage("app.readylytics.health.core.databaseschema.data..") ||
+                        domainPackageGlobs.any { file.hasPackage(it) } ||
+                            dataPackageGlobs.any { file.hasPackage(it) } ||
                             (file.hasPackage("app.readylytics.health.feature..") && file.name.endsWith("ViewModel.kt"))
                     isSource && !isDi && isDomainOrDataOrVm
                 }.flatMap { file ->
@@ -256,13 +250,8 @@ class CleanArchTest {
 
     @Test
     fun `suspend functions do not swallow CancellationException`() {
-        // `catch (e: Throwable)` swallows cancellation exactly as completely as
-        // `catch (e: Exception)`, so both are in scope.
         val broadCatch = Regex("""catch \(\w+: (?:Exception|Throwable)\)""")
         val exceptionCatch = Regex("""catch \(\w+: Exception\)""")
-        // A `catch (t: Throwable) { … throw t }` re-raises whatever it caught, cancellation
-        // included, so it is compliant without naming CancellationException. The backreference
-        // requires the *same* variable be rethrown — `throw somethingElse` does not count.
         val rethrowsCaughtThrowable = Regex("""catch \((\w+): Throwable\)[\s\S]*?throw \1\b""")
 
         val violations =
@@ -279,12 +268,8 @@ class CleanArchTest {
                 .filter { function ->
                     val text = function.text
                     when {
-                        // Explicit cancellation handling anywhere in the function.
                         text.contains("CancellationException") -> false
-                        // A bare `catch (… : Exception)` can never be excused by a rethrow
-                        // elsewhere; it must name CancellationException.
                         exceptionCatch.containsMatchIn(text) -> true
-                        // Throwable-only: compliant iff every such catch rethrows what it caught.
                         else -> !rethrowsCaughtThrowable.containsMatchIn(text)
                     }
                 }.map { "${it.containingFile.name}:${it.name}() swallows CancellationException" }
