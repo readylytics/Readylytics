@@ -32,7 +32,7 @@ class ForegroundSyncController
     constructor(
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
-        private val workerScheduler: dagger.Lazy<app.readylytics.health.workers.WorkerScheduler>,
+        private val workerScheduler: dagger.Lazy<app.readylytics.health.core.model.workers.WorkerScheduler>,
         private val clock: Clock,
     ) : ForegroundSyncGateway {
         private val syncMutex = Mutex()

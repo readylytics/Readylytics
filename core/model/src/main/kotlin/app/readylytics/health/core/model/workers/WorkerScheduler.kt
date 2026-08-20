@@ -1,4 +1,4 @@
-package app.readylytics.health.workers
+package app.readylytics.health.core.model.workers
 
 import app.readylytics.health.data.preferences.BackupSchedule
 

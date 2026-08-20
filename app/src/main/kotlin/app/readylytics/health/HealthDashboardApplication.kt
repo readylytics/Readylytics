@@ -14,6 +14,7 @@ import app.readylytics.health.benchmark.BenchmarkDataSeeder
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.core.model.di.ApplicationScope
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
@@ -27,7 +28,6 @@ import app.readylytics.health.domain.util.LogLevel
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.util.SecureFileLogSink
-import app.readylytics.health.workers.WorkerScheduler
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CancellationException

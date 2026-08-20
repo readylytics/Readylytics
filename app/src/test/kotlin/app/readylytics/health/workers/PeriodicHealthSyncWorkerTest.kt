@@ -6,6 +6,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException

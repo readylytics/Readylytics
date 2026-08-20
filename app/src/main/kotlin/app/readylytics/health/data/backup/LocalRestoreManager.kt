@@ -21,6 +21,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecord
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
@@ -43,7 +44,6 @@ import app.readylytics.health.domain.util.logW
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
-import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher

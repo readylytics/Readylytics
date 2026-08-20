@@ -2,8 +2,8 @@ package app.readylytics.health.domain.sync
 
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.workers.HealthResyncWorker
-import app.readylytics.health.workers.WorkerScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

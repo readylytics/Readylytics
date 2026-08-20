@@ -3,8 +3,8 @@ package app.readylytics.health.domain.migration
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import app.readylytics.health.core.model.di.ApplicationScope
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.workers.DatabaseMigrationWorker
-import app.readylytics.health.workers.WorkerScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

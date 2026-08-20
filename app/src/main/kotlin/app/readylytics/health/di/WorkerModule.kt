@@ -24,7 +24,7 @@ object WorkerModule {
     @Singleton
     fun provideWorkerScheduler(
         impl: app.readylytics.health.workers.WorkerSchedulerImpl,
-    ): app.readylytics.health.workers.WorkerScheduler = impl
+    ): app.readylytics.health.core.model.workers.WorkerScheduler = impl
 
     @Provides
     @Singleton

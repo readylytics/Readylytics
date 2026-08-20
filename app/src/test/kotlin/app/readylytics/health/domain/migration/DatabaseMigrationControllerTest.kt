@@ -3,11 +3,11 @@ package app.readylytics.health.domain.migration
 import androidx.work.Data
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.domain.migration.DatabaseMigrationProgress
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.migration.V7MigrationPhase
 import app.readylytics.health.workers.DatabaseMigrationWorker
-import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

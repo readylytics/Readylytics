@@ -24,7 +24,7 @@ import kotlin.test.assertFailsWith
 class ForegroundSyncControllerTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val syncUseCase = mockk<HealthSyncUseCase>()
-    private val workerScheduler = mockk<app.readylytics.health.workers.WorkerScheduler>(relaxed = true)
+    private val workerScheduler = mockk<app.readylytics.health.core.model.workers.WorkerScheduler>(relaxed = true)
 
     // Fixed rather than Clock.systemDefaultZone() so every "today" computed below is deterministic
     // (DI-002): production resolves "today" via clock.withZone(zoneId), so this must be the same
