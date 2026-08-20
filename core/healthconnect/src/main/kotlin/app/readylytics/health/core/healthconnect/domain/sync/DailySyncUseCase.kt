@@ -194,7 +194,7 @@ class DailySyncUseCase
                         startMs = ingestStart.toEpochMilli(),
                         endMs = windowEnd.toEpochMilli() - 1,
                         zoneThresholds =
-                            app.readylytics.health.domain.heartrate.ZoneThresholds.zoneThresholds(
+                            app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.zoneThresholds(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,

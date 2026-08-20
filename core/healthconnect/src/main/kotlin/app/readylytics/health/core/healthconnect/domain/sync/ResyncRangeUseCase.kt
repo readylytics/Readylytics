@@ -365,7 +365,7 @@ class ResyncRangeUseCase
                         onProgress?.invoke(ResyncPhase.RECONCILE, 0, 0)
                         val reconcileStart = System.currentTimeMillis()
                         val zoneThresholds =
-                            app.readylytics.health.domain.heartrate.ZoneThresholds.zoneThresholds(
+                            app.readylytics.health.core.model.domain.heartrate.ZoneThresholds.zoneThresholds(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,

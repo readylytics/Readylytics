@@ -1,6 +1,6 @@
 package app.readylytics.health.data.healthconnect
 
-import app.readylytics.health.domain.heartrate.ZoneThresholds
+import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainRouteLocation

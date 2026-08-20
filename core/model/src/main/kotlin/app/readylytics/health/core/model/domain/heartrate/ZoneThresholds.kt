@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.heartrate
+package app.readylytics.health.core.model.domain.heartrate
 
 import app.readylytics.health.domain.model.DomainHeartRateSample
 

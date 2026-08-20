@@ -13,7 +13,7 @@ import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
-import app.readylytics.health.domain.heartrate.ZoneThresholds
+import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
