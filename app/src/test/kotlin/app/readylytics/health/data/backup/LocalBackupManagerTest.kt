@@ -8,14 +8,14 @@ import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.sleep.SleepChartConfiguration

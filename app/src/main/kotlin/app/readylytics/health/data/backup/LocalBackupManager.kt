@@ -18,12 +18,12 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecord
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.sleep.SleepLayoutRepository

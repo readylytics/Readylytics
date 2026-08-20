@@ -3,7 +3,7 @@ package app.readylytics.health.core.database.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import app.readylytics.health.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditEvent
 import java.time.Instant
 
 @Entity(

@@ -24,6 +24,8 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logW
 import app.readylytics.health.core.model.workers.WorkerScheduler
@@ -36,8 +38,6 @@ import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.preferences.WorkoutDetailLayoutMapper
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.backup.WrongBackupPasswordException
