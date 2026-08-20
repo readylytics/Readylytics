@@ -17,8 +17,8 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfigurati
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -221,7 +221,7 @@ object SettingsDefaults {
 
     /**
      * Shared default layout for the workout detail screen, used by every
-     * [app.readylytics.health.domain.workouts.detail.WorkoutLayoutType] that has no stored
+     * [app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType] that has no stored
      * customization. Order reproduces the pre-customization visual order of the screen.
      */
     val DEFAULT_WORKOUT_DETAIL_ITEMS =

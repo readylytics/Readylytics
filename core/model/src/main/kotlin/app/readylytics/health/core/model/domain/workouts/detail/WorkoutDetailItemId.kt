@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.workouts.detail
+package app.readylytics.health.core.model.domain.workouts.detail
 
 /**
  * Every customizable element of the workout detail screen. The screen header is

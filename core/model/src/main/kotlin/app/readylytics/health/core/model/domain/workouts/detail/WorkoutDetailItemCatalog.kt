@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.workouts.detail
+package app.readylytics.health.core.model.domain.workouts.detail
 
 /**
  * Layout metadata for workout detail items. Items listed here render full-width;

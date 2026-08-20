@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.workouts
 
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
 
 /**
  * Minimal projection of [WorkoutDetailUiState] needed to decide which detail items have

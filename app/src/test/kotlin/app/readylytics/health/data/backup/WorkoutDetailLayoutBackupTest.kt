@@ -1,8 +1,8 @@
 package app.readylytics.health.data.backup
 
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
 import kotlinx.serialization.json.Json
 import org.junit.Test
 import kotlin.test.assertEquals

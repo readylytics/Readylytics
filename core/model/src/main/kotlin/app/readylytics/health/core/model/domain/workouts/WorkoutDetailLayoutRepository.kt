@@ -1,7 +1,7 @@
 package app.readylytics.health.core.model.domain.workouts
 
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
 import kotlinx.coroutines.flow.Flow
 
 /**

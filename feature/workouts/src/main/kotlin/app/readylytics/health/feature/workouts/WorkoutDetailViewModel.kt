@@ -16,6 +16,10 @@ import app.readylytics.health.core.model.domain.util.RouteDistanceCalculator
 import app.readylytics.health.core.model.domain.util.RouteProjector
 import app.readylytics.health.core.model.domain.util.RouteSimplifier
 import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutTypeMapper
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
@@ -28,10 +32,6 @@ import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutTypeMapper
 import app.readylytics.health.feature.workouts.mappers.ChartDataMapper
 import app.readylytics.health.feature.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.feature.workouts.mappers.RecoveryMetricsMapper

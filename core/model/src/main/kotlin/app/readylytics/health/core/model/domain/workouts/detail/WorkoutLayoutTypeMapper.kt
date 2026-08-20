@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.workouts.detail
+package app.readylytics.health.core.model.domain.workouts.detail
 
 /**
  * Single source of truth for mapping a raw `WorkoutData.exerciseType` (a Health Connect

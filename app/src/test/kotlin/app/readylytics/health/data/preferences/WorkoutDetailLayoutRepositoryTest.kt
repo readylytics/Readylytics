@@ -3,9 +3,9 @@ package app.readylytics.health.data.preferences
 import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot

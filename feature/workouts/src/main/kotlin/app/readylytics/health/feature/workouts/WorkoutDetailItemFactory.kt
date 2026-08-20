@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Composable
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
 
 /**
  * Maps every customizable detail item onto its renderer. Consumed by `ReorderableGrid`,

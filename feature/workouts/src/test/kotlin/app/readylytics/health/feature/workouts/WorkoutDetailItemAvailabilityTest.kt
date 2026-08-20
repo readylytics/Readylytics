@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
 import app.readylytics.health.domain.repository.WorkoutData
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
