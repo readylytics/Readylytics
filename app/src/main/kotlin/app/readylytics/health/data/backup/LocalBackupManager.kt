@@ -22,12 +22,12 @@ import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext

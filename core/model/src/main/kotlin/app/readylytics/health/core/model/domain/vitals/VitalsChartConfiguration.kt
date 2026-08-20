@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.vitals
+package app.readylytics.health.core.model.domain.vitals
 
 import app.readylytics.health.domain.layout.ReorderableItem
 import kotlinx.serialization.Serializable

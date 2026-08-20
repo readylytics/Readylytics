@@ -28,6 +28,7 @@ import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logW
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
@@ -42,7 +43,6 @@ import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.backup.WrongBackupPasswordException
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
