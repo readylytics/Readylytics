@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
-import app.readylytics.health.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
@@ -24,7 +24,7 @@ import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
-import app.readylytics.health.domain.sync.link.SessionLinkReconciler
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.every

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
@@ -42,7 +43,6 @@ import app.readylytics.health.domain.sleep.SleepMetricCardManagementDelegate
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.domain.sleep.SleepTopCardManagementDelegate
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.feature.sleep.overview.createSleepChartStateFlow
 import app.readylytics.health.feature.sleep.overview.createSleepMetricCardStateFlow
 import app.readylytics.health.feature.sleep.overview.createSleepTopCardStateFlow

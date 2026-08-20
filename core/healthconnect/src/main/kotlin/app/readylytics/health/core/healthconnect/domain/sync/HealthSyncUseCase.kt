@@ -3,7 +3,7 @@ package app.readylytics.health.core.healthconnect.domain.sync
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
-import app.readylytics.health.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
@@ -47,7 +47,7 @@ class HealthSyncUseCase
          * Runs the foreground sync / recalculation over a recent [windowDays] window.
          *
          * No default: HC-009 -- every call site must name the window it actually wants rather than
-         * silently inheriting a magic constant. See [app.readylytics.health.domain.sync.MAX_INLINE_RECOMPUTE_DAYS]
+         * silently inheriting a magic constant. See [app.readylytics.health.core.healthconnect.domain.sync.MAX_INLINE_RECOMPUTE_DAYS]
          * for the inline-vs-durable-resync cutoff both [DailySyncUseCase] and
          * [ForegroundSyncController] use.
          *

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
-import app.readylytics.health.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.domain.repository.TransactionRunner
 
 /**

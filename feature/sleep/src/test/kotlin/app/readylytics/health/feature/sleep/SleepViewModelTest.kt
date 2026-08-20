@@ -2,6 +2,7 @@ package app.readylytics.health.feature.sleep
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.common.TimeRange
@@ -17,7 +18,6 @@ import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

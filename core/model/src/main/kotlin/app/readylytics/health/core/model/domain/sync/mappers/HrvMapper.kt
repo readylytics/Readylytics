@@ -1,10 +1,10 @@
-package app.readylytics.health.domain.sync.mappers
+package app.readylytics.health.core.model.domain.sync.mappers
 
 import app.readylytics.health.domain.model.DomainHrvRecord
-import app.readylytics.health.domain.sync.HrvInput
-import app.readylytics.health.domain.sync.SleepSessionInput
-import app.readylytics.health.domain.sync.link.SessionLinkSweep
-import app.readylytics.health.domain.sync.link.SessionSpan
+import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkSweep
+import app.readylytics.health.core.model.domain.sync.link.SessionSpan
 
 object HrvMapper {
     fun mapToInputs(

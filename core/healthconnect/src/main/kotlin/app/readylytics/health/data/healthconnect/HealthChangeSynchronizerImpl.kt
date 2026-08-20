@@ -32,8 +32,8 @@ import app.readylytics.health.domain.model.*
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOutcome
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
-import app.readylytics.health.domain.sync.*
-import app.readylytics.health.domain.sync.mappers.*
+import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.mappers.*
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import dagger.hilt.android.qualifiers.ApplicationContext

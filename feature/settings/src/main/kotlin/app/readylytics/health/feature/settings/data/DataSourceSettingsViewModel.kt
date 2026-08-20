@@ -2,10 +2,10 @@ package app.readylytics.health.feature.settings.data
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.feature.settings.DataSourceSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job

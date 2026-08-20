@@ -5,8 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.model.WorkoutRoutePoint
-import app.readylytics.health.domain.sync.HealthIngestionBatch
-import app.readylytics.health.domain.sync.WorkoutInput
+import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
+import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before

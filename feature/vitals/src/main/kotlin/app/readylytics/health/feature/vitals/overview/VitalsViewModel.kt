@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.dashboard.CardManagementEvent
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
@@ -24,7 +25,6 @@ import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.domain.vitals.VitalsLayoutRepository

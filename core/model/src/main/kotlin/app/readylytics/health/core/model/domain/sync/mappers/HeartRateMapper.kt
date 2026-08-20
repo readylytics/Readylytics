@@ -1,11 +1,11 @@
-package app.readylytics.health.domain.sync.mappers
+package app.readylytics.health.core.model.domain.sync.mappers
 
 import app.readylytics.health.domain.model.DomainHeartRateRecord
-import app.readylytics.health.domain.sync.HeartRateInput
-import app.readylytics.health.domain.sync.SleepSessionInput
-import app.readylytics.health.domain.sync.WorkoutInput
-import app.readylytics.health.domain.sync.link.SessionLinkSweep
-import app.readylytics.health.domain.sync.link.SessionSpan
+import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.WorkoutInput
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkSweep
+import app.readylytics.health.core.model.domain.sync.link.SessionSpan
 
 object HeartRateMapper {
     fun mapToInputs(

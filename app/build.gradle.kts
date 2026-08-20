@@ -231,7 +231,7 @@ android {
         abortOnError = true
         warningsAsErrors = true
         xmlReport = true
-        disable += listOf("GradleDependency", "NewerVersionAvailable")
+        disable += listOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion")
     }
 }
 

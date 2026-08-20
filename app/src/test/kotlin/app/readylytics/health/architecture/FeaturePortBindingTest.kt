@@ -1,6 +1,9 @@
 package app.readylytics.health.architecture
 
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.date.SelectedDateStore
@@ -14,10 +17,7 @@ import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.SyncSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HealthDataRefreshAdapter
-import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncControllerImpl
 import org.junit.Test
 import kotlin.test.assertTrue

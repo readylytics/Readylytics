@@ -7,7 +7,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.SyncPreference
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
-import app.readylytics.health.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow

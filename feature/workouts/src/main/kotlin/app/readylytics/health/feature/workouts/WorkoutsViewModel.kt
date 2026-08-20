@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.dashboard.CardManagementEvent
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.ui.common.TimeRange
@@ -25,7 +26,6 @@ import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.domain.workouts.WorkoutChartId
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration

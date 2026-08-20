@@ -4,7 +4,7 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
-import app.readylytics.health.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first
 import java.time.Instant

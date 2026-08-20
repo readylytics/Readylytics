@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sync.link
+package app.readylytics.health.core.model.domain.sync.link
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

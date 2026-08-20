@@ -13,8 +13,8 @@ import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedEx
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.repository.WalDiagnostics
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
-import app.readylytics.health.domain.sync.*
-import app.readylytics.health.domain.sync.link.SessionLinkReconciler
+import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.domain.util.logI

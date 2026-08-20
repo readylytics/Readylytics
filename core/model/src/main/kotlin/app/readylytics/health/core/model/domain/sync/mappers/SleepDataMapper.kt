@@ -1,10 +1,10 @@
-package app.readylytics.health.domain.sync.mappers
+package app.readylytics.health.core.model.domain.sync.mappers
 
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.SleepStageType
-import app.readylytics.health.domain.sync.SleepSessionInput
-import app.readylytics.health.domain.sync.SleepStageInput
+import app.readylytics.health.core.model.domain.sync.SleepSessionInput
+import app.readylytics.health.core.model.domain.sync.SleepStageInput
 import kotlin.math.max
 
 object SleepDataMapper {

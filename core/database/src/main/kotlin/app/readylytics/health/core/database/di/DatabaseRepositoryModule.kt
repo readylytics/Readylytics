@@ -29,9 +29,9 @@ import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.sync.HealthIngestionStore
-import app.readylytics.health.domain.sync.SelectedSourcePruner
-import app.readylytics.health.domain.sync.link.SessionLinkReconciler
+import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
+import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

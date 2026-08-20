@@ -5,6 +5,8 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
@@ -19,8 +21,6 @@ import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

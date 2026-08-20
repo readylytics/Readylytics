@@ -5,7 +5,7 @@ import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.RouteState
-import app.readylytics.health.domain.sync.mappers.WorkoutMapper
+import app.readylytics.health.core.model.domain.sync.mappers.WorkoutMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

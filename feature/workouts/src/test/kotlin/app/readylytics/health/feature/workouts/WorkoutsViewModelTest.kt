@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutDisplayMetrics
@@ -18,7 +19,6 @@ import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coVerify

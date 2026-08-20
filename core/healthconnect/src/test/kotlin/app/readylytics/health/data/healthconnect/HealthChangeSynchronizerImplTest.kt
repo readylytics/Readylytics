@@ -17,7 +17,7 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.sync.HealthChangeTokenStore
+import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest

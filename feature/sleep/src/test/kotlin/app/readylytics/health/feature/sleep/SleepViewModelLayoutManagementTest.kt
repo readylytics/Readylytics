@@ -3,6 +3,7 @@ package app.readylytics.health.feature.sleep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.data.preferences.SettingsDefaults
@@ -17,7 +18,6 @@ import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

@@ -4,11 +4,11 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
-import app.readylytics.health.domain.sync.*
-import app.readylytics.health.domain.sync.mappers.SleepDataMapper
-import app.readylytics.health.domain.sync.mappers.WorkoutMapper
-import app.readylytics.health.domain.sync.mappers.HeartRateMapper
-import app.readylytics.health.domain.sync.mappers.HrvMapper
+import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
+import app.readylytics.health.core.model.domain.sync.mappers.WorkoutMapper
+import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
+import app.readylytics.health.core.model.domain.sync.mappers.HrvMapper
 import app.readylytics.health.core.model.domain.util.logD
 import java.time.Instant
 import javax.inject.Inject

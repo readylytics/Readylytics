@@ -12,7 +12,7 @@ package app.readylytics.health.core.healthconnect.domain.sync
 const val MAX_INLINE_RECOMPUTE_DAYS = 7
 
 /**
- * Window used by [app.readylytics.health.domain.sync.HealthDataRefresh.refreshAffectedWindow]
+ * Window used by [app.readylytics.health.core.healthconnect.domain.sync.HealthDataRefresh.refreshAffectedWindow]
  * callers today (HC-009): every scoring-relevant settings change currently triggers this same
  * fixed foreground refresh, regardless of whether the setting actually invalidates the whole
  * retention-bounded history. SCORE-007 (WP-26) replaces this for historical-scope settings

@@ -14,10 +14,10 @@ import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePoi
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.sync.HealthIngestionBatch
-import app.readylytics.health.domain.sync.HeartRateInput
-import app.readylytics.health.domain.sync.HrvInput
-import app.readylytics.health.domain.sync.WorkoutInput
+import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
+import app.readylytics.health.core.model.domain.sync.HeartRateInput
+import app.readylytics.health.core.model.domain.sync.HrvInput
+import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import java.lang.reflect.Proxy
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch

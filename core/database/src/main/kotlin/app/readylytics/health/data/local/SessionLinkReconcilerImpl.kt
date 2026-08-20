@@ -10,10 +10,10 @@ import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.repository.TransactionRunner
 import java.time.Instant
-import app.readylytics.health.domain.sync.link.SampleLink
-import app.readylytics.health.domain.sync.link.SessionLinkReconciler
-import app.readylytics.health.domain.sync.link.SessionLinkSweep
-import app.readylytics.health.domain.sync.link.SessionSpan
+import app.readylytics.health.core.model.domain.sync.link.SampleLink
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkSweep
+import app.readylytics.health.core.model.domain.sync.link.SessionSpan
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.yield

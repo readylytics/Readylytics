@@ -11,7 +11,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.sync.SelectedSourcePruner
+import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject

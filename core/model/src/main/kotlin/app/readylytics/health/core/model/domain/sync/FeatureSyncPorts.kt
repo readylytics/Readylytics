@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.model.domain.sync
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow

@@ -9,8 +9,8 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
-import app.readylytics.health.domain.sync.*
-import app.readylytics.health.domain.sync.link.SessionLinkReconciler
+import app.readylytics.health.core.model.domain.sync.*
+import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logI
 import kotlinx.coroutines.CancellationException

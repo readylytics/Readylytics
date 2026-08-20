@@ -11,8 +11,8 @@ import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
-import app.readylytics.health.domain.sync.HealthIngestionBatch
-import app.readylytics.health.domain.sync.WorkoutInput
+import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
+import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before

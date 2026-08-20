@@ -39,9 +39,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.readylytics.health.R
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.domain.sync.ResyncPhase
-import app.readylytics.health.domain.sync.fraction
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.fraction
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.ui.sync.SyncEvent
