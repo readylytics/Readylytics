@@ -20,7 +20,8 @@ import kotlin.test.assertNull
 /**
  * PERF-005/WP-23: verifies `HeartRateDao.observeAggregateByTimeRange`'s `HAVING COUNT(*) > 0`
  * clause returns no row (mapped by Room to `null`) for an empty range, rather than one row of
- * NULLs that would crash mapping to the non-null [app.readylytics.health.core.model.domain.model.HrRangeAggregate] fields.
+ * NULLs that would crash mapping to the non-null
+ * [app.readylytics.health.core.model.domain.model.HrRangeAggregate] fields.
  */
 @RunWith(AndroidJUnit4::class)
 class HeartRateRangeAggregateQueryTest {

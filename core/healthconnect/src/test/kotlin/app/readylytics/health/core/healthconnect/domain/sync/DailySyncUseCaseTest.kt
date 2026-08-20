@@ -9,6 +9,7 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
@@ -525,7 +526,7 @@ class DailySyncUseCaseTest {
                     SecurityException("revoked"),
                 )
 
-            assertFailsWith<app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException> {
+            assertFailsWith<HealthConnectPermissionRevokedException> {
                 useCase.run(windowDays = 1, onProgress = null)
             }
         }
