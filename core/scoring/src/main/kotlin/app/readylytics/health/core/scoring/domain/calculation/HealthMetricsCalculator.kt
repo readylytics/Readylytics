@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.calculation
+package app.readylytics.health.core.scoring.domain.calculation
 
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus

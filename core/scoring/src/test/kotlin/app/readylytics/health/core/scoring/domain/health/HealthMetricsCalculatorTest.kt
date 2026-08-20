@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.health
 
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
-import app.readylytics.health.domain.calculation.HealthMetricsCalculator
+import app.readylytics.health.core.scoring.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus

@@ -24,7 +24,7 @@ class AppDomainOwnershipTest {
 
         val coreScoringPaths =
             listOf(
-                "core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt",
+                "core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/calculation/HealthMetricsCalculator.kt",
                 "core/scoring/src/main/kotlin/app/readylytics/health/domain/insights/InsightEngine.kt",
             )
 

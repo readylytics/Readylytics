@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.calculation
+package app.readylytics.health.core.scoring.domain.calculation
 
 import org.junit.Test
 import kotlin.test.assertEquals
