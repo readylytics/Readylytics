@@ -334,66 +334,132 @@ documented local conditions. One green run is not enough for a flake investigati
 
 ---
 
-## Item 4 — Optional: align packages with Gradle modules
+## Item 4 — Align packages with Gradle modules
+
+**Status:** in progress · **Branch:** `feat/remediation-followup-p2`
 
 **This is cosmetic, wide, and risky to combine with anything else. Schedule it alone.**
 
-### The situation
+### What has been done
 
-Package names do not follow module boundaries. Measured 2026-08-18 across `src/main` only:
-**16 packages span more than one Gradle module.**
+**Architecture test update (2026-08-20):** `CleanArchTest` and `FeatureModuleArchitectureTest`
+now cover all package roots — both legacy (flat `health.domain.*`, `health.data.*`) and
+module-namespaced (`core.model.domain.*`, `core.database.data.*`, etc.). Guards use class-level
+`domainPackageGlobs`, `dataLayerPackagePrefixes`, and `dataPackageGlobs` lists. FQN regex
+derived from the prefix list. `FeatureModuleArchitectureTest` forbidden list extended to cover
+`core.database.data.*`, `core.healthconnect.data.*`, `core.model.data.*`,
+`core.databaseschema.data.*`, and `core.model.workers.*`, with a generalized preferences
+allowlist. New package roots are added to these lists; no per-test edits needed.
 
-| Modules | Package |
-|--:|---|
-| 5 | `app.readylytics.health.di` → `app`, `core/database`, `core/healthconnect`, `core/model`, `core/scoring` |
-| 4 | `app.readylytics.health.domain.sync` → `app`, `core/database`, `core/healthconnect`, `core/model` |
-| 3 | `app.readylytics.health.domain.dashboard` → `core/model`, `core/scoring`, `feature/dashboard` |
-| 3 | `app.readylytics.health.data.migration` → `app`, `core/database`, `database-benchmark` |
-| 2 | `app.readylytics.health.workers` → `app`, `core/model` |
-| 2 | `app.readylytics.health.domain.util` → `core/model`, `core/scoring` |
-| 2 | `app.readylytics.health.domain.user` → `app`, `core/model` |
-| 2 | `app.readylytics.health.domain.security` → `app`, `core/model` |
-| 2 | `app.readylytics.health.domain.scoring` → `core/model`, `core/scoring` |
-| 2 | `app.readylytics.health.domain.migration` → `app`, `core/model` |
-| 2 | `app.readylytics.health.domain.common` → `core/model`, `core/scoring` |
-| 2 | `app.readylytics.health.data.security` → `app`, `core/database` |
-| 2 | `app.readylytics.health.data.preferences` → `app`, `core/model` |
-| 2 | `app.readylytics.health.data.mapper` → `core/database`, `core/healthconnect` |
-| 2 | `app.readylytics.health.data.local.entity` → `core/database`, `core/database-schema` |
-| 2 | `app.readylytics.health.data.local.dao` → `core/database`, `core/database-schema` |
+**Partial renames completed (prior commits on this branch):**
 
-Scope: 705 Kotlin files under `src/main`, 1,155 across all source sets.
+| Module | Renamed packages | Example |
+|---|---|---|
+| `core/model` | `domain.sync` (+ subpackages), `domain.dashboard`, `domain.util`, `domain.scoring`, `domain.common`, `domain.security`, `domain.migration`, `domain.user`, `data.preferences`, `workers`, `di` | `health.domain.sync` → `health.core.model.domain.sync` |
+| `core/scoring` | `domain.common`, `domain.dashboard`, `domain.scoring` (+ subpackages), `domain.util`, `di` | `health.domain.scoring` → `health.core.scoring.domain.scoring` |
+| `core/database` | `data.local.dao`, `data.local.entity`, `data.mapper`, `data.migration`, `data.security`, `domain.sync`, `di` | `health.data.mapper` → `health.core.database.data.mapper` |
+| `core/healthconnect` | `data.mapper`, `domain.sync`, `di` | `health.data.mapper` → `health.core.healthconnect.data.mapper` |
+| `core/database-schema` | fully aligned | — |
 
-### Why it is worth doing eventually
+### Remaining work — measured 2026-08-20
 
-The architecture guard in `app/src/test/kotlin/app/readylytics/health/CleanArchTest.kt` cannot
-express its rules as package predicates because packages do not identify modules. It resorts to
-brittle path-string matching, with Windows/POSIX separator pairs duplicated throughout —
-lines 75, 112, 145-147, 176, 201-202, 254-255. Aligning packages to modules
-(`…core.database.*`, `…core.healthconnect.*`, and so on) lets those become
-`resideInPackage(...)` predicates. It would also likely clear the 4 `InvalidPackageDeclaration`
-entries tracked in `DETEKT_BASELINE_BURNDOWN.md`.
+**260 files across 4 modules still use the flat `health.domain.*` / `health.data.*` namespace.**
 
-### How to do it, if it is scheduled
+#### `core/model` — 129 files, 21 packages
 
-1. One module at a time, smallest first — `core/database-schema` (33 files) is the natural pilot.
-2. Rename with an IDE-grade refactor, not `sed`: Hilt, Room, kotlinx.serialization and
+| Files | Current package | Target |
+|--:|---|---|
+| 33 | `domain.model` | `core.model.domain.model` |
+| 19 | `domain.validation` | `core.model.domain.validation` |
+| 16 | `domain.repository` | `core.model.domain.repository` |
+| 10 | `domain.sleep` | `core.model.domain.sleep` |
+| 7 | `domain.service` | `core.model.domain.service` |
+| 6 | `domain.workouts` | `core.model.domain.workouts` |
+| 5 | `domain.workouts.detail` | `core.model.domain.workouts.detail` |
+| 5 | `domain.preferences` | `core.model.domain.preferences` |
+| 5 | `domain.backup` | `core.model.domain.backup` |
+| 3 | `domain.vitals` | `core.model.domain.vitals` |
+| 3 | `domain.layout` | `core.model.domain.layout` |
+| 3 | `domain.githubissue` | `core.model.domain.githubissue` |
+| 2 | `domain.heartrate` | `core.model.domain.heartrate` |
+| 2 | `domain.date` | `core.model.domain.date` |
+| 2 | `domain.crashreport` | `core.model.domain.crashreport` |
+| 2 | `domain.circadian` | `core.model.domain.circadian` |
+| 2 | `domain.audit` | `core.model.domain.audit` |
+| 1 | `domain.logcat` | `core.model.domain.logcat` |
+| 1 | `domain.error` | `core.model.domain.error` |
+| 1 | `domain.display` | `core.model.domain.display` |
+| 1 | `domain.cache` | `core.model.domain.cache` |
+
+#### `core/scoring` — 55 files, 5 packages
+
+| Files | Current package | Target |
+|--:|---|---|
+| 36 | `domain.insights` | `core.scoring.domain.insights` |
+| 13 | `domain.airecommendation` | `core.scoring.domain.airecommendation` |
+| 3 | `domain.insights.detail` | `core.scoring.domain.insights.detail` |
+| 2 | `domain.calculation` | `core.scoring.domain.calculation` |
+| 1 | `domain.health` | `core.scoring.domain.health` |
+
+#### `core/database` — 68 files, 5 packages
+
+| Files | Current package | Target |
+|--:|---|---|
+| 23 | `data.local` | `core.database.data.local` |
+| 22 | `data.repository` | `core.database.data.repository` |
+| 18 | `data.local.dao` | `core.database.data.local.dao` |
+| 3 | `data.local.migration` | `core.database.data.local.migration` |
+| 2 | `data.audit` | `core.database.data.audit` |
+
+Note: `data.local.dao` (18 files) includes test DAO stubs; main-only count is lower. The
+aligned `core.database.data.local.dao` package already has the main DAOs — these 18 are test
+sources sharing the old package name.
+
+#### `core/healthconnect` — 8 files, 1 package
+
+| Files | Current package | Target |
+|--:|---|---|
+| 8 | `data.healthconnect` | `core.healthconnect.data.healthconnect` |
+
+### Recommended execution order
+
+Smallest scope first. One commit per package (not per module) to keep diffs reviewable.
+After each commit: full gate (`ktlintFormat && detekt && testDebugUnitTest`, then
+`lintRelease` at the end).
+
+1. `core/healthconnect` — 8 files, 1 package. Smallest, isolated.
+2. `core/scoring` — 55 files, 5 packages. No Room/DataStore/WorkManager complications.
+3. `core/database` — 68 files. Watch for Room schema JSON in `core/database/schemas/`,
+   DAO test stubs sharing old package names, and `@Database` entity lists.
+4. `core/model` — 129 files, largest. Contains WorkManager worker classes (`@HiltWorker`),
+   proto/DataStore serializers, and validation logic imported across the entire project.
+
+### How to rename each package
+
+1. Rename with an IDE-grade refactor, not `sed`: Hilt, Room, kotlinx.serialization and
    WorkManager all resolve names in ways plain text substitution will silently break. Watch in
    particular for: `@HiltWorker` / worker class names in WorkManager configuration, Room
    `@Database` entity lists and generated schema JSON in `core/database/schemas`, proto/DataStore
    serializers, and any fully-qualified name in a string.
-3. **Rewrite the corresponding `CleanArchTest` rules in the same commit** — the whole point is
-   to convert path filters into package predicates, and leaving them behind means the rename
-   bought nothing.
-4. Baseline signatures change when file paths change: expect `detekt-baseline.xml` churn and
+2. **Architecture tests already cover new roots** — the class-level lists in `CleanArchTest` and
+   the forbidden list in `FeatureModuleArchitectureTest` match both old and new package names.
+   No per-rename test updates needed unless a new module is added.
+3. Baseline signatures change when file paths change: expect `detekt-baseline.xml` churn and
    handle it per §5 of `DETEKT_BASELINE_BURNDOWN.md`.
-5. Run `codegraph sync` after each module move.
-6. Full gate after every module, not just at the end.
+4. Run `codegraph sync` after each package move.
+5. Full gate after every package, not just at the end.
+
+### When all renames are done
+
+Once no files remain in the flat `health.domain.*` / `health.data.*` namespaces inside
+`core/*` or `feature/*` modules, the legacy entries in `domainPackageGlobs` and
+`dataLayerPackagePrefixes` (`"app.readylytics.health.domain.."`, `"app.readylytics.health.data."`)
+can be narrowed to cover only the `app` module's own domain/data packages. That is a cleanup
+step, not a prerequisite.
 
 ### Verification
 
-Full gate green after each module, `CleanArchTest` rules converted rather than merely still
-passing, and no change to any runtime behaviour.
+Full gate green after each package, and no change to any runtime behaviour.
 
 ---
 
