@@ -1,4 +1,4 @@
-package app.readylytics.health.data.healthconnect
+package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStage

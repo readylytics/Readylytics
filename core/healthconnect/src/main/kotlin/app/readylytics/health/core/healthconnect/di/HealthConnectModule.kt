@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.di
 
-import app.readylytics.health.data.healthconnect.HealthConnectRepositoryImpl
+import app.readylytics.health.core.healthconnect.data.healthconnect.HealthConnectRepositoryImpl
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import dagger.Binds
 import dagger.Module
@@ -18,6 +18,6 @@ abstract class HealthConnectModule {
     @Binds
     @Singleton
     abstract fun bindHealthChangeSynchronizer(
-        impl: app.readylytics.health.data.healthconnect.HealthChangeSynchronizerImpl,
+        impl: app.readylytics.health.core.healthconnect.data.healthconnect.HealthChangeSynchronizerImpl,
     ): app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
 }

@@ -1,4 +1,4 @@
-package app.readylytics.health.data.healthconnect
+package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseRouteResult
@@ -6,7 +6,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Length
-import app.readylytics.health.data.healthconnect.toDomain
+import app.readylytics.health.core.healthconnect.data.healthconnect.toDomain
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.RouteState

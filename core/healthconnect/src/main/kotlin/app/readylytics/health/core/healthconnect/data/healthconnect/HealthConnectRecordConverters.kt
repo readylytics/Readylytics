@@ -1,4 +1,4 @@
-package app.readylytics.health.data.healthconnect
+package app.readylytics.health.core.healthconnect.data.healthconnect
 
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord

@@ -11,7 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.contracts.ExerciseRouteRequestContract
-import app.readylytics.health.data.healthconnect.toDomainRoutePoints
+import app.readylytics.health.core.healthconnect.data.healthconnect.toDomainRoutePoints
 import app.readylytics.health.domain.model.DomainRouteLocation
 
 /**
