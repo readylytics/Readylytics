@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 
-import app.readylytics.health.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile

@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository

@@ -1,5 +1,9 @@
 package app.readylytics.health.docs
 
+import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargetFactory
@@ -8,10 +12,6 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
-import app.readylytics.health.domain.scoring.LoadCoverageConfidence
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals

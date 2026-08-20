@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.model
 
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals

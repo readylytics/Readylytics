@@ -5,7 +5,7 @@ import app.readylytics.health.core.scoring.domain.scoring.HistoricalSleepDayAsse
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.SleepSession

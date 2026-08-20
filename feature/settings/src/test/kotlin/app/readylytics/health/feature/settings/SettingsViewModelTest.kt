@@ -215,10 +215,16 @@ class SettingsViewModelTest {
             viewModel.sharingStarted = SharingStarted.Eagerly
             viewModel.uiState
 
-            viewModel.onEvent(SettingsEvent.TrimpModelChanged(app.readylytics.health.domain.scoring.TrimpModel.I_TRIMP))
+            viewModel.onEvent(
+                SettingsEvent.TrimpModelChanged(app.readylytics.health.core.model.domain.scoring.TrimpModel.I_TRIMP),
+            )
             advanceUntilIdle()
 
-            coVerify { displaySettings.updateTrimpModel(app.readylytics.health.domain.scoring.TrimpModel.I_TRIMP) }
+            coVerify {
+                displaySettings.updateTrimpModel(
+                    app.readylytics.health.core.model.domain.scoring.TrimpModel.I_TRIMP,
+                )
+            }
             coVerify(exactly = 1) { healthDataRefresh.refreshHistorical() }
             coVerify(exactly = 0) { healthDataRefresh.refreshAffectedWindow() }
 

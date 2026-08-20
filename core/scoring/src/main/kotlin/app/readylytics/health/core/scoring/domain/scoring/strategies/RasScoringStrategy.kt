@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring.strategies
 
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton

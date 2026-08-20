@@ -2,7 +2,7 @@ package app.readylytics.health.domain.airecommendation
 
 import app.readylytics.health.domain.model.LoadContext
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassifier
-import app.readylytics.health.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 import javax.inject.Inject
 
 enum class QualitativeLoad { LIGHT, MODERATE, NORMAL, HIGH }

@@ -2,8 +2,8 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHeartRateLoadCalculator
 
-import app.readylytics.health.domain.scoring.LoadCoverageConfidence
-import app.readylytics.health.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.UserPreferences

@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.airecommendation
 
 import app.readylytics.health.domain.repository.WorkoutData
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate

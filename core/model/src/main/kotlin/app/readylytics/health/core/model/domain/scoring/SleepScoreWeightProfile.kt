@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring
+package app.readylytics.health.core.model.domain.scoring
 
 /**
  * User-selectable emphasis for the sleep score. Degraded weights apply when stage data is

@@ -15,7 +15,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUse
 import app.readylytics.health.core.scoring.domain.scoring.LongInterval
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregate
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator

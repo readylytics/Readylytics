@@ -5,8 +5,8 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringS
 import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 
 import app.readylytics.health.domain.model.RecoveryFlag
-import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepContinuityCurves
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepFragmentation
 import org.junit.Assert.assertEquals

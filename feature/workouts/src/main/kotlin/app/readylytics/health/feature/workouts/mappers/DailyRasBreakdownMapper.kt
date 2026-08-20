@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.workouts.mappers
 
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
-import app.readylytics.health.domain.scoring.LoadSourceMode
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale

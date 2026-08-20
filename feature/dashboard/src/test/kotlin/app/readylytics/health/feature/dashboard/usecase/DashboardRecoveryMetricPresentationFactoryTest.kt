@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import io.mockk.every

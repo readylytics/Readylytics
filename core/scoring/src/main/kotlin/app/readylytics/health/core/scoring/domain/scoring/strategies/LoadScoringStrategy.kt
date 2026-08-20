@@ -5,10 +5,10 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoring
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
-import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.ScoringConstants.Readiness
-import app.readylytics.health.domain.scoring.ScoringConstants.Restoration
-import app.readylytics.health.domain.scoring.ScoringConstants.Strain
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Readiness
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Restoration
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Strain
 import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.core.scoring.domain.util.mean
 import app.readylytics.health.core.scoring.domain.util.median

@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring
+package app.readylytics.health.core.model.domain.scoring
 
 /**
  * Confidence in the "everyday" (non-workout, non-sleep) heart-rate load estimate, based on how

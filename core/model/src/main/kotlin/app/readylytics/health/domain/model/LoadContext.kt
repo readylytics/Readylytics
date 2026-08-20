@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 enum class LoadContext {
     BELOW_TYPICAL,

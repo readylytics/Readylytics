@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.validation
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 class HrvBoundsValidator : ValidationRule<Float> {
     override val errorMessage: String =

@@ -7,9 +7,9 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
-import app.readylytics.health.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import java.time.LocalDate
 
 interface AboutPreferences {

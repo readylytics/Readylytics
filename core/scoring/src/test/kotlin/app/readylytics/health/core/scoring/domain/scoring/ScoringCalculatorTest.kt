@@ -1,10 +1,10 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
-import app.readylytics.health.domain.scoring.ScoringConstants.Sleep
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Sleep
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargetFactory
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepContinuityCurves
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepFragmentation

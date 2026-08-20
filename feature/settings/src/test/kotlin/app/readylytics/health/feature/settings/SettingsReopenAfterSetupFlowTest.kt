@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
@@ -10,7 +11,6 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.sync.HealthDataRefresh
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

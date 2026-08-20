@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring
+package app.readylytics.health.core.model.domain.scoring
 
 /**
  * Centralized constants for scoring logic to avoid magic numbers and improve maintainability.

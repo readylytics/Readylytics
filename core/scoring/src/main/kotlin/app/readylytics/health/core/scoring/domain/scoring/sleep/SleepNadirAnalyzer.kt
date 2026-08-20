@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyz
 
 import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs

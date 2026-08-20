@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHeartRateLoadCalculator
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 
-import app.readylytics.health.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.domain.model.HrMinuteBucketRow

@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.scoring
 
+import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer

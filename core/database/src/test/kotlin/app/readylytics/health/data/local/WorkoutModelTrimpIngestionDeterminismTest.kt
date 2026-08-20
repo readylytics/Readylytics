@@ -6,7 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy

@@ -2,9 +2,9 @@ package app.readylytics.health.core.scoring.domain.scoring.components
 
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepContinuityCurves
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
-import app.readylytics.health.domain.scoring.ScoringConstants.Sleep
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Sleep
 import kotlin.math.exp
 
 /**

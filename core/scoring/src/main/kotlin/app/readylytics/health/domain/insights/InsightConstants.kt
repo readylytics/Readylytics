@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.insights
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 /**
  * Centralized thresholds for the deterministic insight engine rules.

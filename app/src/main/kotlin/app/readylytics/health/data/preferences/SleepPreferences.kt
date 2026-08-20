@@ -1,7 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import javax.inject.Inject
 
 internal class SleepPreferences

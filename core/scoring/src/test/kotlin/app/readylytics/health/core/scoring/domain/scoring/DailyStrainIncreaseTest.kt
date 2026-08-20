@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
@@ -8,7 +9,6 @@ import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.feature.settings.R
 import io.mockk.coVerify

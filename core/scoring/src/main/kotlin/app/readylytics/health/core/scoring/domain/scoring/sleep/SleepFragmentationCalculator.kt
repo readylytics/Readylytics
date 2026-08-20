@@ -2,11 +2,11 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepFragmentationCalculator
 
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 import app.readylytics.health.domain.model.SleepStageType
 import app.readylytics.health.domain.repository.SleepStageData
-import app.readylytics.health.domain.scoring.ScoringConstants.Sleep
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Sleep
 
 /**
  * Wake After Sleep Onset (WASO) and discrete awakening count for one sleep session.

@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 
 import app.readylytics.health.data.preferences.UserPreferences
 import java.time.LocalDate

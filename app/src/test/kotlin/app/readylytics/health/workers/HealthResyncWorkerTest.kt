@@ -9,11 +9,11 @@ import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncContr
 import app.readylytics.health.core.healthconnect.domain.sync.FullHistoricalResyncUseCase
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.domain.sync.ResyncPhase
 import dagger.Lazy
 import io.mockk.*

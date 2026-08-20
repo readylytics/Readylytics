@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring
+package app.readylytics.health.core.model.domain.scoring
 
 /**
  * Selects which heart-rate data source feeds a given load computation.

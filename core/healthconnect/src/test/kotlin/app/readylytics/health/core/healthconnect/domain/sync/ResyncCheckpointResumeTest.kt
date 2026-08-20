@@ -9,7 +9,7 @@ import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
-import app.readylytics.health.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.clearMocks
 import io.mockk.coEvery

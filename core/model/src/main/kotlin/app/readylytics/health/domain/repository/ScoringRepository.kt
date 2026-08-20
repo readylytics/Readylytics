@@ -53,7 +53,7 @@ interface ScoringRepository {
 
     /**
      * PERF-002/WP-22: fetches the sleep sessions covering the widest RHR/HRV baseline lookback
-     * (56 days, [app.readylytics.health.domain.scoring.ScoringConstants.HRV_SIGMA_WINDOW_DAYS])
+     * (56 days, [app.readylytics.health.core.model.domain.scoring.ScoringConstants.HRV_SIGMA_WINDOW_DAYS])
      * every day in `[startDate, endDate]` will need, for a caller to hold across a multi-day
      * walk-forward instead of re-querying per day.
      */

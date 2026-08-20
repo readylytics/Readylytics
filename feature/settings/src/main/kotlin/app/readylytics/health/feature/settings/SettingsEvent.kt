@@ -1,5 +1,8 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.FallbackThemeColor
@@ -8,9 +11,6 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
-import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 
 sealed interface SettingsEvent {

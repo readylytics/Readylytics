@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.common.resyncGateEnabled
 

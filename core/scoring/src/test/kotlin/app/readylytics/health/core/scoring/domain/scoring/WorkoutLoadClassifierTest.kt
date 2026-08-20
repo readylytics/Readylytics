@@ -2,8 +2,8 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassifier
 
-import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
-import app.readylytics.health.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
+import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

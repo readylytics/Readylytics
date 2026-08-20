@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring
+package app.readylytics.health.core.model.domain.scoring
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.airecommendation
 
-import app.readylytics.health.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import org.junit.Assert.assertEquals
 import org.junit.Test

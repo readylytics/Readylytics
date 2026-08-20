@@ -5,8 +5,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassifier
 
-import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
-import app.readylytics.health.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
+import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result

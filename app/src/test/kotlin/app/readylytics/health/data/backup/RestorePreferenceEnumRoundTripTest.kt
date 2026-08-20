@@ -1,5 +1,6 @@
 package app.readylytics.health.data.backup
 
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupSchedule
@@ -9,7 +10,6 @@ import app.readylytics.health.data.preferences.PhysiologyProfileProto
 import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.SyncPreferenceProto
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

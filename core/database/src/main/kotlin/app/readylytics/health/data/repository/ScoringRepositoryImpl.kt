@@ -24,7 +24,7 @@ import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
-import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.util.logD

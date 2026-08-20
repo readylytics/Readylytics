@@ -3,10 +3,10 @@ package app.readylytics.health.core.scoring.domain.scoring.strategies
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 
-import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.ScoringConstants.Restoration
-import app.readylytics.health.domain.scoring.ScoringConstants.Sleep
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Restoration
+import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Sleep
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.scoring.domain.scoring.components.RestorationWeights
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargetFactory
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargets
