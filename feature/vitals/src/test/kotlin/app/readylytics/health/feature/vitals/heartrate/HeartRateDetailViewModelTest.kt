@@ -2,7 +2,7 @@ package app.readylytics.health.feature.vitals.heartrate
 
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.HeartRateRecordData

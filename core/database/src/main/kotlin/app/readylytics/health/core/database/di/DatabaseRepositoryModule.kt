@@ -17,7 +17,7 @@ import app.readylytics.health.core.database.data.repository.SleepSessionReposito
 import app.readylytics.health.core.database.data.repository.WeightRepositoryImpl
 import app.readylytics.health.core.database.data.repository.WorkoutRepositoryImpl
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
-import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.domain.repository.BloodPressureRepository
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.DailyMetricsRepository

@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.dashboard.CardManagementEvent
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.airecommendation.DailyPromptFormatter
@@ -25,7 +26,6 @@ import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType

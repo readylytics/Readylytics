@@ -7,7 +7,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.model.di.ApplicationScope
-import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.vitals.bloodpressure
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.BloodPressureRecord
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.MetricStatus

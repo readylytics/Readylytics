@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.date
+package app.readylytics.health.core.model.domain.date
 
 import org.junit.Test
 import java.time.LocalDate

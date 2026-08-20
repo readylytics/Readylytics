@@ -3,9 +3,9 @@ package app.readylytics.health.feature.vitals.weight
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.TrendGranularity
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.BmiCategory
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.WeightRecord
