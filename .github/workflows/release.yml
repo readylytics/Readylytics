@@ -69,7 +69,7 @@ jobs:
         run: ./gradlew testDebugUnitTest
 
       - name: Run lint
-        run: ./gradlew lint lintRelease
+        run: ./gradlew lint lintRelease -Preadylytics.lint.releasePipeline=true
 
       - name: Build signed release bundle
         run: ./gradlew bundleRelease
