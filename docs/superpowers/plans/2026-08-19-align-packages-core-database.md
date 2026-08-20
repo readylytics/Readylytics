@@ -88,14 +88,14 @@ rename affects those test files.
   classes by type via KSP-generated code, not by package string, so no Hilt-specific follow-up is
   needed beyond the import rewrite.
 
-- [ ] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
-- [ ] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/di` →
+- [x] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
+- [x] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/di` →
   Refactor → Rename → "Rename package" → `app.readylytics.health.core.database.di` → both search
   options checked → Preview (confirm exactly 2 files) → apply.
-- [ ] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.di\.\(DatabaseModule\|DatabaseRepositoryModule\)" --include="*.kt" . | grep -v /build/` — Expected: no output.
-- [ ] **Step 4: `codegraph sync`.**
-- [ ] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
-- [ ] **Step 6: Commit.**
+- [x] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.di\.\(DatabaseModule\|DatabaseRepositoryModule\)" --include="*.kt" . | grep -v /build/` — Expected: no output.
+- [x] **Step 4: `codegraph sync`.**
+- [x] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
+- [x] **Step 6: Commit.**
 ```bash
 git add -A -- 'core/database/src/main/kotlin/app/readylytics/health/core' ':(glob)**/*.kt'
 git commit -m "refactor: align core/database di package with module namespace"
@@ -109,21 +109,21 @@ git commit -m "refactor: align core/database di package with module namespace"
 **Interfaces:**
 - Produces: `app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport`.
 
-- [ ] **Step 1: Confirm scope before renaming.** Run:
+- [x] **Step 1: Confirm scope before renaming.** Run:
   `find core/database/src/main/kotlin/app/readylytics/health/domain/sync -maxdepth 1 -name "*.kt"`
   — Expected: exactly `DailyRecomputeSupport.kt`, confirming no subpackage (in particular, no
   `link/` subpackage — that lives only under `src/test` for a different module's class, per the
   File Structure note above, and must not be swept into this rename).
-- [ ] **Step 2: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
-- [ ] **Step 3: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/domain/sync`
+- [x] **Step 2: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
+- [x] **Step 3: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/domain/sync`
   → Refactor → Rename → "Rename package" → `app.readylytics.health.core.database.domain.sync` →
   both search options checked → Preview (confirm exactly 1 file moves, and that
   `domain/sync/link/SessionLinkReconcilerTest.kt` under `src/test` is **not** in the preview list)
   → apply.
-- [ ] **Step 4: Sweep.** Run: `grep -rn "app\.readylytics\.health\.domain\.sync\.DailyRecomputeSupport" --include="*.kt" . | grep -v /build/` — Expected: no output (or only the new FQN).
-- [ ] **Step 5: `codegraph sync`.**
-- [ ] **Step 6: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
-- [ ] **Step 7: Commit.**
+- [x] **Step 4: Sweep.** Run: `grep -rn "app\.readylytics\.health\.domain\.sync\.DailyRecomputeSupport" --include="*.kt" . | grep -v /build/` — Expected: no output (or only the new FQN).
+- [x] **Step 5: `codegraph sync`.**
+- [x] **Step 6: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
+- [x] **Step 7: Commit.**
 ```bash
 git add -A -- 'core/database/src/main/kotlin/app/readylytics/health/core' ':(glob)**/*.kt'
 git commit -m "refactor: align core/database domain.sync package with module namespace"
@@ -138,15 +138,15 @@ git commit -m "refactor: align core/database domain.sync package with module nam
 **Interfaces:**
 - Produces: `app.readylytics.health.core.database.data.migration.DatabaseReadinessGate`.
 
-- [ ] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
-- [ ] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/migration`
+- [x] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
+- [x] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/migration`
   → Refactor → Rename → "Rename package" → `app.readylytics.health.core.database.data.migration` →
   both search options checked → Preview (confirm `DatabaseReadinessGate.kt` and
   `DatabaseReadinessGateTest.kt` both move) → apply.
-- [ ] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.migration\.DatabaseReadinessGate" --include="*.kt" . | grep -v /build/` — Expected: no output.
-- [ ] **Step 4: `codegraph sync`.**
-- [ ] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
-- [ ] **Step 6: Commit.**
+- [x] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.migration\.DatabaseReadinessGate" --include="*.kt" . | grep -v /build/` — Expected: no output.
+- [x] **Step 4: `codegraph sync`.**
+- [x] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
+- [x] **Step 6: Commit.**
 ```bash
 git add -A -- 'core/database/src/main/kotlin/app/readylytics/health/core' 'core/database/src/test/kotlin/app/readylytics/health/core' ':(glob)**/*.kt'
 git commit -m "refactor: align core/database data.migration package with module namespace"
@@ -165,7 +165,7 @@ git commit -m "refactor: align core/database data.migration package with module 
   string constants inside the class, unaffected by package rename); confirm this in Step 1 before
   renaming, since a keystore alias collision would be a genuine data-loss risk if it existed.
 
-- [ ] **Step 1: Confirm no FQN-based keystore alias.** Run:
+- [x] **Step 1: Confirm no FQN-based keystore alias.** Run:
   `grep -n "KeyStore\|alias" core/database/src/main/kotlin/app/readylytics/health/data/security/AndroidKeystoreKeyProvider.kt`
   and read the matched lines — confirm the Keystore alias is a literal string constant (e.g.
   `"readylytics_db_key"`), not derived from `javaClass.name` or `::class.qualifiedName`. If it is
@@ -173,14 +173,14 @@ git commit -m "refactor: align core/database data.migration package with module 
   encrypted database key on this rename, which is a data-loss regression. (Verified 2026-08-19
   during planning: this file uses a literal alias string, not a class-name-derived one — this step
   re-confirms it at execution time in case the file has changed since.)
-- [ ] **Step 2: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
-- [ ] **Step 3: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/security`
+- [x] **Step 2: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
+- [x] **Step 3: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/security`
   → Refactor → Rename → "Rename package" → `app.readylytics.health.core.database.data.security` →
   both search options checked → Preview (confirm 3 `src/main` files + 1 `src/test` file) → apply.
-- [ ] **Step 4: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.security\." --include="*.kt" . | grep -v /build/` — Expected: no output.
-- [ ] **Step 5: `codegraph sync`.**
-- [ ] **Step 6: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
-- [ ] **Step 7: Commit.**
+- [x] **Step 4: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.security\." --include="*.kt" . | grep -v /build/` — Expected: no output.
+- [x] **Step 5: `codegraph sync`.**
+- [x] **Step 6: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
+- [x] **Step 7: Commit.**
 ```bash
 git add -A -- 'core/database/src/main/kotlin/app/readylytics/health/core' 'core/database/src/test/kotlin/app/readylytics/health/core' ':(glob)**/*.kt'
 git commit -m "refactor: align core/database data.security package with module namespace"
@@ -200,14 +200,14 @@ git commit -m "refactor: align core/database data.security package with module n
   after both plans land, `core/database`'s mappers are `core.database.data.mapper.*` and
   `core/healthconnect`'s are `core.healthconnect.data.mapper.*`, no collision.
 
-- [ ] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
-- [ ] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/mapper`
+- [x] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
+- [x] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/mapper`
   → Refactor → Rename → "Rename package" → `app.readylytics.health.core.database.data.mapper` →
   both search options checked → Preview (confirm 3 `src/main` + 2 `src/test` files) → apply.
-- [ ] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.mapper\.\(DailySummaryMapper\|SleepAndHeartRateRecordMappers\|VitalsRecordMappers\)" --include="*.kt" . | grep -v /build/` — Expected: no output.
-- [ ] **Step 4: `codegraph sync`.**
-- [ ] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
-- [ ] **Step 6: Commit.**
+- [x] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.mapper\.\(DailySummaryMapper\|SleepAndHeartRateRecordMappers\|VitalsRecordMappers\)" --include="*.kt" . | grep -v /build/` — Expected: no output.
+- [x] **Step 4: `codegraph sync`.**
+- [x] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
+- [x] **Step 6: Commit.**
 ```bash
 git add -A -- 'core/database/src/main/kotlin/app/readylytics/health/core' 'core/database/src/test/kotlin/app/readylytics/health/core' ':(glob)**/*.kt'
 git commit -m "refactor: align core/database data.mapper package with module namespace"
@@ -226,15 +226,15 @@ git commit -m "refactor: align core/database data.mapper package with module nam
   that same file for `AuditEventEntity`'s new FQN; the IDE refactor handles it automatically, this
   is documented so the diff on `HealthDatabase.kt` in this task's commit is expected and correct.
 
-- [ ] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
-- [ ] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/local/entity`
+- [x] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
+- [x] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/local/entity`
   → Refactor → Rename → "Rename package" → `app.readylytics.health.core.database.data.local.entity`
   → both search options checked → Preview (confirm exactly 1 file: `AuditEventEntity.kt`; confirm
   `HealthDatabase.kt` appears in the "usages to update" list) → apply.
-- [ ] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.local\.entity\.AuditEventEntity" --include="*.kt" . | grep -v /build/` — Expected: no output.
-- [ ] **Step 4: `codegraph sync`.**
-- [ ] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
-- [ ] **Step 6: Commit.**
+- [x] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.local\.entity\.AuditEventEntity" --include="*.kt" . | grep -v /build/` — Expected: no output.
+- [x] **Step 4: `codegraph sync`.**
+- [x] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
+- [x] **Step 6: Commit.**
 ```bash
 git add -A -- 'core/database/src/main/kotlin/app/readylytics/health/core' 'core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt'
 git commit -m "refactor: align core/database data.local.entity package with module namespace"
@@ -250,19 +250,19 @@ git commit -m "refactor: align core/database data.local.entity package with modu
 - Consumes: same `HealthDatabase.kt` note as Task 6 — its `abstract fun auditEventDao(): AuditEventDao`
   accessor's import updates automatically.
 
-- [ ] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
-- [ ] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/local/dao`
+- [x] **Step 1: Baseline.** Run: `./gradlew :core:database:testDebugUnitTest` — Expected: PASS.
+- [x] **Step 2: Rename.** Right-click `core/database/src/main/kotlin/app/readylytics/health/data/local/dao`
   → Refactor → Rename → "Rename package" → `app.readylytics.health.core.database.data.local.dao` →
   both search options checked → Preview (confirm exactly 1 file: `AuditEventDao.kt`; confirm
   `HealthDatabase.kt` appears in the "usages to update" list) → apply.
-- [ ] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.local\.dao\.AuditEventDao" --include="*.kt" . | grep -v /build/` — Expected: no output.
-- [ ] **Step 4: `codegraph sync`.**
-- [ ] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
-- [ ] **Step 6: Final repo-wide sweep for this module's old FQNs.** Run:
+- [x] **Step 3: Sweep.** Run: `grep -rn "app\.readylytics\.health\.data\.local\.dao\.AuditEventDao" --include="*.kt" . | grep -v /build/` — Expected: no output.
+- [x] **Step 4: `codegraph sync`.**
+- [x] **Step 5: Gate.** Run: `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` — Expected: PASS, 3,009 tests, 0 warnings.
+- [x] **Step 6: Final repo-wide sweep for this module's old FQNs.** Run:
   `grep -rn "app\.readylytics\.health\.\(di\|domain\.sync\.DailyRecomputeSupport\|data\.migration\.DatabaseReadinessGate\|data\.security\.\(AndroidKeystoreKeyProvider\|KeyProvider\|SqlCipherKeyManager\)\|data\.mapper\.\(DailySummaryMapper\|SleepAndHeartRateRecordMappers\|VitalsRecordMappers\)\|data\.local\.entity\.AuditEventEntity\|data\.local\.dao\.AuditEventDao\)" --include="*.kt" . | grep -v /build/`
   — Expected: no output (this single command re-checks all seven of this plan's renames at once,
   as the plan's closing gate).
-- [ ] **Step 7: Commit.**
+- [x] **Step 7: Commit.**
 ```bash
 git add -A -- 'core/database/src/main/kotlin/app/readylytics/health/core' 'core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt'
 git commit -m "refactor: align core/database data.local.dao package with module namespace"

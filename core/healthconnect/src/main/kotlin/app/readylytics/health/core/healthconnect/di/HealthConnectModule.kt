@@ -1,4 +1,4 @@
-package app.readylytics.health.di
+package app.readylytics.health.core.healthconnect.di
 
 import app.readylytics.health.data.healthconnect.HealthConnectRepositoryImpl
 import app.readylytics.health.domain.repository.HealthConnectRepository
