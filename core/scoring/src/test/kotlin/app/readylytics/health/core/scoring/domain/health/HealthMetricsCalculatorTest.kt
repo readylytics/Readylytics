@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.health
+package app.readylytics.health.core.scoring.domain.health
 
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
