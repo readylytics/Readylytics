@@ -7,7 +7,7 @@ import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 
 import app.readylytics.health.core.model.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.domain.model.HrMinuteBucketRow
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import kotlin.math.roundToInt
 
 

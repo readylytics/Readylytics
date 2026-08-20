@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUs
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import java.time.LocalDate
 import javax.inject.Inject

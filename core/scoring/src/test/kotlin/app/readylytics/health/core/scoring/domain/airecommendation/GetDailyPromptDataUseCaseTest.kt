@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.airecommendation
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.RecoveryFlag
-import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository

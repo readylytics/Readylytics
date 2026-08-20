@@ -14,7 +14,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.domain.model.DailySummary

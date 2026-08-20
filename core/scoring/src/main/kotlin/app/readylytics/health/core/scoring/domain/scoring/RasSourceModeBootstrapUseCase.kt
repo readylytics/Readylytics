@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrap
 
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 
 /**

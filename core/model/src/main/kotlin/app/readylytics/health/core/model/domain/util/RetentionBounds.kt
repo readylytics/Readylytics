@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.util
 
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

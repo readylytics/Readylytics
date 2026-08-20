@@ -3,10 +3,10 @@ package app.readylytics.health.core.healthconnect.domain.sync
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 
 import app.readylytics.health.domain.model.getOrThrow
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.SyncPreference
-import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow

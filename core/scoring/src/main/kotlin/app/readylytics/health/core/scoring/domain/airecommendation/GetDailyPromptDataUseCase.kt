@@ -6,8 +6,8 @@ import app.readylytics.health.domain.model.PermittedRecommendationMapper
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.model.toLoadContext
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase

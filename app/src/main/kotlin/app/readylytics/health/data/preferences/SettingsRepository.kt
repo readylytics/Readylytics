@@ -9,19 +9,19 @@ import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.AboutPreferences
+import app.readylytics.health.core.model.domain.preferences.BackupSettings
+import app.readylytics.health.core.model.domain.preferences.DeviceSettings
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.HeartRateZoneSettings
+import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
+import app.readylytics.health.core.model.domain.preferences.SleepSettings
+import app.readylytics.health.core.model.domain.preferences.SyncSettings
+import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
-import app.readylytics.health.domain.preferences.AboutPreferences
-import app.readylytics.health.domain.preferences.BackupSettings
-import app.readylytics.health.domain.preferences.DeviceSettings
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.HeartRateZoneSettings
-import app.readylytics.health.domain.preferences.PhysiologySettings
-import app.readylytics.health.domain.preferences.SleepSettings
-import app.readylytics.health.domain.preferences.SyncSettings
-import app.readylytics.health.domain.preferences.ThresholdSettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -41,7 +41,7 @@ class SettingsRepository
         private val ui: UIPreferences,
         private val sync: SyncPreferences,
         private val backup: BackupPreferences,
-    ) : app.readylytics.health.domain.preferences.SettingsRepository,
+    ) : app.readylytics.health.core.model.domain.preferences.SettingsRepository,
         UserPreferencesReader,
         AboutPreferences,
         PhysiologySettings,

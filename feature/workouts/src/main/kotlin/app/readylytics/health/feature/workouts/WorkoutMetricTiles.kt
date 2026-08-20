@@ -4,11 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.model.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.util.PaceSpeedCalculator
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.feature.workouts.R
 import kotlin.math.roundToInt

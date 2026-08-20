@@ -8,8 +8,8 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.HealthZone
 import app.readylytics.health.domain.model.ZoneBand
-import app.readylytics.health.domain.preferences.Gender
-import app.readylytics.health.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.Gender
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 
 /**
  * Pure-Kotlin facade for cross-metric health calculations.

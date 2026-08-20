@@ -7,10 +7,10 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import kotlin.math.abs
 import kotlin.math.roundToInt

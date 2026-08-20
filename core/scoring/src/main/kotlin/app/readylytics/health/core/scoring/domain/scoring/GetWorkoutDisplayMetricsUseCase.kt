@@ -9,9 +9,9 @@ import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData

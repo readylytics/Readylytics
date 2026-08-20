@@ -6,8 +6,8 @@ import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
-import app.readylytics.health.domain.preferences.Gender
-import app.readylytics.health.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.Gender
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import kotlin.math.exp
 
 object RasCalculator {

@@ -12,6 +12,9 @@ import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.dashboard.CardManagementEvent
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.airecommendation.DailyPromptFormatter
@@ -33,9 +36,6 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.preferences.SettingsDefaults
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository

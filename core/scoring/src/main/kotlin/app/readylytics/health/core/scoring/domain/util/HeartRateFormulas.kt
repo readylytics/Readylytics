@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.util
 
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 
 object HeartRateFormulas {
     /**

@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

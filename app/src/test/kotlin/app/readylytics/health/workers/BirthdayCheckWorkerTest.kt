@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk

@@ -2,8 +2,8 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierResolver
 
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.SleepStageData

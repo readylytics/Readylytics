@@ -2,7 +2,7 @@ package app.readylytics.health.feature.onboarding
 
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

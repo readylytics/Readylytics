@@ -1,7 +1,7 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.sync.*
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import io.mockk.coEvery

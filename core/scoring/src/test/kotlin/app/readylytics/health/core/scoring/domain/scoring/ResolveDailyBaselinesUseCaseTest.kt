@@ -6,7 +6,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesU
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import io.mockk.coEvery
 import io.mockk.mockk

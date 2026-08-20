@@ -6,9 +6,9 @@ import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.repository.WalDiagnostics

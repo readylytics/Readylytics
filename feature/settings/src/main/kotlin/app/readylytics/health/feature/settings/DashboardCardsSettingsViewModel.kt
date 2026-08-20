@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.SettingsDefaults
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.sleep.SleepCardCatalog
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository

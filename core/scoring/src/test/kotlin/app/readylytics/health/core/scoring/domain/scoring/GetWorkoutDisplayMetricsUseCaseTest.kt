@@ -11,7 +11,7 @@ import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRecordData

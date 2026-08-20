@@ -4,7 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import app.readylytics.health.core.designsystem.FitDashboardTheme
-import app.readylytics.health.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

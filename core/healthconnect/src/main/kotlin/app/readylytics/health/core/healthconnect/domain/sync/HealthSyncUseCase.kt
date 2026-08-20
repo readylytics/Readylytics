@@ -1,8 +1,8 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.RetentionBounds

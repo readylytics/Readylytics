@@ -13,8 +13,8 @@ import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 
 import app.readylytics.health.core.model.domain.circadian.CircadianThresholdDefaults
-import app.readylytics.health.domain.preferences.PhysiologyProfile
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.scoring.domain.scoring.components.AuditTrail
 import app.readylytics.health.core.scoring.domain.scoring.components.AuditTrailFactory
 import app.readylytics.health.core.scoring.domain.scoring.components.CircadianConsistencyConfig

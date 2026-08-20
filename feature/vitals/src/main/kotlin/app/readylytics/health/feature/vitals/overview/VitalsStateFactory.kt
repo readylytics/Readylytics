@@ -2,6 +2,7 @@ package app.readylytics.health.feature.vitals.overview
 
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
@@ -25,7 +26,6 @@ import app.readylytics.health.domain.model.assessRhr
 import app.readylytics.health.domain.model.assessSpo2
 import app.readylytics.health.domain.model.hrvZoneBandsForBaseline
 import app.readylytics.health.domain.model.rhrZoneBandsForBaseline
-import app.readylytics.health.domain.preferences.UnitSystem
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit

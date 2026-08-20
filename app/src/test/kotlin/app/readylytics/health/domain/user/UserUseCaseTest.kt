@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.user
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.workers.WorkerScheduler
-import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import io.mockk.coEvery
 import io.mockk.coJustRun

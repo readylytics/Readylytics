@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun OnboardingRoute(
-    userPreferencesFlow: Flow<app.readylytics.health.domain.preferences.UserPreferences>,
+    userPreferencesFlow: Flow<app.readylytics.health.core.model.domain.preferences.UserPreferences>,
     allPermissions: Set<String>,
     requiredPermissions: Set<String>,
     optionalPermissions: Set<String>,

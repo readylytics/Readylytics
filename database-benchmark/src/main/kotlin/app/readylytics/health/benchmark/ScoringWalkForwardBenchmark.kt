@@ -17,6 +17,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.SleepSession
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
@@ -39,7 +40,6 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoring
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.preferences.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking

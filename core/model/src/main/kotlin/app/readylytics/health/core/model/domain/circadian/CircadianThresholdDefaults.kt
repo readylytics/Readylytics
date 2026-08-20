@@ -1,7 +1,7 @@
 package app.readylytics.health.core.model.domain.circadian
 
 
-import app.readylytics.health.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 
 /**
  * Single source of truth for circadian-consistency thresholds.

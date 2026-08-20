@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.preferences
+package app.readylytics.health.core.model.domain.preferences
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile

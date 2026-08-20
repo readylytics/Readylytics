@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadIn
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHeartRateLoadCalculator
 
 import app.readylytics.health.domain.model.HrMinuteBucketRow
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import javax.inject.Inject
 import javax.inject.Singleton
 

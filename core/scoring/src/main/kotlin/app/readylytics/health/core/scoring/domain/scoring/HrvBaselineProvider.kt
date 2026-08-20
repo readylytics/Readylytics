@@ -3,8 +3,8 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.HrvBaselineProvider
 
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first

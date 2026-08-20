@@ -7,7 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.logE
 import java.time.Instant

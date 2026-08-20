@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.di
 
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import dagger.Module

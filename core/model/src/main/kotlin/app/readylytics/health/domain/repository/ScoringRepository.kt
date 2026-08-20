@@ -2,7 +2,7 @@ package app.readylytics.health.domain.repository
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.ReadinessResult
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import java.time.LocalDate
 import java.time.ZoneId
 

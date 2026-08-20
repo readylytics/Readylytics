@@ -4,8 +4,8 @@ import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUs
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.preferences.PhysiologyProfile
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before

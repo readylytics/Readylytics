@@ -1,7 +1,7 @@
 package app.readylytics.health.core.database.domain.scoring.golden
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import kotlinx.coroutines.flow.Flow

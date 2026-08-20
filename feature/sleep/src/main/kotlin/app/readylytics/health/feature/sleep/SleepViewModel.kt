@@ -11,6 +11,7 @@ import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
@@ -26,7 +27,6 @@ import app.readylytics.health.core.ui.common.padBucketsToRange
 import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRecordData

@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring.strategies
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 
 import app.readylytics.health.domain.model.RecoveryFlag
-import app.readylytics.health.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Readiness

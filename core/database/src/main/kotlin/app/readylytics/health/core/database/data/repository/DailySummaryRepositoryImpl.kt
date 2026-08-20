@@ -4,7 +4,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.scoringZone
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.SleepSessionData

@@ -16,7 +16,7 @@ import app.readylytics.health.domain.model.Contributors
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.SleepSession
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.core.scoring.domain.scoring.components.PhaseCalculator

@@ -12,14 +12,14 @@ import app.readylytics.health.core.databaseschema.data.local.entity.SleepSession
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
-import app.readylytics.health.domain.preferences.PhysiologyProfile
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer

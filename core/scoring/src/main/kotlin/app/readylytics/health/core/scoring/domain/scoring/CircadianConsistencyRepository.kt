@@ -7,10 +7,10 @@ import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.model.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.circadianConsistencyStatus
-import app.readylytics.health.domain.preferences.SettingsDefaults
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.model.domain.security.EncryptionManager

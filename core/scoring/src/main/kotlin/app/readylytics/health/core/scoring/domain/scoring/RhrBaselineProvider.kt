@@ -6,8 +6,8 @@ import app.readylytics.health.core.scoring.domain.scoring.RhrBaselineProvider
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 import app.readylytics.health.domain.model.PhysiologyConstants
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first

@@ -4,8 +4,8 @@ import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.BodyFatStatus
-import app.readylytics.health.domain.preferences.Gender
-import app.readylytics.health.domain.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.domain.preferences.Gender
+import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.service.HealthMetricsService
 
 object HealthMetricsCalculator {

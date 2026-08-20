@@ -3,8 +3,8 @@ package app.readylytics.health.core.healthconnect.domain.sync
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.domain.model.HealthDataType
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository

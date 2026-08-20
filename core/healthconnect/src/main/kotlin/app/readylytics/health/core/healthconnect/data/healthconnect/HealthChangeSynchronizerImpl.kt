@@ -26,7 +26,7 @@ import app.readylytics.health.core.healthconnect.data.mapper.WeightDataMapper
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.domain.model.*
 import app.readylytics.health.domain.repository.TransactionRunner

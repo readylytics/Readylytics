@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.util
 
-import app.readylytics.health.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import kotlin.math.floor
 import kotlin.math.roundToInt
 

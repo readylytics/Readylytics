@@ -3,8 +3,8 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBaselinesUseCase
 
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import kotlinx.coroutines.flow.first

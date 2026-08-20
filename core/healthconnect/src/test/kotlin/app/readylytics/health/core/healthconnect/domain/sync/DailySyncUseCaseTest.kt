@@ -5,8 +5,8 @@ import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.HealthDataType
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
 import app.readylytics.health.domain.repository.ScoringRepository

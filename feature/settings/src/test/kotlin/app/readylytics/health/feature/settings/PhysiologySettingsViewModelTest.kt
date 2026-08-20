@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.settings
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.DisplaySettings
+import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
-import app.readylytics.health.domain.preferences.DisplaySettings
-import app.readylytics.health.domain.preferences.PhysiologySettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk

@@ -8,8 +8,8 @@ import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.SleepSession
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext

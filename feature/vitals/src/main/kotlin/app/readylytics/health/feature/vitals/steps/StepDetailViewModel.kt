@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import app.readylytics.health.core.model.domain.util.truncateToDayMs
 import app.readylytics.health.core.ui.common.DailyDataPoint
@@ -16,7 +17,6 @@ import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.StepsStatusClassifier
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher

@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.DefaultDispatcher
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.sync.SyncWorkoutRouteUseCase
 import app.readylytics.health.core.model.domain.util.ElevationGainCalculator
 import app.readylytics.health.core.model.domain.util.PaceSpeedCalculator
@@ -20,8 +22,6 @@ import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.RouteState
-import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository

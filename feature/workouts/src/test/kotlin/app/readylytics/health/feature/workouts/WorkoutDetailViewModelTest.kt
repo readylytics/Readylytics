@@ -3,6 +3,7 @@ package app.readylytics.health.feature.workouts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.core.model.domain.sync.SyncWorkoutRouteUseCase
@@ -13,7 +14,6 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.model.WorkoutRoutePoint
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRecordData

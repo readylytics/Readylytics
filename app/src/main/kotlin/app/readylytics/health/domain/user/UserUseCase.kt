@@ -1,10 +1,10 @@
 package app.readylytics.health.domain.user
 
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first

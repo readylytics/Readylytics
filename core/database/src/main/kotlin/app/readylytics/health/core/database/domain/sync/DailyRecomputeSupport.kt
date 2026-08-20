@@ -3,8 +3,8 @@ package app.readylytics.health.core.database.domain.sync
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
 
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext

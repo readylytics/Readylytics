@@ -4,7 +4,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.SleepSession
 import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext

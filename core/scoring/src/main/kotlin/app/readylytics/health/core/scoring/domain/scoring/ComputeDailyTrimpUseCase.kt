@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCa
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import javax.inject.Inject
 
 class ComputeDailyTrimpUseCase

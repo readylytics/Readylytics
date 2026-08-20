@@ -18,7 +18,7 @@ import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.WorkoutRoutePoint
-import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.repository.ScoringRepository
