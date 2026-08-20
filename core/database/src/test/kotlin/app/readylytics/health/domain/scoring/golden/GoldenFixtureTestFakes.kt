@@ -10,7 +10,7 @@ import java.time.LocalDate
 
 /**
  * Minimal, non-mocking fake used by the golden-fixture walk-forward test so the real
- * [app.readylytics.health.data.repository.ScoringRepositoryImpl] can be constructed directly
+ * [app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl] can be constructed directly
  * against a fixed [UserPreferences] snapshot. The walk-forward test never mutates preferences
  * mid-run, so every method beyond the [userPreferences] flow is a no-op.
  */

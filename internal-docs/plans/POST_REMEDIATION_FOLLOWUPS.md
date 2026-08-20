@@ -33,7 +33,7 @@ suppressed detekt findings; that work is not repeated here.
 
 ## Item 1 — `SelectedDateRepository.earliestDate`: decide what `SharingStarted` should be
 
-**File:** `core/database/src/main/kotlin/app/readylytics/health/data/repository/SelectedDateRepository.kt`
+**File:** `core/database/src/main/kotlin/app/readylytics/health/core/database/data/repository/SelectedDateRepository.kt`
 
 ### The situation
 
@@ -124,7 +124,7 @@ Do **not** simply swap the enum value.
 ### Tests to write first (required for Option B, valuable either way)
 
 Existing coverage lives in
-`core/database/src/test/kotlin/app/readylytics/health/data/repository/SelectedDateRepositoryTest.kt`
+`core/database/src/test/kotlin/app/readylytics/health/core/database/data/repository/SelectedDateRepositoryTest.kt`
 (see the `// --- earliestDate boundary tests ---` block at :175, and the cases at :224, :270,
 :274). It does not cover resubscribe behaviour. Add:
 

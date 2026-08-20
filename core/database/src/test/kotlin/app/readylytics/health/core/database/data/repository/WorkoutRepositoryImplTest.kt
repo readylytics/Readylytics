@@ -1,4 +1,4 @@
-package app.readylytics.health.data.repository
+package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePointDao

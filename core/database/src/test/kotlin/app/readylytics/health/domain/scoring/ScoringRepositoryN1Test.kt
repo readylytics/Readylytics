@@ -31,11 +31,11 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.data.repository.ScoringDayDataLoader
-import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
-import app.readylytics.health.data.repository.ScoringRepositoryImpl
-import app.readylytics.health.data.repository.SleepSessionRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
+import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository

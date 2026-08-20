@@ -1,4 +1,4 @@
-package app.readylytics.health.data.repository
+package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase

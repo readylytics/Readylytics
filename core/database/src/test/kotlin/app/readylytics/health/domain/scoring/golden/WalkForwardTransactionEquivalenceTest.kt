@@ -6,11 +6,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.data.repository.ScoringDayDataLoader
-import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
-import app.readylytics.health.data.repository.ScoringRepositoryImpl
-import app.readylytics.health.data.repository.SleepSessionRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
+import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer

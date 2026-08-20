@@ -1,13 +1,13 @@
 package app.readylytics.health.ui.sync
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.database.data.repository.SelectedDateRepository
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository

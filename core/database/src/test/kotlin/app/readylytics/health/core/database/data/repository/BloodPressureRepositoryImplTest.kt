@@ -1,25 +1,27 @@
-package app.readylytics.health.data.repository
+package app.readylytics.health.core.database.data.repository
 
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.domain.model.BloodPressureRecord
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.lang.reflect.Proxy
 
-class BodyFatRepositoryImplTest {
+class BloodPressureRepositoryImplTest {
     private val results = mutableMapOf<String, Any?>()
-    private val dao = fakeDao<BodyFatRecordDao>(results)
-    private val repository = BodyFatRepositoryImpl(dao)
+    private val dao = fakeDao<BloodPressureRecordDao>(results)
+    private val repository = BloodPressureRepositoryImpl(dao)
 
     @Test
     fun `getByDateRangePaged delegates to DAO and maps entities to domain`() =
         runTest {
             val entity =
-                BodyFatRecordEntity(
-                    id = "bf1",
+                BloodPressureRecordEntity(
+                    id = "bp1",
                     timestampMs = 150L,
-                    bodyFatPercent = 18.5f,
+                    systolicMmHg = 120,
+                    diastolicMmHg = 80,
                     deviceName = "Watch",
                 )
             results["getPagedByTimeRange"] = listOf(entity)
@@ -28,9 +30,10 @@ class BodyFatRepositoryImplTest {
 
             assertEquals(1, result.size)
             val mapped = result.first()
-            assertEquals("bf1", mapped.id)
+            assertEquals("bp1", mapped.id)
             assertEquals(150L, mapped.time.toEpochMilli())
-            assertEquals(18.5f, mapped.bodyFatPercent)
+            assertEquals(120, mapped.systolicMmHg)
+            assertEquals(80, mapped.diastolicMmHg)
             assertEquals("Watch", mapped.deviceName)
         }
 

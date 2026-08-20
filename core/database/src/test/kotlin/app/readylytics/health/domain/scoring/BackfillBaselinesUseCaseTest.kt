@@ -16,7 +16,7 @@ import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.TransactionRunner

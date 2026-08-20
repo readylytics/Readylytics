@@ -1,4 +1,4 @@
-package app.readylytics.health.data.repository
+package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao

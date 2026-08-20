@@ -1,11 +1,11 @@
 package app.readylytics.health.architecture
 
+import app.readylytics.health.core.database.data.repository.SelectedDateRepository
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.preferences.AboutPreferences
 import app.readylytics.health.domain.preferences.BackupSettings

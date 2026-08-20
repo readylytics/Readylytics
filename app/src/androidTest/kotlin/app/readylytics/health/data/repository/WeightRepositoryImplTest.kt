@@ -3,6 +3,7 @@ package app.readylytics.health.data.repository
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.database.data.repository.WeightRepositoryImpl
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.HealthDatabase

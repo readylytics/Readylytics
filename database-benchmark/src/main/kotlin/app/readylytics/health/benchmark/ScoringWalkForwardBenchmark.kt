@@ -5,6 +5,10 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
+import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
@@ -33,10 +37,6 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScorin
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
-import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
-import app.readylytics.health.data.repository.ScoringDayDataLoader
-import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
-import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.preferences.SettingsRepository
@@ -180,7 +180,7 @@ class ScoringWalkForwardBenchmark {
         val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
         val scoringConfigFactory = ScoringConfigFactory()
         val sleepSessionRepository =
-            app.readylytics.health.data.repository.SleepSessionRepositoryImpl(
+            app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl(
                 db.sleepSessionDao(),
                 db.sleepStageDao(),
             )
