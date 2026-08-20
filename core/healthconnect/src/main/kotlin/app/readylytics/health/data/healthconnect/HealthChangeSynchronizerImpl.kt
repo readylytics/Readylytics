@@ -18,11 +18,11 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEnt
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.data.mapper.BloodPressureDataMapper
-import app.readylytics.health.data.mapper.BodyFatDataMapper
-import app.readylytics.health.data.mapper.BodyTemperatureDataMapper
-import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
-import app.readylytics.health.data.mapper.WeightDataMapper
+import app.readylytics.health.core.healthconnect.data.mapper.BloodPressureDataMapper
+import app.readylytics.health.core.healthconnect.data.mapper.BodyFatDataMapper
+import app.readylytics.health.core.healthconnect.data.mapper.BodyTemperatureDataMapper
+import app.readylytics.health.core.healthconnect.data.mapper.OxygenSaturationDataMapper
+import app.readylytics.health.core.healthconnect.data.mapper.WeightDataMapper
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.heartrate.ZoneThresholds

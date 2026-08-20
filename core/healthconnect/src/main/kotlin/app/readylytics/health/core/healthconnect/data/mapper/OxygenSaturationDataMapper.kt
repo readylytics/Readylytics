@@ -1,4 +1,4 @@
-package app.readylytics.health.data.mapper
+package app.readylytics.health.core.healthconnect.data.mapper
 
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
