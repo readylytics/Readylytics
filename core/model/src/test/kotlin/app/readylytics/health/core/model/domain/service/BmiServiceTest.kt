@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.service
+package app.readylytics.health.core.model.domain.service
 
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.Result

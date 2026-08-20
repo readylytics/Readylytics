@@ -9,10 +9,10 @@ import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.service.BmiService
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.service.BmiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update

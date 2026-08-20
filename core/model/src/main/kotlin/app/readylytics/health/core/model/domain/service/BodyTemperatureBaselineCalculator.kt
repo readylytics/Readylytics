@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.service
+package app.readylytics.health.core.model.domain.service
 
 import javax.inject.Inject
 

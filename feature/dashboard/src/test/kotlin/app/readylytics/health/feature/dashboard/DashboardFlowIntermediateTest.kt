@@ -6,6 +6,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepos
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.model.domain.sync.ResyncPhase
@@ -14,7 +15,6 @@ import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRe
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
-import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

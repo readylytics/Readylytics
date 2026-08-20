@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.service.HealthMetricsService
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
@@ -29,7 +30,6 @@ import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.model.sleepEfficiencyStatus
 import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.domain.model.toMetricStatus
-import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import java.time.LocalDate
 import javax.inject.Inject

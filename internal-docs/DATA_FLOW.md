@@ -525,7 +525,7 @@ top of that cache — all of it deliberately outside `domain/scoring/**` and nev
 formula:
 
 - **Baseline.** `BodyTemperatureBaselineCalculator`
-  (`core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`)
+  (`core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/BodyTemperatureBaselineCalculator.kt`)
   is a pure-Kotlin plain trailing average over the 14 calendar days immediately before the target
   date (`BASELINE_WINDOW_DAYS = 14`); it returns `null` ("Calibrating") until at least 14 non-null
   `avgSleepingBodyTemp` values exist in that window. `bodyTemperatureStatus(today, baseline, threshold)`
@@ -535,7 +535,7 @@ formula:
   §2.4): a plain average rather than a log-normal EWMA, computed from the already-cached display
   field, and never persisted anywhere the scoring pipeline reads from.
   `BodyTemperatureBaselineProvider`
-  (`core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineProvider.kt`)
+  (`core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/BodyTemperatureBaselineProvider.kt`)
   exposes `observeBaseline(date)` for one selected date at a time — mirroring how
   `HrvBaselineProvider` is consumed — by observing `DailySummaryRepository` emissions for the
   14-day window and delegating to the calculator. Room summary emissions (including recalculation)
@@ -1081,9 +1081,9 @@ defaults when unset).
 | `core/model/src/main/kotlin/app/readylytics/health/domain/sync/mappers/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/BodyCompositionAssessment.kt` | Domain — canonical BMI/body-fat status seam         | assesses categories/statuses and owns the category-band/visual reference metadata consumed by cards, history labels, and trend-chart coloring |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BmiService.kt`               | Domain — facade (delegates)                         | `classify()` → `BodyCompositionAssessment.assessBmi(bmi).status`                        |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/BmiService.kt`               | Domain — facade (delegates)                         | `classify()` → `BodyCompositionAssessment.assessBmi(bmi).status`                        |
 | `core/model/src/main/kotlin/app/readylytics/health/domain/model/VitalStatusClassifiers.kt`      | Domain — canonical steps/heart-rate status seams     | `StepsStatusClassifier` and `HeartRateStatusClassifier` classify display statuses         |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/HealthMetricsService.kt`     | Domain — canonical BP status seam and facade         | delegates BMI/body-fat assessments; owns blood-pressure assessment and component chart-band metadata derived from the same thresholds |
 | `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/calculation/HealthMetricsCalculator.kt` | Domain — facade (delegates)                     | `assessBmi()`/`assessBodyFatPercent()` → `BodyCompositionAssessment`; `assessBloodPressure()` → `HealthMetricsService` |
 | `core/database/src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v12)                             | 17 entities; pre-bridge Room migration chain ends at v6; external migration owns v7; Room owns v7→v12 |
 | `app/src/main/kotlin/app/readylytics/health/data/migration/DatabaseReadinessGate.kt`                                            | Storage — pre-Room readiness guard                  | missing or v7..`DATABASE_VERSION` ready; v5/v6 or resumable metadata require external migration |
@@ -1124,8 +1124,8 @@ defaults when unset).
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 / body temperature trends + bands                                       |
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsTrendSection.kt`      | UI — Vico chart                                     | body temperature trend chart + baseline reference line (display-only, see §1.5)          |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineCalculator.kt`    | Domain — display-only baseline (non-scoring)         | 14-day plain trailing average baseline                                                      |
-| `core/model/src/main/kotlin/app/readylytics/health/domain/service/BodyTemperatureBaselineProvider.kt`      | Domain — display-only baseline (non-scoring)         | `observeBaseline(date)` stream; Room summary/scoring-zone emissions recalculate dashboard + Vitals baseline |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/BodyTemperatureBaselineCalculator.kt`    | Domain — display-only baseline (non-scoring)         | 14-day plain trailing average baseline                                                      |
+| `core/model/src/main/kotlin/app/readylytics/health/core/model/domain/service/BodyTemperatureBaselineProvider.kt`      | Domain — display-only baseline (non-scoring)         | `observeBaseline(date)` stream; Room summary/scoring-zone emissions recalculate dashboard + Vitals baseline |
 | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BodyTemperatureDataMapper.kt`       | Ingestion — mapper                                   | body temperature (°C)                                                                    |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepViewModel.kt`                      | UI — sleep state                                    | sleep score, stage timeline, sleep window/duration trend data, `sleepHrSamples`          |
 | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsViewModel.kt`             | UI — workouts state                                 | TRIMP / strain / RAS                                                                     |

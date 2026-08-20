@@ -3,7 +3,7 @@ package app.readylytics.health.domain.model
 /**
  * Generic outcome envelope used across the domain layer.
  *
- * Replaces ad-hoc result types ([app.readylytics.health.domain.service.BmiResult],
+ * Replaces ad-hoc result types ([app.readylytics.health.core.model.domain.service.BmiResult],
  * `Option<T>`, `PreferenceResult<T>`, `AggregatedValidationResult`) with a single, consistent
  * sealed hierarchy. Services never throw exceptions for predictable failure modes; they return
  * [Result.Failure] with a human-readable [Failure.reason] and a stable [Failure.code].
