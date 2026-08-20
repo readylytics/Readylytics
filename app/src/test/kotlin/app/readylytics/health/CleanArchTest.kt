@@ -8,7 +8,10 @@ import org.junit.Test
 class CleanArchTest {
     private val domainPackageGlobs =
         listOf(
-            "app.readylytics.health.domain..",
+            "app.readylytics.health.domain.migration..",
+            "app.readylytics.health.domain.security..",
+            "app.readylytics.health.domain.sync..",
+            "app.readylytics.health.domain.user..",
             "app.readylytics.health.core.model.domain..",
             "app.readylytics.health.core.scoring.domain..",
             "app.readylytics.health.core.database.domain..",
@@ -18,7 +21,14 @@ class CleanArchTest {
 
     private val dataLayerPackagePrefixes =
         listOf(
-            "app.readylytics.health.data.",
+            "app.readylytics.health.data.backup.",
+            "app.readylytics.health.data.crashreport.",
+            "app.readylytics.health.data.device.",
+            "app.readylytics.health.data.logcat.",
+            "app.readylytics.health.data.migration.",
+            "app.readylytics.health.data.preferences.",
+            "app.readylytics.health.data.security.",
+            "app.readylytics.health.data.util.",
             "app.readylytics.health.core.database.data.",
             "app.readylytics.health.core.healthconnect.data.",
             "app.readylytics.health.core.model.data.",
