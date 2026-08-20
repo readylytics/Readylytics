@@ -6,11 +6,11 @@ import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
-import app.readylytics.health.domain.backup.BackupFileInfo
 import java.time.LocalDate
 
 sealed interface SettingsEvent {

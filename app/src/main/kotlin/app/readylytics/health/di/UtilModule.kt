@@ -1,6 +1,8 @@
 package app.readylytics.health.di
 
 import android.content.Context
+import app.readylytics.health.core.model.domain.backup.BackupService
+import app.readylytics.health.core.model.domain.backup.RestoreService
 import app.readylytics.health.core.model.domain.crashreport.CrashReportStore
 import app.readylytics.health.core.model.domain.logcat.LogcatCaptureStore
 import app.readylytics.health.core.model.domain.util.ResourceProvider
@@ -8,8 +10,6 @@ import app.readylytics.health.data.backup.LocalBackupServiceImpl
 import app.readylytics.health.data.backup.LocalRestoreServiceImpl
 import app.readylytics.health.data.crashreport.CrashReportStoreImpl
 import app.readylytics.health.data.logcat.LogcatCaptureStoreImpl
-import app.readylytics.health.domain.backup.BackupService
-import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.Binds
 import dagger.Module

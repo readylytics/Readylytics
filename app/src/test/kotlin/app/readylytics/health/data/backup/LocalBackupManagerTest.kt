@@ -10,6 +10,8 @@ import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.backup.BackupLocation
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.dashboard.CardId
@@ -19,8 +21,6 @@ import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepLayoutRepository

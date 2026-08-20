@@ -3,13 +3,13 @@ package app.readylytics.health.data.backup
 import android.net.Uri
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.backup.RestoreResult
+import app.readylytics.health.core.model.domain.backup.RestoreStage
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.UserPreferencesProto
-import app.readylytics.health.domain.backup.RestoreResult
-import app.readylytics.health.domain.backup.RestoreStage
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

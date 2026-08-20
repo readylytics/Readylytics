@@ -2,7 +2,7 @@ package app.readylytics.health.data.backup
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.domain.backup.BackupLocation
+import app.readylytics.health.core.model.domain.backup.BackupLocation
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test

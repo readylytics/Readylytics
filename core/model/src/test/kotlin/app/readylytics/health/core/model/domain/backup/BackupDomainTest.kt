@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.backup
+package app.readylytics.health.core.model.domain.backup
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows

@@ -1,7 +1,7 @@
 package app.readylytics.health.data.backup
 
-import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.domain.backup.BackupLocation
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.backup.BackupLocation
 import java.io.File
 import java.io.InputStream
 

@@ -1,3 +1,3 @@
-package app.readylytics.health.domain.backup
+package app.readylytics.health.core.model.domain.backup
 
 class WrongBackupPasswordException : Exception("Incorrect backup password")
