@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard
 
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
@@ -17,7 +18,6 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.dashboard.CardManagementEvent
 import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.insights.InsightContext
 import app.readylytics.health.domain.insights.InsightEngine

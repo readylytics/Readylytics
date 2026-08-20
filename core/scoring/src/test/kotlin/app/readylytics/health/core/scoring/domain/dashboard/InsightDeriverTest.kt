@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.dashboard
+package app.readylytics.health.core.scoring.domain.dashboard
 
 import app.readylytics.health.domain.insights.InsightFinding
 import app.readylytics.health.domain.insights.InsightParams
