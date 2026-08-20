@@ -18,6 +18,11 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferencesReade
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.ui.common.TimeRange
@@ -26,11 +31,6 @@ import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
-import app.readylytics.health.domain.workouts.WorkoutChartId
-import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryId
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi

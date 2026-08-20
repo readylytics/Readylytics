@@ -19,6 +19,8 @@ import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMo
 import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
@@ -28,8 +30,6 @@ import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

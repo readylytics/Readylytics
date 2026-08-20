@@ -7,9 +7,9 @@ import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
-import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

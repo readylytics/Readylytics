@@ -3,10 +3,10 @@ package app.readylytics.health.core.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.ui.components.reorder.DragController
 import app.readylytics.health.core.ui.components.reorder.ReorderableList
-import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryId
 
 @Immutable
 data class WorkoutHistoryConfigurationsList(

@@ -19,7 +19,7 @@ import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

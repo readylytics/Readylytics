@@ -13,10 +13,10 @@ import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
 import app.readylytics.health.core.model.domain.vitals.VitalsChartId
-import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
-import app.readylytics.health.domain.workouts.WorkoutChartId
-import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryId
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
 

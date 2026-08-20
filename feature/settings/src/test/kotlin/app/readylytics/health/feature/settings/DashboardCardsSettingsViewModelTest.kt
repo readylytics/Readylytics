@@ -8,12 +8,12 @@ import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMo
 import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify

@@ -25,11 +25,11 @@ import app.readylytics.health.core.model.domain.backup.BackupLocation
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher

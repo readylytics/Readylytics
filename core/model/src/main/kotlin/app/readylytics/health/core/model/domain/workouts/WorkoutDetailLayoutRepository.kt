@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.workouts
+package app.readylytics.health.core.model.domain.workouts
 
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
 import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType

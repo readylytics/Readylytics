@@ -9,13 +9,13 @@ import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.ui.components.ManagementBottomSheet
 import app.readylytics.health.core.ui.components.ManagementItem
 import app.readylytics.health.core.ui.components.ManagementSection
-import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
-import app.readylytics.health.domain.workouts.WorkoutChartId
-import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

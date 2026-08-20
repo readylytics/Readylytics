@@ -10,7 +10,7 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferencesReade
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
-import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

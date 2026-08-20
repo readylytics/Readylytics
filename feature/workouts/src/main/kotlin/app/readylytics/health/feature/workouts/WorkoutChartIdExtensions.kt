@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.annotation.StringRes
-import app.readylytics.health.domain.workouts.WorkoutChartId
+import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
 
 @get:StringRes
 val WorkoutChartId.displayNameResId: Int
