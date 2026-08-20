@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local.migration
+package app.readylytics.health.core.database.data.local.migration
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase

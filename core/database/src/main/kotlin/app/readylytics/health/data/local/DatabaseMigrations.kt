@@ -2,9 +2,9 @@ package app.readylytics.health.data.local
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import app.readylytics.health.data.local.migration.MIGRATION_10_11
-import app.readylytics.health.data.local.migration.MIGRATION_11_12
-import app.readylytics.health.data.local.migration.MIGRATION_9_10
+import app.readylytics.health.core.database.data.local.migration.MIGRATION_10_11
+import app.readylytics.health.core.database.data.local.migration.MIGRATION_11_12
+import app.readylytics.health.core.database.data.local.migration.MIGRATION_9_10
 
 object DatabaseMigrations {
     private val MIGRATION_1_2 =
