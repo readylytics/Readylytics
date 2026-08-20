@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.data.local.RetentionCleanup
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.preferences.UserPreferences
 import dagger.Lazy
 import io.mockk.coEvery

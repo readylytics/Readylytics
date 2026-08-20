@@ -1,12 +1,12 @@
 package app.readylytics.health
 
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
-import app.readylytics.health.domain.migration.DatabaseReadiness
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify

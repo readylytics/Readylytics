@@ -2,7 +2,7 @@ package app.readylytics.health.data.local
 
 import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.core.database.di.requireDatabaseReady
-import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

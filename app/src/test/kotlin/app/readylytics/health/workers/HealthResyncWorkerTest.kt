@@ -7,10 +7,10 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.healthconnect.domain.sync.FullHistoricalResyncUseCase
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.scoring.SleepScoreWeightProfile

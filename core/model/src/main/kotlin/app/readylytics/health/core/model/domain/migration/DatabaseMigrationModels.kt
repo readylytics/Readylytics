@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.migration
+package app.readylytics.health.core.model.domain.migration
 
 enum class V7MigrationPhase {
     PREFLIGHT,

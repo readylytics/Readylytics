@@ -29,7 +29,7 @@ import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.core.database.data.security.AndroidKeystoreKeyProvider
 import app.readylytics.health.core.database.data.security.KeyProvider
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
-import app.readylytics.health.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.repository.WalDiagnostics
 import dagger.Binds

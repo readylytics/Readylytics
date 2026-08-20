@@ -7,10 +7,10 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import app.readylytics.health.core.model.domain.migration.DatabaseMigrationProgress
+import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
+import app.readylytics.health.core.model.domain.migration.V7MigrationResult
 import app.readylytics.health.data.migration.V7DatabaseMigrator
-import app.readylytics.health.domain.migration.DatabaseMigrationProgress
-import app.readylytics.health.domain.migration.V7MigrationPhase
-import app.readylytics.health.domain.migration.V7MigrationResult
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
