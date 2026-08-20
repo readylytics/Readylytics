@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sync.link
+package app.readylytics.health.core.database.domain.sync.link
 
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
