@@ -427,6 +427,13 @@ Smallest scope first. One commit per package (not per module) to keep diffs revi
 After each commit: full gate (`ktlintFormat && detekt && testDebugUnitTest`, then
 `lintRelease` at the end).
 
+**Execution plans (2026-08-20), one per step, run in order:**
+
+1. `internal-docs/plans/PACKAGE_ALIGN_1_HEALTHCONNECT.md` — `core/healthconnect`, 8 files.
+2. `internal-docs/plans/PACKAGE_ALIGN_2_SCORING.md` — `core/scoring`, 55 files (+ DATA_FLOW scoring-path backstop).
+3. `internal-docs/plans/PACKAGE_ALIGN_3_DATABASE.md` — `core/database`, 68 measured files + 21 flat-ns test files missed by the measurement (+ Room schemas dir rename).
+4. `internal-docs/plans/PACKAGE_ALIGN_4_MODEL.md` — `core/model`, 129 measured files + 50 test files + 3 stray `data.healthconnect` tests (+ CleanArchTest legacy-glob narrowing at the end).
+
 1. `core/healthconnect` — 8 files, 1 package. Smallest, isolated.
 2. `core/scoring` — 55 files, 5 packages. No Room/DataStore/WorkManager complications.
 3. `core/database` — 68 files. Watch for Room schema JSON in `core/database/schemas/`,
