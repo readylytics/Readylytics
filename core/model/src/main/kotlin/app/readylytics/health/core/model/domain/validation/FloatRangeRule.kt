@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.validation
+package app.readylytics.health.core.model.domain.validation
 
 open class FloatRangeRule(
     private val min: Float,

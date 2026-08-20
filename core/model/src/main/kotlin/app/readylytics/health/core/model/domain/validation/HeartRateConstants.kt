@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.validation
+package app.readylytics.health.core.model.domain.validation
 
 /**
  * Physiological bounds for human heart rate measurements.

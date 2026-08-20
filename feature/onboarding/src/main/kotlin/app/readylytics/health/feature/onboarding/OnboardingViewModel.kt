@@ -7,10 +7,10 @@ import app.readylytics.health.core.model.domain.preferences.DisplaySettings
 import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.service.BmiData
 import app.readylytics.health.core.model.domain.service.BmiService
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate

@@ -9,8 +9,8 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferencesReade
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow

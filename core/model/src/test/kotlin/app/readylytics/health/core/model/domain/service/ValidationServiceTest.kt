@@ -1,10 +1,10 @@
 package app.readylytics.health.core.model.domain.service
 
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.validation.FloatRangeRule
-import app.readylytics.health.domain.validation.IntRangeRule
-import app.readylytics.health.domain.validation.ValidationResult
-import app.readylytics.health.domain.validation.ValidationRule
+import app.readylytics.health.core.model.domain.validation.FloatRangeRule
+import app.readylytics.health.core.model.domain.validation.IntRangeRule
+import app.readylytics.health.core.model.domain.validation.ValidationResult
+import app.readylytics.health.core.model.domain.validation.ValidationRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

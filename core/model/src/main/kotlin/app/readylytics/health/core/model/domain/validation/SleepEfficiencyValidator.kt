@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.validation
+package app.readylytics.health.core.model.domain.validation
 
 class SleepEfficiencyValidator : ValidationRule<Float> {
     override val errorMessage: String = "Sleep efficiency: 0–100%"

@@ -6,12 +6,12 @@ import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

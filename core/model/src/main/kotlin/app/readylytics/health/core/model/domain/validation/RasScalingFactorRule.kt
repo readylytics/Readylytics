@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.validation
+package app.readylytics.health.core.model.domain.validation
 
 private const val MIN_FACTOR = 0.1f
 private const val MAX_FACTOR = 0.3f

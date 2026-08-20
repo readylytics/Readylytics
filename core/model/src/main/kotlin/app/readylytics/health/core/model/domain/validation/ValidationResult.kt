@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.validation
+package app.readylytics.health.core.model.domain.validation
 
 sealed class ValidationResult {
     object Valid : ValidationResult()

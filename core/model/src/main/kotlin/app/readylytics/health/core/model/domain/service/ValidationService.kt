@@ -1,8 +1,8 @@
 package app.readylytics.health.core.model.domain.service
 
 import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.validation.ValidationResult
-import app.readylytics.health.domain.validation.ValidationRule
+import app.readylytics.health.core.model.domain.validation.ValidationResult
+import app.readylytics.health.core.model.domain.validation.ValidationRule
 
 /**
  * Payload carried in [Result.Success] when validation passes.

@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.validation
+package app.readylytics.health.core.model.domain.validation
 
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 

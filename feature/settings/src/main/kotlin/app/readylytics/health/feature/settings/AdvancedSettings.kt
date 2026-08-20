@@ -35,9 +35,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.ui.components.MetricTooltip
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.common.resyncGateEnabled
 
