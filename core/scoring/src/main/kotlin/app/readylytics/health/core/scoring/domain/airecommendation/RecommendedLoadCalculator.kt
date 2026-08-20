@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.airecommendation
+package app.readylytics.health.core.scoring.domain.airecommendation
 
 import app.readylytics.health.domain.model.LoadContext
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassifier
