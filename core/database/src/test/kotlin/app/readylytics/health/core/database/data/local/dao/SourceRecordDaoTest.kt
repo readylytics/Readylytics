@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local.dao
+package app.readylytics.health.core.database.data.local.dao
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider

@@ -1,11 +1,11 @@
-package app.readylytics.health.data.local.dao
+package app.readylytics.health.core.database.data.local.dao
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -15,9 +15,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class BodyFatRecordDaoTest {
+class BloodPressureRecordDaoTest {
     private lateinit var db: HealthDatabase
-    private lateinit var dao: BodyFatRecordDao
+    private lateinit var dao: BloodPressureRecordDao
 
     @Before
     fun setUp() {
@@ -27,7 +27,7 @@ class BodyFatRecordDaoTest {
                 .inMemoryDatabaseBuilder(context, HealthDatabase::class.java)
                 .allowMainThreadQueries()
                 .build()
-        dao = db.bodyFatRecordDao()
+        dao = db.bloodPressureRecordDao()
     }
 
     @After
@@ -41,10 +41,11 @@ class BodyFatRecordDaoTest {
             // Setup data
             val records =
                 (1..5).map {
-                    BodyFatRecordEntity(
-                        id = "bf$it",
+                    BloodPressureRecordEntity(
+                        id = "bp$it",
                         timestampMs = it * 1000L,
-                        bodyFatPercent = 20f - it,
+                        systolicMmHg = 120,
+                        diastolicMmHg = 80,
                         deviceName = null,
                     )
                 }
@@ -53,15 +54,15 @@ class BodyFatRecordDaoTest {
             // We want fromMs = 2000L (inclusive), toMs = 5000L (exclusive)
             // This matches records 2, 3, 4. So timestamps: 2000, 3000, 4000.
             // Order is DESC by timestamp, then DESC by id.
-            // So expected order: bf4 (4000L), bf3 (3000L), bf2 (2000L)
+            // So expected order: bp4 (4000L), bp3 (3000L), bp2 (2000L)
             val paged = dao.getPagedByTimeRange(2000L, 5000L, 2, 0)
             assertEquals(2, paged.size)
-            assertEquals("bf4", paged[0].id)
-            assertEquals("bf3", paged[1].id)
+            assertEquals("bp4", paged[0].id)
+            assertEquals("bp3", paged[1].id)
 
             val pagedPage2 = dao.getPagedByTimeRange(2000L, 5000L, 2, 2)
             assertEquals(1, pagedPage2.size)
-            assertEquals("bf2", pagedPage2[0].id)
+            assertEquals("bp2", pagedPage2[0].id)
 
             // And exactly at toMs is excluded (5000L is excluded)
             val count = dao.countByTimeRange(2000L, 5000L)
