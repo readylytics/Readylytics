@@ -28,12 +28,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.readylytics.health.MainActivity
 import app.readylytics.health.R
+import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildIssueReportIntent
 import app.readylytics.health.crashreport.buildLogFileShareIntent
 import app.readylytics.health.crashreport.buildOversizedFallbackIntent
-import app.readylytics.health.domain.githubissue.GitHubIssueType
 import app.readylytics.health.feature.onboarding.OnboardingRoute
 import app.readylytics.health.feature.settings.IssueReportDialog
 import app.readylytics.health.ui.crashreport.CrashReportViewModel

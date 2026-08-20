@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.githubissue
+package app.readylytics.health.core.model.domain.githubissue
 
 data class IssueReportRequest(
     val issueType: GitHubIssueType,
