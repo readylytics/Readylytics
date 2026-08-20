@@ -1,3 +1,4 @@
+import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
@@ -24,6 +25,18 @@ extensions.configure<DetektExtension> {
     // file only ever holds one module's findings and `./gradlew detektBaseline` cannot
     // reproduce it. Config stays shared; only the baseline is split.
     baseline = layout.projectDirectory.file("detekt-baseline.xml").asFile
+}
+
+tasks.withType<Detekt>().configureEach {
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        txt.required.set(false)
+        sarif.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.file("reports/detekt/${name}.html"))
+        xml.outputLocation.set(layout.buildDirectory.file("reports/detekt/${name}.xml"))
+        sarif.outputLocation.set(layout.buildDirectory.file("reports/detekt/${name}.sarif"))
+    }
 }
 
 // MockK mocks final Kotlin classes through its inline agent, which self-attaches to the running
