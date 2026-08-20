@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.error
+package app.readylytics.health.core.model.domain.error
 
 import kotlinx.coroutines.CancellationException
 
