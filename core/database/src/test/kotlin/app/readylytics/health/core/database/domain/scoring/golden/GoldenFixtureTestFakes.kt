@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring.golden
+package app.readylytics.health.core.database.domain.scoring.golden
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.SettingsRepository

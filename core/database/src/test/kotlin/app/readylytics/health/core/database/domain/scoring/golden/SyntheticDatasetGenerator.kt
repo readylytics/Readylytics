@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring.golden
+package app.readylytics.health.core.database.domain.scoring.golden
 
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity

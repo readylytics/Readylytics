@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.scoring.golden
+package app.readylytics.health.core.database.domain.scoring.golden
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
