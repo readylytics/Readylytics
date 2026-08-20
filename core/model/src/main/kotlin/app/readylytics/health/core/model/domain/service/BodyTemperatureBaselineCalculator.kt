@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 /**
  * Pure-Kotlin trailing-average baseline for the Body Temperature "possible illness" insight.
- * Deliberately independent of [app.readylytics.health.domain.scoring] baseline machinery
+ * Deliberately independent of [app.readylytics.health.core.scoring.domain.scoring] baseline machinery
  * (HRV/RHR use a log-normal EWMA coupled to scoring formulas) — this is a plain average over an
  * already-cached display field, never read by any score computation.
  */
