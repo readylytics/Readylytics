@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
-import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException

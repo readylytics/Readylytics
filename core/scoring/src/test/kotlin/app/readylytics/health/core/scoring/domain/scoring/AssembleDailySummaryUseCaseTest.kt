@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 
-import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import org.junit.Assert.assertEquals

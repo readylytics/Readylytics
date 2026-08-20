@@ -9,7 +9,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturatio
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
-import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
 import java.time.LocalDate

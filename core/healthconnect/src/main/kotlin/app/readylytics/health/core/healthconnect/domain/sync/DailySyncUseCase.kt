@@ -4,8 +4,8 @@ import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.core.model.di.IoDispatcher
-import app.readylytics.health.domain.model.HealthDataType
-import app.readylytics.health.domain.model.Result
+import app.readylytics.health.core.model.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone

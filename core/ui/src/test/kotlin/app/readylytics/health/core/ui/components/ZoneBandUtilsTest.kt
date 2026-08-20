@@ -2,8 +2,8 @@ package app.readylytics.health.core.ui.components
 
 import androidx.compose.ui.graphics.Color
 import app.readylytics.health.core.designsystem.ExtendedColors
-import app.readylytics.health.domain.model.HealthZone
-import app.readylytics.health.domain.model.ZoneBand
+import app.readylytics.health.core.model.domain.model.HealthZone
+import app.readylytics.health.core.model.domain.model.ZoneBand
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -2,9 +2,9 @@ package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
-import app.readylytics.health.domain.model.DomainHeartRateRecord
-import app.readylytics.health.domain.model.DomainHrvRecord
-import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.model.DomainHrvRecord
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
@@ -337,7 +337,7 @@ class DailySyncUseCaseTest {
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
-            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             // today attempt + today retry + back-day = 3 sleep reads proves the retry happened.
             assertEquals(3, sleepReadCalls)
         }
@@ -354,10 +354,10 @@ class DailySyncUseCaseTest {
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
-            assertTrue(result is app.readylytics.health.domain.model.Result.Failure)
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Failure)
             assertEquals(
                 "DEFERRED_DAILY_SYNC",
-                (result as app.readylytics.health.domain.model.Result.Failure).code,
+                (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
             )
             // today's two attempts both timed out; the back-day segment never ran and nothing scored.
             coVerify(exactly = 2) { hcRepo.readSleepSessions(any(), any()) }
@@ -387,7 +387,7 @@ class DailySyncUseCaseTest {
 
             val result = useCase.run(windowDays = 1, onProgress = null)
 
-            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             coVerify(exactly = 1) {
                 scoringRepository.computeAndPersistDailySummary(today, any(), any(), any(), any())
             }
@@ -425,10 +425,10 @@ class DailySyncUseCaseTest {
 
             assertEquals(today.minusDays(1).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
             assertEquals(listOf(today), scoredDays)
-            assertTrue(result is app.readylytics.health.domain.model.Result.Failure)
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Failure)
             assertEquals(
                 "REQUIRES_HISTORICAL_RESYNC",
-                (result as app.readylytics.health.domain.model.Result.Failure).code,
+                (result as app.readylytics.health.core.model.domain.model.Result.Failure).code,
             )
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
         }
@@ -466,7 +466,7 @@ class DailySyncUseCaseTest {
             assertEquals(listOf(yesterday, today), scoredDays)
             // Ingestion reaches one extra day back from the widened oldest target day.
             assertEquals(today.minusDays(2).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
-            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
         }
 
@@ -500,7 +500,7 @@ class DailySyncUseCaseTest {
 
             assertEquals(floorDay, scoredDays.first())
             assertEquals(today, scoredDays.last())
-            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
         }
 

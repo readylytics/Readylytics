@@ -7,6 +7,9 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
+import app.readylytics.health.core.model.domain.model.DomainRouteLocation
+import app.readylytics.health.core.model.domain.model.LoadSourceSelector
+import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
@@ -29,9 +32,6 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
-import app.readylytics.health.domain.model.DomainRouteLocation
-import app.readylytics.health.domain.model.LoadSourceSelector
-import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.feature.workouts.mappers.ChartDataMapper
 import app.readylytics.health.feature.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.feature.workouts.mappers.RecoveryMetricsMapper

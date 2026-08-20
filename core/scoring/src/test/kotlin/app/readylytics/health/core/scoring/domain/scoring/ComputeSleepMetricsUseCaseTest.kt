@@ -7,8 +7,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver

@@ -16,10 +16,10 @@ import app.readylytics.health.core.databaseschema.data.local.entity.SleepSession
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.database.data.local.reconstructTimestampedSamples
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.HrMinuteBucketRow
-import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.model.TimestampedTrimp
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
+import app.readylytics.health.core.model.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
 import javax.inject.Inject

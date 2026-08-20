@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.MetricStatus
 
 @Composable
 fun StatusPill(

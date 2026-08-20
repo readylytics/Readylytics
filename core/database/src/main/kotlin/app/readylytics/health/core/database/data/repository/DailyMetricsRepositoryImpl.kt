@@ -4,8 +4,8 @@ import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.model.DailyMetrics
-import app.readylytics.health.domain.model.DailyMetricsMapper
+import app.readylytics.health.core.model.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
 import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.ExperimentalCoroutinesApi

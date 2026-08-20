@@ -1,7 +1,7 @@
 package app.readylytics.health.data.healthconnect
 
-import app.readylytics.health.domain.model.DomainHeartRateRecord
-import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.mappers.HeartRateMapper
 import org.junit.Assert.assertEquals

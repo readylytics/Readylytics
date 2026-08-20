@@ -1,11 +1,11 @@
 package app.readylytics.health.core.scoring.domain.airecommendation
 
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.LoadSourceSelector
-import app.readylytics.health.domain.model.PermittedRecommendationMapper
-import app.readylytics.health.domain.model.RecoveryFlag
-import app.readylytics.health.domain.model.scoreStatus
-import app.readylytics.health.domain.model.toLoadContext
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.LoadSourceSelector
+import app.readylytics.health.core.model.domain.model.PermittedRecommendationMapper
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
+import app.readylytics.health.core.model.domain.model.scoreStatus
+import app.readylytics.health.core.model.domain.model.toLoadContext
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
@@ -13,7 +13,7 @@ import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.model.PermittedRecommendation
+import app.readylytics.health.core.model.domain.model.PermittedRecommendation
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli

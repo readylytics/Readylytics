@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.sync.mappers
 
-import app.readylytics.health.domain.model.DomainHrvRecord
+import app.readylytics.health.core.model.domain.model.DomainHrvRecord
 import app.readylytics.health.core.model.domain.sync.HrvInput
 import app.readylytics.health.core.model.domain.sync.SleepSessionInput
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkSweep

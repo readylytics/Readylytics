@@ -3,9 +3,9 @@ package app.readylytics.health.core.database.data.mapper
 import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
-import app.readylytics.health.domain.model.BloodPressureRecord
-import app.readylytics.health.domain.model.BodyFatRecord
-import app.readylytics.health.domain.model.WeightRecord
+import app.readylytics.health.core.model.domain.model.BloodPressureRecord
+import app.readylytics.health.core.model.domain.model.BodyFatRecord
+import app.readylytics.health.core.model.domain.model.WeightRecord
 import java.time.Instant
 
 object WeightRecordMapper {

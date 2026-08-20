@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
@@ -47,7 +48,6 @@ import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
-import app.readylytics.health.domain.model.InsightType
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreUiR

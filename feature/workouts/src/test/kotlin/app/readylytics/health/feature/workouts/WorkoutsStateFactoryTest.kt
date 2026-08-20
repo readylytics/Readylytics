@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.workouts
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.domain.model.DailySummary
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals

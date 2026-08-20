@@ -4,7 +4,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import app.readylytics.health.core.designsystem.FitDashboardTheme
-import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

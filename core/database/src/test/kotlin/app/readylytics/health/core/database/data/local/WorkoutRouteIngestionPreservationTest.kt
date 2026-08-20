@@ -3,8 +3,8 @@ package app.readylytics.health.core.database.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.domain.model.RouteState
-import app.readylytics.health.domain.model.WorkoutRoutePoint
+import app.readylytics.health.core.model.domain.model.RouteState
+import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.sync.HealthIngestionBatch
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import kotlinx.coroutines.test.runTest

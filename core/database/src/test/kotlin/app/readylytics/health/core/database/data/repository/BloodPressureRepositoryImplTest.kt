@@ -2,7 +2,7 @@ package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
-import app.readylytics.health.domain.model.BloodPressureRecord
+import app.readylytics.health.core.model.domain.model.BloodPressureRecord
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.util
 
-import app.readylytics.health.domain.model.DomainIntervalTotal
+import app.readylytics.health.core.model.domain.model.DomainIntervalTotal
 import java.time.Instant
 
 /**

@@ -2,7 +2,7 @@ package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.database.data.mapper.BodyFatRecordMapper
-import app.readylytics.health.domain.model.BodyFatRecord
+import app.readylytics.health.core.model.domain.model.BodyFatRecord
 import app.readylytics.health.core.model.domain.repository.BodyFatRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

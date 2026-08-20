@@ -11,7 +11,7 @@ import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
 
-import app.readylytics.health.domain.model.RecoveryFlag
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.scoring.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.core.scoring.domain.scoring.components.SleepArchitectureTargets

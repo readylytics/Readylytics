@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.sync.link
 
-import app.readylytics.health.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.RecordType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,7 +1,7 @@
 package app.readylytics.health.core.healthconnect.data.mapper
 
 import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
-import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
 
 object OxygenSaturationDataMapper {
     fun toEntity(record: DomainOxygenSaturationRecord): OxygenSaturationRecordEntity =

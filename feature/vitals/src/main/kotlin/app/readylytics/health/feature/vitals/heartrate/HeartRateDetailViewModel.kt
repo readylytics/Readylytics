@@ -6,10 +6,10 @@ import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.heartrate.HrZoneClassifier
+import app.readylytics.health.core.model.domain.model.HeartRateStatusClassifier
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.domain.model.HeartRateStatusClassifier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi

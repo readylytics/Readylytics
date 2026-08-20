@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.insights
 
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
 
 /**
  * Flags a sharp overnight HRV drop combined with low blood oxygen, which can

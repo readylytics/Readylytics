@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.sync.mappers
 
-import app.readylytics.health.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

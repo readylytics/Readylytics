@@ -7,7 +7,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
-import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import java.time.Instant
 import app.readylytics.health.core.model.domain.sync.link.SampleLink

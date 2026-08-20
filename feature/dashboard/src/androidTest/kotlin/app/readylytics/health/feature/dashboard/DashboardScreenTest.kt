@@ -25,10 +25,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.vitals.heartrate
 
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.domain.model.MetricStatus
 import java.time.LocalDate
 
 data class ZoneTotal(

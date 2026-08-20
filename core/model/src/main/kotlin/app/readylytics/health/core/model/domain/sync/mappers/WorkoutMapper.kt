@@ -1,8 +1,8 @@
 package app.readylytics.health.core.model.domain.sync.mappers
 
-import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainRouteLocation
-import app.readylytics.health.domain.model.WorkoutRoutePoint
+import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainRouteLocation
+import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.sync.WorkoutInput
 import app.readylytics.health.core.model.domain.util.ElevationGainCalculator
 import app.readylytics.health.core.model.domain.util.RouteDistanceCalculator

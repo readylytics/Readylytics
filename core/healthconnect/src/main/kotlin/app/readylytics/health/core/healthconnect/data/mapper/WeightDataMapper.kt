@@ -1,7 +1,7 @@
 package app.readylytics.health.core.healthconnect.data.mapper
 
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
-import app.readylytics.health.domain.model.DomainWeightRecord
+import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 
 object WeightDataMapper {
     fun toEntity(record: DomainWeightRecord): WeightRecordEntity =

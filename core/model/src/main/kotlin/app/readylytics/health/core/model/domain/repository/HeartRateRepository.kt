@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.repository
 
-import app.readylytics.health.domain.model.HrRangeAggregate
+import app.readylytics.health.core.model.domain.model.HrRangeAggregate
 import kotlinx.coroutines.flow.Flow
 
 data class HeartRateRecordData(

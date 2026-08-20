@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.insights.detail
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 
 import app.readylytics.health.core.scoring.domain.insights.InsightContext
-import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.core.model.domain.model.LoadSourceSelector
 import java.time.LocalDate
 
 enum class WorkoutIntensityCategory {

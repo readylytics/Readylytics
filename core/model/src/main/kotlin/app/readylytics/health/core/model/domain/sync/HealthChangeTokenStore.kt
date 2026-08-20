@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.sync
 
-import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.HealthDataType
 
 interface HealthChangeTokenStore {
     suspend fun get(dataType: HealthDataType): String?

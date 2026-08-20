@@ -5,8 +5,8 @@ import androidx.room.Dao
 import androidx.room.MapColumn
 import androidx.room.Query
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.domain.model.HrMinuteBucketRow
-import app.readylytics.health.domain.model.HrRangeAggregate
+import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
+import app.readylytics.health.core.model.domain.model.HrRangeAggregate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 

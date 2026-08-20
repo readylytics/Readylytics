@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
@@ -19,7 +20,6 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.domain.model.DailySummary
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

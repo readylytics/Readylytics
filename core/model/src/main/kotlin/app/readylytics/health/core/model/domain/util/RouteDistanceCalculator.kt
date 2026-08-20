@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.util
 
-import app.readylytics.health.domain.model.DomainRouteLocation
+import app.readylytics.health.core.model.domain.model.DomainRouteLocation
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos

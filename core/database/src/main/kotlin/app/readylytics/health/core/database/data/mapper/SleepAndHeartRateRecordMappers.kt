@@ -2,8 +2,8 @@ package app.readylytics.health.core.database.data.mapper
 
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import app.readylytics.health.domain.model.HeartRateRecord
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.HeartRateRecord
+import app.readylytics.health.core.model.domain.model.SleepSession
 
 object HeartRateRecordMapper {
     fun toDomain(entity: HeartRateRecordEntity): HeartRateRecord =

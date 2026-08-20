@@ -4,9 +4,9 @@ import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import app.readylytics.health.domain.model.ReadinessResult
-import app.readylytics.health.domain.model.Diagnostics
-import app.readylytics.health.domain.model.Contributors
+import app.readylytics.health.core.model.domain.model.ReadinessResult
+import app.readylytics.health.core.model.domain.model.Diagnostics
+import app.readylytics.health.core.model.domain.model.Contributors
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDate

@@ -87,7 +87,7 @@ class HealthResyncWorkerTest {
             coEvery { useCase.execute(any(), any()) } answers {
                 val progressCallback = secondArg<(ResyncPhase, Int, Int) -> Unit>()
                 progressCallback(ResyncPhase.RECOMPUTE, 1, 10)
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             }
             val worker = createWorker()
@@ -113,7 +113,7 @@ class HealthResyncWorkerTest {
                     .build()
             val recomputeOnlySlot = slot<Boolean>()
             coEvery { useCase.execute(capture(recomputeOnlySlot), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             val worker = createWorker()
@@ -127,7 +127,7 @@ class HealthResyncWorkerTest {
         runBlocking {
             val recomputeOnlySlot = slot<Boolean>()
             coEvery { useCase.execute(capture(recomputeOnlySlot), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             val worker = createWorker()
@@ -140,7 +140,7 @@ class HealthResyncWorkerTest {
     fun `doWork returns retry when resync usecase fails`() =
         runBlocking {
             coEvery { useCase.execute(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
             val worker = createWorker()
             val result = worker.doWork()
@@ -200,7 +200,7 @@ class HealthResyncWorkerTest {
     fun `success bumps scoring version and marks the sleep-score recalc baseline`() =
         runBlocking {
             coEvery { useCase.execute(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             createWorker().doWork()
 
@@ -218,7 +218,7 @@ class HealthResyncWorkerTest {
     fun `success with a current scoring version skips the bump but still marks the baseline`() =
         runBlocking {
             coEvery { useCase.execute(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             coEvery { settingsRepository.userPreferences } returns
                 MutableStateFlow(UserPreferences(scoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION))
@@ -232,7 +232,7 @@ class HealthResyncWorkerTest {
     fun `retry path does not persist scoring version or baseline`() =
         runBlocking {
             coEvery { useCase.execute(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
             createWorker().doWork()
 
@@ -254,7 +254,7 @@ class HealthResyncWorkerTest {
     fun `persistence failure does not fail the worker`() =
         runBlocking {
             coEvery { useCase.execute(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             coEvery { settingsRepository.userPreferences } throws
                 RuntimeException("datastore io failure")

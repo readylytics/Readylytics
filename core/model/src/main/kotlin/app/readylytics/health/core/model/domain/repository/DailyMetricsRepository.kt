@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.repository
 
-import app.readylytics.health.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailyMetrics
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 

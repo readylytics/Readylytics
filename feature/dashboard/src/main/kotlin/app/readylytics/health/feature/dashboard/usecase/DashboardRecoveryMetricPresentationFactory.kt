@@ -1,6 +1,16 @@
 package app.readylytics.health.feature.dashboard.usecase
 
 import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.model.BaselineArrow
+import app.readylytics.health.core.model.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.LoadSourceSelector
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.PersonalBaselineAssessment
+import app.readylytics.health.core.model.domain.model.SleepSessionSummary
+import app.readylytics.health.core.model.domain.model.rasStatus
+import app.readylytics.health.core.model.domain.model.sleepDurationStatus
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.common.DateFormatUtils
@@ -8,16 +18,6 @@ import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
-import app.readylytics.health.domain.model.BaselineArrow
-import app.readylytics.health.domain.model.DailyMetrics
-import app.readylytics.health.domain.model.DailyMetricsMapper
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.LoadSourceSelector
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.PersonalBaselineAssessment
-import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.domain.model.rasStatus
-import app.readylytics.health.domain.model.sleepDurationStatus
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR

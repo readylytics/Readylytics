@@ -5,7 +5,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBasel
 
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.util.stdev
 import io.mockk.coEvery

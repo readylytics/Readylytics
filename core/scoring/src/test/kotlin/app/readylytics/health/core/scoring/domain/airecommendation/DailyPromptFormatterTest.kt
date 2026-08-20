@@ -1,8 +1,8 @@
 package app.readylytics.health.core.scoring.domain.airecommendation
 
-import app.readylytics.health.domain.model.RecoveryFlag
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.model.domain.repository.WorkoutData
-import app.readylytics.health.domain.model.PermittedRecommendation
+import app.readylytics.health.core.model.domain.model.PermittedRecommendation
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

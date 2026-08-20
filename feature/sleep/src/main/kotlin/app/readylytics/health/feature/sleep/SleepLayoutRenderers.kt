@@ -8,6 +8,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.dashboard.ModeSpec
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.deepSleepStatus
+import app.readylytics.health.core.model.domain.model.efficiencyStatus
+import app.readylytics.health.core.model.domain.model.remSleepStatus
+import app.readylytics.health.core.model.domain.model.scoreStatus
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.model.domain.sleep.SleepCardCatalog
 import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
@@ -31,11 +36,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.deepSleepStatus
-import app.readylytics.health.domain.model.efficiencyStatus
-import app.readylytics.health.domain.model.remSleepStatus
-import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.feature.sleep.R
 import app.readylytics.health.core.ui.R as CoreUiR
 

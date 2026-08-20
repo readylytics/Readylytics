@@ -31,13 +31,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.DomainRouteLocation
 import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemCatalog
 import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
 import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
 import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.components.reorder.ReorderableGrid
-import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.feature.workouts.R
 import app.readylytics.health.core.ui.R as CoreUiR
 

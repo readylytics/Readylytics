@@ -1,9 +1,9 @@
 package app.readylytics.health.core.model.domain.repository
 
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.HeartRateRecord
-import app.readylytics.health.domain.model.SleepHrSample
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.HeartRateRecord
+import app.readylytics.health.core.model.domain.model.SleepHrSample
+import app.readylytics.health.core.model.domain.model.SleepSession
 import java.time.LocalDate
 import java.time.ZoneId
 

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
-import app.readylytics.health.domain.model.Result
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.sync.*

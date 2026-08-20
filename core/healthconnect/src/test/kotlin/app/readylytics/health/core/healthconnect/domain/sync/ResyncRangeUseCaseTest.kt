@@ -2,7 +2,7 @@ package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
-import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
@@ -190,7 +190,7 @@ class ResyncRangeUseCaseTest {
 
             val result = useCase.run(startDate, endDate, chunkDays = chunkDays, onProgress = null)
 
-            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            assertTrue(result is app.readylytics.health.core.model.domain.model.Result.Success)
             val zoneId = ZoneId.systemDefault()
             val requestedChunkEnds = requestedWindowEnds.map { it.atZone(zoneId).toLocalDate() }
             assertEquals(

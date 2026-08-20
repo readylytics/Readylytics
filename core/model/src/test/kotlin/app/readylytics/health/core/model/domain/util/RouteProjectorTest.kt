@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.util
 
-import app.readylytics.health.domain.model.WorkoutRoutePoint
+import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import org.junit.Test
 import kotlin.math.PI
 import kotlin.math.cos

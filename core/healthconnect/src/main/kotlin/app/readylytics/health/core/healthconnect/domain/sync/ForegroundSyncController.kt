@@ -2,7 +2,7 @@ package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 
-import app.readylytics.health.domain.model.getOrThrow
+import app.readylytics.health.core.model.domain.model.getOrThrow
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.SyncPreference
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
@@ -194,14 +194,14 @@ class ForegroundSyncController
                         syncUseCase.sync(windowDays = requiredWindowDays, onProgress = onProgress)
                     }
 
-                if (result is app.readylytics.health.domain.model.Result.Failure &&
+                if (result is app.readylytics.health.core.model.domain.model.Result.Failure &&
                     result.code == "REQUIRES_HISTORICAL_RESYNC"
                 ) {
                     app.readylytics.health.core.model.domain.util.logI("ForegroundSyncController") {
                         "Sync requires historical resync, enqueuing worker"
                     }
                     workerScheduler.get().scheduleResyncWorker()
-                } else if (result is app.readylytics.health.domain.model.Result.Failure &&
+                } else if (result is app.readylytics.health.core.model.domain.model.Result.Failure &&
                     result.code == "DEFERRED_DAILY_SYNC"
                 ) {
                     // B: a dense daily window that timed out even after its extended-budget retry

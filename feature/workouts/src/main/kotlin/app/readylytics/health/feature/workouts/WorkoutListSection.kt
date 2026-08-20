@@ -15,11 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.onContainerColor
-import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.workouts.R
 import java.util.Locale
 import kotlin.math.roundToInt

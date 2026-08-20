@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.airecommendation
 
-import app.readylytics.health.domain.model.RecoveryFlag
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

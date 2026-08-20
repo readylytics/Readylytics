@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.domain.model.TimestampedTrimp
+import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 

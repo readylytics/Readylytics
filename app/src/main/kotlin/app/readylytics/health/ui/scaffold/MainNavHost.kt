@@ -35,6 +35,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.core.scoring.domain.insights.detail.DailyInsightContext
@@ -44,7 +45,6 @@ import app.readylytics.health.crashreport.GithubIssueIntentResult
 import app.readylytics.health.crashreport.buildIssueReportIntent
 import app.readylytics.health.crashreport.buildLogFileShareIntent
 import app.readylytics.health.crashreport.buildOversizedFallbackIntent
-import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.feature.about.AboutScreen
 import app.readylytics.health.feature.dashboard.DashboardRoute
 import app.readylytics.health.feature.dashboard.InsightCard

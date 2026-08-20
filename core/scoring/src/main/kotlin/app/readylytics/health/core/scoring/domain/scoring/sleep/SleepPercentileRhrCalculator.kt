@@ -2,8 +2,8 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 
-import app.readylytics.health.domain.model.SleepHrSample
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.SleepHrSample
+import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import app.readylytics.health.core.scoring.domain.util.median

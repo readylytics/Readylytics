@@ -6,7 +6,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassifier
 
 import app.readylytics.health.core.model.domain.display.MetricFormatter
-import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.util.logD

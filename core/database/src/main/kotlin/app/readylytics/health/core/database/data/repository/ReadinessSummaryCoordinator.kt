@@ -2,8 +2,8 @@ package app.readylytics.health.core.database.data.repository
 
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext

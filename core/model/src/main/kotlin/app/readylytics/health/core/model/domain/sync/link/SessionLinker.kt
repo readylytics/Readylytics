@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.sync.link
 
-import app.readylytics.health.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.RecordType
 
 /**
  * A session's identity and time bounds, independent of its concrete entity type

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.util
 
-import app.readylytics.health.domain.model.DomainRouteLocation
+import app.readylytics.health.core.model.domain.model.DomainRouteLocation
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals

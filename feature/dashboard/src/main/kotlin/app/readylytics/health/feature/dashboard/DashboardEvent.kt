@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.dashboard
 
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
 import java.time.LocalDate
 
 sealed interface DashboardEvent {

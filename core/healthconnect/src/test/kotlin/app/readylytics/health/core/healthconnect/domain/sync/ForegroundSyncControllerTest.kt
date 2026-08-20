@@ -45,7 +45,7 @@ class ForegroundSyncControllerTest {
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } coAnswers {
                 delay(100) // Simulate long running sync
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             }
 
@@ -77,7 +77,7 @@ class ForegroundSyncControllerTest {
 
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             controller.evaluateAndSync()
@@ -104,7 +104,7 @@ class ForegroundSyncControllerTest {
 
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             controller.evaluateAndSync()
@@ -133,7 +133,7 @@ class ForegroundSyncControllerTest {
 
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             controller.evaluateAndSync()
@@ -167,7 +167,7 @@ class ForegroundSyncControllerTest {
                     )
                 coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
                 coEvery { syncUseCase.sync(any(), any()) } returns
-                    app.readylytics.health.domain.model.Result
+                    app.readylytics.health.core.model.domain.model.Result
                         .Success(Unit)
 
                 controller.evaluateAndSync()
@@ -213,7 +213,7 @@ class ForegroundSyncControllerTest {
                 )
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             controller.evaluateAndSync()
@@ -245,7 +245,7 @@ class ForegroundSyncControllerTest {
                 val progress = firstArg<(ResyncPhase, Int, Int) -> Unit>()
                 progress(ResyncPhase.RECOMPUTE, 1, 5)
                 kotlinx.coroutines.yield()
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
             }
 
@@ -270,7 +270,7 @@ class ForegroundSyncControllerTest {
     fun `executeSync scheduling resync worker on REQUIRES_HISTORICAL_RESYNC result`() =
         runTest {
             coEvery { syncUseCase.sync(windowDays = 1, onProgress = any()) } returns
-                app.readylytics.health.domain.model.Result.Failure(
+                app.readylytics.health.core.model.domain.model.Result.Failure(
                     reason = "Need full resync",
                     code = "REQUIRES_HISTORICAL_RESYNC",
                 )
@@ -284,7 +284,7 @@ class ForegroundSyncControllerTest {
     fun `triggerDailySync drops DEFERRED_DAILY_SYNC without worker escalation or completion event`() =
         runTest {
             coEvery { syncUseCase.sync(windowDays = 1, onProgress = any()) } returns
-                app.readylytics.health.domain.model.Result.Failure(
+                app.readylytics.health.core.model.domain.model.Result.Failure(
                     reason = "Too dense",
                     code = "DEFERRED_DAILY_SYNC",
                 )
@@ -345,7 +345,7 @@ class ForegroundSyncControllerTest {
                 )
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.catchUpSync(any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             controller.evaluateAndSync()
@@ -365,7 +365,7 @@ class ForegroundSyncControllerTest {
                 )
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.catchUpSync(any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             controller.evaluateAndSync()
@@ -401,7 +401,7 @@ class ForegroundSyncControllerTest {
                 )
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             historicalController.evaluateAndSync()

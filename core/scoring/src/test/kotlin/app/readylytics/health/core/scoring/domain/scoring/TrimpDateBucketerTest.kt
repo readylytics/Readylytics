@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 
-import app.readylytics.health.domain.model.TimestampedTrimp
+import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate

@@ -23,8 +23,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
-import app.readylytics.health.domain.model.HeartRateRecord as HeartRateRecordEntity
-import app.readylytics.health.domain.model.SleepSession as SleepSessionEntity
+import app.readylytics.health.core.model.domain.model.HeartRateRecord as HeartRateRecordEntity
+import app.readylytics.health.core.model.domain.model.SleepSession as SleepSessionEntity
 
 private const val DELTA = 0.5f
 

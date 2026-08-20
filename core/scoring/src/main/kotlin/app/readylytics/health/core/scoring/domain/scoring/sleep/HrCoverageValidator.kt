@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
 
-import app.readylytics.health.domain.model.HeartRateRecord
+import app.readylytics.health.core.model.domain.model.HeartRateRecord
 import javax.inject.Inject
 import javax.inject.Singleton
 

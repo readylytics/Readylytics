@@ -1,7 +1,7 @@
 package app.readylytics.health.core.model.domain.service
 
-import app.readylytics.health.domain.model.BmiStatus
-import app.readylytics.health.domain.model.Result
+import app.readylytics.health.core.model.domain.model.BmiStatus
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import org.junit.Before
 import org.junit.Test

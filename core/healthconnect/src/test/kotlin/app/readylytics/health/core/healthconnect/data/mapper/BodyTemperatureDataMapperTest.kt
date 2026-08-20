@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.data.mapper
 
-import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals

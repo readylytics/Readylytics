@@ -25,7 +25,7 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
-import app.readylytics.health.domain.model.TimestampedTrimp
+import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.service
 
-import app.readylytics.health.domain.model.Result
+import app.readylytics.health.core.model.domain.model.Result
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals

@@ -8,7 +8,7 @@ import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
-import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

@@ -7,7 +7,7 @@ import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
 import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.model.HrMinuteBucketRow
+import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.scoring.domain.scoring.LongInterval
 import org.junit.Test
 import kotlin.test.assertEquals

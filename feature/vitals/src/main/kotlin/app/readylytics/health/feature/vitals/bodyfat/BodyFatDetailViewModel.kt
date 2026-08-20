@@ -7,6 +7,11 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.model.BodyCompositionAssessment
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.ZoneBand
+import app.readylytics.health.core.model.domain.model.bodyFatZoneBands
+import app.readylytics.health.core.model.domain.model.toMetricStatus
 import app.readylytics.health.core.model.domain.preferences.Gender
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.repository.BodyFatRepository
@@ -21,11 +26,6 @@ import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.domain.model.BodyCompositionAssessment
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.ZoneBand
-import app.readylytics.health.domain.model.bodyFatZoneBands
-import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.feature.vitals.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher

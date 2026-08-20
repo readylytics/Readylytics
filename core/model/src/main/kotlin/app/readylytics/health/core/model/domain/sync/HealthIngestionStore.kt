@@ -1,7 +1,7 @@
 package app.readylytics.health.core.model.domain.sync
 
-import app.readylytics.health.domain.model.RouteState
-import app.readylytics.health.domain.model.WorkoutRoutePoint
+import app.readylytics.health.core.model.domain.model.RouteState
+import app.readylytics.health.core.model.domain.model.WorkoutRoutePoint
 import java.time.LocalDate
 import java.time.ZoneId
 

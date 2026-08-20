@@ -5,9 +5,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
-import app.readylytics.health.domain.model.BucketZoneBands
-import app.readylytics.health.domain.model.HealthZone
-import app.readylytics.health.domain.model.ZoneBand
+import app.readylytics.health.core.model.domain.model.BucketZoneBands
+import app.readylytics.health.core.model.domain.model.HealthZone
+import app.readylytics.health.core.model.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 

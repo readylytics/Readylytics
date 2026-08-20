@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.airecommendation
 
-import app.readylytics.health.domain.model.RecoveryFlag
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
 
 /**
  * Stable plain-English glosses for every [RecoveryFlag], aligned with Section F of

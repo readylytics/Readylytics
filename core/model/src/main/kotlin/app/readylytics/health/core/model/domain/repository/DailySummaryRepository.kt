@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.repository
 
-import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.DailySummary
 import kotlinx.coroutines.flow.Flow
 
 interface DailySummaryRepository {

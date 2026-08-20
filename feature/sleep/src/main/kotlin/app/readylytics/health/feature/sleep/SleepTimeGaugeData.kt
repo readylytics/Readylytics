@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.sleep
 
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.sleepDurationStatus
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.feature.sleep.R
 import app.readylytics.health.core.ui.R as CoreUiR
 

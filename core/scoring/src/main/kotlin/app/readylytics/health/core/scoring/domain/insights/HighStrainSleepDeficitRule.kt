@@ -2,8 +2,8 @@ package app.readylytics.health.core.scoring.domain.insights
 
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 
-import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.LoadSourceSelector
 
 /**
  * Explains a suppressed autonomic response (HRV down, RHR up) by correlating

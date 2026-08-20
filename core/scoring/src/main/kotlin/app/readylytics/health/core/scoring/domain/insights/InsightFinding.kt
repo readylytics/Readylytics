@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.insights
 
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
 
 /**
  * Result of an [InsightRule] firing: the displayable insight type plus the

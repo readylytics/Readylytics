@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
 import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_DELTA_PILL_TAG
 import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_GAUGE_TAG
@@ -29,7 +30,6 @@ import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_TITLE_INFO
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.components.metriccard.progressFraction
 import app.readylytics.health.core.ui.components.onContainerColor
-import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

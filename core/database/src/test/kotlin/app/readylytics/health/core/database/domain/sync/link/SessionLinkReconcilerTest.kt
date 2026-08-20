@@ -11,7 +11,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEnt
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
-import app.readylytics.health.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.RecordType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -171,7 +171,7 @@ class SessionLinkReconcilerTest {
                     10_000L,
                     14_000L,
                     listOf(
-                        app.readylytics.health.domain.model.DomainHeartRateSample(
+                        app.readylytics.health.core.model.domain.model.DomainHeartRateSample(
                             java.time.Instant.ofEpochMilli(hr3.timestampMs),
                             hr3.beatsPerMinute,
                         ),

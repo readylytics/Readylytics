@@ -1,13 +1,13 @@
 package app.readylytics.health.core.model.domain.service
 
-import app.readylytics.health.domain.model.BloodPressureStatus
-import app.readylytics.health.domain.model.BmiStatus
-import app.readylytics.health.domain.model.BodyCompositionAssessment
-import app.readylytics.health.domain.model.BodyFatStatus
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.model.HealthZone
-import app.readylytics.health.domain.model.ZoneBand
+import app.readylytics.health.core.model.domain.model.BloodPressureStatus
+import app.readylytics.health.core.model.domain.model.BmiStatus
+import app.readylytics.health.core.model.domain.model.BodyCompositionAssessment
+import app.readylytics.health.core.model.domain.model.BodyFatStatus
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.model.HealthZone
+import app.readylytics.health.core.model.domain.model.ZoneBand
 import app.readylytics.health.core.model.domain.preferences.Gender
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 

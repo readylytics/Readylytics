@@ -1,7 +1,7 @@
 package app.readylytics.health.core.model.domain.repository
 
 
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.SleepSession
 
 /**
  * PERF-002/WP-22: sleep sessions covering the widest RHR/HRV baseline lookback (56 days), fetched

@@ -9,13 +9,13 @@ import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoring
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.ReadinessResult
-import app.readylytics.health.domain.model.Diagnostics
-import app.readylytics.health.domain.model.Contributors
-import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.ReadinessResult
+import app.readylytics.health.core.model.domain.model.Diagnostics
+import app.readylytics.health.core.model.domain.model.Contributors
+import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionData

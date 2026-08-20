@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.scoring
 
-import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

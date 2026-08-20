@@ -5,7 +5,7 @@ import app.readylytics.health.core.scoring.domain.scoring.RhrBaselineProvider
 
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
-import app.readylytics.health.domain.model.PhysiologyConstants
+import app.readylytics.health.core.model.domain.model.PhysiologyConstants
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository

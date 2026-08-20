@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 
-import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.core.model.domain.model.getOrNull
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import javax.inject.Inject
 

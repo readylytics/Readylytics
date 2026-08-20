@@ -1,8 +1,8 @@
 package app.readylytics.health.core.healthconnect.data.healthconnect
 
-import app.readylytics.health.domain.model.DomainSleepSessionRecord
-import app.readylytics.health.domain.model.DomainSleepStage
-import app.readylytics.health.domain.model.DomainSleepStageType
+import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainSleepStage
+import app.readylytics.health.core.model.domain.model.DomainSleepStageType
 import app.readylytics.health.core.model.domain.sync.mappers.SleepDataMapper
 import org.junit.Test
 import java.time.Instant

@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepFragmentati
 
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
-import app.readylytics.health.domain.model.SleepStageType
+import app.readylytics.health.core.model.domain.model.SleepStageType
 import app.readylytics.health.core.model.domain.repository.SleepStageData
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants.Sleep
 

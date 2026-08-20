@@ -1,12 +1,12 @@
 package app.readylytics.health.feature.vitals.overview
 
 import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.domain.model.DailyMetrics
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.MetricStatus
 import io.mockk.every
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel

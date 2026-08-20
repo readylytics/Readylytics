@@ -11,11 +11,11 @@ import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.dashboard.ModeSpec
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_BAR_TAG
 import app.readylytics.health.core.ui.components.metriccard.UNIVERSAL_METRIC_CARD_TAG
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.domain.model.MetricStatus
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.runner.RunWith

@@ -16,7 +16,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperat
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
-import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals

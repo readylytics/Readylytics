@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.repository
 
-import app.readylytics.health.domain.model.BodyFatRecord
+import app.readylytics.health.core.model.domain.model.BodyFatRecord
 import kotlinx.coroutines.flow.Flow
 
 interface BodyFatRepository {

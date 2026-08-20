@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
 
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 import javax.inject.Inject

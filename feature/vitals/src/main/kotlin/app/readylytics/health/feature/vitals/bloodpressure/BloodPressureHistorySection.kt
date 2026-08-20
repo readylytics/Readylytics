@@ -10,12 +10,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.BloodPressureStatus
+import app.readylytics.health.core.model.domain.model.toMetricStatus
 import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
-import app.readylytics.health.domain.model.BloodPressureStatus
-import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.feature.vitals.R
 import java.time.Instant
 import java.time.ZoneId

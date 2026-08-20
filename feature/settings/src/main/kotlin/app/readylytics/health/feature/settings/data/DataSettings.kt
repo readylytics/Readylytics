@@ -42,12 +42,12 @@ import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval
 import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.model.HealthDataCategory
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.core.ui.components.settings.RetentionSlider
-import app.readylytics.health.domain.model.HealthDataCategory
-import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SyncSettingsState

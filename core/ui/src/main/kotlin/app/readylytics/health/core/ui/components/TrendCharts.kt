@@ -33,6 +33,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.BucketZoneBands
+import app.readylytics.health.core.model.domain.model.HealthZone
+import app.readylytics.health.core.model.domain.model.ZoneBand
 import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
@@ -43,9 +46,6 @@ import app.readylytics.health.core.ui.common.bucketLengthDays
 import app.readylytics.health.core.ui.common.bucketStartForDate
 import app.readylytics.health.core.ui.common.periodLabelFor
 import app.readylytics.health.core.ui.common.rememberPeriodOrdinalLabel
-import app.readylytics.health.domain.model.BucketZoneBands
-import app.readylytics.health.domain.model.HealthZone
-import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState

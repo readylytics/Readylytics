@@ -11,12 +11,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.model.BodyFatCategory
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.components.HistoryCardLayout
 import app.readylytics.health.core.ui.components.PaginationControls
 import app.readylytics.health.core.ui.components.SectionHeader
-import app.readylytics.health.domain.model.BodyFatCategory
-import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.vitals.R
 import java.time.Instant
 import java.time.ZoneId

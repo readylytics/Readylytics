@@ -1,8 +1,8 @@
 package app.readylytics.health.core.scoring.domain.insights
 
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.ReadinessResult
-import app.readylytics.health.domain.model.RecoveryFlag
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.ReadinessResult
+import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import java.time.LocalDate
 

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.user
 
-import app.readylytics.health.domain.model.Result
+import app.readylytics.health.core.model.domain.model.Result
 import java.time.LocalDate
 
 interface UserProfileActions {

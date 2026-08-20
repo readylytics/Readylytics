@@ -9,7 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.security.AndroidKeystoreKeyProvider
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.RecordType
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

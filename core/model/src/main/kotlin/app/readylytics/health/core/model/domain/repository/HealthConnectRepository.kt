@@ -1,15 +1,15 @@
 package app.readylytics.health.core.model.domain.repository
 
-import app.readylytics.health.domain.model.DomainBloodPressureRecord
-import app.readylytics.health.domain.model.DomainBodyFatRecord
-import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
-import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainHeartRateRecord
-import app.readylytics.health.domain.model.DomainHrvRecord
-import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
-import app.readylytics.health.domain.model.DomainSleepSessionRecord
-import app.readylytics.health.domain.model.DomainStepsRecord
-import app.readylytics.health.domain.model.DomainWeightRecord
+import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
+import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.model.DomainHrvRecord
+import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 import java.time.Instant
 
 class HealthConnectPermissionRevokedException(

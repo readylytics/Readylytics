@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.HistoricalSleepDayAssembler
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy

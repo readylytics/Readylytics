@@ -15,7 +15,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEnt
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
 import io.mockk.*

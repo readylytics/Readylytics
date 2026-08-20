@@ -9,7 +9,7 @@ import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
 import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.model.Result
+import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.repository.WorkoutData
 import io.mockk.every
 import io.mockk.mockk

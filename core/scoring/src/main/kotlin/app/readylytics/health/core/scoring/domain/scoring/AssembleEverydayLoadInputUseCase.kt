@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHeartRateLoadCalculator
 
-import app.readylytics.health.domain.model.HrMinuteBucketRow
+import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import javax.inject.Inject
 import javax.inject.Singleton

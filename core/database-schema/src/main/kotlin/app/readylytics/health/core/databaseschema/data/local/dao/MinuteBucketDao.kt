@@ -5,7 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
-import app.readylytics.health.domain.model.HrMinuteBucketRow
+import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 
 @Dao
 interface MinuteBucketDao {

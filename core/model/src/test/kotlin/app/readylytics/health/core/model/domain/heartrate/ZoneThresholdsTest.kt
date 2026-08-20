@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.heartrate
 
-import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant

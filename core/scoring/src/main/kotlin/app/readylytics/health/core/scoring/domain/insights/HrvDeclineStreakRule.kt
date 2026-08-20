@@ -1,8 +1,8 @@
 package app.readylytics.health.core.scoring.domain.insights
 
-import app.readylytics.health.domain.model.DailyMetricsMapper
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.InsightType
 
 /**
  * Flags a multi-night streak of below-baseline HRV readings, which can

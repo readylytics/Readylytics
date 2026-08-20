@@ -7,13 +7,13 @@ import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.rasStatus
+import app.readylytics.health.core.model.domain.model.strainRatioStatus
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.rasStatus
-import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.core.ui.R as CoreUiR
 
 fun buildWorkoutsCardDataMap(

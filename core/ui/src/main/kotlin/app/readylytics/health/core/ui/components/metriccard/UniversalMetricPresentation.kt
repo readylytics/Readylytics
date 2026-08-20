@@ -1,6 +1,6 @@
 package app.readylytics.health.core.ui.components.metriccard
 
-import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.MetricStatus
 
 enum class UniversalMetricUnavailableReason {
     MISSING_VALUE,

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.repository
 
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
 import kotlinx.coroutines.flow.Flow
 
 interface InsightDismissalRepository {

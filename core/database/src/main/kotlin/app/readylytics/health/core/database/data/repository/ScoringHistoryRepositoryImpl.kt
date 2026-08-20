@@ -3,10 +3,10 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.database.data.mapper.HeartRateRecordMapper
 import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.HeartRateRecord
-import app.readylytics.health.domain.model.SleepHrSample
-import app.readylytics.health.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.HeartRateRecord
+import app.readylytics.health.core.model.domain.model.SleepHrSample
+import app.readylytics.health.core.model.domain.model.SleepSession
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao

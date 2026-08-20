@@ -14,22 +14,22 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
-import app.readylytics.health.domain.model.DomainBloodPressureRecord
-import app.readylytics.health.domain.model.DomainBodyFatRecord
-import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
-import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainHeartRateRecord
-import app.readylytics.health.domain.model.DomainHeartRateSample
-import app.readylytics.health.domain.model.DomainHrvRecord
-import app.readylytics.health.domain.model.DomainIntervalTotal
-import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
-import app.readylytics.health.domain.model.DomainRouteLocation
-import app.readylytics.health.domain.model.DomainSleepSessionRecord
-import app.readylytics.health.domain.model.DomainSleepStage
-import app.readylytics.health.domain.model.DomainSleepStageType
-import app.readylytics.health.domain.model.DomainStepsRecord
-import app.readylytics.health.domain.model.DomainWeightRecord
-import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.core.model.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyFatRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
+import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainHrvRecord
+import app.readylytics.health.core.model.domain.model.DomainIntervalTotal
+import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.core.model.domain.model.DomainRouteLocation
+import app.readylytics.health.core.model.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainSleepStage
+import app.readylytics.health.core.model.domain.model.DomainSleepStageType
+import app.readylytics.health.core.model.domain.model.DomainStepsRecord
+import app.readylytics.health.core.model.domain.model.DomainWeightRecord
+import app.readylytics.health.core.model.domain.model.RouteState
 
 fun SleepSessionRecord.toDomain(): DomainSleepSessionRecord =
     DomainSleepSessionRecord(

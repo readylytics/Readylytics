@@ -19,7 +19,7 @@ class AppDomainOwnershipTest {
 
         val coreModelPaths =
             listOf(
-                "core/model/src/main/kotlin/app/readylytics/health/domain/validation/BirthdayDateRule.kt",
+                "core/model/src/main/kotlin/app/readylytics/health/core/model/domain/validation/BirthdayDateRule.kt",
             )
 
         val coreScoringPaths =

@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.workouts
 
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.strainRatioStatus
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.strainRatioStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

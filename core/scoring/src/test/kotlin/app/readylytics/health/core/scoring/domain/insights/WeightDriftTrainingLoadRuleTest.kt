@@ -1,7 +1,7 @@
 package app.readylytics.health.core.scoring.domain.insights
 
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

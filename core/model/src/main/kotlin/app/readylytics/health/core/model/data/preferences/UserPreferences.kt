@@ -67,7 +67,7 @@ data class UserPreferences(
     val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
     val primaryDeviceName: String? = null,
     /**
-     * Per–data-type source device selection. Key = [app.readylytics.health.domain.model.HealthDataType]
+     * Per–data-type source device selection. Key = [app.readylytics.health.core.model.domain.model.HealthDataType]
      * name, value = device label. A missing key means "All devices" for that data type.
      */
     val deviceByDataType: Map<String, String> = emptyMap(),

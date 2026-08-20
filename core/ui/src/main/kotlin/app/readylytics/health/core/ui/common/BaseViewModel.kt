@@ -1,7 +1,7 @@
 package app.readylytics.health.core.ui.common
 
 import androidx.lifecycle.ViewModel
-import app.readylytics.health.domain.model.Result
+import app.readylytics.health.core.model.domain.model.Result
 
 abstract class BaseViewModel : ViewModel() {
     protected fun <T> handleResult(

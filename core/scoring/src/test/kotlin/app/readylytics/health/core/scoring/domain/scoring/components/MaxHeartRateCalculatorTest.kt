@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring.components
 
 import app.readylytics.health.core.scoring.domain.scoring.components.MaxHeartRateCalculator
 
-import app.readylytics.health.domain.model.PhysiologyConstants
+import app.readylytics.health.core.model.domain.model.PhysiologyConstants
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

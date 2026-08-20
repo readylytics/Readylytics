@@ -1,7 +1,7 @@
 package app.readylytics.health.core.model.domain.service
 
-import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.model.getOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

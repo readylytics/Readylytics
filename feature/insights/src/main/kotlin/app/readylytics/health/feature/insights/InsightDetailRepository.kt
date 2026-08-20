@@ -2,13 +2,13 @@ package app.readylytics.health.feature.insights
 
 import android.content.Context
 import android.content.res.Resources
+import app.readylytics.health.core.model.domain.model.InsightType
 import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.core.scoring.domain.insights.detail.CauseRankHint
 import app.readylytics.health.core.scoring.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.core.scoring.domain.insights.detail.InsightCause
 import app.readylytics.health.core.scoring.domain.insights.detail.InsightCauseRanker
 import app.readylytics.health.core.scoring.domain.insights.detail.InsightDetailContent
-import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.feature.insights.R
 
 class InsightDetailRepository(

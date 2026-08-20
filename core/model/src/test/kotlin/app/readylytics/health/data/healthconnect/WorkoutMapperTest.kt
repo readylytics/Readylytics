@@ -1,10 +1,10 @@
 package app.readylytics.health.data.healthconnect
 
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
-import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainHeartRateSample
-import app.readylytics.health.domain.model.DomainRouteLocation
-import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainHeartRateSample
+import app.readylytics.health.core.model.domain.model.DomainRouteLocation
+import app.readylytics.health.core.model.domain.model.RouteState
 import app.readylytics.health.core.model.domain.sync.mappers.WorkoutMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

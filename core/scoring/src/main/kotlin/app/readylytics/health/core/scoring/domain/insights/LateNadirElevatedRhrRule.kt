@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.insights
 
-import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.InsightType
 
 /**
  * Explains a delayed heart rate nadir by correlating it with a meaningfully

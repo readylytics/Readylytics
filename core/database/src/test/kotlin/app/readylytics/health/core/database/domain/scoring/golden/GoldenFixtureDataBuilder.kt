@@ -9,7 +9,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEnt
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.RecordType
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.random.Random

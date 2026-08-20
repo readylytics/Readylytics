@@ -1,7 +1,7 @@
 package app.readylytics.health.core.healthconnect.data.mapper
 
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
-import app.readylytics.health.domain.model.DomainBodyTemperatureRecord
+import app.readylytics.health.core.model.domain.model.DomainBodyTemperatureRecord
 
 object BodyTemperatureDataMapper {
     fun toEntity(record: DomainBodyTemperatureRecord): BodyTemperatureRecordEntity =

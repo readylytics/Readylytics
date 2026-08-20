@@ -1,6 +1,6 @@
 package app.readylytics.health.core.healthconnect.data.mapper
 
-import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.core.model.domain.model.DomainOxygenSaturationRecord
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant

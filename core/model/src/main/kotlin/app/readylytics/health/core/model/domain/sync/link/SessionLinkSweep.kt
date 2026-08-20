@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.sync.link
 
-import app.readylytics.health.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.RecordType
 
 /**
  * Stateful, single-pass equivalent of [SessionLinker.resolve] for samples visited in non-decreasing

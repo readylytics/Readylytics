@@ -7,9 +7,9 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Length
 import app.readylytics.health.core.healthconnect.data.healthconnect.toDomain
-import app.readylytics.health.domain.model.DomainExerciseSessionRecord
-import app.readylytics.health.domain.model.DomainSleepStageType
-import app.readylytics.health.domain.model.RouteState
+import app.readylytics.health.core.model.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.core.model.domain.model.DomainSleepStageType
+import app.readylytics.health.core.model.domain.model.RouteState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant

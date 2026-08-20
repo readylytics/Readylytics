@@ -17,7 +17,7 @@ import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
-import app.readylytics.health.domain.model.Result as DomainResult
+import app.readylytics.health.core.model.domain.model.Result as DomainResult
 
 /**
  * Short-lived periodic worker for "Background Sync": pulls the last 2 days of Health Connect
