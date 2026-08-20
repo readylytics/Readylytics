@@ -5,7 +5,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassifier
 
-import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.WorkoutData

@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.display
+package app.readylytics.health.core.model.domain.display
 
 import app.readylytics.health.core.model.data.preferences.UnitSystem
 import org.junit.Test

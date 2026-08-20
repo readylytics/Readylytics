@@ -6,7 +6,7 @@ import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetri
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
-import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.SettingsRepository
