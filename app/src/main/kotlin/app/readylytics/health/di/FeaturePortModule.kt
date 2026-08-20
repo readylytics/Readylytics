@@ -1,6 +1,7 @@
 package app.readylytics.health.di
 
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
+import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.AboutPreferences
 import app.readylytics.health.domain.preferences.BackupSettings
@@ -17,7 +18,6 @@ import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HealthDataRefreshAdapter
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncControllerImpl
-import app.readylytics.health.domain.user.UserProfileActions
 import app.readylytics.health.domain.user.UserUseCase
 import dagger.Binds
 import dagger.Module

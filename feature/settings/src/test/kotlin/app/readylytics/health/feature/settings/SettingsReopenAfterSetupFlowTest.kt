@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
@@ -11,7 +12,6 @@ import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.sync.HealthDataRefresh
-import app.readylytics.health.domain.user.UserProfileActions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow

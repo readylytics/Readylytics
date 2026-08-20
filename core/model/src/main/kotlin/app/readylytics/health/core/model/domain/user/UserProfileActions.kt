@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.user
+package app.readylytics.health.core.model.domain.user
 
 import app.readylytics.health.domain.model.Result
 import java.time.LocalDate

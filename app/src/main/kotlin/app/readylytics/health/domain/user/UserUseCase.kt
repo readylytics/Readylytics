@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.user
 
+import app.readylytics.health.core.model.domain.user.UserProfileActions
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.model.Result
