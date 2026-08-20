@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.cache
+package app.readylytics.health.core.model.domain.cache
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
