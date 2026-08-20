@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.layout
+package app.readylytics.health.core.model.domain.layout
 
 /**
  * Merges a persisted configuration list with the current default set, appending any

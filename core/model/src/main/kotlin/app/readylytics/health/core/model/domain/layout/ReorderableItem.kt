@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.layout
+package app.readylytics.health.core.model.domain.layout
 
 /**
  * Shape shared by all reorderable layout configurations (dashboard cards, vitals charts,

@@ -3,7 +3,7 @@ package app.readylytics.health.data.preferences
 import androidx.datastore.core.DataStore
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.ApplicationScope
-import app.readylytics.health.domain.layout.LayoutDefaultsMerger
+import app.readylytics.health.core.model.domain.layout.LayoutDefaultsMerger
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration

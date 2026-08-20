@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.layout
+package app.readylytics.health.core.model.domain.layout
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame

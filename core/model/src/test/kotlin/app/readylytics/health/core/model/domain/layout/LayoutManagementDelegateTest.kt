@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.layout
+package app.readylytics.health.core.model.domain.layout
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi

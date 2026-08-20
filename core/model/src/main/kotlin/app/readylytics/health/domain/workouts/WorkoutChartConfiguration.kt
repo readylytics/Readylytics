@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.workouts
 
-import app.readylytics.health.domain.layout.ReorderableItem
+import app.readylytics.health.core.model.domain.layout.ReorderableItem
 import kotlinx.serialization.Serializable
 
 @Serializable

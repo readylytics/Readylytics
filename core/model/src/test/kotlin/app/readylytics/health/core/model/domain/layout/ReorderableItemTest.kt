@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.layout
+package app.readylytics.health.core.model.domain.layout
 
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardId

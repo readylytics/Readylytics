@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.sleep.overview
 
 import androidx.compose.runtime.Immutable
-import app.readylytics.health.domain.layout.LayoutManagementDelegate
+import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepLayoutRepository
