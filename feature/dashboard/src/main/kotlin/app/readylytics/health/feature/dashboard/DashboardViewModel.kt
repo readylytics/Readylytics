@@ -2,6 +2,7 @@ package app.readylytics.health.feature.dashboard
 
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
@@ -10,7 +11,6 @@ import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.airecommendation.DailyPromptFormatter
 import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.domain.cache.DailyMetricCache

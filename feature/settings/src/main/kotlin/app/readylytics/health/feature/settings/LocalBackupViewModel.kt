@@ -2,8 +2,8 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreResult

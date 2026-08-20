@@ -3,7 +3,7 @@ package app.readylytics.health.core.healthconnect.domain.sync
 import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
-import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository

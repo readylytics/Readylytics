@@ -2,8 +2,8 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository

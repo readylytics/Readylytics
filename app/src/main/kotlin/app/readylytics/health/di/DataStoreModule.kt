@@ -13,6 +13,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.data.preferences.*
 import app.readylytics.health.domain.util.logE
 import dagger.Module

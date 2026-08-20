@@ -6,7 +6,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
-import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.domain.date.SelectedDateStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

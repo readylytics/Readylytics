@@ -20,7 +20,7 @@ import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
 import app.readylytics.health.domain.model.DomainBodyTemperatureRecord

@@ -2,7 +2,7 @@ package app.readylytics.health.data.logcat
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.logcat.LogcatCaptureStore
 import app.readylytics.health.util.SecureFileLogSink

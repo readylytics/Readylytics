@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.scoring.domain.scoring.calculateDailyRasIncrease
-import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
