@@ -4,7 +4,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
-import app.readylytics.health.domain.util.HeartRateFormulas
+import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import java.time.LocalDate
 import javax.inject.Inject
 

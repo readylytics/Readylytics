@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.common
+package app.readylytics.health.core.scoring.domain.common
 
 import app.readylytics.health.domain.scoring.ScoringConfig
 

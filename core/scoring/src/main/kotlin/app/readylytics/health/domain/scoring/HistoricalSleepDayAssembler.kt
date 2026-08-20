@@ -5,7 +5,7 @@ import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.SleepDayAggregator
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
-import app.readylytics.health.domain.util.mean
+import app.readylytics.health.core.scoring.domain.util.mean
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

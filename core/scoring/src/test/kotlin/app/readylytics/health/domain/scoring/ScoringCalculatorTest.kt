@@ -8,8 +8,8 @@ import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
-import app.readylytics.health.domain.util.median
-import app.readylytics.health.domain.util.stdev
+import app.readylytics.health.core.scoring.domain.util.median
+import app.readylytics.health.core.scoring.domain.util.stdev
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

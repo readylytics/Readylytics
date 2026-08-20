@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.util
+package app.readylytics.health.core.scoring.domain.util
 
 import kotlin.math.roundToInt
 import kotlin.math.sqrt

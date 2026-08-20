@@ -4,7 +4,7 @@ import app.readylytics.health.domain.model.SleepHrSample
 import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.util.median
+import app.readylytics.health.core.scoring.domain.util.median
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject

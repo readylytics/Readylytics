@@ -5,8 +5,8 @@ import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.util.HeartRateFormulas
-import app.readylytics.health.domain.util.stdev
+import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
+import app.readylytics.health.core.scoring.domain.util.stdev
 import javax.inject.Inject
 import kotlin.math.ln
 

@@ -8,9 +8,9 @@ import app.readylytics.health.domain.scoring.ScoringConstants.Readiness
 import app.readylytics.health.domain.scoring.ScoringConstants.Restoration
 import app.readylytics.health.domain.scoring.ScoringConstants.Strain
 import app.readylytics.health.domain.scoring.components.EmergencyFlagThresholds
-import app.readylytics.health.domain.util.mean
-import app.readylytics.health.domain.util.median
-import app.readylytics.health.domain.util.stdev
+import app.readylytics.health.core.scoring.domain.util.mean
+import app.readylytics.health.core.scoring.domain.util.median
+import app.readylytics.health.core.scoring.domain.util.stdev
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.exp

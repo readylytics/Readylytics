@@ -7,7 +7,7 @@ import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.repository.WalkForwardBaselineContext
 import app.readylytics.health.domain.repository.WalkForwardTrimpContext
-import app.readylytics.health.domain.util.HeartRateFormulas
+import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
 import kotlinx.coroutines.CancellationException

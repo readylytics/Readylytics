@@ -15,7 +15,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.util.stdev
+import app.readylytics.health.core.scoring.domain.util.stdev
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
