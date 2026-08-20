@@ -231,7 +231,19 @@ android {
         abortOnError = true
         warningsAsErrors = true
         xmlReport = true
-        disable += listOf("GradleDependency", "NewerVersionAvailable")
+        // Requires network dependency lookups that aren't meaningful/stable in CI.
+        disable += listOf("NewerVersionAvailable")
+        // "A newer AGP/Gradle or dependency version is available" is noise, not a bug: it must
+        // never block a Play release, and in normal CI it should be visible without failing the
+        // build. releasePipeline (set only by the release workflow) fully suppresses these;
+        // otherwise they're downgraded to informational, which warningsAsErrors does not promote.
+        val releasePipeline =
+            providers.gradleProperty("readylytics.lint.releasePipeline").orElse("false").map(String::toBoolean)
+        if (releasePipeline.get()) {
+            disable += listOf("GradleDependency", "AndroidGradlePluginVersion")
+        } else {
+            informational += listOf("GradleDependency", "AndroidGradlePluginVersion")
+        }
     }
 }
 
