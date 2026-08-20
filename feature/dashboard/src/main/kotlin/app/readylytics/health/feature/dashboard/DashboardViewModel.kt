@@ -15,6 +15,9 @@ import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.scoring.domain.airecommendation.DailyPromptFormatter
 import app.readylytics.health.core.scoring.domain.airecommendation.GetDailyPromptDataUseCase
 import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
+import app.readylytics.health.core.scoring.domain.insights.InsightContext
+import app.readylytics.health.core.scoring.domain.insights.InsightEngine
+import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.common.BaseViewModel
@@ -23,9 +26,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPrese
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.insights.InsightContext
-import app.readylytics.health.domain.insights.InsightEngine
-import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType

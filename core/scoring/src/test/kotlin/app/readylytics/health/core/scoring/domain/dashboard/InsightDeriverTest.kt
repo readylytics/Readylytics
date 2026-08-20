@@ -1,7 +1,7 @@
 package app.readylytics.health.core.scoring.domain.dashboard
 
-import app.readylytics.health.domain.insights.InsightFinding
-import app.readylytics.health.domain.insights.InsightParams
+import app.readylytics.health.core.scoring.domain.insights.InsightFinding
+import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.RecoveryFlag
 import org.junit.Assert.assertEquals
