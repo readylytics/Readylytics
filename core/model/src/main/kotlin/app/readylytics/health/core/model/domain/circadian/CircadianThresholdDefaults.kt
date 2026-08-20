@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.circadian
+package app.readylytics.health.core.model.domain.circadian
 
 
 import app.readylytics.health.domain.preferences.PhysiologyProfile

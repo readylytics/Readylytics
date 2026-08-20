@@ -12,7 +12,7 @@ import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 
-import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
+import app.readylytics.health.core.model.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.core.scoring.domain.scoring.components.AuditTrail

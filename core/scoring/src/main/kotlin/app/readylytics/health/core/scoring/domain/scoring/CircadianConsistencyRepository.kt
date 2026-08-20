@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRe
 
 import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
-import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
+import app.readylytics.health.core.model.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.circadianConsistencyStatus
 import app.readylytics.health.domain.preferences.SettingsDefaults

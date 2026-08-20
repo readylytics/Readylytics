@@ -869,7 +869,7 @@ sync, historical resync, retention-window changes, and restarts.
 
 Supporting helpers live in `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/components/` and `core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/domain/scoring/sleep/`
 (architecture targets via `SleepArchitectureTargetFactory`, continuity curves via `SleepContinuityCurves`, restoration weights, nadir analysis, HR coverage validation).
-`CircadianThresholdDefaults` (`core/model/src/main/kotlin/app/readylytics/health/domain/circadian/`) is the single threshold source, consumed
+`CircadianThresholdDefaults` (`core/model/src/main/kotlin/app/readylytics/health/core/model/domain/circadian/`) is the single threshold source, consumed
 by both the live repository above and the diagnostic config built in `ScoringConfigFactory`. `ScoringConfig` encapsulates scoring settings (including `hypersomniaOnsetRatio` and `sleepWeightProfile`) in its deterministic config hash.
 
 **HC-006/WP-11 — stage-less sessions reweight instead of scoring 0%.** A stage-less HC

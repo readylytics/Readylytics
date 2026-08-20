@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.circadian
+package app.readylytics.health.core.model.domain.circadian
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
