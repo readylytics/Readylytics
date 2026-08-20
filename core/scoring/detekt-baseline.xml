@@ -52,7 +52,7 @@
     <ID>MaxLineLength:SleepDayAggregatorTest.kt$SleepDayAggregatorTest$val aggregate = assertNotNull(SleepDayAggregator.aggregateForScoreDay(LocalDate.of(2026, 7, 9), listOf(core, pass, fail), policy()))</ID>
     <ID>MaxLineLength:SleepTrendDayAssemblerTest.kt$SleepTrendDayAssemblerTest$SleepDaySegment(id, start.toInstant().toEpochMilli(), end.toInstant().toEpochMilli(), durationMinutes, lightSleepMinutes = light)</ID>
     <ID>MaxLineLength:SleepTrendDayAssemblerTest.kt$SleepTrendDayAssemblerTest$assertEquals(listOf(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 3)), result.map { it.scoreDay })</ID>
-    <ID>NewLineAtEndOfFile:ScoringBindsModule.kt$app.readylytics.health.di.ScoringBindsModule.kt</ID>
+    <ID>NewLineAtEndOfFile:ScoringBindsModule.kt$app.readylytics.health.core.scoring.di.ScoringBindsModule.kt</ID>
     <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeAdaptiveBaselineRhrBpm( dayMidnight: Instant, rhrBaselineOverride: Float?, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, ): Float?</ID>
     <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeAdaptiveBaselineRhrBpmBetween( fromMs: Long, toMs: Long, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, prefetchedSessions: List&lt;SleepSession&gt;? = null, ): Float?</ID>
     <ID>ReturnCount:BaselineComputer.kt$BaselineComputer$suspend fun computeBackfillBaselines( summaries: List&lt;DailySummary&gt;, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, ): Map&lt;LocalDate, BackfillBaseline&gt;</ID>

@@ -1,4 +1,4 @@
-package app.readylytics.health.di
+package app.readylytics.health.core.scoring.di
 
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.ScoringHistoryRepository

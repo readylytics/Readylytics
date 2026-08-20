@@ -77,7 +77,6 @@
     <ID>MaxLineLength:ScoringRepositoryImpl.kt$ScoringRepositoryImpl$val previousDaysMs = (1..6).map { i -&gt; targetDate.minusDays(i.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli() }</ID>
     <ID>MaxLineLength:ScoringRepositoryImpl.kt$ScoringRepositoryImpl$val session = aggregatedSleep?.scoringSession ?: dataLoader.loadSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)</ID>
     <ID>MaxLineLength:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest$"Rounded readinessWorkoutOnly must not flip when a live-computed day is recomputed from its frozen summary."</ID>
-    <ID>NewLineAtEndOfFile:DatabaseRepositoryModule.kt$app.readylytics.health.di.DatabaseRepositoryModule.kt</ID>
     <ID>ReturnCount:ReadinessSummaryCoordinator.kt$ReadinessSummaryCoordinator$suspend fun resolveSleepAggregation( targetDate: LocalDate, zoneId: ZoneId, prefs: UserPreferences, ): SleepAggregationContext?</ID>
     <ID>ReturnCount:ScoringDayDataLoader.kt$ScoringDayDataLoader$suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List&lt;HrMinuteBucketRow&gt;</ID>
     <ID>ReturnCount:SqlCipherKeyManager.kt$SqlCipherKeyManager$fun migrateIfNeeded(dbFile: File)</ID>
