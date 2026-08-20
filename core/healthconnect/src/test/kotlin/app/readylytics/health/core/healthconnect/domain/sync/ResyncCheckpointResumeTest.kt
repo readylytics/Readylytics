@@ -5,10 +5,10 @@ import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.WalkForwardBaselineContext
-import app.readylytics.health.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.clearMocks

@@ -13,6 +13,13 @@ import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMo
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.repository.SleepStageData
 import app.readylytics.health.core.model.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.core.model.domain.sleep.SleepChartId
 import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
@@ -36,13 +43,6 @@ import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.core.ui.common.padBucketsToRange
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.repository.DailyMetricsRepository
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepSessionRepository
-import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.feature.sleep.overview.createSleepChartStateFlow
 import app.readylytics.health.feature.sleep.overview.createSleepMetricCardStateFlow
 import app.readylytics.health.feature.sleep.overview.createSleepTopCardStateFlow

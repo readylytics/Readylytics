@@ -5,9 +5,9 @@ import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 import app.readylytics.health.domain.model.HrRangeAggregate
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.HrvRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.HrvRecordData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

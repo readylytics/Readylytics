@@ -7,6 +7,8 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.BodyFatRepository
+import app.readylytics.health.core.model.domain.repository.WeightRepository
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.TrendGranularity
 import app.readylytics.health.domain.model.BodyCompositionAssessment
@@ -15,8 +17,6 @@ import app.readylytics.health.domain.model.BodyFatRecord
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.WeightRecord
 import app.readylytics.health.domain.model.toMetricStatus
-import app.readylytics.health.domain.repository.BodyFatRepository
-import app.readylytics.health.domain.repository.WeightRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

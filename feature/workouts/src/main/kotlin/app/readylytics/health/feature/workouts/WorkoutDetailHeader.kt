@@ -7,8 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.ui.common.DateFormatUtils
-import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.feature.workouts.R
 import java.time.Instant
 import java.time.ZoneId

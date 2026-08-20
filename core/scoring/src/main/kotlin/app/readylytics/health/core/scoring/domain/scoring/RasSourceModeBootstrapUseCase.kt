@@ -5,7 +5,7 @@ import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrap
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 
 /**
  * One-time bootstrap for existing users' `rasSourceMode` preference.

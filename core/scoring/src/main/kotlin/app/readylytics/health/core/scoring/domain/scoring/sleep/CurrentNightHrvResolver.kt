@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 
 import app.readylytics.health.domain.model.SleepSession
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.util.mean
 import javax.inject.Inject
 import javax.inject.Singleton

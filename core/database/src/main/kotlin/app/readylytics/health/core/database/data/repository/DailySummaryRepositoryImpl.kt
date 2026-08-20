@@ -6,8 +6,8 @@ import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first

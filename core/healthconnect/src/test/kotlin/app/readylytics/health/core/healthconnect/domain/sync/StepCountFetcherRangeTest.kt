@@ -1,7 +1,7 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.sync.*
-import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest

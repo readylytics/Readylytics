@@ -3,9 +3,9 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepStageDao
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepSessionRepository
-import app.readylytics.health.domain.repository.SleepStageData
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.repository.SleepStageData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

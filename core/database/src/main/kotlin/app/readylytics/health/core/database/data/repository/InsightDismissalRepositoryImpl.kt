@@ -3,7 +3,7 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.databaseschema.data.local.dao.InsightDismissalDao
 import app.readylytics.health.core.databaseschema.data.local.entity.InsightDismissalEntity
 import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.domain.repository.InsightDismissalRepository
+import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map

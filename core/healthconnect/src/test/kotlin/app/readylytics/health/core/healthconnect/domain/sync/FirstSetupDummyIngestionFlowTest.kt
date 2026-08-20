@@ -19,10 +19,10 @@ import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.WorkoutRoutePoint
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.PermissionStatus
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.WalDiagnostics
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery

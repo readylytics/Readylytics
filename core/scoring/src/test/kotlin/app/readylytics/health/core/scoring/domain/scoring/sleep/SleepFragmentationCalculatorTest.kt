@@ -2,7 +2,7 @@ package app.readylytics.health.core.scoring.domain.scoring.sleep
 
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepFragmentationCalculator
 
-import app.readylytics.health.domain.repository.SleepStageData
+import app.readylytics.health.core.model.domain.repository.SleepStageData
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

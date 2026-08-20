@@ -35,9 +35,9 @@ import app.readylytics.health.domain.model.DomainSleepStage
 import app.readylytics.health.domain.model.DomainSleepStageType
 import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.PermissionStatus
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.util.SessionTotalsResolver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException

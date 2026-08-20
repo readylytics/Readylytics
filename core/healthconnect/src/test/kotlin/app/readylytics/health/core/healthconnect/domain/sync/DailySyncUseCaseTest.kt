@@ -7,12 +7,12 @@ import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.WalDiagnostics
-import app.readylytics.health.domain.repository.WalkForwardBaselineContext
-import app.readylytics.health.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.WalDiagnostics
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
@@ -521,11 +521,11 @@ class DailySyncUseCaseTest {
             // ForegroundSyncController/the periodic worker can route to the permission-recovery
             // flow, not be swallowed into a generic Result.Failure("SYNC_ERROR").
             coEvery { hcRepo.readSleepSessions(any(), any()) } throws
-                app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException(
+                app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException(
                     SecurityException("revoked"),
                 )
 
-            assertFailsWith<app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException> {
+            assertFailsWith<app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException> {
                 useCase.run(windowDays = 1, onProgress = null)
             }
         }

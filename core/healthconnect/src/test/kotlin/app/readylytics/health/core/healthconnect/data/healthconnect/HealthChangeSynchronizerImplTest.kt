@@ -16,7 +16,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecord
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HealthDataType
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf

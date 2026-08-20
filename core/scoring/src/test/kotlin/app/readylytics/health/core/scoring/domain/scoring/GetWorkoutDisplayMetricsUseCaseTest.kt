@@ -13,10 +13,10 @@ import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.WorkoutData
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
 import io.mockk.coEvery
 import io.mockk.coVerify

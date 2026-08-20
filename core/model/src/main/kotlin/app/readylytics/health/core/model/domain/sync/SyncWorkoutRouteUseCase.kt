@@ -3,7 +3,7 @@ package app.readylytics.health.core.model.domain.sync
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.RouteState
-import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import app.readylytics.health.core.model.domain.sync.mappers.WorkoutMapper
 import javax.inject.Inject
 import javax.inject.Singleton

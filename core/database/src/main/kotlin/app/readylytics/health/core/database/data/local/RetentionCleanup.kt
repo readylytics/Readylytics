@@ -12,7 +12,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.StepRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import javax.inject.Inject
 import javax.inject.Singleton
 

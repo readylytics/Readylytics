@@ -37,7 +37,7 @@ import app.readylytics.health.core.database.data.repository.ScoringHistoryReposi
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.model.domain.security.EncryptionManager
-import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator

@@ -5,7 +5,7 @@ import app.readylytics.health.core.scoring.domain.scoring.HrvBaselineProvider
 
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf

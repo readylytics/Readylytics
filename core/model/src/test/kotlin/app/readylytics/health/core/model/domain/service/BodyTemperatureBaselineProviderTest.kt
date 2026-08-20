@@ -2,7 +2,7 @@ package app.readylytics.health.core.model.domain.service
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import io.mockk.coEvery
 import io.mockk.every

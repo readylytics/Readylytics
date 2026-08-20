@@ -1,7 +1,7 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.core.model.domain.sync.*
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 
 /**
  * Shared test double implementation of [TransactionRunner] that tracks transaction counts,

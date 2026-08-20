@@ -17,9 +17,9 @@ import androidx.compose.ui.test.performClick
 import app.readylytics.health.core.designsystem.FitDashboardTheme
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.util.ProjectedPoint
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
-import app.readylytics.health.domain.repository.WorkoutData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

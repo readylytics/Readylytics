@@ -29,7 +29,7 @@ import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.domain.model.*
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOutcome
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
 import app.readylytics.health.core.model.domain.sync.*

@@ -6,9 +6,9 @@ import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.ApplicationScope
 import app.readylytics.health.core.model.domain.preferences.SleepSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
-import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel

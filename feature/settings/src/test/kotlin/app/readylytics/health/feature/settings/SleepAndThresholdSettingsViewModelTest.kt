@@ -6,10 +6,10 @@ import app.readylytics.health.core.model.domain.preferences.CircadianThresholdPr
 import app.readylytics.health.core.model.domain.preferences.SleepSettings
 import app.readylytics.health.core.model.domain.preferences.ThresholdSettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.feature.settings.R
 import io.mockk.coVerify
 import io.mockk.every

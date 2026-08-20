@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.repository.BloodPressureRepository
 import app.readylytics.health.core.model.domain.service.HealthMetricsService
 import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
@@ -16,7 +17,6 @@ import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.repository.BloodPressureRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

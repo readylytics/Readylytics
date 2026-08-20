@@ -1,7 +1,7 @@
 package app.readylytics.health.core.healthconnect.di
 
 import app.readylytics.health.core.healthconnect.data.healthconnect.HealthConnectRepositoryImpl
-import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

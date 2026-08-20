@@ -5,8 +5,8 @@ import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePoi
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.model.WorkoutRoutePoint
-import app.readylytics.health.domain.repository.WorkoutData
-import app.readylytics.health.domain.repository.WorkoutRepository
+import app.readylytics.health.core.model.domain.repository.WorkoutData
+import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

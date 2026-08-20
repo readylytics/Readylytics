@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.WeightRepository
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.scoring.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.core.ui.common.DailyDataPoint
@@ -20,7 +21,6 @@ import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.domain.model.BodyCompositionAssessment
-import app.readylytics.health.domain.repository.WeightRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

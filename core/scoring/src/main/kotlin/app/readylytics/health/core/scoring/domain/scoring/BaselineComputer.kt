@@ -9,7 +9,7 @@ import app.readylytics.health.core.model.domain.scoring.ScoringConstants
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.SleepSession
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.scoring.domain.util.mean

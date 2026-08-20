@@ -3,7 +3,7 @@ package app.readylytics.health.core.scoring.domain.scoring
 import app.readylytics.health.core.scoring.domain.scoring.HrMaxProvider
 
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first

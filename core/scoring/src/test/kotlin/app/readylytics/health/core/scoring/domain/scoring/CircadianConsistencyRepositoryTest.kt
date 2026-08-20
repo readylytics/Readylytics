@@ -9,8 +9,8 @@ import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
 import app.readylytics.health.core.model.domain.security.EncryptionManager
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

@@ -3,12 +3,12 @@ package app.readylytics.health.ui.sync
 import app.readylytics.health.core.database.data.repository.SelectedDateRepository
 import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.PermissionStatus
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncState
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.PermissionStatus
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder

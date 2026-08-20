@@ -5,10 +5,10 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUse
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.repository.WalkForwardBaselineContext
-import app.readylytics.health.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE

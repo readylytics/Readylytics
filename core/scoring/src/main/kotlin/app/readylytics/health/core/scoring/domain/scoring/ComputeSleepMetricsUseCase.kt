@@ -17,8 +17,8 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.core.scoring.domain.scoring.components.PhaseCalculator
 import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator

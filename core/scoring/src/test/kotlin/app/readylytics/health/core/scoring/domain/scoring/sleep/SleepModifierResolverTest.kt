@@ -4,9 +4,9 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierRes
 
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepSessionRepository
-import app.readylytics.health.domain.repository.SleepStageData
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.repository.SleepStageData
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.model.domain.security.EncryptionManager
 import io.mockk.coEvery

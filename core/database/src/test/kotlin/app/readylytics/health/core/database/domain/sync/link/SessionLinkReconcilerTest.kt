@@ -12,7 +12,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.SleepSession
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.model.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot

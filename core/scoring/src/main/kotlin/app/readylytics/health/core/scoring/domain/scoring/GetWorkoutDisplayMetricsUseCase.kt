@@ -12,9 +12,9 @@ import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.WorkoutData
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
 import kotlinx.coroutines.flow.first
 import java.time.Instant

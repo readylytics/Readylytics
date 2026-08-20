@@ -9,9 +9,9 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.preferences.scoringZone
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException
-import app.readylytics.health.domain.repository.WalDiagnostics
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException
+import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import app.readylytics.health.core.scoring.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.core.model.domain.sync.*
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler

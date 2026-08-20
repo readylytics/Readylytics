@@ -3,7 +3,7 @@ package app.readylytics.health.core.database.data.repository
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.database.data.mapper.BloodPressureRecordMapper
 import app.readylytics.health.domain.model.BloodPressureRecord
-import app.readylytics.health.domain.repository.BloodPressureRepository
+import app.readylytics.health.core.model.domain.repository.BloodPressureRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

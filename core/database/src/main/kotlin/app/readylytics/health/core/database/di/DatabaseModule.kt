@@ -30,8 +30,8 @@ import app.readylytics.health.core.database.data.security.AndroidKeystoreKeyProv
 import app.readylytics.health.core.database.data.security.KeyProvider
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.repository.WalDiagnostics
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

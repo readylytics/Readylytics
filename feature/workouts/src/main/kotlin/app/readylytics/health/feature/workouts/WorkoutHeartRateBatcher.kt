@@ -1,9 +1,9 @@
 package app.readylytics.health.feature.workouts
 
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.WorkoutData
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 

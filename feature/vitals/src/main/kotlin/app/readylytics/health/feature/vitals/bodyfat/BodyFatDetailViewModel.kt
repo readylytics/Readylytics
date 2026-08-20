@@ -9,6 +9,8 @@ import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.display.MetricFormatter
 import app.readylytics.health.core.model.domain.preferences.Gender
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.BodyFatRepository
+import app.readylytics.health.core.model.domain.repository.WeightRepository
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
@@ -24,8 +26,6 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.model.bodyFatZoneBands
 import app.readylytics.health.domain.model.toMetricStatus
-import app.readylytics.health.domain.repository.BodyFatRepository
-import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.feature.vitals.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher

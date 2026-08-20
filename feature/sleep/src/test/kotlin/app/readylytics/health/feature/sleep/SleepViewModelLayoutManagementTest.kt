@@ -7,6 +7,10 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.model.domain.sleep.SleepChartId
 import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
@@ -14,10 +18,6 @@ import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.repository.DailyMetricsRepository
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.SleepSessionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

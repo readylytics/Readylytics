@@ -12,7 +12,7 @@ import javax.inject.Singleton
  * of `ScoringRepositoryImpl.computeDailySummary`, for both the workout-only and everyday-HR
  * variants. Pure -- callers resolve the bucketed `dailyTrimpByDate`/`everydayTrimpByDate` maps
  * (today's freshly computed value already injected) from whatever source (a single-day DB query or
- * a shared walk-forward [app.readylytics.health.domain.repository.WalkForwardTrimpContext] slice);
+ * a shared walk-forward [app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext] slice);
  * this use case never touches persistence.
  */
 @Singleton

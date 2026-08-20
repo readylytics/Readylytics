@@ -1,6 +1,6 @@
 package app.readylytics.health.core.database.data.local
 
-import app.readylytics.health.domain.repository.WalDiagnostics
+import app.readylytics.health.core.model.domain.repository.WalDiagnostics
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import javax.inject.Inject

@@ -28,7 +28,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecor
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
 import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.model.WorkoutRoutePoint
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.BloodPressureInput
 import app.readylytics.health.core.model.domain.sync.BodyFatInput
 import app.readylytics.health.core.model.domain.sync.BodyTemperatureInput

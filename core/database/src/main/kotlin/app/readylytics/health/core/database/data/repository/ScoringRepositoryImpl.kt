@@ -10,10 +10,10 @@ import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.SleepSession
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.WalkForwardBaselineContext
-import app.readylytics.health.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase

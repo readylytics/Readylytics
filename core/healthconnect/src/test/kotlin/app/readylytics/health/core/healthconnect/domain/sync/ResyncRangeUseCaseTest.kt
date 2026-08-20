@@ -5,11 +5,11 @@ import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.WalkForwardBaselineContext
-import app.readylytics.health.domain.repository.WalkForwardTrimpContext
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.ScoringRepository
+import app.readylytics.health.core.model.domain.repository.WalkForwardBaselineContext
+import app.readylytics.health.core.model.domain.repository.WalkForwardTrimpContext
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -179,7 +179,7 @@ class ResyncRangeUseCaseTest {
             coEvery { hcRepo.readSleepSessions(any(), capture(requestedWindowEnds)) } coAnswers {
                 callCount++
                 if (callCount == 1) {
-                    throw app.readylytics.health.domain.repository.HealthConnectWindowTimeoutException(
+                    throw app.readylytics.health.core.model.domain.repository.HealthConnectWindowTimeoutException(
                         windowStart = Instant.EPOCH,
                         windowEnd = Instant.EPOCH,
                         cause = RuntimeException("synthetic timeout for test"),

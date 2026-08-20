@@ -1,7 +1,7 @@
 package app.readylytics.health.core.database.data.local
 
 import androidx.room.withTransaction
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import javax.inject.Inject
 import javax.inject.Singleton
 

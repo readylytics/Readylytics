@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.repository
+package app.readylytics.health.core.model.domain.repository
 
 import app.readylytics.health.domain.model.HrRangeAggregate
 import kotlinx.coroutines.flow.Flow

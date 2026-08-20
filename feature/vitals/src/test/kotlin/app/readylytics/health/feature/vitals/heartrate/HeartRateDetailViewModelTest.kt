@@ -4,9 +4,9 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.HeartRateRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

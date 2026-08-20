@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

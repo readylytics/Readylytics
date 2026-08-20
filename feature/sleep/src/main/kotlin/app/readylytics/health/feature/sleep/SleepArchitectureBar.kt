@@ -30,7 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import app.readylytics.health.feature.sleep.R
 
 private data class StageSegment(

@@ -6,7 +6,7 @@ import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
-import app.readylytics.health.domain.repository.DailyMetricsRepository
+import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

@@ -5,8 +5,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBasel
 
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.preferences.scoringZone
-import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
