@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import java.time.Clock
 import java.time.LocalDate

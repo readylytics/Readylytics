@@ -2,12 +2,12 @@ package app.readylytics.health.feature.sleep
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
@@ -94,11 +94,11 @@ class SleepViewModelTest {
         every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
         every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
         every { sleepLayoutRepository.sleepTopCardConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS)
         every { sleepLayoutRepository.sleepChartConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CHARTS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CHARTS)
         every { sleepLayoutRepository.sleepMetricCardConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS)
     }
 
     @After

@@ -3,7 +3,7 @@ package app.readylytics.health.data.repository
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.data.preferences.scoringZone
+import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.ReadinessResult

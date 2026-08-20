@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.DefaultDispatcher
 import app.readylytics.health.core.model.domain.sync.SyncWorkoutRouteUseCase
 import app.readylytics.health.core.model.domain.util.ElevationGainCalculator
@@ -15,7 +16,6 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
-import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.layout.LayoutManagementDelegate
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.LoadSourceSelector

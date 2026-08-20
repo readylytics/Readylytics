@@ -21,8 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.ui.components.settings.RetentionSlider
-import app.readylytics.health.data.preferences.SettingsDefaults
 
 @Composable
 fun RetentionSetupScreen(

@@ -1,6 +1,12 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.normalizeCoreMergeGapMinutes
+import app.readylytics.health.core.model.data.preferences.normalizeHypersomniaOnsetPercent
+import app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes
+import app.readylytics.health.core.model.data.preferences.normalizeSupplementalArchitectureCoveragePercent
+import app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import javax.inject.Inject
 
@@ -31,7 +37,12 @@ internal class SleepPreferences
 
         suspend fun updateCoreMergeGapMinutes(minutes: Int) {
             dataStore.updateData {
-                it.toBuilder().setCoreMergeGapMinutes(normalizeCoreMergeGapMinutes(minutes)).build()
+                it
+                    .toBuilder()
+                    .setCoreMergeGapMinutes(
+                        app.readylytics.health.core.model.data.preferences
+                            .normalizeCoreMergeGapMinutes(minutes),
+                    ).build()
             }
         }
 
@@ -40,7 +51,9 @@ internal class SleepPreferences
                 it
                     .toBuilder()
                     .setSupplementalCutoffMinutesOfDay(
-                        normalizeSupplementalCutoffMinutesOfDay(minutes),
+                        app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay(
+                            minutes,
+                        ),
                     ).build()
             }
         }
@@ -49,8 +62,11 @@ internal class SleepPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setMinimumCountedSleepSegmentMinutes(normalizeMinimumCountedSleepSegmentMinutes(minutes))
-                    .build()
+                    .setMinimumCountedSleepSegmentMinutes(
+                        app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes(
+                            minutes,
+                        ),
+                    ).build()
             }
         }
 
@@ -59,7 +75,10 @@ internal class SleepPreferences
                 it
                     .toBuilder()
                     .setSupplementalArchitectureCoveragePercent(
-                        normalizeSupplementalArchitectureCoveragePercent(percent),
+                        app.readylytics.health.core.model.data.preferences
+                            .normalizeSupplementalArchitectureCoveragePercent(
+                                percent,
+                            ),
                     ).build()
             }
         }
@@ -142,7 +161,12 @@ internal class SleepPreferences
 
         suspend fun updateHypersomniaOnsetPercent(percent: Int) {
             dataStore.updateData {
-                it.toBuilder().setHypersomniaOnsetPercent(normalizeHypersomniaOnsetPercent(percent)).build()
+                it
+                    .toBuilder()
+                    .setHypersomniaOnsetPercent(
+                        app.readylytics.health.core.model.data.preferences
+                            .normalizeHypersomniaOnsetPercent(percent),
+                    ).build()
             }
         }
 

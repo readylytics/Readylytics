@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
 import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId

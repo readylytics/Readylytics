@@ -1,5 +1,7 @@
 package app.readylytics.health.data.preferences
 
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.core.model.domain.util.toMidnightEpochMilli
 import org.junit.Test
 import java.time.LocalDate
@@ -11,19 +13,28 @@ class ScoringZoneTest {
     @Test
     fun scoringZone_validId_isParsed() {
         val prefs = UserPreferences(scoringZoneId = "America/Los_Angeles")
-        assertEquals(ZoneId.of("America/Los_Angeles"), prefs.scoringZone())
+        assertEquals(
+            ZoneId.of("America/Los_Angeles"),
+            prefs.scoringZone(),
+        )
     }
 
     @Test
     fun scoringZone_blank_fallsBackToDeviceZone() {
         val prefs = UserPreferences(scoringZoneId = "")
-        assertEquals(ZoneId.systemDefault(), prefs.scoringZone())
+        assertEquals(
+            ZoneId.systemDefault(),
+            prefs.scoringZone(),
+        )
     }
 
     @Test
     fun scoringZone_invalidId_fallsBackToDeviceZone() {
         val prefs = UserPreferences(scoringZoneId = "Not/AZone")
-        assertEquals(ZoneId.systemDefault(), prefs.scoringZone())
+        assertEquals(
+            ZoneId.systemDefault(),
+            prefs.scoringZone(),
+        )
     }
 
     /**
@@ -38,10 +49,16 @@ class ScoringZoneTest {
             val prefs = UserPreferences(scoringZoneId = "America/Los_Angeles")
 
             TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
-            val underUtc = date.toMidnightEpochMilli(prefs.scoringZone())
+            val underUtc =
+                date.toMidnightEpochMilli(
+                    prefs.scoringZone(),
+                )
 
             TimeZone.setDefault(TimeZone.getTimeZone("Asia/Tokyo"))
-            val underTokyo = date.toMidnightEpochMilli(prefs.scoringZone())
+            val underTokyo =
+                date.toMidnightEpochMilli(
+                    prefs.scoringZone(),
+                )
 
             assertEquals(underUtc, underTokyo)
             assertEquals(

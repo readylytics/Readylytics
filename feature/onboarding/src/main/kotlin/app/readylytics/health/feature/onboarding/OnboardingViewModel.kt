@@ -1,9 +1,9 @@
 package app.readylytics.health.feature.onboarding
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.ui.common.BaseViewModel
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings

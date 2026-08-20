@@ -67,16 +67,16 @@ class CleanArchTest {
         // Only these specific types are allowed; data-layer impls (mappers, serializers, repos) are not.
         val allowedDataImports =
             setOf(
-                "app.readylytics.health.data.preferences.UserPreferences",
-                "app.readylytics.health.data.preferences.Gender",
-                "app.readylytics.health.data.preferences.AppTheme",
-                "app.readylytics.health.data.preferences.SettingsDefaults",
-                "app.readylytics.health.data.preferences.PhysiologyProfile",
-                "app.readylytics.health.data.preferences.UnitSystem",
-                "app.readylytics.health.data.preferences.SyncPreference",
-                "app.readylytics.health.data.preferences.BackgroundSyncInterval",
-                "app.readylytics.health.data.preferences.FallbackThemeColor",
-                "app.readylytics.health.data.preferences.BackupSchedule",
+                "app.readylytics.health.core.model.data.preferences.UserPreferences",
+                "app.readylytics.health.core.model.data.preferences.Gender",
+                "app.readylytics.health.core.model.data.preferences.AppTheme",
+                "app.readylytics.health.core.model.data.preferences.SettingsDefaults",
+                "app.readylytics.health.core.model.data.preferences.PhysiologyProfile",
+                "app.readylytics.health.core.model.data.preferences.UnitSystem",
+                "app.readylytics.health.core.model.data.preferences.SyncPreference",
+                "app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval",
+                "app.readylytics.health.core.model.data.preferences.FallbackThemeColor",
+                "app.readylytics.health.core.model.data.preferences.BackupSchedule",
             )
         val violations =
             Konsist
@@ -103,16 +103,16 @@ class CleanArchTest {
     fun `domain package does not reference data package via fully-qualified names`() {
         val allowedDataReferences =
             setOf(
-                "app.readylytics.health.data.preferences.UserPreferences",
-                "app.readylytics.health.data.preferences.Gender",
-                "app.readylytics.health.data.preferences.AppTheme",
-                "app.readylytics.health.data.preferences.SettingsDefaults",
-                "app.readylytics.health.data.preferences.PhysiologyProfile",
-                "app.readylytics.health.data.preferences.UnitSystem",
-                "app.readylytics.health.data.preferences.SyncPreference",
-                "app.readylytics.health.data.preferences.BackgroundSyncInterval",
-                "app.readylytics.health.data.preferences.FallbackThemeColor",
-                "app.readylytics.health.data.preferences.BackupSchedule",
+                "app.readylytics.health.core.model.data.preferences.UserPreferences",
+                "app.readylytics.health.core.model.data.preferences.Gender",
+                "app.readylytics.health.core.model.data.preferences.AppTheme",
+                "app.readylytics.health.core.model.data.preferences.SettingsDefaults",
+                "app.readylytics.health.core.model.data.preferences.PhysiologyProfile",
+                "app.readylytics.health.core.model.data.preferences.UnitSystem",
+                "app.readylytics.health.core.model.data.preferences.SyncPreference",
+                "app.readylytics.health.core.model.data.preferences.BackgroundSyncInterval",
+                "app.readylytics.health.core.model.data.preferences.FallbackThemeColor",
+                "app.readylytics.health.core.model.data.preferences.BackupSchedule",
             )
 
         val violations =

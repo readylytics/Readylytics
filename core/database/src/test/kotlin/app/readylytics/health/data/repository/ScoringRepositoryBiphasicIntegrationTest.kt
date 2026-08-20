@@ -12,7 +12,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSession

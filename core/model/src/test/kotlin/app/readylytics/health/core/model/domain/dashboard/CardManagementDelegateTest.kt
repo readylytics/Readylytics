@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.dashboard
 
-import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel

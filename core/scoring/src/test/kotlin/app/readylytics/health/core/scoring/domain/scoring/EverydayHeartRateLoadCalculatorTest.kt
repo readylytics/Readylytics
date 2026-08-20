@@ -5,8 +5,8 @@ import app.readylytics.health.core.scoring.domain.scoring.EverydayHeartRateLoadC
 import app.readylytics.health.core.model.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.scoring.domain.scoring.LongInterval
 import org.junit.Test

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.workers
 
-import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
 
 interface WorkerScheduler {
     companion object {

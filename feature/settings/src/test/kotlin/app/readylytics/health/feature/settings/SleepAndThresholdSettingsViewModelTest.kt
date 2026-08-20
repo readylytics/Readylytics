@@ -1,10 +1,10 @@
 package app.readylytics.health.feature.settings
 
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
 import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings

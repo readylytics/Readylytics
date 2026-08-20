@@ -1,6 +1,6 @@
 package app.readylytics.health.core.model.domain.dashboard
 
-import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

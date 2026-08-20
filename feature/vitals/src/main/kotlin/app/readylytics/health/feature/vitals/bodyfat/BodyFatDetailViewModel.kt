@@ -2,6 +2,8 @@ package app.readylytics.health.feature.vitals.bodyfat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.common.BodyFatHistoryItem
@@ -13,8 +15,6 @@ import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.core.ui.common.buildPeriodAverageSummary
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.BodyCompositionAssessment

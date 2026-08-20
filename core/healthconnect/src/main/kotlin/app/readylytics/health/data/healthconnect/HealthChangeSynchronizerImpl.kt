@@ -24,10 +24,10 @@ import app.readylytics.health.core.healthconnect.data.mapper.BodyTemperatureData
 import app.readylytics.health.core.healthconnect.data.mapper.OxygenSaturationDataMapper
 import app.readylytics.health.core.healthconnect.data.mapper.WeightDataMapper
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.scoringZone
+import app.readylytics.health.core.model.data.preferences.scoringZone
 import app.readylytics.health.domain.model.*
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOutcome

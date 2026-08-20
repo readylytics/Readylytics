@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
 
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

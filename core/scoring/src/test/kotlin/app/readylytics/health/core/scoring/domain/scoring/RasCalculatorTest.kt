@@ -4,8 +4,8 @@ import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

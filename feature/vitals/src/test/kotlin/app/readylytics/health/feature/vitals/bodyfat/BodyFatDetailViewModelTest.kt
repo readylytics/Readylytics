@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.vitals.bodyfat
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.TrendGranularity
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.BodyCompositionAssessment
 import app.readylytics.health.domain.model.BodyFatCategory

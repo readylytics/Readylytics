@@ -4,7 +4,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.HrvBaselineProvider
 
 import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import io.mockk.coEvery
 import io.mockk.mockk

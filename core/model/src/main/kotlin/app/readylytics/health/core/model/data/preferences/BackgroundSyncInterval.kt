@@ -1,4 +1,4 @@
-package app.readylytics.health.data.preferences
+package app.readylytics.health.core.model.data.preferences
 
 /**
  * User-selectable intervals for the periodic background Health Connect sync,

@@ -1,4 +1,4 @@
-package app.readylytics.health.data.preferences
+package app.readylytics.health.core.model.data.preferences
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

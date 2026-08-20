@@ -38,9 +38,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
-import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.domain.validation.HeartRateConstants
 import app.readylytics.health.feature.settings.HeartRateZonesState
 import app.readylytics.health.feature.settings.PhysiologySettingsState

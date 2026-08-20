@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.vitals.overview
 
 import androidx.compose.runtime.Immutable
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
@@ -10,7 +11,6 @@ import app.readylytics.health.core.ui.common.aggregateByRange
 import app.readylytics.health.core.ui.common.bucketBy
 import app.readylytics.health.core.ui.common.bucketLengthDays
 import app.readylytics.health.core.ui.common.bucketStartForDate
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.BodyTemperatureAssessment
 import app.readylytics.health.domain.model.BucketZoneBands
 import app.readylytics.health.domain.model.DailyMetrics

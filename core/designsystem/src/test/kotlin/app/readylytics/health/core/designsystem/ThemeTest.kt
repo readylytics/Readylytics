@@ -3,7 +3,7 @@ package app.readylytics.health.core.designsystem
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test

@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.onboarding
 
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings

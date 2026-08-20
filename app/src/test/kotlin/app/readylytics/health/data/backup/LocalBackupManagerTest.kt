@@ -4,15 +4,15 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
@@ -597,7 +597,7 @@ class LocalBackupManagerTest {
                 mockk<SettingsRepository>().apply {
                     every { userPreferences } returns
                         flowOf(
-                            app.readylytics.health.data.preferences.UserPreferences(
+                            app.readylytics.health.core.model.data.preferences.UserPreferences(
                                 backupDirectoryUri = safUri.toString(),
                             ),
                         )
@@ -662,7 +662,7 @@ class LocalBackupManagerTest {
                 mockk<SettingsRepository>().apply {
                     every { userPreferences } returns
                         flowOf(
-                            app.readylytics.health.data.preferences.UserPreferences(
+                            app.readylytics.health.core.model.data.preferences.UserPreferences(
                                 backupPasswordHash = null,
                             ),
                         )

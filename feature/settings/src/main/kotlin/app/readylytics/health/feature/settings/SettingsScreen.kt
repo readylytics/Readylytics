@@ -46,13 +46,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
 import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
-import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.domain.githubissue.GitHubIssueType
 import app.readylytics.health.domain.githubissue.IssueReportRequest
 import app.readylytics.health.feature.settings.LocalBackupViewModel.SideEffect

@@ -1,6 +1,6 @@
 package app.readylytics.health.core.ui.common
 
-import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiCategory
 import app.readylytics.health.domain.model.BmiStatus

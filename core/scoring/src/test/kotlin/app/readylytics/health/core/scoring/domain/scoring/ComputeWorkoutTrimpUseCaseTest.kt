@@ -4,8 +4,8 @@ import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUse
 
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.getOrNull
 import org.junit.Test
 import java.time.Instant

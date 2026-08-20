@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.validation
 
-import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 
 class HrrToleranceRule : IntRangeRule(
     SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS,

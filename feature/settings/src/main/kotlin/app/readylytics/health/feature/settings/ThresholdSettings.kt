@@ -36,9 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.ui.components.MetricTooltip
-import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.common.resyncGateEnabled
 import kotlin.math.roundToInt

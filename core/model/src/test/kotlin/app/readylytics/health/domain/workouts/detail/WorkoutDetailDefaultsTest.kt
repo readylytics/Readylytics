@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.workouts.detail
 
-import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

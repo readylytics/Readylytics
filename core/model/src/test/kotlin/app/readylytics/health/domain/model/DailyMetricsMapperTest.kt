@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.model
 
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.math.exp

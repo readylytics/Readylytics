@@ -113,8 +113,8 @@ class ScoringComponentsTest {
     @Test
     fun scoringConfigFactory_athleteProfile_returnsZHrvThreshold1_2() {
         val prefs =
-            app.readylytics.health.data.preferences.UserPreferences(
-                physiologyProfile = app.readylytics.health.data.preferences.PhysiologyProfile.ATHLETE,
+            app.readylytics.health.core.model.data.preferences.UserPreferences(
+                physiologyProfile = app.readylytics.health.core.model.data.preferences.PhysiologyProfile.ATHLETE,
             )
         val factory =
             app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory()
@@ -126,8 +126,8 @@ class ScoringComponentsTest {
     @Test
     fun scoringConfigFactory_activeProfile_returnsZHrvThreshold1_5() {
         val prefs =
-            app.readylytics.health.data.preferences.UserPreferences(
-                physiologyProfile = app.readylytics.health.data.preferences.PhysiologyProfile.ACTIVE,
+            app.readylytics.health.core.model.data.preferences.UserPreferences(
+                physiologyProfile = app.readylytics.health.core.model.data.preferences.PhysiologyProfile.ACTIVE,
             )
         val factory =
             app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory()
@@ -139,8 +139,8 @@ class ScoringComponentsTest {
     @Test
     fun scoringConfigFactory_sedentaryProfile_returnsZHrvThreshold2_0() {
         val prefs =
-            app.readylytics.health.data.preferences.UserPreferences(
-                physiologyProfile = app.readylytics.health.data.preferences.PhysiologyProfile.SEDENTARY,
+            app.readylytics.health.core.model.data.preferences.UserPreferences(
+                physiologyProfile = app.readylytics.health.core.model.data.preferences.PhysiologyProfile.SEDENTARY,
             )
         val factory =
             app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory()

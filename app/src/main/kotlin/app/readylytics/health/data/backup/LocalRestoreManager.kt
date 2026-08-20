@@ -20,6 +20,8 @@ import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEn
 import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logW
@@ -28,7 +30,6 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.PhysiologyProfileProto
-import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.SyncPreferenceProto
@@ -888,10 +889,10 @@ class LocalRestoreManager
 
         private fun BackupScheduleProto.toDomain() =
             when (this) {
-                BackupScheduleProto.BACKUP_MANUAL -> app.readylytics.health.data.preferences.BackupSchedule.MANUAL
-                BackupScheduleProto.BACKUP_DAILY -> app.readylytics.health.data.preferences.BackupSchedule.DAILY
-                BackupScheduleProto.BACKUP_WEEKLY -> app.readylytics.health.data.preferences.BackupSchedule.WEEKLY
-                BackupScheduleProto.UNRECOGNIZED -> app.readylytics.health.data.preferences.BackupSchedule.MANUAL
+                BackupScheduleProto.BACKUP_MANUAL -> BackupSchedule.MANUAL
+                BackupScheduleProto.BACKUP_DAILY -> BackupSchedule.DAILY
+                BackupScheduleProto.BACKUP_WEEKLY -> BackupSchedule.WEEKLY
+                BackupScheduleProto.UNRECOGNIZED -> BackupSchedule.MANUAL
             }
     }
 

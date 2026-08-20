@@ -1,5 +1,19 @@
 package app.readylytics.health.data.preferences
 
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.normalizeCoreMergeGapMinutes
+import app.readylytics.health.core.model.data.preferences.normalizeHypersomniaOnsetPercent
+import app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes
+import app.readylytics.health.core.model.data.preferences.normalizeSupplementalArchitectureCoveragePercent
+import app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
@@ -33,25 +47,32 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         goalSleepHours = goalSleepHours,
         coreMergeGapMinutes =
             if (hasCoreMergeGapMinutes()) {
-                normalizeCoreMergeGapMinutes(coreMergeGapMinutes)
+                app.readylytics.health.core.model.data.preferences
+                    .normalizeCoreMergeGapMinutes(coreMergeGapMinutes)
             } else {
                 SettingsDefaults.CORE_MERGE_GAP_MINUTES
             },
         supplementalCutoffMinutesOfDay =
             if (hasSupplementalCutoffMinutesOfDay()) {
-                normalizeSupplementalCutoffMinutesOfDay(supplementalCutoffMinutesOfDay)
+                app.readylytics.health.core.model.data.preferences.normalizeSupplementalCutoffMinutesOfDay(
+                    supplementalCutoffMinutesOfDay,
+                )
             } else {
                 SettingsDefaults.SUPPLEMENTAL_CUTOFF_MINUTES_OF_DAY
             },
         minimumCountedSleepSegmentMinutes =
             if (hasMinimumCountedSleepSegmentMinutes()) {
-                normalizeMinimumCountedSleepSegmentMinutes(minimumCountedSleepSegmentMinutes)
+                app.readylytics.health.core.model.data.preferences.normalizeMinimumCountedSleepSegmentMinutes(
+                    minimumCountedSleepSegmentMinutes,
+                )
             } else {
                 SettingsDefaults.MINIMUM_COUNTED_SLEEP_SEGMENT_MINUTES
             },
         supplementalArchitectureCoveragePercent =
             if (hasSupplementalArchitectureCoveragePercent()) {
-                normalizeSupplementalArchitectureCoveragePercent(supplementalArchitectureCoveragePercent)
+                app.readylytics.health.core.model.data.preferences.normalizeSupplementalArchitectureCoveragePercent(
+                    supplementalArchitectureCoveragePercent,
+                )
             } else {
                 SettingsDefaults.SUPPLEMENTAL_ARCHITECTURE_COVERAGE_PERCENT
             },
@@ -214,7 +235,9 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         sleepScoreWeightProfile = sleepScoreWeightProfile.toDomainProfile(),
         hypersomniaOnsetPercent =
             if (hasHypersomniaOnsetPercent()) {
-                normalizeHypersomniaOnsetPercent(hypersomniaOnsetPercent)
+                app.readylytics.health.core.model.data.preferences.normalizeHypersomniaOnsetPercent(
+                    hypersomniaOnsetPercent,
+                )
             } else {
                 SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT
             },

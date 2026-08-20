@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.airecommendation
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.preferences.UserPreferencesReader

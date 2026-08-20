@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.preferences
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate

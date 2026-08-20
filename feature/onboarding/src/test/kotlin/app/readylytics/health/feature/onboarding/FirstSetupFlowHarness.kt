@@ -1,13 +1,13 @@
 package app.readylytics.health.feature.onboarding
 
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
@@ -93,11 +93,11 @@ class FirstSetupFlowHarness(
             preferences.update { it.copy(unitSystem = unitSystem) }
         }
 
-        override suspend fun updateAppTheme(theme: app.readylytics.health.data.preferences.AppTheme) =
+        override suspend fun updateAppTheme(theme: app.readylytics.health.core.model.data.preferences.AppTheme) =
             error("Unexpected call: updateAppTheme")
 
         override suspend fun updateFallbackThemeColor(
-            color: app.readylytics.health.data.preferences.FallbackThemeColor,
+            color: app.readylytics.health.core.model.data.preferences.FallbackThemeColor,
         ) = error("Unexpected call: updateFallbackThemeColor")
 
         override suspend fun updateCustomPaletteEnabled(enabled: Boolean) =

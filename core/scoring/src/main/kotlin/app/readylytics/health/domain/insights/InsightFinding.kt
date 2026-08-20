@@ -72,7 +72,7 @@ sealed class InsightParams {
     ) : InsightParams()
 
     /**
-     * @param everydayMode True when [app.readylytics.health.data.preferences.UserPreferences.strainLoadSourceMode]
+     * @param everydayMode True when [app.readylytics.health.core.model.data.preferences.UserPreferences.strainLoadSourceMode]
      * is
      * [app.readylytics.health.core.model.domain.scoring.LoadSourceMode.EVERYDAY_HEART_RATE]
      * at evaluation time, so the UI can render "daily physiological load" copy instead

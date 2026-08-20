@@ -31,7 +31,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.feature.settings.R
 
 private fun FallbackThemeColor.labelRes(): Int =

@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.onboarding
 
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.UnitSystem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -45,7 +45,7 @@ class FirstSetupProfilePersistenceFlowTest {
 
             val prefs = harness.preferences.value
             assertEquals("1990-06-15", prefs.birthDate)
-            assertEquals(app.readylytics.health.data.preferences.Gender.FEMALE, prefs.gender)
+            assertEquals(app.readylytics.health.core.model.data.preferences.Gender.FEMALE, prefs.gender)
             assertEquals(PhysiologyProfile.ACTIVE, prefs.physiologyProfile)
             assertEquals(true, prefs.dynamicColorEnabled)
             assertEquals(UnitSystem.METRIC, prefs.unitSystem)
