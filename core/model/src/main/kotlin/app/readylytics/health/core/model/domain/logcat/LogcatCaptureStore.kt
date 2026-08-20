@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.logcat
+package app.readylytics.health.core.model.domain.logcat
 
 import java.io.File
 
