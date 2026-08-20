@@ -14,7 +14,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DailySummary
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.data.local.reconstructTimestampedSamples
+import app.readylytics.health.core.database.data.local.reconstructTimestampedSamples
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.HrMinuteBucketRow

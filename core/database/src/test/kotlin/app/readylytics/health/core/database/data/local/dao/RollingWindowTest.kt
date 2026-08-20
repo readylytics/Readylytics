@@ -4,7 +4,7 @@ import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import kotlinx.coroutines.test.runTest

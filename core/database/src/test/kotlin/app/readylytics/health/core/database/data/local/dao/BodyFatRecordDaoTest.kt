@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After

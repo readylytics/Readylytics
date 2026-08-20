@@ -1,9 +1,9 @@
 package app.readylytics.health.core.database.di
 
 import app.readylytics.health.core.database.data.audit.RoomAuditTrailRepository
-import app.readylytics.health.data.local.RoomHealthIngestionStore
-import app.readylytics.health.data.local.SelectedSourcePrunerImpl
-import app.readylytics.health.data.local.SessionLinkReconcilerImpl
+import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
+import app.readylytics.health.core.database.data.local.SelectedSourcePrunerImpl
+import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.database.data.repository.BloodPressureRepositoryImpl
 import app.readylytics.health.core.database.data.repository.BodyFatRepositoryImpl
 import app.readylytics.health.core.database.data.repository.DailyMetricsRepositoryImpl

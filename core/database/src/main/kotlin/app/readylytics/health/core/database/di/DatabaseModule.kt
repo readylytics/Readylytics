@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import app.readylytics.health.data.local.DatabaseMigrations
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.RoomTransactionRunner
-import app.readylytics.health.data.local.RoomWalDiagnostics
+import app.readylytics.health.core.database.data.local.DatabaseMigrations
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.RoomTransactionRunner
+import app.readylytics.health.core.database.data.local.RoomWalDiagnostics
 import app.readylytics.health.core.database.data.local.dao.AuditEventDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao

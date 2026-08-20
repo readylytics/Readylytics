@@ -5,6 +5,9 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.RoomTransactionRunner
+import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
@@ -34,9 +37,6 @@ import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileR
 import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.RoomTransactionRunner
-import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.preferences.SettingsRepository

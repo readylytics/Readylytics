@@ -3,7 +3,7 @@ package app.readylytics.health.core.database.data.local.dao
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After

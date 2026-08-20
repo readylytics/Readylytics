@@ -2,8 +2,8 @@ package app.readylytics.health.data.backup
 
 import android.net.Uri
 import android.util.JsonReader
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
-import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.sleep.SleepChartConfiguration

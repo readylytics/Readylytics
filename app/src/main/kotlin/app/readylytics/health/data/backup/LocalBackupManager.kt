@@ -3,6 +3,7 @@ package app.readylytics.health.data.backup
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
@@ -19,7 +20,6 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.audit.AuditEvent

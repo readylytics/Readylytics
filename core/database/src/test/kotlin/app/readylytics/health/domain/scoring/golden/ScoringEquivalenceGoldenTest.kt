@@ -2,9 +2,9 @@ package app.readylytics.health.domain.scoring.golden
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.data.local.DataRollupManager
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.RoomTransactionRunner
+import app.readylytics.health.core.database.data.local.DataRollupManager
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.domain.heartrate.ZoneThresholds

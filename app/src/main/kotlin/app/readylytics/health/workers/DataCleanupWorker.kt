@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import app.readylytics.health.core.database.data.local.RetentionCleanup
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.util.RetentionBounds
-import app.readylytics.health.data.local.RetentionCleanup
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.Lazy
 import dagger.assisted.Assisted

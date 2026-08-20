@@ -3,7 +3,7 @@ package app.readylytics.health.workers
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
-import app.readylytics.health.data.local.DataRollupManager
+import app.readylytics.health.core.database.data.local.DataRollupManager
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify

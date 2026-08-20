@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local
+package app.readylytics.health.core.database.data.local
 
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4

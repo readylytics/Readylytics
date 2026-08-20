@@ -6,7 +6,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test

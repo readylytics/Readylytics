@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local
+package app.readylytics.health.core.database.data.local
 
 import app.readylytics.health.domain.repository.WalDiagnostics
 import kotlinx.coroutines.CancellationException

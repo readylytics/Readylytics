@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.sync.link
 
-import app.readylytics.health.data.local.SessionLinkReconcilerImpl
+import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao

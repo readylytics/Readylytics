@@ -13,7 +13,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturatio
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity

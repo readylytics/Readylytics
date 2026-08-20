@@ -8,9 +8,9 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.model.domain.migration.V7MigrationPhase
 import app.readylytics.health.core.model.domain.migration.V7MigrationResult
-import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.migration.V7DatabaseBenchmarkDriver
 import app.readylytics.health.databasebenchmark.di.benchmarkIoDispatcher
 import kotlinx.coroutines.CancellationException

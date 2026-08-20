@@ -1,4 +1,4 @@
-package app.readylytics.health.data.local
+package app.readylytics.health.core.database.data.local
 
 object DatabaseUpgradeSql {
     val V5_TO_V6 =

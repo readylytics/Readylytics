@@ -3,8 +3,8 @@ package app.readylytics.health.domain.scoring.golden
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.RoomTransactionRunner
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader

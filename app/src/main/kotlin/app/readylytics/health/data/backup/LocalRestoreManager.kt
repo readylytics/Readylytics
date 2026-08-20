@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.JsonReader
 import android.util.JsonToken
 import androidx.room.withTransaction
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
 import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
@@ -26,7 +27,6 @@ import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.core.model.domain.util.logW
 import app.readylytics.health.core.model.workers.WorkerScheduler
-import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.PhysiologyProfileProto

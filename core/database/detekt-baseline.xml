@@ -87,7 +87,7 @@
     <ID>TooManyFunctions:DatabaseModule.kt$DatabaseModule$Companion</ID>
     <ID>TooManyFunctions:DatabaseRepositoryModule.kt$DatabaseRepositoryModule</ID>
     <ID>TooManyFunctions:HealthDatabase.kt$HealthDatabase : RoomDatabase</ID>
-    <ID>TooManyFunctions:RoomHealthIngestionStore.kt$app.readylytics.health.data.local.RoomHealthIngestionStore.kt</ID>
+    <ID>TooManyFunctions:RoomHealthIngestionStore.kt$app.readylytics.health.core.database.data.local.RoomHealthIngestionStore.kt</ID>
     <ID>TooManyFunctions:ScoringDayDataLoader.kt$ScoringDayDataLoader</ID>
     <ID>TooManyFunctions:ScoringHistoryRepositoryImpl.kt$ScoringHistoryRepositoryImpl : ScoringHistoryRepository</ID>
     <ID>TooManyFunctions:ScoringRepositoryImpl.kt$ScoringRepositoryImpl : ScoringRepository</ID>

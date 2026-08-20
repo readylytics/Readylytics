@@ -1,5 +1,7 @@
 package app.readylytics.health.data.local
 
+import app.readylytics.health.core.database.data.local.DatabaseMigrations
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.migration.DatabaseReadinessGate
 import app.readylytics.health.core.database.di.requireDatabaseReady
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness

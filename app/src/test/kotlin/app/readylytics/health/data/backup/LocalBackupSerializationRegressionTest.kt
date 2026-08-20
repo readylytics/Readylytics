@@ -3,13 +3,13 @@ package app.readylytics.health.data.backup
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.BackupSchedule
 import app.readylytics.health.core.model.data.preferences.SyncPreference
 import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.audit.AuditEvent

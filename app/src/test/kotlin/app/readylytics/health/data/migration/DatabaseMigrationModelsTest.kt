@@ -147,7 +147,7 @@ class DatabaseMigrationModelsTest {
     fun `exported v7 identities match migrator identity`() {
         val schema =
             readRepoFile(
-                "core/database/schemas/app.readylytics.health.data.local.HealthDatabase/7.json",
+                "core/database/schemas/app.readylytics.health.core.database.data.local.HealthDatabase/7.json",
             )
         val topLevelIdentity =
             Regex(""""identityHash":\s*"([0-9a-f]+)"""")
