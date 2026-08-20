@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.healthconnect.domain.sync
 
 /**
  * How far back a foreground (UI-blocking) sync/recompute will widen inline before escalating to

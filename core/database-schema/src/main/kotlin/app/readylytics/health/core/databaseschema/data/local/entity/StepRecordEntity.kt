@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  * Raw per-record steps rows, keyed by stable Health Connect record id. Persisted purely so a
  * later `DeletionChange` for steps can resolve the deleted record's own `(startTime, endTime)`
  * and mark the right days affected (HC-005) -- daily step totals remain sourced from
- * [app.readylytics.health.domain.sync.StepCountFetcher]'s aggregate/device-filtered reads, never
+ * [app.readylytics.health.core.healthconnect.domain.sync.StepCountFetcher]'s aggregate/device-filtered reads, never
  * from this table.
  */
 @Serializable

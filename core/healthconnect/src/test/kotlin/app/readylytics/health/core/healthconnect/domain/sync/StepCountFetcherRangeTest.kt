@@ -1,5 +1,6 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.domain.sync.*
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import io.mockk.coEvery
 import io.mockk.mockk

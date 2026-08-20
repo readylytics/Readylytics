@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.domain.util.logD
 import kotlinx.coroutines.CancellationException

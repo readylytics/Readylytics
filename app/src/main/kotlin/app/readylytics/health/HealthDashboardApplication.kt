@@ -12,6 +12,7 @@ import androidx.work.Configuration
 import app.readylytics.health.BuildConfig
 import app.readylytics.health.benchmark.BenchmarkDataSeeder
 import app.readylytics.health.core.database.data.security.SqlCipherKeyManager
+import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
 import app.readylytics.health.crashreport.CrashReportHandler
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
@@ -19,7 +20,6 @@ import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.domain.migration.DatabaseMigrationController
 import app.readylytics.health.domain.migration.DatabaseReadiness
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
-import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.LogContext

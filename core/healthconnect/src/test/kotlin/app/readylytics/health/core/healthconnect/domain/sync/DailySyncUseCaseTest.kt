@@ -1,5 +1,6 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.domain.sync.*
 import app.readylytics.health.core.database.domain.sync.DailyRecomputeSupport
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHrvRecord

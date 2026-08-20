@@ -30,6 +30,8 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.model.*
 import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSyncOutcome
+import app.readylytics.health.core.healthconnect.domain.sync.HealthChangeSynchronizer
 import app.readylytics.health.domain.sync.*
 import app.readylytics.health.domain.sync.mappers.*
 import app.readylytics.health.domain.util.logD

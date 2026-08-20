@@ -1,9 +1,10 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainRouteLocation
 import app.readylytics.health.domain.model.RouteState
 import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.domain.sync.*
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

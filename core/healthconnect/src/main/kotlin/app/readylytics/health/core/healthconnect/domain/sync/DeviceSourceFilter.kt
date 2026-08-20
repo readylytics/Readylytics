@@ -1,4 +1,4 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.healthconnect.domain.sync
 
 /**
  * Pure, Android-free helper that strictly filters a list of records to a single

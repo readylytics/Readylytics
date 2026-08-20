@@ -1,8 +1,9 @@
-package app.readylytics.health.domain.sync
+package app.readylytics.health.core.healthconnect.domain.sync
 
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.sync.*
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first

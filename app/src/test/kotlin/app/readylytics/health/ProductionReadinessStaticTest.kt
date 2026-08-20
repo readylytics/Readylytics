@@ -109,7 +109,7 @@ class ProductionReadinessStaticTest {
     fun `foreground sync and local backup helpers do not swallow coroutine cancellation`() {
         val foregroundSyncController =
             sourceFile(
-                "src/main/kotlin/app/readylytics/health/domain/sync/ForegroundSyncController.kt",
+                "src/main/kotlin/app/readylytics/health/core/healthconnect/domain/sync/ForegroundSyncController.kt",
             ).readText()
         val localBackupManager =
             sourceFile(
