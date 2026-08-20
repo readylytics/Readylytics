@@ -20,7 +20,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.HrMinuteBucketRow
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.TimestampedTrimp
-import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton

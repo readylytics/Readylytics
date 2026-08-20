@@ -2,6 +2,8 @@ package app.readylytics.health.feature.workouts
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.dashboard.CardId
@@ -11,8 +13,6 @@ import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
-import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.workouts.WorkoutChartId
 import app.readylytics.health.domain.workouts.WorkoutHistoryId

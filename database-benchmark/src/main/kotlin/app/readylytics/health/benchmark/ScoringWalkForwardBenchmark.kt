@@ -8,6 +8,25 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepStageEntity
+import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
+import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
+import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
+import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
+import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierResolver
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
+import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.RasScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.RoomTransactionRunner
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
@@ -19,24 +38,7 @@ import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.heartrate.ZoneThresholds
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.scoring.AssembleDailySummaryUseCase
-import app.readylytics.health.domain.scoring.AssembleEverydayLoadInputUseCase
-import app.readylytics.health.domain.scoring.BaselineComputer
-import app.readylytics.health.domain.scoring.BuildLoadSeriesUseCase
-import app.readylytics.health.domain.scoring.CompositeScoringCalculator
-import app.readylytics.health.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
-import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
-import app.readylytics.health.domain.scoring.ResolveDailyBaselinesUseCase
-import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
-import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
-import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
-import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
-import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
-import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.domain.security.EncryptionManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -186,13 +188,13 @@ class ScoringWalkForwardBenchmark {
         val settingsRepo = BenchmarkFakeSettingsRepository(prefs)
         val encryptionManager = BenchmarkFakeEncryptionManager()
         val circadianConsistencyRepository =
-            app.readylytics.health.domain.scoring.CircadianConsistencyRepository(
+            app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository(
                 sleepSessionRepository,
                 settingsRepo,
                 encryptionManager,
             )
         val sleepModifierResolver =
-            app.readylytics.health.domain.scoring.sleep.SleepModifierResolver(
+            app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifierResolver(
                 sleepSessionRepository,
                 circadianConsistencyRepository,
             )

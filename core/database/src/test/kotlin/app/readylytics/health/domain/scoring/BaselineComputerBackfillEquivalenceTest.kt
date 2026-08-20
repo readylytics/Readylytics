@@ -1,5 +1,9 @@
 package app.readylytics.health.domain.scoring
 
+import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
+import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBaselinesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao

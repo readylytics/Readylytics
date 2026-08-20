@@ -1,7 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.domain.scoring.RasCalculator
+import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.Clock
 import java.time.LocalDate

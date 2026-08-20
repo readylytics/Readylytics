@@ -1,11 +1,11 @@
 package app.readylytics.health
 
 import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
 import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.workers.WorkerScheduler

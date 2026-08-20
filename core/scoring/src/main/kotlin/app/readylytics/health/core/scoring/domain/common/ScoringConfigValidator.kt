@@ -1,6 +1,6 @@
 package app.readylytics.health.core.scoring.domain.common
 
-import app.readylytics.health.domain.scoring.ScoringConfig
+import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
 
 object ScoringConfigValidator {
     fun validate(config: ScoringConfig): Result<Unit> {

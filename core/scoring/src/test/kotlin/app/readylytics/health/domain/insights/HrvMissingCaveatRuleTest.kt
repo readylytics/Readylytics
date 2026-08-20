@@ -2,7 +2,7 @@ package app.readylytics.health.domain.insights
 
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.RecoveryFlag
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

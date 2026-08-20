@@ -4,6 +4,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
+import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.layout.LayoutManagementDelegate
@@ -17,9 +21,6 @@ import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
-import app.readylytics.health.domain.scoring.RasCalculator
-import app.readylytics.health.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.domain.sync.SyncWorkoutRouteUseCase
 import app.readylytics.health.domain.util.ElevationGainCalculator
 import app.readylytics.health.domain.util.PaceSpeedCalculator
@@ -282,7 +283,7 @@ class WorkoutDetailViewModel
                             workout = workout,
                             samples =
                                 workoutSamples.map {
-                                    app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
+                                    app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
                                         .HeartRateSample(
                                             it.timestamp,
                                             it.bpm,

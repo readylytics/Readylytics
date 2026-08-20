@@ -1,5 +1,7 @@
 package app.readylytics.health.core.healthconnect.domain.sync
 
+import app.readylytics.health.core.scoring.domain.scoring.components.Phase
+
 import app.readylytics.health.domain.model.getOrThrow
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.SyncPreference

@@ -1,5 +1,17 @@
 package app.readylytics.health.domain.scoring
 
+import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
+import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
+import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
+import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
+import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
+
 import app.readylytics.health.core.databaseschema.data.local.dao.*
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
@@ -13,7 +25,7 @@ import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.model.TimestampedTrimp
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf

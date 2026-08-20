@@ -16,6 +16,7 @@
     <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zLnHrv }</ID>
     <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zRhr }</ID>
     <ID>FunctionOnlyReturningConstant:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$private fun goldenResourceRelativePath(): String</ID>
+    <ID>InvalidPackageDeclaration:SleepMetricsHelpersTest.kt$package app.readylytics.health.core.scoring.domain.scoring.sleep</ID>
     <ID>LargeClass:BackfillBaselinesUseCaseTest.kt$BackfillBaselinesUseCaseTest</ID>
     <ID>LongMethod:BaselineComputerBackfillEquivalenceTest.kt$BaselineComputerBackfillEquivalenceTest$@Before fun setup()</ID>
     <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm adapts percentile based on sample count`()</ID>

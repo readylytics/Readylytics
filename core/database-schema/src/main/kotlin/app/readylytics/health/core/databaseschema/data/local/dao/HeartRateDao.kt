@@ -1,5 +1,6 @@
 package app.readylytics.health.core.databaseschema.data.local.dao
 
+
 import androidx.room.Dao
 import androidx.room.MapColumn
 import androidx.room.Query

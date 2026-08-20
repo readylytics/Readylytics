@@ -1,5 +1,10 @@
 package app.readylytics.health.domain.scoring
 
+import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
+import app.readylytics.health.core.scoring.domain.scoring.ComputeHistoricalBaselinesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
@@ -14,7 +19,7 @@ import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.core.scoring.domain.util.stdev
 import io.mockk.coEvery
 import io.mockk.coVerify

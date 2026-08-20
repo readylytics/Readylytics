@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.insights
 
+import app.readylytics.health.domain.scoring.LoadSourceMode
+
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.LoadSourceSelector
 

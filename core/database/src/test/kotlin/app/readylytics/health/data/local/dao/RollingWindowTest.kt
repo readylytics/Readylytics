@@ -6,7 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.domain.scoring.TrimpDateBucketer
+import app.readylytics.health.core.scoring.domain.scoring.TrimpDateBucketer
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals

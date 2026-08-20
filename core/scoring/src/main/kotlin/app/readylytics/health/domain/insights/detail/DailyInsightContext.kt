@@ -1,5 +1,7 @@
 package app.readylytics.health.domain.insights.detail
 
+import app.readylytics.health.domain.scoring.LoadSourceMode
+
 import app.readylytics.health.domain.insights.InsightContext
 import app.readylytics.health.domain.model.LoadSourceSelector
 import java.time.LocalDate

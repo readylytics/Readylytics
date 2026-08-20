@@ -10,12 +10,12 @@ import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
-import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.LoadCoverageConfidence
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.model.PermittedRecommendation
 import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.components.Phase
+import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

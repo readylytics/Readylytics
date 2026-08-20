@@ -4,6 +4,12 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDayPolicy
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepDaySegment
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepTrendDay
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepTrendDayAssembler
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
@@ -27,12 +33,6 @@ import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.SleepStageData
-import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.scoring.sleep.SleepDayPolicy
-import app.readylytics.health.domain.scoring.sleep.SleepDaySegment
-import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
-import app.readylytics.health.domain.scoring.sleep.SleepTrendDayAssembler
 import app.readylytics.health.domain.sleep.SleepChartConfiguration
 import app.readylytics.health.domain.sleep.SleepChartId
 import app.readylytics.health.domain.sleep.SleepLayoutRepository

@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.sleep
 
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sleep.SleepMetricCardId
 import app.readylytics.health.domain.sleep.SleepTopCardId
 import org.junit.Assert.assertEquals

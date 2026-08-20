@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.repository
 
+
 /**
  * Diagnostic-only WAL growth measurement for logcat instrumentation of sync WAL growth (Phase 1
  * heavy-data-sync measurement -- see `.omc/plans/heavy-data-sync-phase1.md` §2). Scoped to this

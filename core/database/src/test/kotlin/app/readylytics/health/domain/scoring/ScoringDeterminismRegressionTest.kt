@@ -1,5 +1,17 @@
 package app.readylytics.health.domain.scoring
 
+import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUseCase
+import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
+import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
+import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
+import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
+
 import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
@@ -18,10 +30,10 @@ import app.readylytics.health.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.data.repository.ScoringDayDataLoader
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.domain.scoring.sleep.SleepFragmentation
-import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
-import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepFragmentation
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
+import app.readylytics.health.core.scoring.domain.scoring.strategies.LoadScoringStrategy
+import app.readylytics.health.core.scoring.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

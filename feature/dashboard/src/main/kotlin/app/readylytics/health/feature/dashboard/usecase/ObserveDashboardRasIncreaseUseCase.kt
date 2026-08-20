@@ -1,11 +1,11 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.scoring.domain.scoring.calculateDailyRasIncrease
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.scoring.calculateDailyRasIncrease
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

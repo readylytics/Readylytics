@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.airecommendation
 
 import app.readylytics.health.domain.scoring.LoadCoverageConfidence
-import app.readylytics.health.domain.scoring.components.Phase
+import app.readylytics.health.core.scoring.domain.scoring.components.Phase
 
 enum class AdvisorDataConfidence {
     LOW,

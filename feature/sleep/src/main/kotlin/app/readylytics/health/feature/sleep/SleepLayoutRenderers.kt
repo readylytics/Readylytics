@@ -6,6 +6,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.scoring.domain.scoring.toStatus
+import app.readylytics.health.core.scoring.domain.scoring.toTimeString
 import app.readylytics.health.core.scoring.domain.util.roundToPercentInt
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
@@ -28,9 +31,6 @@ import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
 import app.readylytics.health.domain.model.scoreStatus
 import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.scoring.toStatus
-import app.readylytics.health.domain.scoring.toTimeString
 import app.readylytics.health.domain.sleep.SleepCardCatalog
 import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
 import app.readylytics.health.domain.sleep.SleepMetricCardId

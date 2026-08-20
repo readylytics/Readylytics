@@ -2,7 +2,7 @@ package app.readylytics.health.domain.insights
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 
 /**
  * Snapshot of a user's biometric state passed to [InsightRule]s. Pure Kotlin,

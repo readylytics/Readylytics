@@ -1,4 +1,9 @@
-package app.readylytics.health.domain.scoring.sleep
+package app.readylytics.health.core.scoring.domain.scoring.sleep
+
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
+import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepNadirAnalyzer
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
@@ -8,7 +13,7 @@ import app.readylytics.health.core.databaseschema.data.local.dao.SleepHrSample
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
 import app.readylytics.health.core.database.data.mapper.SleepSessionMapper
 import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
-import app.readylytics.health.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest

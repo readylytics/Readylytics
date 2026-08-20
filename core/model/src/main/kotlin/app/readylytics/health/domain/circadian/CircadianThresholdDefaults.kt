@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.circadian
 
+
 import app.readylytics.health.domain.preferences.PhysiologyProfile
 
 /**
@@ -22,7 +23,7 @@ object CircadianThresholdDefaults {
     /**
      * Resolves the effective threshold for a day's scoring: the user [override] if present,
      * otherwise the [profile] default. Pure; the single resolver consumed by both the live
-     * [app.readylytics.health.domain.scoring.CircadianConsistencyRepository] and the
+     * [app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository] and the
      * diagnostic config in `ScoringConfigFactory`.
      */
     fun resolveThreshold(

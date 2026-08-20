@@ -1,6 +1,9 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Immutable
+import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.core.scoring.domain.scoring.calculateDailyStrainIncrease
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
@@ -14,10 +17,7 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.scoring.WorkoutLoadClassification
-import app.readylytics.health.domain.scoring.calculateDailyStrainIncrease
 import app.readylytics.health.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
 import java.time.Instant

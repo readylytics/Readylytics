@@ -3,7 +3,7 @@ package app.readylytics.health.domain.insights
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecoveryFlag
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import java.time.LocalDate
 
 internal fun dailySummary(

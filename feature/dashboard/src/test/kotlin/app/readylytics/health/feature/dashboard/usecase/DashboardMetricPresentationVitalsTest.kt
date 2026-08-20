@@ -424,7 +424,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     @Test
     fun `circadian score bounds are 0 to 100`() {
         val circResult =
-            app.readylytics.health.domain.scoring.CircadianConsistencyResult
+            app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
                 .Ready(85f, 0, 0, 0, 0)
         val cards = factory.build(summary(), preferences(), date, null, circResult, null)
         val visual = cards.getValue(CardId.CIRCADIAN_CONSISTENCY).visual as UniversalMetricVisual.Score
@@ -435,7 +435,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     @Test
     fun `circadian consistency displays its rounded score as a percentage`() {
         val circResult =
-            app.readylytics.health.domain.scoring.CircadianConsistencyResult
+            app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
                 .Ready(95.4f, 0, 0, 0, 0)
         every {
             resourceProvider.getString(

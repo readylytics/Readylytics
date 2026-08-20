@@ -1,5 +1,6 @@
 package app.readylytics.health.feature.dashboard.usecase
 
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScalePreparer
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
@@ -26,7 +27,6 @@ import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.domain.model.toMetricStatus
 import app.readylytics.health.domain.preferences.UnitSystem
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.service.HealthMetricsService
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.UnitConverter
@@ -528,7 +528,7 @@ class DashboardMetricPresentationFactory
                 )
 
             // 15. CIRCADIAN
-            val circReady = circadianResult as? app.readylytics.health.domain.scoring.CircadianConsistencyResult.Ready
+            val circReady = circadianResult as? CircadianConsistencyResult.Ready
             val circTitle =
                 resourceProvider.getString(
                     DashboardR.string.card_title_circadian_consistency,
