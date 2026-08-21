@@ -34,8 +34,6 @@
     <ID>MatchingDeclarationName:StatusLegend.kt$StatusItem</ID>
     <ID>MatchingDeclarationName:TrendPeriodAggregation.kt$PeriodAverageSummary</ID>
     <ID>MatchingDeclarationName:VicoChartTooltipOverlay.kt$InvisibleMarker : CartesianMarker</ID>
-    <ID>MaxLineLength:DataPointTooltipTest.kt$DataPointTooltipTest$"value and date must share the same center axis: value=${valueBounds.center.x}, date=${dateBounds.center.x}"</ID>
-    <ID>MaxLineLength:ZoneBandUtilsTest.kt$ZoneBandUtilsTest$// Note: rememberZoneBandColors is a pure wrapper around zoneBandColors; its logic is covered by testing the underlying zoneBandColors function here.</ID>
     <ID>ReturnCount:DragController.kt$DragController$fun onDrag( delta: Offset, deleteZoneTop: Float?, )</ID>
     <ID>SpreadOperator:UiText.kt$(id, *args.toTypedArray())</ID>
     <ID>TooManyFunctions:ChartDefaults.kt$ChartDefaults</ID>
