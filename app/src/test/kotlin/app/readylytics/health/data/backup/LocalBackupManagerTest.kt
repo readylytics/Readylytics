@@ -630,24 +630,8 @@ class LocalBackupManagerTest {
             staleFile.setLastModified(eightDaysAgo)
             recentFile.setLastModified(oneDayAgo)
 
-            // We need to use a real DocumentFile behavior.
             // In Robolectric, Uri.fromFile(dir) works with DocumentFile.fromTreeUri.
-
-            val result = manager.createBackup()
-            // Note: createBackup might fail because of missing content resolver support for file:// outputstream in Robolectric
-            // but we only care about the pruning part which happens before it tries to write if we are lucky,
-            // or we just check the files after.
-            // Actually, pruning happens AFTER creation in my implementation for SAF?
-            // Let's check:
-            // if (customUri != null) { ... pruneOldBackups(customUri) ... }
-
-            // Wait, in my implementation:
-            // context.contentResolver.openOutputStream(file.uri)?.use { ... }
-            // pruneOldBackups(customUri)
-
-            // If openOutputStream fails, pruneOldBackups might not be called.
-            // I should move pruning BEFORE writing to ensure it happens even if write fails?
-            // Usually it's better to prune before to free up space.
+            manager.createBackup()
 
             assertTrue(!staleFile.exists(), "Stale SAF file should be deleted")
             assertTrue(recentFile.exists(), "Recent SAF file should be retained")
