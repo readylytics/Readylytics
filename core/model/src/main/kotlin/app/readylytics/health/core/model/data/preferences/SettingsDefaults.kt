@@ -149,10 +149,30 @@ object SettingsDefaults {
 
     val DEFAULT_VITALS_CARDS =
         listOf(
-            CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
-            CardConfiguration(CardId.HRV, isVisible = true, position = 1, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
-            CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = false, position = 2, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
-            CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = false, position = 3, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(
+                CardId.RESTING_HR,
+                isVisible = true,
+                position = 0,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.HRV,
+                isVisible = true,
+                position = 1,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.OXYGEN_SATURATION,
+                isVisible = false,
+                position = 2,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.BODY_TEMPERATURE,
+                isVisible = false,
+                position = 3,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
         )
 
     val DEFAULT_VITALS_CHARTS =

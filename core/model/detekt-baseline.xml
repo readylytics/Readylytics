@@ -7,19 +7,6 @@
     <ID>LoopWithTooManyJumpStatements:ElevationGainCalculator.kt$ElevationGainCalculator$for</ID>
     <ID>LoopWithTooManyJumpStatements:SessionTotalsResolver.kt$SessionTotalsResolver$for</ID>
     <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
-    <ID>MaxLineLength:AppLog.kt$ScopedLogger$inline fun error(throwable: Throwable? = null, msg: () -&gt; String)</ID>
-    <ID>MaxLineLength:AppLog.kt$ScopedLogger$inline fun warn(throwable: Throwable? = null, msg: () -&gt; String)</ID>
-    <ID>MaxLineLength:ElevationGainCalculatorTest.kt$ElevationGainCalculatorTest$// Starts at 200m, descends to 100m, climbs to 150m (50m gain), descends to 80m, climbs to 120m (40m gain) -&gt; total 90m</ID>
-    <ID>MaxLineLength:HealthConnectRepository.kt$HealthConnectRepository$/** Permission required for [PeriodicHealthSyncWorker][app.readylytics.health.workers.PeriodicHealthSyncWorker] to read data while the app is backgrounded. */</ID>
-    <ID>MaxLineLength:HealthZone.kt$// HRV — higher is better: above optimalMin=OPTIMAL, down to neutralMin=NEUTRAL, down to warningMin=WARNING, below=CRITICAL</ID>
-    <ID>MaxLineLength:HrrToleranceRule.kt$HrrToleranceRule$"Recovery match window: ${SettingsDefaults.MIN_HRR_TOLERANCE_SECONDS}–${SettingsDefaults.MAX_HRR_TOLERANCE_SECONDS} s"</ID>
-    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = false, position = 3, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
-    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.HRV, isVisible = true, position = 1, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
-    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = false, position = 2, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
-    <ID>MaxLineLength:SettingsDefaults.kt$SettingsDefaults$CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0, requestedDisplayMode = DashboardCardDisplayMode.GAUGE)</ID>
-    <ID>MaxLineLength:SleepMetricCardManagementDelegate.kt$SleepMetricCardManagementDelegate$fun</ID>
-    <ID>MaxLineLength:VitalAssessmentTest.kt$VitalAssessmentTest$assertEquals(MetricStatus.CALIBRATING, summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))</ID>
-    <ID>MaxLineLength:WorkoutMapper.kt$WorkoutMapper$?:</ID>
     <ID>MemberNameEqualsClassName:ZoneThresholds.kt$ZoneThresholds$fun zoneThresholds( z1Min: Int = 95, z1Max: Int = 114, z2Max: Int = 133, z3Max: Int = 152, z4Max: Int = 171, ): IntArray</ID>
     <ID>NestedBlockDepth:ElevationGainCalculator.kt$ElevationGainCalculator$fun calculateAscent( altitudes: List&lt;Double&gt;, thresholdMeters: Double = DEFAULT_THRESHOLD_METERS, ): Double</ID>
     <ID>ReturnCount:BmiService.kt$BmiService$fun calculateBmi( weight: Float, height: Float, units: UnitSystem, ): Result&lt;BmiData&gt;</ID>

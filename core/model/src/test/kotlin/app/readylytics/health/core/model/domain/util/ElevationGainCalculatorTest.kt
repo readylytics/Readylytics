@@ -34,7 +34,8 @@ class ElevationGainCalculatorTest {
 
     @Test
     fun calculateAscent_tracksAscentAfterDescent() {
-        // Starts at 200m, descends to 100m, climbs to 150m (50m gain), descends to 80m, climbs to 120m (40m gain) -> total 90m
+        // Starts at 200m, descends to 100m, climbs to 150m (50m gain),
+        // descends to 80m, climbs to 120m (40m gain) -> total 90m
         val altitudes = listOf(200.0, 150.0, 100.0, 110.0, 150.0, 80.0, 120.0)
         val gain = ElevationGainCalculator.calculateAscent(altitudes, thresholdMeters = 3.0)
         assertEquals(90.0, gain, 0.01)
