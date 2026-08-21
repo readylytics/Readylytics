@@ -87,7 +87,7 @@ fun BloodPressureHistoryCard(
 
 @Preview(showBackground = true)
 @Composable
-private fun BloodPressureHistoryCardPreview() {
+internal fun BloodPressureHistoryCardPreview() {
     FitDashboardTheme {
         Column {
             BloodPressureHistoryCard(

@@ -22,15 +22,5 @@
     <ID>TooManyFunctions:DashboardViewModel.kt$DashboardViewModel : BaseViewModel</ID>
     <ID>UnusedParameter:DashboardMetricPresentationFactory.kt$DashboardMetricPresentationFactory$selectedDate: LocalDate</ID>
     <ID>UnusedParameter:DashboardScreen.kt$onRefresh: () -&gt; Unit</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true) @Composable private fun DashboardScoreBarPreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true) @Composable private fun DashboardScoreGaugePreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true) @Composable private fun DashboardScoreValuePreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, fontScale = 1.5f, name = "Selector/card - fontScale 1.5x") @Composable private fun DashboardCardFontScaleLargePreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Baseline Gauge - within range") @Composable private fun DashboardBaselineWithinRangeGaugePreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Edit mode - openable selector control") @Composable private fun DashboardEditModeSelectorPreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Goal Bar - above target") @Composable private fun DashboardGoalAboveTargetBarPreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Goal Bar - unavailable (grey)") @Composable private fun DashboardGoalUnavailableBarPreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Selector/card - default font scale") @Composable private fun DashboardCardFontScaleDefaultPreview()</ID>
-    <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Weight Bar - reference range at BMI 21.7") @Composable private fun DashboardWeightReferenceRangeBarPreview()</ID>
   </CurrentIssues>
 </SmellBaseline>

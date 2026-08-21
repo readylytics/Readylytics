@@ -103,7 +103,7 @@ fun WeightHistoryCard(
 
 @Preview(showBackground = true)
 @Composable
-private fun WeightHistoryCardPreview() {
+internal fun WeightHistoryCardPreview() {
     FitDashboardTheme {
         Column {
             WeightHistoryCard(

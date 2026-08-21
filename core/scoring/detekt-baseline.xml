@@ -77,7 +77,6 @@
     <ID>ReturnCount:RhrBaselineProvider.kt$AdaptiveRhrBaselineProvider$override suspend fun getPreciseRhrBaseline(date: LocalDate): Double</ID>
     <ID>ReturnCount:RhrBaselineProvider.kt$AdaptiveRhrBaselineProvider$override suspend fun getRoundedRhrBaseline(date: LocalDate): Int</ID>
     <ID>ReturnCount:SleepPercentileRhrCalculator.kt$SleepPercentileRhrCalculator$fun List&lt;SleepHrSample&gt;?.getPercentileValue(percentile: Int): Int?</ID>
-    <ID>ReturnCount:SleepPercentileRhrCalculator.kt$SleepPercentileRhrCalculator$private fun List&lt;Int&gt;.getPercentile(percentile: Int): Int?</ID>
     <ID>ReturnCount:StepShortfallRule.kt$StepShortfallRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
     <ID>ReturnCount:WeightDriftTrainingLoadRule.kt$WeightDriftTrainingLoadRule$override fun evaluate(context: InsightContext): InsightFinding?</ID>
     <ID>TooManyFunctions:BaselineComputer.kt$BaselineComputer</ID>
@@ -86,6 +85,5 @@
     <ID>TooManyFunctions:ScoringCalculator.kt$ScoringCalculator</ID>
     <ID>TooManyFunctions:SleepDayAggregator.kt$SleepDayAggregator</ID>
     <ID>UnusedParameter:HrCoverageValidator.kt$HrCoverageValidator$durationMinutes: Int</ID>
-    <ID>UnusedPrivateMember:SleepPercentileRhrCalculator.kt$SleepPercentileRhrCalculator$private fun List&lt;Int&gt;.getPercentile(percentile: Int): Int?</ID>
   </CurrentIssues>
 </SmellBaseline>
