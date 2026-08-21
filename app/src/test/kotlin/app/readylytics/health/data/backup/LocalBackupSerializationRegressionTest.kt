@@ -79,26 +79,28 @@ class LocalBackupSerializationRegressionTest {
                 context,
                 db,
                 settingsRepo(),
-                mockk<CardConfigurationRepository>(relaxed = true).apply {
-                    every { dashboardCardConfigurations() } returns flowOf(emptyList())
-                },
-                mockk<VitalsLayoutRepository>(relaxed = true).apply {
-                    every { vitalsCardConfigurations() } returns flowOf(emptyList())
-                    every { vitalsChartConfigurations() } returns flowOf(emptyList())
-                },
-                mockk<SleepLayoutRepository>(relaxed = true).apply {
-                    every { sleepTopCardConfigurations() } returns flowOf(emptyList())
-                    every { sleepChartConfigurations() } returns flowOf(emptyList())
-                    every { sleepMetricCardConfigurations() } returns flowOf(emptyList())
-                },
-                mockk<WorkoutsLayoutRepository>(relaxed = true).apply {
-                    every { workoutCardConfigurations() } returns flowOf(emptyList())
-                    every { workoutChartConfigurations() } returns flowOf(emptyList())
-                    every { workoutHistoryConfigurations() } returns flowOf(emptyList())
-                },
-                mockk<WorkoutDetailLayoutRepository>(relaxed = true).apply {
-                    every { allLayouts() } returns flowOf(emptyMap())
-                },
+                RestoreLayoutRepositories(
+                    mockk<CardConfigurationRepository>(relaxed = true).apply {
+                        every { dashboardCardConfigurations() } returns flowOf(emptyList())
+                    },
+                    mockk<VitalsLayoutRepository>(relaxed = true).apply {
+                        every { vitalsCardConfigurations() } returns flowOf(emptyList())
+                        every { vitalsChartConfigurations() } returns flowOf(emptyList())
+                    },
+                    mockk<SleepLayoutRepository>(relaxed = true).apply {
+                        every { sleepTopCardConfigurations() } returns flowOf(emptyList())
+                        every { sleepChartConfigurations() } returns flowOf(emptyList())
+                        every { sleepMetricCardConfigurations() } returns flowOf(emptyList())
+                    },
+                    mockk<WorkoutsLayoutRepository>(relaxed = true).apply {
+                        every { workoutCardConfigurations() } returns flowOf(emptyList())
+                        every { workoutChartConfigurations() } returns flowOf(emptyList())
+                        every { workoutHistoryConfigurations() } returns flowOf(emptyList())
+                    },
+                    mockk<WorkoutDetailLayoutRepository>(relaxed = true).apply {
+                        every { allLayouts() } returns flowOf(emptyMap())
+                    },
+                ),
                 encryptionManager,
                 RecordingAuditTrailRepository(),
                 Dispatchers.Unconfined,

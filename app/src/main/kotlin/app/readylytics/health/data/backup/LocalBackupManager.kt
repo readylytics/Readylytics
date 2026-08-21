@@ -22,12 +22,7 @@ import app.readylytics.health.core.model.domain.audit.AuditEvent
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
 import app.readylytics.health.core.model.domain.backup.BackupFileInfo
 import app.readylytics.health.core.model.domain.backup.BackupLocation
-import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
 import app.readylytics.health.core.model.domain.util.logE
-import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
-import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -62,11 +57,7 @@ class LocalBackupManager
         @param:ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
-        private val cardConfigurationRepository: CardConfigurationRepository,
-        private val vitalsLayoutRepository: VitalsLayoutRepository,
-        private val sleepLayoutRepository: SleepLayoutRepository,
-        private val workoutsLayoutRepository: WorkoutsLayoutRepository,
-        private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository,
+        private val layoutRepositories: RestoreLayoutRepositories,
         private val encryptionManager: EncryptionManager,
         private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -516,17 +507,20 @@ class LocalBackupManager
 
         private suspend fun writePreferences(writer: BufferedWriter) {
             val prefs = settingsRepository.userPreferences.first()
-            val cards = cardConfigurationRepository.dashboardCardConfigurations().first()
-            val vitalsCards = vitalsLayoutRepository.vitalsCardConfigurations().first()
-            val vitalsCharts = vitalsLayoutRepository.vitalsChartConfigurations().first()
-            val sleepTopCards = sleepLayoutRepository.sleepTopCardConfigurations().first()
-            val sleepCharts = sleepLayoutRepository.sleepChartConfigurations().first()
-            val sleepMetricCards = sleepLayoutRepository.sleepMetricCardConfigurations().first()
-            val workoutCards = workoutsLayoutRepository.workoutCardConfigurations().first()
-            val workoutCharts = workoutsLayoutRepository.workoutChartConfigurations().first()
-            val workoutHistory = workoutsLayoutRepository.workoutHistoryConfigurations().first()
+            val cards = layoutRepositories.cardConfigurationRepository.dashboardCardConfigurations().first()
+            val vitalsCards = layoutRepositories.vitalsLayoutRepository.vitalsCardConfigurations().first()
+            val vitalsCharts = layoutRepositories.vitalsLayoutRepository.vitalsChartConfigurations().first()
+            val sleepTopCards = layoutRepositories.sleepLayoutRepository.sleepTopCardConfigurations().first()
+            val sleepCharts = layoutRepositories.sleepLayoutRepository.sleepChartConfigurations().first()
+            val sleepMetricCards = layoutRepositories.sleepLayoutRepository.sleepMetricCardConfigurations().first()
+            val workoutCards = layoutRepositories.workoutsLayoutRepository.workoutCardConfigurations().first()
+            val workoutCharts = layoutRepositories.workoutsLayoutRepository.workoutChartConfigurations().first()
+            val workoutHistory = layoutRepositories.workoutsLayoutRepository.workoutHistoryConfigurations().first()
             val workoutDetailLayouts =
-                workoutDetailLayoutRepository.allLayouts().first().mapKeys { it.key.name }
+                layoutRepositories.workoutDetailLayoutRepository
+                    .allLayouts()
+                    .first()
+                    .mapKeys { it.key.name }
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
