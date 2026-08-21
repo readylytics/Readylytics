@@ -411,20 +411,20 @@ class ScoringSyncScopeOutputsDeterminismTest {
     }
 
     private fun assertSameMatrix(results: List<ScopeResult>) {
-        val fields =
+        val fields: List<Pair<String, (DailySummary) -> Any?>> =
             listOf(
-                "sleepScore" to { it: DailySummary -> it.sleepScore },
-                "readinessWorkoutOnly" to { it: DailySummary -> it.readinessWorkoutOnly },
-                "rhrBpm" to { it: DailySummary -> it.rhrBpm },
-                "rhrSigma" to { it: DailySummary -> it.rhrSigma },
-                "hrvMuMssd" to { it: DailySummary -> it.hrvMuMssd },
-                "hrvSigmaMssd" to { it: DailySummary -> it.hrvSigmaMssd },
-                "restingHeartRate" to { it: DailySummary -> it.restingHeartRate },
-                "nocturnalHrv" to { it: DailySummary -> it.nocturnalHrv },
-                "baselineObservationCount" to { it: DailySummary -> it.baselineObservationCount },
-                "zLnHrv" to { it: DailySummary -> it.zLnHrv },
-                "zRhr" to { it: DailySummary -> it.zRhr },
-                "sRest" to { it: DailySummary -> it.sRest },
+                "sleepScore" to { it.sleepScore },
+                "readinessWorkoutOnly" to { it.readinessWorkoutOnly },
+                "rhrBpm" to { it.rhrBpm },
+                "rhrSigma" to { it.rhrSigma },
+                "hrvMuMssd" to { it.hrvMuMssd },
+                "hrvSigmaMssd" to { it.hrvSigmaMssd },
+                "restingHeartRate" to { it.restingHeartRate },
+                "nocturnalHrv" to { it.nocturnalHrv },
+                "baselineObservationCount" to { it.baselineObservationCount },
+                "zLnHrv" to { it.zLnHrv },
+                "zRhr" to { it.zRhr },
+                "sRest" to { it.sRest },
             )
 
         val baseline = results.first()

@@ -3,18 +3,6 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>EmptyFunctionBlock:SqlCipherKeyManagerTest.kt$SqlCipherKeyManagerTest.&lt;no name provided&gt;${}</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.baselineObservationCount }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.hrvMuMssd }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.hrvSigmaMssd }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.nocturnalHrv }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.readinessWorkoutOnly }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.restingHeartRate }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.rhrBpm }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.rhrSigma }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.sRest }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.sleepScore }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zLnHrv }</ID>
-    <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zRhr }</ID>
     <ID>FunctionOnlyReturningConstant:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$private fun goldenResourceRelativePath(): String</ID>
     <ID>InvalidPackageDeclaration:SleepMetricsHelpersTest.kt$package app.readylytics.health.core.scoring.domain.scoring.sleep</ID>
     <ID>LargeClass:BackfillBaselinesUseCaseTest.kt$BackfillBaselinesUseCaseTest</ID>
