@@ -67,7 +67,7 @@ private val SHAPE_CORNER = 6.dp
 private val LABEL_WIDTH = 64.dp
 private val CHART_TOTAL_HEIGHT = LANE_HEIGHT * 4
 
-private val NINE_HOURS_MS = 9L * 3_600_000L
+private const val NINE_HOURS_MS = 9L * 3_600_000L
 
 private fun getStageColor(
     stageType: String,

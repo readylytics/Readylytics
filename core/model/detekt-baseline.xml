@@ -20,7 +20,6 @@
     <ID>MaxLineLength:SleepMetricCardManagementDelegate.kt$SleepMetricCardManagementDelegate$fun</ID>
     <ID>MaxLineLength:VitalAssessmentTest.kt$VitalAssessmentTest$assertEquals(MetricStatus.CALIBRATING, summary.restingHrStatus(optimalThreshold = 1.0f, warningThreshold = 1.02f))</ID>
     <ID>MaxLineLength:WorkoutMapper.kt$WorkoutMapper$?:</ID>
-    <ID>MayBeConst:SettingsDefaults.kt$SettingsDefaults$val HEIGHT_CM: Float? = 175f</ID>
     <ID>MemberNameEqualsClassName:ZoneThresholds.kt$ZoneThresholds$fun zoneThresholds( z1Min: Int = 95, z1Max: Int = 114, z2Max: Int = 133, z3Max: Int = 152, z4Max: Int = 171, ): IntArray</ID>
     <ID>NestedBlockDepth:ElevationGainCalculator.kt$ElevationGainCalculator$fun calculateAscent( altitudes: List&lt;Double&gt;, thresholdMeters: Double = DEFAULT_THRESHOLD_METERS, ): Double</ID>
     <ID>ReturnCount:BmiService.kt$BmiService$fun calculateBmi( weight: Float, height: Float, units: UnitSystem, ): Result&lt;BmiData&gt;</ID>
