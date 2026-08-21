@@ -1,6 +1,6 @@
 # Detekt Tier 2 — Local, Mechanical-With-Judgement
 
-**Status:** not started · **Created:** 2026-08-21 · **Owner:** unassigned
+**Status:** completed · **Completed:** 2026-08-21 · **Owner:** Antigravity
 **Parent:** `DETEKT_BASELINE_BURNDOWN.md` §6, Tier 2
 **Scope:** 111 baseline entries across 6 rules. Each fix is local to one file, but requires reading the context before applying.
 
