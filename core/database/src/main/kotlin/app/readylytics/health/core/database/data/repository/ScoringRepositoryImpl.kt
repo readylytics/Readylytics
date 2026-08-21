@@ -233,8 +233,14 @@ class ScoringRepositoryImpl
                     inputs.baselineContext?.sessions,
                     inputs.session != null,
                 )
-            val avgSpo2 = dataLoader.loadAvgSpo2(inputs.session)
-            val avgBodyTemp = dataLoader.loadAvgBodyTemp(inputs.session)
+            val base =
+                ReadinessBaseInputs(
+                    inputs.session,
+                    inputs.currentSessionIds,
+                    baseSummary,
+                    dataLoader.loadAvgSpo2(inputs.session),
+                    dataLoader.loadAvgBodyTemp(inputs.session),
+                )
             return if (!isCalibrated) {
                 val calibHrvBaseline =
                     baselineComputer.computeHrvBaselineBetween(
@@ -245,33 +251,28 @@ class ScoringRepositoryImpl
                         prefetchedSessions = inputs.baselineContext?.sessions,
                     )
                 readinessSummaryCoordinator.computeUncalibratedSummary(
-                    session = inputs.session,
-                    currentSessionIds = inputs.currentSessionIds,
-                    baseSummary = baseSummary,
-                    avgSpo2 = avgSpo2,
-                    avgBodyTemp = avgBodyTemp,
+                    base = base,
                     calibHrvBaseline = calibHrvBaseline,
                     rhrBaselineValue = inputs.context.initialBaselines.rhrBaselineValue,
                     prefs = inputs.context.prefs,
                 )
             } else {
                 readinessSummaryCoordinator.computeCalibratedSummary(
-                    targetDate = inputs.context.targetDate,
-                    zoneId = inputs.context.zoneId,
-                    nextDayMidnightMs = inputs.context.nextDayMidnightMs,
-                    session = inputs.session,
-                    currentSessionIds = inputs.currentSessionIds,
-                    baseSummary = baseSummary,
-                    dailyTrimpRaw = inputs.dailyTrimpRaw,
-                    trimpEverydayHr = inputs.trimpEverydayHr,
-                    avgSpo2 = avgSpo2,
-                    avgBodyTemp = avgBodyTemp,
-                    initialBaselines = inputs.context.initialBaselines,
-                    scoringConfig = inputs.context.scoringConfig,
-                    prefs = inputs.context.prefs,
-                    sleepDayPolicy = inputs.context.sleepDayPolicy,
-                    trimpContext = inputs.trimpContext,
-                    baselineContext = inputs.baselineContext,
+                    base = base,
+                    context =
+                        CalibratedScoringContext(
+                            targetDate = inputs.context.targetDate,
+                            zoneId = inputs.context.zoneId,
+                            nextDayMidnightMs = inputs.context.nextDayMidnightMs,
+                            dailyTrimpRaw = inputs.dailyTrimpRaw,
+                            trimpEverydayHr = inputs.trimpEverydayHr,
+                            initialBaselines = inputs.context.initialBaselines,
+                            scoringConfig = inputs.context.scoringConfig,
+                            prefs = inputs.context.prefs,
+                            sleepDayPolicy = inputs.context.sleepDayPolicy,
+                            trimpContext = inputs.trimpContext,
+                            baselineContext = inputs.baselineContext,
+                        ),
                 )
             }
         }
