@@ -10,7 +10,6 @@
     <ID>ReturnCount:MetricStatusExtensions.kt$fun DailySummary.restingHrStatus( optimalThreshold: Float, warningThreshold: Float, ): MetricStatus</ID>
     <ID>ReturnCount:SleepArchitectureValidator.kt$SleepArchitectureValidator$override fun validate(value: SleepStageFractions): ValidationResult</ID>
     <ID>ReturnCount:UnitConverter.kt$UnitConverter$fun elevationParts( meters: Float, unitSystem: UnitSystem, ): MetricParts?</ID>
-    <ID>ReturnCount:WorkoutLayoutTypeMapper.kt$WorkoutLayoutTypeMapper$fun fromExerciseType(raw: String): WorkoutLayoutType</ID>
     <ID>SwallowedException:ErrorBoundary.kt$e: Exception</ID>
     <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
     <ID>TooManyFunctions:DateRangeService.kt$DateRangeService</ID>
