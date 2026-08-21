@@ -12,15 +12,10 @@
     <ID>CyclomaticComplexMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
-    <ID>LargeClass:LocalBackupManagerTest.kt$LocalBackupManagerTest</ID>
     <ID>LongMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:CrashReportPrompt.kt$@Composable fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel())</ID>
     <ID>LongMethod:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;$override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto</ID>
     <ID>LongMethod:DatabaseRecoveryScreen.kt$@Composable fun DatabaseRecoveryScreen( onResetDatabase: () -&gt; Unit, onRestoreBackup: (Uri, onResult: (Boolean, String?) -&gt; Unit) -&gt; Unit, )</ID>
-    <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writeJsonStreaming(outputStream: OutputStream)</ID>
-    <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writePreferences(writer: BufferedWriter)</ID>
-    <ID>LongMethod:LocalBackupManager.kt$LocalBackupManager$suspend fun reencryptBackups( oldPassword: String?, newPassword: String?, ): Result&lt;Unit&gt;</ID>
-    <ID>LongMethod:LocalBackupManagerTest.kt$LocalBackupManagerTest$@Before fun setUp()</ID>
     <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresSleepTopCardsChartsAndMetricCards()</ID>
     <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresVitalsCardsAndCharts()</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
@@ -31,7 +26,6 @@
     <ID>LongMethod:UserPreferencesMapper.kt$fun UserPreferencesProto.toDomainModel(): UserPreferences</ID>
     <ID>LongMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>LongMethod:V7DatabaseMigrator.kt$V7DatabaseMigrator$private suspend fun runStateMachine(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit)</ID>
-    <ID>LongParameterList:LocalBackupManager.kt$LocalBackupManager$( @param:ApplicationContext private val context: Context, private val healthDatabase: HealthDatabase, private val settingsRepository: SettingsRepository, private val cardConfigurationRepository: CardConfigurationRepository, private val vitalsLayoutRepository: VitalsLayoutRepository, private val sleepLayoutRepository: SleepLayoutRepository, private val workoutsLayoutRepository: WorkoutsLayoutRepository, private val workoutDetailLayoutRepository: WorkoutDetailLayoutRepository, private val encryptionManager: EncryptionManager, private val auditTrailRepository: AuditTrailRepository, @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher, private val backupStoreFactory: BackupStoreFactory = DefaultBackupStoreFactory(context), )</ID>
     <ID>NestedBlockDepth:FeatureResourceOwnershipTest.kt$FeatureResourceOwnershipTest$@Test fun `string resources have one owning module`()</ID>
     <ID>ReturnCount:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$private fun resolveAuditedFile(pathFromRepoRoot: String): File</ID>
     <ID>ReturnCount:DataCleanupWorker.kt$DataCleanupWorker$override suspend fun doWork(): Result</ID>

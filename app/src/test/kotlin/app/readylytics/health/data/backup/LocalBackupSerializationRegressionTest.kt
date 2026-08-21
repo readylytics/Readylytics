@@ -74,9 +74,8 @@ class LocalBackupSerializationRegressionTest {
             mockk<EncryptionManager>(relaxed = true).apply {
                 every { decrypt(any()) } returns "test_password"
             }
-        manager =
-            LocalBackupManager(
-                context,
+        val backupStreamWriter =
+            BackupStreamWriter(
                 db,
                 settingsRepo(),
                 RestoreLayoutRepositories(
@@ -101,6 +100,12 @@ class LocalBackupSerializationRegressionTest {
                         every { allLayouts() } returns flowOf(emptyMap())
                     },
                 ),
+            )
+        manager =
+            LocalBackupManager(
+                context,
+                settingsRepo(),
+                backupStreamWriter,
                 encryptionManager,
                 RecordingAuditTrailRepository(),
                 Dispatchers.Unconfined,
