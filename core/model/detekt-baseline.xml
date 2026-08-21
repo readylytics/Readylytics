@@ -3,7 +3,6 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
-    <ID>ReturnCount:MetricStatusExtensions.kt$fun DailySummary.restingHrStatus( optimalThreshold: Float, warningThreshold: Float, ): MetricStatus</ID>
     <ID>ReturnCount:SleepArchitectureValidator.kt$SleepArchitectureValidator$override fun validate(value: SleepStageFractions): ValidationResult</ID>
     <ID>SwallowedException:ErrorBoundary.kt$e: Exception</ID>
     <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
