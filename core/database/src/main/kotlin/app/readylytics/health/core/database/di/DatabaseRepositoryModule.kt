@@ -1,37 +1,25 @@
 package app.readylytics.health.core.database.di
 
 import app.readylytics.health.core.database.data.audit.RoomAuditTrailRepository
-import app.readylytics.health.core.database.data.local.RoomHealthIngestionStore
-import app.readylytics.health.core.database.data.local.SelectedSourcePrunerImpl
-import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.database.data.repository.BloodPressureRepositoryImpl
 import app.readylytics.health.core.database.data.repository.BodyFatRepositoryImpl
 import app.readylytics.health.core.database.data.repository.DailyMetricsRepositoryImpl
 import app.readylytics.health.core.database.data.repository.DailySummaryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.HeartRateRepositoryImpl
 import app.readylytics.health.core.database.data.repository.InsightDismissalRepositoryImpl
-import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
-import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
-import app.readylytics.health.core.database.data.repository.SelectedDateRepository
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
 import app.readylytics.health.core.database.data.repository.WeightRepositoryImpl
 import app.readylytics.health.core.database.data.repository.WorkoutRepositoryImpl
 import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
-import app.readylytics.health.core.model.domain.date.SelectedDateStore
 import app.readylytics.health.core.model.domain.repository.BloodPressureRepository
 import app.readylytics.health.core.model.domain.repository.BodyFatRepository
 import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
 import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
 import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
-import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
-import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
 import app.readylytics.health.core.model.domain.repository.WeightRepository
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
-import app.readylytics.health.core.model.domain.sync.HealthIngestionStore
-import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
-import app.readylytics.health.core.model.domain.sync.link.SessionLinkReconciler
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -76,30 +64,6 @@ abstract class DatabaseRepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAuditTrailRepository(impl: RoomAuditTrailRepository): AuditTrailRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindScoringHistoryRepository(impl: ScoringHistoryRepositoryImpl): ScoringHistoryRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindScoringRepository(impl: ScoringRepositoryImpl): ScoringRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindSelectedSourcePruner(impl: SelectedSourcePrunerImpl): SelectedSourcePruner
-
-    @Binds
-    @Singleton
-    abstract fun bindHealthIngestionStore(impl: RoomHealthIngestionStore): HealthIngestionStore
-
-    @Binds
-    @Singleton
-    abstract fun bindSelectedDateStore(impl: SelectedDateRepository): SelectedDateStore
-
-    @Binds
-    @Singleton
-    abstract fun bindSessionLinkReconciler(impl: SessionLinkReconcilerImpl): SessionLinkReconciler
 
     @Binds
     @Singleton
