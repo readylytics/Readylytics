@@ -162,9 +162,11 @@ object DailyMetricsMapper {
         systolic: Int?,
         diastolic: Int?,
     ): String? {
-        if (systolic == null || diastolic == null || systolic == 0 || diastolic == 0) return null
+        if (!isValidPressure(systolic) || !isValidPressure(diastolic)) return null
         return "$systolic/$diastolic"
     }
+
+    private fun isValidPressure(value: Int?): Boolean = value != null && value > 0
 
     private fun format1(value: Float): String = String.format(Locale.getDefault(), "%.1f", value)
 

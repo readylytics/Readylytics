@@ -2,7 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:DailyMetricsMapper.kt$DailyMetricsMapper$systolic == null || diastolic == null || systolic == 0 || diastolic == 0</ID>
     <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
     <ID>ReturnCount:MetricStatusExtensions.kt$fun DailySummary.restingHrStatus( optimalThreshold: Float, warningThreshold: Float, ): MetricStatus</ID>
     <ID>ReturnCount:SleepArchitectureValidator.kt$SleepArchitectureValidator$override fun validate(value: SleepStageFractions): ValidationResult</ID>
