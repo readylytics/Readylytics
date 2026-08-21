@@ -208,7 +208,12 @@ Do this **module by module**, smallest first, one rule at a time, one commit per
 group. Never mix a baseline burn-down with behavioural work — a reviewer must be able to read
 the diff as "no behaviour changed".
 
-Suggested order (cheapest and safest first):
+Suggested order (cheapest and safest first). Each tier has a detailed execution plan:
+
+- **[Tier 1](DETEKT_TIER1_MECHANICAL.md)** — mechanical, per-entry breakdown with caution notes
+- **[Tier 2](DETEKT_TIER2_JUDGEMENT.md)** — mechanical-with-judgement, module-by-module MaxLineLength map
+- **[Tier 3](DETEKT_TIER3_REFACTORS.md)** — real refactors, per-file refactor units with strategies
+- **[Tier 4](DETEKT_TIER4_DECISIONS.md)** — needs decisions, per-entry assessment and recommendation
 
 **Tier 1 — mechanical, near-zero risk (~50 entries)**
 `NewLineAtEndOfFile` (4), `MayBeConst` (2), `ExplicitItLambdaParameter` (12),
