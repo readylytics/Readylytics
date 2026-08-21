@@ -12,10 +12,10 @@ internal data class PermissionGateInfo(
     val permissionsDenied: Boolean,
     val missingPermissions: Set<String>,
     val autoLaunchTriggered: Boolean,
-    val permissionLauncher: ManagedActivityResultLauncher<Set<String>>,
+    val permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>,
     val permissions: Set<String>,
     val syncLogViewModel: SyncLogViewModel,
-    val logText: String,
+    val logText: String?,
     val context: Context,
     val onAutoLaunchTriggered: () -> Unit,
 )

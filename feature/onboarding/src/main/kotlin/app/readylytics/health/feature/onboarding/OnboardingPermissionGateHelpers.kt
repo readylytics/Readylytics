@@ -3,13 +3,14 @@ package app.readylytics.health.feature.onboarding
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.Surface
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.health.connect.client.HealthConnectClient
+import app.readylytics.health.core.ui.sync.SyncProgressScreen
 
 /**
  * Helper composable that auto‑launches the permission request when we need to skip directly to the
@@ -19,7 +20,7 @@ import androidx.health.connect.client.HealthConnectClient
 internal fun HandleAutoLaunchPermissions(
     skipToPermissions: Boolean,
     autoLaunchTriggered: Boolean,
-    permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>, 
+    permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>,
     permissions: Set<String>,
     onTriggered: () -> Unit,
 ) {
@@ -39,7 +40,7 @@ internal data class SyncOrPermissionGateState(
     val permissionsDenied: Boolean,
     val missingPermissions: Set<String>,
     val syncStatus: OnboardingSyncStatus,
-    val logText: String,
+    val logText: String?,
 )
 
 /**
@@ -50,7 +51,7 @@ internal data class SyncOrPermissionGateState(
 internal fun SyncOrPermissionGateSurface(
     gateState: SyncOrPermissionGateState,
     context: Context,
-    permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>, 
+    permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>,
     permissions: Set<String>,
     syncLogViewModel: SyncLogViewModel,
 ) {

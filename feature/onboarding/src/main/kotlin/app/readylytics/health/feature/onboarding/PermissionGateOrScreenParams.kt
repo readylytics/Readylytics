@@ -15,7 +15,7 @@ data class PermissionGateOrScreenParams(
     val permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>,
     val permissions: Set<String>,
     val syncLogViewModel: SyncLogViewModel,
-    val logText: String,
+    val logText: String?,
     val context: Context,
     val onAutoLaunchTriggered: () -> Unit,
     val onPermissionsGranted: () -> Unit,
@@ -26,5 +26,5 @@ data class PermissionGateOrScreenParams(
     val restoreViewModel: OnboardingRestoreViewModel,
     val onboardingViewModel: OnboardingViewModel,
     val onProfileSaved: () -> Unit,
-    val allPermissions: Set<String>
+    val allPermissions: Set<String>,
 )

@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.onboarding
 
-import java.time.LocalDate
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.data.preferences.UnitSystem
+import java.time.LocalDate
 
 /**
  * Data class bundling all UI state and callbacks for the profile setup screen.

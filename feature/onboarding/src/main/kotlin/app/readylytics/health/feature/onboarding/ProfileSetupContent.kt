@@ -3,28 +3,26 @@ package app.readylytics.health.feature.onboarding
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
-import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.core.ui.settings.HeightInputField
-import java.time.LocalDate
-
-
 
 /**
  * UI composable for the profile setup screen. Parameters are bundled in [ProfileSetupState]
  * to keep the function signature short and satisfy Detekt's max parameter rule.
  */
 @Composable
-fun ProfileSetupContent(state: ProfileSetupState) {
+internal fun ProfileSetupContent(state: ProfileSetupState) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(MaterialTheme.spacing.pageSectionGapLarge)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(MaterialTheme.spacing.pageSectionGapLarge)
+                .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -71,4 +69,3 @@ fun ProfileSetupContent(state: ProfileSetupState) {
         )
     }
 }
-

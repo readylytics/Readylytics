@@ -297,7 +297,8 @@ private fun ProfileSetupScreen(onNextClick: (result: ProfileSetupResult) -> Unit
         )
     }
 
-        val state = ProfileSetupState(
+    val state =
+        ProfileSetupState(
             birthDate = birthDate,
             onBirthDateChange = { birthDate = it },
             showBirthdatePicker = showBirthdatePicker,
@@ -316,7 +317,7 @@ private fun ProfileSetupScreen(onNextClick: (result: ProfileSetupResult) -> Unit
             onUnitSystemChange = { unitSystem = it },
             onSubmit = onSubmit,
         )
-        ProfileSetupContent(state)
+    ProfileSetupContent(state)
 }
 
 @Composable
@@ -341,7 +342,7 @@ internal fun ProfileSetupHeader() {
 }
 
 @Composable
-private fun ProfileSetupSubmitButton(
+internal fun ProfileSetupSubmitButton(
     birthDate: LocalDate,
     heightHasError: Boolean,
     onSubmit: () -> Unit,
@@ -361,7 +362,7 @@ private fun ProfileSetupSubmitButton(
 }
 
 @Composable
-private fun BirthdayAndGenderFields(
+internal fun BirthdayAndGenderFields(
     birthDate: LocalDate,
     onBirthDateChange: (LocalDate) -> Unit,
     showBirthdatePicker: Boolean,
@@ -400,7 +401,7 @@ private fun BirthdayAndGenderFields(
 }
 
 @Composable
-private fun AppearanceAndUnitsFields(
+internal fun AppearanceAndUnitsFields(
     dynamicColorEnabled: Boolean,
     onDynamicColorEnabledChange: (Boolean) -> Unit,
     unitSystem: UnitSystem,

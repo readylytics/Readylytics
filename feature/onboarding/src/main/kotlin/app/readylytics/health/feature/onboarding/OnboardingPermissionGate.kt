@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
  * Parameters are bundled in [PermissionGateInfo] to stay within Detekt's parameter limit.
  */
 @Composable
-fun OnboardingPermissionGate(info: PermissionGateInfo) {
+internal fun OnboardingPermissionGate(info: PermissionGateInfo) {
     // Handle auto‑launch of permission request if needed.
     HandleAutoLaunchPermissions(
         skipToPermissions = info.skipToPermissions,

@@ -15,7 +15,7 @@ data class PermissionGateParams(
     val permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>,
     val permissions: Set<String>,
     val syncLogViewModel: SyncLogViewModel,
-    val logText: String,
+    val logText: String?,
     val context: Context,
     val onAutoLaunchTriggered: () -> Unit,
     val onPermissionsGranted: () -> Unit,

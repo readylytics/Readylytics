@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.onboarding
 
-import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,19 +33,20 @@ fun OnboardingRoute(
     syncLogViewModel: SyncLogViewModel = hiltViewModel(),
 ) {
     // Bundle parameters into a data class to reduce long parameter list.
-    val routeParams = OnboardingRouteParams(
-        userPreferencesFlow = userPreferencesFlow,
-        allPermissions = allPermissions,
-        requiredPermissions = requiredPermissions,
-        optionalPermissions = optionalPermissions,
-        onPermissionsGranted = onPermissionsGranted,
-        onPermissionsDenied = onPermissionsDenied,
-        onRestartApp = onRestartApp,
-        syncStatus = syncStatus,
-        onboardingViewModel = onboardingViewModel,
-        restoreViewModel = restoreViewModel,
-        syncLogViewModel = syncLogViewModel,
-    )
+    val routeParams =
+        OnboardingRouteParams(
+            userPreferencesFlow = userPreferencesFlow,
+            allPermissions = allPermissions,
+            requiredPermissions = requiredPermissions,
+            optionalPermissions = optionalPermissions,
+            onPermissionsGranted = onPermissionsGranted,
+            onPermissionsDenied = onPermissionsDenied,
+            onRestartApp = onRestartApp,
+            syncStatus = syncStatus,
+            onboardingViewModel = onboardingViewModel,
+            restoreViewModel = restoreViewModel,
+            syncLogViewModel = syncLogViewModel,
+        )
     OnboardingRouteBody(routeParams)
 }
 
@@ -58,141 +58,112 @@ private fun shouldShowPermissionGate(
 
 @Composable
 private fun PermissionGateSection(params: PermissionGateParams) {
-    val gateInfo = PermissionGateInfo(
-        skipToPermissions = params.skipToPermissions,
-        syncStatus = params.syncStatus,
-        permissionsDenied = params.permissionsDenied,
-        missingPermissions = params.missingPermissions,
-        autoLaunchTriggered = params.autoLaunchTriggered,
-        permissionLauncher = params.permissionLauncher,
-        permissions = params.permissions,
-        syncLogViewModel = params.syncLogViewModel,
-        logText = params.logText,
-        context = params.context,
-        onAutoLaunchTriggered = params.onAutoLaunchTriggered,
-    )
+    val gateInfo =
+        PermissionGateInfo(
+            skipToPermissions = params.skipToPermissions,
+            syncStatus = params.syncStatus,
+            permissionsDenied = params.permissionsDenied,
+            missingPermissions = params.missingPermissions,
+            autoLaunchTriggered = params.autoLaunchTriggered,
+            permissionLauncher = params.permissionLauncher,
+            permissions = params.permissions,
+            syncLogViewModel = params.syncLogViewModel,
+            logText = params.logText,
+            context = params.context,
+            onAutoLaunchTriggered = params.onAutoLaunchTriggered,
+        )
     OnboardingPermissionGate(gateInfo)
 }
 
 @Composable
-private fun OnboardingRouteBody(
-    userPreferencesFlow: Flow<app.readylytics.health.core.model.domain.preferences.UserPreferences>,
-    allPermissions: Set<String>,
-    requiredPermissions: Set<String>,
-    optionalPermissions: Set<String>,
-    onPermissionsGranted: () -> Unit,
-    onPermissionsDenied: () -> Unit,
-    onRestartApp: () -> Unit,
-    syncStatus: OnboardingSyncStatus,
-    onboardingViewModel: OnboardingViewModel,
-    restoreViewModel: OnboardingRestoreViewModel,
-    syncLogViewModel: SyncLogViewModel,
-) {
+private fun OnboardingRouteBody(params: OnboardingRouteParams) {
     val context = LocalContext.current
-    val userPrefs by userPreferencesFlow.collectAsStateWithLifecycle(initialValue = null)
-    val restoreState by restoreViewModel.state.collectAsStateWithLifecycle()
-    val logText by syncLogViewModel.logText.collectAsStateWithLifecycle()
-    val permissions = remember { allPermissions }
+    val userPrefs by params.userPreferencesFlow.collectAsStateWithLifecycle(initialValue = null)
+    val restoreState by params.restoreViewModel.state.collectAsStateWithLifecycle()
+    val logText by params.syncLogViewModel.logText.collectAsStateWithLifecycle()
+    val permissions = remember { params.allPermissions }
 
     var permissionsDenied by rememberSaveable { mutableStateOf(false) }
     var missingPermissions by rememberSaveable { mutableStateOf(setOf<String>()) }
 
     val permissionLauncher =
-        rememberOnboardingPermissionLauncher(requiredPermissions = requiredPermissions, onGranted = {
+        rememberOnboardingPermissionLauncher(requiredPermissions = params.requiredPermissions, onGranted = {
             permissionsDenied =
                 false
-            ; onPermissionsGranted()
+            ; params.onPermissionsGranted()
         }, onDenied = { missing ->
             permissionsDenied = true
             missingPermissions = missing
-            onPermissionsDenied()
+            params.onPermissionsDenied()
         })
 
-    ObserveRestartAppSideEffect(restoreViewModel.sideEffect, onRestartApp)
+    ObserveRestartAppSideEffect(params.restoreViewModel.sideEffect, params.onRestartApp)
 
     var profileJustSaved by rememberSaveable { mutableStateOf(false) }
     val skipToPermissions = userPrefs?.isBirthdayConfigured == true && !profileJustSaved
     var autoLaunchTriggered by rememberSaveable { mutableStateOf(false) }
 
     PermissionGateOrScreen(
-        skipToPermissions = skipToPermissions,
-        syncStatus = syncStatus,
-        permissionsDenied = permissionsDenied,
-        missingPermissions = missingPermissions,
-        autoLaunchTriggered = autoLaunchTriggered,
-        permissionLauncher = permissionLauncher,
-        permissions = permissions,
-        syncLogViewModel = syncLogViewModel,
-        logText = logText,
-        context = context,
-        onAutoLaunchTriggered = { autoLaunchTriggered = true },
-        onPermissionsGranted = onPermissionsGranted,
-        onPermissionsDenied = onPermissionsDenied,
-        requiredPermissions = requiredPermissions,
-        optionalPermissions = optionalPermissions,
-        restoreState = restoreState,
-        restoreViewModel = restoreViewModel,
-        onboardingViewModel = onboardingViewModel,
-        onProfileSaved = { profileJustSaved = true },
-        allPermissions = permissions,
-    )
-}
-
-@Composable
-private fun PermissionGateOrScreen(
-    skipToPermissions: Boolean,
-    syncStatus: OnboardingSyncStatus,
-    permissionsDenied: Boolean,
-    missingPermissions: Set<String>,
-    autoLaunchTriggered: Boolean,
-    permissionLauncher: ManagedActivityResultLauncher<Set<String>, Set<String>>,
-    permissions: Set<String>,
-    syncLogViewModel: SyncLogViewModel,
-    logText: String,
-    context: Context,
-    onAutoLaunchTriggered: () -> Unit,
-    onPermissionsGranted: () -> Unit,
-    onPermissionsDenied: () -> Unit,
-    // Below are needed for the onboarding screen content
-    requiredPermissions: Set<String>,
-    optionalPermissions: Set<String>,
-    restoreState: OnboardingRestoreState,
-    restoreViewModel: OnboardingRestoreViewModel,
-    onboardingViewModel: OnboardingViewModel,
-    onProfileSaved: () -> Unit,
-    allPermissions: Set<String>,
-) {
-    if (shouldShowPermissionGate(skipToPermissions, syncStatus, permissionsDenied)) {
-        PermissionGateSection(
+        PermissionGateOrScreenParams(
             skipToPermissions = skipToPermissions,
-            syncStatus = syncStatus,
+            syncStatus = params.syncStatus,
             permissionsDenied = permissionsDenied,
             missingPermissions = missingPermissions,
             autoLaunchTriggered = autoLaunchTriggered,
             permissionLauncher = permissionLauncher,
             permissions = permissions,
-            syncLogViewModel = syncLogViewModel,
+            syncLogViewModel = params.syncLogViewModel,
             logText = logText,
             context = context,
-            onAutoLaunchTriggered = onAutoLaunchTriggered,
-            onPermissionsGranted = onPermissionsGranted,
-            onPermissionsDenied = onPermissionsDenied,
+            onAutoLaunchTriggered = { autoLaunchTriggered = true },
+            onPermissionsGranted = params.onPermissionsGranted,
+            onPermissionsDenied = params.onPermissionsDenied,
+            requiredPermissions = params.requiredPermissions,
+            optionalPermissions = params.optionalPermissions,
+            restoreState = restoreState,
+            restoreViewModel = params.restoreViewModel,
+            onboardingViewModel = params.onboardingViewModel,
+            onProfileSaved = { profileJustSaved = true },
+            allPermissions = permissions,
+        ),
+    )
+}
+
+@Composable
+private fun PermissionGateOrScreen(params: PermissionGateOrScreenParams) {
+    if (shouldShowPermissionGate(params.skipToPermissions, params.syncStatus, params.permissionsDenied)) {
+        PermissionGateSection(
+            PermissionGateParams(
+                skipToPermissions = params.skipToPermissions,
+                syncStatus = params.syncStatus,
+                permissionsDenied = params.permissionsDenied,
+                missingPermissions = params.missingPermissions,
+                autoLaunchTriggered = params.autoLaunchTriggered,
+                permissionLauncher = params.permissionLauncher,
+                permissions = params.permissions,
+                syncLogViewModel = params.syncLogViewModel,
+                logText = params.logText,
+                context = params.context,
+                onAutoLaunchTriggered = params.onAutoLaunchTriggered,
+                onPermissionsGranted = params.onPermissionsGranted,
+                onPermissionsDenied = params.onPermissionsDenied,
+            ),
         )
         return
     }
 
     OnboardingScreenContent(
-        permissions = OnboardingPermissionsState(requiredPermissions, optionalPermissions),
+        permissions = OnboardingPermissionsState(params.requiredPermissions, params.optionalPermissions),
         restoreCallbacks =
             OnboardingRestoreCallbacks(
-                restoreState,
-                restoreViewModel::restore,
-                restoreViewModel::dismissError,
+                params.restoreState,
+                params.restoreViewModel::restore,
+                params.restoreViewModel::dismissError,
             ),
-        onProfileSaved = onProfileSaved,
-        onboardingViewModel = onboardingViewModel,
-        permissionLauncher = permissionLauncher,
-        allPermissions = allPermissions,
+        onProfileSaved = params.onProfileSaved,
+        onboardingViewModel = params.onboardingViewModel,
+        permissionLauncher = params.permissionLauncher,
+        allPermissions = params.allPermissions,
     )
 }
 
