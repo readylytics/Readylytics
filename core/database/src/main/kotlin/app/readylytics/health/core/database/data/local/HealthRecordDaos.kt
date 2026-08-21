@@ -16,6 +16,12 @@ import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutRoutePointDao
 import javax.inject.Inject
 
+/**
+ * Canonical shared bundle of all per-record DAOs, consumed by [RoomHealthIngestionStore],
+ * [RetentionCleanup], and [SelectedSourcePrunerImpl]. Deliberately excludes [DailySummaryDao]
+ * (a rollup used only by RoomHealthIngestionStore.clearFrozenBaselines) and includes
+ * [MinuteBucketDao] so RetentionCleanup needs no separate constructor param.
+ */
 data class HealthRecordDaos
     @Inject
     constructor(
