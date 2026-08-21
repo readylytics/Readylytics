@@ -4,7 +4,6 @@
   <CurrentIssues>
     <ID>ComplexCondition:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$prefix == "androidx.health.connect." &amp;&amp; ( source.name == "DataSettings.kt" || source.name == "OnboardingRoute.kt" || source.name == "PermissionBullets.kt" ) &amp;&amp; ( line.contains("androidx.health.connect.client.PermissionController") || line.contains("androidx.health.connect.client.permission.HealthPermission") || line.contains("androidx.health.connect.client.HealthConnectClient") || line.contains("androidx.health.connect.client.records.") )</ID>
     <ID>CyclomaticComplexMethod:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$@Test fun `existing feature sources have no forbidden imports`()</ID>
-    <ID>CyclomaticComplexMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
@@ -14,7 +13,6 @@
     <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresSleepTopCardsChartsAndMetricCards()</ID>
     <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresVitalsCardsAndCharts()</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
-    <ID>LongMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:ProductionReadinessStaticTest.kt$ProductionReadinessStaticTest$@Test fun `data backup and transfer exclusions are fully configured`()</ID>
     <ID>LongMethod:V7DatabaseMigrator.kt$V7DatabaseMigrator$private suspend fun runStateMachine(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit)</ID>
@@ -25,7 +23,6 @@
     <ID>ReturnCount:DatabaseReadyStartupInitializer.kt$DatabaseReadyStartupCoordinator$private suspend fun initializeWithRetry( states: StateFlow&lt;DatabaseMigrationUiState&gt;, readiness: DatabaseReadiness, )</ID>
     <ID>ReturnCount:DatabaseReadyStartupInitializer.kt$DatabaseReadyStartupInitializer$suspend fun initializeIfReady(readiness: DatabaseReadiness): StartupInitializationResult</ID>
     <ID>ReturnCount:LogSlotStoreTest.kt$LogSlotStoreTest.AdAwareSecureFileStore$override fun readText( file: File, associatedData: ByteArray, ): String</ID>
-    <ID>ReturnCount:MainNavHost.kt$private fun getTabIndex(destination: NavDestination?): Int</ID>
     <ID>ReturnCount:V7DatabaseMigrator.kt$V7DatabaseMigrator$suspend fun migrate(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit): V7MigrationResult</ID>
     <ID>SwallowedException:BirthdayCheckWorker.kt$BirthdayCheckWorker$e: Exception</ID>
     <ID>SwallowedException:CrashReportShareIntent.kt$e: PackageManager.NameNotFoundException</ID>
