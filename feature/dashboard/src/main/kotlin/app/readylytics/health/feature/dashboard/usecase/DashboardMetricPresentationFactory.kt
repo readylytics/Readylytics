@@ -30,7 +30,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScale
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
