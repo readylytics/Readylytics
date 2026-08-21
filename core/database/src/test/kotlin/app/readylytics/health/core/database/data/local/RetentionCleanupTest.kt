@@ -28,7 +28,6 @@ class RetentionCleanupTest {
     private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
     private lateinit var stepRecordDao: StepRecordDao
     private lateinit var minuteBucketDao: MinuteBucketDao
-    private lateinit var sourceRecordDao: SourceRecordDao
     private lateinit var retentionCleanup: RetentionCleanup
 
     @Before
@@ -52,7 +51,6 @@ class RetentionCleanupTest {
         bodyTemperatureDao = database.bodyTemperatureRecordDao()
         stepRecordDao = database.stepRecordDao()
         minuteBucketDao = database.minuteBucketDao()
-        sourceRecordDao = database.sourceRecordDao()
 
         val transactionRunner = RoomTransactionRunner(database)
         retentionCleanup =
@@ -72,7 +70,7 @@ class RetentionCleanupTest {
                         oxygenSaturationRecordDao = oxygenSaturationDao,
                         bodyTemperatureRecordDao = bodyTemperatureDao,
                         stepRecordDao = stepRecordDao,
-                        sourceRecordDao = sourceRecordDao,
+                        sourceRecordDao = database.sourceRecordDao(),
                         minuteBucketDao = minuteBucketDao,
                     ),
                 dailySummaryDao = dailySummaryDao,
