@@ -4,7 +4,6 @@
   <CurrentIssues>
     <ID>ComplexCondition:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$prefix == "androidx.health.connect." &amp;&amp; ( source.name == "DataSettings.kt" || source.name == "OnboardingRoute.kt" || source.name == "PermissionBullets.kt" ) &amp;&amp; ( line.contains("androidx.health.connect.client.PermissionController") || line.contains("androidx.health.connect.client.permission.HealthPermission") || line.contains("androidx.health.connect.client.HealthConnectClient") || line.contains("androidx.health.connect.client.records.") )</ID>
     <ID>CyclomaticComplexMethod:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$@Test fun `existing feature sources have no forbidden imports`()</ID>
-    <ID>CyclomaticComplexMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
     <ID>LongMethod:CrashReportPrompt.kt$@Composable fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel())</ID>
@@ -13,7 +12,6 @@
     <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresSleepTopCardsChartsAndMetricCards()</ID>
     <ID>LongMethod:LocalRestoreValidationTest.kt$LocalRestoreValidationTest$@Test fun applyRestore_restoresVitalsCardsAndCharts()</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
-    <ID>LongMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:ProductionReadinessStaticTest.kt$ProductionReadinessStaticTest$@Test fun `data backup and transfer exclusions are fully configured`()</ID>
     <ID>LongMethod:V7DatabaseMigrator.kt$V7DatabaseMigrator$private suspend fun runStateMachine(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit)</ID>
     <ID>NestedBlockDepth:FeatureResourceOwnershipTest.kt$FeatureResourceOwnershipTest$@Test fun `string resources have one owning module`()</ID>
