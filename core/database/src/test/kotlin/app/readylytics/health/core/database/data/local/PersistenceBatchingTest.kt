@@ -46,20 +46,24 @@ class PersistenceBatchingTest {
             val heartRateDao = recordingDao<HeartRateDao>(events, "heartRate")
             val store =
                 RoomHealthIngestionStore(
-                    sleepSessionDao = recordingDao(events, "sleep"),
-                    sleepStageDao = recordingDao(events, "sleepStage"),
-                    heartRateDao = heartRateDao,
-                    hrvDao = recordingDao(events, "hrv"),
-                    workoutDao = recordingDao(events, "workout"),
-                    workoutRoutePointDao = recordingDao(events, "routePoints"),
-                    weightRecordDao = recordingDao(events, "weight"),
-                    bodyFatRecordDao = recordingDao(events, "bodyFat"),
-                    bloodPressureRecordDao = recordingDao(events, "bloodPressure"),
-                    oxygenSaturationRecordDao = recordingDao(events, "oxygen"),
-                    bodyTemperatureRecordDao = recordingDao(events, "bodyTemperature"),
-                    stepRecordDao = recordingDao(events, "steps"),
+                    daos =
+                        HealthRecordDaos(
+                            sleepSessionDao = recordingDao(events, "sleep"),
+                            sleepStageDao = recordingDao(events, "sleepStage"),
+                            heartRateDao = heartRateDao,
+                            hrvDao = recordingDao(events, "hrv"),
+                            workoutDao = recordingDao(events, "workout"),
+                            workoutRoutePointDao = recordingDao(events, "routePoints"),
+                            weightRecordDao = recordingDao(events, "weight"),
+                            bodyFatRecordDao = recordingDao(events, "bodyFat"),
+                            bloodPressureRecordDao = recordingDao(events, "bloodPressure"),
+                            oxygenSaturationRecordDao = recordingDao(events, "oxygen"),
+                            bodyTemperatureRecordDao = recordingDao(events, "bodyTemperature"),
+                            stepRecordDao = recordingDao(events, "steps"),
+                            sourceRecordDao = recordingDao(events, "sourceRecord"),
+                            minuteBucketDao = recordingDao(events, "minuteBucket"),
+                        ),
                     dailySummaryDao = recordingDao(events, "summary"),
-                    sourceRecordDao = recordingDao(events, "sourceRecord"),
                     transactionRunner = transactionRunner,
                 )
 
@@ -354,20 +358,24 @@ class PersistenceBatchingTest {
         workoutRoutePointDao: WorkoutRoutePointDao = recordingDao(events, "routePoints"),
     ): RoomHealthIngestionStore =
         RoomHealthIngestionStore(
-            sleepSessionDao = recordingDao(events, "sleep"),
-            sleepStageDao = recordingDao(events, "sleepStage"),
-            heartRateDao = recordingDao(events, "heartRate"),
-            hrvDao = recordingDao(events, "hrv"),
-            workoutDao = recordingDao(events, "workout"),
-            workoutRoutePointDao = workoutRoutePointDao,
-            weightRecordDao = recordingDao(events, "weight"),
-            bodyFatRecordDao = recordingDao(events, "bodyFat"),
-            bloodPressureRecordDao = recordingDao(events, "bloodPressure"),
-            oxygenSaturationRecordDao = recordingDao(events, "oxygen"),
-            bodyTemperatureRecordDao = recordingDao(events, "bodyTemperature"),
-            stepRecordDao = recordingDao(events, "steps"),
+            daos =
+                HealthRecordDaos(
+                    sleepSessionDao = recordingDao(events, "sleep"),
+                    sleepStageDao = recordingDao(events, "sleepStage"),
+                    heartRateDao = recordingDao(events, "heartRate"),
+                    hrvDao = recordingDao(events, "hrv"),
+                    workoutDao = recordingDao(events, "workout"),
+                    workoutRoutePointDao = workoutRoutePointDao,
+                    weightRecordDao = recordingDao(events, "weight"),
+                    bodyFatRecordDao = recordingDao(events, "bodyFat"),
+                    bloodPressureRecordDao = recordingDao(events, "bloodPressure"),
+                    oxygenSaturationRecordDao = recordingDao(events, "oxygen"),
+                    bodyTemperatureRecordDao = recordingDao(events, "bodyTemperature"),
+                    stepRecordDao = recordingDao(events, "steps"),
+                    sourceRecordDao = recordingDao(events, "sourceRecord"),
+                    minuteBucketDao = recordingDao(events, "minuteBucket"),
+                ),
             dailySummaryDao = recordingDao(events, "summary"),
-            sourceRecordDao = recordingDao(events, "sourceRecord"),
             transactionRunner = transactionRunner,
         )
 
