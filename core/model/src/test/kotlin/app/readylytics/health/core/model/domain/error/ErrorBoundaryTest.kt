@@ -100,9 +100,11 @@ class ErrorBoundaryTest {
             assertEquals(42, (result as SafeResult.Success).value)
         }
 
+    @Suppress("TooGenericExceptionThrown")
     @Test
     fun recoverWithRetryStrategyReturnsFailureAfterExhaustion() =
         runTest {
+            // Deliberately generic: verifies retry exhaustion regardless of failure type.
             val failure: SafeResult.Failure<Int> = SafeResult.Failure(RuntimeException("error"))
             val strategy = RecoveryStrategy.Retry<Int>(maxAttempts = 2, delayMs = 0)
             val result = failure.recover(strategy) { throw RuntimeException("still failing") }

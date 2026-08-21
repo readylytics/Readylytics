@@ -70,8 +70,6 @@
     <ID>ReturnCount:ScoringDayDataLoader.kt$ScoringDayDataLoader$suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List&lt;HrMinuteBucketRow&gt;</ID>
     <ID>ReturnCount:SqlCipherKeyManager.kt$SqlCipherKeyManager$fun migrateIfNeeded(dbFile: File)</ID>
     <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule.Companion$(*DatabaseMigrations.all)</ID>
-    <ID>TooGenericExceptionThrown:DatabaseReadinessGateTest.kt$DatabaseReadinessGateTest$throw RuntimeException("disk error")</ID>
-    <ID>TooGenericExceptionThrown:SqlCipherKeyManager.kt$SqlCipherKeyManager$throw RuntimeException("SQLCipher migration failed", e)</ID>
     <ID>TooManyFunctions:DatabaseModule.kt$DatabaseModule$Companion</ID>
     <ID>TooManyFunctions:DatabaseRepositoryModule.kt$DatabaseRepositoryModule</ID>
     <ID>TooManyFunctions:HealthDatabase.kt$HealthDatabase : RoomDatabase</ID>

@@ -284,7 +284,7 @@ class SqlCipherKeyManager
                 File("${dbFile.absolutePath}-shm").delete()
             } catch (e: Exception) {
                 tempFile.delete()
-                throw RuntimeException("SQLCipher migration failed", e)
+                throw MigrationException("SQLCipher migration failed", e)
             } finally {
                 rawKey.fill(0)
             }
@@ -329,6 +329,11 @@ class SqlCipherKeyManager
         }
 
         class KeyDecryptionException(
+            message: String,
+            cause: Throwable? = null,
+        ) : Exception(message, cause)
+
+        class MigrationException(
             message: String,
             cause: Throwable? = null,
         ) : Exception(message, cause)

@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import app.readylytics.health.core.model.domain.security.EncryptionInitException
 import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.RegistryConfiguration
@@ -72,7 +73,7 @@ class EncryptionManager
                     generateKey(alias, useStrongBox = false)
                     keyMetadataStore.setCurrentKey(CURRENT_KEY_VERSION, strongBoxBacked = false)
                 } catch (ex: Exception) {
-                    throw RuntimeException("Failed to generate master key", ex)
+                    throw EncryptionInitException("Failed to generate master key", ex)
                 }
             }
         }

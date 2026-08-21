@@ -35,8 +35,6 @@
     <ID>ReturnCount:UnitConverter.kt$UnitConverter$fun elevationParts( meters: Float, unitSystem: UnitSystem, ): MetricParts?</ID>
     <ID>ReturnCount:WorkoutLayoutTypeMapper.kt$WorkoutLayoutTypeMapper$fun fromExerciseType(raw: String): WorkoutLayoutType</ID>
     <ID>SwallowedException:ErrorBoundary.kt$e: Exception</ID>
-    <ID>TooGenericExceptionThrown:ErrorBoundaryTest.kt$ErrorBoundaryTest$throw RuntimeException("still failing")</ID>
-    <ID>TooGenericExceptionThrown:Result.kt$throw Exception(reason)</ID>
     <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
     <ID>TooManyFunctions:DateRangeService.kt$DateRangeService</ID>
     <ID>TooManyFunctions:FeatureSettingsPorts.kt$DisplaySettings</ID>

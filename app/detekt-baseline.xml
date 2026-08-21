@@ -70,7 +70,6 @@
     <ID>SwallowedException:UserPreferencesMapper.kt$e: Exception</ID>
     <ID>SwallowedException:UserUseCase.kt$UserUseCase$e: Exception</ID>
     <ID>ThrowsCount:SyncViewModel.kt$SyncViewModel$fun onAppForeground()</ID>
-    <ID>TooGenericExceptionThrown:EncryptionManager.kt$EncryptionManager$throw RuntimeException("Failed to generate master key", ex)</ID>
     <ID>TooManyFunctions:CrashReportShareIntent.kt$app.readylytics.health.crashreport.CrashReportShareIntent.kt</ID>
     <ID>TooManyFunctions:FeaturePortModule.kt$FeaturePortModule</ID>
     <ID>TooManyFunctions:LocalRestoreManager.kt$LocalRestoreManager</ID>
