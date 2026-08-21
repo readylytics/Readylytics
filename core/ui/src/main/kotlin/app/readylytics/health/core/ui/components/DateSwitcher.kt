@@ -68,9 +68,6 @@ fun DateSwitcher(
     val canGoBack = earliestDate == null || selectedDate > earliestDate
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
-    val prevEnabled = canGoBack && enabled
-    val nextEnabled = canGoForward && enabled
-
     Row(
         modifier =
             modifier
@@ -84,24 +81,11 @@ fun DateSwitcher(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FilledIconButton(
+        NavIconButton(
             onClick = onPreviousDay,
-            enabled = prevEnabled,
-            shape = MaterialTheme.shapes.large,
-            colors =
-                IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                ),
-            modifier = Modifier.size(MaterialTheme.dimens.avatarMedium),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.accessibility_prev_day),
-            )
-        }
+            enabled = canGoBack && enabled,
+            isNext = false,
+        )
         DatePill(
             selectedDate = selectedDate,
             today = today,
@@ -109,68 +93,108 @@ fun DateSwitcher(
             onClick = { showDatePicker = true },
             modifier = Modifier.weight(1f),
         )
-        FilledIconButton(
+        NavIconButton(
             onClick = onNextDay,
-            enabled = nextEnabled,
-            shape = MaterialTheme.shapes.large,
-            colors =
-                IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                ),
-            modifier = Modifier.size(MaterialTheme.dimens.avatarMedium),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.accessibility_next_day),
-            )
-        }
+            enabled = canGoForward && enabled,
+            isNext = true,
+        )
     }
 
     if (showDatePicker) {
-        val todayMs = today.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
-        val earliestMs = earliestDate?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli()
+        DateSwitcherPickerDialog(
+            selectedDate = selectedDate,
+            today = today,
+            earliestDate = earliestDate,
+            onDateSelected = onDateSelected,
+            onDismiss = { showDatePicker = false },
+        )
+    }
+}
 
-        val datePickerState =
-            rememberDatePickerState(
-                initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli(),
-                selectableDates =
-                    object : SelectableDates {
-                        override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                            utcTimeMillis <= todayMs && (earliestMs == null || utcTimeMillis >= earliestMs)
+@Composable
+private fun NavIconButton(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    isNext: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    FilledIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = MaterialTheme.shapes.large,
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            ),
+        modifier = modifier.size(MaterialTheme.dimens.avatarMedium),
+    ) {
+        Icon(
+            imageVector =
+                if (isNext) {
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight
+                } else {
+                    Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                },
+            contentDescription =
+                stringResource(
+                    if (isNext) R.string.accessibility_next_day else R.string.accessibility_prev_day,
+                ),
+        )
+    }
+}
 
-                        override fun isSelectableYear(year: Int): Boolean {
-                            val earliestYear = earliestDate?.year ?: 1900
-                            return year in earliestYear..today.year
-                        }
-                    },
-            )
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateSwitcherPickerDialog(
+    selectedDate: LocalDate,
+    today: LocalDate,
+    earliestDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val todayMs = today.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
+    val earliestMs = earliestDate?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli()
 
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val date = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
-                            onDateSelected(date)
-                        }
-                        showDatePicker = false
-                    },
-                ) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
+    val datePickerState =
+        rememberDatePickerState(
+            initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli(),
+            selectableDates =
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                        utcTimeMillis <= todayMs && (earliestMs == null || utcTimeMillis >= earliestMs)
+
+                    override fun isSelectableYear(year: Int): Boolean {
+                        val earliestYear = earliestDate?.year ?: 1900
+                        return year in earliestYear..today.year
+                    }
+                },
+        )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val date = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
+                        onDateSelected(date)
+                    }
+                    onDismiss()
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    ) {
+        DatePicker(state = datePickerState)
     }
 }
 
