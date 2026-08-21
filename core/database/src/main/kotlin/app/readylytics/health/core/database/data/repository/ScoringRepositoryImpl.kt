@@ -36,6 +36,8 @@ class ScoringRepositoryImpl
     @Inject
     constructor(
         private val dataLoader: ScoringDayDataLoader,
+        private val bodyMetricsDataLoader: BodyMetricsDataLoader,
+        private val seriesLoader: ScoringSeriesLoader,
         private val settingsRepo: SettingsRepository,
         private val baselineComputer: BaselineComputer,
         private val scoringConfigFactory: ScoringConfigFactory,
@@ -52,9 +54,9 @@ class ScoringRepositoryImpl
             ScoringDayContextResolver(scoringConfigFactory, resolveDailyBaselinesUseCase, scoringHistoryRepository)
         private val dailyTrimpComputer =
             DailyTrimpComputer(dataLoader, computeDailyTrimpUseCase, assembleEverydayLoadInputUseCase)
-        private val baseSummaryAssembler = BaseSummaryAssembler(dataLoader)
+        private val baseSummaryAssembler = BaseSummaryAssembler(bodyMetricsDataLoader)
         private val calibrationGate = CalibrationGate(baselineComputer)
-        private val rasTotalsComputer = RasTotalsComputer(dataLoader)
+        private val rasTotalsComputer = RasTotalsComputer(seriesLoader)
 
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,
@@ -112,14 +114,14 @@ class ScoringRepositoryImpl
                 dailyTrimpByDate =
                     TreeMap(
                         TrimpDateBucketer.bucket(
-                            dataLoader.loadWorkoutTrimpPoints(fromMs, toMs),
+                            seriesLoader.loadWorkoutTrimpPoints(fromMs, toMs),
                             zoneId,
                         ),
                     ),
                 everydayTrimpByDate =
                     TreeMap(
                         TrimpDateBucketer.bucket(
-                            dataLoader.loadEverydayTrimpPoints(fromMs, toMs),
+                            seriesLoader.loadEverydayTrimpPoints(fromMs, toMs),
                             zoneId,
                         ),
                     ),
@@ -238,8 +240,8 @@ class ScoringRepositoryImpl
                     session = inputs.session,
                     currentSessionIds = inputs.currentSessionIds,
                     baseSummary = baseSummary,
-                    avgSpo2 = dataLoader.loadAvgSpo2(inputs.session),
-                    avgBodyTemp = dataLoader.loadAvgBodyTemp(inputs.session),
+                    avgSpo2 = bodyMetricsDataLoader.loadAvgSpo2(inputs.session),
+                    avgBodyTemp = bodyMetricsDataLoader.loadAvgBodyTemp(inputs.session),
                 )
             return if (!isCalibrated) {
                 val calibHrvBaseline =

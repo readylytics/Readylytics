@@ -31,6 +31,7 @@ class ReadinessSummaryCoordinator
     @Inject
     constructor(
         private val dataLoader: ScoringDayDataLoader,
+        private val seriesLoader: ScoringSeriesLoader,
         private val scoringHistoryRepository: ScoringHistoryRepository,
         private val baselineComputer: BaselineComputer,
         private val buildLoadSeriesUseCase: BuildLoadSeriesUseCase,
@@ -200,7 +201,7 @@ class ReadinessSummaryCoordinator
             val dailyTrimpByDate = (
                 context.trimpContext?.dailyTrimpByDate?.subMap(fromDate, true, context.targetDate, true)
                     ?: TrimpDateBucketer.bucket(
-                        dataLoader.loadWorkoutTrimpPoints(
+                        seriesLoader.loadWorkoutTrimpPoints(
                             fromDate.atStartOfDay(context.zoneId).toInstant().toEpochMilli(),
                             context.nextDayMidnightMs,
                         ),
@@ -211,7 +212,7 @@ class ReadinessSummaryCoordinator
             val everydayTrimpByDate = (
                 context.trimpContext?.everydayTrimpByDate?.subMap(fromDate, true, context.targetDate, true)
                     ?: TrimpDateBucketer.bucket(
-                        dataLoader.loadEverydayTrimpPoints(
+                        seriesLoader.loadEverydayTrimpPoints(
                             fromDate.atStartOfDay(context.zoneId).toInstant().toEpochMilli(),
                             context.nextDayMidnightMs,
                         ),

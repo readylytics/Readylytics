@@ -69,16 +69,21 @@ class ScoringRepositoryBiphasicIntegrationTest {
             dailySummaryDao,
             heartRateDao,
             minuteBucketDao,
+        )
+    private val bodyMetricsDataLoader =
+        BodyMetricsDataLoader(
             weightRecordDao,
             bodyFatRecordDao,
             bloodPressureRecordDao,
             oxygenSaturationRecordDao,
             bodyTemperatureRecordDao,
         )
+    private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
 
     private val readinessSummaryCoordinator =
         ReadinessSummaryCoordinator(
             dataLoader,
+            seriesLoader,
             scoringHistoryRepository,
             baselineComputer,
             BuildLoadSeriesUseCase(scoringCalculator),
@@ -90,6 +95,8 @@ class ScoringRepositoryBiphasicIntegrationTest {
     private val repo =
         ScoringRepositoryImpl(
             dataLoader,
+            bodyMetricsDataLoader,
+            seriesLoader,
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,

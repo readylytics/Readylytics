@@ -218,18 +218,23 @@ class ScoringWalkForwardBenchmark {
                 db.dailySummaryDao(),
                 db.heartRateDao(),
                 db.minuteBucketDao(),
+            )
+        val bodyMetricsDataLoader =
+            BodyMetricsDataLoader(
                 db.weightRecordDao(),
                 db.bodyFatRecordDao(),
                 db.bloodPressureRecordDao(),
                 db.oxygenSaturationRecordDao(),
                 db.bodyTemperatureRecordDao(),
             )
+        val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader = dataLoader,
+                seriesLoader = seriesLoader,
                 scoringHistoryRepository = scoringHistoryRepository,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -241,6 +246,8 @@ class ScoringWalkForwardBenchmark {
         val scoringRepository =
             ScoringRepositoryImpl(
                 dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = scoringConfigFactory,

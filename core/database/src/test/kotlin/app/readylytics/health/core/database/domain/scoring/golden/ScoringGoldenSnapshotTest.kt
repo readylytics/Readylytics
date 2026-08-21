@@ -14,8 +14,10 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecor
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
@@ -105,16 +107,20 @@ class ScoringGoldenSnapshotTest {
 
         val dataLoader = ScoringDayDataLoader(
             db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-            db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-            db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
-            db.bodyTemperatureRecordDao(),
+            db.minuteBucketDao(),
         )
+        val bodyMetricsDataLoader = BodyMetricsDataLoader(
+            db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
+            db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
+        )
+        val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader = dataLoader,
+                seriesLoader = seriesLoader,
                 scoringHistoryRepository = scoringHistoryRepository,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -125,6 +131,8 @@ class ScoringGoldenSnapshotTest {
 
         return ScoringRepositoryImpl(
             dataLoader = dataLoader,
+            bodyMetricsDataLoader = bodyMetricsDataLoader,
+            seriesLoader = seriesLoader,
             settingsRepo = settingsRepository,
             baselineComputer = baselineComputer,
             scoringConfigFactory = scoringConfigFactory,

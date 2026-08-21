@@ -66,12 +66,16 @@ class ScoringRepositoryImplTest {
             dailySummaryDao,
             heartRateDao,
             minuteBucketDao,
+        )
+    private val bodyMetricsDataLoader =
+        BodyMetricsDataLoader(
             weightRecordDao,
             bodyFatRecordDao,
             bloodPressureRecordDao,
             oxygenSaturationRecordDao,
             bodyTemperatureRecordDao,
         )
+    private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -79,6 +83,7 @@ class ScoringRepositoryImplTest {
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader,
+                seriesLoader,
                 scoringHistoryRepository,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
@@ -88,6 +93,8 @@ class ScoringRepositoryImplTest {
             )
         return ScoringRepositoryImpl(
             dataLoader,
+            bodyMetricsDataLoader,
+            seriesLoader,
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,

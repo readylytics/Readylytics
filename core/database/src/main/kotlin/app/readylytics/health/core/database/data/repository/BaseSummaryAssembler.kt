@@ -4,7 +4,7 @@ import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 
 class BaseSummaryAssembler(
-    private val dataLoader: ScoringDayDataLoader,
+    private val bodyMetricsDataLoader: BodyMetricsDataLoader,
 ) {
     suspend fun buildBaseSummary(
         context: ScoringDayContext,
@@ -14,7 +14,7 @@ class BaseSummaryAssembler(
         everydayResult: EverydayHrLoadResult,
         aggregatedSleep: SleepAggregationContext?,
     ): DailySummary {
-        val latest = dataLoader.loadLatestBodyMetrics(context.nextDayMidnightMs)
+        val latest = bodyMetricsDataLoader.loadLatestBodyMetrics(context.nextDayMidnightMs)
 
         return (context.dailySummary ?: DailySummary(date = context.targetDate)).copy(
             trimpWorkoutOnly = dailyTrimpRaw,

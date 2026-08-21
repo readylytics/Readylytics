@@ -31,8 +31,10 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
@@ -204,18 +206,23 @@ class ScoringRepositoryN1Test {
                 dailySummaryDao,
                 heartRateDao,
                 minuteBucketDao,
+            )
+        val bodyMetricsDataLoader =
+            BodyMetricsDataLoader(
                 weightRecordDao,
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
             )
+        val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader = dataLoader,
+                seriesLoader = seriesLoader,
                 scoringHistoryRepository = scoringHistoryRepository,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -227,6 +234,8 @@ class ScoringRepositoryN1Test {
         repo =
             ScoringRepositoryImpl(
                 dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = scoringConfigFactory,

@@ -12,7 +12,7 @@ import kotlin.math.round
 class RasTotalsComputer
     @Inject
     constructor(
-        private val dataLoader: ScoringDayDataLoader,
+        private val seriesLoader: ScoringSeriesLoader,
     ) {
         data class RasTotals(
             val dailyRas: Float,
@@ -51,6 +51,6 @@ class RasTotalsComputer
                 (1..6).map { i ->
                     targetDate.minusDays(i.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
                 }
-            return dataLoader.loadPreviousDaysSummaries(previousDaysMs).mapNotNull(selector).sum()
+            return seriesLoader.loadPreviousDaysSummaries(previousDaysMs).mapNotNull(selector).sum()
         }
     }

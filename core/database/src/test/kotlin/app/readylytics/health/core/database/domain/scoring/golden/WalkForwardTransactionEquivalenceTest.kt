@@ -6,8 +6,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
@@ -130,10 +132,14 @@ class WalkForwardTransactionEquivalenceTest {
             val dataLoader =
                 ScoringDayDataLoader(
                     db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-                    db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-                    db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
-                    db.bodyTemperatureRecordDao(),
+                    db.minuteBucketDao(),
                 )
+            val bodyMetricsDataLoader =
+                BodyMetricsDataLoader(
+                    db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
+                    db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
+                )
+            val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
             val sleepSessionRepository = SleepSessionRepositoryImpl(db.sleepSessionDao(), db.sleepStageDao())
             val circadianConsistencyRepository =
                 CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, FakeEncryptionManager())
@@ -158,6 +164,7 @@ class WalkForwardTransactionEquivalenceTest {
             val readinessSummaryCoordinator =
                 ReadinessSummaryCoordinator(
                     dataLoader = dataLoader,
+                    seriesLoader = seriesLoader,
                     scoringHistoryRepository = scoringHistoryRepository,
                     baselineComputer = baselineComputer,
                     buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -169,6 +176,8 @@ class WalkForwardTransactionEquivalenceTest {
             val scoringRepository =
                 ScoringRepositoryImpl(
                     dataLoader = dataLoader,
+                    bodyMetricsDataLoader = bodyMetricsDataLoader,
+                    seriesLoader = seriesLoader,
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,
                     scoringConfigFactory = scoringConfigFactory,

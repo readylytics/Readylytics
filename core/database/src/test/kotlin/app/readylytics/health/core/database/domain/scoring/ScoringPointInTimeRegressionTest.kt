@@ -22,9 +22,11 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
@@ -74,15 +76,20 @@ class ScoringPointInTimeRegressionTest {
                 dailySummaryDao,
                 heartRateDao,
                 minuteBucketDao,
+            )
+        val bodyMetricsDataLoader =
+            BodyMetricsDataLoader(
                 weightRecordDao,
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
             )
+        val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader,
+                seriesLoader,
                 scoringHistoryRepository,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
@@ -93,6 +100,8 @@ class ScoringPointInTimeRegressionTest {
         repo =
             ScoringRepositoryImpl(
                 dataLoader,
+                bodyMetricsDataLoader,
+                seriesLoader,
                 settingsRepo,
                 baselineComputer,
                 scoringConfigFactory,
