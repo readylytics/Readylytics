@@ -5,6 +5,7 @@ import app.readylytics.health.core.databaseschema.data.local.entity.DailySummary
 import app.readylytics.health.core.model.domain.model.ReadinessResult
 import app.readylytics.health.core.model.domain.model.RecoveryFlag
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 object DailySummaryMapper {
@@ -81,7 +82,7 @@ object DailySummaryMapper {
     private fun resolveDate(
         entity: DailySummaryEntity,
         zoneId: ZoneId,
-    ): java.time.LocalDate =
+    ): LocalDate =
         Instant
             .ofEpochMilli(entity.dateMidnightMs)
             .atZone(zoneId)
