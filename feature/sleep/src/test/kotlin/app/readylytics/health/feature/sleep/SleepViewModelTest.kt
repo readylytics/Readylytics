@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.sleep
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.data.preferences.UserPreferences
