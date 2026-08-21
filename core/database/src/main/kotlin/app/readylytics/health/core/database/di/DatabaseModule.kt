@@ -68,7 +68,7 @@ abstract class DatabaseModule {
             val builder =
                 Room
                     .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
-                    .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory(dbFile))
+                    .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
                     .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                     .setQueryCoroutineContext(Dispatchers.IO)
                     .addMigrations(*DatabaseMigrations.all)

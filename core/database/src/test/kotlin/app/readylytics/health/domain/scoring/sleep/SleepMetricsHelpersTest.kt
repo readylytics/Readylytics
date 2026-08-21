@@ -322,14 +322,13 @@ class HrCoverageValidatorTest {
     fun `isValid_coverageAbove70pct_returnsTrue`() {
         val sessionStart = 1000L
         val sessionEnd = 10000L
-        val durationMinutes = 150
         val records =
             listOf(
                 mockHeartRateRecord(timestampMs = 2000L),
                 mockHeartRateRecord(timestampMs = 8000L),
             )
 
-        val result = validator.isValid(sessionStart, sessionEnd, durationMinutes, records)
+        val result = validator.isValid(sessionStart, sessionEnd, records)
 
         assertTrue(result)
     }
@@ -338,13 +337,12 @@ class HrCoverageValidatorTest {
     fun `isValid_coverageBelow70pct_returnsFalse`() {
         val sessionStart = 1000L
         val sessionEnd = 100000L
-        val durationMinutes = 1500
         val records =
             listOf(
                 mockHeartRateRecord(timestampMs = 2000L),
             )
 
-        val result = validator.isValid(sessionStart, sessionEnd, durationMinutes, records)
+        val result = validator.isValid(sessionStart, sessionEnd, records)
 
         assertFalse(result)
     }

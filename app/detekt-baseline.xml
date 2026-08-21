@@ -83,8 +83,6 @@
     <ID>TooManyFunctions:SyncPreferences.kt$SyncPreferences</ID>
     <ID>TooManyFunctions:UIPreferences.kt$UIPreferences</ID>
     <ID>TooManyFunctions:V7DatabaseMigrator.kt$V7DatabaseMigrator</ID>
-    <ID>UnusedParameter:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$file: File</ID>
-    <ID>UnusedParameter:LogcatCaptureStoreImpl.kt$LogcatCaptureStoreImpl$durationMinutes: Int</ID>
     <ID>UseCheckOrError:FileBackupStore.kt$FileBackupStore$throw IllegalStateException("Failed to delete local file")</ID>
     <ID>UseCheckOrError:LocalBackupManager.kt$LocalBackupManager$throw IllegalStateException("Backup password not set")</ID>
     <ID>UseCheckOrError:LocalRestoreManager.kt$LocalRestoreManager$throw IllegalStateException("Could not open backup URI")</ID>

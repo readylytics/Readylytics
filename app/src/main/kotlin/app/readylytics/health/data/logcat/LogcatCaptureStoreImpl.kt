@@ -22,7 +22,7 @@ class LogcatCaptureStoreImpl
         @ReleaseLogSink private val logSink: SecureFileLogSink,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : LogcatCaptureStore {
-        internal var debugLogReader: suspend (Int) -> String? = ::readFromLogcat
+        internal var debugLogReader: suspend (Int) -> String? = { readFromLogcat() }
 
         override suspend fun capture(durationMinutes: Int): String? =
             withContext(ioDispatcher) {
@@ -48,7 +48,7 @@ class LogcatCaptureStoreImpl
 
         private fun isDebugBuild(): Boolean = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
-        private fun readFromLogcat(durationMinutes: Int): String? {
+        private fun readFromLogcat(): String? {
             val process =
                 Runtime
                     .getRuntime()

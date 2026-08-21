@@ -84,6 +84,5 @@
     <ID>TooManyFunctions:DailyPromptFormatter.kt$DailyPromptFormatter</ID>
     <ID>TooManyFunctions:ScoringCalculator.kt$ScoringCalculator</ID>
     <ID>TooManyFunctions:SleepDayAggregator.kt$SleepDayAggregator</ID>
-    <ID>UnusedParameter:HrCoverageValidator.kt$HrCoverageValidator$durationMinutes: Int</ID>
   </CurrentIssues>
 </SmellBaseline>

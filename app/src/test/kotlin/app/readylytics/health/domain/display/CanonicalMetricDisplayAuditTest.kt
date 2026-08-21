@@ -28,7 +28,7 @@ class CanonicalMetricDisplayAuditTest {
                 .mapNotNull { file ->
                     val text = file.readText()
                     val suspicious =
-                        forbiddenPatternsFor(file)
+                        forbiddenPatternsFor()
                             .filter { pattern -> pattern in text }
                     if (suspicious.isEmpty()) null else file.path to suspicious
                 }
@@ -41,7 +41,7 @@ class CanonicalMetricDisplayAuditTest {
         )
     }
 
-    private fun forbiddenPatternsFor(file: File): List<String> {
+    private fun forbiddenPatternsFor(): List<String> {
         val commonDecimalFormatting =
             listOf(
                 "\"%.2f\".format",

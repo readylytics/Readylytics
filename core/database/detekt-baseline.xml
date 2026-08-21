@@ -80,7 +80,6 @@
     <ID>TooManyFunctions:ScoringHistoryRepositoryImpl.kt$ScoringHistoryRepositoryImpl : ScoringHistoryRepository</ID>
     <ID>TooManyFunctions:ScoringRepositoryImpl.kt$ScoringRepositoryImpl : ScoringRepository</ID>
     <ID>TooManyFunctions:SqlCipherKeyManager.kt$SqlCipherKeyManager</ID>
-    <ID>UnusedParameter:SqlCipherKeyManager.kt$SqlCipherKeyManager$dbFile: File? = null</ID>
     <ID>UseCheckOrError:SqlCipherKeyManager.kt$SqlCipherKeyManager$throw IllegalStateException("Encrypted key not found in preferences")</ID>
     <ID>UseCheckOrError:SqlCipherKeyManager.kt$SqlCipherKeyManager$throw IllegalStateException("Encryption IV not found in preferences")</ID>
   </CurrentIssues>

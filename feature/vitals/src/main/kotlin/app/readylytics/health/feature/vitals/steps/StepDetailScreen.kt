@@ -165,7 +165,6 @@ fun StepDetailScreen(
                         points = uiState.dailySteps,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
-                        metricName = stringResource(CoreUiR.string.label_steps),
                         baselineUnit = stringResource(CoreUiR.string.unit_steps),
                         hideUnitInTooltip = true,
                         baseline = uiState.stepGoal.toFloat(),

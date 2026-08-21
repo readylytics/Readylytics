@@ -96,10 +96,8 @@ class SqlCipherKeyManagerTest {
             .putString(SqlCipherKeyManager.PREF_IV, "corrupted")
             .commit()
 
-        val dbFile = File(context.filesDir, "test.db")
-
         // getOrCreateFactory should return a factory that throws during create()
-        val factory = keyManager.getOrCreateFactory(dbFile)
+        val factory = keyManager.getOrCreateFactory()
 
         assertThrows(KeyDecryptionException::class.java) {
             val configuration =
@@ -125,7 +123,6 @@ class SqlCipherKeyManagerTest {
 
     @Test
     fun getOrCreateDbKey_concurrentThreads_convergeOnSingleKey() {
-        val dbFile = File(context.filesDir, "concurrent_test.db")
         val threadCount = 8
         val startBarrier = java.util.concurrent.CyclicBarrier(threadCount)
         val keys = java.util.concurrent.ConcurrentLinkedQueue<ByteArray>()
@@ -138,7 +135,7 @@ class SqlCipherKeyManagerTest {
                         // All threads call getOrCreateDbKey() concurrently (protected by lock).
                         // Each thread either generates a new key if none exists, or retrieves
                         // an existing one. All threads should converge on the same key.
-                        val key = keyManager.getOrCreateDbKeyForTest(dbFile)
+                        val key = keyManager.getOrCreateDbKeyForTest()
                         keys.add(key)
                     } catch (t: Throwable) {
                         errors.add(t)

@@ -98,6 +98,7 @@ fun FitDashboardTheme(
         remember(
             darkTheme,
             dynamicColor,
+            fallbackThemeColor,
             customPrimaryColor,
             customSecondaryColor,
             customTertiaryColor,
@@ -107,7 +108,12 @@ fun FitDashboardTheme(
             val secondarySeed = if (isCustomPaletteEnabled) Color(customSecondaryColor) else null
             val tertiarySeed = if (isCustomPaletteEnabled) Color(customTertiaryColor) else null
 
-            val matchingPreset = FallbackThemeColor.entries.find { it.primaryColor == customPrimaryColor }
+            val matchingPreset =
+                if (isCustomPaletteEnabled) {
+                    FallbackThemeColor.entries.find { it.primaryColor == customPrimaryColor }
+                } else {
+                    fallbackThemeColor
+                }
 
             val colorScheme =
                 when {

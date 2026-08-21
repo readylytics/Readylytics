@@ -219,7 +219,6 @@ class ComputeSleepMetricsUseCase
                     coverageValidator.isValid(
                         session.startTime,
                         session.endTime,
-                        session.durationMinutes,
                         allWakeHrRecords,
                     )
                 val validation =

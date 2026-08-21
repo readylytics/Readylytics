@@ -245,7 +245,7 @@ class SqlCipherKeyManagerCrossProcessRaceTest {
             // The DB file remains fresh; only its key is deliberately pre-seeded and retained for
             // this entire test class so the already-running service processes see the same value.
             SqlCipherKeyManager(context, AndroidKeystoreKeyProvider())
-                .getOrCreateDbKeyForTest(dbFile)
+                .getOrCreateDbKeyForTest()
                 .fill(0)
         }
     }

@@ -1,7 +1,5 @@
 package app.readylytics.health.core.scoring.domain.scoring.sleep
 
-import app.readylytics.health.core.scoring.domain.scoring.sleep.HrCoverageValidator
-
 import app.readylytics.health.core.model.domain.model.HeartRateRecord
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,7 +11,6 @@ class HrCoverageValidator
         fun isValid(
             sessionStartMs: Long,
             sessionEndMs: Long,
-            durationMinutes: Int,
             hrRecords: List<HeartRateRecord>,
         ): Boolean {
             val filtered = hrRecords.filter { it.timestampMs in sessionStartMs..sessionEndMs }

@@ -9,6 +9,5 @@
     <ID>LongMethod:ThemeColorUtils.kt$internal fun mcuColorScheme( seedColor: Color, secondaryColor: Color?, tertiaryColor: Color?, isDark: Boolean, ): ColorScheme</ID>
     <ID>ReturnCount:ThemeColorUtils.kt$private fun hueToRgb( p: Float, q: Float, t: Float, ): Float</ID>
     <ID>TooManyFunctions:ThemeColorUtils.kt$app.readylytics.health.core.designsystem.ThemeColorUtils.kt</ID>
-    <ID>UnusedParameter:Theme.kt$fallbackThemeColor: FallbackThemeColor = FallbackThemeColor.GREEN_PERFORMANCE</ID>
   </CurrentIssues>
 </SmellBaseline>

@@ -75,7 +75,6 @@ fun TrendChart(
     points: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
-    metricName: String,
     baselineUnit: String,
     modifier: Modifier = Modifier,
     baseline: Float? = null,

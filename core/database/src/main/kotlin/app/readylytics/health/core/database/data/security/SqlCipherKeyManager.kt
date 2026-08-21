@@ -91,13 +91,13 @@ class SqlCipherKeyManager
          * write across processes. A database file's existence is not proof that this write has
          * completed (see KNOWN_ISSUE_sqlcipher_multiprocess_key_race.md).
          */
-        fun getOrCreateFactory(dbFile: File): SupportSQLiteOpenHelper.Factory =
+        fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory =
             SupportSQLiteOpenHelper.Factory { configuration ->
                 val delegateHelper =
                     withCrossProcessKeyLock {
                         val decryptedKey =
                             try {
-                                getOrCreateDbKeyLocked(dbFile)
+                                getOrCreateDbKeyLocked()
                             } catch (e: KeyDecryptionException) {
                                 // Key is corrupted. isKeyCorrupted StateFlow is already set to true
                                 // by getOrCreateDbKeyLocked. Re-throw from within create() so Room's
@@ -186,7 +186,7 @@ class SqlCipherKeyManager
             return if (fileExistedBeforeOpen) {
                 val db =
                     withCrossProcessKeyLock {
-                        val rawKey = getOrCreateDbKeyLocked(dbFile)
+                        val rawKey = getOrCreateDbKeyLocked()
                         try {
                             openWritableDatabase(dbFile, rawKey)
                         } finally {
@@ -196,7 +196,7 @@ class SqlCipherKeyManager
                 db.use(block)
             } else {
                 withCrossProcessKeyLock {
-                    val rawKey = getOrCreateDbKeyLocked(dbFile)
+                    val rawKey = getOrCreateDbKeyLocked()
                     val db =
                         try {
                             openWritableDatabase(dbFile, rawKey)
@@ -253,7 +253,7 @@ class SqlCipherKeyManager
             }
 
             val tempFile = File(dbFile.parent, "${dbFile.name}.cipher_tmp")
-            val rawKey = getOrCreateDbKey(dbFile)
+            val rawKey = getOrCreateDbKey()
             try {
                 val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
                 // Create the encrypted target via the same nativeKey-backed open path used to
@@ -299,7 +299,7 @@ class SqlCipherKeyManager
             destFile: File,
         ) {
             if (!dbFile.exists()) return
-            val rawKey = getOrCreateDbKey(null)
+            val rawKey = getOrCreateDbKey()
             try {
                 // Raw key must be passed as bytes, not a String: see withWritableDatabase.
                 val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
@@ -372,8 +372,8 @@ class SqlCipherKeyManager
             }
         }
 
-        private fun getOrCreateDbKey(dbFile: File? = null): ByteArray =
-            withCrossProcessKeyLock { getOrCreateDbKeyLocked(dbFile) }
+        private fun getOrCreateDbKey(): ByteArray =
+            withCrossProcessKeyLock { getOrCreateDbKeyLocked() }
 
         /**
          * Unlocked core of [getOrCreateDbKey]. Callable only from inside a block already holding
@@ -383,7 +383,7 @@ class SqlCipherKeyManager
          * the locked [getOrCreateDbKey] from within an already-held lock would throw
          * [java.nio.channels.OverlappingFileLockException].
          */
-        private fun getOrCreateDbKeyLocked(dbFile: File? = null): ByteArray =
+        private fun getOrCreateDbKeyLocked(): ByteArray =
             if (prefs.contains(PREF_ENCRYPTED_KEY)) {
                 try {
                     decryptKey()
@@ -448,7 +448,7 @@ class SqlCipherKeyManager
         private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
         @androidx.annotation.VisibleForTesting
-        fun getOrCreateDbKeyForTest(dbFile: File? = null): ByteArray = getOrCreateDbKey(dbFile)
+        fun getOrCreateDbKeyForTest(): ByteArray = getOrCreateDbKey()
 
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"
