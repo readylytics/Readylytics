@@ -6,9 +6,6 @@
     <ID>FunctionOnlyReturningConstant:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$private fun goldenResourceRelativePath(): String</ID>
     <ID>InvalidPackageDeclaration:SleepMetricsHelpersTest.kt$package app.readylytics.health.core.scoring.domain.scoring.sleep</ID>
     <ID>LargeClass:BackfillBaselinesUseCaseTest.kt$BackfillBaselinesUseCaseTest</ID>
-    <ID>LongMethod:BaselineComputerBackfillEquivalenceTest.kt$BaselineComputerBackfillEquivalenceTest$@Before fun setup()</ID>
-    <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm adapts percentile based on sample count`()</ID>
-    <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm filters sessions with less than 10 samples`()</ID>
     <ID>LongMethod:BaselineComputerWalkForwardEquivalenceTest.kt$BaselineComputerWalkForwardEquivalenceTest$@Before fun setup()</ID>
     <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$private fun addNight( sleepSessions: MutableList&lt;SleepSessionEntity&gt;, sleepStages: MutableList&lt;SleepStageEntity&gt;, heartRateRows: MutableList&lt;HeartRateRecordEntity&gt;, wakeDay: LocalDate, deviceName: String, stageLess: Boolean, )</ID>
     <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$suspend fun build( db: HealthDatabase, startDate: LocalDate, endDate: LocalDate, ): BuildResult</ID>

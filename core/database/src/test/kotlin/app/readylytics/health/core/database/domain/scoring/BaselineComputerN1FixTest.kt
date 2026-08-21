@@ -59,6 +59,41 @@ class BaselineComputerN1FixTest {
         baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
     }
 
+    private fun session(
+        startTime: Long,
+        id: String,
+        durationMs: Long,
+    ): SleepSessionEntity =
+        SleepSessionEntity(
+            id = id,
+            startTime = startTime,
+            endTime = startTime + durationMs,
+            durationMinutes = 480,
+            efficiency = 0.9f,
+            deepSleepMinutes = 120,
+            remSleepMinutes = 60,
+            lightSleepMinutes = 300,
+            awakeMinutes = 15,
+            deviceName = id.replace("session_", "Device"),
+        )
+
+    private fun stubAcceptingValidation() {
+        every { scoringCalculator.validateNight(any(), any(), any(), any(), any(), any()) } returns
+            ScoringCalculator.NightValidationResult(
+                rmssdValid = true,
+                rhrValid = true,
+                durationValid = true,
+                stagesValid = true,
+                stagesSuspicious = false,
+                hrCoverageValid = true,
+            )
+    }
+
+    private fun stubEmptyVitalsMaps() {
+        coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns emptyMap()
+        coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
+    }
+
     @Test
     fun `computeAdaptiveBaselineRhrBpm returns override when provided`() =
         runTest {
@@ -158,44 +193,13 @@ class BaselineComputerN1FixTest {
 
             val sessions =
                 listOf(
-                    SleepSessionEntity(
-                        id = "session_1",
-                        startTime = baselineFromMs,
-                        endTime = baselineFromMs + 8 * 60 * 60 * 1000,
-                        durationMinutes = 480,
-                        efficiency = 0.9f,
-                        deepSleepMinutes = 120,
-                        remSleepMinutes = 60,
-                        lightSleepMinutes = 300,
-                        awakeMinutes = 15,
-                        deviceName = "Device1",
-                    ),
-                    SleepSessionEntity(
-                        id = "session_2",
-                        startTime = baselineFromMs + 24 * 60 * 60 * 1000,
-                        endTime = baselineFromMs + 32 * 60 * 60 * 1000,
-                        durationMinutes = 480,
-                        efficiency = 0.9f,
-                        deepSleepMinutes = 120,
-                        remSleepMinutes = 60,
-                        lightSleepMinutes = 300,
-                        awakeMinutes = 15,
-                        deviceName = "Device2",
-                    ),
+                    session(baselineFromMs, "session_1", 8 * 60 * 60 * 1000),
+                    session(baselineFromMs + 24 * 60 * 60 * 1000, "session_2", 8 * 60 * 60 * 1000),
                 )
 
             coEvery { sleepSessionDao.getSince(any()) } returns sessions
-            every { scoringCalculator.validateNight(any(), any(), any(), any(), any(), any()) } returns
-                ScoringCalculator.NightValidationResult(
-                    rmssdValid = true,
-                    rhrValid = true,
-                    durationValid = true,
-                    stagesValid = true,
-                    stagesSuspicious = false,
-                    hrCoverageValid = true,
-                )
-            coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns emptyMap()
-            coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
+            stubAcceptingValidation()
+            stubEmptyVitalsMaps()
 
             // Only session_1 has enough samples; session_2 has only 5
             val hrSamples =
@@ -251,68 +255,15 @@ class BaselineComputerN1FixTest {
 
             val sessions =
                 listOf(
-                    SleepSessionEntity(
-                        id = "session_1",
-                        startTime = baselineFromMs,
-                        endTime = baselineFromMs + 8 * 60 * 60 * 1000,
-                        durationMinutes = 480,
-                        efficiency = 0.9f,
-                        deepSleepMinutes = 120,
-                        remSleepMinutes = 60,
-                        lightSleepMinutes = 300,
-                        awakeMinutes = 15,
-                        deviceName = "Device1",
-                    ),
-                    SleepSessionEntity(
-                        id = "session_2",
-                        startTime = baselineFromMs + 24 * 60 * 60 * 1000,
-                        endTime = baselineFromMs + 32 * 60 * 60 * 1000,
-                        durationMinutes = 480,
-                        efficiency = 0.9f,
-                        deepSleepMinutes = 120,
-                        remSleepMinutes = 60,
-                        lightSleepMinutes = 300,
-                        awakeMinutes = 15,
-                        deviceName = "Device2",
-                    ),
-                    SleepSessionEntity(
-                        id = "session_3",
-                        startTime = baselineFromMs + 48 * 60 * 60 * 1000,
-                        endTime = baselineFromMs + 56 * 60 * 60 * 1000,
-                        durationMinutes = 480,
-                        efficiency = 0.9f,
-                        deepSleepMinutes = 120,
-                        remSleepMinutes = 60,
-                        lightSleepMinutes = 300,
-                        awakeMinutes = 15,
-                        deviceName = "Device3",
-                    ),
-                    SleepSessionEntity(
-                        id = "session_4",
-                        startTime = baselineFromMs + 72 * 60 * 60 * 1000,
-                        endTime = baselineFromMs + 80 * 60 * 60 * 1000,
-                        durationMinutes = 480,
-                        efficiency = 0.9f,
-                        deepSleepMinutes = 120,
-                        remSleepMinutes = 60,
-                        lightSleepMinutes = 300,
-                        awakeMinutes = 15,
-                        deviceName = "Device4",
-                    ),
+                    session(baselineFromMs, "session_1", 8 * 60 * 60 * 1000),
+                    session(baselineFromMs + 24 * 60 * 60 * 1000, "session_2", 8 * 60 * 60 * 1000),
+                    session(baselineFromMs + 48 * 60 * 60 * 1000, "session_3", 8 * 60 * 60 * 1000),
+                    session(baselineFromMs + 72 * 60 * 60 * 1000, "session_4", 8 * 60 * 60 * 1000),
                 )
 
             coEvery { sleepSessionDao.getSince(any()) } returns sessions
-            every { scoringCalculator.validateNight(any(), any(), any(), any(), any(), any()) } returns
-                ScoringCalculator.NightValidationResult(
-                    rmssdValid = true,
-                    rhrValid = true,
-                    durationValid = true,
-                    stagesValid = true,
-                    stagesSuspicious = false,
-                    hrCoverageValid = true,
-                )
-            coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns emptyMap()
-            coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
+            stubAcceptingValidation()
+            stubEmptyVitalsMaps()
 
             val hrSamples = mutableListOf<SleepHrSample>()
 
