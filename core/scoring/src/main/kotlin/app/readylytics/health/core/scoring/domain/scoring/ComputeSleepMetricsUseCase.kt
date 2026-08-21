@@ -93,7 +93,9 @@ class ComputeSleepMetricsUseCase
                         circadianOverride = decryptedOverride,
                     )
                 logD("ComputeSleepMetrics") {
-                    "Config applied: hash=${scoringConfig.auditTrail.configHashCode}, phase=${scoringConfig.auditTrail.phaseName}, threshold=${scoringConfig.circadianConsistency.thresholdMinutes}"
+                    "Config applied: hash=${scoringConfig.auditTrail.configHashCode}, " +
+                        "phase=${scoringConfig.auditTrail.phaseName}, " +
+                        "threshold=${scoringConfig.circadianConsistency.thresholdMinutes}"
                 }
 
                 val frozenBaseline = summary.baselineCalculatedAtDate != null

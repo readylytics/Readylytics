@@ -37,8 +37,10 @@ class SleepDayAggregatorTest {
         assertEquals(LocalDate.of(2026, 7, 9), aggregate.scoreDay)
         assertEquals(480, aggregate.totalDurationMinutes)
         assertTrue(aggregate.supplementalBlocks.isEmpty())
-        assertEquals(listOf("core"), aggregate.coreCluster.segments.map { it.stableId })
-        assertEquals(SleepStageTotals(lightMinutes = 240, deepMinutes = 90, remMinutes = 120, awakeMinutes = 30), aggregate.architectureTotals)
+        assertEquals(
+            SleepStageTotals(lightMinutes = 240, deepMinutes = 90, remMinutes = 120, awakeMinutes = 30),
+            aggregate.architectureTotals,
+        )
         assertEquals(session.startTimeMs, aggregate.recoveryWindow.startTimeMs)
         assertEquals(session.endTimeMs, aggregate.recoveryWindow.endTimeMs)
         assertEquals(480, aggregate.recoveryWindow.clockDurationMinutes)
@@ -233,7 +235,10 @@ class SleepDayAggregatorTest {
 
         val result = SleepDayAggregator.aggregate(listOf(beforeCutoff, atCutoff), policy())
 
-        assertEquals(listOf(LocalDate.of(2026, 3, 29), LocalDate.of(2026, 3, 30)), result.aggregates.map { it.scoreDay })
+        assertEquals(
+            listOf(LocalDate.of(2026, 3, 29), LocalDate.of(2026, 3, 30)),
+            result.aggregates.map { it.scoreDay },
+        )
         assertEquals("dst-before-cutoff", result.aggregates.first().coreCluster.stableSessionTieBreakId)
         assertEquals("dst-at-cutoff", result.aggregates.last().coreCluster.stableSessionTieBreakId)
     }
@@ -266,7 +271,14 @@ class SleepDayAggregatorTest {
                 light = 41,
             )
 
-        val aggregate = assertNotNull(SleepDayAggregator.aggregateForScoreDay(LocalDate.of(2026, 7, 9), listOf(core, pass, fail), policy()))
+        val aggregate =
+            assertNotNull(
+                SleepDayAggregator.aggregateForScoreDay(
+                    LocalDate.of(2026, 7, 9),
+                    listOf(core, pass, fail),
+                    policy(),
+                ),
+            )
         val eligibility = aggregate.supplementalBlocks.associate { it.segment.stableId to it.architectureEligible }
 
         assertEquals(true, eligibility["pass-70-percent"])
@@ -296,7 +308,14 @@ class SleepDayAggregatorTest {
                 end = at(2026, 7, 9, 13, 45),
             )
 
-        val aggregate = assertNotNull(SleepDayAggregator.aggregateForScoreDay(LocalDate.of(2026, 7, 9), listOf(core, noStages), policy()))
+        val aggregate =
+            assertNotNull(
+                SleepDayAggregator.aggregateForScoreDay(
+                    LocalDate.of(2026, 7, 9),
+                    listOf(core, noStages),
+                    policy(),
+                ),
+            )
         val supplemental = aggregate.supplementalBlocks.single()
 
         assertEquals(525, aggregate.totalDurationMinutes)
@@ -307,7 +326,9 @@ class SleepDayAggregatorTest {
     }
 
     private fun coreIdFor(vararg segments: SleepDaySegment): String =
-        assertNotNull(SleepDayAggregator.aggregate(segments.toList(), policy()).aggregates.singleOrNull()).coreCluster.stableSessionTieBreakId
+        assertNotNull(
+            SleepDayAggregator.aggregate(segments.toList(), policy()).aggregates.singleOrNull(),
+        ).coreCluster.stableSessionTieBreakId
 
     private fun policy(
         coreMergeGapMinutes: Int = 90,

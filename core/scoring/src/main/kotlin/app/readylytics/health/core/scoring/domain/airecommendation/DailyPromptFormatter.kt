@@ -13,7 +13,10 @@ import java.util.Locale
 object DailyPromptFormatter {
     fun format(data: DailyPromptData): String {
         val sb = StringBuilder()
-        sb.appendLine("Today's data for ${data.date} — generate a training recommendation per the Output Contract defined in the system prompt.")
+        sb.appendLine(
+            "Today's data for ${data.date} — generate a training recommendation per the Output " +
+                "Contract defined in the system prompt.",
+        )
         sb.appendLine()
         sb.appendSectionA(data)
         sb.appendSectionB(data)
@@ -111,7 +114,8 @@ object DailyPromptFormatter {
                     "${workout.avgHr.toInt()} bpm",
             )
             appendLine(
-                "- TRIMP: ${trimpOrUnavailable(workout.trimp)} (model TRIMP ${trimpOrUnavailable(workoutBlock.modelTrimp)} when present)",
+                "- TRIMP: ${trimpOrUnavailable(workout.trimp)} " +
+                    "(model TRIMP ${trimpOrUnavailable(workoutBlock.modelTrimp)} when present)",
             )
             appendLine(
                 "- HR zone breakdown (minutes): zone 1 ${zoneMinutes(workout.zone1Minutes)}, " +
