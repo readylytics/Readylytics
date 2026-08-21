@@ -19,16 +19,22 @@ fun AppInfoSection() {
     Column {
         SectionHeader("# About your scores")
         BodyText(
-            "This app turns the data your phone and wearables already collect — sleep, heart rate, and exercise — into three daily numbers that try to answer one question: **how is your body doing today, and what should you do with that information?**",
+            "This app turns the data your phone and wearables already collect — sleep, heart rate, and " +
+                "exercise — into three daily numbers that try to answer one question: " +
+                "**how is your body doing today, and what should you do with that information?**",
         )
         BodyText(
-            "We try to be honest about what these numbers can and can't tell you. They are decision aids, not diagnoses. If something feels off in your body, trust your body over the score.",
+            "We try to be honest about what these numbers can and can't tell you. They are decision aids, " +
+                "not diagnoses. If something feels off in your body, trust your body over the score.",
         )
 
         HighlightBox {
             SubHeader("## A note on measurement")
             BodyText(
-                "Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic algorithms. These estimates may contain significant measurement error compared to clinical systems like polysomnography or ECG. The scores shown here are health tracking and recovery estimates, not clinical measurements.",
+                "Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic " +
+                    "algorithms. These estimates may contain significant measurement error compared to " +
+                    "clinical systems like polysomnography or ECG. The scores shown here are health tracking " +
+                    "and recovery estimates, not clinical measurements.",
             )
         }
 
@@ -37,7 +43,8 @@ fun AppInfoSection() {
         SubHeader("## The three scores at a glance")
         ScoreTable()
         BodyText(
-            "You'll see all three on your dashboard once enough data has been collected. Until then, we'll show you what we have and explain what's missing.",
+            "You'll see all three on your dashboard once enough data has been collected. " +
+                "Until then, we'll show you what we have and explain what's missing.",
         )
     }
 }
