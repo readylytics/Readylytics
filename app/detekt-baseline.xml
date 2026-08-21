@@ -3,13 +3,11 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$prefix == "androidx.health.connect." &amp;&amp; ( source.name == "DataSettings.kt" || source.name == "OnboardingRoute.kt" || source.name == "PermissionBullets.kt" ) &amp;&amp; ( line.contains("androidx.health.connect.client.PermissionController") || line.contains("androidx.health.connect.client.permission.HealthPermission") || line.contains("androidx.health.connect.client.HealthConnectClient") || line.contains("androidx.health.connect.client.records.") )</ID>
-    <ID>CyclomaticComplexMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
     <ID>CyclomaticComplexMethod:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$@Test fun `existing feature sources have no forbidden imports`()</ID>
     <ID>CyclomaticComplexMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
-    <ID>LongMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:CrashReportPrompt.kt$@Composable fun CrashReportPrompt(viewModel: CrashReportViewModel = hiltViewModel())</ID>
     <ID>LongMethod:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;$override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto</ID>
     <ID>LongMethod:DatabaseRecoveryScreen.kt$@Composable fun DatabaseRecoveryScreen( onResetDatabase: () -&gt; Unit, onRestoreBackup: (Uri, onResult: (Boolean, String?) -&gt; Unit) -&gt; Unit, )</ID>
