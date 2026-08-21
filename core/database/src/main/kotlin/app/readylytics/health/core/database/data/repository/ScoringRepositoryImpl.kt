@@ -235,11 +235,11 @@ class ScoringRepositoryImpl
                 )
             val base =
                 ReadinessBaseInputs(
-                    inputs.session,
-                    inputs.currentSessionIds,
-                    baseSummary,
-                    dataLoader.loadAvgSpo2(inputs.session),
-                    dataLoader.loadAvgBodyTemp(inputs.session),
+                    session = inputs.session,
+                    currentSessionIds = inputs.currentSessionIds,
+                    baseSummary = baseSummary,
+                    avgSpo2 = dataLoader.loadAvgSpo2(inputs.session),
+                    avgBodyTemp = dataLoader.loadAvgBodyTemp(inputs.session),
                 )
             return if (!isCalibrated) {
                 val calibHrvBaseline =

@@ -195,8 +195,6 @@ class ReadinessSummaryCoordinator
 
         private suspend fun resolveTrimpSeries(
             context: CalibratedScoringContext,
-            dailyTrimpRaw: Float,
-            trimpEverydayHr: Float,
         ): Pair<Map<LocalDate, Float>, Map<LocalDate, Float>> {
             val fromDate = context.targetDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
             val dailyTrimpByDate = (
@@ -208,7 +206,7 @@ class ReadinessSummaryCoordinator
                         ),
                         context.zoneId,
                     )
-            ).toMutableMap().apply { put(context.targetDate, dailyTrimpRaw) }
+            ).toMutableMap().apply { put(context.targetDate, context.dailyTrimpRaw) }
 
             val everydayTrimpByDate = (
                 context.trimpContext?.everydayTrimpByDate?.subMap(fromDate, true, context.targetDate, true)
@@ -219,7 +217,7 @@ class ReadinessSummaryCoordinator
                         ),
                         context.zoneId,
                     )
-            ).toMutableMap().apply { put(context.targetDate, trimpEverydayHr) }
+            ).toMutableMap().apply { put(context.targetDate, context.trimpEverydayHr) }
             return Pair(dailyTrimpByDate, everydayTrimpByDate)
         }
 
@@ -227,8 +225,7 @@ class ReadinessSummaryCoordinator
             base: ReadinessBaseInputs,
             context: CalibratedScoringContext,
         ): DailySummary {
-            val (dailyTrimpByDate, everydayTrimpByDate) =
-                resolveTrimpSeries(context, context.dailyTrimpRaw, context.trimpEverydayHr)
+            val (dailyTrimpByDate, everydayTrimpByDate) = resolveTrimpSeries(context)
 
             val loadSeries = buildLoadSeriesUseCase.execute(context.targetDate, dailyTrimpByDate, everydayTrimpByDate)
             val withLoadSummary = base.baseSummary.copy(
