@@ -98,6 +98,7 @@ class ScoringRepositoryBiphasicIntegrationTest {
             AssembleEverydayLoadInputUseCase(),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
+            RasTotalsComputer(dataLoader),
             UnconfinedTestDispatcher(),
         )
 
