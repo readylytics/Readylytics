@@ -132,7 +132,7 @@ class DailyRecomputeSupport
          *
          * Two properties make this safe and are load-bearing:
          * - **Reads see the transaction's own uncommitted writes.** The walk-forward depends on
-         *   this: day N sums days N-1..N-6 (`ScoringRepositoryImpl.sumRasLastSixDays`) and reads
+         *   this: day N sums days N-1..N-6 (`RasTotalsComputer.sumRasLastSixDays`) and reads
          *   day N-1 (`ComputeSleepMetricsUseCase`). Deferring the writes to after the loop instead
          *   would make those reads see stale rows and change the scores.
          * - **The dispatcher switch inside `ScoringRepositoryImpl.computeDailySummary` stays in the

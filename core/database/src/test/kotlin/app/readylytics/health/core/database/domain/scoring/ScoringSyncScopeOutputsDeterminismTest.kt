@@ -32,7 +32,6 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.core.database.data.repository.RasTotalsComputer
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
@@ -387,7 +386,6 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                 scoringHistoryRepository = scoringHistoryRepository,
                 readinessSummaryCoordinator = readinessSummaryCoordinator,
-                rasTotalsComputer = RasTotalsComputer(dataLoader),
                 defaultDispatcher = UnconfinedTestDispatcher(),
             )
 

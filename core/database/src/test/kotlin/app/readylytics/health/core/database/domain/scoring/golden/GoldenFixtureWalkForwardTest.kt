@@ -8,7 +8,6 @@ import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.database.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.core.database.data.repository.RasTotalsComputer
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
@@ -225,7 +224,6 @@ class GoldenFixtureWalkForwardTest {
                     assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,
-                    rasTotalsComputer = RasTotalsComputer(dataLoader),
                     defaultDispatcher = UnconfinedTestDispatcher(),
                 )
             // WP-11/HC-006 fix: this fixture's stage-less-night scenario (`stageLessNightDate`)

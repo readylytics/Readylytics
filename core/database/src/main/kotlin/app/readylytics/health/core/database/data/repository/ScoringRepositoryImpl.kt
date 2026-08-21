@@ -16,7 +16,6 @@ import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.scoring.domain.scoring.AssembleEverydayLoadInputUseCase
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
-import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.EverydayHrLoadResult
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -45,7 +44,6 @@ class ScoringRepositoryImpl
         private val assembleEverydayLoadInputUseCase: AssembleEverydayLoadInputUseCase,
         private val scoringHistoryRepository: ScoringHistoryRepository,
         private val readinessSummaryCoordinator: ReadinessSummaryCoordinator,
-        private val rasTotalsComputer: RasTotalsComputer,
         @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
@@ -56,6 +54,7 @@ class ScoringRepositoryImpl
             DailyTrimpComputer(dataLoader, computeDailyTrimpUseCase, assembleEverydayLoadInputUseCase)
         private val baseSummaryAssembler = BaseSummaryAssembler(dataLoader)
         private val calibrationGate = CalibrationGate(baselineComputer)
+        private val rasTotalsComputer = RasTotalsComputer(dataLoader)
 
         override suspend fun computeAndPersistDailySummary(
             targetDate: LocalDate,

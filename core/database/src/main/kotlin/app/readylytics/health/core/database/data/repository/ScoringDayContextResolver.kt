@@ -29,7 +29,7 @@ class ScoringDayContextResolver(
     private val resolveDailyBaselinesUseCase: ResolveDailyBaselinesUseCase,
     private val scoringHistoryRepository: ScoringHistoryRepository,
 ) {
-    fun createSleepDayPolicy(prefs: UserPreferences, zoneId: ZoneId): SleepDayPolicy =
+    private fun createSleepDayPolicy(prefs: UserPreferences, zoneId: ZoneId): SleepDayPolicy =
         SleepDayPolicy(
             coreMergeGapMinutes = prefs.coreMergeGapMinutes,
             supplementalCutoffMinutesOfDay = prefs.supplementalCutoffMinutesOfDay,

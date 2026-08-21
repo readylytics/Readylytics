@@ -14,7 +14,6 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecor
 import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.UserPreferences
-import app.readylytics.health.core.database.data.repository.RasTotalsComputer
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
@@ -134,7 +133,6 @@ class ScoringGoldenSnapshotTest {
             assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
             scoringHistoryRepository = scoringHistoryRepository,
             readinessSummaryCoordinator = readinessSummaryCoordinator,
-            rasTotalsComputer = RasTotalsComputer(dataLoader),
             defaultDispatcher = UnconfinedTestDispatcher(),
         )
     }

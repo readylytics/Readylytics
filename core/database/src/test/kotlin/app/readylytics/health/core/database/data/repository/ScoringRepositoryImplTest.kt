@@ -96,7 +96,6 @@ class ScoringRepositoryImplTest {
             AssembleEverydayLoadInputUseCase(),
             scoringHistoryRepository,
             readinessSummaryCoordinator,
-            RasTotalsComputer(dataLoader),
             dispatcher,
         )
     }

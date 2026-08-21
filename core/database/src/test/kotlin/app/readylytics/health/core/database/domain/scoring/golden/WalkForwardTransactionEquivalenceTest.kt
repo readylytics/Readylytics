@@ -6,7 +6,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.model.data.preferences.UserPreferences
-import app.readylytics.health.core.database.data.repository.RasTotalsComputer
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
@@ -47,7 +46,7 @@ import kotlin.test.assertEquals
  *
  * This is not a redundant restatement of the mock-level transaction-count tests: it is the only
  * check that exercises the walk-forward's read-after-write dependencies for real. Day N's
- * `totalRas*` sums days N-1..N-6 (`ScoringRepositoryImpl.sumRasLastSixDays`) and
+ * `totalRas*` sums days N-1..N-6 (`RasTotalsComputer.sumRasLastSixDays`) and
  * `ComputeSleepMetricsUseCase` reads day N-1, so any implementation that defers the writes past
  * the days that read them -- e.g. buffering the summaries and calling `upsertAll` after the loop --
  * silently produces different scores. Reads inside a transaction see that transaction's own
@@ -178,7 +177,6 @@ class WalkForwardTransactionEquivalenceTest {
                     assembleEverydayLoadInputUseCase = AssembleEverydayLoadInputUseCase(),
                     scoringHistoryRepository = scoringHistoryRepository,
                     readinessSummaryCoordinator = readinessSummaryCoordinator,
-                    rasTotalsComputer = RasTotalsComputer(dataLoader),
                     defaultDispatcher = UnconfinedTestDispatcher(),
                 )
             val recomputeSupport =
