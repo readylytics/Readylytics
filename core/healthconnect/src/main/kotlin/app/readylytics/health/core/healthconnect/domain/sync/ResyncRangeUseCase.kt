@@ -299,10 +299,14 @@ class ResyncRangeUseCase
 
                         logD(TELEMETRY_TAG) {
                             "[INGESTION] Completed in ${ingestEnd - ingestStart}ms. " +
-                            "HeartRate: $hrBeforeResync -> $hrBeforePrune (delta: ${hrBeforePrune - hrBeforeResync}), " +
-                            "HRV: $hrvBeforeResync -> $hrvBeforePrune (delta: ${hrvBeforePrune - hrvBeforeResync}), " +
-                            "Sleep: $sleepBeforeResync -> $sleepBeforePrune (delta: ${sleepBeforePrune - sleepBeforeResync}), " +
-                            "Workout: $workoutBeforeResync -> $workoutBeforePrune (delta: ${workoutBeforePrune - workoutBeforeResync})"
+                                "HeartRate: $hrBeforeResync -> $hrBeforePrune " +
+                                "(delta: ${hrBeforePrune - hrBeforeResync}), " +
+                                "HRV: $hrvBeforeResync -> $hrvBeforePrune " +
+                                "(delta: ${hrvBeforePrune - hrvBeforeResync}), " +
+                                "Sleep: $sleepBeforeResync -> $sleepBeforePrune " +
+                                "(delta: ${sleepBeforePrune - sleepBeforeResync}), " +
+                                "Workout: $workoutBeforeResync -> $workoutBeforePrune " +
+                                "(delta: ${workoutBeforePrune - workoutBeforeResync})"
                         }
                     }
 
@@ -353,10 +357,14 @@ class ResyncRangeUseCase
 
                         logD(TELEMETRY_TAG) {
                             "[PRUNING] Completed in ${pruneEnd - pruneStart}ms. " +
-                            "HeartRate: $hrBeforePrune -> $hrAfterPrune (pruned: ${hrBeforePrune - hrAfterPrune}), " +
-                            "HRV: $hrvBeforePrune -> $hrvAfterPrune (pruned: ${hrvBeforePrune - hrvAfterPrune}), " +
-                            "Sleep: $sleepBeforePrune -> $sleepAfterPrune (pruned: ${sleepBeforePrune - sleepAfterPrune}), " +
-                            "Workout: $workoutBeforePrune -> $workoutAfterPrune (pruned: ${workoutBeforePrune - workoutAfterPrune})"
+                                "HeartRate: $hrBeforePrune -> $hrAfterPrune " +
+                                "(pruned: ${hrBeforePrune - hrAfterPrune}), " +
+                                "HRV: $hrvBeforePrune -> $hrvAfterPrune " +
+                                "(pruned: ${hrvBeforePrune - hrvAfterPrune}), " +
+                                "Sleep: $sleepBeforePrune -> $sleepAfterPrune " +
+                                "(pruned: ${sleepBeforePrune - sleepAfterPrune}), " +
+                                "Workout: $workoutBeforePrune -> $workoutAfterPrune " +
+                                "(pruned: ${workoutBeforePrune - workoutAfterPrune})"
                         }
                     }
 

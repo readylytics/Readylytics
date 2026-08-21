@@ -64,7 +64,10 @@ class HealthIngestionCoordinator
         ) {
             withTimeout(windowBudgetMs) {
                 val sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) }
-                val exerciseRecords = retryWithBackoff { hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true) }
+                val exerciseRecords =
+                    retryWithBackoff {
+                        hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true)
+                    }
                 val weightRecords = retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) }
                 val bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
                 val bloodPressureRecords =

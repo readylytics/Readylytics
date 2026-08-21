@@ -358,7 +358,8 @@ class HealthConnectRepositoryImpl
                                     .record
                             val result = record.exerciseRouteResult
                             app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                                "Exercise session ${session.metadata.id} (${session.exerciseType}) route result: ${result.javaClass.simpleName}"
+                                "Exercise session ${session.metadata.id} (${session.exerciseType}) " +
+                                    "route result: ${result.javaClass.simpleName}"
                             }
                             result
                         } catch (e: CancellationException) {
@@ -423,7 +424,8 @@ class HealthConnectRepositoryImpl
                     val record = client.readRecord(ExerciseSessionRecord::class, id).record
                     val routeResult = record.exerciseRouteResult
                     app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
-                        "Read single exercise session $id (${record.exerciseType}) route result: ${routeResult.javaClass.simpleName}"
+                        "Read single exercise session $id (${record.exerciseType}) " +
+                            "route result: ${routeResult.javaClass.simpleName}"
                     }
                     val distanceTotals =
                         readIntervalTotals<DistanceRecord>(record.startTime, record.endTime) { it.toIntervalTotal() }
