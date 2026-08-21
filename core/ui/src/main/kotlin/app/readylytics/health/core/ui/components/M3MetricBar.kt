@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
@@ -101,51 +102,77 @@ fun M3MetricBar(
                     progressBarRangeInfo = ProgressBarRangeInfo(progressToDraw, 0f..1f)
                 },
     ) {
-        // One continuous track capsule spanning the full width; the fill overlays it with the same
-        // round cap, so the track never reads as a second pill alongside the fill. (M3's
-        // LinearProgressIndicator instead draws the track as the remainder after the fill, which is
-        // what produced the "two pills" split.)
         val strokeWidth = size.height
         val centerY = size.height / 2f
-        drawLine(
-            color = trackColor,
-            start = Offset(strokeWidth / 2f, centerY),
-            end = Offset(size.width - strokeWidth / 2f, centerY),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
+        drawMetricBarTrack(trackColor, strokeWidth, centerY)
         if (progressToDraw > 0f) {
-            drawLine(
-                color = activeColor,
-                start = Offset(strokeWidth / 2f, centerY),
-                end = Offset(fillEndCenterX(progressToDraw, size.width, strokeWidth), centerY),
-                strokeWidth = strokeWidth,
-                cap = StrokeCap.Round,
-            )
+            drawMetricBarFill(activeColor, progressToDraw, strokeWidth, centerY)
         }
-        val tickRadiusPx = tickDiameter.toPx() / 2f
-        // The fill's round cap overhangs `strokeWidth / 2` px past the raw progress fraction, so a
-        // tick nominally just past `progressToDraw` can still sit inside that cap and render on top
-        // of the fill (ticks are drawn after the fill). Hide ticks that fall within the overhang.
-        visibleTickFractions(
-            progressToDraw,
-            capCoverageFraction(progressToDraw, size.width, strokeWidth),
-        ).forEach { fraction ->
-            drawCircle(
-                color = tickColor,
-                radius = tickRadiusPx,
-                center = Offset(size.width * fraction, centerY),
-            )
-        }
-        // Value marker dot sitting exactly at the visual end of the fill's rounded cap, mirroring
-        // the gauge's marker (drawn last, on top of track/fill/ticks). Strictly opt-in via
-        // [showMarker] so pre-existing callers never render it by accident.
+        drawMetricBarTicks(tickColor, tickDiameter.toPx() / 2f, progressToDraw, strokeWidth, centerY)
         if (shouldDrawValueMarker(showMarker, progressFraction, progressToDraw)) {
-            drawCircle(
-                color = markerColor,
-                radius = markerDiameter.toPx() / 2f,
-                center = Offset(fillEndCenterX(progressToDraw, size.width, strokeWidth), centerY),
-            )
+            drawMetricBarMarker(markerColor, markerDiameter.toPx() / 2f, progressToDraw, strokeWidth, centerY)
         }
     }
+}
+
+private fun DrawScope.drawMetricBarTrack(
+    trackColor: Color,
+    strokeWidth: Float,
+    centerY: Float,
+) {
+    drawLine(
+        color = trackColor,
+        start = Offset(strokeWidth / 2f, centerY),
+        end = Offset(size.width - strokeWidth / 2f, centerY),
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round,
+    )
+}
+
+private fun DrawScope.drawMetricBarFill(
+    activeColor: Color,
+    progressToDraw: Float,
+    strokeWidth: Float,
+    centerY: Float,
+) {
+    drawLine(
+        color = activeColor,
+        start = Offset(strokeWidth / 2f, centerY),
+        end = Offset(fillEndCenterX(progressToDraw, size.width, strokeWidth), centerY),
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round,
+    )
+}
+
+private fun DrawScope.drawMetricBarTicks(
+    tickColor: Color,
+    tickRadiusPx: Float,
+    progressToDraw: Float,
+    strokeWidth: Float,
+    centerY: Float,
+) {
+    visibleTickFractions(
+        progressToDraw,
+        capCoverageFraction(progressToDraw, size.width, strokeWidth),
+    ).forEach { fraction ->
+        drawCircle(
+            color = tickColor,
+            radius = tickRadiusPx,
+            center = Offset(size.width * fraction, centerY),
+        )
+    }
+}
+
+private fun DrawScope.drawMetricBarMarker(
+    markerColor: Color,
+    markerRadiusPx: Float,
+    progressToDraw: Float,
+    strokeWidth: Float,
+    centerY: Float,
+) {
+    drawCircle(
+        color = markerColor,
+        radius = markerRadiusPx,
+        center = Offset(fillEndCenterX(progressToDraw, size.width, strokeWidth), centerY),
+    )
 }
