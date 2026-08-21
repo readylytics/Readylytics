@@ -7,7 +7,6 @@
     <ID>CyclomaticComplexMethod:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$@Test fun `existing feature sources have no forbidden imports`()</ID>
     <ID>CyclomaticComplexMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
-    <ID>CyclomaticComplexMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
     <ID>LongMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
@@ -20,7 +19,6 @@
     <ID>LongMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:MainScaffold.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MainScaffold( modifier: Modifier = Modifier, syncViewModel: SyncViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:ProductionReadinessStaticTest.kt$ProductionReadinessStaticTest$@Test fun `data backup and transfer exclusions are fully configured`()</ID>
-    <ID>LongMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>LongMethod:V7DatabaseMigrator.kt$V7DatabaseMigrator$private suspend fun runStateMachine(onProgress: suspend (DatabaseMigrationProgress) -&gt; Unit)</ID>
     <ID>NestedBlockDepth:FeatureResourceOwnershipTest.kt$FeatureResourceOwnershipTest$@Test fun `string resources have one owning module`()</ID>
     <ID>ReturnCount:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$private fun resolveAuditedFile(pathFromRepoRoot: String): File</ID>
