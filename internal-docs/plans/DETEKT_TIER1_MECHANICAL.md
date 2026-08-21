@@ -1,6 +1,6 @@
 # Detekt Tier 1 — Mechanical, Near-Zero Risk
 
-**Status:** not started · **Created:** 2026-08-21 · **Owner:** unassigned
+**Status:** completed · **Created:** 2026-08-21 · **Completed:** 2026-08-21 · **Owner:** antigravity
 **Parent:** `DETEKT_BASELINE_BURNDOWN.md` §6, Tier 1
 **Scope:** 66 baseline entries across 6 rules. Delete, rename, or trivially fix. Compiler and tests catch any mistake immediately.
 
