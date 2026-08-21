@@ -3,15 +3,11 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:DailyMetricsMapper.kt$DailyMetricsMapper$systolic == null || diastolic == null || systolic == 0 || diastolic == 0</ID>
-    <ID>CyclomaticComplexMethod:ElevationGainCalculator.kt$ElevationGainCalculator$fun smoothElevationProfile(series: List&lt;Pair&lt;Double, Double?&gt;&gt;): List&lt;Pair&lt;Double, Double&gt;&gt;</ID>
-    <ID>LoopWithTooManyJumpStatements:ElevationGainCalculator.kt$ElevationGainCalculator$for</ID>
     <ID>LoopWithTooManyJumpStatements:SessionTotalsResolver.kt$SessionTotalsResolver$for</ID>
     <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
     <ID>MemberNameEqualsClassName:ZoneThresholds.kt$ZoneThresholds$fun zoneThresholds( z1Min: Int = 95, z1Max: Int = 114, z2Max: Int = 133, z3Max: Int = 152, z4Max: Int = 171, ): IntArray</ID>
-    <ID>NestedBlockDepth:ElevationGainCalculator.kt$ElevationGainCalculator$fun calculateAscent( altitudes: List&lt;Double&gt;, thresholdMeters: Double = DEFAULT_THRESHOLD_METERS, ): Double</ID>
     <ID>ReturnCount:BmiService.kt$BmiService$fun calculateBmi( weight: Float, height: Float, units: UnitSystem, ): Result&lt;BmiData&gt;</ID>
     <ID>ReturnCount:DateRangeService.kt$DateRangeService$fun slidingWindows( range: DateRange, windowDays: Int, ): Result&lt;List&lt;DateRange&gt;&gt;</ID>
-    <ID>ReturnCount:ElevationGainCalculator.kt$ElevationGainCalculator$fun smoothElevationProfile(series: List&lt;Pair&lt;Double, Double?&gt;&gt;): List&lt;Pair&lt;Double, Double&gt;&gt;</ID>
     <ID>ReturnCount:HealthMetricsService.kt$HealthMetricsService$fun calculateBmi( weightKg: Float, heightCm: Float, ): Result&lt;Float&gt;</ID>
     <ID>ReturnCount:MetricStatusExtensions.kt$fun DailySummary.restingHrStatus( optimalThreshold: Float, warningThreshold: Float, ): MetricStatus</ID>
     <ID>ReturnCount:PermittedRecommendationMapper.kt$PermittedRecommendationMapper$fun resolve(status: MetricStatus, flags: List&lt;RecoveryFlag&gt;): PermittedRecommendation</ID>
