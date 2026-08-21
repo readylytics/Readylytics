@@ -298,7 +298,6 @@ fun SleepTrendChart(
         }
 
     val labelComponent = ChartDefaults.labelTextComponent()
-    val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
 
     val remappedStartPoints =

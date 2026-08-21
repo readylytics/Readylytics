@@ -7,7 +7,6 @@ import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -20,16 +19,13 @@ import app.readylytics.health.feature.dashboard.R as DashboardR
 abstract class DashboardMetricPresentationFactoryTestBase {
     protected lateinit var factory: DashboardMetricPresentationFactory
     protected lateinit var resourceProvider: ResourceProvider
-    protected lateinit var getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase
 
     @Before
     fun setup() {
         resourceProvider = mockk(relaxed = true)
-        getWorkoutMetricsUseCase = mockk(relaxed = true)
         factory =
             DashboardMetricPresentationFactory(
                 resourceProvider,
-                getWorkoutMetricsUseCase,
             )
         every { resourceProvider.getString(any()) } returns "mock_string"
         every { resourceProvider.getString(CoreUiR.string.metric_value_unavailable) } returns "—"

@@ -44,6 +44,5 @@
     <ID>TooManyFunctions:TrendPeriodAggregation.kt$app.readylytics.health.core.ui.common.TrendPeriodAggregation.kt</ID>
     <ID>UnusedParameter:CardLoader.kt$modifier: Modifier = Modifier</ID>
     <ID>UnusedParameter:TrendCharts.kt$metricName: String</ID>
-    <ID>UnusedPrivateProperty:DateSwitcher.kt$val pillDescription = stringResource( R.string.accessibility_date_pill, qualifierLabelFor(selectedDate, today), selectedDate.format(dateFormatter), )</ID>
   </CurrentIssues>
 </SmellBaseline>

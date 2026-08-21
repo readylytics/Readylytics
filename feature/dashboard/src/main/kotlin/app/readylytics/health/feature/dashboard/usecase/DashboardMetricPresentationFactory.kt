@@ -30,7 +30,6 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricScale
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -41,7 +40,6 @@ class DashboardMetricPresentationFactory
     @Inject
     constructor(
         private val resourceProvider: ResourceProvider,
-        private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
     ) {
         // Human-readable, TalkBack-friendly accessibilityDescription wiring for all 15 dashboard metric
         // cards (Sleep Score, Readiness, Weight, Body Fat, Sleep Duration, HRV, Sleep RHR, Resting HR,

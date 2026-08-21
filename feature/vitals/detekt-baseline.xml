@@ -40,6 +40,5 @@
     <ID>UnusedPrivateMember:BloodPressureHistorySection.kt$@Preview(showBackground = true) @Composable private fun BloodPressureHistoryCardPreview()</ID>
     <ID>UnusedPrivateMember:BodyFatHistorySection.kt$@Preview(showBackground = true) @Composable private fun BodyFatHistoryCardPreview()</ID>
     <ID>UnusedPrivateMember:WeightHistorySection.kt$@Preview(showBackground = true) @Composable private fun WeightHistoryCardPreview()</ID>
-    <ID>UnusedPrivateProperty:StepDetailScreen.kt$val stepsDelta = if (stepCount != null &amp;&amp; stepGoal &gt; 0) { val diff = stepCount - stepGoal val formattedDiff = String.format(java.util.Locale.US, "%,d", kotlin.math.abs(diff)) when { diff &gt; 0 -&gt; stringResource(CoreUiR.string.delta_up) + " $formattedDiff" diff &lt; 0 -&gt; stringResource(CoreUiR.string.delta_down) + " $formattedDiff" else -&gt; stringResource(CoreUiR.string.delta_no_change) } } else { null }</ID>
   </CurrentIssues>
 </SmellBaseline>

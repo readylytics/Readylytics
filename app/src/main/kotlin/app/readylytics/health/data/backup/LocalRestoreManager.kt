@@ -265,7 +265,7 @@ class LocalRestoreManager
 
             reader.beginObject()
             while (reader.hasNext()) {
-                when (val name = reader.nextName()) {
+                when (reader.nextName()) {
                     "preferences" -> {
                         val prefsString = readNextObjectAsString(reader)
                         val prefsBackup = json.decodeFromString<UserPreferencesBackup>(prefsString)
@@ -571,7 +571,7 @@ class LocalRestoreManager
             reader: JsonReader,
             sb: StringBuilder,
         ) {
-            when (val token = reader.peek()) {
+            when (reader.peek()) {
                 JsonToken.BEGIN_OBJECT -> {
                     reader.beginObject()
                     sb.append("{")

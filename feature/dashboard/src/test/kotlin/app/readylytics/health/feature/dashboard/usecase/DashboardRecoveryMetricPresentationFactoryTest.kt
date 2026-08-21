@@ -7,7 +7,6 @@ import app.readylytics.health.core.model.domain.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.ResourceProvider
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.feature.dashboard.domain.dashboard.GetWorkoutMetricsUseCase
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -53,7 +52,6 @@ class DashboardRecoveryMetricPresentationFactoryTest {
         factory =
             DashboardMetricPresentationFactory(
                 resourceProvider,
-                mockk<GetWorkoutMetricsUseCase>(relaxed = true),
             )
 
         every {

@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
@@ -201,6 +202,7 @@ private fun DatePill(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp, max = 72.dp)
+                .semantics { contentDescription = pillDescription }
                 .testTag("date_pill"),
     ) {
         Row(

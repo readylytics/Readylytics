@@ -229,7 +229,6 @@ class RoomHealthIngestionStore
         }
     }
 
-private const val TAG = "RoomHealthIngestionStore"
 private const val PERSIST_TAG = "HealthSync.Persist"
 
 internal suspend fun <T> List<T>.forEachPersistenceBatch(

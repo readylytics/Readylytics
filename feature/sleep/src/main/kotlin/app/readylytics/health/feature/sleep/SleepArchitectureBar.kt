@@ -76,7 +76,6 @@ fun SleepArchitectureBar(
             StageSegment(awakeLabel, session.awakeMinutes) { awakeColor },
         )
 
-    val primaryColor = MaterialTheme.colorScheme.primary
     val resolvedColors = segments.map { it.color() }
 
     val chartSummary = stringResource(R.string.chart_accessibility_sleep_architecture_summary)

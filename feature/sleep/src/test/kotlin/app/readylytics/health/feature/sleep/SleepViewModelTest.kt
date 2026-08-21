@@ -55,7 +55,6 @@ class SleepViewModelTest {
     private val selectedDateRepository: SelectedDateStore = mockk(relaxed = true)
     private val circadianRepo: CircadianConsistencyRepository = mockk(relaxed = true)
     private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
-    private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
 
     private val sleepLayoutRepository: app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository =
         mockk(relaxed = true)
@@ -121,7 +120,6 @@ class SleepViewModelTest {
             selectedDateRepository = selectedDateRepository,
             circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
-            savedStateHandle = savedStateHandle,
             sleepLayoutRepository = sleepLayoutRepository,
             ioDispatcher = testDispatcher,
             defaultDispatcher = testDispatcher,

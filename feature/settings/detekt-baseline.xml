@@ -46,6 +46,5 @@
     <ID>SwallowedException:PhysiologySettingsViewModel.kt$PhysiologySettingsViewModel$e: Exception</ID>
     <ID>UnusedParameter:HeartRateSettings.kt$expandState: SettingsExpandState</ID>
     <ID>UnusedParameter:HeartRateSettings.kt$onExpandStateChange: (SettingsExpandState) -&gt; Unit</ID>
-    <ID>UnusedPrivateProperty:CircadianThresholdSettingsSection.kt$private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)</ID>
   </CurrentIssues>
 </SmellBaseline>

@@ -32,6 +32,5 @@
     <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Goal Bar - unavailable (grey)") @Composable private fun DashboardGoalUnavailableBarPreview()</ID>
     <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Selector/card - default font scale") @Composable private fun DashboardCardFontScaleDefaultPreview()</ID>
     <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Weight Bar - reference range at BMI 21.7") @Composable private fun DashboardWeightReferenceRangeBarPreview()</ID>
-    <ID>UnusedPrivateProperty:DashboardMetricPresentationFactory.kt$DashboardMetricPresentationFactory$private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase</ID>
   </CurrentIssues>
 </SmellBaseline>
