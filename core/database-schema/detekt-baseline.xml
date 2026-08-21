@@ -2,21 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MaxLineLength:BloodPressureRecordDao.kt$BloodPressureRecordDao$"DELETE FROM blood_pressure_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:BodyFatRecordDao.kt$BodyFatRecordDao$"DELETE FROM body_fat_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:BodyTemperatureRecordDao.kt$BodyTemperatureRecordDao$"DELETE FROM body_temperature_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:DailySummaryDao.kt$DailySummaryDao$"SELECT CAST(ROUND(totalRasWorkoutOnly) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs"</ID>
-    <ID>MaxLineLength:HeartRateDao.kt$HeartRateDao$"AND (timestampMs &gt; :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef &gt; :lastSourceRecordRef)) "</ID>
-    <ID>MaxLineLength:HeartRateDao.kt$HeartRateDao$"DELETE FROM heart_rate_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:HeartRateDao.kt$HeartRateDao$@Query("SELECT * FROM heart_rate_records WHERE timestampMs &gt;= :fromMs ORDER BY timestampMs ASC, sourceRecordRef ASC")</ID>
-    <ID>MaxLineLength:HrvDao.kt$HrvDao$"AND (timestampMs &gt; :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef &gt; :lastSourceRecordRef)) "</ID>
-    <ID>MaxLineLength:HrvDao.kt$HrvDao$"DELETE FROM hrv_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:OxygenSaturationRecordDao.kt$OxygenSaturationRecordDao$"DELETE FROM oxygen_saturation_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:SleepSessionDao.kt$SleepSessionDao$"DELETE FROM sleep_sessions WHERE endTime &gt;= :fromMs AND endTime &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:SleepSessionDao.kt$SleepSessionDao$"SELECT * FROM sleep_sessions WHERE endTime &gt;= :fromMs AND endTime &lt; :toMs ORDER BY endTime ASC, id ASC LIMIT 1"</ID>
-    <ID>MaxLineLength:WeightRecordDao.kt$WeightRecordDao$"DELETE FROM weight_records WHERE timestampMs &gt;= :fromMs AND timestampMs &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:WorkoutDao.kt$WorkoutDao$"DELETE FROM workout_records WHERE startTime &gt;= :fromMs AND startTime &lt; :toMs AND (deviceName != :deviceName OR deviceName IS NULL)"</ID>
-    <ID>MaxLineLength:WorkoutDao.kt$WorkoutDao$"SELECT SUM(avgHr * durationMinutes) / CAST(SUM(durationMinutes) AS FLOAT) FROM workout_records WHERE startTime &gt;= :fromMs AND startTime &lt; :toMs AND durationMinutes &gt; 0"</ID>
     <ID>TooManyFunctions:BloodPressureRecordDao.kt$BloodPressureRecordDao</ID>
     <ID>TooManyFunctions:BodyFatRecordDao.kt$BodyFatRecordDao</ID>
     <ID>TooManyFunctions:BodyTemperatureRecordDao.kt$BodyTemperatureRecordDao</ID>

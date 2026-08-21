@@ -46,7 +46,8 @@ interface HrvDao {
     @Query(
         "SELECT * FROM hrv_records " +
             "WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
-            "AND (timestampMs > :lastTimestampMs OR (timestampMs = :lastTimestampMs AND sourceRecordRef > :lastSourceRecordRef)) " +
+            "AND (timestampMs > :lastTimestampMs OR " +
+            "(timestampMs = :lastTimestampMs AND sourceRecordRef > :lastSourceRecordRef)) " +
             "ORDER BY timestampMs ASC, sourceRecordRef ASC LIMIT :limit",
     )
     suspend fun getKeysetPage(
@@ -187,7 +188,9 @@ interface HrvDao {
     suspend fun getDistinctDeviceNames(): List<String>
 
     @Query(
-        "DELETE FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+        "DELETE FROM hrv_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND (deviceName != :deviceName OR deviceName IS NULL)",
     )
     suspend fun deleteRecordsNotMatchingDevice(
         fromMs: Long,
