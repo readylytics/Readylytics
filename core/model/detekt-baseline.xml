@@ -3,7 +3,6 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:DailyMetricsMapper.kt$DailyMetricsMapper$systolic == null || diastolic == null || systolic == 0 || diastolic == 0</ID>
-    <ID>LoopWithTooManyJumpStatements:SessionTotalsResolver.kt$SessionTotalsResolver$for</ID>
     <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
     <ID>MemberNameEqualsClassName:ZoneThresholds.kt$ZoneThresholds$fun zoneThresholds( z1Min: Int = 95, z1Max: Int = 114, z2Max: Int = 133, z3Max: Int = 152, z4Max: Int = 171, ): IntArray</ID>
     <ID>ReturnCount:BmiService.kt$BmiService$fun calculateBmi( weight: Float, height: Float, units: UnitSystem, ): Result&lt;BmiData&gt;</ID>
