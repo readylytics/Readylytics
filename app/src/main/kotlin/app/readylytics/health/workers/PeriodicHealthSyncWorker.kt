@@ -6,17 +6,18 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.migration.DatabaseReadinessInspector
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.domain.sync.HealthSyncUseCase
-import app.readylytics.health.domain.util.logE
+import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
+import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
-import app.readylytics.health.domain.model.Result as DomainResult
+import app.readylytics.health.core.model.domain.model.Result as DomainResult
 
 /**
  * Short-lived periodic worker for "Background Sync": pulls the last 2 days of Health Connect

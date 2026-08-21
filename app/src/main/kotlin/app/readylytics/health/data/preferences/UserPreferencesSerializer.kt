@@ -2,9 +2,13 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.domain.scoring.SleepScoreWeightProfile
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
+import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
@@ -166,9 +170,9 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setInstallDate(domain.installDate)
         .setTrimpMethod(
             when (domain.trimpModel) {
-                app.readylytics.health.domain.scoring.TrimpModel.BANISTER -> TrimpMethodProto.TRIMP_BANISTER
-                app.readylytics.health.domain.scoring.TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
-                app.readylytics.health.domain.scoring.TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
+                app.readylytics.health.core.model.domain.scoring.TrimpModel.BANISTER -> TrimpMethodProto.TRIMP_BANISTER
+                app.readylytics.health.core.model.domain.scoring.TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
+                app.readylytics.health.core.model.domain.scoring.TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
             },
         ).setRasCalibration(domain.banisterMultiplier)
         .setChengBeta(domain.chengBeta)

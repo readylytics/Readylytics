@@ -3,9 +3,9 @@ package app.readylytics.health.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.FallbackThemeColor
-import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
 import app.readylytics.health.ui.scaffold.ThemeViewModel
 import app.readylytics.health.core.designsystem.FitDashboardTheme as CoreFitDashboardTheme
 

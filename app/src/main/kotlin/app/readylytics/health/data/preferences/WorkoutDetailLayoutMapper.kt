@@ -1,8 +1,8 @@
 package app.readylytics.health.data.preferences
 
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemConfiguration
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
 
 /**
  * Proto <-> domain mapping for workout detail layouts. Unknown enum names (written by a

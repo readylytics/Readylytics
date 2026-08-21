@@ -8,6 +8,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.preferences.UnitSystem
+import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.DeltaDirection
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -17,9 +20,6 @@ import app.readylytics.health.core.ui.components.ChartDataMap
 import app.readylytics.health.core.ui.components.ReorderableChartList
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
-import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.vitals.VitalsChartConfiguration
-import app.readylytics.health.domain.vitals.VitalsChartId
 import app.readylytics.health.feature.vitals.R
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState

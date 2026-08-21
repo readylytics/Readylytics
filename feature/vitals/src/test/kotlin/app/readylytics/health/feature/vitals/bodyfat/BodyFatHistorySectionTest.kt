@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.vitals.bodyfat
 
-import app.readylytics.health.domain.model.BodyFatCategory
+import app.readylytics.health.core.model.domain.model.BodyFatCategory
 import app.readylytics.health.feature.vitals.R
 import org.junit.Assert.assertEquals
 import org.junit.Test

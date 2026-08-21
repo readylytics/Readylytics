@@ -39,10 +39,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.common.MetricCardSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.SectionHeader
-import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.feature.vitals.R
 import java.time.ZoneId
 import app.readylytics.health.core.ui.R as CoreUiR

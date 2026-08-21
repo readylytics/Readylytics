@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.annotation.StringRes
-import app.readylytics.health.domain.workouts.detail.WorkoutDetailItemId
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @get:StringRes

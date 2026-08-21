@@ -3,9 +3,9 @@ package app.readylytics.health.feature.sleep
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepTrendDay
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TrendGranularity
-import app.readylytics.health.domain.scoring.sleep.SleepTrendDay
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.marker.ColumnCartesianLayerMarkerTarget

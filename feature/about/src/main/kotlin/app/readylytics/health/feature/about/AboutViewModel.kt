@@ -2,7 +2,7 @@ package app.readylytics.health.feature.about
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.domain.preferences.AboutPreferences
+import app.readylytics.health.core.model.domain.preferences.AboutPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject

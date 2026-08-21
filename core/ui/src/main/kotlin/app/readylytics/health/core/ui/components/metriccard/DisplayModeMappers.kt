@@ -1,6 +1,6 @@
 package app.readylytics.health.core.ui.components.metriccard
 
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 
 /** Map the domain display mode to the UI display mode. */
 fun DashboardCardDisplayMode.toUniversalMode(): UniversalCardDisplayMode =

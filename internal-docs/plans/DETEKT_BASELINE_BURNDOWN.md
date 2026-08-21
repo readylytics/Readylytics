@@ -16,38 +16,38 @@ frozen into a **per-module** `detekt-baseline.xml` so the build could go green w
 1,600-line cleanup. Every entry in those files is a real, still-present finding that detekt is
 being told to ignore. This document is about removing them, one at a time, by fixing the code.
 
-**As of 2026-08-18 there are 658 baselined findings across 16 files:**
+**As of 2026-08-21 there are 647 baselined findings across 16 files:**
 
 | Entries | File |
 |--------:|------|
-| 96 | `app/detekt-baseline.xml` |
 | 96 | `core/database/detekt-baseline.xml` |
-| 86 | `core/scoring/detekt-baseline.xml` |
-| 54 | `core/model/detekt-baseline.xml` |
-| 45 | `core/ui/detekt-baseline.xml` |
+| 94 | `app/detekt-baseline.xml` |
+| 87 | `core/scoring/detekt-baseline.xml` |
+| 55 | `core/model/detekt-baseline.xml` |
 | 45 | `feature/settings/detekt-baseline.xml` |
-| 40 | `core/healthconnect/detekt-baseline.xml` |
+| 44 | `core/ui/detekt-baseline.xml` |
+| 39 | `core/healthconnect/detekt-baseline.xml` |
 | 39 | `feature/vitals/detekt-baseline.xml` |
 | 39 | `feature/workouts/detekt-baseline.xml` |
-| 33 | `core/database-schema/detekt-baseline.xml` |
 | 32 | `feature/dashboard/detekt-baseline.xml` |
 | 29 | `feature/sleep/detekt-baseline.xml` |
+| 25 | `core/database-schema/detekt-baseline.xml` |
 | 8 | `core/designsystem/detekt-baseline.xml` |
 | 7 | `feature/onboarding/detekt-baseline.xml` |
 | 5 | `feature/about/detekt-baseline.xml` |
-| 4 | `feature/insights/detekt-baseline.xml` |
+| 3 | `feature/insights/detekt-baseline.xml` |
 
 By rule:
 
 | Count | Rule | Notes |
 |------:|------|-------|
-| 186 | `LongMethod` | threshold 60 lines |
-| 89 | `MaxLineLength` | |
+| 185 | `LongMethod` | threshold 60 lines |
+| 81 | `MaxLineLength` | |
 | 61 | `ReturnCount` | |
-| 58 | `TooManyFunctions` | |
-| 52 | `CyclomaticComplexMethod` | threshold 15 |
-| 41 | `LongParameterList` | function 8 / constructor 10, defaults + data classes ignored |
-| 24 | `SwallowedException` | |
+| 59 | `TooManyFunctions` | |
+| 50 | `CyclomaticComplexMethod` | threshold 15 |
+| 42 | `LongParameterList` | function 8 / constructor 10, defaults + data classes ignored |
+| 23 | `SwallowedException` | |
 | 19 | `UnusedPrivateProperty` | |
 | 15 | `UnusedPrivateMember` | |
 | 14 | `UnusedParameter` | |
@@ -55,9 +55,8 @@ By rule:
 | 11 | `ComplexCondition` | |
 | 8 each | `UseCheckOrError`, `MatchingDeclarationName`, `LargeClass` | |
 | 7 | `DestructuringDeclarationWithTooManyEntries` | |
-| 6 | `NewLineAtEndOfFile` | |
-| 5 each | `TooGenericExceptionThrown`, `NestedBlockDepth`, `InstanceOfCheckForException`, `ImplicitDefaultLocale` | |
-| 4 each | `InvalidPackageDeclaration`, `EmptyFunctionBlock` | |
+| 5 each | `TooGenericExceptionThrown`, `NestedBlockDepth`, `InvalidPackageDeclaration`, `InstanceOfCheckForException`, `ImplicitDefaultLocale` | |
+| 4 each | `NewLineAtEndOfFile`, `EmptyFunctionBlock` | |
 | 3 | `LoopWithTooManyJumpStatements` | |
 | 2 each | `ThrowsCount`, `SpreadOperator`, `MayBeConst` | |
 | 1 each | `MemberNameEqualsClassName`, `FunctionOnlyReturningConstant` | |
@@ -67,9 +66,9 @@ Files carrying the most entries (these are where the work concentrates):
 ```
 18  LocalRestoreManager.kt              11  DashboardMetricCardPreviews.kt
 14  ScoringSyncScopeOutputsDeterminismTest.kt   10  DashboardCardsSettingsViewModelTest.kt
-13  ScoringRepositoryImpl.kt             9  WorkoutDetailViewModelTest.kt
-11  ReadinessSummaryCoordinator.kt       9  ResyncRangeUseCase.kt
-11  HealthConnectRepositoryImpl.kt       7  SleepDayAggregatorTest.kt / LocalBackupManager.kt / BaselineComputer.kt
+13  ScoringRepositoryImpl.kt             9  WorkoutDetailViewModelTest.kt / ResyncRangeUseCase.kt
+11  ReadinessSummaryCoordinator.kt       7  SleepDayAggregatorTest.kt / BaselineComputer.kt
+11  HealthConnectRepositoryImpl.kt       6  SqlCipherKeyManager.kt / SleepTrendChart.kt / LocalBackupManager.kt / InsightCauseRanker.kt
 ```
 
 Detekt runs over **test sources too** — several of the heaviest files above are tests.
@@ -137,7 +136,7 @@ The mandatory pre-commit gate for this repo is unchanged and detekt is only part
 ```
 
 Run `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` before handing work back.
-Current known-good state: **3,009 unit tests, 0 failures, 0 lint warnings.**
+Current known-good state: **3,082 unit tests, 0 failures, 0 lint warnings.**
 
 ---
 
@@ -212,22 +211,22 @@ the diff as "no behaviour changed".
 Suggested order (cheapest and safest first):
 
 **Tier 1 — mechanical, near-zero risk (~50 entries)**
-`NewLineAtEndOfFile` (6), `MayBeConst` (2), `ExplicitItLambdaParameter` (12),
+`NewLineAtEndOfFile` (4), `MayBeConst` (2), `ExplicitItLambdaParameter` (12),
 `UnusedPrivateProperty` (19), `UnusedPrivateMember` (15), `UnusedParameter` (14).
 Delete or rename; the compiler and tests catch any mistake immediately. Note `ktlintFormat`
 fixes `NewLineAtEndOfFile` for you. For unused members, check for reflection/DI/Room usage
 before deleting — Hilt and Room reference things the compiler cannot see.
 
 **Tier 2 — local, mechanical-with-judgement (~110 entries)**
-`MaxLineLength` (89), `ImplicitDefaultLocale` (5), `UseCheckOrError` (8),
+`MaxLineLength` (81), `ImplicitDefaultLocale` (5), `UseCheckOrError` (8),
 `InstanceOfCheckForException` (5), `TooGenericExceptionThrown` (5),
 `DestructuringDeclarationWithTooManyEntries` (7).
 `MaxLineLength` is mostly wrapping; be careful not to fight ktlint, which also has an opinion —
 run `./gradlew ktlintFormat` after and re-check detekt.
 
 **Tier 3 — real refactors (~400 entries)**
-`LongMethod` (186), `TooManyFunctions` (58), `CyclomaticComplexMethod` (52),
-`LongParameterList` (41), `ComplexCondition` (11), `LargeClass` (8), `NestedBlockDepth` (5).
+`LongMethod` (185), `TooManyFunctions` (59), `CyclomaticComplexMethod` (50),
+`LongParameterList` (42), `ComplexCondition` (11), `LargeClass` (8), `NestedBlockDepth` (5).
 These are the actual architecture debt. Two decompositions already landed in this repo and are
 worth reading as worked examples before starting:
 
@@ -249,14 +248,14 @@ touching scoring, `core/database/src/test/resources/golden/` holds golden-snapsh
 exist precisely to prove the output did not move — see the hard constraints in §7.
 
 **Tier 4 — needs a decision, not a fix (~30 entries)**
-`SwallowedException` (24), `ThrowsCount` (2), `InvalidPackageDeclaration` (4).
+`SwallowedException` (23), `ThrowsCount` (2), `InvalidPackageDeclaration` (5).
 `SwallowedException` overlaps a policy area that has already been litigated in this repo: some
 broad catches are correct by design (e.g. `SecureFileLogSink` — a log sink inside a detached
 `scope.launch` must not propagate), and the `CancellationException` rethrow rule is owned by
 Konsist. **Read the surrounding comments before "fixing" one of these**; several carry an
-explicit rationale explaining why they are the way they are. `InvalidPackageDeclaration` will
-likely be resolved for free by the package/module alignment item in
-`internal-docs/plans/POST_REMEDIATION_FOLLOWUPS.md` — check that before doing it by hand.
+explicit rationale explaining why they are the way they are. `InvalidPackageDeclaration` (5 entries) survived the package alignment refactor — these are
+files whose package does not match their directory path, scattered across `core/ui`, `core/scoring`,
+and `feature/settings`. Each needs its package fixed or the file moved.
 
 ---
 
@@ -286,7 +285,7 @@ likely be resolved for free by the package/module alignment item in
 
 1. Baseline entries removed (not re-suppressed), and the count in this document updated.
 2. `./gradlew ktlintCheck detekt testDebugUnitTest lintRelease` passes.
-3. Unit test count has not dropped (3,009 as of 2026-08-18) and failures are 0.
+3. Unit test count has not dropped (3,082 as of 2026-08-21) and failures are 0.
 4. No behavioural diff — if the change is not provably behaviour-preserving, it needs a test
    that proves it.
 5. `git diff -- '**/detekt-baseline.xml'` shows **removals only**.

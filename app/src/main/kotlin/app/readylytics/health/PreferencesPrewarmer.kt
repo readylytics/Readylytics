@@ -1,7 +1,7 @@
 package app.readylytics.health
 
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.domain.util.logE
 import dagger.Lazy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first

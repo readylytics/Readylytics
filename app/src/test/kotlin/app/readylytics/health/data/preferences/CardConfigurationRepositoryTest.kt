@@ -1,10 +1,11 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardCatalog
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardCatalog
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -133,7 +134,7 @@ class CardConfigurationRepositoryTest {
 
             val newConfigs =
                 listOf(
-                    app.readylytics.health.domain.dashboard.CardConfiguration(
+                    app.readylytics.health.core.model.domain.dashboard.CardConfiguration(
                         CardId.READINESS,
                         isVisible = true,
                         position = 0,

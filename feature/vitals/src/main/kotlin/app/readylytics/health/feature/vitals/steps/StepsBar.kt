@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.StepsStatusClassifier
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
@@ -46,7 +47,6 @@ import app.readylytics.health.core.ui.components.SegmentHitBox
 import app.readylytics.health.core.ui.components.containerColor
 import app.readylytics.health.core.ui.components.detectCanvasTap
 import app.readylytics.health.core.ui.components.gaugeColor
-import app.readylytics.health.domain.model.StepsStatusClassifier
 import app.readylytics.health.feature.vitals.R
 import java.text.NumberFormat
 import java.time.LocalDate

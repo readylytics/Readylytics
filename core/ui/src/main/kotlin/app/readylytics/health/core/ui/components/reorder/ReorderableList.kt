@@ -35,8 +35,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.layout.ReorderableItem
 import app.readylytics.health.core.ui.R
-import app.readylytics.health.domain.layout.ReorderableItem
 
 /**
  * Single-column list supporting drag-and-drop reordering, generic over any [ReorderableItem].

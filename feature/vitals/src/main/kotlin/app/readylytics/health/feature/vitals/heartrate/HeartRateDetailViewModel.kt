@@ -2,14 +2,14 @@ package app.readylytics.health.feature.vitals.heartrate
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.di.DefaultDispatcher
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.display.MetricFormatter
+import app.readylytics.health.core.model.domain.heartrate.HrZoneClassifier
+import app.readylytics.health.core.model.domain.model.HeartRateStatusClassifier
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.di.DefaultDispatcher
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.display.MetricFormatter
-import app.readylytics.health.domain.heartrate.HrZoneClassifier
-import app.readylytics.health.domain.model.HeartRateStatusClassifier
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi

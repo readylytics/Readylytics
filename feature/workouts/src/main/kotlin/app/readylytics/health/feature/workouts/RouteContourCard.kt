@@ -32,7 +32,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.domain.util.ProjectedPoint
+import app.readylytics.health.core.model.domain.util.ProjectedPoint
 
 private val CONTOUR_PADDING = 16.dp
 

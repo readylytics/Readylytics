@@ -4,32 +4,32 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
+import app.readylytics.health.core.model.domain.backup.BackupFileInfo
+import app.readylytics.health.core.model.domain.backup.BackupLocation
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.sleep.SleepChartConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepChartId
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
+import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
+import app.readylytics.health.core.model.domain.vitals.VitalsChartConfiguration
+import app.readylytics.health.core.model.domain.vitals.VitalsChartId
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
-import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.domain.backup.BackupLocation
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.sleep.SleepChartConfiguration
-import app.readylytics.health.domain.sleep.SleepChartId
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.domain.sleep.SleepMetricCardId
-import app.readylytics.health.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.domain.sleep.SleepTopCardId
-import app.readylytics.health.domain.vitals.VitalsChartConfiguration
-import app.readylytics.health.domain.vitals.VitalsChartId
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -460,7 +460,7 @@ class LocalBackupManagerTest {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "w1",
                         timestampMs = 1000L,
                         weightKg = 70.5f,
@@ -469,7 +469,7 @@ class LocalBackupManagerTest {
             )
             db.bodyTemperatureRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity(
                         id = "bt1",
                         timestampMs = 1000L,
                         celsius = 36.8f,
@@ -511,7 +511,7 @@ class LocalBackupManagerTest {
         runTest {
             db.weightRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.WeightRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity(
                         id = "w1",
                         timestampMs = 1000L,
                         weightKg = 70.5f,
@@ -520,7 +520,7 @@ class LocalBackupManagerTest {
             )
             db.stepRecordDao().upsertAll(
                 listOf(
-                    app.readylytics.health.data.local.entity.StepRecordEntity(
+                    app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity(
                         id = "s1",
                         startTime = 1000L,
                         endTime = 2000L,
@@ -597,7 +597,7 @@ class LocalBackupManagerTest {
                 mockk<SettingsRepository>().apply {
                     every { userPreferences } returns
                         flowOf(
-                            app.readylytics.health.data.preferences.UserPreferences(
+                            app.readylytics.health.core.model.data.preferences.UserPreferences(
                                 backupDirectoryUri = safUri.toString(),
                             ),
                         )
@@ -662,7 +662,7 @@ class LocalBackupManagerTest {
                 mockk<SettingsRepository>().apply {
                     every { userPreferences } returns
                         flowOf(
-                            app.readylytics.health.data.preferences.UserPreferences(
+                            app.readylytics.health.core.model.data.preferences.UserPreferences(
                                 backupPasswordHash = null,
                             ),
                         )

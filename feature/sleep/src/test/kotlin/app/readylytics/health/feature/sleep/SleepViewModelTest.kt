@@ -2,22 +2,22 @@ package app.readylytics.health.feature.sleep
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.AppTheme
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.model.DailyMetrics
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.repository.DailyMetricsRepository
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepSessionRepository
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.model.DailyMetrics
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.repository.DailyMetricsRepository
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepSessionRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -57,7 +57,8 @@ class SleepViewModelTest {
     private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
     private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
 
-    private val sleepLayoutRepository: app.readylytics.health.domain.sleep.SleepLayoutRepository = mockk(relaxed = true)
+    private val sleepLayoutRepository: app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository =
+        mockk(relaxed = true)
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))
     private val selectedSummaryFlow = MutableStateFlow<DailySummary?>(null)
@@ -94,11 +95,11 @@ class SleepViewModelTest {
         every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
         every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
         every { sleepLayoutRepository.sleepTopCardConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS)
         every { sleepLayoutRepository.sleepChartConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CHARTS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CHARTS)
         every { sleepLayoutRepository.sleepMetricCardConfigurations() } returns
-            flowOf(app.readylytics.health.data.preferences.SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS)
+            flowOf(app.readylytics.health.core.model.data.preferences.SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS)
     }
 
     @After

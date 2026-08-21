@@ -18,14 +18,14 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
 import app.readylytics.health.core.ui.sync.SyncProgressScreen
-import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun OnboardingRoute(
-    userPreferencesFlow: Flow<app.readylytics.health.domain.preferences.UserPreferences>,
+    userPreferencesFlow: Flow<app.readylytics.health.core.model.domain.preferences.UserPreferences>,
     allPermissions: Set<String>,
     requiredPermissions: Set<String>,
     optionalPermissions: Set<String>,
@@ -58,18 +58,18 @@ fun OnboardingRoute(
         rememberLauncherForActivityResult(
             contract = PermissionController.createRequestPermissionResultContract(),
         ) { granted ->
-            app.readylytics.health.domain.util.logD("OnboardingRoute") {
+            app.readylytics.health.core.model.domain.util.logD("OnboardingRoute") {
                 "Permission result received. Granted: $granted"
             }
             if (granted.containsAll(requiredPermissions)) {
-                app.readylytics.health.domain.util.logD(
+                app.readylytics.health.core.model.domain.util.logD(
                     "OnboardingRoute",
                 ) { "All required permissions granted by user" }
                 permissionsDenied = false
                 onPermissionsGranted()
             } else {
                 val missing = requiredPermissions - granted
-                app.readylytics.health.domain.util.logD(
+                app.readylytics.health.core.model.domain.util.logD(
                     "OnboardingRoute",
                 ) { "User denied some required permissions: $missing" }
                 permissionsDenied = true
@@ -101,7 +101,7 @@ fun OnboardingRoute(
         LaunchedEffect(Unit) {
             if (skipToPermissions && !autoLaunchTriggered) {
                 autoLaunchTriggered = true
-                app.readylytics.health.domain.util.logD("OnboardingRoute") {
+                app.readylytics.health.core.model.domain.util.logD("OnboardingRoute") {
                     "Profile already configured (restored). Launching HC permissions: $permissions"
                 }
                 permissionLauncher.launch(permissions)
@@ -154,7 +154,7 @@ fun OnboardingRoute(
             // Set BEFORE saveProfile so the DataStore write cannot race and trigger
             // skipToPermissions while profileJustSaved is still false.
             profileJustSaved = true
-            app.readylytics.health.domain.util.logD("OnboardingRoute") {
+            app.readylytics.health.core.model.domain.util.logD("OnboardingRoute") {
                 "Grant Access clicked. Saving profile first..."
             }
             onboardingViewModel.saveProfile(
@@ -169,7 +169,7 @@ fun OnboardingRoute(
         },
         onRetentionSetupComplete = { retentionDays ->
             onboardingViewModel.saveRetention(retentionDays) {
-                app.readylytics.health.domain.util.logD("OnboardingRoute") {
+                app.readylytics.health.core.model.domain.util.logD("OnboardingRoute") {
                     "Retention saved. Launching HC permissions: $permissions"
                 }
                 permissionLauncher.launch(permissions)

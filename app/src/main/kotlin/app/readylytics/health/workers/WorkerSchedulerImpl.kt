@@ -10,7 +10,8 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject

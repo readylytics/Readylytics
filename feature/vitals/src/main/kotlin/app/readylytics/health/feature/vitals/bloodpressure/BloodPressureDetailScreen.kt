@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.model.BloodPressureStatus
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
@@ -43,7 +44,6 @@ import app.readylytics.health.core.ui.components.PeriodAverageSummaryGroup
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
-import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
 import app.readylytics.health.core.ui.R as CoreUiR

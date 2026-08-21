@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.workouts
 
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutType
-import app.readylytics.health.domain.workouts.detail.WorkoutLayoutTypeMapper
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutType
+import app.readylytics.health.core.model.domain.workouts.detail.WorkoutLayoutTypeMapper
 
 /**
  * Display name for a raw Health Connect exercise type. Grouped types delegate to

@@ -36,6 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
@@ -44,10 +48,6 @@ import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.insights.InsightParams
-import app.readylytics.health.domain.model.InsightType
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -149,6 +149,7 @@ fun DashboardRoute(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
@@ -171,7 +172,7 @@ fun DashboardScreen(
     onCancelCardManagement: () -> Unit = {},
     onManageClick: (() -> Unit)? = null,
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
-    onReorderCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
+    onReorderCards: (List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
     onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
     onDateSelected: (LocalDate) -> Unit = {},

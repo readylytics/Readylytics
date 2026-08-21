@@ -5,8 +5,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 
 /**
  * Prototype DAO mirroring production `HeartRateDao.upsertAll` / `HrvDao.upsertAll` plus the

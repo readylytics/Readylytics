@@ -1,4 +1,5 @@
 import com.github.triplet.gradle.androidpublisher.ReleaseStatus
+import io.gitlab.arturbosch.detekt.Detekt
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.MapProperty
@@ -302,6 +303,18 @@ detekt {
     config.setFrom(rootProject.layout.projectDirectory.file("config/detekt/detekt.yml"))
     // Per-module baseline — see the comment in readylytics.kotlin-android-conventions.gradle.kts.
     baseline = layout.projectDirectory.file("detekt-baseline.xml").asFile
+}
+
+tasks.withType<Detekt>().configureEach {
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        txt.required.set(false)
+        sarif.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.html"))
+        xml.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.xml"))
+        sarif.outputLocation.set(layout.buildDirectory.file("reports/detekt/$name.sarif"))
+    }
 }
 
 jacoco {

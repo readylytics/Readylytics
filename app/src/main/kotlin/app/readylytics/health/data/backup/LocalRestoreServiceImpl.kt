@@ -2,10 +2,10 @@ package app.readylytics.health.data.backup
 
 import android.net.Uri
 import androidx.core.net.toUri
+import app.readylytics.health.core.model.domain.backup.BackupLocation
+import app.readylytics.health.core.model.domain.backup.RestoreResult
+import app.readylytics.health.core.model.domain.backup.RestoreService
 import app.readylytics.health.data.backup.LocalRestoreManager
-import app.readylytics.health.domain.backup.BackupLocation
-import app.readylytics.health.domain.backup.RestoreResult
-import app.readylytics.health.domain.backup.RestoreService
 import javax.inject.Inject
 import javax.inject.Singleton
 

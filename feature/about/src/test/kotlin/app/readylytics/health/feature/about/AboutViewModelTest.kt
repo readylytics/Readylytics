@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.about
 
-import app.readylytics.health.domain.preferences.AboutPreferences
+import app.readylytics.health.core.model.domain.preferences.AboutPreferences
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

@@ -7,11 +7,11 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.model.domain.model.SleepStageType
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.repository.SleepStageData
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.domain.model.SleepStageType
-import app.readylytics.health.domain.repository.HeartRateRecordData
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.feature.sleep.SleepHrChart
 import app.readylytics.health.feature.sleep.SleepStagesChart
 import app.readylytics.health.feature.vitals.heartrate.HrTimelineChart

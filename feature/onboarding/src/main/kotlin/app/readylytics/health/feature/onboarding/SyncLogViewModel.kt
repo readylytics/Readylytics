@@ -2,7 +2,7 @@ package app.readylytics.health.feature.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.domain.logcat.LogcatCaptureStore
+import app.readylytics.health.core.model.domain.logcat.LogcatCaptureStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

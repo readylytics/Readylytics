@@ -4,11 +4,12 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.migration.DatabaseReadinessInspector
-import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
-import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.healthconnect.domain.sync.ForegroundSyncController
+import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
+import app.readylytics.health.core.model.domain.repository.HealthConnectPermissionRevokedException
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.every
@@ -46,7 +47,7 @@ class PeriodicHealthSyncWorkerTest {
     fun `doWork returns success when sync succeeds`() =
         runBlocking {
             coEvery { healthSyncUseCase.sync(windowDays = 2) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Success(Unit)
 
             val worker = createWorker()
@@ -62,7 +63,7 @@ class PeriodicHealthSyncWorkerTest {
     fun `doWork returns retry when sync fails`() =
         runBlocking {
             coEvery { healthSyncUseCase.sync(windowDays = 2) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Failure("error", "network error")
 
             val worker = createWorker()
@@ -98,7 +99,7 @@ class PeriodicHealthSyncWorkerTest {
     fun `doWork schedules historical resync when bounded sync detects older changes`() =
         runBlocking {
             coEvery { healthSyncUseCase.sync(windowDays = 2) } returns
-                app.readylytics.health.domain.model.Result
+                app.readylytics.health.core.model.domain.model.Result
                     .Failure("Requires historical resync", "REQUIRES_HISTORICAL_RESYNC")
 
             val result = createWorker().doWork()

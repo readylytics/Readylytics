@@ -5,45 +5,46 @@ import android.net.Uri
 import android.util.JsonReader
 import android.util.JsonToken
 import androidx.room.withTransaction
-import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.local.dao.SourceRecordDao
-import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
-import app.readylytics.health.data.local.entity.BodyFatRecordEntity
-import app.readylytics.health.data.local.entity.BodyTemperatureRecordEntity
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.HrMinuteBucketEntity
-import app.readylytics.health.data.local.entity.HrvRecordEntity
-import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
-import app.readylytics.health.data.local.entity.StepRecordEntity
-import app.readylytics.health.data.local.entity.WeightRecordEntity
-import app.readylytics.health.data.local.entity.WorkoutRecordEntity
-import app.readylytics.health.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.core.database.data.local.HealthDatabase
+import app.readylytics.health.core.databaseschema.data.local.dao.SourceRecordDao
+import app.readylytics.health.core.databaseschema.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.BodyTemperatureRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrMinuteBucketEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.OxygenSaturationRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.StepRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoutePointEntity
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.di.IoDispatcher
+import app.readylytics.health.core.model.domain.audit.AuditEvent
+import app.readylytics.health.core.model.domain.audit.AuditTrailRepository
+import app.readylytics.health.core.model.domain.backup.RestoreResult
+import app.readylytics.health.core.model.domain.backup.RestoreStage
+import app.readylytics.health.core.model.domain.backup.WrongBackupPasswordException
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.util.logW
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.PhysiologyProfileProto
-import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SleepScoreWeightProfileProto
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.preferences.WorkoutDetailLayoutMapper
 import app.readylytics.health.data.security.EncryptionManager
-import app.readylytics.health.di.IoDispatcher
-import app.readylytics.health.domain.audit.AuditEvent
-import app.readylytics.health.domain.audit.AuditTrailRepository
-import app.readylytics.health.domain.backup.RestoreResult
-import app.readylytics.health.domain.backup.RestoreStage
-import app.readylytics.health.domain.backup.WrongBackupPasswordException
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.util.logW
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
-import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -888,10 +889,10 @@ class LocalRestoreManager
 
         private fun BackupScheduleProto.toDomain() =
             when (this) {
-                BackupScheduleProto.BACKUP_MANUAL -> app.readylytics.health.data.preferences.BackupSchedule.MANUAL
-                BackupScheduleProto.BACKUP_DAILY -> app.readylytics.health.data.preferences.BackupSchedule.DAILY
-                BackupScheduleProto.BACKUP_WEEKLY -> app.readylytics.health.data.preferences.BackupSchedule.WEEKLY
-                BackupScheduleProto.UNRECOGNIZED -> app.readylytics.health.data.preferences.BackupSchedule.MANUAL
+                BackupScheduleProto.BACKUP_MANUAL -> BackupSchedule.MANUAL
+                BackupScheduleProto.BACKUP_DAILY -> BackupSchedule.DAILY
+                BackupScheduleProto.BACKUP_WEEKLY -> BackupSchedule.WEEKLY
+                BackupScheduleProto.UNRECOGNIZED -> BackupSchedule.MANUAL
             }
     }
 

@@ -1,0 +1,16 @@
+package app.readylytics.health.core.healthconnect.data.mapper
+
+import app.readylytics.health.core.databaseschema.data.local.entity.WeightRecordEntity
+import app.readylytics.health.core.model.domain.model.DomainWeightRecord
+
+object WeightDataMapper {
+    fun toEntity(record: DomainWeightRecord): WeightRecordEntity =
+        WeightRecordEntity(
+            id = "${record.id}_${record.time.toEpochMilli()}",
+            timestampMs = record.time.toEpochMilli(),
+            weightKg = record.weightKg,
+            deviceName = record.deviceName,
+        )
+
+    fun toEntities(records: List<DomainWeightRecord>): List<WeightRecordEntity> = records.map { toEntity(it) }
+}

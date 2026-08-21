@@ -1,7 +1,7 @@
 package app.readylytics.health
 
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.UserPreferences
 import dagger.Lazy
 import io.mockk.every
 import io.mockk.mockk

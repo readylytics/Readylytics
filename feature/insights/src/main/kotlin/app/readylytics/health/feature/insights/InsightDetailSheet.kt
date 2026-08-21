@@ -19,9 +19,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.domain.insights.detail.InsightConfidence
-import app.readylytics.health.domain.insights.detail.InsightDetailContent
-import app.readylytics.health.domain.insights.detail.InsightDetailType
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightConfidence
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightDetailContent
+import app.readylytics.health.core.scoring.domain.insights.detail.InsightDetailType
 import app.readylytics.health.feature.insights.R
 
 @OptIn(ExperimentalMaterial3Api::class)

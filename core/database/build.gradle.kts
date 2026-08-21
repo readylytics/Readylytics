@@ -106,7 +106,7 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
     violationRules {
         rule {
             element = "PACKAGE"
-            includes = listOf("app.readylytics.health.data.repository")
+            includes = listOf("app.readylytics.health.core.database.data.repository")
             limit {
                 counter = "LINE"
                 value = "COVEREDRATIO"

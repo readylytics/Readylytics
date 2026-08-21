@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.sleep.overview
 
 import androidx.annotation.StringRes
-import app.readylytics.health.domain.sleep.SleepChartId
+import app.readylytics.health.core.model.domain.sleep.SleepChartId
 import app.readylytics.health.feature.sleep.R
 
 @get:StringRes

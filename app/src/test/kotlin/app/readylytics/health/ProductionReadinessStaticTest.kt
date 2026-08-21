@@ -109,7 +109,7 @@ class ProductionReadinessStaticTest {
     fun `foreground sync and local backup helpers do not swallow coroutine cancellation`() {
         val foregroundSyncController =
             sourceFile(
-                "src/main/kotlin/app/readylytics/health/domain/sync/ForegroundSyncController.kt",
+                "src/main/kotlin/app/readylytics/health/core/healthconnect/domain/sync/ForegroundSyncController.kt",
             ).readText()
         val localBackupManager =
             sourceFile(
@@ -146,7 +146,10 @@ class ProductionReadinessStaticTest {
 
     @Test
     fun `local database has no unencrypted production create helper`() {
-        val source = sourceFile("src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt").readText()
+        val source =
+            sourceFile(
+                "src/main/kotlin/app/readylytics/health/core/database/data/local/HealthDatabase.kt",
+            ).readText()
 
         assertFalse(source.contains("fun create(context: Context): HealthDatabase"))
         assertFalse(source.contains("databaseBuilder(context, HealthDatabase::class.java, \"health_db\")"))
@@ -221,7 +224,8 @@ class ProductionReadinessStaticTest {
 
     @Test
     fun `all nine DAO deletions are owned by RetentionCleanup`() {
-        val retentionCleanupFile = sourceFile("src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt")
+        val retentionCleanupFile =
+            sourceFile("src/main/kotlin/app/readylytics/health/core/database/data/local/RetentionCleanup.kt")
         val retentionCleanupContent = retentionCleanupFile.readText()
 
         val expectedDaos =

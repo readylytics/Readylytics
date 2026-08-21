@@ -1,5 +1,13 @@
 package app.readylytics.health.di
 
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.preferences.CircadianThresholdPreferences
+import app.readylytics.health.core.model.domain.sleep.SleepLayoutRepository
+import app.readylytics.health.core.model.domain.sync.HealthChangeTokenStore
+import app.readylytics.health.core.model.domain.sync.ResyncCheckpointStore
+import app.readylytics.health.core.model.domain.vitals.VitalsLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutDetailLayoutRepository
+import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.data.preferences.CardConfigurationRepositoryImpl
 import app.readylytics.health.data.preferences.DataStoreCircadianThresholdPreferences
 import app.readylytics.health.data.preferences.HealthChangeTokenStoreImpl
@@ -9,14 +17,6 @@ import app.readylytics.health.data.preferences.SleepLayoutRepositoryImpl
 import app.readylytics.health.data.preferences.VitalsLayoutRepositoryImpl
 import app.readylytics.health.data.preferences.WorkoutDetailLayoutRepositoryImpl
 import app.readylytics.health.data.preferences.WorkoutsLayoutRepositoryImpl
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
-import app.readylytics.health.domain.sleep.SleepLayoutRepository
-import app.readylytics.health.domain.sync.HealthChangeTokenStore
-import app.readylytics.health.domain.sync.ResyncCheckpointStore
-import app.readylytics.health.domain.vitals.VitalsLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutDetailLayoutRepository
-import app.readylytics.health.domain.workouts.WorkoutsLayoutRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -38,7 +38,7 @@ abstract class RepositoryModule {
     @Singleton
     abstract fun bindSettingsRepository(
         impl: SettingsRepository,
-    ): app.readylytics.health.domain.preferences.SettingsRepository
+    ): app.readylytics.health.core.model.domain.preferences.SettingsRepository
 
     @Binds
     @Singleton

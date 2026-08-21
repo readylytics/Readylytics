@@ -2,15 +2,15 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.SyncPreference
-import app.readylytics.health.domain.preferences.DeviceSettings
-import app.readylytics.health.domain.preferences.SyncSettings
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.sync.HealthDataRefresh
-import app.readylytics.health.domain.sync.HistoricalResyncController
-import app.readylytics.health.domain.util.logE
-import app.readylytics.health.domain.validation.SettingsValidators
-import app.readylytics.health.domain.validation.ValidationResult
+import app.readylytics.health.core.model.data.preferences.SyncPreference
+import app.readylytics.health.core.model.domain.preferences.DeviceSettings
+import app.readylytics.health.core.model.domain.preferences.SyncSettings
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.domain.sync.HistoricalResyncController
+import app.readylytics.health.core.model.domain.util.logE
+import app.readylytics.health.core.model.domain.validation.SettingsValidators
+import app.readylytics.health.core.model.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow

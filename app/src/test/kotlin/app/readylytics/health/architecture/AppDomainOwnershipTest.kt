@@ -19,13 +19,15 @@ class AppDomainOwnershipTest {
 
         val coreModelPaths =
             listOf(
-                "core/model/src/main/kotlin/app/readylytics/health/domain/validation/BirthdayDateRule.kt",
+                "core/model/src/main/kotlin/app/readylytics/health/core/model/domain/validation/BirthdayDateRule.kt",
             )
 
         val coreScoringPaths =
             listOf(
-                "core/scoring/src/main/kotlin/app/readylytics/health/domain/calculation/HealthMetricsCalculator.kt",
-                "core/scoring/src/main/kotlin/app/readylytics/health/domain/insights/InsightEngine.kt",
+                "core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/" +
+                    "domain/calculation/HealthMetricsCalculator.kt",
+                "core/scoring/src/main/kotlin/app/readylytics/health/core/scoring/" +
+                    "domain/insights/InsightEngine.kt",
             )
 
         appPaths.forEach { path ->

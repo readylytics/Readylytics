@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
@@ -49,7 +50,6 @@ import app.readylytics.health.core.ui.components.WorkoutHistoryConfigurationsLis
 import app.readylytics.health.core.ui.components.WorkoutHistoryDataMap
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
-import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -85,6 +85,7 @@ fun WorkoutsRoute(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 fun WorkoutsScreen(
     uiState: WorkoutsUiState,
@@ -100,16 +101,24 @@ fun WorkoutsScreen(
     earliestDate: java.time.LocalDate? = null,
     onToggleWorkoutsManagement: () -> Unit = {},
     onCancelWorkoutsManagement: () -> Unit = {},
-    onToggleCardVisibility: (app.readylytics.health.domain.dashboard.CardId, Boolean) -> Unit = { _, _ -> },
-    onReorderCards: (List<app.readylytics.health.domain.dashboard.CardConfiguration>) -> Unit = {},
+    onToggleCardVisibility: (app.readylytics.health.core.model.domain.dashboard.CardId, Boolean) -> Unit = { _, _ -> },
+    onReorderCards: (List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>) -> Unit = {},
     onWorkoutsCardDisplayModeChanged: (
-        app.readylytics.health.domain.dashboard.CardId,
-        app.readylytics.health.domain.dashboard.DashboardCardDisplayMode,
+        app.readylytics.health.core.model.domain.dashboard.CardId,
+        app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode,
     ) -> Unit = { _, _ -> },
-    onToggleChartVisibility: (app.readylytics.health.domain.workouts.WorkoutChartId, Boolean) -> Unit = { _, _ -> },
-    onReorderCharts: (List<app.readylytics.health.domain.workouts.WorkoutChartConfiguration>) -> Unit = {},
-    onToggleHistoryVisibility: (app.readylytics.health.domain.workouts.WorkoutHistoryId, Boolean) -> Unit = { _, _ -> },
-    onReorderHistory: (List<app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration>) -> Unit = {},
+    onToggleChartVisibility: (
+        app.readylytics.health.core.model.domain.workouts.WorkoutChartId,
+        Boolean,
+    ) -> Unit = { _, _ -> },
+    onReorderCharts: (List<app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration>) -> Unit = {},
+    onToggleHistoryVisibility: (
+        app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId,
+        Boolean,
+    ) -> Unit = { _, _ -> },
+    onReorderHistory: (
+        List<app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration>,
+    ) -> Unit = {},
     onResetWorkoutsToDefaults: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()

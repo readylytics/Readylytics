@@ -1,7 +1,7 @@
 package app.readylytics.health.ui.scaffold
 
-import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

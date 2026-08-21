@@ -1,9 +1,9 @@
 package app.readylytics.health.feature.workouts
 
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.scoring.WorkoutIntensityLevel
-import app.readylytics.health.domain.scoring.WorkoutLoadClassification
-import app.readylytics.health.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.scoring.WorkoutIntensityLevel
+import app.readylytics.health.core.model.domain.scoring.WorkoutLoadLevel
+import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
 
 internal fun WorkoutLoadLevel.labelResId(): Int =
     when (this) {

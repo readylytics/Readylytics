@@ -1,7 +1,7 @@
 package app.readylytics.health.data.crashreport
 
 import android.content.Context
-import app.readylytics.health.domain.crashreport.CrashReportStore
+import app.readylytics.health.core.model.domain.crashreport.CrashReportStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject

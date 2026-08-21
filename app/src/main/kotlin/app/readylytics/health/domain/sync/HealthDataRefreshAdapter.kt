@@ -1,6 +1,9 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.workers.WorkerScheduler
+import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.healthconnect.domain.sync.SETTINGS_REFRESH_WINDOW_DAYS
+import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import javax.inject.Inject
 import javax.inject.Singleton
 

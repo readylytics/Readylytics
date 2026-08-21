@@ -1,0 +1,43 @@
+package app.readylytics.health.core.scoring.domain.scoring.sleep
+
+import app.readylytics.health.core.scoring.domain.scoring.sleep.CurrentNightHrvResolver
+
+import app.readylytics.health.core.model.domain.model.SleepSession
+import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.core.scoring.domain.util.mean
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class CurrentNightHrvResolver
+    @Inject
+    constructor(
+        private val scoringHistoryRepository: ScoringHistoryRepository,
+    ) {
+        data class HrvResult(
+            val samples: List<Float>,
+            val mean: Float,
+        )
+
+        suspend fun resolve(
+            session: SleepSession,
+            currentSessionIds: Set<String> = setOf(session.id),
+        ): HrvResult {
+            var samples =
+                if (currentSessionIds.isNotEmpty()) {
+                    currentSessionIds
+                        .toList()
+                        .sorted()
+                        .flatMap { sessionId ->
+                            scoringHistoryRepository.getSleepRmssdForSession(sessionId)
+                        }
+                } else {
+                    scoringHistoryRepository.getSleepRmssdForSession(session.id)
+                }
+            if (samples.isEmpty()) {
+                samples = scoringHistoryRepository.getRmssdInTimeRange(session.startTime, session.endTime)
+            }
+            val mean = if (samples.isNotEmpty()) samples.mean() else 0f
+            return HrvResult(samples, mean)
+        }
+    }

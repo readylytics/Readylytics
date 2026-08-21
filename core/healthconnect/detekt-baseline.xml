@@ -28,7 +28,6 @@
     <ID>MaxLineLength:StepCountFetcherRangeTest.kt$StepCountFetcherRangeTest$startDate.atStartOfDay(zoneId).toInstant() to startDate.plusDays(10).atStartOfDay(zoneId).toInstant()</ID>
     <ID>MaxLineLength:SyncWorkoutRouteUseCaseTest.kt$SyncWorkoutRouteUseCaseTest$coVerify(exactly = 0) { healthIngestionStore.persistSingleWorkoutRoute(any(), any(), any(), any(), any(), any()) }</ID>
     <ID>NestedBlockDepth:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
-    <ID>NewLineAtEndOfFile:FullHistoricalResyncUseCaseTest.kt$app.readylytics.health.domain.sync.FullHistoricalResyncUseCaseTest.kt</ID>
     <ID>ReturnCount:DeviceLabel.kt$DeviceLabel$fun from( device: Device?, dataOrigin: DataOrigin, ): String</ID>
     <ID>ReturnCount:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
     <ID>ReturnCount:StepCountFetcher.kt$StepCountFetcher$suspend fun fetchRange( startDate: LocalDate, endDate: LocalDate, chunkDays: Int, stepsDevice: String?, zoneId: ZoneId, ): Map&lt;LocalDate, Long&gt;</ID>
@@ -40,7 +39,7 @@
     <ID>SwallowedException:ResyncRangeUseCase.kt$ResyncRangeUseCase$e: HealthConnectWindowTimeoutException</ID>
     <ID>ThrowsCount:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$private suspend inline fun &lt;reified T : androidx.health.connect.client.records.Record&gt; readAllPagesStreaming( from: Instant, to: Instant, onPage: suspend (List&lt;T&gt;) -&gt; Unit, )</ID>
     <ID>TooManyFunctions:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl : HealthChangeSynchronizer</ID>
-    <ID>TooManyFunctions:HealthConnectRecordConverters.kt$app.readylytics.health.data.healthconnect.HealthConnectRecordConverters.kt</ID>
+    <ID>TooManyFunctions:HealthConnectRecordConverters.kt$app.readylytics.health.core.healthconnect.data.healthconnect.HealthConnectRecordConverters.kt</ID>
     <ID>TooManyFunctions:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl : HealthConnectRepository</ID>
   </CurrentIssues>
 </SmellBaseline>

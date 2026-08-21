@@ -6,7 +6,8 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
-import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.workers.WorkerScheduler
 import dagger.Lazy
 import io.mockk.every
 import io.mockk.mockk

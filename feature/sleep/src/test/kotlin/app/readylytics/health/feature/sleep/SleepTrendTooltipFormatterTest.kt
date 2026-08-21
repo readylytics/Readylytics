@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.sleep
 
-import app.readylytics.health.domain.scoring.sleep.SleepTrendNap
+import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepTrendNap
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.text.SimpleDateFormat

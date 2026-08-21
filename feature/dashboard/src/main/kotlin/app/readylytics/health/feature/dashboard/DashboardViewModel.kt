@@ -2,46 +2,46 @@ package app.readylytics.health.feature.dashboard
 
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.di.DefaultDispatcher
+import app.readylytics.health.core.model.domain.cache.DailyMetricCache
+import app.readylytics.health.core.model.domain.dashboard.CardConfiguration
+import app.readylytics.health.core.model.domain.dashboard.CardConfigurationRepository
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardManagementDelegate
+import app.readylytics.health.core.model.domain.dashboard.CardManagementEvent
+import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
+import app.readylytics.health.core.model.domain.date.SelectedDateStore
+import app.readylytics.health.core.model.domain.model.DailyMetricsMapper
+import app.readylytics.health.core.model.domain.model.DailySummary
+import app.readylytics.health.core.model.domain.model.InsightType
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.Result
+import app.readylytics.health.core.model.domain.model.SleepSessionSummary
+import app.readylytics.health.core.model.domain.model.getOrNull
+import app.readylytics.health.core.model.domain.preferences.SettingsDefaults
+import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
+import app.readylytics.health.core.model.domain.preferences.scoringZone
+import app.readylytics.health.core.model.domain.repository.DailySummaryRepository
+import app.readylytics.health.core.model.domain.repository.HealthConnectRepository
+import app.readylytics.health.core.model.domain.repository.HeartRateRepository
+import app.readylytics.health.core.model.domain.repository.InsightDismissalRepository
+import app.readylytics.health.core.model.domain.repository.SleepSessionData
+import app.readylytics.health.core.model.domain.service.BodyTemperatureBaselineProvider
+import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.scoring.domain.airecommendation.DailyPromptFormatter
+import app.readylytics.health.core.scoring.domain.airecommendation.GetDailyPromptDataUseCase
+import app.readylytics.health.core.scoring.domain.dashboard.InsightDeriver
+import app.readylytics.health.core.scoring.domain.insights.InsightContext
+import app.readylytics.health.core.scoring.domain.insights.InsightEngine
+import app.readylytics.health.core.scoring.domain.insights.InsightParams
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRepository
+import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.di.DefaultDispatcher
-import app.readylytics.health.domain.airecommendation.DailyPromptFormatter
-import app.readylytics.health.domain.airecommendation.GetDailyPromptDataUseCase
-import app.readylytics.health.domain.cache.DailyMetricCache
-import app.readylytics.health.domain.dashboard.CardConfiguration
-import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.dashboard.CardManagementDelegate
-import app.readylytics.health.domain.dashboard.CardManagementEvent
-import app.readylytics.health.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.domain.dashboard.InsightDeriver
-import app.readylytics.health.domain.date.SelectedDateStore
-import app.readylytics.health.domain.insights.InsightContext
-import app.readylytics.health.domain.insights.InsightEngine
-import app.readylytics.health.domain.insights.InsightParams
-import app.readylytics.health.domain.model.DailyMetricsMapper
-import app.readylytics.health.domain.model.DailySummary
-import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.Result
-import app.readylytics.health.domain.model.SleepSessionSummary
-import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.preferences.SettingsDefaults
-import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.domain.preferences.scoringZone
-import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.domain.repository.HealthConnectRepository
-import app.readylytics.health.domain.repository.HeartRateRepository
-import app.readylytics.health.domain.repository.InsightDismissalRepository
-import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
-import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.service.BodyTemperatureBaselineProvider
-import app.readylytics.health.domain.sync.ForegroundSyncGateway
-import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.feature.dashboard.usecase.GetDashboardDataUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardRasIncreaseUseCase
 import app.readylytics.health.feature.dashboard.usecase.ObserveDashboardStrainIncreaseUseCase
@@ -371,7 +371,7 @@ class DashboardViewModel
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            app.readylytics.health.domain.util
+                            app.readylytics.health.core.model.domain.util
                                 .logE(TAG, e) { "Failed to generate daily prompt" }
                             _errorMessage.value = UiText.StringRes(R.string.ai_recommendation_copy_failed)
                         }
@@ -392,7 +392,7 @@ class DashboardViewModel
                     // "Resync Health Connect data" button drives the full historical resync.
                     foregroundSyncController.triggerDailySync()
                 } catch (e: Exception) {
-                    app.readylytics.health.domain.util
+                    app.readylytics.health.core.model.domain.util
                         .logE(TAG, e) { "Refresh failed" }
                     _errorMessage.value = UiText.StringRes(CoreUiR.string.error_sync_failed)
                 } finally {

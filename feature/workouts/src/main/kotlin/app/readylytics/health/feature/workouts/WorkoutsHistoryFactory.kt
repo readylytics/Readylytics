@@ -1,8 +1,8 @@
 package app.readylytics.health.feature.workouts
 
 import androidx.compose.runtime.Composable
-import app.readylytics.health.domain.workouts.WorkoutHistoryConfiguration
-import app.readylytics.health.domain.workouts.WorkoutHistoryId
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
+import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 
 fun buildWorkoutsHistoryDataMap(
     uiState: WorkoutsUiState,

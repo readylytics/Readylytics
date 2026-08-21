@@ -16,6 +16,7 @@
     <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zLnHrv }</ID>
     <ID>ExplicitItLambdaParameter:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest${ it: DailySummary -&gt; it.zRhr }</ID>
     <ID>FunctionOnlyReturningConstant:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$private fun goldenResourceRelativePath(): String</ID>
+    <ID>InvalidPackageDeclaration:SleepMetricsHelpersTest.kt$package app.readylytics.health.core.scoring.domain.scoring.sleep</ID>
     <ID>LargeClass:BackfillBaselinesUseCaseTest.kt$BackfillBaselinesUseCaseTest</ID>
     <ID>LongMethod:BaselineComputerBackfillEquivalenceTest.kt$BaselineComputerBackfillEquivalenceTest$@Before fun setup()</ID>
     <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm adapts percentile based on sample count`()</ID>
@@ -77,7 +78,6 @@
     <ID>MaxLineLength:ScoringRepositoryImpl.kt$ScoringRepositoryImpl$val previousDaysMs = (1..6).map { i -&gt; targetDate.minusDays(i.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli() }</ID>
     <ID>MaxLineLength:ScoringRepositoryImpl.kt$ScoringRepositoryImpl$val session = aggregatedSleep?.scoringSession ?: dataLoader.loadSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)</ID>
     <ID>MaxLineLength:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest$"Rounded readinessWorkoutOnly must not flip when a live-computed day is recomputed from its frozen summary."</ID>
-    <ID>NewLineAtEndOfFile:DatabaseRepositoryModule.kt$app.readylytics.health.di.DatabaseRepositoryModule.kt</ID>
     <ID>ReturnCount:ReadinessSummaryCoordinator.kt$ReadinessSummaryCoordinator$suspend fun resolveSleepAggregation( targetDate: LocalDate, zoneId: ZoneId, prefs: UserPreferences, ): SleepAggregationContext?</ID>
     <ID>ReturnCount:ScoringDayDataLoader.kt$ScoringDayDataLoader$suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List&lt;HrMinuteBucketRow&gt;</ID>
     <ID>ReturnCount:SqlCipherKeyManager.kt$SqlCipherKeyManager$fun migrateIfNeeded(dbFile: File)</ID>
@@ -87,7 +87,7 @@
     <ID>TooManyFunctions:DatabaseModule.kt$DatabaseModule$Companion</ID>
     <ID>TooManyFunctions:DatabaseRepositoryModule.kt$DatabaseRepositoryModule</ID>
     <ID>TooManyFunctions:HealthDatabase.kt$HealthDatabase : RoomDatabase</ID>
-    <ID>TooManyFunctions:RoomHealthIngestionStore.kt$app.readylytics.health.data.local.RoomHealthIngestionStore.kt</ID>
+    <ID>TooManyFunctions:RoomHealthIngestionStore.kt$app.readylytics.health.core.database.data.local.RoomHealthIngestionStore.kt</ID>
     <ID>TooManyFunctions:ScoringDayDataLoader.kt$ScoringDayDataLoader</ID>
     <ID>TooManyFunctions:ScoringHistoryRepositoryImpl.kt$ScoringHistoryRepositoryImpl : ScoringHistoryRepository</ID>
     <ID>TooManyFunctions:ScoringRepositoryImpl.kt$ScoringRepositoryImpl : ScoringRepository</ID>

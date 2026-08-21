@@ -2,9 +2,9 @@ package app.readylytics.health.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import app.readylytics.health.data.local.entity.HealthSourceRecordEntity
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HealthSourceRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.core.databaseschema.data.local.entity.HrvRecordEntity
 
 /**
  * Test-only Room schema for Phase 3 (Option C) conflict-strategy research.

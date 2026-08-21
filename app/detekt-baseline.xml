@@ -7,7 +7,6 @@
     <ID>ComplexCondition:LocalRestoreManager.kt$LocalRestoreManager$backup.zone1MinPercent != null &amp;&amp; backup.zone1MaxPercent != null &amp;&amp; backup.zone2MaxPercent != null &amp;&amp; backup.zone3MaxPercent != null &amp;&amp; backup.zone4MaxPercent != null</ID>
     <ID>CyclomaticComplexMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>
     <ID>CyclomaticComplexMethod:FeatureModuleArchitectureTest.kt$FeatureModuleArchitectureTest$@Test fun `existing feature sources have no forbidden imports`()</ID>
-    <ID>CyclomaticComplexMethod:LocalBackupManager.kt$LocalBackupManager$private suspend fun writeJsonStreaming(outputStream: OutputStream)</ID>
     <ID>CyclomaticComplexMethod:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun performStreamingRestore( reader: JsonReader, schemaVersion: Int, onPreferencesParsed: (UserPreferencesBackup) -&gt; Unit, )</ID>
     <ID>CyclomaticComplexMethod:LocalRestoreManager.kt$LocalRestoreManager$private suspend fun restorePreferences( backup: UserPreferencesBackup, providedPassword: String?, )</ID>
     <ID>CyclomaticComplexMethod:MainNavHost.kt$@Composable fun MainNavHost( navController: NavHostController, modifier: Modifier = Modifier, )</ID>
@@ -71,7 +70,6 @@
     <ID>SwallowedException:LogcatCaptureStoreImpl.kt$LogcatCaptureStoreImpl$e: IOException</ID>
     <ID>SwallowedException:SyncViewModel.kt$SyncViewModel$e: HealthConnectPermissionRevokedException</ID>
     <ID>SwallowedException:UserPreferencesMapper.kt$e: Exception</ID>
-    <ID>SwallowedException:UserPreferencesSerializer.kt$e: Exception</ID>
     <ID>SwallowedException:UserUseCase.kt$UserUseCase$e: Exception</ID>
     <ID>ThrowsCount:SyncViewModel.kt$SyncViewModel$fun onAppForeground()</ID>
     <ID>TooGenericExceptionThrown:EncryptionManager.kt$EncryptionManager$throw RuntimeException("Failed to generate master key", ex)</ID>

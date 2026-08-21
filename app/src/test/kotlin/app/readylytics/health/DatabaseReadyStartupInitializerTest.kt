@@ -1,12 +1,14 @@
 package app.readylytics.health
 
-import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.core.healthconnect.domain.sync.HealthSyncUseCase
+import app.readylytics.health.core.model.data.preferences.BackupSchedule
+import app.readylytics.health.core.model.data.preferences.SettingsDefaults
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
+import app.readylytics.health.core.model.workers.WorkerScheduler
+import app.readylytics.health.core.scoring.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.migration.DatabaseMigrationUiState
-import app.readylytics.health.domain.migration.DatabaseReadiness
-import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
-import app.readylytics.health.domain.sync.HealthSyncUseCase
-import app.readylytics.health.workers.WorkerScheduler
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -260,8 +262,8 @@ class DatabaseReadyStartupInitializerTest {
         every { settingsRepositoryLazy.get() } returns settingsRepository
         every { settingsRepository.userPreferences } returns
             flowOf(
-                app.readylytics.health.data.preferences.UserPreferences(
-                    scoringVersion = app.readylytics.health.data.preferences.SettingsDefaults.CURRENT_SCORING_VERSION,
+                UserPreferences(
+                    scoringVersion = SettingsDefaults.CURRENT_SCORING_VERSION,
                 ),
             )
         return DatabaseReadyStartupInitializer(

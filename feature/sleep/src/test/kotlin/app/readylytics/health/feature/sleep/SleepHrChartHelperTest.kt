@@ -1,6 +1,6 @@
 package app.readylytics.health.feature.sleep
 
-import app.readylytics.health.domain.repository.HeartRateRecordData
+import app.readylytics.health.core.model.domain.repository.HeartRateRecordData
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

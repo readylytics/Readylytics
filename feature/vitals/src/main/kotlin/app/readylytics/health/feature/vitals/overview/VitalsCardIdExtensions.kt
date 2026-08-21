@@ -1,7 +1,7 @@
 package app.readylytics.health.feature.vitals.overview
 
 import androidx.annotation.StringRes
-import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.dashboard.CardId
 import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.core.ui.R as CoreUiR
 

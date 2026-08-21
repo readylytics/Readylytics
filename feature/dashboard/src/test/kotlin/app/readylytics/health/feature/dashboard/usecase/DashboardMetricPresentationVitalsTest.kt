@@ -1,14 +1,14 @@
 package app.readylytics.health.feature.dashboard.usecase
+import app.readylytics.health.core.model.data.preferences.Gender
+import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
+import app.readylytics.health.core.model.data.preferences.UnitSystem
+import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.dashboard.CardId
+import app.readylytics.health.core.model.domain.model.MetricStatus
+import app.readylytics.health.core.model.domain.model.SleepSessionSummary
 import app.readylytics.health.core.ui.components.GOAL_FILL_CAP_FRACTION
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricUnavailableReason
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.SleepSessionSummary
 import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -424,7 +424,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     @Test
     fun `circadian score bounds are 0 to 100`() {
         val circResult =
-            app.readylytics.health.domain.scoring.CircadianConsistencyResult
+            app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
                 .Ready(85f, 0, 0, 0, 0)
         val cards = factory.build(summary(), preferences(), date, null, circResult, null)
         val visual = cards.getValue(CardId.CIRCADIAN_CONSISTENCY).visual as UniversalMetricVisual.Score
@@ -435,7 +435,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     @Test
     fun `circadian consistency displays its rounded score as a percentage`() {
         val circResult =
-            app.readylytics.health.domain.scoring.CircadianConsistencyResult
+            app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
                 .Ready(95.4f, 0, 0, 0, 0)
         every {
             resourceProvider.getString(

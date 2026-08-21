@@ -4,8 +4,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.RecalcProgress
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

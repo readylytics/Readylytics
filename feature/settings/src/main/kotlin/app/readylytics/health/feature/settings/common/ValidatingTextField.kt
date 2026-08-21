@@ -5,8 +5,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import app.readylytics.health.domain.validation.ValidationResult
-import app.readylytics.health.domain.validation.ValidationRule
+import app.readylytics.health.core.model.domain.validation.ValidationResult
+import app.readylytics.health.core.model.domain.validation.ValidationRule
 
 @Composable
 fun ValidatingTextField(

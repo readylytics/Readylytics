@@ -3,7 +3,7 @@ package app.readylytics.health.workers
 import android.app.NotificationManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import app.readylytics.health.domain.sync.ResyncPhase
+import app.readylytics.health.core.model.domain.sync.ResyncPhase
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith

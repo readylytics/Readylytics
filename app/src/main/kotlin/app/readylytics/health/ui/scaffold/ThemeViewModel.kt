@@ -1,7 +1,7 @@
 package app.readylytics.health.ui.scaffold
 
 import androidx.lifecycle.ViewModel
-import app.readylytics.health.data.preferences.FallbackThemeColor
+import app.readylytics.health.core.model.data.preferences.FallbackThemeColor
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
