@@ -128,85 +128,93 @@ class SyncViewModel
             if (foregroundCheckJob?.isActive == true) return
             foregroundCheckJob =
                 viewModelScope.launch {
-                    // Advances to the new "today" only if the user was passively on
-                    // today and the calendar day rolled over while backgrounded; an
-                    // explicit historical date pick is left untouched. Awaited before
-                    // any permission check / sync below so they never read a stale date.
-                    selectedDateRepository.advanceTodayIfNeeded()
+                    runForegroundCheck()
+                }
+        }
 
-                    // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
-                    // its coroutine. If that already happened, skip the permission re-check.
-                    // Samsung's getGrantedPermissions() returns stale Missing immediately after
-                    // granting, so this prevents it from overwriting a valid grant result.
-                    if (_uiState.value is SyncUiState.SyncingCatchUp) return@launch
-                    if (_uiState.value is SyncUiState.PermissionsGranted) {
+        private suspend fun runForegroundCheck() {
+            // Advances to the new "today" only if the user was passively on
+            // today and the calendar day rolled over while backgrounded; an
+            // explicit historical date pick is left untouched. Awaited before
+            // any permission check / sync below so they never read a stale date.
+            selectedDateRepository.advanceTodayIfNeeded()
+
+            // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
+            // its coroutine. If that already happened, skip the permission re-check.
+            // Samsung's getGrantedPermissions() returns stale Missing immediately after
+            // granting, so this prevents it from overwriting a valid grant result.
+            if (_uiState.value is SyncUiState.SyncingCatchUp) return
+            if (_uiState.value is SyncUiState.PermissionsGranted) {
+                try {
+                    foregroundSyncController.evaluateAndSync()
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    handleHealthConnectPermissionFailure(e, "Foreground sync eval")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    app.readylytics.health.core.model.domain.util.logE(
+                        "SyncViewModel",
+                        e,
+                    ) { "Foreground sync eval failed" }
+                }
+                return
+            }
+            checkPermissionsAndSync()
+        }
+
+        private suspend fun checkPermissionsAndSync() {
+            app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
+                "App foregrounded. Starting permission check..."
+            }
+            _uiState.update { SyncUiState.CheckingPermissions }
+            try {
+                when (val status = hcRepo.checkPermissions()) {
+                    is PermissionStatus.Granted -> {
+                        app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
+                            "Permissions GRANTED (critical ones present). Starting sync..."
+                        }
+                        _uiState.update { SyncUiState.PermissionsGranted }
                         try {
                             foregroundSyncController.evaluateAndSync()
                         } catch (e: HealthConnectPermissionRevokedException) {
-                            handleHealthConnectPermissionFailure(e, "Foreground sync eval")
+                            handleHealthConnectPermissionFailure(e, "Foreground sync")
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            app.readylytics.health.core.model.domain.util.logE(
-                                "SyncViewModel",
-                                e,
-                            ) { "Foreground sync eval failed" }
-                        }
-                        return@launch
-                    }
-                    app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
-                        "App foregrounded. Starting permission check..."
-                    }
-                    _uiState.update { SyncUiState.CheckingPermissions }
-                    try {
-                        when (val status = hcRepo.checkPermissions()) {
-                            is PermissionStatus.Granted -> {
-                                app.readylytics.health.core.model.domain.util.logD("SyncViewModel") {
-                                    "Permissions GRANTED (critical ones present). Starting sync..."
-                                }
-                                _uiState.update { SyncUiState.PermissionsGranted }
-                                try {
-                                    foregroundSyncController.evaluateAndSync()
-                                } catch (e: HealthConnectPermissionRevokedException) {
-                                    handleHealthConnectPermissionFailure(e, "Foreground sync")
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Exception) {
-                                    app.readylytics.health.core.model.domain.util.logE("SyncViewModel", e) {
-                                        "Foreground sync failed, staying on MainShell"
-                                    }
-                                }
-                            }
-                            is PermissionStatus.Missing -> {
-                                app.readylytics.health.core.model.domain.util.logD(
-                                    "SyncViewModel",
-                                ) { "Permissions MISSING: ${status.missing}" }
-                                _uiState.update { SyncUiState.NeedsPermissions }
-                            }
-                            is PermissionStatus.Unavailable -> {
-                                app.readylytics.health.core.model.domain.util.logD(
-                                    "SyncViewModel",
-                                ) { "Health Connect UNAVAILABLE" }
-                                _uiState.update { SyncUiState.Unavailable }
+                            app.readylytics.health.core.model.domain.util.logE("SyncViewModel", e) {
+                                "Foreground sync failed, staying on MainShell"
                             }
                         }
-                    } catch (e: HealthConnectPermissionRevokedException) {
+                    }
+                    is PermissionStatus.Missing -> {
                         app.readylytics.health.core.model.domain.util.logD(
                             "SyncViewModel",
-                        ) { "Permissions revoked during check" }
+                        ) { "Permissions MISSING: ${status.missing}" }
                         _uiState.update { SyncUiState.NeedsPermissions }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        app.readylytics.health.core.model.domain.util
-                            .logE("SyncViewModel", e) { "Foreground sync failed" }
-                        _uiState.update {
-                            SyncUiState.Error(
-                                UiText.StringRes(CoreUiR.string.error_sync_failed),
-                            )
-                        }
+                    }
+                    is PermissionStatus.Unavailable -> {
+                        app.readylytics.health.core.model.domain.util.logD(
+                            "SyncViewModel",
+                        ) { "Health Connect UNAVAILABLE" }
+                        _uiState.update { SyncUiState.Unavailable }
                     }
                 }
+            } catch (e: HealthConnectPermissionRevokedException) {
+                app.readylytics.health.core.model.domain.util.logD(
+                    "SyncViewModel",
+                ) { "Permissions revoked during check" }
+                _uiState.update { SyncUiState.NeedsPermissions }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                app.readylytics.health.core.model.domain.util
+                    .logE("SyncViewModel", e) { "Foreground sync failed" }
+                _uiState.update {
+                    SyncUiState.Error(
+                        UiText.StringRes(CoreUiR.string.error_sync_failed),
+                    )
+                }
+            }
         }
 
         fun onPermissionsGranted() {
