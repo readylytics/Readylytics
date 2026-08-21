@@ -23,7 +23,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     fun `every card wires a real tooltip resource instead of an empty string`() {
         stubTooltips()
 
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
 
         val expected =
             mapOf(
@@ -55,7 +55,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                 summary(weightKg = 70f, bodyFatPercent = 18f)
                     .copy(bloodPressureSystolic = 120, bloodPressureDiastolic = 80),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -68,7 +67,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
     @Test
     fun `sleep score and readiness share score thresholds`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val sleep = cards.getValue(CardId.SLEEP_SCORE).visual as UniversalMetricVisual.Score
         val readiness = cards.getValue(CardId.READINESS).visual as UniversalMetricVisual.Score
         assertEquals(0f, sleep.minValue)
@@ -92,7 +91,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                 factory.build(
                     summary().copy(sleepScore = score, readinessWorkoutOnly = score),
                     preferences(),
-                    date,
                     null,
                     null,
                     null,
@@ -113,7 +111,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                 factory.build(
                     summary(),
                     preferences(),
-                    date,
                     SleepSessionSummary(efficiency = efficiency, startTime = 0L, endTime = 0L),
                     null,
                     null,
@@ -132,7 +129,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                 factory.build(
                     summary().copy(avgSleepingSpo2 = spo2),
                     preferences(),
-                    date,
                     null,
                     null,
                     null,
@@ -157,7 +153,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                     hrvMuMssd = ln(41.0).toFloat(),
                 ),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -182,7 +177,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                     baselineCalculatedAtDate = null,
                 ),
                 preferences().copy(rhrBaselineOverride = 55.6f),
-                date,
                 null,
                 null,
                 null,
@@ -219,7 +213,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                     rhrBpm = null,
                 ),
                 preferences().copy(rhrBaselineOverride = null),
-                date,
                 null,
                 null,
                 null,
@@ -248,7 +241,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                     baselineCalculatedAtDate = null,
                 ),
                 preferences().copy(rhrBaselineOverride = null),
-                date,
                 null,
                 null,
                 null,
@@ -289,7 +281,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                             bloodPressureDiastolic = reading.second,
                         ),
                         preferences(),
-                        date,
                         null,
                         null,
                         null,
@@ -305,7 +296,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary().copy(readinessWorkoutOnly = 84.6f),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -324,7 +314,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary(weightKg = 66.45625f),
                 preferences(heightCm = 175f),
-                date,
                 null,
                 null,
                 null,
@@ -353,7 +342,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                     .build(
                         summary(weightKg = bmi),
                         preferences(heightCm = 100f),
-                        date,
                         null,
                         null,
                         null,
@@ -369,7 +357,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary(weightKg = 66.44f),
                 preferences(heightCm = 175f),
-                date,
                 null,
                 null,
                 null,
@@ -389,7 +376,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
                     gender = Gender.MALE,
                     physiologyProfile = PhysiologyProfile.ATHLETE,
                 ),
-                date,
                 null,
                 null,
                 null,
@@ -404,7 +390,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary().copy(sleepDurationMinutes = 450),
                 preferences().copy(goalSleepHours = 8f),
-                date,
                 null,
                 null,
                 null,
@@ -416,7 +401,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
     @Test
     fun `ras permits overflow beyond 100`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val visual = cards.getValue(CardId.RAS_DAILY).visual as UniversalMetricVisual.Score
         assertEquals(100f / GOAL_FILL_CAP_FRACTION, visual.maxValue)
     }
@@ -426,7 +411,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
         val circResult =
             app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
                 .Ready(85f, 0, 0, 0, 0)
-        val cards = factory.build(summary(), preferences(), date, null, circResult, null)
+        val cards = factory.build(summary(), preferences(), null, circResult, null)
         val visual = cards.getValue(CardId.CIRCADIAN_CONSISTENCY).visual as UniversalMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(100f, visual.maxValue)
@@ -447,7 +432,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             )
         } returns "Circadian: 95 of 100, mock_string"
 
-        val cards = factory.build(summary(), preferences(), date, null, circResult, null)
+        val cards = factory.build(summary(), preferences(), null, circResult, null)
         val presentation = cards.getValue(CardId.CIRCADIAN_CONSISTENCY)
         val visual = presentation.visual as UniversalMetricVisual.Score
 
@@ -459,7 +444,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
     @Test
     fun `sleep efficiency uses 0 to 100 bounds`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val visual = cards.getValue(CardId.SLEEP_EFFICIENCY).visual as UniversalMetricVisual.Score
         assertEquals(0f, visual.minValue)
         assertEquals(100f, visual.maxValue)
@@ -477,7 +462,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             )
         } returns "Sleep Efficiency: 95%, mock_string"
 
-        val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
+        val cards = factory.build(summary(), preferences(), lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
         val visual = presentation.visual as UniversalMetricVisual.Score
 
@@ -491,7 +476,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
     fun `sleep efficiency accepts legacy fractional values as percentages`() {
         val lastSleepSession = SleepSessionSummary(efficiency = 0.9f, startTime = 0L, endTime = 0L)
 
-        val cards = factory.build(summary(), preferences(), date, lastSleepSession, null, null)
+        val cards = factory.build(summary(), preferences(), lastSleepSession, null, null)
         val presentation = cards.getValue(CardId.SLEEP_EFFICIENCY)
         val visual = presentation.visual as UniversalMetricVisual.Score
 
@@ -507,7 +492,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary(bodyFatPercent = 13.64f),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -521,7 +505,7 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
 
     @Test
     fun `missing body fat keeps the em dash without a stray percent sign`() {
-        val cards = factory.build(summary(), preferences(), date, null, null, null)
+        val cards = factory.build(summary(), preferences(), null, null, null)
         val presentation = cards.getValue(CardId.BODY_FAT)
 
         assertEquals("\u2014", presentation.valueText)
@@ -534,7 +518,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary().copy(avgSleepingSpo2 = 96.4f),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -551,7 +534,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary().copy(avgSleepingSpo2 = 97.6f),
                 preferences(),
-                date,
                 null,
                 null,
                 null,
@@ -571,7 +553,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary = summary,
                 preferences = preferences(),
-                selectedDate = date,
                 lastSleepSession = null,
                 circadianResult = null,
                 heartRateSummary = null,
@@ -594,7 +575,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary = summary,
                 preferences = prefs,
-                selectedDate = date,
                 lastSleepSession = null,
                 circadianResult = null,
                 heartRateSummary = null,
@@ -613,7 +593,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary = summary,
                 preferences = prefs,
-                selectedDate = date,
                 lastSleepSession = null,
                 circadianResult = null,
                 heartRateSummary = null,
@@ -632,7 +611,6 @@ class DashboardMetricPresentationVitalsTest : DashboardMetricPresentationFactory
             factory.build(
                 summary = summary,
                 preferences = prefs,
-                selectedDate = date,
                 lastSleepSession = null,
                 circadianResult = null,
                 heartRateSummary = null,

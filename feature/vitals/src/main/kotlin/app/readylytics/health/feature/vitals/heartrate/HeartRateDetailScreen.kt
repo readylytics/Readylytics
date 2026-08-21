@@ -57,8 +57,6 @@ fun HeartRateDetailRoute(
     HeartRateDetailScreen(
         uiState = uiState,
         onBack = onBack,
-        onPreviousDay = viewModel::onPreviousDay,
-        onNextDay = viewModel::onNextDay,
     )
 }
 
@@ -67,8 +65,6 @@ fun HeartRateDetailRoute(
 fun HeartRateDetailScreen(
     uiState: HeartRateDetailUiState,
     onBack: () -> Unit,
-    onPreviousDay: () -> Unit,
-    onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val today = uiState.today

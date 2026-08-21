@@ -366,8 +366,6 @@ fun SettingsScreen(
                                 physiologyState = physiologyState,
                                 onEvent = onHeartRateEvent,
                                 onPhysiologyEvent = onPhysiologyEvent,
-                                expandState = expandState,
-                                onExpandStateChange = { expandState = it },
                                 isResyncing = isResyncing,
                             )
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))

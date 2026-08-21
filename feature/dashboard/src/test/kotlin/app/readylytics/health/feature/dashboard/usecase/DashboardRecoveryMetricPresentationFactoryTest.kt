@@ -248,5 +248,5 @@ class DashboardRecoveryMetricPresentationFactoryTest {
         summary: DailySummary?,
         preferences: UserPreferences,
         session: SleepSessionSummary?,
-    ) = factory.build(summary, preferences, date, session, null, null)
+    ) = factory.build(summary, preferences, session, null, null)
 }

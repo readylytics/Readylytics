@@ -88,7 +88,6 @@ class DashboardMetricPresentationFactory
         fun build(
             summary: DailySummary?,
             preferences: UserPreferences,
-            selectedDate: LocalDate,
             lastSleepSession: SleepSessionSummary?,
             circadianResult: CircadianConsistencyResult?,
             heartRateSummary: HeartRateDaySummary?,

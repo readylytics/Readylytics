@@ -46,7 +46,6 @@ import app.readylytics.health.feature.settings.HeartRateZonesState
 import app.readylytics.health.feature.settings.PhysiologySettingsState
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
-import app.readylytics.health.feature.settings.SettingsExpandState
 import app.readylytics.health.feature.settings.common.resyncGateEnabled
 import kotlin.math.roundToInt
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -57,8 +56,6 @@ fun HeartRateZoneSection(
     physiologyState: PhysiologySettingsState,
     onEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
-    expandState: SettingsExpandState,
-    onExpandStateChange: (SettingsExpandState) -> Unit,
     isResyncing: Boolean = false,
 ) {
     val controlsEnabled = resyncGateEnabled(isResyncing)

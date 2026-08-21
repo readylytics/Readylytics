@@ -112,7 +112,6 @@ fun DashboardRoute(
     DashboardScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
-        onRefresh = viewModel::onRefresh,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
         onDateSelected = { viewModel.onEvent(DashboardEvent.DateSelected(it)) },
@@ -154,7 +153,6 @@ fun DashboardRoute(
 fun DashboardScreen(
     uiState: DashboardUiState,
     snackbarHostState: SnackbarHostState,
-    onRefresh: () -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onNavigateToSleep: () -> Unit,

@@ -619,7 +619,6 @@ fun SleepTrendChart(
                 selectedState = selectedState,
                 barColor = MaterialTheme.colorScheme.primary,
                 lineColor = MaterialTheme.colorScheme.tertiary,
-                layerBounds = layerBounds,
                 barThicknessDp = 8.dp,
                 chartHeight = chartHeight,
             )

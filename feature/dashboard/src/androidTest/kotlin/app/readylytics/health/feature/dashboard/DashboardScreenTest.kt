@@ -77,7 +77,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -103,7 +102,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -129,7 +127,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -161,7 +158,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -281,7 +277,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -313,7 +308,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -345,7 +339,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -377,7 +370,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = false),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -418,7 +410,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = state.value,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -470,7 +461,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -516,7 +506,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = createConfigurableTestUiState(isManagingCards = true),
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -566,7 +555,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -606,7 +594,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -636,7 +623,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -662,7 +648,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -688,7 +673,6 @@ class DashboardScreenTest {
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},

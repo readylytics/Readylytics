@@ -31,8 +31,6 @@ class HeartRateDetailScreenTest {
                             isLoading = false,
                         ),
                     onBack = {},
-                    onPreviousDay = {},
-                    onNextDay = {},
                 )
             }
         }

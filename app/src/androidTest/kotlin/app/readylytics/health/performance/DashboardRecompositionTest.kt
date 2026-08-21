@@ -60,7 +60,6 @@ class DashboardRecompositionTest {
             DashboardScreen(
                 uiState = uiState.value,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
@@ -92,7 +91,6 @@ class DashboardRecompositionTest {
             DashboardScreen(
                 uiState = uiState.value,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
                 onNavigateToSleep = {},
