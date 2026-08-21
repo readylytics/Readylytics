@@ -12,19 +12,8 @@ object DailySummaryMapper {
         entity: DailySummaryEntity,
         zoneId: ZoneId,
     ): DailySummary {
-        val date =
-            Instant
-                .ofEpochMilli(entity.dateMidnightMs)
-                .atZone(zoneId)
-                .toLocalDate()
-
-        val flags: Set<RecoveryFlag> =
-            entity.recoveryFlags
-                ?.split(',')
-                ?.mapNotNull { token ->
-                    runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
-                }?.toSet()
-                ?: emptySet()
+        val date = resolveDate(entity, zoneId)
+        val flags = resolveFlags(entity)
 
         return DailySummary(
             date = date,
@@ -49,44 +38,7 @@ object DailySummaryMapper {
                 ),
             sRest = entity.sRest,
             isCalibrating = entity.isCalibrating ?: false,
-            weightKg = entity.weightKg,
-            bodyFatPercent = entity.bodyFatPercent,
-            bloodPressureSystolic = entity.bloodPressureSystolic,
-            bloodPressureDiastolic = entity.bloodPressureDiastolic,
-            avgSleepingSpo2 = entity.avgSleepingSpo2,
-            avgSleepingBodyTemp = entity.avgSleepingBodyTemp,
-            hrvMuMssd = entity.hrvMuMssd,
-            hrvSigmaMssd = entity.hrvSigmaMssd,
-            rhrBpm = entity.rhrBpm,
-            rhrSigma = entity.rhrSigma,
-            baselineCalculatedAtDate = entity.baselineCalculatedAtDate,
-            hrMax = entity.hrMax,
-            snapshotProfile = entity.snapshotProfile,
-            snapshotCalibrationPhase = entity.snapshotCalibrationPhase,
-            hrvSigmaPrior = entity.hrvSigmaPrior,
-            rasScalingFactor = entity.rasScalingFactor,
-            baselineObservationCount = entity.baselineObservationCount,
-            trimpWorkoutOnly = entity.trimpWorkoutOnly,
-            trimpEverydayHr = entity.trimpEverydayHr,
-            rasWorkoutOnly = entity.rasWorkoutOnly,
-            rasEverydayHr = entity.rasEverydayHr,
-            totalRasWorkoutOnly = entity.totalRasWorkoutOnly,
-            totalRasEverydayHr = entity.totalRasEverydayHr,
-            atlWorkoutOnly = entity.atlWorkoutOnly,
-            atlEverydayHr = entity.atlEverydayHr,
-            ctlWorkoutOnly = entity.ctlWorkoutOnly,
-            ctlEverydayHr = entity.ctlEverydayHr,
-            strainRatioWorkoutOnly = entity.strainRatioWorkoutOnly,
-            strainRatioEverydayHr = entity.strainRatioEverydayHr,
-            loadScoreWorkoutOnly = entity.loadScoreWorkoutOnly,
-            loadScoreEverydayHr = entity.loadScoreEverydayHr,
-            readinessWorkoutOnly = entity.readinessWorkoutOnly,
-            readinessEverydayHr = entity.readinessEverydayHr,
-            everydayCoverageMinutes = entity.everydayCoverageMinutes,
-            everydayLoadConfidence = entity.everydayLoadConfidence,
-            supplementalSleepDurationMinutes = entity.supplementalSleepDurationMinutes,
-            napCount = entity.napCount,
-        )
+        ).withBodyMetrics(entity).withBaselines(entity).withLoadFields(entity)
     }
 
     fun toEntity(
@@ -123,12 +75,87 @@ object DailySummaryMapper {
             contributorsEmbedded = domain.readinessResult.contributors,
             sRest = domain.sRest,
             isCalibrating = domain.isCalibrating,
+        ).withBodyMetrics(domain).withBaselines(domain).withLoadFields(domain)
+    }
+
+    private fun resolveDate(
+        entity: DailySummaryEntity,
+        zoneId: ZoneId,
+    ): java.time.LocalDate =
+        Instant
+            .ofEpochMilli(entity.dateMidnightMs)
+            .atZone(zoneId)
+            .toLocalDate()
+
+    private fun resolveFlags(entity: DailySummaryEntity): Set<RecoveryFlag> =
+        entity.recoveryFlags
+            ?.split(',')
+            ?.mapNotNull { token ->
+                runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
+            }?.toSet()
+            ?: emptySet()
+
+    private fun DailySummary.withBodyMetrics(entity: DailySummaryEntity): DailySummary =
+        copy(
+            weightKg = entity.weightKg,
+            bodyFatPercent = entity.bodyFatPercent,
+            bloodPressureSystolic = entity.bloodPressureSystolic,
+            bloodPressureDiastolic = entity.bloodPressureDiastolic,
+            avgSleepingSpo2 = entity.avgSleepingSpo2,
+            avgSleepingBodyTemp = entity.avgSleepingBodyTemp,
+        )
+
+    private fun DailySummary.withBaselines(entity: DailySummaryEntity): DailySummary =
+        copy(
+            hrvMuMssd = entity.hrvMuMssd,
+            hrvSigmaMssd = entity.hrvSigmaMssd,
+            rhrBpm = entity.rhrBpm,
+            rhrSigma = entity.rhrSigma,
+            baselineCalculatedAtDate = entity.baselineCalculatedAtDate,
+            hrMax = entity.hrMax,
+            snapshotProfile = entity.snapshotProfile,
+            snapshotCalibrationPhase = entity.snapshotCalibrationPhase,
+            hrvSigmaPrior = entity.hrvSigmaPrior,
+            rasScalingFactor = entity.rasScalingFactor,
+            baselineObservationCount = entity.baselineObservationCount,
+        )
+
+    private fun DailySummary.withLoadFields(entity: DailySummaryEntity): DailySummary =
+        copy(
+            trimpWorkoutOnly = entity.trimpWorkoutOnly,
+            trimpEverydayHr = entity.trimpEverydayHr,
+            rasWorkoutOnly = entity.rasWorkoutOnly,
+            rasEverydayHr = entity.rasEverydayHr,
+            totalRasWorkoutOnly = entity.totalRasWorkoutOnly,
+            totalRasEverydayHr = entity.totalRasEverydayHr,
+            atlWorkoutOnly = entity.atlWorkoutOnly,
+            atlEverydayHr = entity.atlEverydayHr,
+            ctlWorkoutOnly = entity.ctlWorkoutOnly,
+            ctlEverydayHr = entity.ctlEverydayHr,
+            strainRatioWorkoutOnly = entity.strainRatioWorkoutOnly,
+            strainRatioEverydayHr = entity.strainRatioEverydayHr,
+            loadScoreWorkoutOnly = entity.loadScoreWorkoutOnly,
+            loadScoreEverydayHr = entity.loadScoreEverydayHr,
+            readinessWorkoutOnly = entity.readinessWorkoutOnly,
+            readinessEverydayHr = entity.readinessEverydayHr,
+            everydayCoverageMinutes = entity.everydayCoverageMinutes,
+            everydayLoadConfidence = entity.everydayLoadConfidence,
+            supplementalSleepDurationMinutes = entity.supplementalSleepDurationMinutes,
+            napCount = entity.napCount,
+        )
+
+    private fun DailySummaryEntity.withBodyMetrics(domain: DailySummary): DailySummaryEntity =
+        copy(
             weightKg = domain.weightKg,
             bodyFatPercent = domain.bodyFatPercent,
             bloodPressureSystolic = domain.bloodPressureSystolic,
             bloodPressureDiastolic = domain.bloodPressureDiastolic,
             avgSleepingSpo2 = domain.avgSleepingSpo2,
             avgSleepingBodyTemp = domain.avgSleepingBodyTemp,
+        )
+
+    private fun DailySummaryEntity.withBaselines(domain: DailySummary): DailySummaryEntity =
+        copy(
             hrvMuMssd = domain.hrvMuMssd,
             hrvSigmaMssd = domain.hrvSigmaMssd,
             rhrBpm = domain.rhrBpm,
@@ -140,6 +167,10 @@ object DailySummaryMapper {
             hrvSigmaPrior = domain.hrvSigmaPrior,
             rasScalingFactor = domain.rasScalingFactor,
             baselineObservationCount = domain.baselineObservationCount,
+        )
+
+    private fun DailySummaryEntity.withLoadFields(domain: DailySummary): DailySummaryEntity =
+        copy(
             trimpWorkoutOnly = domain.trimpWorkoutOnly,
             trimpEverydayHr = domain.trimpEverydayHr,
             rasWorkoutOnly = domain.rasWorkoutOnly,
@@ -161,5 +192,4 @@ object DailySummaryMapper {
             supplementalSleepDurationMinutes = domain.supplementalSleepDurationMinutes,
             napCount = domain.napCount,
         )
-    }
 }

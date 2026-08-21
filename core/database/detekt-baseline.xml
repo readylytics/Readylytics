@@ -10,8 +10,6 @@
     <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm adapts percentile based on sample count`()</ID>
     <ID>LongMethod:BaselineComputerN1FixTest.kt$BaselineComputerN1FixTest$@Test fun `computeAdaptiveBaselineRhrBpm filters sessions with less than 10 samples`()</ID>
     <ID>LongMethod:BaselineComputerWalkForwardEquivalenceTest.kt$BaselineComputerWalkForwardEquivalenceTest$@Before fun setup()</ID>
-    <ID>LongMethod:DailySummaryMapper.kt$DailySummaryMapper$fun toDomain( entity: DailySummaryEntity, zoneId: ZoneId, ): DailySummary</ID>
-    <ID>LongMethod:DailySummaryMapper.kt$DailySummaryMapper$fun toEntity( domain: DailySummary, zoneId: ZoneId, ): DailySummaryEntity</ID>
     <ID>LongMethod:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$override fun migrate(db: SupportSQLiteDatabase)</ID>
     <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$private fun addNight( sleepSessions: MutableList&lt;SleepSessionEntity&gt;, sleepStages: MutableList&lt;SleepStageEntity&gt;, heartRateRows: MutableList&lt;HeartRateRecordEntity&gt;, wakeDay: LocalDate, deviceName: String, stageLess: Boolean, )</ID>
     <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$suspend fun build( db: HealthDatabase, startDate: LocalDate, endDate: LocalDate, ): BuildResult</ID>
