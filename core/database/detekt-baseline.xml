@@ -45,6 +45,5 @@
     <ID>TooManyFunctions:DatabaseRepositoryModule.kt$DatabaseRepositoryModule</ID>
     <ID>TooManyFunctions:HealthDatabase.kt$HealthDatabase : RoomDatabase</ID>
     <ID>TooManyFunctions:ScoringHistoryRepositoryImpl.kt$ScoringHistoryRepositoryImpl : ScoringHistoryRepository</ID>
-    <ID>TooManyFunctions:SqlCipherKeyManager.kt$SqlCipherKeyManager</ID>
   </CurrentIssues>
 </SmellBaseline>

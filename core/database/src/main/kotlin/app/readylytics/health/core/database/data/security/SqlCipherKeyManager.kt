@@ -23,6 +23,21 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// SQLCipher 4 default; pinned explicitly so a freshly-ATTACHed database (which uses
+// the library's current default) and a reopened one (via the legacy
+// openOrCreateDatabase overloads, which can default to an older compatibility level)
+// always agree on page size / KDF / HMAC settings.
+private const val CIPHER_COMPATIBILITY = 4
+
+private val CIPHER_COMPATIBILITY_HOOK =
+    object : net.zetetic.database.sqlcipher.SQLiteDatabaseHook {
+        override fun preKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) {
+            connection.execute("PRAGMA cipher_compatibility = $CIPHER_COMPATIBILITY", null, null)
+        }
+
+        override fun postKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) = Unit
+    }
+
 /**
  * Manages SQLCipher database encryption key generation, storage, and decryption.
  * Uses Android KeyStore to protect a 256-bit AES key, with encrypted key + IV stored in SharedPreferences.
@@ -153,6 +168,57 @@ class SqlCipherKeyManager
                 }
         }
 
+        private inner class KeyCodec {
+            fun getOrCreateKeystoreKey(): SecretKey = keyProvider.getOrCreateKey(KEYSTORE_ALIAS)
+
+            fun encryptAndStoreKey(rawKey: ByteArray) {
+                val keystoreKey = getOrCreateKeystoreKey()
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.ENCRYPT_MODE, keystoreKey)
+                val iv = cipher.iv
+                val encryptedKey = cipher.doFinal(rawKey)
+
+                // commit = true: must be durably on disk before the cross-process lock is released,
+                // so a losing process's first (post-lock) read of this SharedPreferences file is
+                // guaranteed to see it. The default apply() is async and gives no cross-process
+                // ordering guarantee -- see withCrossProcessKeyLock's doc comment above.
+                prefs.edit(commit = true) {
+                    putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
+                    putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
+                }
+            }
+
+            fun decryptKey(): ByteArray {
+                val keystoreKey = getOrCreateKeystoreKey()
+                val encryptedKeyBase64 =
+                    prefs.getString(PREF_ENCRYPTED_KEY, null)
+                        ?: error("Encrypted key not found in preferences")
+                val ivBase64 =
+                    prefs.getString(PREF_IV, null)
+                        ?: error("Encryption IV not found in preferences")
+
+                val encryptedKey = Base64.decode(encryptedKeyBase64, Base64.NO_WRAP)
+                val iv = Base64.decode(ivBase64, Base64.NO_WRAP)
+
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, keystoreKey, GCMParameterSpec(128, iv))
+                return cipher.doFinal(encryptedKey)
+            }
+
+            fun generateAndStoreNewKey(): ByteArray {
+                val rawKey = ByteArray(32)
+                SecureRandom().nextBytes(rawKey)
+                try {
+                    encryptAndStoreKey(rawKey)
+                    return rawKey.clone()
+                } finally {
+                    rawKey.fill(0)
+                }
+            }
+        }
+
+        private val keyCodec = KeyCodec()
+
         /**
          * Opens (creating if necessary) the SQLCipher database at [dbFile] and runs [block]
          * against it.
@@ -206,31 +272,6 @@ class SqlCipherKeyManager
                     db.use(block)
                 }
             }
-        }
-
-        private fun openWritableDatabase(
-            dbFile: File,
-            rawKey: ByteArray,
-        ): net.zetetic.database.sqlcipher.SQLiteDatabase {
-            // Raw key must be passed as bytes, not a String: the String-password overload
-            // derives a PBKDF2 key from the literal "x'hex'" text instead of recognizing it
-            // as a raw-hex key, silently opening with the wrong key (see getOrCreateFactory).
-            val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
-            // The convenience openOrCreateDatabase() overloads hardcode CREATE_IF_NECESSARY
-            // only, so every open runs setWalModeFromConfiguration() without the WAL flag and
-            // forcibly resets journal_mode back to the default (delete) -- even if a previous
-            // session had explicitly set WAL. Passing ENABLE_WRITE_AHEAD_LOGGING here makes
-            // WAL mode stick across every reopen, matching Room's own WRITE_AHEAD_LOGGING config.
-            return net.zetetic.database.sqlcipher.SQLiteDatabase
-                .openDatabase(
-                    dbFile.absolutePath,
-                    rawKeyBytes,
-                    null,
-                    net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY or
-                        net.zetetic.database.sqlcipher.SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
-                    null,
-                    CIPHER_COMPATIBILITY_HOOK,
-                )
         }
 
         /**
@@ -342,7 +383,7 @@ class SqlCipherKeyManager
             withCrossProcessKeyLock {
                 if (prefs.contains(PREF_ENCRYPTED_KEY)) {
                     try {
-                        val decrypted = decryptKey()
+                        val decrypted = keyCodec.decryptKey()
                         decrypted.fill(0)
                     } catch (e: Exception) {
                         _isKeyCorrupted.value = true
@@ -391,7 +432,7 @@ class SqlCipherKeyManager
         private fun getOrCreateDbKeyLocked(): ByteArray =
             if (prefs.contains(PREF_ENCRYPTED_KEY)) {
                 try {
-                    decryptKey()
+                    keyCodec.decryptKey()
                 } catch (e: Exception) {
                     _isKeyCorrupted.value = true
                     logE("SqlCipherKeyManager", e) {
@@ -400,57 +441,8 @@ class SqlCipherKeyManager
                     throw KeyDecryptionException("Database key decryption failed", e)
                 }
             } else {
-                generateAndStoreNewKey()
+                keyCodec.generateAndStoreNewKey()
             }
-
-        private fun generateAndStoreNewKey(): ByteArray {
-            val rawKey = ByteArray(32)
-            SecureRandom().nextBytes(rawKey)
-            try {
-                encryptAndStoreKey(rawKey)
-                return rawKey.clone()
-            } finally {
-                rawKey.fill(0)
-            }
-        }
-
-        private fun getOrCreateKeystoreKey(): SecretKey = keyProvider.getOrCreateKey(KEYSTORE_ALIAS)
-
-        private fun encryptAndStoreKey(rawKey: ByteArray) {
-            val keystoreKey = getOrCreateKeystoreKey()
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.ENCRYPT_MODE, keystoreKey)
-            val iv = cipher.iv
-            val encryptedKey = cipher.doFinal(rawKey)
-
-            // commit = true: must be durably on disk before the cross-process lock is released,
-            // so a losing process's first (post-lock) read of this SharedPreferences file is
-            // guaranteed to see it. The default apply() is async and gives no cross-process
-            // ordering guarantee -- see withCrossProcessKeyLock's doc comment above.
-            prefs.edit(commit = true) {
-                putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
-                putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
-            }
-        }
-
-        private fun decryptKey(): ByteArray {
-            val keystoreKey = getOrCreateKeystoreKey()
-            val encryptedKeyBase64 =
-                prefs.getString(PREF_ENCRYPTED_KEY, null)
-                    ?: error("Encrypted key not found in preferences")
-            val ivBase64 =
-                prefs.getString(PREF_IV, null)
-                    ?: error("Encryption IV not found in preferences")
-
-            val encryptedKey = Base64.decode(encryptedKeyBase64, Base64.NO_WRAP)
-            val iv = Base64.decode(ivBase64, Base64.NO_WRAP)
-
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.DECRYPT_MODE, keystoreKey, GCMParameterSpec(128, iv))
-            return cipher.doFinal(encryptedKey)
-        }
-
-        private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
         @androidx.annotation.VisibleForTesting
         fun getOrCreateDbKeyForTest(): ByteArray = getOrCreateDbKey()
@@ -486,20 +478,32 @@ class SqlCipherKeyManager
 
             @androidx.annotation.VisibleForTesting
             const val PREF_IV = "encryption_iv"
-
-            // SQLCipher 4 default; pinned explicitly so a freshly-ATTACHed database (which uses
-            // the library's current default) and a reopened one (via the legacy
-            // openOrCreateDatabase overloads, which can default to an older compatibility level)
-            // always agree on page size / KDF / HMAC settings.
-            private const val CIPHER_COMPATIBILITY = 4
-
-            private val CIPHER_COMPATIBILITY_HOOK =
-                object : net.zetetic.database.sqlcipher.SQLiteDatabaseHook {
-                    override fun preKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) {
-                        connection.execute("PRAGMA cipher_compatibility = $CIPHER_COMPATIBILITY", null, null)
-                    }
-
-                    override fun postKey(connection: net.zetetic.database.sqlcipher.SQLiteConnection) = Unit
-                }
         }
     }
+
+private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+
+private fun openWritableDatabase(
+    dbFile: File,
+    rawKey: ByteArray,
+): net.zetetic.database.sqlcipher.SQLiteDatabase {
+    // Raw key must be passed as bytes, not a String: the String-password overload
+    // derives a PBKDF2 key from the literal "x'hex'" text instead of recognizing it
+    // as a raw-hex key, silently opening with the wrong key (see getOrCreateFactory).
+    val rawKeyBytes = "x'${rawKey.toHex()}'".toByteArray(Charsets.UTF_8)
+    // The convenience openOrCreateDatabase() overloads hardcode CREATE_IF_NECESSARY
+    // only, so every open runs setWalModeFromConfiguration() without the WAL flag and
+    // forcibly resets journal_mode back to the default (delete) -- even if a previous
+    // session had explicitly set WAL. Passing ENABLE_WRITE_AHEAD_LOGGING here makes
+    // WAL mode stick across every reopen, matching Room's own WRITE_AHEAD_LOGGING config.
+    return net.zetetic.database.sqlcipher.SQLiteDatabase
+        .openDatabase(
+            dbFile.absolutePath,
+            rawKeyBytes,
+            null,
+            net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY or
+                net.zetetic.database.sqlcipher.SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
+            null,
+            CIPHER_COMPATIBILITY_HOOK,
+        )
+}
