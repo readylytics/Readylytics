@@ -8,7 +8,6 @@
     <ID>ReturnCount:DateRangeService.kt$DateRangeService$fun slidingWindows( range: DateRange, windowDays: Int, ): Result&lt;List&lt;DateRange&gt;&gt;</ID>
     <ID>ReturnCount:HealthMetricsService.kt$HealthMetricsService$fun calculateBmi( weightKg: Float, heightCm: Float, ): Result&lt;Float&gt;</ID>
     <ID>ReturnCount:MetricStatusExtensions.kt$fun DailySummary.restingHrStatus( optimalThreshold: Float, warningThreshold: Float, ): MetricStatus</ID>
-    <ID>ReturnCount:RouteSimplifier.kt$RouteSimplifier$fun simplify( points: List&lt;ProjectedPoint&gt;, maxPoints: Int = 200, ): List&lt;ProjectedPoint&gt;</ID>
     <ID>ReturnCount:SessionLinkSweep.kt$SessionLinkSweep$fun resolve(sampleMs: Long): SampleLink</ID>
     <ID>ReturnCount:SessionLinker.kt$SessionLinker$fun resolve( sampleMs: Long, sleepSessions: List&lt;SessionSpan&gt;, workoutSessions: List&lt;SessionSpan&gt;, ): SampleLink</ID>
     <ID>ReturnCount:SleepArchitectureValidator.kt$SleepArchitectureValidator$override fun validate(value: SleepStageFractions): ValidationResult</ID>
