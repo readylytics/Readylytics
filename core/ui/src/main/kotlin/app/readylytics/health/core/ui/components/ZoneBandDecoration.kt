@@ -51,14 +51,11 @@ class ZoneBandDecoration(
     ) {
         bands.forEachIndexed { index, band ->
             drawBandRect(
-                context,
-                band.lowerBound,
-                band.upperBound,
-                colors[index],
-                bounds.left,
-                bounds.right,
-                bounds,
-                range,
+                context = context,
+                band = band,
+                color = colors[index],
+                bounds = bounds,
+                range = range,
             )
         }
     }
@@ -173,23 +170,20 @@ class ZoneBandDecoration(
 
     private fun drawBandRect(
         context: CartesianDrawingContext,
-        lowerBound: Double,
-        upperBound: Double,
+        band: ZoneBand,
         color: Color,
-        left: Float,
-        right: Float,
         bounds: androidx.compose.ui.geometry.Rect,
         range: Double,
     ) {
-        val clampedLower = lowerBound.coerceIn(minY, maxY)
-        val clampedUpper = upperBound.coerceIn(minY, maxY)
+        val clampedLower = band.lowerBound.coerceIn(minY, maxY)
+        val clampedUpper = band.upperBound.coerceIn(minY, maxY)
         if (clampedLower >= clampedUpper) return
         val topY = yToCanvas(clampedUpper, bounds, range)
         val bottomY = yToCanvas(clampedLower, bounds, range)
         context.mutableDrawScope.drawRect(
             color = color,
-            topLeft = Offset(left, topY),
-            size = Size(right - left, bottomY - topY),
+            topLeft = Offset(bounds.left, topY),
+            size = Size(bounds.width, bottomY - topY),
         )
     }
 }

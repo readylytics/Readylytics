@@ -5,7 +5,6 @@
     <ID>InvalidPackageDeclaration:DateSwitcher.kt$package app.readylytics.health.core.ui.dashboard</ID>
     <ID>InvalidPackageDeclaration:HeightInputField.kt$package app.readylytics.health.core.ui.settings</ID>
     <ID>InvalidPackageDeclaration:UnitSystemSelector.kt$package app.readylytics.health.core.ui.settings.common</ID>
-    <ID>LongParameterList:ZoneBandDecoration.kt$ZoneBandDecoration$( context: CartesianDrawingContext, lowerBound: Double, upperBound: Double, color: Color, left: Float, right: Float, bounds: androidx.compose.ui.geometry.Rect, range: Double, )</ID>
     <ID>MatchingDeclarationName:CanvasChartTooltip.kt$SegmentHitBox</ID>
     <ID>MatchingDeclarationName:MetricStatus.kt$MetricContainerTone</ID>
     <ID>MatchingDeclarationName:PeriodAverageSummaryGroup.kt$LabeledPeriodAverage</ID>
