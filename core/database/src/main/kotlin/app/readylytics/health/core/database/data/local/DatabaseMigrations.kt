@@ -96,7 +96,10 @@ object DatabaseMigrations {
                     )
                     """.trimIndent()
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_summaries_dateMidnightMs` ON `daily_summaries` (`dateMidnightMs`)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_daily_summaries_dateMidnightMs` " +
+                        "ON `daily_summaries` (`dateMidnightMs`)",
+                )
             }
         }
 

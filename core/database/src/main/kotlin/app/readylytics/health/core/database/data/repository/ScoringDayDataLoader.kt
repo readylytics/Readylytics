@@ -118,14 +118,22 @@ class ScoringDayDataLoader
         suspend fun loadAvgSpo2(session: SleepSessionEntity?): Float? {
             if (session == null) return null
             val spo2Samples = oxygenSaturationRecordDao.getByTimeRange(session.startTime, session.endTime)
-            return if (spo2Samples.isNotEmpty()) spo2Samples.asSequence().map { it.percentage }.average().toFloat() else null
+            return if (spo2Samples.isNotEmpty()) {
+                spo2Samples.asSequence().map { it.percentage }.average().toFloat()
+            } else {
+                null
+            }
         }
 
         // from resolveAvgBodyTemp L459-463
         suspend fun loadAvgBodyTemp(session: SleepSessionEntity?): Float? {
             if (session == null) return null
             val bodyTempSamples = bodyTemperatureRecordDao.getByTimeRange(session.startTime, session.endTime)
-            return if (bodyTempSamples.isNotEmpty()) bodyTempSamples.asSequence().map { it.celsius }.average().toFloat() else null
+            return if (bodyTempSamples.isNotEmpty()) {
+                bodyTempSamples.asSequence().map { it.celsius }.average().toFloat()
+            } else {
+                null
+            }
         }
 
         data class LatestBodyMetrics(

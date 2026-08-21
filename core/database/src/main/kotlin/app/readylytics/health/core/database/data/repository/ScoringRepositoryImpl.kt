@@ -106,11 +106,27 @@ class ScoringRepositoryImpl
             endDate: LocalDate,
             zoneId: ZoneId,
         ): WalkForwardTrimpContext {
-            val fromMs = startDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val fromMs =
+                startDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
             val toMs = endDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
             return WalkForwardTrimpContext(
-                dailyTrimpByDate = TreeMap(TrimpDateBucketer.bucket(dataLoader.loadWorkoutTrimpPoints(fromMs, toMs), zoneId)),
-                everydayTrimpByDate = TreeMap(TrimpDateBucketer.bucket(dataLoader.loadEverydayTrimpPoints(fromMs, toMs), zoneId)),
+                dailyTrimpByDate =
+                    TreeMap(
+                        TrimpDateBucketer.bucket(
+                            dataLoader.loadWorkoutTrimpPoints(fromMs, toMs),
+                            zoneId,
+                        ),
+                    ),
+                everydayTrimpByDate =
+                    TreeMap(
+                        TrimpDateBucketer.bucket(
+                            dataLoader.loadEverydayTrimpPoints(fromMs, toMs),
+                            zoneId,
+                        ),
+                    ),
             )
         }
 
@@ -158,10 +174,18 @@ class ScoringRepositoryImpl
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
 
                 val (workouts, dailyTrimpRaw) =
-                    processWorkouts(dayMidnightMs, nextDayMidnightMs, initialBaselines.rhrBaselineValue, initialBaselines.frozenHrMax, prefs)
+                    processWorkouts(
+                        dayMidnightMs = dayMidnightMs,
+                        nextDayMidnightMs = nextDayMidnightMs,
+                        rhrBaselineValue = initialBaselines.rhrBaselineValue,
+                        frozenHrMax = initialBaselines.frozenHrMax,
+                        prefs = prefs,
+                    )
 
                 val aggregatedSleep = readinessSummaryCoordinator.resolveSleepAggregation(targetDate, zoneId, prefs)
-                val session = aggregatedSleep?.scoringSession ?: dataLoader.loadSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+                val session =
+                    aggregatedSleep?.scoringSession
+                        ?: dataLoader.loadSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val currentSessionIds = aggregatedSleep?.coreSessionIds ?: session?.let { setOf(it.id) }.orEmpty()
 
                 val everydayResult =
@@ -196,7 +220,14 @@ class ScoringRepositoryImpl
                     )
 
                 val isCalibrated =
-                    isCalibrated(dailySummary, dayMidnightMs, nextDayMidnightMs, sleepDayPolicy, baselineContext?.sessions, session != null)
+                    isCalibrated(
+                        dailySummary = dailySummary,
+                        dayMidnightMs = dayMidnightMs,
+                        nextDayMidnightMs = nextDayMidnightMs,
+                        sleepDayPolicy = sleepDayPolicy,
+                        prefetchedSessions = baselineContext?.sessions,
+                        hasSession = session != null,
+                    )
 
                 val avgSpo2 = dataLoader.loadAvgSpo2(session)
                 val avgBodyTemp = dataLoader.loadAvgBodyTemp(session)
@@ -407,7 +438,12 @@ class ScoringRepositoryImpl
 
 
 
-        private fun logTelemetry(scoringConfig: ScoringConfig, prefs: UserPreferences, rasTotalPre: Float, rasTotalPost: Float?) {
+        private fun logTelemetry(
+            scoringConfig: ScoringConfig,
+            prefs: UserPreferences,
+            rasTotalPre: Float,
+            rasTotalPost: Float?,
+        ) {
             val updatedAudit = scoringConfig.auditTrail.copy(
                 appliedSf = scoringConfig.rasScalingFactor,
                 physiologyProfile = prefs.physiologyProfile.name,
@@ -435,7 +471,10 @@ class ScoringRepositoryImpl
             zoneId: ZoneId,
             selector: (DailySummaryEntity) -> Float?,
         ): Float {
-            val previousDaysMs = (1..6).map { i -> targetDate.minusDays(i.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli() }
+            val previousDaysMs =
+                (1..6).map { i ->
+                    targetDate.minusDays(i.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                }
             return dataLoader.loadPreviousDaysSummaries(previousDaysMs).mapNotNull(selector).sum()
         }
     }

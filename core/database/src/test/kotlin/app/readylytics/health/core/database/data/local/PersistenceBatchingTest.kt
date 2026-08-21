@@ -80,7 +80,10 @@ class PersistenceBatchingTest {
             )
 
             assertEquals(3, transactionRunner.transactionCount)
-            assertEquals(listOf("sleep:0", "heartRate:5000", "heartRate:1"), events.filter { it.startsWith("sleep:") || it.startsWith("heartRate:") })
+            assertEquals(
+                listOf("sleep:0", "heartRate:5000", "heartRate:1"),
+                events.filter { it.startsWith("sleep:") || it.startsWith("heartRate:") },
+            )
         }
 
     @Test

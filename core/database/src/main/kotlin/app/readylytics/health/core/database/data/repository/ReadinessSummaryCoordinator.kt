@@ -80,8 +80,12 @@ class ReadinessSummaryCoordinator
                 )
             val allSleepIntervals =
                 buildList {
-                    aggregate.coreCluster.segments.forEach { add(LongInterval(it.startTimeMs, it.endTimeMs)) }
-                    aggregate.supplementalBlocks.forEach { add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs)) }
+                    aggregate.coreCluster.segments.forEach {
+                        add(LongInterval(it.startTimeMs, it.endTimeMs))
+                    }
+                    aggregate.supplementalBlocks.forEach {
+                        add(LongInterval(it.segment.startTimeMs, it.segment.endTimeMs))
+                    }
                 }
 
             return SleepAggregationContext(
@@ -93,7 +97,12 @@ class ReadinessSummaryCoordinator
         }
 
         private fun toSleepDaySegment(session: SleepSessionEntity): SleepDaySegment {
-            val durationMinutes = if (session.durationMinutes > 0) session.durationMinutes else ((session.endTime - session.startTime) / 60_000L).toInt()
+            val durationMinutes =
+                if (session.durationMinutes > 0) {
+                    session.durationMinutes
+                } else {
+                    ((session.endTime - session.startTime) / 60_000L).toInt()
+                }
             return SleepDaySegment(
                 stableId = session.id,
                 startTimeMs = session.startTime,
@@ -147,16 +156,31 @@ class ReadinessSummaryCoordinator
             val sleepHrSamples = if (currentSessionIds.size <= 1) {
                 scoringHistoryRepository.getSleepHrSamplesForSession(session.id)
             } else {
-                scoringHistoryRepository.getSleepHrProjectionForSessions(currentSessionIds.toList()).map { it.beatsPerMinute }.sorted()
+                scoringHistoryRepository.getSleepHrProjectionForSessions(currentSessionIds.toList())
+                    .map { it.beatsPerMinute }
+                    .sorted()
             }
             val avgRhr = if (sleepHrSamples.isNotEmpty()) {
-                val idx = Math.round((prefs.restingHrPercentile / 100.0) * (sleepHrSamples.size - 1)).toInt().coerceIn(0, sleepHrSamples.size - 1)
+                val idx =
+                    Math.round((prefs.restingHrPercentile / 100.0) * (sleepHrSamples.size - 1))
+                        .toInt()
+                        .coerceIn(0, sleepHrSamples.size - 1)
                 sleepHrSamples[idx]
             } else {
                 null
             }
-            val deepSleepPercent = if (session.durationMinutes > 0) session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f else null
-            val remSleepPercent = if (session.durationMinutes > 0) session.remSleepMinutes / session.durationMinutes.toFloat() * 100f else null
+            val deepSleepPercent =
+                if (session.durationMinutes > 0) {
+                    session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f
+                } else {
+                    null
+                }
+            val remSleepPercent =
+                if (session.durationMinutes > 0) {
+                    session.remSleepMinutes / session.durationMinutes.toFloat() * 100f
+                } else {
+                    null
+                }
 
             return assembleDailySummaryUseCase.assembleUncalibrated(
                 baseSummary = baseSummary,
@@ -194,12 +218,24 @@ class ReadinessSummaryCoordinator
             val fromDate = targetDate.minusDays(ScoringConstants.CHRONIC_DAYS * 2)
             val dailyTrimpByDate = (
                 trimpContext?.dailyTrimpByDate?.subMap(fromDate, true, targetDate, true)
-                    ?: TrimpDateBucketer.bucket(dataLoader.loadWorkoutTrimpPoints(fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(), nextDayMidnightMs), zoneId)
+                    ?: TrimpDateBucketer.bucket(
+                        dataLoader.loadWorkoutTrimpPoints(
+                            fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                            nextDayMidnightMs,
+                        ),
+                        zoneId,
+                    )
             ).toMutableMap().apply { put(targetDate, dailyTrimpRaw) }
 
             val everydayTrimpByDate = (
                 trimpContext?.everydayTrimpByDate?.subMap(fromDate, true, targetDate, true)
-                    ?: TrimpDateBucketer.bucket(dataLoader.loadEverydayTrimpPoints(fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(), nextDayMidnightMs), zoneId)
+                    ?: TrimpDateBucketer.bucket(
+                        dataLoader.loadEverydayTrimpPoints(
+                            fromDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                            nextDayMidnightMs,
+                        ),
+                        zoneId,
+                    )
             ).toMutableMap().apply { put(targetDate, trimpEverydayHr) }
 
             val loadSeries = buildLoadSeriesUseCase.execute(targetDate, dailyTrimpByDate, everydayTrimpByDate)
