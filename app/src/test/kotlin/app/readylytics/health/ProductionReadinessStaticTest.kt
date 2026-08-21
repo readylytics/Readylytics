@@ -230,15 +230,15 @@ class ProductionReadinessStaticTest {
 
         val expectedDaos =
             listOf(
-                "sleepDao.deleteBeforeTimestamp",
+                "sleepSessionDao.deleteBeforeTimestamp",
                 "heartRateDao.deleteBeforeTimestamp",
                 "hrvDao.deleteBeforeTimestamp",
                 "workoutDao.deleteBeforeTimestamp",
                 "dailySummaryDao.deleteBeforeTimestamp",
-                "weightDao.deleteBeforeTimestamp",
-                "bodyFatDao.deleteBeforeTimestamp",
-                "bloodPressureDao.deleteBeforeTimestamp",
-                "oxygenSaturationDao.deleteBeforeTimestamp",
+                "weightRecordDao.deleteBeforeTimestamp",
+                "bodyFatRecordDao.deleteBeforeTimestamp",
+                "bloodPressureRecordDao.deleteBeforeTimestamp",
+                "oxygenSaturationRecordDao.deleteBeforeTimestamp",
             )
 
         val missingDaos =

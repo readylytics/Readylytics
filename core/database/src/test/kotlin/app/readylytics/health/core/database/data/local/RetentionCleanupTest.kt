@@ -28,6 +28,7 @@ class RetentionCleanupTest {
     private lateinit var bodyTemperatureDao: BodyTemperatureRecordDao
     private lateinit var stepRecordDao: StepRecordDao
     private lateinit var minuteBucketDao: MinuteBucketDao
+    private lateinit var sourceRecordDao: SourceRecordDao
     private lateinit var retentionCleanup: RetentionCleanup
 
     @Before
@@ -51,23 +52,30 @@ class RetentionCleanupTest {
         bodyTemperatureDao = database.bodyTemperatureRecordDao()
         stepRecordDao = database.stepRecordDao()
         minuteBucketDao = database.minuteBucketDao()
+        sourceRecordDao = database.sourceRecordDao()
 
         val transactionRunner = RoomTransactionRunner(database)
         retentionCleanup =
             RetentionCleanup(
                 transactionRunner = transactionRunner,
-                sleepDao = sleepDao,
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                workoutDao = workoutDao,
+                daos =
+                    HealthRecordDaos(
+                        sleepSessionDao = sleepDao,
+                        sleepStageDao = sleepStageDao,
+                        heartRateDao = heartRateDao,
+                        hrvDao = hrvDao,
+                        workoutDao = workoutDao,
+                        workoutRoutePointDao = database.workoutRoutePointDao(),
+                        weightRecordDao = weightDao,
+                        bodyFatRecordDao = bodyFatDao,
+                        bloodPressureRecordDao = bloodPressureDao,
+                        oxygenSaturationRecordDao = oxygenSaturationDao,
+                        bodyTemperatureRecordDao = bodyTemperatureDao,
+                        stepRecordDao = stepRecordDao,
+                        sourceRecordDao = sourceRecordDao,
+                        minuteBucketDao = minuteBucketDao,
+                    ),
                 dailySummaryDao = dailySummaryDao,
-                weightDao = weightDao,
-                bodyFatDao = bodyFatDao,
-                bloodPressureDao = bloodPressureDao,
-                oxygenSaturationDao = oxygenSaturationDao,
-                bodyTemperatureDao = bodyTemperatureDao,
-                stepRecordDao = stepRecordDao,
-                minuteBucketDao = minuteBucketDao,
             )
     }
 
