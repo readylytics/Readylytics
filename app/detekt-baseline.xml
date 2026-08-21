@@ -16,10 +16,6 @@
     <ID>CyclomaticComplexMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
-    <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is CancellationException</ID>
-    <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is ZipException</ID>
-    <ID>InstanceOfCheckForException:PeriodicHealthSyncWorker.kt$PeriodicHealthSyncWorker$e is HealthConnectPermissionRevokedException</ID>
-    <ID>InstanceOfCheckForException:PeriodicHealthSyncWorker.kt$PeriodicHealthSyncWorker$e is SecurityException</ID>
     <ID>LargeClass:LocalBackupManagerTest.kt$LocalBackupManagerTest</ID>
     <ID>LargeClass:LocalRestoreManager.kt$LocalRestoreManager</ID>
     <ID>LongMethod:AppNavHost.kt$@Composable fun AppNavHost( viewModel: SyncViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), crashReportViewModel: CrashReportViewModel = hiltViewModel(), logcatCaptureViewModel: LogcatCaptureViewModel = hiltViewModel(), )</ID>

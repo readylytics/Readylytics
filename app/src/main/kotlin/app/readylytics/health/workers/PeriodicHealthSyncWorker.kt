@@ -74,13 +74,15 @@ class PeriodicHealthSyncWorker
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: SecurityException) {
+                logE(TAG, e) { "Periodic sync worker failed" }
+                Result.failure()
+            } catch (e: HealthConnectPermissionRevokedException) {
+                logE(TAG, e) { "Periodic sync worker failed" }
+                Result.failure()
             } catch (e: Exception) {
                 logE(TAG, e) { "Periodic sync worker failed" }
-                if (e is SecurityException || e is HealthConnectPermissionRevokedException) {
-                    Result.failure()
-                } else {
-                    Result.retry()
-                }
+                Result.retry()
             } finally {
                 syncController.onBackgroundRecalcFinished(success)
                 runCatching {

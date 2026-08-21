@@ -5,7 +5,6 @@
     <ID>CyclomaticComplexMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
     <ID>CyclomaticComplexMethod:ResyncRangeUseCase.kt$ResyncRangeUseCase$suspend fun run( startDate: LocalDate, endDate: LocalDate, chunkDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, skipIngestAndPrune: Boolean = false, ): Result&lt;Unit&gt;</ID>
     <ID>EmptyFunctionBlock:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest.RecordingHealthIngestionStore${}</ID>
-    <ID>InstanceOfCheckForException:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$e !is HealthConnectPermissionRevokedException</ID>
     <ID>LargeClass:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl : HealthConnectRepository</ID>
     <ID>LongMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
     <ID>LongMethod:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest$@Test fun `daily sync persists deterministic dummy sleep workout hr and hrv batch`()</ID>

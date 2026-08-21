@@ -396,8 +396,13 @@ class HealthConnectRepositoryImpl
                 readAllPages<T>(from, to).map(map)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: HealthConnectPermissionRevokedException) {
+                app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
+                    "${T::class.simpleName} permission not granted; falling back to route-derived totals"
+                }
+                emptyList()
             } catch (e: Exception) {
-                if (e !is HealthConnectPermissionRevokedException && e.asHealthConnectSecurityCause() == null) throw e
+                if (e.asHealthConnectSecurityCause() == null) throw e
                 app.readylytics.health.core.model.domain.util.logD("HealthConnectRepository") {
                     "${T::class.simpleName} permission not granted; falling back to route-derived totals"
                 }

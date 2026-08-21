@@ -149,8 +149,9 @@ class LocalRestoreManager
                         if (backup != null) {
                             try {
                                 restorePreferences(backup, providedPassword)
+                            } catch (e: CancellationException) {
+                                throw e
                             } catch (e: Throwable) {
-                                if (e is CancellationException) throw e
                                 auditTrailRepository.appendBestEffort(
                                     "LocalRestoreManager",
                                     AuditEvent(
@@ -180,24 +181,30 @@ class LocalRestoreManager
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Throwable) {
+                } catch (e: ZipException) {
                     val cause =
-                        if (e is ZipException && e.message?.contains("password", ignoreCase = true) == true) {
+                        if (e.message?.contains("password", ignoreCase = true) == true) {
                             WrongBackupPasswordException()
                         } else {
                             e
                         }
-                    auditTrailRepository.appendBestEffort(
-                        "LocalRestoreManager",
-                        AuditEvent(
-                            type = AuditEvent.Type.RESTORE_FAILED,
-                            occurredAt = Instant.now(),
-                            detail = cause::class.simpleName,
-                        ),
-                    )
-                    RestoreResult.Failure(cause)
+                    buildRestoreFailure(cause)
+                } catch (e: Throwable) {
+                    buildRestoreFailure(e)
                 }
             }
+
+        private suspend fun buildRestoreFailure(cause: Throwable): RestoreResult.Failure {
+            auditTrailRepository.appendBestEffort(
+                "LocalRestoreManager",
+                AuditEvent(
+                    type = AuditEvent.Type.RESTORE_FAILED,
+                    occurredAt = Instant.now(),
+                    detail = cause::class.simpleName,
+                ),
+            )
+            return RestoreResult.Failure(cause)
+        }
 
         private fun readManifest(zipFile: ZipFile): BackupManifest {
             val header =
