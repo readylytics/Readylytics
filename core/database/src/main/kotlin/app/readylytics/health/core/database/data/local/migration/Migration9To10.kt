@@ -19,6 +19,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 val MIGRATION_9_10 =
     object : Migration(9, 10) {
         override fun migrate(db: SupportSQLiteDatabase) {
+            createNewTables(db)
+            backfillSourceRecords(db)
+            rebuildHeartRateRecords(db)
+            rebuildHrvRecords(db)
+        }
+
+        private fun createNewTables(db: SupportSQLiteDatabase) {
             // 1. Dimension table.
             db.execSQL(
                 """
@@ -60,7 +67,9 @@ val MIGRATION_9_10 =
                 "CREATE INDEX IF NOT EXISTS index_hr_minute_buckets_bucketStartMs_bucketEndMs " +
                     "ON hr_minute_buckets(bucketStartMs, bucketEndMs)",
             )
+        }
 
+        private fun backfillSourceRecords(db: SupportSQLiteDatabase) {
             // 3. Backfill dimension rows from both hot tables (base UUID -> recordType -> first-seen).
             db.execSQL(
                 """
@@ -82,9 +91,6 @@ val MIGRATION_9_10 =
                 GROUP BY substr(sourceRecordId, 1, instr(sourceRecordId || '_', '_') - 1)
                 """.trimIndent(),
             )
-
-            rebuildHeartRateRecords(db)
-            rebuildHrvRecords(db)
         }
 
         private fun rebuildHeartRateRecords(db: SupportSQLiteDatabase) {

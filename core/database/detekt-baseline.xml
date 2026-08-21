@@ -13,7 +13,6 @@
     <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$private fun addNight( sleepSessions: MutableList&lt;SleepSessionEntity&gt;, sleepStages: MutableList&lt;SleepStageEntity&gt;, heartRateRows: MutableList&lt;HeartRateRecordEntity&gt;, wakeDay: LocalDate, deviceName: String, stageLess: Boolean, )</ID>
     <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$suspend fun build( db: HealthDatabase, startDate: LocalDate, endDate: LocalDate, ): BuildResult</ID>
     <ID>LongMethod:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$@Test fun `walk-forward recompute matches golden fixture`()</ID>
-    <ID>LongMethod:Migration9To10.kt$&lt;no name provided&gt;$override fun migrate(db: SupportSQLiteDatabase)</ID>
     <ID>LongMethod:RetentionCleanupTest.kt$RetentionCleanupTest$@Test fun testRetentionCleanup()</ID>
     <ID>LongMethod:RollingWindowTest.kt$RollingWindowTest$@Test fun `getTrimpInRange feeds local-date aggregation`()</ID>
     <ID>LongMethod:RollingWindowTest.kt$RollingWindowTest$@Test fun `getWorkoutsInRange filters correctly`()</ID>
