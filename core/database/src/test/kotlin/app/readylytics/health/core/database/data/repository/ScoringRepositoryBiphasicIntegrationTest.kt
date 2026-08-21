@@ -106,7 +106,6 @@ class ScoringRepositoryBiphasicIntegrationTest {
         runTest {
             val zoneId = ZoneId.of("Europe/Berlin")
             val targetDate = LocalDate.of(2026, 7, 9)
-            val dayMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
 
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
             coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } returns null

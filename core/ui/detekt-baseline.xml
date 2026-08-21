@@ -45,6 +45,5 @@
     <ID>UnusedParameter:CardLoader.kt$modifier: Modifier = Modifier</ID>
     <ID>UnusedParameter:TrendCharts.kt$metricName: String</ID>
     <ID>UnusedPrivateProperty:DateSwitcher.kt$val pillDescription = stringResource( R.string.accessibility_date_pill, qualifierLabelFor(selectedDate, today), selectedDate.format(dateFormatter), )</ID>
-    <ID>UnusedPrivateProperty:TimeRangeTest.kt$TimeRangeTest$val expectedStart = baseDate .minusDays(6) .atStartOfDay(zoneId) .toInstant() .toEpochMilli()</ID>
   </CurrentIssues>
 </SmellBaseline>

@@ -33,6 +33,5 @@
     <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Selector/card - default font scale") @Composable private fun DashboardCardFontScaleDefaultPreview()</ID>
     <ID>UnusedPrivateMember:DashboardMetricCardPreviews.kt$@Preview(showBackground = true, name = "Weight Bar - reference range at BMI 21.7") @Composable private fun DashboardWeightReferenceRangeBarPreview()</ID>
     <ID>UnusedPrivateProperty:DashboardMetricPresentationFactory.kt$DashboardMetricPresentationFactory$private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase</ID>
-    <ID>UnusedPrivateProperty:DashboardViewModelTest.kt$DashboardViewModelTest$val initialState = viewModel.isManagingCards.value</ID>
   </CurrentIssues>
 </SmellBaseline>

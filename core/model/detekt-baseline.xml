@@ -51,7 +51,5 @@
     <ID>TooManyFunctions:ScoringHistoryRepository.kt$ScoringHistoryRepository</ID>
     <ID>TooManyFunctions:UnitConverter.kt$UnitConverter</ID>
     <ID>TooManyFunctions:VitalAssessment.kt$app.readylytics.health.core.model.domain.model.VitalAssessment.kt</ID>
-    <ID>UnusedPrivateProperty:BodyTemperatureBaselineCalculatorTest.kt$BodyTemperatureBaselineCalculatorTest$val fourteenDays = List(14) { 36.5f } + List(0) { }</ID>
-    <ID>UnusedPrivateProperty:SleepCardCatalogTest.kt$SleepCardCatalogTest$private val topGauge = SleepTopCardConfiguration(SleepTopCardId.SLEEP_DURATION_GAUGE)</ID>
   </CurrentIssues>
 </SmellBaseline>

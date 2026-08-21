@@ -114,7 +114,6 @@ class ReadinessCalculationTest {
     fun `readiness recovery tracking`() {
         val lowScore = 35f
         val recoveredScore = 70f
-        val recoveryDays = 3
         val scoreImprovement = recoveredScore - lowScore
         assertEquals(35f, scoreImprovement)
     }

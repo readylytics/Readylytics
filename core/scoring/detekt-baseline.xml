@@ -87,6 +87,5 @@
     <ID>TooManyFunctions:SleepDayAggregator.kt$SleepDayAggregator</ID>
     <ID>UnusedParameter:HrCoverageValidator.kt$HrCoverageValidator$durationMinutes: Int</ID>
     <ID>UnusedPrivateMember:SleepPercentileRhrCalculator.kt$SleepPercentileRhrCalculator$private fun List&lt;Int&gt;.getPercentile(percentile: Int): Int?</ID>
-    <ID>UnusedPrivateProperty:ReadinessCalculationTest.kt$ReadinessCalculationTest$val recoveryDays = 3</ID>
   </CurrentIssues>
 </SmellBaseline>

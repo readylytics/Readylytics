@@ -175,8 +175,6 @@ class BaselineComputerBackfillEquivalenceTest {
                         toMs = nextDayMidnightMs,
                         excludeSessionIds = ownSession?.id?.let(::setOf).orEmpty(),
                     )
-                val expectedRhr =
-                    baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
                 val actual =
                     batched[
                         summary.dateMidnightMs.let {

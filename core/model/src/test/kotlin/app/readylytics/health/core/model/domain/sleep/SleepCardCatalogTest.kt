@@ -7,7 +7,6 @@ import org.junit.Test
 
 class SleepCardCatalogTest {
     private val topScore = SleepTopCardConfiguration(SleepTopCardId.SLEEP_SCORE)
-    private val topGauge = SleepTopCardConfiguration(SleepTopCardId.SLEEP_DURATION_GAUGE)
     private val topBar = SleepTopCardConfiguration(SleepTopCardId.SLEEP_BREAKDOWN_BAR)
 
     private val metricCircadian = SleepMetricCardConfiguration(SleepMetricCardId.CIRCADIAN_CONSISTENCY)

@@ -86,8 +86,6 @@
     <ID>UnusedParameter:CanonicalMetricDisplayAuditTest.kt$CanonicalMetricDisplayAuditTest$file: File</ID>
     <ID>UnusedParameter:LogcatCaptureStoreImpl.kt$LogcatCaptureStoreImpl$durationMinutes: Int</ID>
     <ID>UnusedPrivateMember:PhysiologyPreferences.kt$PhysiologyPreferences$private fun Int.toValidRestMinutes()</ID>
-    <ID>UnusedPrivateProperty:CardConfigurationRepositoryTest.kt$CardConfigurationRepositoryTest$val repo = CardConfigurationRepositoryImpl(dataStore, testScope)</ID>
-    <ID>UnusedPrivateProperty:HealthDeviceRepositoryTest.kt$HealthDeviceRepositoryTest$val dbDevices = listOf("Device1", "Device2")</ID>
     <ID>UnusedPrivateProperty:LocalRestoreManager.kt$LocalRestoreManager$val name = reader.nextName()</ID>
     <ID>UnusedPrivateProperty:LocalRestoreManager.kt$LocalRestoreManager$val token = reader.peek()</ID>
     <ID>UseCheckOrError:FileBackupStore.kt$FileBackupStore$throw IllegalStateException("Failed to delete local file")</ID>
