@@ -319,18 +319,37 @@ private fun NavGraphBuilder.addOnboardingDestination(
         val isSyncing = args.uiState is SyncUiState.SyncingCatchUp
         val isSyncError = args.uiState is SyncUiState.Error
         val syncError = (args.uiState as? SyncUiState.Error)?.message?.resolveOrNull()
+        val syncStatus =
+            app.readylytics.health.feature.onboarding.OnboardingSyncStatus(
+                isSyncing = isSyncing,
+                isSyncError = isSyncError,
+                syncError = syncError,
+                recalcProgress = args.recalcProgress,
+                onRetrySync = { args.viewModel.onPermissionsGranted() },
+                onSkipSync = { args.viewModel.skipSync() },
+                onReportIssue = args.onReportIssue,
+                onDownloadLogs = {
+                    args.coroutineScope.launch {
+                        val file = args.logcatCaptureViewModel.captureFile()
+                        context.startActivity(buildLogFileShareIntent(context, file))
+                    }
+                },
+                onContinueInBackground = {
+                    args.onSetSyncBackgrounded()
+                    navController.navigate(AppDestination.MainShell) {
+                        popUpTo(AppDestination.Onboarding) {
+                            inclusive = true
+                            saveState = true
+                        }
+                        restoreState = true
+                    }
+                },
+            )
         OnboardingRoute(
             userPreferencesFlow = args.viewModel.userPreferences,
             allPermissions = args.viewModel.allPermissions,
             requiredPermissions = args.viewModel.requiredPermissions,
             optionalPermissions = args.viewModel.optionalPermissions,
-            isSyncing = isSyncing,
-            isSyncError = isSyncError,
-            syncError = syncError,
-            recalcProgress = args.recalcProgress,
-            onRetrySync = { args.viewModel.onPermissionsGranted() },
-            onSkipSync = { args.viewModel.skipSync() },
-            onReportIssue = args.onReportIssue,
             onPermissionsGranted = { args.viewModel.onPermissionsGranted() },
             onPermissionsDenied = { args.viewModel.onPermissionsDenied() },
             onRestartApp = {
@@ -340,22 +359,7 @@ private fun NavGraphBuilder.addOnboardingDestination(
                     }
                 context.startActivity(restartIntent)
             },
-            onDownloadLogs = {
-                args.coroutineScope.launch {
-                    val file = args.logcatCaptureViewModel.captureFile()
-                    context.startActivity(buildLogFileShareIntent(context, file))
-                }
-            },
-            onContinueInBackground = {
-                args.onSetSyncBackgrounded()
-                navController.navigate(AppDestination.MainShell) {
-                    popUpTo(AppDestination.Onboarding) {
-                        inclusive = true
-                        saveState = true
-                    }
-                    restoreState = true
-                }
-            },
+            syncStatus = syncStatus,
         )
     }
 }

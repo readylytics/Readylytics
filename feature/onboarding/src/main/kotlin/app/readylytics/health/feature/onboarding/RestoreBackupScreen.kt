@@ -87,24 +87,7 @@ fun RestoreBackupScreen(
                 .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
     ) {
-        IconButton(onClick = onBack, enabled = !isBusy) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreR.string.back))
-        }
-
-        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-
-        Text(
-            text = stringResource(R.string.onboarding_restore_title),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-
-        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-
-        Text(
-            text = stringResource(R.string.onboarding_restore_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        RestoreHeader(onBack = onBack, isBusy = isBusy)
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
@@ -120,76 +103,141 @@ fun RestoreBackupScreen(
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text(stringResource(R.string.onboarding_restore_password_label)) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isBusy,
-            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    autoCorrectEnabled = false,
-                    imeAction = ImeAction.Done,
-                ),
-            keyboardActions =
-                KeyboardActions(
-                    onDone = {
-                        selectedUri?.takeIf { password.isNotEmpty() && !isBusy }?.let {
-                            onRestoreClick(it, password)
-                        }
-                    },
-                ),
-            trailingIcon = {
-                IconButton(onClick = { showPassword = !showPassword }) {
-                    Icon(
-                        imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription =
-                            stringResource(
-                                if (showPassword) {
-                                    CoreR.string.accessibility_password_hide
-                                } else {
-                                    CoreR.string.accessibility_password_show
-                                },
-                            ),
-                    )
-                }
-            },
-            singleLine = true,
+        RestorePasswordField(
+            password = password,
+            onPasswordChange = { password = it },
+            showPassword = showPassword,
+            onShowPasswordToggle = { showPassword = !showPassword },
+            isBusy = isBusy,
+            selectedUri = selectedUri,
+            onRestoreClick = onRestoreClick,
         )
 
         if (resolvedError != null) {
             Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = resolvedError,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onDismissError) {
-                    Text(stringResource(CoreR.string.action_dismiss))
-                }
-            }
+            RestoreErrorRow(resolvedError = resolvedError, onDismissError = onDismissError)
         }
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
-        Button(
-            onClick = { selectedUri?.let { onRestoreClick(it, password) } },
-            enabled = selectedUri != null && password.isNotEmpty() && !isBusy,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (isBusy) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = MaterialTheme.dimens.progressStrokeWidth,
-                    color = MaterialTheme.colorScheme.onPrimary,
+        RestoreSubmitButton(
+            selectedUri = selectedUri,
+            password = password,
+            isBusy = isBusy,
+            onRestoreClick = onRestoreClick,
+        )
+    }
+}
+
+@Composable
+private fun RestoreHeader(
+    onBack: () -> Unit,
+    isBusy: Boolean,
+) {
+    IconButton(onClick = onBack, enabled = !isBusy) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreR.string.back))
+    }
+    Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+    Text(
+        text = stringResource(R.string.onboarding_restore_title),
+        style = MaterialTheme.typography.headlineSmall,
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+    Text(
+        text = stringResource(R.string.onboarding_restore_subtitle),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun RestoreSubmitButton(
+    selectedUri: Uri?,
+    password: String,
+    isBusy: Boolean,
+    onRestoreClick: (uri: Uri, password: String) -> Unit,
+) {
+    Button(
+        onClick = { selectedUri?.let { onRestoreClick(it, password) } },
+        enabled = selectedUri != null && password.isNotEmpty() && !isBusy,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        if (isBusy) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = MaterialTheme.dimens.progressStrokeWidth,
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+        } else {
+            Text(stringResource(R.string.onboarding_restore_button))
+        }
+    }
+}
+
+@Composable
+private fun RestorePasswordField(
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    showPassword: Boolean,
+    onShowPasswordToggle: () -> Unit,
+    isBusy: Boolean,
+    selectedUri: Uri?,
+    onRestoreClick: (uri: Uri, password: String) -> Unit,
+) {
+    OutlinedTextField(
+        value = password,
+        onValueChange = onPasswordChange,
+        label = { Text(stringResource(R.string.onboarding_restore_password_label)) },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !isBusy,
+        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions =
+            KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                autoCorrectEnabled = false,
+                imeAction = ImeAction.Done,
+            ),
+        keyboardActions =
+            KeyboardActions(
+                onDone = {
+                    selectedUri?.takeIf { password.isNotEmpty() && !isBusy }?.let {
+                        onRestoreClick(it, password)
+                    }
+                },
+            ),
+        trailingIcon = {
+            IconButton(onClick = onShowPasswordToggle) {
+                Icon(
+                    imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription =
+                        stringResource(
+                            if (showPassword) {
+                                CoreR.string.accessibility_password_hide
+                            } else {
+                                CoreR.string.accessibility_password_show
+                            },
+                        ),
                 )
-            } else {
-                Text(stringResource(R.string.onboarding_restore_button))
             }
+        },
+        singleLine = true,
+    )
+}
+
+@Composable
+private fun RestoreErrorRow(
+    resolvedError: String,
+    onDismissError: () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = resolvedError,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onDismissError) {
+            Text(stringResource(CoreR.string.action_dismiss))
         }
     }
 }

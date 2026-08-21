@@ -76,45 +76,10 @@ fun RetentionSetupScreen(
 
             Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
 
-            Text(
-                text = stringResource(R.string.onboarding_hc_permissions_label),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.fillMaxWidth(),
+            PermissionsSummary(
+                requiredPermissions = requiredPermissions,
+                optionalPermissions = optionalPermissions,
             )
-            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-            Text(
-                text = stringResource(R.string.onboarding_hc_permissions_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
-
-            Text(
-                text = stringResource(R.string.onboarding_required_permissions_label),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-            requiredPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
-                PermissionBulletRow(stringResource(labelRes))
-            }
-
-            if (optionalPermissions.isNotEmpty()) {
-                Spacer(Modifier.height(MaterialTheme.spacing.small))
-                Text(
-                    text = stringResource(R.string.onboarding_optional_permissions_label),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
-                optionalPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
-                    PermissionBulletRow(stringResource(labelRes))
-                }
-            }
         }
 
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
@@ -133,6 +98,52 @@ fun RetentionSetupScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.onboarding_open_hc_settings))
+        }
+    }
+}
+
+@Composable
+private fun PermissionsSummary(
+    requiredPermissions: Set<String>,
+    optionalPermissions: Set<String>,
+) {
+    Text(
+        text = stringResource(R.string.onboarding_hc_permissions_label),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+    Text(
+        text = stringResource(R.string.onboarding_hc_permissions_desc),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+    )
+
+    Spacer(Modifier.height(MaterialTheme.spacing.small))
+
+    Text(
+        text = stringResource(R.string.onboarding_required_permissions_label),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+    requiredPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
+        PermissionBulletRow(stringResource(labelRes))
+    }
+
+    if (optionalPermissions.isNotEmpty()) {
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        Text(
+            text = stringResource(R.string.onboarding_optional_permissions_label),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(MaterialTheme.spacing.extraSmall))
+        optionalPermissions.mapNotNull { healthPermissionLabelRes(it) }.forEach { labelRes ->
+            PermissionBulletRow(stringResource(labelRes))
         }
     }
 }
