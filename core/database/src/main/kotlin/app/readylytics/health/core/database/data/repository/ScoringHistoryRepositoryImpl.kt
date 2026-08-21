@@ -21,6 +21,9 @@ import javax.inject.Singleton
 import kotlin.math.round
 
 @Singleton
+@Suppress("TooManyFunctions") // Implements every member of the ScoringHistoryRepository domain
+// interface (core/model); splitting the interface to shrink this count is a cross-module change
+// with call-site impact across ReadinessSummaryCoordinator/ScoringRepositoryImpl, out of Tier 3 scope.
 class ScoringHistoryRepositoryImpl
     @Inject
     constructor(

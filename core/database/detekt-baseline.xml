@@ -41,7 +41,5 @@
     <ID>ReturnCount:ScoringDayDataLoader.kt$ScoringDayDataLoader$suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List&lt;HrMinuteBucketRow&gt;</ID>
     <ID>ReturnCount:SqlCipherKeyManager.kt$SqlCipherKeyManager$fun migrateIfNeeded(dbFile: File)</ID>
     <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule.Companion$(*DatabaseMigrations.all)</ID>
-    <ID>TooManyFunctions:HealthDatabase.kt$HealthDatabase : RoomDatabase</ID>
-    <ID>TooManyFunctions:ScoringHistoryRepositoryImpl.kt$ScoringHistoryRepositoryImpl : ScoringHistoryRepository</ID>
   </CurrentIssues>
 </SmellBaseline>

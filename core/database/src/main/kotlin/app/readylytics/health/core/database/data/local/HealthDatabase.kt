@@ -61,6 +61,9 @@ import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRoute
     version = HealthDatabase.DATABASE_VERSION,
 )
 @TypeConverters(Converters::class)
+@Suppress("TooManyFunctions") // Room requires every DAO accessor on the single @Database class for
+// this physical .db file; there is no supported way to split them across multiple database
+// classes, so this count cannot be reduced without removing a working DAO.
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
 
