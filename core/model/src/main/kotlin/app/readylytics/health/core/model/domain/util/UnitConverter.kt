@@ -170,14 +170,10 @@ object UnitConverter {
     fun elevationParts(
         meters: Float,
         unitSystem: UnitSystem,
-    ): MetricParts? {
-        // 0 m is a real measurement (a genuinely flat route), not missing data -- only negative
-        // and non-finite values mean "unavailable".
-        if (meters < 0f || meters.isNaN() || meters.isInfinite()) return null
-        if (meters > 15_000f) return null
-        return when (unitSystem) {
-            UnitSystem.METRIC -> MetricParts("%.0f".format(meters), "m")
-            UnitSystem.IMPERIAL -> MetricParts("%.0f".format(meters * METERS_TO_FEET), "ft")
+    ): MetricParts? =
+        when {
+            meters < 0f || meters.isNaN() || meters.isInfinite() || meters > 15_000f -> null
+            unitSystem == UnitSystem.METRIC -> MetricParts("%.0f".format(meters), "m")
+            else -> MetricParts("%.0f".format(meters * METERS_TO_FEET), "ft")
         }
-    }
 }
