@@ -1,6 +1,7 @@
 package app.readylytics.health.util
 
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
@@ -101,8 +102,8 @@ data class LoadTestResult(
             =================
             Duration: ${durationMs}ms
             Operations: $iterationsCompleted
-            Success Rate: ${String.format("%.2f", successRate)}%
-            Ops/sec: ${String.format("%.0f", operationsPerSecond)}
+            Success Rate: ${String.format(Locale.US, "%.2f", successRate)}%
+            Ops/sec: ${String.format(Locale.US, "%.0f", operationsPerSecond)}
             Exceptions: $exceptionCount
             """.trimIndent(),
         )

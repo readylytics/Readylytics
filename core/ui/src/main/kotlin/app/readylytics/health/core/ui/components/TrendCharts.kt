@@ -338,7 +338,7 @@ fun TrendChart(
                 if (axisDecimalPlaces == 0) {
                     value.roundToInt().toString()
                 } else {
-                    String.format("%.${axisDecimalPlaces}f", value)
+                    String.format(Locale.getDefault(), "%.${axisDecimalPlaces}f", value)
                 }
             }
         }
@@ -556,7 +556,11 @@ internal fun formatBaselineLegendText(
     when {
         value != null -> {
             val formattedValue =
-                if (decimalPlaces == 0) value.roundToInt().toString() else String.format("%.${decimalPlaces}f", value)
+                if (decimalPlaces == 0) {
+                    value.roundToInt().toString()
+                } else {
+                    String.format(Locale.getDefault(), "%.${decimalPlaces}f", value)
+                }
             "$label: $formattedValue $unit"
         }
         unavailableValueLabel != null -> "$label: $unavailableValueLabel"

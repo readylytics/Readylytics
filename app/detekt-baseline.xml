@@ -16,8 +16,6 @@
     <ID>CyclomaticComplexMethod:UserPreferencesSerializer.kt$fun UserPreferences.toProto(): UserPreferencesProto</ID>
     <ID>EmptyFunctionBlock:DataStoreModule.kt$DataStoreModule.&lt;no name provided&gt;${}</ID>
     <ID>EmptyFunctionBlock:LocalBackupManagerTest.kt$LocalBackupManagerTest.FakeBackupStore${}</ID>
-    <ID>ImplicitDefaultLocale:LoadTestResult.kt$LoadTestResult$String.format("%.0f", operationsPerSecond)</ID>
-    <ID>ImplicitDefaultLocale:LoadTestResult.kt$LoadTestResult$String.format("%.2f", successRate)</ID>
     <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is CancellationException</ID>
     <ID>InstanceOfCheckForException:LocalRestoreManager.kt$LocalRestoreManager$e is ZipException</ID>
     <ID>InstanceOfCheckForException:PeriodicHealthSyncWorker.kt$PeriodicHealthSyncWorker$e is HealthConnectPermissionRevokedException</ID>
