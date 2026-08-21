@@ -109,6 +109,7 @@ class FeatureModuleArchitectureTest {
             setOf(
                 "DataSettings.kt",
                 "OnboardingRoute.kt",
+                "OnboardingPermissionGateHelpers.kt",
                 "PermissionBullets.kt",
             )
 

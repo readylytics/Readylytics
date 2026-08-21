@@ -211,4 +211,129 @@ class DayOffsetTickCalculatorTest {
             }
         }
     }
+
+    @Test
+    fun `rangeDays 360 keeps strictly ascending ticks including both endpoints`() {
+        val calculator = DayOffsetTickCalculator(360)
+        val range = 0.0..359.0
+        val values = calculator.values(range)
+        assertTrue(values.first() == 0.0)
+        assertTrue(values.last() == 359.0)
+        assertEquals(values.sorted(), values)
+        assertEquals(values.distinct(), values)
+        assertTrue(values.zipWithNext().all { (a, b) -> b - a > 0.0 })
+    }
+
+    @Test
+    fun `cache hit returns the identical instance`() {
+        val calculator = DayOffsetTickCalculator(30)
+        val range = 0.0..10.0
+
+        val first = calculator.values(range)
+        val second = calculator.values(range)
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `cache hit returns the identical instance for the zoomed-out early return`() {
+        // rangeDays = 30, visibleDays = 29 > (rangeDays - 2.0) = 28.0, so this hits the
+        // zoomedOutValues early return rather than the general spacing path above.
+        val calculator = DayOffsetTickCalculator(30)
+        val range = 0.0..29.0
+
+        val first = calculator.values(range)
+        val second = calculator.values(range)
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `cache miss on a changed range recomputes and matches reference`() {
+        val calculator = DayOffsetTickCalculator(30)
+        val rangeA = 0.0..10.0
+        val rangeB = 0.0..20.0
+
+        val resultA = calculator.values(rangeA)
+        val resultB = calculator.values(rangeB)
+
+        assertEquals(referenceValues(30, rangeA), resultA)
+        assertEquals(referenceValues(30, rangeB), resultB)
+    }
+
+    @Test
+    fun `alternating ranges still return correct values for the earlier range`() {
+        val calculator = DayOffsetTickCalculator(90)
+        val rangeA = 0.0..10.0
+        val rangeB = 20.0..40.0
+
+        val firstA = calculator.values(rangeA)
+        calculator.values(rangeB)
+        val secondA = calculator.values(rangeA)
+        calculator.values(rangeB)
+        val thirdA = calculator.values(rangeA)
+
+        assertEquals(referenceValues(90, rangeA), firstA)
+        assertEquals(referenceValues(90, rangeA), secondA)
+        assertEquals(referenceValues(90, rangeA), thirdA)
+    }
+
+    @Test
+    fun `tickValuesFor places one tick per bucketed point offset`() {
+        assertEquals(
+            listOf(45.0, 135.0, 225.0, 315.0),
+            ChartDefaults.tickValuesFor(360, listOf(315, 45, 225, 135), 0.0..359.0),
+        )
+    }
+
+    @Test
+    fun `tickValuesFor without point offsets delegates to the daily calculator`() {
+        assertEquals(
+            listOf(0.0, 6.0, 12.0, 18.0, 24.0, 29.0),
+            ChartDefaults.tickValuesFor(30, emptyList(), 0.0..29.0),
+        )
+    }
+
+    @Test
+    fun `spacing-candidate reuse produces identical output across calls in the same bucket`() {
+        // rangeDays = 180, zoomed-out branch requires visibleDays > 178.0; both ranges below stay
+        // well under that, so both hit the general path with spacing = 5 (visibleDays <= 35.0).
+        val calculator = DayOffsetTickCalculator(180)
+        val rangeOne = 0.0..30.0
+        val rangeTwo = 50.0..80.0
+
+        val firstOne = calculator.values(rangeOne)
+        val firstTwo = calculator.values(rangeTwo)
+        val secondOne = calculator.values(rangeOne)
+        val secondTwo = calculator.values(rangeTwo)
+
+        assertEquals(referenceValues(180, rangeOne), firstOne)
+        assertEquals(referenceValues(180, rangeTwo), firstTwo)
+        assertEquals(referenceValues(180, rangeOne), secondOne)
+        assertEquals(referenceValues(180, rangeTwo), secondTwo)
+    }
+
+    @Test
+    fun `subsampleTicks keeps list unchanged when within cap`() {
+        val ticks = listOf(20.0, 76.0, 118.0)
+        assertEquals(ticks, ChartDefaults.subsampleTicks(ticks, maxTicks = 5))
+    }
+
+    @Test
+    fun `subsampleTicks caps to maxTicks preserving first and last`() {
+        // 360D EIGHT_WEEK bucket midpoints observed on device.
+        val ticks = listOf(20.0, 76.0, 118.0, 160.0, 216.0, 272.0, 328.0, 359.0)
+        val result = ChartDefaults.subsampleTicks(ticks, maxTicks = ChartDefaults.MAX_X_AXIS_TICKS)
+        assertEquals(ChartDefaults.MAX_X_AXIS_TICKS, result.size)
+        assertEquals(20.0, result.first())
+        assertEquals(359.0, result.last())
+        assertEquals(result.toSortedSet().toList(), result)
+    }
+
+    @Test
+    fun `subsampleTicks spreads evenly across dense ticks`() {
+        val ticks = (0..359).map { it.toDouble() }
+        val result = ChartDefaults.subsampleTicks(ticks, maxTicks = 4)
+        assertEquals(listOf(0.0, 120.0, 239.0, 359.0), result)
+    }
 }
