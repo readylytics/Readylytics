@@ -83,11 +83,5 @@
     <ID>TooManyFunctions:SyncPreferences.kt$SyncPreferences</ID>
     <ID>TooManyFunctions:UIPreferences.kt$UIPreferences</ID>
     <ID>TooManyFunctions:V7DatabaseMigrator.kt$V7DatabaseMigrator</ID>
-    <ID>UseCheckOrError:FileBackupStore.kt$FileBackupStore$throw IllegalStateException("Failed to delete local file")</ID>
-    <ID>UseCheckOrError:LocalBackupManager.kt$LocalBackupManager$throw IllegalStateException("Backup password not set")</ID>
-    <ID>UseCheckOrError:LocalRestoreManager.kt$LocalRestoreManager$throw IllegalStateException("Could not open backup URI")</ID>
-    <ID>UseCheckOrError:LocalRestoreManager.kt$LocalRestoreManager$throw IllegalStateException("No JSON file found in backup ZIP")</ID>
-    <ID>UseCheckOrError:SafBackupStore.kt$SafBackupStore$throw IllegalStateException("Could not read backup")</ID>
-    <ID>UseCheckOrError:SafBackupStore.kt$SafBackupStore$throw IllegalStateException("Failed to delete SAF document")</ID>
   </CurrentIssues>
 </SmellBaseline>

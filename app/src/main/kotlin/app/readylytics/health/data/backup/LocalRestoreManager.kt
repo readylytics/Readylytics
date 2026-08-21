@@ -133,7 +133,7 @@ class LocalRestoreManager
                         val manifest = readManifest(zipFile)
                         val header =
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
-                                ?: throw IllegalStateException("No JSON file found in backup ZIP")
+                                ?: error("No JSON file found in backup ZIP")
 
                         var prefsBackup: UserPreferencesBackup? = null
                         healthDatabase.withTransaction {
@@ -202,7 +202,7 @@ class LocalRestoreManager
         private fun readManifest(zipFile: ZipFile): BackupManifest {
             val header =
                 zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
-                    ?: throw IllegalStateException("No JSON file found in backup ZIP")
+                    ?: error("No JSON file found in backup ZIP")
 
             return zipFile.getInputStream(header).use { inputStream ->
                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
@@ -622,7 +622,7 @@ class LocalRestoreManager
                 tempFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: throw IllegalStateException("Could not open backup URI")
+            } ?: error("Could not open backup URI")
         }
 
         private suspend fun getDecryptedPassword(): String? {

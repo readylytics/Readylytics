@@ -43,7 +43,7 @@ class SafBackupStore(
             return file.inputStream()
         }
         return context.contentResolver.openInputStream(uri)
-            ?: throw IllegalStateException("Could not read backup")
+            ?: error("Could not read backup")
     }
 
     override suspend fun publish(
@@ -111,7 +111,7 @@ class SafBackupStore(
         if (uri.scheme == "file") {
             val file = File(uri.path ?: error("Invalid file location"))
             if (file.exists() && !file.delete()) {
-                throw IllegalStateException("Failed to delete SAF document")
+                error("Failed to delete SAF document")
             }
             return
         }
@@ -120,7 +120,7 @@ class SafBackupStore(
             val root = getTreeDocumentFile()
             val file = root?.findFile(documentFile.name ?: "")
             if (file?.delete() == false) {
-                throw IllegalStateException("Failed to delete SAF document")
+                error("Failed to delete SAF document")
             }
         }
     }

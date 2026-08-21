@@ -102,7 +102,7 @@ class LocalBackupManager
                     val password =
                         prefs.backupPasswordHash?.let { hash ->
                             encryptionManager.decrypt(hash)
-                        } ?: throw IllegalStateException("Backup password not set")
+                        } ?: error("Backup password not set")
 
                     // 3. Create ZIP file
                     tempZipFile = File(context.cacheDir, zipFilename)
