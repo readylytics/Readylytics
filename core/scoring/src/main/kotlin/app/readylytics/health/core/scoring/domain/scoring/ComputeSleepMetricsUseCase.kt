@@ -42,36 +42,56 @@ import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 
+data class SleepMetricsCollaborators
+    @Inject
+    constructor(
+        val baselineComputer: BaselineComputer,
+        val scoringHistoryRepository: ScoringHistoryRepository,
+        val scoringCalculator: ScoringCalculator,
+        val scoringConfigFactory: ScoringConfigFactory,
+        val encryptionManager: EncryptionManager,
+        val hrvResolver: CurrentNightHrvResolver,
+        val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
+        val nadirAnalyzer: SleepNadirAnalyzer,
+        val coverageValidator: HrCoverageValidator,
+        val sleepModifierResolver: SleepModifierResolver,
+    )
+
+data class SleepMetricsRequest(
+    val session: SleepSession,
+    val dayMidnight: Instant,
+    val targetDate: LocalDate,
+    val prefs: UserPreferences,
+    val summary: DailySummary,
+    val loadScore: Float,
+    val loadScoreEverydayHr: Float?,
+    val zoneId: ZoneId,
+    val rhrBaselineValue: Float,
+    val dayEndMs: Long,
+    val currentSessionIds: Set<String>,
+    val prefetchedSessions: List<SleepSession>?,
+)
+
 @Singleton
 class ComputeSleepMetricsUseCase
     @Inject
     constructor(
-        private val baselineComputer: BaselineComputer,
-        private val scoringHistoryRepository: ScoringHistoryRepository,
-        private val scoringCalculator: ScoringCalculator,
-        private val scoringConfigFactory: ScoringConfigFactory,
-        private val encryptionManager: EncryptionManager,
-        private val hrvResolver: CurrentNightHrvResolver,
-        private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
-        private val nadirAnalyzer: SleepNadirAnalyzer,
-        private val coverageValidator: HrCoverageValidator,
-        private val sleepModifierResolver: SleepModifierResolver,
+        private val collaborators: SleepMetricsCollaborators,
     ) {
-        suspend operator fun invoke(
-            session: SleepSession,
-            dayMidnight: Instant,
-            targetDate: LocalDate,
-            prefs: UserPreferences,
-            summary: DailySummary,
-            loadScore: Float,
-            loadScoreEverydayHr: Float?,
-            zoneId: ZoneId,
-            rhrBaselineValue: Float,
-            dayEndMs: Long,
-            currentSessionIds: Set<String> = setOf(session.id),
-            prefetchedSessions: List<SleepSession>? = null,
-        ): Result<DailySummary> =
-            try {
+        suspend operator fun invoke(request: SleepMetricsRequest): Result<DailySummary> {
+            val session = request.session
+            val dayMidnight = request.dayMidnight
+            val targetDate = request.targetDate
+            val prefs = request.prefs
+            val summary = request.summary
+            val loadScore = request.loadScore
+            val loadScoreEverydayHr = request.loadScoreEverydayHr
+            val zoneId = request.zoneId
+            val rhrBaselineValue = request.rhrBaselineValue
+            val dayEndMs = request.dayEndMs
+            val currentSessionIds = request.currentSessionIds
+            val prefetchedSessions = request.prefetchedSessions
+            return try {
                 val installDate =
                     if (prefs.installDate > 0) {
                         LocalDate.ofEpochDay(
@@ -83,10 +103,10 @@ class ComputeSleepMetricsUseCase
                     }
                 val decryptedOverride =
                     prefs.circadianThresholdOverride?.let { encrypted ->
-                        runCatching { encryptionManager.decrypt(encrypted)?.toInt() }.getOrNull()
+                        runCatching { collaborators.encryptionManager.decrypt(encrypted)?.toInt() }.getOrNull()
                     }
                 val scoringConfig =
-                    scoringConfigFactory.build(
+                    collaborators.scoringConfigFactory.build(
                         userPreferences = prefs,
                         installDate = installDate,
                         currentDate = targetDate,
@@ -108,63 +128,26 @@ class ComputeSleepMetricsUseCase
                         scoringZoneId = zoneId,
                     )
 
-                val rhrValues: List<Int>
-                val muHrvHistory: List<Float>
-                val sigmaHrvHistory: List<Float>
-                val historicalSessions: List<SleepSession>
-                val validHistoricalSessionIds: List<String>
-                val validHistoricalDayCount: Int
-                val frozenHrvMu: Float?
-                val frozenHrvSigma: Float?
-                val frozenRhr: Float?
-                val frozenRhrSigma: Float?
+                val baselineWindow = resolveBaselineWindow(
+                    frozenBaseline = frozenBaseline,
+                    summary = summary,
+                    dayMidnight = dayMidnight,
+                    dayEndMs = dayEndMs,
+                    sleepDayPolicy = sleepDayPolicy,
+                    currentSessionIds = currentSessionIds,
+                    prefs = prefs,
+                )
 
-                if (frozenBaseline) {
-                    // Frozen baselines stored on the summary — skip live recompute
-                    rhrValues = emptyList()
-                    muHrvHistory = emptyList()
-                    sigmaHrvHistory = emptyList()
-                    historicalSessions = emptyList()
-                    validHistoricalSessionIds = emptyList()
-                    validHistoricalDayCount = 0
-                    frozenHrvMu = summary.hrvMuMssd
-                    frozenHrvSigma = summary.hrvSigmaMssd
-                    frozenRhr = summary.rhrBpm
-                    frozenRhrSigma = summary.rhrSigma
-                } else {
-                    // Live recompute path — no stored baselines yet.
-                    // computeHrvWindows returns null only when the baseline is frozen (US-B6);
-                    // the outer frozenBaseline check already routes frozen days to the other branch,
-                    // so null here is an unexpected race — fall back to empty windows.
-                    rhrValues =
-                        baselineComputer.rhrHistoryBetween(
-                            dayMidnight.toEpochMilli(),
-                            dayEndMs,
-                            prefs.restingHrPercentile,
-                            sleepDayPolicy = sleepDayPolicy,
-                        )
-                    val hrvWindows =
-                        baselineComputer.computeHrvWindowsBetween(
-                            fromMs = dayMidnight.toEpochMilli(),
-                            toMs = dayEndMs,
-                            excludeSessionIds = currentSessionIds,
-                            sleepDayPolicy = sleepDayPolicy,
-                        ) ?: BaselineComputer.HrvWindows(
-                            muHistory = emptyList(),
-                            sigmaHistory = emptyList(),
-                            historicalSessions = emptyList(),
-                            validHistoricalSessionIds = emptyList(),
-                        )
-                    historicalSessions = hrvWindows.historicalSessions
-                    validHistoricalSessionIds = hrvWindows.validHistoricalSessionIds
-                    validHistoricalDayCount = hrvWindows.validHistoricalDayCount
-                    sigmaHrvHistory = hrvWindows.sigmaHistory
-                    muHrvHistory = hrvWindows.muHistory
-                    frozenHrvMu = null
-                    frozenHrvSigma = null
-                    frozenRhr = null
-                    frozenRhrSigma = null
-                }
+                val rhrValues = baselineWindow.rhrValues
+                val muHrvHistory = baselineWindow.muHrvHistory
+                val sigmaHrvHistory = baselineWindow.sigmaHrvHistory
+                val historicalSessions = baselineWindow.historicalSessions
+                val validHistoricalSessionIds = baselineWindow.validHistoricalSessionIds
+                val validHistoricalDayCount = baselineWindow.validHistoricalDayCount
+                val frozenHrvMu = baselineWindow.frozenHrvMu
+                val frozenHrvSigma = baselineWindow.frozenHrvSigma
+                val frozenRhr = baselineWindow.frozenRhr
+                val frozenRhrSigma = baselineWindow.frozenRhrSigma
 
                 val yesterdayMidnightMs =
                     targetDate
@@ -172,9 +155,9 @@ class ComputeSleepMetricsUseCase
                         .atStartOfDay(zoneId)
                         .toInstant()
                         .toEpochMilli()
-                val yesterdaySummary = scoringHistoryRepository.getDailySummaryByDate(yesterdayMidnightMs, zoneId)
+                val yesterdaySummary = collaborators.scoringHistoryRepository.getDailySummaryByDate(yesterdayMidnightMs, zoneId)
 
-                val hrvResult = hrvResolver.resolve(session, currentSessionIds)
+                val hrvResult = collaborators.hrvResolver.resolve(session, currentSessionIds)
                 val sessionHrvSamples = hrvResult.samples
                 val currentHrvMean = hrvResult.mean
                 @Suppress("SENSELESS_COMPARISON")
@@ -182,7 +165,7 @@ class ComputeSleepMetricsUseCase
                 logD("ComputeSleepMetrics") { "HRV resolved: samples=${sessionHrvSamples.size}, hasMean=$hasMean" }
 
                 val wakeHrResult =
-                    sleepPercentileRhrCalculator.collect(
+                    collaborators.sleepPercentileRhrCalculator.collect(
                         session = session,
                         dayMidnight = dayMidnight,
                         percentile = prefs.restingHrPercentile,
@@ -204,7 +187,7 @@ class ComputeSleepMetricsUseCase
                     }
 
                 val allWakeHrRecords =
-                    scoringHistoryRepository.getHeartRateRecordsByTimeRange(
+                    collaborators.scoringHistoryRepository.getHeartRateRecordsByTimeRange(
                         session.startTime,
                         session.endTime,
                     )
@@ -218,13 +201,13 @@ class ComputeSleepMetricsUseCase
                             compareBy({ it.beatsPerMinute }, { it.timestampMs }, { it.id }),
                         )?.timestampMs
                 val currentHrCoverage =
-                    coverageValidator.isValid(
+                    collaborators.coverageValidator.isValid(
                         session.startTime,
                         session.endTime,
                         allWakeHrRecords,
                     )
                 val validation =
-                    scoringCalculator.validateNight(
+                    collaborators.scoringCalculator.validateNight(
                         rmssdMs = if (sessionHrvSamples.isNotEmpty()) currentHrvMean else null,
                         rhrBpm = currentNocturnalRhr?.toFloat(),
                         durationMinutes = session.durationMinutes,
@@ -270,7 +253,7 @@ class ComputeSleepMetricsUseCase
                             frozenHrvSigma
                         } else {
                             val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
-                            scoringCalculator.hrvSigma(
+                            collaborators.scoringCalculator.hrvSigma(
                                 lnSigmaHistory,
                                 sigmaPrior,
                             )
@@ -290,7 +273,7 @@ class ComputeSleepMetricsUseCase
                 val stagesSuspicious = hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
 
                 val sleepModifiers =
-                    sleepModifierResolver.resolve(
+                    collaborators.sleepModifierResolver.resolve(
                         sessionId = session.id,
                         targetDate = targetDate,
                         prefs = prefs,
@@ -305,11 +288,11 @@ class ComputeSleepMetricsUseCase
                 val sessionPhase = PhaseCalculator.calculatePhase(totalValidHrvNights)
 
                 if (currentNocturnalRhr != null) {
-                    val nadirCtx = nadirAnalyzer.analyze(session, historicalSessions, minHrTimestamp)
+                    val nadirCtx = collaborators.nadirAnalyzer.analyze(session, historicalSessions, minHrTimestamp)
 
                     val zHrv =
                         if (sessionHrvSamples.isNotEmpty()) {
-                            scoringCalculator.computeHrvZScore(
+                            collaborators.scoringCalculator.computeHrvZScore(
                                 currentHrvMean,
                                 muHrvHistory,
                                 effectiveSigmaHistory,
@@ -322,7 +305,7 @@ class ComputeSleepMetricsUseCase
                             null
                         }
                     val zRhr =
-                        scoringCalculator.computeRhrZScore(
+                        collaborators.scoringCalculator.computeRhrZScore(
                             currentNocturnalRhr.toFloat(),
                             rhrValues,
                             frozenRhr ?: prefs.rhrBaselineOverride,
@@ -331,7 +314,7 @@ class ComputeSleepMetricsUseCase
                     val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
 
                     sRest =
-                        scoringCalculator.computeRestorationSubScore(
+                        collaborators.scoringCalculator.computeRestorationSubScore(
                             currentHrvMean,
                             muHrvHistory,
                             effectiveSigmaHistory,
@@ -349,7 +332,7 @@ class ComputeSleepMetricsUseCase
                     if (nadirCtx.isLateNadir) sRest *= ScoringConstants.Restoration.LATE_NADIR_PENALTY
 
                     sleepScore =
-                        scoringCalculator.computeSleepScore(
+                        collaborators.scoringCalculator.computeSleepScore(
                             session.durationMinutes,
                             session.efficiency,
                             session.deepSleepMinutes,
@@ -395,7 +378,7 @@ class ComputeSleepMetricsUseCase
                             prefs.hrvOptimalThreshold
 
                     val recoveryFlags =
-                        scoringCalculator.computeRecoveryFlags(
+                        collaborators.scoringCalculator.computeRecoveryFlags(
                             zLnHrv = zHrv,
                             zRhr = zRhr,
                             rhrDeltaBpm = rhrDeltaBpm,
@@ -420,10 +403,10 @@ class ComputeSleepMetricsUseCase
                         )
 
                     readinessScore =
-                        scoringCalculator.computeReadinessScore(sRest, sleepScore, loadScore, recoveryFlags)
+                        collaborators.scoringCalculator.computeReadinessScore(sRest, sleepScore, loadScore, recoveryFlags)
                     readinessEverydayHr =
                         loadScoreEverydayHr?.let {
-                            scoringCalculator.computeReadinessScore(sRest, sleepScore, it, recoveryFlags)
+                            collaborators.scoringCalculator.computeReadinessScore(sRest, sleepScore, it, recoveryFlags)
                         }
                     persistedZLnHrv = zHrv
                     persistedZRhr = zRhr
@@ -443,13 +426,13 @@ class ComputeSleepMetricsUseCase
                             null
                         }
                     val durationSubScore =
-                        scoringCalculator.computeDurationSubScore(
+                        collaborators.scoringCalculator.computeDurationSubScore(
                             session.durationMinutes,
                             session.efficiency,
                             prefs.goalSleepHours,
                         )
                     val archSubScore =
-                        scoringCalculator.computeArchSubScore(
+                        collaborators.scoringCalculator.computeArchSubScore(
                             session.deepSleepMinutes,
                             session.remSleepMinutes,
                             session.durationMinutes,
@@ -464,7 +447,7 @@ class ComputeSleepMetricsUseCase
                                 Contributors(
                                     hrvScore =
                                         zHrv?.let {
-                                            scoringCalculator.computeHrvScore(
+                                            collaborators.scoringCalculator.computeHrvScore(
                                                 it,
                                                 scoringConfig.hrvSaturationZ,
                                             )
@@ -637,6 +620,75 @@ class ComputeSleepMetricsUseCase
                 logE("ComputeSleepMetrics", e) { "Sleep metrics failed for $targetDate" }
                 Result.failure("Failed to compute sleep metrics", "SLEEP_METRICS_ERROR")
             }
+        }
+
+        private data class BaselineWindowResult(
+            val rhrValues: List<Int>,
+            val muHrvHistory: List<Float>,
+            val sigmaHrvHistory: List<Float>,
+            val historicalSessions: List<SleepSession>,
+            val validHistoricalSessionIds: List<String>,
+            val validHistoricalDayCount: Int,
+            val frozenHrvMu: Float?,
+            val frozenHrvSigma: Float?,
+            val frozenRhr: Float?,
+            val frozenRhrSigma: Float?,
+        )
+
+        private suspend fun resolveBaselineWindow(
+            frozenBaseline: Boolean,
+            summary: DailySummary,
+            dayMidnight: Instant,
+            dayEndMs: Long,
+            sleepDayPolicy: SleepDayPolicy,
+            currentSessionIds: Set<String>,
+            prefs: UserPreferences,
+        ): BaselineWindowResult {
+            return if (frozenBaseline) {
+                BaselineWindowResult(
+                    rhrValues = emptyList(),
+                    muHrvHistory = emptyList(),
+                    sigmaHrvHistory = emptyList(),
+                    historicalSessions = emptyList(),
+                    validHistoricalSessionIds = emptyList(),
+                    validHistoricalDayCount = 0,
+                    frozenHrvMu = summary.hrvMuMssd,
+                    frozenHrvSigma = summary.hrvSigmaMssd,
+                    frozenRhr = summary.rhrBpm,
+                    frozenRhrSigma = summary.rhrSigma,
+                )
+            } else {
+                val rhrValues = collaborators.baselineComputer.rhrHistoryBetween(
+                    dayMidnight.toEpochMilli(),
+                    dayEndMs,
+                    prefs.restingHrPercentile,
+                    sleepDayPolicy = sleepDayPolicy,
+                )
+                val hrvWindows = collaborators.baselineComputer.computeHrvWindowsBetween(
+                    fromMs = dayMidnight.toEpochMilli(),
+                    toMs = dayEndMs,
+                    excludeSessionIds = currentSessionIds,
+                    sleepDayPolicy = sleepDayPolicy,
+                ) ?: BaselineComputer.HrvWindows(
+                    muHistory = emptyList(),
+                    sigmaHistory = emptyList(),
+                    historicalSessions = emptyList(),
+                    validHistoricalSessionIds = emptyList(),
+                )
+                BaselineWindowResult(
+                    rhrValues = rhrValues,
+                    muHrvHistory = hrvWindows.muHistory,
+                    sigmaHrvHistory = hrvWindows.sigmaHistory,
+                    historicalSessions = hrvWindows.historicalSessions,
+                    validHistoricalSessionIds = hrvWindows.validHistoricalSessionIds,
+                    validHistoricalDayCount = hrvWindows.validHistoricalDayCount,
+                    frozenHrvMu = null,
+                    frozenHrvSigma = null,
+                    frozenRhr = null,
+                    frozenRhrSigma = null,
+                )
+            }
+        }
 
         private fun SleepSession.toSleepSessionData(): SleepSessionData =
             SleepSessionData(
