@@ -12,6 +12,7 @@ import app.readylytics.health.core.scoring.domain.scoring.AssembleDailySummaryUs
 import app.readylytics.health.core.scoring.domain.scoring.BaselineComputer
 import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsRequest
 import app.readylytics.health.core.scoring.domain.scoring.LongInterval
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfig
@@ -251,18 +252,20 @@ class ReadinessSummaryCoordinator
 
             val withSleepMetrics = if (base.session != null) {
                 computeSleepMetricsUseCase(
-                    session = SleepSessionMapper.toDomain(base.session),
-                    dayMidnight = context.targetDate.atStartOfDay(context.zoneId).toInstant(),
-                    targetDate = context.targetDate,
-                    prefs = context.prefs,
-                    summary = withHrvBaseline,
-                    loadScore = loadSeries.loadScore,
-                    loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
-                    zoneId = context.zoneId,
-                    rhrBaselineValue = context.initialBaselines.rhrBaselineValue,
-                    dayEndMs = context.nextDayMidnightMs,
-                    currentSessionIds = base.currentSessionIds,
-                    prefetchedSessions = context.baselineContext?.sessions,
+                    SleepMetricsRequest(
+                        session = SleepSessionMapper.toDomain(base.session),
+                        dayMidnight = context.targetDate.atStartOfDay(context.zoneId).toInstant(),
+                        targetDate = context.targetDate,
+                        prefs = context.prefs,
+                        summary = withHrvBaseline,
+                        loadScore = loadSeries.loadScore,
+                        loadScoreEverydayHr = loadSeries.loadScoreEverydayHr,
+                        zoneId = context.zoneId,
+                        rhrBaselineValue = context.initialBaselines.rhrBaselineValue,
+                        dayEndMs = context.nextDayMidnightMs,
+                        currentSessionIds = base.currentSessionIds,
+                        prefetchedSessions = context.baselineContext?.sessions,
+                    ),
                 ).getOrNull() ?: withHrvBaseline
             } else {
                 withHrvBaseline
