@@ -43,7 +43,7 @@ playServicesStats = "17.1.0"
 playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.13.0"
 playPublisher = "4.1.1"
-appcompat = "1.7.1"
+appcompat = "1.8.0"
 materialColorUtilities = "5.0.0"
 adaptive = "1.2.0"
 
