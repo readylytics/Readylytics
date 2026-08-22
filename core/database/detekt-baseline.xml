@@ -15,10 +15,6 @@
     <ID>LongMethod:RollingWindowTest.kt$RollingWindowTest$@Test fun `getWorkoutsInRange filters correctly`()</ID>
     <ID>LongMethod:ScoringGoldenSnapshotTest.kt$ScoringGoldenSnapshotTest$@Test fun `case 2 - day with sleep spanning midnight`()</ID>
     <ID>LongMethod:ScoringGoldenSnapshotTest.kt$ScoringGoldenSnapshotTest$private fun createRepository(settingsRepository: SettingsRepository): ScoringRepositoryImpl</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun everydayAndWorkoutOnlyVariantsArePersistedIndependently()</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun everydayAtlCtlInjectionDoesNotContaminateWorkoutOnlySeries()</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun historicalAtlCtlIsDstSafeAndStableAcrossRepeatedCompute()</ID>
-    <ID>LongMethod:ScoringPointInTimeRegressionTest.kt$ScoringPointInTimeRegressionTest$@Test fun verifyHistoricalRecomputationIsStableAfterPreferencesChange()</ID>
     <ID>LongMethod:ScoringRepositoryBiphasicIntegrationTest.kt$ScoringRepositoryBiphasicIntegrationTest$@Test fun `biphasic scoring aggregates sleep totals but keeps recovery inputs on core cluster`()</ID>
     <ID>LongMethod:ScoringRepositoryImplTest.kt$ScoringRepositoryImplTest$@Test fun `computeDailySummary returns different baseline for consecutive days`()</ID>
     <ID>LongMethod:ScoringRepositoryN1Test.kt$ScoringRepositoryN1Test$@Before fun setUp()</ID>
