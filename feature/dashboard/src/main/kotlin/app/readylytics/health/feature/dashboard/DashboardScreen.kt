@@ -14,6 +14,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -59,6 +60,198 @@ private data class ColoredSnackbarVisuals(
     override val withDismissAction: Boolean = false,
     override val duration: SnackbarDuration = SnackbarDuration.Short,
 ) : SnackbarVisuals
+
+data class DashboardNavigationCallbacks(
+    val onNavigateToSleep: () -> Unit = {},
+    val onNavigateToWorkouts: () -> Unit = {},
+    val onNavigateToRhr: () -> Unit = {},
+    val onNavigateToSteps: () -> Unit = {},
+    val onNavigateToHeartRate: () -> Unit = {},
+    val onNavigateToHrv: () -> Unit = {},
+    val onNavigateToWeight: () -> Unit = {},
+    val onNavigateToBodyFat: () -> Unit = {},
+    val onNavigateToBloodPressure: () -> Unit = {},
+    val onNavigateToVitals: () -> Unit = {},
+)
+
+@Composable
+private fun DateSwitcherSection(
+    selectedDate: LocalDate,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
+    today: LocalDate,
+    onDateSelected: (LocalDate) -> Unit,
+    earliestDate: LocalDate?,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+    ) {
+        DateSwitcher(
+            selectedDate = selectedDate,
+            onPreviousDay = onPreviousDay,
+            onNextDay = onNextDay,
+            today = today,
+            onDateSelected = onDateSelected,
+            earliestDate = earliestDate,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun StatusLegendSection() {
+    StatusLegend()
+}
+
+@Composable
+private fun CustomizeButton(onToggleCardManagement: () -> Unit) {
+    FilledTonalButton(
+        onClick = onToggleCardManagement,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.pageSectionGap,
+                ),
+        colors =
+            ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+    ) {
+        Text(
+            text = stringResource(CoreUiR.string.action_customize),
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+@Composable
+private fun buildSnackbarPaddingModifier(isManagingCards: Boolean): Modifier =
+    Modifier.padding(
+        start = MaterialTheme.spacing.pageHorizontal,
+        end = MaterialTheme.spacing.pageHorizontal,
+        top = MaterialTheme.spacing.pageSectionGap,
+        // 88.dp: no grid token, clears the edit-mode FAB height exactly
+        bottom = if (isManagingCards) 88.dp else MaterialTheme.spacing.pageBottom,
+    )
+
+@Composable
+private fun NoDataPlaceholder() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = MaterialTheme.spacing.doubleExtraLarge),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(app.readylytics.health.core.ui.R.string.dashboard_no_data),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun buildEditModeFabModifier(): Modifier = Modifier.padding(MaterialTheme.spacing.pageHorizontal)
+
+@Composable
+private fun buildLazyColumnPadding(): PaddingValues =
+    PaddingValues(
+        top = MaterialTheme.spacing.pageTop,
+        bottom = MaterialTheme.spacing.pageBottom,
+    )
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CardManagementSheet(
+    isOpen: Boolean,
+    cardConfigurations: List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>,
+    onCardVisibilityChanged: (CardId, Boolean) -> Unit,
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
+    onResetToDefaults: () -> Unit,
+    onDismiss: () -> Unit,
+    sheetState: SheetState,
+) {
+    if (isOpen) {
+        CardManagementBottomSheet(
+            cards = cardConfigurations,
+            onCardVisibilityChanged = onCardVisibilityChanged,
+            onCardDisplayModeChanged = onCardDisplayModeChanged,
+            onResetToDefaults = onResetToDefaults,
+            onDismiss = onDismiss,
+            sheetState = sheetState,
+        )
+    }
+}
+
+
+@Composable
+private fun MetricGridSection(
+    uiState: DashboardUiState,
+    navigationCallbacks: DashboardNavigationCallbacks,
+    isEditing: Boolean,
+    isLoading: Boolean,
+    onDismissInsight: (InsightType) -> Unit,
+    onRestoreInsights: () -> Unit,
+    onOpenInsight: (InsightParams) -> Unit,
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
+    onCopySetupPrompt: () -> Unit,
+    onCopyDailyPrompt: () -> Unit,
+    onCardVisibilityChanged: (CardId, Boolean) -> Unit,
+    onReorderCards: (List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>) -> Unit,
+    insightsCard: @Composable (
+        DashboardUiState,
+        Boolean,
+        (InsightType) -> Unit,
+        () -> Unit,
+        (InsightParams) -> Unit,
+    ) -> Unit,
+) {
+    val cardInputs = uiState.cardInputs()
+    val cardDataMap =
+        remember(cardInputs) {
+            CardDataMap(
+                buildCardDataMap(
+                    uiState = uiState,
+                    onNavigateToSleep = navigationCallbacks.onNavigateToSleep,
+                    onNavigateToWorkouts = navigationCallbacks.onNavigateToWorkouts,
+                    onNavigateToRhr = navigationCallbacks.onNavigateToRhr,
+                    onNavigateToSteps = navigationCallbacks.onNavigateToSteps,
+                    onNavigateToHeartRate = navigationCallbacks.onNavigateToHeartRate,
+                    onNavigateToHrv = navigationCallbacks.onNavigateToHrv,
+                    onNavigateToWeight = navigationCallbacks.onNavigateToWeight,
+                    onNavigateToBodyFat = navigationCallbacks.onNavigateToBodyFat,
+                    onNavigateToBloodPressure = navigationCallbacks.onNavigateToBloodPressure,
+                    onNavigateToVitals = navigationCallbacks.onNavigateToVitals,
+                    isEditing = isEditing,
+                    isLoading = isLoading,
+                    onDismissInsight = onDismissInsight,
+                    onRestoreInsights = onRestoreInsights,
+                    onOpenInsight = onOpenInsight,
+                    onCardDisplayModeChanged = onCardDisplayModeChanged,
+                    onCopySetupPrompt = onCopySetupPrompt,
+                    onCopyDailyPrompt = onCopyDailyPrompt,
+                    insightsCard = insightsCard,
+                ),
+            )
+        }
+    ReorderableCardGrid(
+        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
+        cardDataMap = cardDataMap,
+        isEditing = isEditing,
+        onCardRemove = { cardId ->
+            onCardVisibilityChanged(cardId, false)
+        },
+        onCardReorder = onReorderCards,
+        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+    )
+}
 
 @Composable
 fun DashboardRoute(
@@ -116,16 +309,19 @@ fun DashboardRoute(
         onNextDay = viewModel::onNextDay,
         onDateSelected = { viewModel.onEvent(DashboardEvent.DateSelected(it)) },
         earliestDate = earliestDate,
-        onNavigateToSleep = onNavigateToSleep,
-        onNavigateToWorkouts = onNavigateToWorkouts,
-        onNavigateToRhr = onNavigateToRhr,
-        onNavigateToSteps = onNavigateToSteps,
-        onNavigateToHeartRate = onNavigateToHeartRate,
-        onNavigateToHrv = onNavigateToHrv,
-        onNavigateToWeight = onNavigateToWeight,
-        onNavigateToBodyFat = onNavigateToBodyFat,
-        onNavigateToBloodPressure = onNavigateToBloodPressure,
-        onNavigateToVitals = onNavigateToVitals,
+        navigationCallbacks =
+            DashboardNavigationCallbacks(
+                onNavigateToSleep = onNavigateToSleep,
+                onNavigateToWorkouts = onNavigateToWorkouts,
+                onNavigateToRhr = onNavigateToRhr,
+                onNavigateToSteps = onNavigateToSteps,
+                onNavigateToHeartRate = onNavigateToHeartRate,
+                onNavigateToHrv = onNavigateToHrv,
+                onNavigateToWeight = onNavigateToWeight,
+                onNavigateToBodyFat = onNavigateToBodyFat,
+                onNavigateToBloodPressure = onNavigateToBloodPressure,
+                onNavigateToVitals = onNavigateToVitals,
+            ),
         onToggleCardManagement = viewModel::toggleCardManagement,
         onCancelCardManagement = viewModel::onCancelCardManagement,
         onCardVisibilityChanged = viewModel::onToggleCardVisibility,
@@ -148,31 +344,21 @@ fun DashboardRoute(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("LongMethod", "LongParameterList")
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
     snackbarHostState: SnackbarHostState,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
-    onNavigateToSleep: () -> Unit,
-    onNavigateToWorkouts: () -> Unit,
-    onNavigateToRhr: () -> Unit,
-    onNavigateToSteps: () -> Unit,
+    onToggleCardManagement: () -> Unit,
+    onCancelCardManagement: () -> Unit,
+    onCardVisibilityChanged: (CardId, Boolean) -> Unit,
+    onReorderCards: (List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>) -> Unit,
+    onResetToDefaults: () -> Unit,
+    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit,
     modifier: Modifier = Modifier,
-    onNavigateToHeartRate: () -> Unit = {},
-    onNavigateToHrv: () -> Unit = {},
-    onNavigateToWeight: () -> Unit = {},
-    onNavigateToBodyFat: () -> Unit = {},
-    onNavigateToBloodPressure: () -> Unit = {},
-    onNavigateToVitals: () -> Unit = {},
-    onToggleCardManagement: () -> Unit = {},
-    onCancelCardManagement: () -> Unit = {},
+    navigationCallbacks: DashboardNavigationCallbacks = DashboardNavigationCallbacks(),
     onManageClick: (() -> Unit)? = null,
-    onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
-    onReorderCards: (List<app.readylytics.health.core.model.domain.dashboard.CardConfiguration>) -> Unit = {},
-    onResetToDefaults: () -> Unit = {},
-    onCardDisplayModeChanged: (CardId, DashboardCardDisplayMode) -> Unit = { _, _ -> },
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
     onDismissInsight: (InsightType) -> Unit = {},
@@ -194,42 +380,29 @@ fun DashboardScreen(
     val today = uiState.today
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (manageState.isManageOpen) {
-            CardManagementBottomSheet(
-                cards = uiState.cardConfigurations,
-                onCardVisibilityChanged = onCardVisibilityChanged,
-                onCardDisplayModeChanged = onCardDisplayModeChanged,
-                onResetToDefaults = onResetToDefaults,
-                onDismiss = manageState.closeManage,
-                sheetState = manageState.sheetState,
-            )
-        }
+        CardManagementSheet(
+            isOpen = manageState.isManageOpen,
+            cardConfigurations = uiState.cardConfigurations,
+            onCardVisibilityChanged = onCardVisibilityChanged,
+            onCardDisplayModeChanged = onCardDisplayModeChanged,
+            onResetToDefaults = onResetToDefaults,
+            onDismiss = manageState.closeManage,
+            sheetState = manageState.sheetState,
+        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
-            contentPadding =
-                PaddingValues(
-                    top = MaterialTheme.spacing.pageTop,
-                    bottom = MaterialTheme.spacing.pageBottom,
-                ),
+            contentPadding = buildLazyColumnPadding(),
         ) {
             item(key = "date_switcher") {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                ) {
-                    DateSwitcher(
-                        selectedDate = uiState.selectedDate,
-                        onPreviousDay = onPreviousDay,
-                        onNextDay = onNextDay,
-                        today = today,
-                        onDateSelected = onDateSelected,
-                        earliestDate = earliestDate,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                DateSwitcherSection(
+                    selectedDate = uiState.selectedDate,
+                    onPreviousDay = onPreviousDay,
+                    onNextDay = onNextDay,
+                    today = today,
+                    onDateSelected = onDateSelected,
+                    earliestDate = earliestDate,
+                )
             }
 
             item(key = "date_switcher_spacer") {
@@ -238,19 +411,7 @@ fun DashboardScreen(
 
             if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
                 item(key = "no_data_placeholder") {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = MaterialTheme.spacing.doubleExtraLarge),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(app.readylytics.health.core.ui.R.string.dashboard_no_data),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    NoDataPlaceholder()
                 }
             } else {
                 item(key = "metric_grid") {
@@ -260,43 +421,20 @@ fun DashboardScreen(
                     // recomposition while still excluding the high-frequency sync fields
                     // (isRefreshing/recalcProgress) that previously forced ReorderableCardGrid
                     // and every child card to recompose each frame during a resync.
-                    val cardInputs = uiState.cardInputs()
-                    val cardDataMap =
-                        remember(cardInputs) {
-                            CardDataMap(
-                                buildCardDataMap(
-                                    uiState = uiState,
-                                    onNavigateToSleep = onNavigateToSleep,
-                                    onNavigateToWorkouts = onNavigateToWorkouts,
-                                    onNavigateToRhr = onNavigateToRhr,
-                                    onNavigateToSteps = onNavigateToSteps,
-                                    onNavigateToHeartRate = onNavigateToHeartRate,
-                                    onNavigateToHrv = onNavigateToHrv,
-                                    onNavigateToWeight = onNavigateToWeight,
-                                    onNavigateToBodyFat = onNavigateToBodyFat,
-                                    onNavigateToBloodPressure = onNavigateToBloodPressure,
-                                    onNavigateToVitals = onNavigateToVitals,
-                                    isEditing = uiState.isManagingCards,
-                                    isLoading = uiState.isComputingMetrics,
-                                    onDismissInsight = onDismissInsight,
-                                    onRestoreInsights = onRestoreInsights,
-                                    onOpenInsight = onOpenInsight,
-                                    onCardDisplayModeChanged = onCardDisplayModeChanged,
-                                    onCopySetupPrompt = onCopySetupPrompt,
-                                    onCopyDailyPrompt = onCopyDailyPrompt,
-                                    insightsCard = insightsCard,
-                                ),
-                            )
-                        }
-                    ReorderableCardGrid(
-                        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
-                        cardDataMap = cardDataMap,
+                    MetricGridSection(
+                        uiState = uiState,
+                        navigationCallbacks = navigationCallbacks,
                         isEditing = uiState.isManagingCards,
-                        onCardRemove = { cardId ->
-                            onCardVisibilityChanged(cardId, false)
-                        },
-                        onCardReorder = onReorderCards,
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+                        isLoading = uiState.isComputingMetrics,
+                        onDismissInsight = onDismissInsight,
+                        onRestoreInsights = onRestoreInsights,
+                        onOpenInsight = onOpenInsight,
+                        onCardDisplayModeChanged = onCardDisplayModeChanged,
+                        onCopySetupPrompt = onCopySetupPrompt,
+                        onCopyDailyPrompt = onCopyDailyPrompt,
+                        onCardVisibilityChanged = onCardVisibilityChanged,
+                        onReorderCards = onReorderCards,
+                        insightsCard = insightsCard,
                     )
                 }
             }
@@ -304,31 +442,12 @@ fun DashboardScreen(
             item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap)) }
 
             item(key = "status_legend") {
-                StatusLegend()
+                StatusLegendSection()
             }
 
             if (!uiState.isManagingCards) {
                 item(key = "customize_button") {
-                    FilledTonalButton(
-                        onClick = onToggleCardManagement,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    horizontal = MaterialTheme.spacing.pageHorizontal,
-                                    vertical = MaterialTheme.spacing.pageSectionGap,
-                                ),
-                        colors =
-                            ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                contentColor = MaterialTheme.colorScheme.onSurface,
-                            ),
-                    ) {
-                        Text(
-                            text = stringResource(CoreUiR.string.action_customize),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
+                    CustomizeButton(onToggleCardManagement)
                 }
             }
         }
@@ -337,14 +456,9 @@ fun DashboardScreen(
             hostState = snackbarHostState,
             modifier =
                 Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(
-                        start = MaterialTheme.spacing.pageHorizontal,
-                        end = MaterialTheme.spacing.pageHorizontal,
-                        top = MaterialTheme.spacing.pageSectionGap,
-                        // 88.dp: no grid token, clears the edit-mode FAB height exactly
-                        bottom = if (uiState.isManagingCards) 88.dp else MaterialTheme.spacing.pageBottom,
-                    ),
+                    .align(
+                        Alignment.BottomCenter,
+                    ).then(buildSnackbarPaddingModifier(uiState.isManagingCards)),
             snackbar = { data ->
                 val isError = (data.visuals as? ColoredSnackbarVisuals)?.isError == true
                 Snackbar(
@@ -370,7 +484,7 @@ fun DashboardScreen(
             onDoneClick = onToggleCardManagement,
             onCancelClick = onCancelCardManagement,
             onManageClick = onManageClick ?: manageState.openManage,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacing.pageHorizontal),
+            modifier = Modifier.align(Alignment.BottomEnd).then(buildEditModeFabModifier()),
         )
 
         insightDetail?.invoke()
