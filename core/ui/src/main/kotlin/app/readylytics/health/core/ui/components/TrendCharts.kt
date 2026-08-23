@@ -36,6 +36,87 @@ import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 
+private data class TrendChartComposableState(
+    val renderData: TrendChartRenderData,
+    val config: TrendChartConfig,
+    val bounds: TrendChartBounds,
+    val uiState: TrendChartUIState,
+)
+
+private data class TrendChartParams(
+    val renderData: TrendChartRenderData,
+    val rangeStartMs: Long,
+    val rangeDays: Int,
+    val baselineUnit: String,
+    val baseline: Float?,
+    val baselineLabel: String?,
+    val baselineUnavailableLabel: String?,
+    val baselineDecimalPlaces: Int,
+    val axisDecimalPlaces: Int,
+    val tooltipDecimalPlaces: Int,
+    val showBaseline: Boolean,
+    val hideUnitInTooltip: Boolean,
+    val scrollState: VicoScrollState,
+    val zoomState: VicoZoomState,
+    val parentScrollInProgress: () -> Boolean,
+    val granularity: TrendGranularity,
+    val periodSummary: PeriodAverageSummary?,
+    val deltaDirection: DeltaDirection,
+    val historicalBaseline: List<DailyDataPoint>?,
+    val minYOverride: Double?,
+    val maxYOverride: Double?,
+    val modifier: Modifier,
+)
+
+@Composable
+private fun buildTrendChartComposableState(params: TrendChartParams): TrendChartComposableState {
+    val (minY, maxY) = calculateMinMaxY(params.renderData, params.minYOverride, params.maxYOverride)
+    val baselineValue = params.baseline ?: requireNotNull(params.renderData.calculatedBaseline)
+    val hasHistoricalBaseline = !params.historicalBaseline.isNullOrEmpty()
+    val shouldShowBaseline =
+        remember(baselineValue, minY, maxY, params.showBaseline) {
+            params.showBaseline && baselineValue.toDouble() >= minY && baselineValue.toDouble() <= maxY
+        }
+
+    val config =
+        TrendChartConfig(
+            rangeStartMs = params.rangeStartMs,
+            rangeDays = params.rangeDays,
+            baselineUnit = params.baselineUnit,
+            baselineDecimalPlaces = params.baselineDecimalPlaces,
+            axisDecimalPlaces = params.axisDecimalPlaces,
+            tooltipDecimalPlaces = params.tooltipDecimalPlaces,
+            hideUnitInTooltip = params.hideUnitInTooltip,
+            granularity = params.granularity,
+        )
+    val bounds =
+        TrendChartBounds(
+            minY = minY,
+            maxY = maxY,
+            baselineValue = baselineValue,
+            shouldShowBaseline = shouldShowBaseline,
+            resolvedBaselineLabel = params.baselineLabel ?: defaultBaselineLabel(params.historicalBaseline),
+            baselineUnavailableLabel = params.baselineUnavailableLabel,
+            hasHistoricalBaseline = hasHistoricalBaseline,
+        )
+    val uiState =
+        TrendChartUIState(
+            scrollState = params.scrollState,
+            zoomState = params.zoomState,
+            parentScrollInProgress = params.parentScrollInProgress,
+            periodSummary = params.periodSummary,
+            deltaDirection = params.deltaDirection,
+            modifier = params.modifier,
+        )
+
+    return TrendChartComposableState(
+        renderData = params.renderData,
+        config = config,
+        bounds = bounds,
+        uiState = uiState,
+    )
+}
+
 @Composable
 fun TrendChart(
     points: List<DailyDataPoint>,
@@ -69,50 +150,39 @@ fun TrendChart(
         return
     }
 
-    val (minY, maxY) = calculateMinMaxY(renderData, minYOverride, maxYOverride)
-    val baselineValue = baseline ?: requireNotNull(renderData.calculatedBaseline)
-    val hasHistoricalBaseline = !historicalBaseline.isNullOrEmpty()
-    val shouldShowBaseline =
-        remember(baselineValue, minY, maxY, showBaseline) {
-            showBaseline && baselineValue.toDouble() >= minY && baselineValue.toDouble() <= maxY
-        }
-
-    val config =
-        TrendChartConfig(
-            rangeStartMs = rangeStartMs,
-            rangeDays = rangeDays,
-            baselineUnit = baselineUnit,
-            baselineDecimalPlaces = baselineDecimalPlaces,
-            axisDecimalPlaces = axisDecimalPlaces,
-            tooltipDecimalPlaces = tooltipDecimalPlaces,
-            hideUnitInTooltip = hideUnitInTooltip,
-            granularity = granularity,
-        )
-    val bounds =
-        TrendChartBounds(
-            minY = minY,
-            maxY = maxY,
-            baselineValue = baselineValue,
-            shouldShowBaseline = shouldShowBaseline,
-            resolvedBaselineLabel = baselineLabel ?: defaultBaselineLabel(historicalBaseline),
-            baselineUnavailableLabel = baselineUnavailableLabel,
-            hasHistoricalBaseline = hasHistoricalBaseline,
-        )
-    val uiState =
-        TrendChartUIState(
-            scrollState = scrollState,
-            zoomState = zoomState,
-            parentScrollInProgress = parentScrollInProgress,
-            periodSummary = periodSummary,
-            deltaDirection = deltaDirection,
-            modifier = modifier,
+    val composableState =
+        buildTrendChartComposableState(
+            TrendChartParams(
+                renderData = renderData,
+                rangeStartMs = rangeStartMs,
+                rangeDays = rangeDays,
+                baselineUnit = baselineUnit,
+                baseline = baseline,
+                baselineLabel = baselineLabel,
+                baselineUnavailableLabel = baselineUnavailableLabel,
+                baselineDecimalPlaces = baselineDecimalPlaces,
+                axisDecimalPlaces = axisDecimalPlaces,
+                tooltipDecimalPlaces = tooltipDecimalPlaces,
+                showBaseline = showBaseline,
+                hideUnitInTooltip = hideUnitInTooltip,
+                scrollState = scrollState,
+                zoomState = zoomState,
+                parentScrollInProgress = parentScrollInProgress,
+                granularity = granularity,
+                periodSummary = periodSummary,
+                deltaDirection = deltaDirection,
+                historicalBaseline = historicalBaseline,
+                minYOverride = minYOverride,
+                maxYOverride = maxYOverride,
+                modifier = modifier,
+            ),
         )
 
     TrendChartContent(
-        renderData = renderData,
-        config = config,
-        bounds = bounds,
-        uiState = uiState,
+        renderData = composableState.renderData,
+        config = composableState.config,
+        bounds = composableState.bounds,
+        uiState = composableState.uiState,
         zoneBands = zoneBands,
         bucketZoneBands = bucketZoneBands,
         historicalBaseline = historicalBaseline,
@@ -168,8 +238,6 @@ private fun TrendChartContent(
     bucketZoneBands: List<BucketZoneBands>?,
     historicalBaseline: List<DailyDataPoint>?,
 ) {
-    val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
-
     TrendChartHostBox(
         renderData = renderData,
         config = config,
@@ -181,18 +249,33 @@ private fun TrendChartContent(
         modifier = uiState.modifier,
     )
 
+    TrendChartLegendSection(config = config, bounds = bounds)
+    TrendChartSummarySection(uiState = uiState, config = config)
+}
+
+@Composable
+private fun TrendChartLegendSection(
+    config: TrendChartConfig,
+    bounds: TrendChartBounds,
+) {
     if (bounds.shouldShowBaseline || bounds.baselineUnavailableLabel != null || bounds.hasHistoricalBaseline) {
         Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
         BaselineLegend(
             value = if (bounds.shouldShowBaseline || bounds.hasHistoricalBaseline) bounds.baselineValue else null,
             unit = config.baselineUnit,
             label = bounds.resolvedBaselineLabel,
-            color = baselineColor,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             decimalPlaces = config.baselineDecimalPlaces,
             unavailableValueLabel = bounds.baselineUnavailableLabel,
         )
     }
+}
 
+@Composable
+private fun TrendChartSummarySection(
+    uiState: TrendChartUIState,
+    config: TrendChartConfig,
+) {
     if (uiState.periodSummary != null) {
         Spacer(Modifier.height(MaterialTheme.spacing.extraSmallMedium))
         PeriodAverageSummaryRow(

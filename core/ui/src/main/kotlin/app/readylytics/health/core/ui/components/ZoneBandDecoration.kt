@@ -102,57 +102,15 @@ class ZoneBandDecoration(
         val zoneCount = buckets.first().bands.size
 
         for (zoneIndex in 0 until zoneCount) {
-            val path = Path()
             val zone = buckets.first().bands[zoneIndex].zone
-
-            val firstUpper =
-                buckets
-                    .first()
-                    .bands[zoneIndex]
-                    .upperBound
-                    .coerceIn(minY, maxY)
-            val firstLower =
-                buckets
-                    .first()
-                    .bands[zoneIndex]
-                    .lowerBound
-                    .coerceIn(minY, maxY)
-            val firstLeft = xForDayOffset(buckets.first().startDayOffset)
-
-            // Top edge — left to right through bucket midpoints
-            path.moveTo(firstLeft, yToCanvas(firstUpper, bounds, range))
-            for (i in buckets.indices) {
-                val centerX = xForDayOffset((buckets[i].startDayOffset + buckets[i].endDayOffset) / 2)
-                val upperY = yToCanvas(buckets[i].bands[zoneIndex].upperBound.coerceIn(minY, maxY), bounds, range)
-                path.lineTo(centerX, upperY)
-            }
-            // Right edge — vertical drop
-            val lastRight = xForDayOffset(buckets.last().endDayOffset)
-            val lastUpper =
-                buckets
-                    .last()
-                    .bands[zoneIndex]
-                    .upperBound
-                    .coerceIn(minY, maxY)
-            path.lineTo(lastRight, yToCanvas(lastUpper, bounds, range))
-
-            val lastLower =
-                buckets
-                    .last()
-                    .bands[zoneIndex]
-                    .lowerBound
-                    .coerceIn(minY, maxY)
-            path.lineTo(lastRight, yToCanvas(lastLower, bounds, range))
-
-            // Bottom edge — right to left through bucket midpoints
-            for (i in buckets.indices.reversed()) {
-                val centerX = xForDayOffset((buckets[i].startDayOffset + buckets[i].endDayOffset) / 2)
-                val lowerY = yToCanvas(buckets[i].bands[zoneIndex].lowerBound.coerceIn(minY, maxY), bounds, range)
-                path.lineTo(centerX, lowerY)
-            }
-            // Left edge — close back to start
-            path.lineTo(firstLeft, yToCanvas(firstLower, bounds, range))
-            path.close()
+            val path =
+                buildBandPath(
+                    buckets = buckets,
+                    zoneIndex = zoneIndex,
+                    xForDayOffset = ::xForDayOffset,
+                    bounds = bounds,
+                    range = range,
+                )
 
             context.mutableDrawScope.drawPath(
                 path = path,
@@ -160,6 +118,79 @@ class ZoneBandDecoration(
                 style = Fill,
             )
         }
+    }
+
+    private fun buildBandPath(
+        buckets: List<BucketZoneBands>,
+        zoneIndex: Int,
+        xForDayOffset: (Int) -> Float,
+        bounds: androidx.compose.ui.geometry.Rect,
+        range: Double,
+    ): Path {
+        val path = Path()
+        val pathContext = BandPathContext(buckets, zoneIndex, xForDayOffset, bounds, range)
+
+        buildTopAndRightEdges(path, pathContext)
+        buildBottomAndLeftEdges(path, pathContext)
+        path.close()
+
+        return path
+    }
+
+    private data class BandPathContext(
+        val buckets: List<BucketZoneBands>,
+        val zoneIndex: Int,
+        val xForDayOffset: (Int) -> Float,
+        val bounds: androidx.compose.ui.geometry.Rect,
+        val range: Double,
+    )
+
+    private fun buildTopAndRightEdges(path: Path, context: BandPathContext) {
+        val firstUpper = context.buckets.first().bands[context.zoneIndex].upperBound.coerceIn(minY, maxY)
+        val firstLeft = context.xForDayOffset(context.buckets.first().startDayOffset)
+
+        path.moveTo(firstLeft, yToCanvas(firstUpper, context.bounds, context.range))
+        for (i in context.buckets.indices) {
+            val centerX =
+                context.xForDayOffset(
+                    (context.buckets[i].startDayOffset + context.buckets[i].endDayOffset) / 2,
+                )
+            val upperY =
+                yToCanvas(
+                    context.buckets[i].bands[context.zoneIndex].upperBound.coerceIn(minY, maxY),
+                    context.bounds,
+                    context.range,
+                )
+            path.lineTo(centerX, upperY)
+        }
+
+        val lastRight = context.xForDayOffset(context.buckets.last().endDayOffset)
+        val lastUpper = context.buckets.last().bands[context.zoneIndex].upperBound.coerceIn(minY, maxY)
+        path.lineTo(lastRight, yToCanvas(lastUpper, context.bounds, context.range))
+
+        val lastLower = context.buckets.last().bands[context.zoneIndex].lowerBound.coerceIn(minY, maxY)
+        path.lineTo(lastRight, yToCanvas(lastLower, context.bounds, context.range))
+    }
+
+    private fun buildBottomAndLeftEdges(path: Path, context: BandPathContext) {
+        val firstLower = context.buckets.first().bands[context.zoneIndex].lowerBound.coerceIn(minY, maxY)
+        val firstLeft = context.xForDayOffset(context.buckets.first().startDayOffset)
+
+        for (i in context.buckets.indices.reversed()) {
+            val centerX =
+                context.xForDayOffset(
+                    (context.buckets[i].startDayOffset + context.buckets[i].endDayOffset) / 2,
+                )
+            val lowerY =
+                yToCanvas(
+                    context.buckets[i].bands[context.zoneIndex].lowerBound.coerceIn(minY, maxY),
+                    context.bounds,
+                    context.range,
+                )
+            path.lineTo(centerX, lowerY)
+        }
+
+        path.lineTo(firstLeft, yToCanvas(firstLower, context.bounds, context.range))
     }
 
     private fun yToCanvas(
