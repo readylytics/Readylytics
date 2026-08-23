@@ -162,36 +162,15 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = LocalDate.of(2026, 6, 11)
-            val selectedMidnightMs =
-                selectedDate
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val session =
-                SleepSessionData(
-                    id = "session_1",
-                    deviceName = "SmartRing",
-                    startTime =
-                        selectedDate
-                            .minusDays(1)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        selectedDate
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 510,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                    sleepScore = 85f,
-                )
+            val selectedMidnightMs = selectedDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val session = sleepSession(
+                id = "session_1",
+                startTime = selectedDate.minusDays(1).atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                endTime = selectedDate.atTime(6, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                durationMinutes = 510,
+                awakeMinutes = 30,
+                sleepScore = 85f,
+            )
 
             coEvery { dailySummaryRepository.getByDate(selectedMidnightMs) } returns
                 DailySummary(date = selectedDate, sleepDurationMinutes = 480)
@@ -256,32 +235,14 @@ class SleepViewModelTest {
     fun `trend data points are correctly calculated from sleep sessions`() =
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
-            val session =
-                SleepSessionData(
-                    id = "session_1",
-                    deviceName = "SmartRing",
-                    startTime =
-                        LocalDate
-                            .of(2026, 6, 10)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        LocalDate
-                            .of(2026, 6, 11)
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                    sleepScore = 85f,
-                )
+            val session = sleepSession(
+                id = "session_1",
+                startTime = LocalDate.of(2026, 6, 10).atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                endTime = LocalDate.of(2026, 6, 11).atTime(6, 0).atZone(zoneId).toInstant().toEpochMilli(),
+                durationMinutes = 480,
+                awakeMinutes = 30,
+                sleepScore = 85f,
+            )
 
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
 
@@ -365,37 +326,7 @@ class SleepViewModelTest {
     fun `trend overlap tie-breaking preserves the session source name`() =
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
-            val scoreDay = selectedDateFlow.value
-            val earlierStart =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(22, 0)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val laterStart =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(22, 30)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val stableIdWinnerWithoutSource =
-                sleepSession(
-                    id = "a-stable-id",
-                    startTime = earlierStart,
-                    endTime = earlierStart + 480 * 60_000L,
-                    durationMinutes = 480,
-                    deviceName = "z-source",
-                )
-            val sourceWinner =
-                sleepSession(
-                    id = "z-stable-id",
-                    startTime = laterStart,
-                    endTime = laterStart + 480 * 60_000L,
-                    durationMinutes = 480,
-                    deviceName = "a-source",
-                )
+            val (stableIdWinnerWithoutSource, sourceWinner) = buildOverlapTiebreakerSessions(zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns
                 flowOf(listOf(stableIdWinnerWithoutSource, sourceWinner))
 
@@ -403,7 +334,7 @@ class SleepViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             val state = viewModel.uiState.first { !it.isLoading && it.trendDays.last().coreStartTimeMs != null }
-            assertEquals(laterStart, state.trendDays.last().coreStartTimeMs)
+            assertEquals(sourceWinner.startTime, state.trendDays.last().coreStartTimeMs)
         }
 
     @Test
@@ -652,6 +583,27 @@ class SleepViewModelTest {
         durationMinutes = 480,
         awakeMinutes = 30,
     )
+
+    private fun buildOverlapTiebreakerSessions(zoneId: ZoneId): Pair<SleepSessionData, SleepSessionData> {
+        val scoreDay = selectedDateFlow.value
+        val earlierStart = scoreDay.minusDays(1).atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli()
+        val laterStart = scoreDay.minusDays(1).atTime(22, 30).atZone(zoneId).toInstant().toEpochMilli()
+        val stableIdWinnerWithoutSource = sleepSession(
+            id = "a-stable-id",
+            startTime = earlierStart,
+            endTime = earlierStart + 480 * 60_000L,
+            durationMinutes = 480,
+            deviceName = "z-source",
+        )
+        val sourceWinner = sleepSession(
+            id = "z-stable-id",
+            startTime = laterStart,
+            endTime = laterStart + 480 * 60_000L,
+            durationMinutes = 480,
+            deviceName = "a-source",
+        )
+        return stableIdWinnerWithoutSource to sourceWinner
+    }
 
     private fun scoreDayFor(
         instant: java.time.Instant,
