@@ -6,11 +6,21 @@ import app.readylytics.health.core.model.domain.model.DomainWeightRecord
 object WeightDataMapper {
     fun toEntity(record: DomainWeightRecord): WeightRecordEntity =
         WeightRecordEntity(
-            id = "${record.id}_${record.time.toEpochMilli()}",
-            timestampMs = record.time.toEpochMilli(),
+            id = extractWeightRecordId(record),
+            timestampMs = extractWeightTimestamp(record),
             weightKg = record.weightKg,
-            deviceName = record.deviceName,
+            deviceName = extractWeightDeviceName(record),
         )
 
-    fun toEntities(records: List<DomainWeightRecord>): List<WeightRecordEntity> = records.map { toEntity(it) }
+    fun toEntities(records: List<DomainWeightRecord>): List<WeightRecordEntity> =
+        MapperHelpers.mapRecordList(records, ::toEntity)
+
+    private fun extractWeightRecordId(record: DomainWeightRecord): String =
+        MapperHelpers.extractRecordIdFromInstant(record.id, record.time)
+
+    private fun extractWeightTimestamp(record: DomainWeightRecord): Long =
+        MapperHelpers.extractTimestampMs(record.time)
+
+    private fun extractWeightDeviceName(record: DomainWeightRecord): String =
+        MapperHelpers.extractDeviceName(record.deviceName)
 }
