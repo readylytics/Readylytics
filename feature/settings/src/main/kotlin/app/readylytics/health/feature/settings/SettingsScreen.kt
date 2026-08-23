@@ -325,7 +325,6 @@ private fun SettingsScreenContent(
                     matchingSections = matchingSections,
                     expandState = expandState,
                     shouldExpandSection = shouldExpandSection,
-                    controlsEnabled = controlsEnabled,
                     onExpandStateChange = { expandState = it },
                 )
 

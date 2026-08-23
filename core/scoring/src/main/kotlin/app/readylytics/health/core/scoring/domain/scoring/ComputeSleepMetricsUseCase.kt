@@ -264,27 +264,22 @@ class ComputeSleepMetricsUseCase
                 if (currentNocturnalRhr != null) {
                     val nadirCtx = collaborators.nadirAnalyzer.analyze(session, historicalSessions, minHrTimestamp)
 
-                    val zHrv =
-                        if (sessionHrvSamples.isNotEmpty()) {
-                            collaborators.scoringCalculator.computeHrvZScore(
-                                currentHrvMean,
-                                muHrvHistory,
-                                effectiveSigmaHistory,
-                                sigmaPrior,
-                                baselineOverride = prefs.hrvBaselineOverride,
-                                frozenLnMu = frozenHrvMu,
-                                frozenLnSigma = frozenHrvSigma,
-                            )
-                        } else {
-                            null
-                        }
-                    val zRhr =
-                        collaborators.scoringCalculator.computeRhrZScore(
-                            currentNocturnalRhr.toFloat(),
-                            rhrValues,
-                            frozenRhr ?: prefs.rhrBaselineOverride,
-                            effectiveRhrSigma,
-                        )
+                    val zHrv = computeHrvZScore(
+                        sessionHrvSamples,
+                        currentHrvMean,
+                        muHrvHistory,
+                        effectiveSigmaHistory,
+                        sigmaPrior,
+                        frozenHrvMu,
+                        frozenHrvSigma,
+                        prefs,
+                    )
+                    val zRhr = collaborators.scoringCalculator.computeRhrZScore(
+                        currentNocturnalRhr.toFloat(),
+                        rhrValues,
+                        frozenRhr ?: prefs.rhrBaselineOverride,
+                        effectiveRhrSigma,
+                    )
                     val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
 
                     sRest =
@@ -322,34 +317,11 @@ class ComputeSleepMetricsUseCase
                             scoringConfig.hypersomniaOnsetRatio,
                         )
 
-                    val currentHrvBaseline: Float? =
-                        when {
-                            prefs.hrvBaselineOverride != null -> prefs.hrvBaselineOverride
-                            frozenBaseline && frozenHrvMu != null -> exp(frozenHrvMu)
-                            muHrvHistory.isNotEmpty() ->
-                                exp(
-                                    muHrvHistory
-                                        .map { ln(it.coerceAtLeast(0.001f)) }
-                                        .average()
-                                        .toFloat(),
-                                )
-                            else -> null
-                        }
-                    val isCurrentHrvOptimal =
-                        currentHrvBaseline != null &&
-                            currentHrvBaseline > 0f &&
-                            currentHrvMean / currentHrvBaseline >= prefs.hrvOptimalThreshold
-                    val isCurrentRhrOptimal =
-                        baselineRhrValue > 0f &&
-                            currentNocturnalRhr.toFloat() / baselineRhrValue <= prefs.rhrOptimalThreshold
+                    val currentHrvBaseline = resolveCurrentHrvBaseline(frozenBaseline, frozenHrvMu, prefs, muHrvHistory)
+                    val isCurrentHrvOptimal = isHrvOptimal(currentHrvBaseline, currentHrvMean, prefs.hrvOptimalThreshold)
+                    val isCurrentRhrOptimal = isRhrOptimal(baselineRhrValue, currentNocturnalRhr, prefs.rhrOptimalThreshold)
                     val yesterdayHrvBaseline = prefs.hrvBaselineOverride ?: yesterdaySummary?.hrvMuMssd?.let { exp(it) }
-                    val prevHrv = yesterdaySummary?.nocturnalHrv
-                    val isPreviousHrvOptimal =
-                        prevHrv != null &&
-                            yesterdayHrvBaseline != null &&
-                            yesterdayHrvBaseline > 0f &&
-                            prevHrv.toFloat() / yesterdayHrvBaseline >=
-                            prefs.hrvOptimalThreshold
+                    val isPreviousHrvOptimal = isPreviousHrvOptimal(yesterdaySummary, yesterdayHrvBaseline, prefs.hrvOptimalThreshold)
 
                     val recoveryFlags =
                         collaborators.scoringCalculator.computeRecoveryFlags(
@@ -615,6 +587,66 @@ class ComputeSleepMetricsUseCase
             val hrvSigma: Float?,
             val stagesSuspicious: Boolean,
         )
+
+        private fun resolveCurrentHrvBaseline(
+            frozenBaseline: Boolean,
+            frozenHrvMu: Float?,
+            prefs: UserPreferences,
+            muHrvHistory: List<Float>,
+        ): Float? =
+            when {
+                prefs.hrvBaselineOverride != null -> prefs.hrvBaselineOverride
+                frozenBaseline && frozenHrvMu != null -> exp(frozenHrvMu)
+                muHrvHistory.isNotEmpty() ->
+                    exp(
+                        muHrvHistory
+                            .map { ln(it.coerceAtLeast(0.001f)) }
+                            .average()
+                            .toFloat(),
+                    )
+                else -> null
+            }
+
+        private fun isHrvOptimal(baseline: Float?, current: Float?, threshold: Float): Boolean =
+            baseline != null && baseline > 0f && current != null && current / baseline >= threshold
+
+        private fun isRhrOptimal(baseline: Int, current: Int, threshold: Float): Boolean =
+            baseline > 0 && current.toFloat() / baseline.toFloat() <= threshold
+
+        private fun isPreviousHrvOptimal(
+            yesterdaySummary: DailySummary?,
+            yesterdayHrvBaseline: Float?,
+            threshold: Float,
+        ): Boolean {
+            val prevHrv = yesterdaySummary?.nocturnalHrv ?: return false
+            return yesterdayHrvBaseline != null &&
+                yesterdayHrvBaseline > 0f &&
+                prevHrv.toFloat() / yesterdayHrvBaseline >= threshold
+        }
+
+        private fun computeHrvZScore(
+            sessionHrvSamples: List<Float>,
+            currentHrvMean: Float?,
+            muHrvHistory: List<Float>,
+            effectiveSigmaHistory: List<Float>,
+            sigmaPrior: Float,
+            frozenHrvMu: Float?,
+            frozenHrvSigma: Float?,
+            prefs: UserPreferences,
+        ): Float? =
+            if (sessionHrvSamples.isNotEmpty() && currentHrvMean != null) {
+                collaborators.scoringCalculator.computeHrvZScore(
+                    currentHrvMean,
+                    muHrvHistory,
+                    effectiveSigmaHistory,
+                    sigmaPrior,
+                    baselineOverride = prefs.hrvBaselineOverride,
+                    frozenLnMu = frozenHrvMu,
+                    frozenLnSigma = frozenHrvSigma,
+                )
+            } else {
+                null
+            }
 
         private fun isStagesSuspicious(session: SleepSession, validation: Any): Boolean {
             val hasNoStageBreakdown =

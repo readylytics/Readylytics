@@ -1,6 +1,7 @@
 package app.readylytics.health.feature.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -124,7 +125,6 @@ internal fun AdvancedSectionWrapper(
     matchingSections: List<SettingsSectionMetadata>,
     expandState: SettingsExpandState,
     shouldExpandSection: (String) -> Boolean,
-    controlsEnabled: Boolean,
     onExpandStateChange: (SettingsExpandState) -> Unit,
 ) {
     if (matchingSections.any { it.id == "advanced" }) {
