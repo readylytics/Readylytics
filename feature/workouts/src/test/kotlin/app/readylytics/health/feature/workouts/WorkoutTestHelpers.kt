@@ -15,7 +15,7 @@ object WorkoutTestHelpers {
         startMs: Long,
         exerciseType: String = "running",
         durationMinutes: Int = 30,
-        routeState: RouteState = RouteState.IMPORTED,
+        routeState: String = RouteState.IMPORTED,
         elevationGainMeters: Float = 100f,
         trimp: Float = 60f,
         avgHr: Float = 150f,
