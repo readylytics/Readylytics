@@ -100,6 +100,7 @@ internal fun buildEfficiencyText(session: SleepSessionData?): String =
  * Builds deep sleep percentage display text from metrics.
  * Handles null metrics gracefully.
  */
+@Composable
 internal fun buildDeepSleepText(metrics: app.readylytics.health.core.model.domain.model.DailyMetrics?): String =
     metrics?.deepSleepPercentDisplay
         ?: stringResource(CoreUiR.string.metric_value_unavailable)
@@ -108,6 +109,7 @@ internal fun buildDeepSleepText(metrics: app.readylytics.health.core.model.domai
  * Builds REM sleep percentage display text from metrics.
  * Handles null metrics gracefully.
  */
+@Composable
 internal fun buildRemSleepText(metrics: app.readylytics.health.core.model.domain.model.DailyMetrics?): String =
     metrics?.remSleepPercentDisplay
         ?: stringResource(CoreUiR.string.metric_value_unavailable)
