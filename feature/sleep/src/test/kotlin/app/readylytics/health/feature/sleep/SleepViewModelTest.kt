@@ -342,20 +342,7 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val scoreDay = selectedDateFlow.value
-            val startTime =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(22, 0)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val session =
-                sleepSession(
-                    id = "legacy-zero-duration",
-                    startTime = startTime,
-                    endTime = startTime + 8 * 60 * 60_000L,
-                    durationMinutes = 0,
-                )
+            val session = buildLegacyZeroDurationSession(scoreDay, zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
 
             viewModel = createViewModel()
@@ -371,26 +358,7 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val scoreDay = selectedDateFlow.value
-            val cutoffStart =
-                scoreDay
-                    .minusDays(1)
-                    .atTime(20, 0)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            val session =
-                sleepSession(
-                    id = "cutoff",
-                    startTime = cutoffStart,
-                    endTime =
-                        scoreDay
-                            .minusDays(1)
-                            .atTime(20, 30)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 30,
-                )
+            val session = buildCutoffBoundarySession(scoreDay, zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
 
             viewModel = createViewModel()
@@ -583,32 +551,7 @@ class SleepViewModelTest {
             // chart has historical data to show, so no skeleton should appear during this sync.
             val zoneId = ZoneId.systemDefault()
             val selectedDate = selectedDateFlow.value
-            val priorSession =
-                SleepSessionData(
-                    id = "session_prior",
-                    deviceName = "SmartRing",
-                    startTime =
-                        selectedDate
-                            .minusDays(3)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        selectedDate
-                            .minusDays(2)
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                    sleepScore = 85f,
-                )
+            val priorSession = buildPriorSleepSession(selectedDate, zoneId)
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(priorSession))
             // observeFirstSessionEndingInRange (today's session) and getByDate/observeByDate
             // (today's summary) stay at their setUp() defaults: null.
@@ -639,31 +582,8 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = selectedDateFlow.value
-            val session =
-                SleepSessionData(
-                    id = "session_1",
-                    deviceName = "SmartRing",
-                    startTime =
-                        selectedDate
-                            .minusDays(1)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        selectedDate
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                    sleepScore = 85f,
-                )
+            val session = buildSleepSessionWithHr(selectedDate, zoneId)
+                .copy(sleepScore = 85f)
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
             every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(emptyList())
