@@ -266,10 +266,25 @@ class ScoringPointInTimeRegressionTest {
             assertEquals(2, atlMaps.size, "ATL computed once per variant")
             val workoutOnlyMap = atlMaps[0]
             val everydayMap = atlMaps[1]
-            assertEquals(30f, workoutOnlyMap[today.minusDays(1)], "Workout-only historical entry preserved")
-            assertNull(everydayMap[today.minusDays(1)], "Workout-only historical entry must not leak into the everyday series")
-            assertEquals(0f, workoutOnlyMap[today], "Workout-only series now injects today's dailyTrimpRaw too (SCORE-005)")
-            assertEquals(0f, everydayMap[today], "Everyday series injects today's everyday TRIMP (0 with no HR)")
+            assertEquals(
+                30f,
+                workoutOnlyMap[today.minusDays(1)],
+                "Workout-only historical entry preserved"
+            )
+            assertNull(
+                everydayMap[today.minusDays(1)],
+                "Workout-only historical entry must not leak into the everyday series"
+            )
+            assertEquals(
+                0f,
+                workoutOnlyMap[today],
+                "Workout-only series now injects today's dailyTrimpRaw too (SCORE-005)"
+            )
+            assertEquals(
+                0f,
+                everydayMap[today],
+                "Everyday series injects today's everyday TRIMP (0 with no HR)"
+            )
         }
 
     @Test
@@ -289,8 +304,10 @@ class ScoringPointInTimeRegressionTest {
                 coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
                 coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
                 coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
-                coEvery { workoutDao.getTrimpPoints(any(), any()) } returns listOf(TimestampedTrimp(historicalMidnightMs, 30f))
-                coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns listOf(TimestampedTrimp(historicalMidnightMs, 12f))
+                coEvery { workoutDao.getTrimpPoints(any(), any()) } returns
+                    listOf(TimestampedTrimp(historicalMidnightMs, 30f))
+                coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns
+                    listOf(TimestampedTrimp(historicalMidnightMs, 12f))
 
                 setupPreferences(athletePrefs())
 

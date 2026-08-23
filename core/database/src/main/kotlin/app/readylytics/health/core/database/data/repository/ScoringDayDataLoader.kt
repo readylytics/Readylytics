@@ -26,8 +26,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("TooManyFunctions")
 class ScoringDayDataLoader
     @Inject
+    @Suppress("LongParameterList")
     constructor(
         private val workoutDao: WorkoutDao,
         private val sleepSessionDao: SleepSessionDao,
@@ -119,7 +121,11 @@ class ScoringDayDataLoader
         suspend fun loadAvgSpo2(session: SleepSessionEntity?): Float? {
             if (session == null) return null
             val spo2Samples = fetchSpo2Samples(session)
-            return if (spo2Samples.isNotEmpty()) spo2Samples.asSequence().map { it.percentage }.average().toFloat() else null
+            return if (spo2Samples.isNotEmpty()) {
+                spo2Samples.asSequence().map { it.percentage }.average().toFloat()
+            } else {
+                null
+            }
         }
 
         private suspend fun fetchSpo2Samples(session: SleepSessionEntity) =
@@ -129,7 +135,11 @@ class ScoringDayDataLoader
         suspend fun loadAvgBodyTemp(session: SleepSessionEntity?): Float? {
             if (session == null) return null
             val bodyTempSamples = fetchBodyTempSamples(session)
-            return if (bodyTempSamples.isNotEmpty()) bodyTempSamples.asSequence().map { it.celsius }.average().toFloat() else null
+            return if (bodyTempSamples.isNotEmpty()) {
+                bodyTempSamples.asSequence().map { it.celsius }.average().toFloat()
+            } else {
+                null
+            }
         }
 
         private suspend fun fetchBodyTempSamples(session: SleepSessionEntity) =

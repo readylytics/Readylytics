@@ -228,7 +228,6 @@ class ReadinessSummaryCoordinator
             context: CalibratedScoringContext,
         ): DailySummary {
             val (dailyTrimpByDate, everydayTrimpByDate) = resolveTrimpSeries(context)
-
             val loadSeries = buildLoadSeriesUseCase.execute(context.targetDate, dailyTrimpByDate, everydayTrimpByDate)
             val withLoadSummary = base.baseSummary.copy(
                 atlWorkoutOnly = loadSeries.atl,
@@ -248,9 +247,39 @@ class ReadinessSummaryCoordinator
                 sleepDayPolicy = context.sleepDayPolicy,
                 prefetchedSessions = context.baselineContext?.sessions,
             )
-            val withHrvBaseline = withLoadSummary.copy(hrvBaseline = computedHrvBaseline)
+            val withHrvAndSleep =
+                assembleHrvAndSleepMetrics(base, context, withLoadSummary, loadSeries, computedHrvBaseline)
 
-            val withSleepMetrics = if (base.session != null) {
+            val finalBaselines = resolveDailyBaselinesUseCase.resolveFinalBaselines(
+                frozenSnapshot = context.initialBaselines.frozenSnapshot,
+                summaryHrvMuMssd = withHrvAndSleep.hrvMuMssd,
+                summaryHrvSigmaMssd = withHrvAndSleep.hrvSigmaMssd,
+                summaryRhrSigma = withHrvAndSleep.rhrSigma,
+                rhrBaselineValue = context.initialBaselines.rhrBaselineValue,
+            )
+
+            return assembleDailySummaryUseCase.assembleCalibrated(
+                baseSummary = withHrvAndSleep,
+                targetDate = context.targetDate,
+                computedHrvBaseline = computedHrvBaseline,
+                finalBaselines = finalBaselines,
+                avgSpo2 = base.avgSpo2,
+                avgBodyTemp = base.avgBodyTemp,
+                resolvedHrMax = context.initialBaselines.hrMax,
+                scoringConfigRasScalingFactor = context.scoringConfig.rasScalingFactor,
+                prefs = context.prefs,
+            )
+        }
+
+        private suspend fun assembleHrvAndSleepMetrics(
+            base: ReadinessBaseInputs,
+            context: CalibratedScoringContext,
+            withLoadSummary: DailySummary,
+            loadSeries: BuildLoadSeriesUseCase.LoadSeries,
+            computedHrvBaseline: Int?,
+        ): DailySummary {
+            val withHrvBaseline = withLoadSummary.copy(hrvBaseline = computedHrvBaseline)
+            return if (base.session != null) {
                 computeSleepMetricsUseCase(
                     SleepMetricsRequest(
                         session = SleepSessionMapper.toDomain(base.session),
@@ -270,26 +299,6 @@ class ReadinessSummaryCoordinator
             } else {
                 withHrvBaseline
             }
-
-            val finalBaselines = resolveDailyBaselinesUseCase.resolveFinalBaselines(
-                frozenSnapshot = context.initialBaselines.frozenSnapshot,
-                summaryHrvMuMssd = withSleepMetrics.hrvMuMssd,
-                summaryHrvSigmaMssd = withSleepMetrics.hrvSigmaMssd,
-                summaryRhrSigma = withSleepMetrics.rhrSigma,
-                rhrBaselineValue = context.initialBaselines.rhrBaselineValue,
-            )
-
-            return assembleDailySummaryUseCase.assembleCalibrated(
-                baseSummary = withSleepMetrics,
-                targetDate = context.targetDate,
-                computedHrvBaseline = computedHrvBaseline,
-                finalBaselines = finalBaselines,
-                avgSpo2 = base.avgSpo2,
-                avgBodyTemp = base.avgBodyTemp,
-                resolvedHrMax = context.initialBaselines.hrMax,
-                scoringConfigRasScalingFactor = context.scoringConfig.rasScalingFactor,
-                prefs = context.prefs,
-            )
         }
     }
 
