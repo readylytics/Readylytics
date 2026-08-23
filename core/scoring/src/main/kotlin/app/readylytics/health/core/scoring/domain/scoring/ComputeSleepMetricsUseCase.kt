@@ -420,46 +420,32 @@ class ComputeSleepMetricsUseCase
                                 ),
                         )
                 }
-                if (BuildConfig.DEBUG) {
-                    val debugPayload =
-                        """
-                        {
-                            "targetDate": "$targetDate",
-                            "dayMidnightMs": ${dayMidnight.toEpochMilli()},
-                            "dayEndMs": $dayEndMs,
-                            "frozenBaseline": $frozenBaseline,
-                            "isCalibrating": $isCalibrating,
-                            "windows": {
-                                "hrvMuHistorySize": ${muHrvHistory.size},
-                                "rhrValuesSize": ${rhrValues.size}
-                            },
-                            "inputs": {
-                                "sessionId": "${session.id}",
-                                "currentHrvMean": $currentHrvMean,
-                                "currentNocturnalRhr": $currentNocturnalRhr,
-                                "durationMinutes": ${session.durationMinutes},
-                                "loadScore": $loadScore
-                            },
-                            "baselines": {
-                                "frozenHrvMu": $frozenHrvMu,
-                                "frozenHrvSigma": $frozenHrvSigma,
-                                "activeHrvMu": ${readinessResult.diagnostics.rollingMu},
-                                "activeHrvSigma": $hrvSigma,
-                                "frozenRhr": $frozenRhr,
-                                "effectiveRhrSigma": $effectiveRhrSigma
-                            },
-                            "scores": {
-                                "zHrv": $persistedZLnHrv,
-                                "zRhr": $persistedZRhr,
-                                "sRest": $sRest,
-                                "sleepScore": $sleepScore,
-                                "readinessScore": $readinessScore,
-                                "recoveryFlags": "$persistedFlags"
-                            }
-                        }
-                        """.trimIndent()
-                    logD("ScoringDebug") { "\n$debugPayload" }
-                }
+                logDebugScoringMetrics(
+                    targetDate,
+                    dayMidnight,
+                    dayEndMs,
+                    frozenBaseline,
+                    isCalibrating,
+                    muHrvHistory.size,
+                    rhrValues.size,
+                    session.id,
+                    currentHrvMean,
+                    currentNocturnalRhr,
+                    session.durationMinutes,
+                    loadScore,
+                    frozenHrvMu,
+                    frozenHrvSigma,
+                    readinessResult.diagnostics.rollingMu,
+                    hrvSigma,
+                    frozenRhr,
+                    effectiveRhrSigma,
+                    persistedZLnHrv,
+                    persistedZRhr,
+                    sRest,
+                    sleepScore,
+                    readinessScore,
+                    persistedFlags,
+                )
 
                 Result.success(
                     summary.copy(
@@ -633,9 +619,9 @@ class ComputeSleepMetricsUseCase
             frozenHrvMu: Float?,
             frozenHrvSigma: Float?,
             prefs: UserPreferences,
-        ): Float? =
+        ): Float? {
             if (sessionHrvSamples.isNotEmpty() && currentHrvMean != null) {
-                collaborators.scoringCalculator.computeHrvZScore(
+                return collaborators.scoringCalculator.computeHrvZScore(
                     currentHrvMean,
                     muHrvHistory,
                     effectiveSigmaHistory,
@@ -644,9 +630,9 @@ class ComputeSleepMetricsUseCase
                     frozenLnMu = frozenHrvMu,
                     frozenLnSigma = frozenHrvSigma,
                 )
-            } else {
-                null
             }
+            return null
+        }
 
         private fun isStagesSuspicious(session: SleepSession, validation: Any): Boolean {
             val hasNoStageBreakdown =
@@ -659,6 +645,75 @@ class ComputeSleepMetricsUseCase
             @Suppress("UNCHECKED_CAST")
             val stagesSuspiciousVal = (validation as? Map<String, Any>)?.get("stagesSuspicious") as? Boolean ?: false
             return hasNoStageBreakdown || !stagesValid || stagesSuspiciousVal
+        }
+
+        // Extracted to reduce invoke() complexity - logs comprehensive debug metrics
+        private fun logDebugScoringMetrics(
+            targetDate: LocalDate,
+            dayMidnight: Instant,
+            dayEndMs: Long,
+            frozenBaseline: Boolean,
+            isCalibrating: Boolean,
+            hrvMuHistorySize: Int,
+            rhrValuesSize: Int,
+            sessionId: String,
+            currentHrvMean: Float?,
+            currentNocturnalRhr: Int?,
+            durationMinutes: Int,
+            loadScore: Float,
+            frozenHrvMu: Float?,
+            frozenHrvSigma: Float?,
+            activeHrvMu: Float?,
+            activeHrvSigma: Float?,
+            frozenRhr: Float?,
+            effectiveRhrSigma: Float?,
+            zLnHrv: Float?,
+            zRhr: Float?,
+            sRest: Float?,
+            sleepScore: Float?,
+            readinessScore: Float?,
+            recoveryFlags: String?,
+        ) {
+            if (!BuildConfig.DEBUG) return
+
+            val debugPayload =
+                """
+                {
+                    "targetDate": "$targetDate",
+                    "dayMidnightMs": ${dayMidnight.toEpochMilli()},
+                    "dayEndMs": $dayEndMs,
+                    "frozenBaseline": $frozenBaseline,
+                    "isCalibrating": $isCalibrating,
+                    "windows": {
+                        "hrvMuHistorySize": $hrvMuHistorySize,
+                        "rhrValuesSize": $rhrValuesSize
+                    },
+                    "inputs": {
+                        "sessionId": "$sessionId",
+                        "currentHrvMean": $currentHrvMean,
+                        "currentNocturnalRhr": $currentNocturnalRhr,
+                        "durationMinutes": $durationMinutes,
+                        "loadScore": $loadScore
+                    },
+                    "baselines": {
+                        "frozenHrvMu": $frozenHrvMu,
+                        "frozenHrvSigma": $frozenHrvSigma,
+                        "activeHrvMu": $activeHrvMu,
+                        "activeHrvSigma": $activeHrvSigma,
+                        "frozenRhr": $frozenRhr,
+                        "effectiveRhrSigma": $effectiveRhrSigma
+                    },
+                    "scores": {
+                        "zHrv": $zLnHrv,
+                        "zRhr": $zRhr,
+                        "sRest": $sRest,
+                        "sleepScore": $sleepScore,
+                        "readinessScore": $readinessScore,
+                        "recoveryFlags": "$recoveryFlags"
+                    }
+                }
+                """.trimIndent()
+            logD("ScoringDebug") { "\n$debugPayload" }
         }
 
         private fun computeBaselineMetrics(input: BaselineMetricsInput): BaselineMetricsResult {

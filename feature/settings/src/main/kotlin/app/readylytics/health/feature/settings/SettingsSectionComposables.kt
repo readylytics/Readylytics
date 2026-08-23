@@ -75,32 +75,29 @@ internal fun BaselinesThresholdsSection(
     uiState: UIState,
     isResyncing: Boolean,
     controlsEnabled: Boolean,
-    onThresholdEvent: (SettingsEvent) -> Unit,
-    onSleepEvent: (SettingsEvent) -> Unit,
-    onPhysiologyEvent: (SettingsEvent) -> Unit,
-    onHeartRateEvent: (SettingsEvent) -> Unit,
+    callbacks: BaselinesThresholdsCallbacks,
 ) {
     Column {
-        ActivityThresholdsSubsection(stepGoal = uiState.stepGoal, onUIEvent = { onSleepEvent(it) })
-        SleepThresholdsSubsection(sleepState = sleepState, onSleepEvent = onSleepEvent, isResyncing = isResyncing)
+        ActivityThresholdsSubsection(stepGoal = uiState.stepGoal, onUIEvent = { callbacks.onSleepEvent(it) })
+        SleepThresholdsSubsection(sleepState = sleepState, onSleepEvent = callbacks.onSleepEvent, isResyncing = isResyncing)
         HeartRateProfileSubsection(
             heartRateState = heartRateState,
             physiologyState = physiologyState,
-            onHeartRateEvent = onHeartRateEvent,
-            onPhysiologyEvent = onPhysiologyEvent,
+            onHeartRateEvent = callbacks.onHeartRateEvent,
+            onPhysiologyEvent = callbacks.onPhysiologyEvent,
             isResyncing = isResyncing,
             controlsEnabled = controlsEnabled,
         )
-        LoadSourcesTolerance(sleepState = sleepState, onSleepEvent = onSleepEvent, isResyncing = isResyncing)
+        LoadSourcesTolerance(sleepState = sleepState, onSleepEvent = callbacks.onSleepEvent, isResyncing = isResyncing)
         CircadianThresholdsSubsection(
             thresholdState = thresholdState,
             physiologyState = physiologyState,
-            onThresholdEvent = onThresholdEvent,
+            onThresholdEvent = callbacks.onThresholdEvent,
             controlsEnabled = controlsEnabled,
         )
         ThresholdSettingsSection(
             uiState = thresholdState,
-            onEvent = onThresholdEvent,
+            onEvent = callbacks.onThresholdEvent,
             isResyncing = isResyncing,
         )
     }

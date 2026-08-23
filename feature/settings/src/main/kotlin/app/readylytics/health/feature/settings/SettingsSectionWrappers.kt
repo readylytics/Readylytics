@@ -82,10 +82,12 @@ internal fun BaselinesThresholdsSectionWrapper(
                 uiState = states.uiState,
                 isResyncing = states.syncState.isResyncing,
                 controlsEnabled = controlsEnabled,
-                onThresholdEvent = intents.onThresholdEvent,
-                onSleepEvent = intents.onSleepEvent,
-                onPhysiologyEvent = intents.onPhysiologyEvent,
-                onHeartRateEvent = intents.onHeartRateEvent,
+                callbacks = BaselinesThresholdsCallbacks(
+                    onThresholdEvent = intents.onThresholdEvent,
+                    onSleepEvent = intents.onSleepEvent,
+                    onPhysiologyEvent = intents.onPhysiologyEvent,
+                    onHeartRateEvent = intents.onHeartRateEvent,
+                ),
             )
         }
         HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
