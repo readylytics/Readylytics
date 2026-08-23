@@ -214,40 +214,9 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = LocalDate.of(2026, 6, 11)
-            val session =
-                SleepSessionData(
-                    id = "session_1",
-                    deviceName = "SmartRing",
-                    startTime =
-                        selectedDate
-                            .minusDays(1)
-                            .atTime(22, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    endTime =
-                        selectedDate
-                            .atTime(6, 0)
-                            .atZone(zoneId)
-                            .toInstant()
-                            .toEpochMilli(),
-                    durationMinutes = 480,
-                    efficiency = 0.93f,
-                    deepSleepMinutes = 90,
-                    lightSleepMinutes = 300,
-                    remSleepMinutes = 90,
-                    awakeMinutes = 30,
-                )
-            val hrSamples =
-                listOf(
-                    HeartRateRecordData(
-                        id = "hr1",
-                        timestampMs = session.startTime + 60_000L,
-                        beatsPerMinute = 54,
-                        recordType = "SLEEP",
-                        sessionId = session.id,
-                    ),
-                )
+            val session = buildSleepSessionWithHr(selectedDate, zoneId)
+            val hrSamples = listOf(buildHeartRateSample("hr1", session.id, session.startTime + 60_000L, 54))
+
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
             every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(hrSamples)
@@ -629,17 +598,59 @@ class SleepViewModelTest {
         endTime: Long,
         durationMinutes: Int,
         deviceName: String = "SmartRing",
+        efficiency: Float = 0.93f,
+        deepSleepMinutes: Int = 90,
+        lightSleepMinutes: Int = 300,
+        remSleepMinutes: Int = 90,
+        awakeMinutes: Int = 0,
+        sleepScore: Float? = null,
     ) = SleepSessionData(
         id = id,
         deviceName = deviceName,
         startTime = startTime,
         endTime = endTime,
         durationMinutes = durationMinutes,
-        efficiency = 0.93f,
-        deepSleepMinutes = 90,
-        lightSleepMinutes = 300,
-        remSleepMinutes = 90,
-        awakeMinutes = 0,
+        efficiency = efficiency,
+        deepSleepMinutes = deepSleepMinutes,
+        lightSleepMinutes = lightSleepMinutes,
+        remSleepMinutes = remSleepMinutes,
+        awakeMinutes = awakeMinutes,
+        sleepScore = sleepScore,
+    )
+
+    private fun buildHeartRateSample(
+        id: String,
+        sessionId: String,
+        timestampMs: Long,
+        beatsPerMinute: Int,
+    ) = HeartRateRecordData(
+        id = id,
+        timestampMs = timestampMs,
+        beatsPerMinute = beatsPerMinute,
+        recordType = "SLEEP",
+        sessionId = sessionId,
+    )
+
+    private fun buildSleepSessionWithHr(
+        selectedDate: LocalDate,
+        zoneId: ZoneId,
+    ) = sleepSession(
+        id = "session_1",
+        startTime =
+            selectedDate
+                .minusDays(1)
+                .atTime(22, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli(),
+        endTime =
+            selectedDate
+                .atTime(6, 0)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli(),
+        durationMinutes = 480,
+        awakeMinutes = 30,
     )
 
     private fun scoreDayFor(
