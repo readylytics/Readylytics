@@ -1,7 +1,8 @@
 package app.readylytics.health.core.model.domain.model
 
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.display.MetricFormatter
-import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import java.util.Locale
 import kotlin.math.abs
@@ -31,7 +32,6 @@ object DailyMetricsMapper {
 
         return DailyMetrics(
             date = summary.date,
-            // Raw passthrough
             nocturnalRhrRaw = summary.restingHeartRate,
             nocturnalHrvRaw = summary.nocturnalHrv,
             rhrBaselineRaw = rhrBaselineRaw,
@@ -39,7 +39,6 @@ object DailyMetricsMapper {
             hrvBaselineSdRaw = summary.hrvSigmaMssd,
             rhrSnapshotRaw = rhrSnapshotRaw,
             strainRatioRaw = LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode),
-            // Rounded display ints
             nocturnalRhrRounded = summary.restingHeartRate,
             nocturnalHrvRounded = summary.nocturnalHrv,
             restingHeartRateRounded = summary.restingHeartRate,
@@ -53,33 +52,48 @@ object DailyMetricsMapper {
             rasRounded = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt(),
             rasDayScoreRounded = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt(),
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
-            // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
             hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRoundedValue),
             restingHrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
             rhrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
             hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRoundedValue),
             restingHrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
-            // Display strings
             sleepDurationDisplay = formatSleepDuration(summary.sleepDurationMinutes),
-            weightKgDisplay = summary.weightKg?.let { format1(it) },
-            weightLbsDisplay = summary.weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) },
-            bodyFatDisplay = summary.bodyFatPercent?.let { "${format1(it)}%" },
-            strainRatioDisplay =
-                LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode)?.let {
-                    MetricFormatter.formatStrain(it)
-                },
+            weightKgDisplay = formatWeight(summary.weightKg),
+            weightLbsDisplay = formatWeightLbs(summary.weightKg),
+            bodyFatDisplay = formatBodyFatPercent(summary.bodyFatPercent),
+            strainRatioDisplay = formatStrainRatio(summary, prefs.strainLoadSourceMode),
             zLnHrvDisplay = summary.zLnHrv?.let { format2(it) },
             hrvSigmaDisplay = summary.hrvSigma?.let { format3(it) },
             bloodPressureDisplay = formatBloodPressure(summary.bloodPressureSystolic, summary.bloodPressureDiastolic),
-            deepSleepPercentDisplay = summary.deepSleepPercent?.let { "${it.roundToInt()}%" },
-            remSleepPercentDisplay = summary.remSleepPercent?.let { "${it.roundToInt()}%" },
+            deepSleepPercentDisplay = formatPercentDisplay(summary.deepSleepPercent),
+            remSleepPercentDisplay = formatPercentDisplay(summary.remSleepPercent),
             needsRecalc = LoadSourceSelector.needsRecalc(summary, prefs),
             readinessLowConfidence = LoadSourceSelector.readinessLowConfidence(summary, prefs),
             napDurationDisplay = summary.supplementalSleepDurationMinutes?.let(::formatSleepDuration),
             napCount = summary.napCount,
         )
     }
+
+    private fun formatWeight(weightKg: Float?): String? =
+        weightKg?.let { format1(it) }
+
+    private fun formatWeightLbs(weightKg: Float?): String? =
+        weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) }
+
+    private fun formatBodyFatPercent(bodyFatPercent: Float?): String? =
+        bodyFatPercent?.let { "${format1(it)}%" }
+
+    private fun formatStrainRatio(
+        summary: DailySummary,
+        loadSourceMode: LoadSourceMode,
+    ): String? =
+        LoadSourceSelector.selectStrainRatio(summary, loadSourceMode)?.let {
+            MetricFormatter.formatStrain(it)
+        }
+
+    private fun formatPercentDisplay(percent: Float?): String? =
+        percent?.let { "${it.roundToInt()}%" }
 
     private fun deriveRhrBaselineRaw(
         summary: DailySummary,
