@@ -2,16 +2,12 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:InsightCauseRanker.kt$InsightCauseRanker$hint == CauseRankHint.ELEVATED_RHR &amp;&amp; ( context.zRhr != null &amp;&amp; context.zRhr &gt;= 1.0f || context.rhrDeltaBpm != null &amp;&amp; context.rhrDeltaBpm &gt;= 3f )</ID>
-    <ID>ComplexCondition:InsightCauseRanker.kt$InsightCauseRanker$hint == CauseRankHint.LOW_ACTIVITY &amp;&amp; context.stepCount != null &amp;&amp; context.stepGoal != null &amp;&amp; context.stepCount &lt; context.stepGoal * 0.7f</ID>
-    <ID>ComplexCondition:InsightCauseRanker.kt$InsightCauseRanker$hint == CauseRankHint.POOR_SLEEP &amp;&amp; ( context.sleepScore != null &amp;&amp; context.sleepScore &lt; 60f || context.sleepDurationMinutes != null &amp;&amp; context.goalSleepMinutes != null &amp;&amp; context.sleepDurationMinutes &lt; context.goalSleepMinutes * 0.85f )</ID>
-    <ID>ComplexCondition:InsightCauseRanker.kt$InsightCauseRanker$hint == CauseRankHint.STRONG_ELEVATED_RHR &amp;&amp; ( context.zRhr != null &amp;&amp; context.zRhr &gt;= 2.0f || context.rhrDeltaBpm != null &amp;&amp; context.rhrDeltaBpm &gt;= 5f )</ID>
     <ID>ComplexCondition:LoadScoringStrategy.kt$LoadScoringStrategy$currentRmssdMs &lt;= 0f || (frozenLnMu == null &amp;&amp; baselineOverride == null &amp;&amp; muHistory.isEmpty())</ID>
     <ID>CyclomaticComplexMethod:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase$suspend operator fun invoke( session: SleepSession, dayMidnight: Instant, targetDate: LocalDate, prefs: UserPreferences, summary: DailySummary, loadScore: Float, loadScoreEverydayHr: Float?, zoneId: ZoneId, rhrBaselineValue: Float, dayEndMs: Long, currentSessionIds: Set&lt;String&gt; = setOf(session.id), prefetchedSessions: List&lt;SleepSession&gt;? = null, ): Result&lt;DailySummary&gt;</ID>
     <ID>CyclomaticComplexMethod:GetDailyPromptDataUseCase.kt$GetDailyPromptDataUseCase$suspend fun execute(today: LocalDate): DailyPromptData</ID>
-    <ID>CyclomaticComplexMethod:InsightCauseRanker.kt$InsightCauseRanker$private fun score( insightId: InsightType, context: DailyInsightContext, hint: CauseRankHint, ): Int</ID>
     <ID>CyclomaticComplexMethod:LoadScoringStrategy.kt$LoadScoringStrategy$fun computeRecoveryFlags( zLnHrv: Float?, zRhr: Float?, rhrDeltaBpm: Float?, yesterdayZLnHrv: Float?, yesterdayZRhr: Float?, hrvMissing: Boolean, stagesSuspicious: Boolean, isLateNadir: Boolean, isCalibrating: Boolean, emergencyFlags: EmergencyFlagThresholds?, yesterdayTrimp: Float? = null, yesterdayHrv: Float? = null, currentHrv: Float? = null, hrvOptimalThreshold: Float = 1.0f, isCurrentHrvOptimal: Boolean = false, isCurrentRhrOptimal: Boolean = false, isPreviousHrvOptimal: Boolean = false, ): Set&lt;RecoveryFlag&gt;</ID>
     <ID>CyclomaticComplexMethod:RasScoringStrategy.kt$RasScoringStrategy$private fun computeEmaSeries( dailyTrimpByDate: Map&lt;LocalDate, Float&gt;, windowDays: Long, seriesStart: LocalDate, seriesEnd: LocalDate, ): Map&lt;LocalDate, Float&gt;</ID>
+    <ID>CyclomaticComplexMethod:InsightCauseRanker.kt$InsightCauseRanker$private fun score( insightId: InsightType, context: DailyInsightContext, hint: CauseRankHint, ): Int</ID>
     <ID>LongMethod:BaselineComputer.kt$BaselineComputer$suspend fun computeBackfillBaselines( summaries: List&lt;DailySummary&gt;, percentile: Int, sleepDayPolicy: SleepDayPolicy? = null, ): Map&lt;LocalDate, BackfillBaseline&gt;</ID>
     <ID>LongMethod:ComputeSleepMetricsUseCase.kt$ComputeSleepMetricsUseCase$suspend operator fun invoke( session: SleepSession, dayMidnight: Instant, targetDate: LocalDate, prefs: UserPreferences, summary: DailySummary, loadScore: Float, loadScoreEverydayHr: Float?, zoneId: ZoneId, rhrBaselineValue: Float, dayEndMs: Long, currentSessionIds: Set&lt;String&gt; = setOf(session.id), prefetchedSessions: List&lt;SleepSession&gt;? = null, ): Result&lt;DailySummary&gt;</ID>
     <ID>LongMethod:ComputeWorkoutLoadMetricsUseCaseTest.kt$ComputeWorkoutLoadMetricsUseCaseTest$@Test fun `uses stored workout trimp and returns rounded display values`()</ID>
@@ -23,7 +19,6 @@
     <ID>LongMethod:GetWorkoutDisplayMetricsUseCaseTest.kt$GetWorkoutDisplayMetricsUseCaseTest$@Test fun `gainedStrain is identical whether history is self-fetched or passed in pre-fetched`()</ID>
     <ID>LongMethod:GetWorkoutDisplayMetricsUseCaseTest.kt$GetWorkoutDisplayMetricsUseCaseTest$@Test fun `uses pre-fetched historicalSummaries instead of querying the repository`()</ID>
     <ID>LongMethod:HistoricalSleepDayAssembler.kt$HistoricalSleepDayAssembler$suspend fun buildHistoricalSleepDays( sessions: List&lt;SleepSession&gt;, percentile: Int, sleepDayPolicy: SleepDayPolicy?, assumeCoverageValid: Boolean = false, ): List&lt;HistoricalSleepDay&gt;</ID>
-    <ID>LongMethod:InsightCauseRanker.kt$InsightCauseRanker$private fun score( insightId: InsightType, context: DailyInsightContext, hint: CauseRankHint, ): Int</ID>
     <ID>LongMethod:InsightEngineTest.kt$InsightEngineTest$@Test fun `all registered rules can fire together`()</ID>
     <ID>LongMethod:SleepDayAggregatorTest.kt$SleepDayAggregatorTest$@Test fun canonicalizesOverlapWithoutSelectedSourceUsingLockedFallbackOrder()</ID>
     <ID>LongMethod:SleepDayAggregatorTest.kt$SleepDayAggregatorTest$@Test fun groupsCoreClusterCountsEligibleSupplementalAndSeversExactCutoffToNextDay()</ID>
@@ -67,6 +62,7 @@
     <ID>TooManyFunctions:BaselineComputer.kt$BaselineComputer</ID>
     <ID>TooManyFunctions:CompositeScoringCalculator.kt$CompositeScoringCalculator : ScoringCalculator</ID>
     <ID>TooManyFunctions:DailyPromptFormatter.kt$DailyPromptFormatter</ID>
+    <ID>TooManyFunctions:InsightCauseRanker.kt$InsightCauseRanker</ID>
     <ID>TooManyFunctions:ScoringCalculator.kt$ScoringCalculator</ID>
     <ID>TooManyFunctions:SleepDayAggregator.kt$SleepDayAggregator</ID>
   </CurrentIssues>
