@@ -496,124 +496,14 @@ class SleepViewModelTest {
             collectJob.cancelAndJoin()
         }
 
-    private fun sleepSession(
-        id: String,
-        startTime: Long,
-        endTime: Long,
-        durationMinutes: Int,
-        deviceName: String = "SmartRing",
-        efficiency: Float = 0.93f,
-        deepSleepMinutes: Int = 90,
-        lightSleepMinutes: Int = 300,
-        remSleepMinutes: Int = 90,
-        awakeMinutes: Int = 0,
-        sleepScore: Float? = null,
-    ) = SleepSessionData(
-        id = id,
-        deviceName = deviceName,
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = durationMinutes,
-        efficiency = efficiency,
-        deepSleepMinutes = deepSleepMinutes,
-        lightSleepMinutes = lightSleepMinutes,
-        remSleepMinutes = remSleepMinutes,
-        awakeMinutes = awakeMinutes,
-        sleepScore = sleepScore,
-    )
-
-    private fun buildHeartRateSample(
-        id: String,
-        sessionId: String,
-        timestampMs: Long,
-        beatsPerMinute: Int,
-    ) = HeartRateRecordData(
-        id = id,
-        timestampMs = timestampMs,
-        beatsPerMinute = beatsPerMinute,
-        recordType = "SLEEP",
-        sessionId = sessionId,
-    )
-
-    private fun buildSleepSessionWithHr(
-        selectedDate: LocalDate,
-        zoneId: ZoneId,
-    ) = sleepSession(
-        id = "session_1",
-        startTime =
-            selectedDate
-                .minusDays(1)
-                .atTime(22, 0)
-                .atZone(zoneId)
-                .toInstant()
-                .toEpochMilli(),
-        endTime =
-            selectedDate
-                .atTime(6, 0)
-                .atZone(zoneId)
-                .toInstant()
-                .toEpochMilli(),
-        durationMinutes = 480,
-        awakeMinutes = 30,
-    )
-
     private fun buildOverlapTiebreakerSessions(zoneId: ZoneId): Pair<SleepSessionData, SleepSessionData> {
         val scoreDay = selectedDateFlow.value
-        val earlierStart = scoreDay.minusDays(1).atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli()
-        val laterStart = scoreDay.minusDays(1).atTime(22, 30).atZone(zoneId).toInstant().toEpochMilli()
-        val stableIdWinnerWithoutSource = sleepSession(
-            id = "a-stable-id",
-            startTime = earlierStart,
-            endTime = earlierStart + 480 * 60_000L,
-            durationMinutes = 480,
-            deviceName = "z-source",
-        )
-        val sourceWinner = sleepSession(
-            id = "z-stable-id",
-            startTime = laterStart,
-            endTime = laterStart + 480 * 60_000L,
-            durationMinutes = 480,
-            deviceName = "a-source",
-        )
-        return stableIdWinnerWithoutSource to sourceWinner
+        return buildOverlapTiebreakerSessions(scoreDay, zoneId)
     }
 
     private fun buildScoringZoneSessionData(deviceZoneId: ZoneId): Pair<ZoneId, Long> {
         val scoreDay = selectedDateFlow.value
-        val cutoffMinutes = 20 * 60
-        val referenceInstant = scoreDay.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant()
-        val deviceOffsetSeconds = deviceZoneId.rules.getOffset(referenceInstant).totalSeconds
-        val scoringZoneId =
-            listOf("America/New_York", "Pacific/Kiritimati", "Pacific/Pago_Pago")
-                .asSequence()
-                .map(ZoneId::of)
-                .first { zone ->
-                    zone.rules.getOffset(referenceInstant).totalSeconds != deviceOffsetSeconds
-                }
-        val sessionStart =
-            (0..(48 * 60))
-                .asSequence()
-                .map { minuteOffset ->
-                    scoreDay
-                        .minusDays(1)
-                        .atStartOfDay(ZoneId.of("UTC"))
-                        .plusMinutes(minuteOffset.toLong())
-                        .toInstant()
-                }.first { instant ->
-                    scoreDayFor(instant, scoringZoneId, cutoffMinutes) == scoreDay &&
-                        scoreDayFor(instant, deviceZoneId, cutoffMinutes) != scoreDay
-                }.toEpochMilli()
-        return scoringZoneId to sessionStart
-    }
-
-    private fun scoreDayFor(
-        instant: java.time.Instant,
-        zoneId: ZoneId,
-        cutoffMinutes: Int,
-    ): LocalDate {
-        val localTime = instant.atZone(zoneId)
-        val minutesOfDay = localTime.hour * 60 + localTime.minute
-        return if (minutesOfDay < cutoffMinutes) localTime.toLocalDate() else localTime.toLocalDate().plusDays(1)
+        return buildScoringZoneSessionData(scoreDay, deviceZoneId)
     }
 
     @Test
