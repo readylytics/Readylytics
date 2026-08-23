@@ -1,10 +1,16 @@
 package app.readylytics.health.core.database.data.repository
 
+import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
+import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.DailySummaryDao
 import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
 import app.readylytics.health.core.databaseschema.data.local.dao.MinuteBucketDao
+import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
+import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
 import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
+import app.readylytics.health.core.databaseschema.data.local.entity.DailySummaryEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.SleepSessionEntity
 import app.readylytics.health.core.databaseschema.data.local.entity.WorkoutRecordEntity
@@ -13,6 +19,7 @@ import app.readylytics.health.core.database.data.mapper.DailySummaryMapper
 import app.readylytics.health.core.model.domain.model.DailySummary
 import app.readylytics.health.core.model.domain.model.HrMinuteBucketRow
 import app.readylytics.health.core.model.domain.model.RecordType
+import app.readylytics.health.core.model.domain.model.TimestampedTrimp
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import java.time.ZoneId
 import javax.inject.Inject
@@ -27,6 +34,11 @@ class ScoringDayDataLoader
         private val dailySummaryDao: DailySummaryDao,
         private val heartRateDao: HeartRateDao,
         private val minuteBucketDao: MinuteBucketDao,
+        private val weightRecordDao: WeightRecordDao,
+        private val bodyFatRecordDao: BodyFatRecordDao,
+        private val bloodPressureRecordDao: BloodPressureRecordDao,
+        private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
     ) {
         // from processWorkouts L298
         suspend fun loadWorkouts(dayMidnightMs: Long, nextDayMidnightMs: Long): List<WorkoutRecordEntity> =
@@ -35,11 +47,14 @@ class ScoringDayDataLoader
         // from processWorkouts L299-306
         suspend fun loadExerciseHrSamples(workouts: List<WorkoutRecordEntity>): List<HeartRateRecordEntity> {
             if (workouts.isEmpty()) return emptyList()
-            return heartRateDao
-                .getByTimeRange(workouts.minOf { it.startTime }, workouts.maxOf { it.endTime })
+            return fetchExerciseHrInRange(workouts.minOf { it.startTime }, workouts.maxOf { it.endTime })
+        }
+
+        private suspend fun fetchExerciseHrInRange(startMs: Long, endMs: Long): List<HeartRateRecordEntity> =
+            heartRateDao
+                .getByTimeRange(startMs, endMs)
                 .filter { it.recordType == RecordType.EXERCISE.name }
                 .sortedBy { it.timestampMs }
-        }
 
         // from exerciseSamplesForWorkout L655-673
         suspend fun loadWorkoutSamples(
@@ -48,7 +63,13 @@ class ScoringDayDataLoader
         ): List<HeartRateRecordEntity> {
             val hot = hotSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
             if (hot.isNotEmpty()) return hot
-            return minuteBucketDao
+            return fetchWorkoutSamplesFromBuckets(workout)
+        }
+
+        private suspend fun fetchWorkoutSamplesFromBuckets(
+            workout: WorkoutRecordEntity,
+        ): List<HeartRateRecordEntity> =
+            minuteBucketDao
                 .getBucketsForSession("EXERCISE", workout.id)
                 .reconstructTimestampedSamples()
                 .map { (timestampMs, bpm) ->
@@ -60,7 +81,6 @@ class ScoringDayDataLoader
                         sessionId = workout.id,
                     )
                 }
-        }
 
         // from processWorkouts L325-328
         suspend fun persistModelTrimp(
@@ -74,12 +94,18 @@ class ScoringDayDataLoader
 
         // from mergedMinuteBuckets L631-653
         suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List<HrMinuteBucketRow> {
-            val hot = heartRateDao.getMinuteBuckets(dayStartMs, dayEndMs)
-            val warm = minuteBucketDao.getMinuteBuckets(dayStartMs, dayEndMs)
+            val hot = queryHotMinuteBuckets(dayStartMs, dayEndMs)
+            val warm = queryWarmMinuteBuckets(dayStartMs, dayEndMs)
             if (warm.isEmpty()) return hot
             if (hot.isEmpty()) return warm
             return mergeMinuteBuckets(hot, warm)
         }
+
+        private suspend fun queryHotMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List<HrMinuteBucketRow> =
+            heartRateDao.getMinuteBuckets(dayStartMs, dayEndMs)
+
+        private suspend fun queryWarmMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List<HrMinuteBucketRow> =
+            minuteBucketDao.getMinuteBuckets(dayStartMs, dayEndMs)
 
         // from resolveSleepAggregation L682
         suspend fun loadOverlappingSessions(fetchStartMs: Long, fetchEndMs: Long): List<SleepSessionEntity> =
@@ -88,6 +114,67 @@ class ScoringDayDataLoader
         // from computeDailySummary L197
         suspend fun loadSessionEndingInRange(dayMidnightMs: Long, nextDayMidnightMs: Long): SleepSessionEntity? =
             sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+
+        // from resolveAvgSpo2 L453-457
+        suspend fun loadAvgSpo2(session: SleepSessionEntity?): Float? {
+            if (session == null) return null
+            val spo2Samples = fetchSpo2Samples(session)
+            return if (spo2Samples.isNotEmpty()) spo2Samples.asSequence().map { it.percentage }.average().toFloat() else null
+        }
+
+        private suspend fun fetchSpo2Samples(session: SleepSessionEntity) =
+            oxygenSaturationRecordDao.getByTimeRange(session.startTime, session.endTime)
+
+        // from resolveAvgBodyTemp L459-463
+        suspend fun loadAvgBodyTemp(session: SleepSessionEntity?): Float? {
+            if (session == null) return null
+            val bodyTempSamples = fetchBodyTempSamples(session)
+            return if (bodyTempSamples.isNotEmpty()) bodyTempSamples.asSequence().map { it.celsius }.average().toFloat() else null
+        }
+
+        private suspend fun fetchBodyTempSamples(session: SleepSessionEntity) =
+            bodyTemperatureRecordDao.getByTimeRange(session.startTime, session.endTime)
+
+        data class LatestBodyMetrics(
+            val weightKg: Float?,
+            val bodyFatPercent: Float?,
+            val bloodPressureSystolic: Int?,
+            val bloodPressureDiastolic: Int?,
+        )
+
+        // from buildBaseSummary L411-413
+        suspend fun loadLatestBodyMetrics(nextDayMidnightMs: Long): LatestBodyMetrics {
+            val weight = queryLatestWeight(nextDayMidnightMs)
+            val bodyFat = queryLatestBodyFat(nextDayMidnightMs)
+            val bp = queryLatestBloodPressure(nextDayMidnightMs)
+            return LatestBodyMetrics(
+                weightKg = weight?.weightKg,
+                bodyFatPercent = bodyFat?.bodyFatPercent,
+                bloodPressureSystolic = bp?.systolicMmHg,
+                bloodPressureDiastolic = bp?.diastolicMmHg,
+            )
+        }
+
+        private suspend fun queryLatestWeight(upToMs: Long) =
+            weightRecordDao.getLatestUpTo(upToMs)
+
+        private suspend fun queryLatestBodyFat(upToMs: Long) =
+            bodyFatRecordDao.getLatestUpTo(upToMs)
+
+        private suspend fun queryLatestBloodPressure(upToMs: Long) =
+            bloodPressureRecordDao.getLatestUpTo(upToMs)
+
+        // from sumRasLastSixDays L765
+        suspend fun loadPreviousDaysSummaries(previousDaysMs: List<Long>): List<DailySummaryEntity> =
+            dailySummaryDao.getByDates(previousDaysMs)
+
+        // from fetchWalkForwardTrimpContext L145 / computeCalibratedSummary L541
+        suspend fun loadWorkoutTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =
+            workoutDao.getTrimpPoints(fromMs, toMs)
+
+        // from fetchWalkForwardTrimpContext L146 / computeCalibratedSummary L546
+        suspend fun loadEverydayTrimpPoints(fromMs: Long, toMs: Long): List<TimestampedTrimp> =
+            dailySummaryDao.getEverydayTrimpPoints(fromMs, toMs)
 
         // from persist L626
         suspend fun persistDailySummary(summary: DailySummary, zoneId: ZoneId) {
