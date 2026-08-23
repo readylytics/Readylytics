@@ -226,51 +226,25 @@ class ComputeSleepMetricsUseCase
                 var readinessResult: ReadinessResult = ReadinessResult.EMPTY
 
                 val sigmaPrior = prefs.physiologyProfile.lnSigmaPrior
-                // When baselines are frozen, use the stored sigma directly; otherwise use live history
-                val effectiveSigmaHistory =
-                    if (frozenBaseline && frozenHrvSigma != null) {
-                        listOf(frozenHrvSigma)
-                    } else {
-                        sigmaHrvHistory
-                    }
-
-                // Determine effective sigma for RHR.
-                // Note: preserving null when rhrValues.size <= 1 is intentional to ensure downstream scoring
-                // (e.g. LoadScoringStrategy) uses its percentage-based fallback logic during recalculations.
-                val calculatedRhrSigma =
-                    if (!frozenBaseline && rhrValues.size > 1) {
-                        rhrValues
-                            .stdev()
-                            .takeIf { it > 0f }
-                    } else {
-                        null
-                    }
-                val effectiveRhrSigma = frozenRhrSigma ?: calculatedRhrSigma
-
-                val hrvSigma =
-                    if (sessionHrvSamples.isNotEmpty()) {
-                        if (frozenBaseline && frozenHrvSigma != null) {
-                            frozenHrvSigma
-                        } else {
-                            val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
-                            collaborators.scoringCalculator.hrvSigma(
-                                lnSigmaHistory,
-                                sigmaPrior,
-                            )
-                        }
-                    } else {
-                        null
-                    }
-                // HC-006/OD-2: a stage-less session (SleepDataMapper's raw-span duration fallback)
-                // has zero deep/rem/light minutes despite a positive duration -- validateNight's
-                // deep/rem *fraction* checks read that as 0%, i.e. trivially "valid", when it's
-                // actually total architecture blindness. Force the existing reweight pathway.
-                val hasNoStageBreakdown =
-                    session.durationMinutes > 0 &&
-                        session.deepSleepMinutes == 0 &&
-                        session.remSleepMinutes == 0 &&
-                        session.lightSleepMinutes == 0
-                val stagesSuspicious = hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
+                val baselineMetrics =
+                    computeBaselineMetrics(
+                        BaselineMetricsInput(
+                            frozenBaseline = frozenBaseline,
+                            frozenHrvSigma = frozenHrvSigma,
+                            sigmaHrvHistory = sigmaHrvHistory,
+                            sigmaPrior = sigmaPrior,
+                            sessionHrvSamples = sessionHrvSamples,
+                            rhrValues = rhrValues,
+                            frozenRhrSigma = frozenRhrSigma,
+                            session = session,
+                            validation = validation,
+                        ),
+                    )
+                val effectiveSigmaHistory = baselineMetrics.effectiveSigmaHistory
+                val calculatedRhrSigma = baselineMetrics.calculatedRhrSigma
+                val effectiveRhrSigma = baselineMetrics.effectiveRhrSigma
+                val hrvSigma = baselineMetrics.hrvSigma
+                val stagesSuspicious = baselineMetrics.stagesSuspicious
 
                 val sleepModifiers =
                     collaborators.sleepModifierResolver.resolve(
@@ -620,6 +594,87 @@ class ComputeSleepMetricsUseCase
                 logE("ComputeSleepMetrics", e) { "Sleep metrics failed for $targetDate" }
                 Result.failure("Failed to compute sleep metrics", "SLEEP_METRICS_ERROR")
             }
+        }
+
+        private data class BaselineMetricsInput(
+            val frozenBaseline: Boolean,
+            val frozenHrvSigma: Float?,
+            val sigmaHrvHistory: List<Float>,
+            val sigmaPrior: Float,
+            val sessionHrvSamples: List<Float>,
+            val rhrValues: List<Int>,
+            val frozenRhrSigma: Float?,
+            val session: SleepSession,
+            val validation: Any,
+        )
+
+        private data class BaselineMetricsResult(
+            val effectiveSigmaHistory: List<Float>,
+            val calculatedRhrSigma: Float?,
+            val effectiveRhrSigma: Float?,
+            val hrvSigma: Float?,
+            val stagesSuspicious: Boolean,
+        )
+
+        private fun isStagesSuspicious(session: SleepSession, validation: Any): Boolean {
+            val hasNoStageBreakdown =
+                session.durationMinutes > 0 &&
+                    session.deepSleepMinutes == 0 &&
+                    session.remSleepMinutes == 0 &&
+                    session.lightSleepMinutes == 0
+            @Suppress("UNCHECKED_CAST")
+            val stagesValid = (validation as? Map<String, Any>)?.get("stagesValid") as? Boolean ?: true
+            @Suppress("UNCHECKED_CAST")
+            val stagesSuspiciousVal = (validation as? Map<String, Any>)?.get("stagesSuspicious") as? Boolean ?: false
+            return hasNoStageBreakdown || !stagesValid || stagesSuspiciousVal
+        }
+
+        private fun computeBaselineMetrics(input: BaselineMetricsInput): BaselineMetricsResult {
+            val frozenBaseline = input.frozenBaseline
+            val frozenHrvSigma = input.frozenHrvSigma
+            val sigmaHrvHistory = input.sigmaHrvHistory
+            val sigmaPrior = input.sigmaPrior
+            val sessionHrvSamples = input.sessionHrvSamples
+            val rhrValues = input.rhrValues
+            val frozenRhrSigma = input.frozenRhrSigma
+            val session = input.session
+            val validation = input.validation
+            val effectiveSigmaHistory =
+                if (frozenBaseline && frozenHrvSigma != null) {
+                    listOf(frozenHrvSigma)
+                } else {
+                    sigmaHrvHistory
+                }
+
+            val calculatedRhrSigma =
+                if (!frozenBaseline && rhrValues.size > 1) {
+                    rhrValues.stdev().takeIf { it > 0f }
+                } else {
+                    null
+                }
+            val effectiveRhrSigma = frozenRhrSigma ?: calculatedRhrSigma
+
+            val hrvSigma =
+                if (sessionHrvSamples.isNotEmpty()) {
+                    if (frozenBaseline && frozenHrvSigma != null) {
+                        frozenHrvSigma
+                    } else {
+                        val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
+                        collaborators.scoringCalculator.hrvSigma(lnSigmaHistory, sigmaPrior)
+                    }
+                } else {
+                    null
+                }
+
+            val stagesSuspicious = isStagesSuspicious(session, validation)
+
+            return BaselineMetricsResult(
+                effectiveSigmaHistory = effectiveSigmaHistory,
+                calculatedRhrSigma = calculatedRhrSigma,
+                effectiveRhrSigma = effectiveRhrSigma,
+                hrvSigma = hrvSigma,
+                stagesSuspicious = stagesSuspicious,
+            )
         }
 
         private data class BaselineWindowResult(

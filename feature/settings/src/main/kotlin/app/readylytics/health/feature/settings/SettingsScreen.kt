@@ -200,12 +200,51 @@ fun SettingsScreen(
     hasCrashReport: Boolean = false,
     onSendIssueReport: (IssueReportRequest) -> Unit = {},
 ) {
-    val context = LocalContext.current
+    val states = SettingsStates(
+        thresholdState = thresholdState,
+        sleepState = sleepState,
+        physiologyState = physiologyState,
+        heartRateState = heartRateState,
+        localBackupState = localBackupState,
+        syncState = syncState,
+        uiState = uiState,
+        dashboardCardsState = dashboardCardsState,
+        hasCrashReport = hasCrashReport,
+    )
+    val intents = SettingsIntents(
+        onThresholdEvent = onThresholdEvent,
+        onSleepEvent = onSleepEvent,
+        onPhysiologyEvent = onPhysiologyEvent,
+        onHeartRateEvent = onHeartRateEvent,
+        onLocalBackupEvent = onLocalBackupEvent,
+        onSyncEvent = onSyncEvent,
+        onUIEvent = onUIEvent,
+        onDashboardCardsEvent = onDashboardCardsEvent,
+        onNavigateToAbout = onNavigateToAbout,
+        onNavigateToLicenses = onNavigateToLicenses,
+        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+        onOpenSourceCode = onOpenSourceCode,
+        onSendIssueReport = onSendIssueReport,
+    )
+
+    SettingsScreenContent(
+        states = states,
+        intents = intents,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsScreenContent(
+    states: SettingsStates,
+    intents: SettingsIntents,
+    modifier: Modifier = Modifier,
+) {
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var pendingReportType by remember { mutableStateOf<GitHubIssueType?>(null) }
-    val resolvedThresholdError = thresholdState.thresholdError.resolveOrNull()
-    val isResyncing = syncState.isResyncing
+    val isResyncing = states.syncState.isResyncing
     val controlsEnabled = resyncGateEnabled(isResyncing)
 
     val matchingSections by remember(searchQuery) {
@@ -215,37 +254,17 @@ fun SettingsScreen(
         searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
     }
 
-    if (localBackupState.showRestoreConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) },
-            title = { Text(stringResource(R.string.dialog_restore_backup_title)) },
-            text = {
-                val filename =
-                    localBackupState.pendingRestoreFile?.name
-                        ?: stringResource(R.string.backup_this_backup)
-                Text(stringResource(R.string.dialog_restore_backup_body, filename))
-            },
-            confirmButton = {
-                Button(onClick = { onLocalBackupEvent(SettingsEvent.RestoreConfirmed) }) {
-                    Text(stringResource(R.string.action_restore))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) {
-                    Text(stringResource(app.readylytics.health.core.ui.R.string.action_cancel))
-                }
-            },
-        )
-    }
+    RestoreConfirmDialog(
+        states = states,
+        intents = intents,
+    )
 
-    pendingReportType?.let { reportType ->
-        IssueReportDialog(
-            reportType = reportType,
-            hasCrashReport = hasCrashReport,
-            onDismiss = { pendingReportType = null },
-            onSubmit = onSendIssueReport,
-        )
-    }
+    IssueReportDialogHandler(
+        pendingReportType = pendingReportType,
+        hasCrashReport = states.hasCrashReport,
+        onDismiss = { pendingReportType = null },
+        onSendIssueReport = intents.onSendIssueReport,
+    )
 
     Column(modifier = modifier.fillMaxSize()) {
         Column(
@@ -260,436 +279,153 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(vertical = MaterialTheme.spacing.pageSectionGapSmall),
             ) {
-                // Search
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                horizontal = MaterialTheme.spacing.pageHorizontal,
-                                vertical = MaterialTheme.spacing.pageSectionGapSmall,
-                            ),
-                    placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
-                    leadingIcon = {
-                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.accessibility_search))
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(
-                                    Icons.Filled.Clear,
-                                    contentDescription = stringResource(R.string.accessibility_clear),
-                                )
-                            }
-                        }
-                    },
-                    shape = MaterialTheme.shapes.large,
-                    singleLine = true,
+                SettingsSearchBar(
+                    searchQuery = searchQuery,
+                    onSearchQueryChanged = { searchQuery = it },
                 )
 
-                // Data & Backup & Health Connect
-                if (matchingSections.any { it.id == "data_backup_sync" }) {
-                    M3CollapsibleSection(
-                        header = stringResource(R.string.settings_section_data_backup),
-                        expanded =
-                            !expandState.collapseDataBackup ||
-                                shouldExpandSection("data_backup_sync"),
-                        onExpandedChange = {
-                            expandState = expandState.copy(collapseDataBackup = !it)
-                        },
-                    ) {
-                        Column {
-                            SectionHeader(stringResource(R.string.settings_sub_local_backup))
-                            LocalBackupSection(
-                                uiState = localBackupState,
-                                onEvent = onLocalBackupEvent,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                            SectionHeader(stringResource(R.string.settings_sub_data_management))
-                            DataManagementSection(
-                                uiState = uiState,
-                                isResyncing = isResyncing,
-                                onEvent = onUIEvent,
-                                onSyncEvent = onSyncEvent,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                            SectionHeader(stringResource(R.string.settings_sub_health_connect))
-                            SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)
-                        }
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
-                }
+                DataBackupSyncSectionWrapper(
+                    states = states,
+                    intents = intents,
+                    matchingSections = matchingSections,
+                    expandState = expandState,
+                    shouldExpandSection = shouldExpandSection,
+                    onExpandStateChange = { expandState = it },
+                )
 
-                // Data Sources (per–data-type source device selection)
-                if (matchingSections.any { it.id == "data_sources" }) {
-                    M3CollapsibleSection(
-                        header = stringResource(R.string.data_sources_title),
-                        expanded =
-                            !expandState.collapseDataSources ||
-                                shouldExpandSection("data_sources"),
-                        onExpandedChange = {
-                            expandState = expandState.copy(collapseDataSources = !it)
-                        },
-                    ) {
-                        DataSourceSettingsSection()
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
-                }
+                DataSourcesSectionWrapper(
+                    matchingSections = matchingSections,
+                    expandState = expandState,
+                    shouldExpandSection = shouldExpandSection,
+                    onExpandStateChange = { expandState = it },
+                )
 
-                // Baselines & Thresholds
-                if (matchingSections.any { it.id == "baselines_thresholds" }) {
-                    M3CollapsibleSection(
-                        header = stringResource(R.string.settings_section_baselines_thresholds),
-                        expanded =
-                            !expandState.collapseBaselinesThresholds ||
-                                shouldExpandSection("baselines_thresholds"),
-                        onExpandedChange = {
-                            expandState = expandState.copy(collapseBaselinesThresholds = !it)
-                        },
-                    ) {
-                        Column {
-                            SectionHeader(stringResource(R.string.label_daily_step_goal))
-                            ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onUIEvent)
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                            SectionHeader(stringResource(R.string.label_sleep))
-                            SleepSettingsSection(
-                                uiState = sleepState,
-                                onEvent = onSleepEvent,
-                                isResyncing = isResyncing,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                            SectionHeader(stringResource(R.string.settings_sub_heart_rate_zones))
-                            HeartRateZoneSection(
-                                uiState = heartRateState,
-                                physiologyState = physiologyState,
-                                onEvent = onHeartRateEvent,
-                                onPhysiologyEvent = onPhysiologyEvent,
-                                isResyncing = isResyncing,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-                            PhysiologyProfilePicker(
-                                selectedProfile = physiologyState.physiologyProfile,
-                                onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
-                                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.pageHorizontal),
-                                enabled = controlsEnabled,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                            SectionHeader(stringResource(R.string.load_sources_section_title))
-                            LoadSourcesSection(
-                                uiState = sleepState,
-                                onEvent = onSleepEvent,
-                                isResyncing = isResyncing,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-                            SectionHeader(
-                                stringResource(app.readylytics.health.core.ui.R.string.label_circadian_consistency),
-                            )
-                            CircadianThresholdSettingsSection(
-                                profile = physiologyState.physiologyProfile,
-                                currentOverride = thresholdState.circadianThresholdOverride,
-                                onOverrideChanged = {
-                                    onThresholdEvent(
-                                        SettingsEvent.CircadianThresholdOverrideChanged(it),
-                                    )
-                                },
-                                isLoading = thresholdState.isUpdatingThreshold,
-                                error = resolvedThresholdError,
-                                onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
-                                enabled = controlsEnabled,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                            SectionHeader(stringResource(R.string.settings_sub_thresholds))
-                            ThresholdSettingsSection(
-                                uiState = thresholdState,
-                                onEvent = onThresholdEvent,
-                                isResyncing = isResyncing,
-                            )
-                        }
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
-                }
+                BaselinesThresholdsSectionWrapper(
+                    states = states,
+                    intents = intents,
+                    matchingSections = matchingSections,
+                    expandState = expandState,
+                    shouldExpandSection = shouldExpandSection,
+                    controlsEnabled = controlsEnabled,
+                    onExpandStateChange = { expandState = it },
+                )
 
-                // Display
-                if (matchingSections.any { it.id == "display" }) {
-                    M3CollapsibleSection(
-                        header = stringResource(R.string.settings_section_display),
-                        expanded =
-                            !expandState.collapseDisplay ||
-                                shouldExpandSection("display"),
-                        onExpandedChange = {
-                            expandState = expandState.copy(collapseDisplay = !it)
-                        },
-                    ) {
-                        Column {
-                            AppThemeItem(uiState = uiState, onEvent = onUIEvent)
-                            SettingsToggleItem(
-                                label = stringResource(CoreUiR.string.onboarding_dynamic_color_label),
-                                description = stringResource(CoreUiR.string.onboarding_dynamic_color_desc),
-                                checked = uiState.dynamicColorEnabled,
-                                onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
-                            )
-                            AnimatedVisibility(visible = !uiState.dynamicColorEnabled) {
-                                Column {
-                                    CustomColorPicker(
-                                        label = stringResource(R.string.fallback_theme_color_label),
-                                        selectedColor = Color(uiState.customPrimaryColor),
-                                        onColorSelected = {
-                                            onUIEvent(
-                                                SettingsEvent.CustomPrimaryColorChanged(it.toArgb().toLong()),
-                                            )
-                                        },
-                                        enabled = true,
-                                        modifier =
-                                            Modifier.fillMaxWidth().padding(
-                                                horizontal = MaterialTheme.spacing.pageHorizontal,
-                                                vertical = MaterialTheme.spacing.small,
-                                            ),
-                                    )
-                                    SettingsToggleItem(
-                                        label = stringResource(R.string.settings_customize_palette_label),
-                                        description = stringResource(R.string.settings_customize_palette_desc),
-                                        checked = uiState.isCustomPaletteEnabled,
-                                        onCheckedChange = { onUIEvent(SettingsEvent.CustomPaletteEnabledChanged(it)) },
-                                    )
-                                    val primarySeed = Color(uiState.customPrimaryColor)
-                                    val currentSecondary =
-                                        if (uiState.isCustomPaletteEnabled) {
-                                            Color(uiState.customSecondaryColor)
-                                        } else {
-                                            calculateSecondarySeedColor(primarySeed)
-                                        }
-                                    val currentTertiary =
-                                        if (uiState.isCustomPaletteEnabled) {
-                                            Color(uiState.customTertiaryColor)
-                                        } else {
-                                            calculateTertiarySeedColor(primarySeed)
-                                        }
-                                    CustomColorPicker(
-                                        label = stringResource(R.string.settings_secondary_color_label),
-                                        selectedColor = currentSecondary,
-                                        onColorSelected = {
-                                            onUIEvent(
-                                                SettingsEvent.CustomSecondaryColorChanged(it.toArgb().toLong()),
-                                            )
-                                        },
-                                        enabled = uiState.isCustomPaletteEnabled,
-                                        modifier =
-                                            Modifier.fillMaxWidth().padding(
-                                                horizontal = MaterialTheme.spacing.pageHorizontal,
-                                                vertical = MaterialTheme.spacing.small,
-                                            ),
-                                        onReset = {
-                                            onUIEvent(
-                                                SettingsEvent.CustomSecondaryColorChanged(
-                                                    calculateSecondarySeedColor(primarySeed).toArgb().toLong(),
-                                                ),
-                                            )
-                                        },
-                                        showPresets = false,
-                                    )
-                                    CustomColorPicker(
-                                        label = stringResource(R.string.settings_tertiary_color_label),
-                                        selectedColor = currentTertiary,
-                                        onColorSelected = {
-                                            onUIEvent(
-                                                SettingsEvent.CustomTertiaryColorChanged(it.toArgb().toLong()),
-                                            )
-                                        },
-                                        enabled = uiState.isCustomPaletteEnabled,
-                                        modifier =
-                                            Modifier.fillMaxWidth().padding(
-                                                horizontal = MaterialTheme.spacing.pageHorizontal,
-                                                vertical = MaterialTheme.spacing.small,
-                                            ),
-                                        onReset = {
-                                            onUIEvent(
-                                                SettingsEvent.CustomTertiaryColorChanged(
-                                                    calculateTertiarySeedColor(primarySeed).toArgb().toLong(),
-                                                ),
-                                            )
-                                        },
-                                        showPresets = false,
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-                            UnitSystemSelector(
-                                selectedUnit = uiState.unitSystem,
-                                onUnitSelected = { onUIEvent(SettingsEvent.UnitSystemChanged(it)) },
-                                modifier =
-                                    Modifier.fillMaxWidth().padding(
-                                        horizontal = MaterialTheme.spacing.pageHorizontal,
-                                    ),
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-                            DashboardCardsSettingsSection(
-                                uiState = dashboardCardsState,
-                                onEvent = onDashboardCardsEvent,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
-                            WorkoutDetailLayoutSettingsSection(onEvent = onUIEvent)
-                        }
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
-                }
+                DisplaySectionWrapper(
+                    states = states,
+                    intents = intents,
+                    matchingSections = matchingSections,
+                    expandState = expandState,
+                    shouldExpandSection = shouldExpandSection,
+                    onExpandStateChange = { expandState = it },
+                )
 
-                // Advanced
-                if (matchingSections.any { it.id == "advanced" }) {
-                    M3CollapsibleSection(
-                        header = stringResource(R.string.settings_section_advanced),
-                        expanded =
-                            !expandState.collapseAdvanced ||
-                                shouldExpandSection("advanced"),
-                        onExpandedChange = {
-                            expandState = expandState.copy(collapseAdvanced = !it)
-                        },
-                    ) {
-                        AdvancedSettingsSection(
-                            sleepState = sleepState,
-                            hrrToleranceSeconds = uiState.hrrToleranceSeconds,
-                            rasScalingFactor = uiState.rasScalingFactor,
-                            trimpModel = uiState.trimpModel,
-                            banisterMultiplier = uiState.banisterMultiplier,
-                            chengBeta = uiState.chengBeta,
-                            itrimB = uiState.itrimB,
-                            onEvent = onSleepEvent,
-                            onPhysiologyEvent = onPhysiologyEvent,
-                            onUIEvent = onUIEvent,
-                            isResyncing = isResyncing,
-                        )
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
-                }
+                AdvancedSectionWrapper(
+                    states = states,
+                    intents = intents,
+                    matchingSections = matchingSections,
+                    expandState = expandState,
+                    shouldExpandSection = shouldExpandSection,
+                    controlsEnabled = controlsEnabled,
+                    onExpandStateChange = { expandState = it },
+                )
 
-                // Issue Reporting (Bug reports & Feature requests)
-                if (matchingSections.any { it.id == "issue_reporting" }) {
-                    M3CollapsibleSection(
-                        header = stringResource(R.string.settings_section_issue_reporting),
-                        expanded =
-                            !expandState.collapseIssueReporting ||
-                                shouldExpandSection("issue_reporting"),
-                        onExpandedChange = {
-                            expandState = expandState.copy(collapseIssueReporting = !it)
-                        },
-                    ) {
-                        Column {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.settings_item_report_bug),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                },
-                                modifier =
-                                    Modifier.clickable {
-                                        pendingReportType = GitHubIssueType.BUG_REPORT
-                                    },
-                            )
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall),
-                            )
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.settings_item_request_feature),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                },
-                                modifier =
-                                    Modifier.clickable {
-                                        pendingReportType = GitHubIssueType.FEATURE_REQUEST
-                                    },
-                            )
-                        }
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))
-                }
+                IssueReportingSectionWrapper(
+                    matchingSections = matchingSections,
+                    expandState = expandState,
+                    shouldExpandSection = shouldExpandSection,
+                    onReportTypeSelected = { pendingReportType = it },
+                    onExpandStateChange = { expandState = it },
+                )
 
-                // Miscellaneous (About & Licenses)
-                if (matchingSections.any { it.id == "miscellaneous" }) {
-                    M3CollapsibleSection(
-                        header = stringResource(R.string.settings_section_miscellaneous),
-                        expanded =
-                            !expandState.collapseMiscellaneous ||
-                                shouldExpandSection("miscellaneous"),
-                        onExpandedChange = {
-                            expandState = expandState.copy(collapseMiscellaneous = !it)
-                        },
-                    ) {
-                        Column {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.settings_about_button),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                },
-                                modifier = Modifier.clickable { onNavigateToAbout() },
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.settings_item_licenses),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                },
-                                modifier = Modifier.clickable { onNavigateToLicenses() },
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.settings_item_privacy_policy),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                },
-                                modifier = Modifier.clickable { onOpenPrivacyPolicy() },
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.extraSmall))
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.settings_item_source_code),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                },
-                                modifier = Modifier.clickable { onOpenSourceCode() },
-                            )
-                        }
-                    }
-                }
+                MiscellaneousSectionWrapper(
+                    matchingSections = matchingSections,
+                    expandState = expandState,
+                    shouldExpandSection = shouldExpandSection,
+                    intents = intents,
+                    onExpandStateChange = { expandState = it },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AppThemeItem(
-    uiState: UIState,
-    onEvent: (SettingsEvent) -> Unit,
+private fun SettingsSearchBar(
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
 ) {
-    DropdownPreferenceItem(
-        label = stringResource(R.string.settings_label_app_theme),
-        selectedDisplayValue =
-            uiState.appTheme.name
-                .lowercase()
-                .replaceFirstChar { it.uppercase() },
-        options = AppTheme.entries,
-        onOptionSelected = { onEvent(SettingsEvent.AppThemeChanged(it)) },
-        optionLabel = { it.name.lowercase().replaceFirstChar { it.uppercase() } },
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchQueryChanged,
         modifier =
-            Modifier.fillMaxWidth().padding(
-                horizontal = MaterialTheme.spacing.pageHorizontal,
-                vertical = MaterialTheme.spacing.small,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = MaterialTheme.spacing.pageHorizontal,
+                    vertical = MaterialTheme.spacing.pageSectionGapSmall,
+                ),
+        placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
+        leadingIcon = {
+            Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.accessibility_search))
+        },
+        trailingIcon = {
+            if (searchQuery.isNotEmpty()) {
+                IconButton(onClick = { onSearchQueryChanged("") }) {
+                    Icon(
+                        Icons.Filled.Clear,
+                        contentDescription = stringResource(R.string.accessibility_clear),
+                    )
+                }
+            }
+        },
+        shape = MaterialTheme.shapes.large,
+        singleLine = true,
     )
 }
+
+@Composable
+private fun RestoreConfirmDialog(
+    states: SettingsStates,
+    intents: SettingsIntents,
+) {
+    if (states.localBackupState.showRestoreConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { intents.onLocalBackupEvent(SettingsEvent.RestoreDismissed) },
+            title = { Text(stringResource(R.string.dialog_restore_backup_title)) },
+            text = {
+                val filename =
+                    states.localBackupState.pendingRestoreFile?.name
+                        ?: stringResource(R.string.backup_this_backup)
+                Text(stringResource(R.string.dialog_restore_backup_body, filename))
+            },
+            confirmButton = {
+                Button(onClick = { intents.onLocalBackupEvent(SettingsEvent.RestoreConfirmed) }) {
+                    Text(stringResource(R.string.action_restore))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { intents.onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) {
+                    Text(stringResource(CoreUiR.string.action_cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun IssueReportDialogHandler(
+    pendingReportType: GitHubIssueType?,
+    hasCrashReport: Boolean,
+    onDismiss: () -> Unit,
+    onSendIssueReport: (IssueReportRequest) -> Unit,
+) {
+    pendingReportType?.let { reportType ->
+        IssueReportDialog(
+            reportType = reportType,
+            hasCrashReport = hasCrashReport,
+            onDismiss = onDismiss,
+            onSubmit = onSendIssueReport,
+        )
+    }
+}
+
