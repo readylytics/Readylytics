@@ -88,21 +88,13 @@ fun RestoreBackupScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         RestoreHeader(onBack = onBack, isBusy = isBusy)
-
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
-
-        OutlinedButton(
-            onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-            enabled = !isBusy,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(Icons.Filled.Description, contentDescription = null)
-            Spacer(Modifier.width(MaterialTheme.spacing.pageSectionGapSmall))
-            Text(selectedFileName ?: stringResource(R.string.onboarding_restore_select_file_button))
-        }
-
+        RestoreFileSection(
+            selectedFileName = selectedFileName,
+            isBusy = isBusy,
+            filePickerLauncher = filePickerLauncher,
+        )
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGap))
-
         RestorePasswordField(
             password = password,
             onPasswordChange = { password = it },
@@ -112,20 +104,42 @@ fun RestoreBackupScreen(
             selectedUri = selectedUri,
             onRestoreClick = onRestoreClick,
         )
-
-        if (resolvedError != null) {
-            Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
-            RestoreErrorRow(resolvedError = resolvedError, onDismissError = onDismissError)
-        }
-
+        RestoreErrorSection(resolvedError = resolvedError, onDismissError = onDismissError)
         Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapLarge))
-
         RestoreSubmitButton(
             selectedUri = selectedUri,
             password = password,
             isBusy = isBusy,
             onRestoreClick = onRestoreClick,
         )
+    }
+}
+
+@Composable
+private fun RestoreFileSection(
+    selectedFileName: String?,
+    isBusy: Boolean,
+    filePickerLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>,
+) {
+    OutlinedButton(
+        onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+        enabled = !isBusy,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(Icons.Filled.Description, contentDescription = null)
+        Spacer(Modifier.width(MaterialTheme.spacing.pageSectionGapSmall))
+        Text(selectedFileName ?: stringResource(R.string.onboarding_restore_select_file_button))
+    }
+}
+
+@Composable
+private fun RestoreErrorSection(
+    resolvedError: String?,
+    onDismissError: () -> Unit,
+) {
+    if (resolvedError != null) {
+        Spacer(Modifier.height(MaterialTheme.spacing.pageSectionGapSmall))
+        RestoreErrorRow(resolvedError = resolvedError, onDismissError = onDismissError)
     }
 }
 
