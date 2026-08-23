@@ -405,34 +405,7 @@ class SleepViewModelTest {
     fun `trend assigns sessions using the configured scoring zone instead of the device zone`() =
         runTest(testDispatcher) {
             val deviceZoneId = ZoneId.systemDefault()
-            val scoreDay = selectedDateFlow.value
-            val cutoffMinutes = 20 * 60
-            // Device zone may be a UTC-equivalent alias (Etc/UTC, GMT, Iceland, Azores in summer,
-            // ...) whose ID differs from "UTC" but has an identical offset. Comparing IDs would pick
-            // a scoring zone with the same offset and no instant could diverge, so pick a candidate
-            // scoring zone whose actual offset differs from the device zone's.
-            val referenceInstant = scoreDay.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant()
-            val deviceOffsetSeconds = deviceZoneId.rules.getOffset(referenceInstant).totalSeconds
-            val scoringZoneId =
-                listOf("America/New_York", "Pacific/Kiritimati", "Pacific/Pago_Pago")
-                    .asSequence()
-                    .map(ZoneId::of)
-                    .first { zone ->
-                        zone.rules.getOffset(referenceInstant).totalSeconds != deviceOffsetSeconds
-                    }
-            val sessionStart =
-                (0..(48 * 60))
-                    .asSequence()
-                    .map { minuteOffset ->
-                        scoreDay
-                            .minusDays(1)
-                            .atStartOfDay(ZoneId.of("UTC"))
-                            .plusMinutes(minuteOffset.toLong())
-                            .toInstant()
-                    }.first { instant ->
-                        scoreDayFor(instant, scoringZoneId, cutoffMinutes) == scoreDay &&
-                            scoreDayFor(instant, deviceZoneId, cutoffMinutes) != scoreDay
-                    }.toEpochMilli()
+            val (scoringZoneId, sessionStart) = buildScoringZoneSessionData(deviceZoneId)
             val session = sleepSession("zone", sessionStart, sessionStart + 30 * 60_000L, 30)
             every { settingsRepo.userPreferences } returns flowOf(UserPreferences(scoringZoneId = scoringZoneId.id))
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
@@ -603,6 +576,34 @@ class SleepViewModelTest {
             deviceName = "a-source",
         )
         return stableIdWinnerWithoutSource to sourceWinner
+    }
+
+    private fun buildScoringZoneSessionData(deviceZoneId: ZoneId): Pair<ZoneId, Long> {
+        val scoreDay = selectedDateFlow.value
+        val cutoffMinutes = 20 * 60
+        val referenceInstant = scoreDay.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant()
+        val deviceOffsetSeconds = deviceZoneId.rules.getOffset(referenceInstant).totalSeconds
+        val scoringZoneId =
+            listOf("America/New_York", "Pacific/Kiritimati", "Pacific/Pago_Pago")
+                .asSequence()
+                .map(ZoneId::of)
+                .first { zone ->
+                    zone.rules.getOffset(referenceInstant).totalSeconds != deviceOffsetSeconds
+                }
+        val sessionStart =
+            (0..(48 * 60))
+                .asSequence()
+                .map { minuteOffset ->
+                    scoreDay
+                        .minusDays(1)
+                        .atStartOfDay(ZoneId.of("UTC"))
+                        .plusMinutes(minuteOffset.toLong())
+                        .toInstant()
+                }.first { instant ->
+                    scoreDayFor(instant, scoringZoneId, cutoffMinutes) == scoreDay &&
+                        scoreDayFor(instant, deviceZoneId, cutoffMinutes) != scoreDay
+                }.toEpochMilli()
+        return scoringZoneId to sessionStart
     }
 
     private fun scoreDayFor(
