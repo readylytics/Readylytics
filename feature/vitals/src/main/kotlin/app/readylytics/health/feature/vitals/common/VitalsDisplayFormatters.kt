@@ -6,8 +6,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.model.domain.model.MetricStatus
-import app.readylytics.health.core.ui.R as CoreUiR
 import java.text.NumberFormat
+import app.readylytics.health.core.ui.R as CoreUiR
 
 /**
  * Formatting helpers for vital signs display values and labels.
@@ -21,8 +21,7 @@ object VitalsDisplayFormatters {
     /**
      * Format optional metric values as formatted string or "--" fallback.
      */
-    fun formatNumberOrDash(value: Int?): String =
-        value?.let { formatNumber(it) } ?: "--"
+    fun formatNumberOrDash(value: Int?): String = value?.let { formatNumber(it) } ?: "--"
 }
 
 /**
@@ -83,5 +82,7 @@ fun formatBloodPressureDelta(diff: Int): String =
 /**
  * Helper to compute blood pressure delta or null if baseline is missing.
  */
-fun computeBloodPressureDelta(current: Int?, baseline: Int): Int? =
-    current?.let { it - baseline }
+fun computeBloodPressureDelta(
+    current: Int?,
+    baseline: Int,
+): Int? = current?.let { it - baseline }

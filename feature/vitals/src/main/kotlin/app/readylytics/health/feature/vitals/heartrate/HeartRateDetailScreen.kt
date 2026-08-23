@@ -42,7 +42,6 @@ import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.feature.vitals.common.formatDurationToMinutes
-import app.readylytics.health.feature.vitals.common.metricStatusLabelRes
 import app.readylytics.health.feature.vitals.common.zoneColor
 import java.time.ZoneId
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -348,4 +347,3 @@ private fun ZoneRow(
         }
     }
 }
-
