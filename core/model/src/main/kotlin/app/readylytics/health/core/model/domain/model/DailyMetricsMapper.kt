@@ -29,6 +29,26 @@ object DailyMetricsMapper {
         val rhrBaselineRounded = rhrBaselineRounded(summary, prefs)
         val hrvBaselineRoundedValue = hrvBaselineRounded(summary, prefs)
         val rhrSnapshotRaw = acceptedRhrSnapshotRaw(summary)
+        return buildDailyMetrics(
+            summary = summary,
+            prefs = prefs,
+            rhrBaselineRaw = rhrBaselineRaw,
+            rhrBaselineRounded = rhrBaselineRounded,
+            hrvBaselineRoundedValue = hrvBaselineRoundedValue,
+            rhrSnapshotRaw = rhrSnapshotRaw,
+        )
+    }
+
+    private fun buildDailyMetrics(
+        summary: DailySummary,
+        prefs: UserPreferences,
+        rhrBaselineRaw: Float?,
+        rhrBaselineRounded: Int?,
+        hrvBaselineRoundedValue: Int?,
+        rhrSnapshotRaw: Float?,
+    ): DailyMetrics {
+        val loadScoreMetrics = buildLoadScoreMetrics(summary, prefs)
+        val baselineComparisons = buildBaselineComparisons(summary, rhrBaselineRounded, hrvBaselineRoundedValue)
 
         return DailyMetrics(
             date = summary.date,
@@ -45,19 +65,19 @@ object DailyMetricsMapper {
             rhrBaselineRounded = rhrBaselineRounded,
             hrvBaselineRounded = hrvBaselineRoundedValue,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
-            readinessRounded = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt(),
-            loadScoreRounded = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt(),
+            readinessRounded = loadScoreMetrics.readiness,
+            loadScoreRounded = loadScoreMetrics.load,
             restorationRounded = summary.sRest?.roundToInt(),
-            trimpRounded = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt(),
-            rasRounded = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt(),
-            rasDayScoreRounded = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt(),
+            trimpRounded = loadScoreMetrics.trimp,
+            rasRounded = loadScoreMetrics.rasTotal,
+            rasDayScoreRounded = loadScoreMetrics.rasDay,
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
-            rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
-            hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRoundedValue),
-            restingHrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
-            rhrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
-            hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRoundedValue),
-            restingHrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
+            rhrBaselineDiff = baselineComparisons.rhrDiff,
+            hrvBaselineDiff = baselineComparisons.hrvDiff,
+            restingHrBaselineDiff = baselineComparisons.rhrDiff,
+            rhrBaselineArrow = baselineComparisons.rhrArrow,
+            hrvBaselineArrow = baselineComparisons.hrvArrow,
+            restingHrBaselineArrow = baselineComparisons.rhrArrow,
             sleepDurationDisplay = formatSleepDuration(summary.sleepDurationMinutes),
             weightKgDisplay = formatWeight(summary.weightKg),
             weightLbsDisplay = formatWeightLbs(summary.weightKg),
@@ -73,6 +93,45 @@ object DailyMetricsMapper {
             napDurationDisplay = summary.supplementalSleepDurationMinutes?.let(::formatSleepDuration),
             napCount = summary.napCount,
         )
+    }
+
+    private data class BaselineComparisons(
+        val rhrDiff: Int?,
+        val hrvDiff: Int?,
+        val rhrArrow: BaselineArrow?,
+        val hrvArrow: BaselineArrow?,
+    )
+
+    private data class LoadScoreMetrics(
+        val readiness: Int?,
+        val load: Int?,
+        val trimp: Int?,
+        val rasTotal: Int?,
+        val rasDay: Int?,
+    )
+
+    private fun buildBaselineComparisons(
+        summary: DailySummary,
+        rhrBaselineRounded: Int?,
+        hrvBaselineRoundedValue: Int?,
+    ): BaselineComparisons {
+        val rhrDiff = diff(summary.restingHeartRate, rhrBaselineRounded)
+        val hrvDiff = diff(summary.nocturnalHrv, hrvBaselineRoundedValue)
+        val rhrArrow = arrow(summary.restingHeartRate, rhrBaselineRounded)
+        val hrvArrow = arrow(summary.nocturnalHrv, hrvBaselineRoundedValue)
+        return BaselineComparisons(rhrDiff, hrvDiff, rhrArrow, hrvArrow)
+    }
+
+    private fun buildLoadScoreMetrics(
+        summary: DailySummary,
+        prefs: UserPreferences,
+    ): LoadScoreMetrics {
+        val readiness = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt()
+        val load = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt()
+        val trimp = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt()
+        val rasTotal = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt()
+        val rasDay = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt()
+        return LoadScoreMetrics(readiness, load, trimp, rasTotal, rasDay)
     }
 
     private fun formatWeight(weightKg: Float?): String? =
