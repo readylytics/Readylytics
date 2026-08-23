@@ -67,38 +67,37 @@ internal fun DataBackupSyncSection(
 }
 
 @Composable
-internal fun BaselinesThresholdsSection(
-    thresholdState: ThresholdSettingsState,
-    sleepState: SleepSettingsState,
-    physiologyState: PhysiologySettingsState,
-    heartRateState: HeartRateZonesState,
-    uiState: UIState,
-    isResyncing: Boolean,
-    controlsEnabled: Boolean,
-    callbacks: BaselinesThresholdsCallbacks,
-) {
+internal fun BaselinesThresholdsSection(context: BaselinesThresholdsContext) {
     Column {
-        ActivityThresholdsSubsection(stepGoal = uiState.stepGoal, onUIEvent = { callbacks.onSleepEvent(it) })
-        SleepThresholdsSubsection(sleepState = sleepState, onSleepEvent = callbacks.onSleepEvent, isResyncing = isResyncing)
-        HeartRateProfileSubsection(
-            heartRateState = heartRateState,
-            physiologyState = physiologyState,
-            onHeartRateEvent = callbacks.onHeartRateEvent,
-            onPhysiologyEvent = callbacks.onPhysiologyEvent,
-            isResyncing = isResyncing,
-            controlsEnabled = controlsEnabled,
+        ActivityThresholdsSubsection(stepGoal = context.uiState.stepGoal, onUIEvent = context.onSleepEvent)
+        SleepThresholdsSubsection(
+            sleepState = context.sleepState,
+            onSleepEvent = context.onSleepEvent,
+            isResyncing = context.isResyncing,
         )
-        LoadSourcesTolerance(sleepState = sleepState, onSleepEvent = callbacks.onSleepEvent, isResyncing = isResyncing)
+        HeartRateProfileSubsection(
+            heartRateState = context.heartRateState,
+            physiologyState = context.physiologyState,
+            onHeartRateEvent = context.onHeartRateEvent,
+            onPhysiologyEvent = context.onPhysiologyEvent,
+            isResyncing = context.isResyncing,
+            controlsEnabled = context.controlsEnabled,
+        )
+        LoadSourcesTolerance(
+            sleepState = context.sleepState,
+            onSleepEvent = context.onSleepEvent,
+            isResyncing = context.isResyncing,
+        )
         CircadianThresholdsSubsection(
-            thresholdState = thresholdState,
-            physiologyState = physiologyState,
-            onThresholdEvent = callbacks.onThresholdEvent,
-            controlsEnabled = controlsEnabled,
+            thresholdState = context.thresholdState,
+            physiologyState = context.physiologyState,
+            onThresholdEvent = context.onThresholdEvent,
+            controlsEnabled = context.controlsEnabled,
         )
         ThresholdSettingsSection(
-            uiState = thresholdState,
-            onEvent = callbacks.onThresholdEvent,
-            isResyncing = isResyncing,
+            uiState = context.thresholdState,
+            onEvent = context.onThresholdEvent,
+            isResyncing = context.isResyncing,
         )
     }
 }

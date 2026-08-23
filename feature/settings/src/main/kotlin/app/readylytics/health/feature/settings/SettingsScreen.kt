@@ -254,11 +254,7 @@ private fun SettingsScreenContent(
         searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
     }
 
-    RestoreConfirmDialog(
-        states = states,
-        intents = intents,
-    )
-
+    RestoreConfirmDialog(states = states, intents = intents)
     IssueReportDialogHandler(
         pendingReportType = pendingReportType,
         hasCrashReport = states.hasCrashReport,
@@ -267,83 +263,81 @@ private fun SettingsScreenContent(
     )
 
     Column(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = MaterialTheme.spacing.pageSectionGapSmall),
-            ) {
-                SettingsSearchBar(
-                    searchQuery = searchQuery,
-                    onSearchQueryChanged = { searchQuery = it },
-                )
+        SettingsContentScroll(
+            context = SettingsContentScrollContext(
+                states = states,
+                intents = intents,
+                searchQuery = searchQuery,
+                onSearchQueryChanged = { searchQuery = it },
+                matchingSections = matchingSections,
+                expandState = expandState,
+                shouldExpandSection = shouldExpandSection,
+                controlsEnabled = controlsEnabled,
+                onExpandStateChange = { expandState = it },
+                onReportTypeSelected = { pendingReportType = it },
+            ),
+        )
+    }
+}
 
-                DataBackupSyncSectionWrapper(
-                    states = states,
-                    intents = intents,
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    onExpandStateChange = { expandState = it },
-                )
-
-                DataSourcesSectionWrapper(
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    onExpandStateChange = { expandState = it },
-                )
-
-                BaselinesThresholdsSectionWrapper(
-                    states = states,
-                    intents = intents,
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    controlsEnabled = controlsEnabled,
-                    onExpandStateChange = { expandState = it },
-                )
-
-                DisplaySectionWrapper(
-                    states = states,
-                    intents = intents,
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    onExpandStateChange = { expandState = it },
-                )
-
-                AdvancedSectionWrapper(
-                    states = states,
-                    intents = intents,
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    onExpandStateChange = { expandState = it },
-                )
-
-                IssueReportingSectionWrapper(
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    onReportTypeSelected = { pendingReportType = it },
-                    onExpandStateChange = { expandState = it },
-                )
-
-                MiscellaneousSectionWrapper(
-                    matchingSections = matchingSections,
-                    expandState = expandState,
-                    shouldExpandSection = shouldExpandSection,
-                    intents = intents,
-                    onExpandStateChange = { expandState = it },
-                )
-            }
+@Composable
+private fun SettingsContentScroll(context: SettingsContentScrollContext) {
+    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.pageSectionGapSmall)) {
+                SettingsSearchBar(searchQuery = context.searchQuery, onSearchQueryChanged = context.onSearchQueryChanged)
+            DataBackupSyncSectionWrapper(
+                states = context.states,
+                intents = context.intents,
+                matchingSections = context.matchingSections,
+                expandState = context.expandState,
+                shouldExpandSection = context.shouldExpandSection,
+                onExpandStateChange = context.onExpandStateChange,
+            )
+            DataSourcesSectionWrapper(
+                matchingSections = context.matchingSections,
+                expandState = context.expandState,
+                shouldExpandSection = context.shouldExpandSection,
+                onExpandStateChange = context.onExpandStateChange,
+            )
+            BaselinesThresholdsSectionWrapper(
+                states = context.states,
+                intents = context.intents,
+                matchingSections = context.matchingSections,
+                expandState = context.expandState,
+                shouldExpandSection = context.shouldExpandSection,
+                controlsEnabled = context.controlsEnabled,
+                onExpandStateChange = context.onExpandStateChange,
+            )
+            DisplaySectionWrapper(
+                states = context.states,
+                intents = context.intents,
+                matchingSections = context.matchingSections,
+                expandState = context.expandState,
+                shouldExpandSection = context.shouldExpandSection,
+                onExpandStateChange = context.onExpandStateChange,
+            )
+            AdvancedSectionWrapper(
+                states = context.states,
+                intents = context.intents,
+                matchingSections = context.matchingSections,
+                expandState = context.expandState,
+                shouldExpandSection = context.shouldExpandSection,
+                onExpandStateChange = context.onExpandStateChange,
+            )
+            IssueReportingSectionWrapper(
+                matchingSections = context.matchingSections,
+                expandState = context.expandState,
+                shouldExpandSection = context.shouldExpandSection,
+                onReportTypeSelected = context.onReportTypeSelected,
+                onExpandStateChange = context.onExpandStateChange,
+            )
+            MiscellaneousSectionWrapper(
+                matchingSections = context.matchingSections,
+                expandState = context.expandState,
+                shouldExpandSection = context.shouldExpandSection,
+                intents = context.intents,
+                onExpandStateChange = context.onExpandStateChange,
+            )
         }
     }
 }

@@ -75,14 +75,14 @@ internal fun BaselinesThresholdsSectionWrapper(
             onExpandedChange = { onExpandStateChange(expandState.copy(collapseBaselinesThresholds = !it)) },
         ) {
             BaselinesThresholdsSection(
-                thresholdState = states.thresholdState,
-                sleepState = states.sleepState,
-                physiologyState = states.physiologyState,
-                heartRateState = states.heartRateState,
-                uiState = states.uiState,
-                isResyncing = states.syncState.isResyncing,
-                controlsEnabled = controlsEnabled,
-                callbacks = BaselinesThresholdsCallbacks(
+                context = BaselinesThresholdsContext(
+                    thresholdState = states.thresholdState,
+                    sleepState = states.sleepState,
+                    physiologyState = states.physiologyState,
+                    heartRateState = states.heartRateState,
+                    uiState = states.uiState,
+                    isResyncing = states.syncState.isResyncing,
+                    controlsEnabled = controlsEnabled,
                     onThresholdEvent = intents.onThresholdEvent,
                     onSleepEvent = intents.onSleepEvent,
                     onPhysiologyEvent = intents.onPhysiologyEvent,
