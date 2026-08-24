@@ -257,6 +257,10 @@ sealed interface SettingsEvent {
         val unitSystem: app.readylytics.health.core.model.data.preferences.UnitSystem,
     ) : SettingsEvent
 
+    data class WeekStartDayChanged(
+        val weekStartDay: java.time.DayOfWeek,
+    ) : SettingsEvent
+
     data class CustomPaletteEnabledChanged(
         val enabled: Boolean,
     ) : SettingsEvent

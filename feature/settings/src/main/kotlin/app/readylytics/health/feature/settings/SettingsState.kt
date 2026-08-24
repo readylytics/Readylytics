@@ -14,6 +14,7 @@ import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
 import app.readylytics.health.core.ui.common.UiText
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 data class ThresholdSettingsState(
@@ -106,6 +107,7 @@ data class UIState(
     val chengBeta: Float = PhysiologyProfile.ACTIVE.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
+    val weekStartDay: DayOfWeek = SettingsDefaults.WEEK_START_DAY,
     val isCustomPaletteEnabled: Boolean = false,
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,

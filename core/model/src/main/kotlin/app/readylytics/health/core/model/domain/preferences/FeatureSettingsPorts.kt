@@ -10,6 +10,7 @@ import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMo
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.scoring.SleepScoreWeightProfile
 import app.readylytics.health.core.model.domain.scoring.TrimpModel
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 interface AboutPreferences {
@@ -79,6 +80,7 @@ interface DisplaySettings {
     suspend fun updateCustomSecondaryColor(color: Long)
     suspend fun updateCustomTertiaryColor(color: Long)
     suspend fun updateUnitSystem(unitSystem: UnitSystem)
+    suspend fun updateWeekStartDay(day: DayOfWeek)
     suspend fun updateHrrToleranceSeconds(value: Int)
     suspend fun updateRasScalingFactor(value: Float)
     suspend fun updateStepGoal(steps: Int)

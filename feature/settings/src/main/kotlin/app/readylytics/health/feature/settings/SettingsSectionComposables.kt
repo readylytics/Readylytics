@@ -25,6 +25,7 @@ import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
+import app.readylytics.health.core.ui.components.settings.WeekStartDayPicker
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
 import app.readylytics.health.feature.settings.common.CustomColorPicker
@@ -112,6 +113,12 @@ internal fun DisplaySettingsSection(
         UnitSystemSelector(
             selectedUnit = uiState.unitSystem,
             onUnitSelected = { onUIEvent(SettingsEvent.UnitSystemChanged(it)) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))
+        WeekStartDayPicker(
+            selectedDay = uiState.weekStartDay,
+            onDaySelected = { onUIEvent(SettingsEvent.WeekStartDayChanged(it)) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.pageHorizontal),
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.pageSectionGap))

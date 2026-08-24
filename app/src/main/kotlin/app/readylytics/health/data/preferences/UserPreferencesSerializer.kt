@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.DayOfWeek
 
 object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
     override val defaultValue: UserPreferencesProto =
@@ -73,6 +74,7 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setSleepScoreWeightProfile(SleepScoreWeightProfileProto.SLEEP_WEIGHT_PROFILE_BALANCED)
             .setHypersomniaOnsetPercent(SettingsDefaults.HYPERSOMNIA_ONSET_PERCENT)
             .setScoringVersion(0)
+            .setWeekStartDay(SettingsDefaults.WEEK_START_DAY.toProto())
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -98,6 +100,17 @@ fun FallbackThemeColor.toProto(): FallbackThemeColorProto =
         FallbackThemeColor.PURPLE_INSIGHT -> FallbackThemeColorProto.FALLBACK_PURPLE_INSIGHT
         FallbackThemeColor.ICON_SIGNATURE -> FallbackThemeColorProto.FALLBACK_ICON_SIGNATURE
         FallbackThemeColor.ICON_ELEMENTS -> FallbackThemeColorProto.FALLBACK_ICON_ELEMENTS
+    }
+
+fun DayOfWeek.toProto(): DayOfWeekProto =
+    when (this) {
+        DayOfWeek.MONDAY -> DayOfWeekProto.DAY_OF_WEEK_MONDAY
+        DayOfWeek.TUESDAY -> DayOfWeekProto.DAY_OF_WEEK_TUESDAY
+        DayOfWeek.WEDNESDAY -> DayOfWeekProto.DAY_OF_WEEK_WEDNESDAY
+        DayOfWeek.THURSDAY -> DayOfWeekProto.DAY_OF_WEEK_THURSDAY
+        DayOfWeek.FRIDAY -> DayOfWeekProto.DAY_OF_WEEK_FRIDAY
+        DayOfWeek.SATURDAY -> DayOfWeekProto.DAY_OF_WEEK_SATURDAY
+        DayOfWeek.SUNDAY -> DayOfWeekProto.DAY_OF_WEEK_SUNDAY
     }
 
 fun UserPreferences.toProto(): UserPreferencesProto =

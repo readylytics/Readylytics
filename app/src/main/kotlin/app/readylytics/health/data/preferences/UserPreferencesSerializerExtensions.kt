@@ -63,6 +63,7 @@ internal fun UserPreferencesProto.Builder.applyZoneAndDemographicFields(
                 UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
             },
         )
+        setWeekStartDay(domain.weekStartDay.toProto())
     }
 
 internal fun UserPreferencesProto.Builder.applyThresholdAndDisplayFields(

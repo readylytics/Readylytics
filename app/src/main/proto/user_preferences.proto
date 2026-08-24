@@ -54,6 +54,17 @@ enum LoadSourceModeProto {
     LOAD_SOURCE_EVERYDAY_HEART_RATE = 2;
 }
 
+enum DayOfWeekProto {
+    DAY_OF_WEEK_UNSET = 0;
+    DAY_OF_WEEK_MONDAY = 1;
+    DAY_OF_WEEK_TUESDAY = 2;
+    DAY_OF_WEEK_WEDNESDAY = 3;
+    DAY_OF_WEEK_THURSDAY = 4;
+    DAY_OF_WEEK_FRIDAY = 5;
+    DAY_OF_WEEK_SATURDAY = 6;
+    DAY_OF_WEEK_SUNDAY = 7;
+}
+
 enum DashboardCardDisplayModeProto {
     DASHBOARD_CARD_DISPLAY_MODE_UNSET = 0;
     DASHBOARD_CARD_DISPLAY_MODE_VALUE = 1;
@@ -260,6 +271,11 @@ message UserPreferencesProto {
     optional SleepScoreWeightProfileProto last_recalc_sleep_score_weight_profile = 86;
     optional float last_recalc_goal_sleep_hours = 87;
     optional int32 last_recalc_hypersomnia_onset_percent = 88;
+
+    // Day the user's week starts on, for weekly training analytics ("this week"/"last week").
+    // DAY_OF_WEEK_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // SettingsDefaults.WEEK_START_DAY at the domain read boundary.
+    DayOfWeekProto week_start_day = 89;
 }
 
 enum TrimpMethodProto {

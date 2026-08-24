@@ -7,6 +7,7 @@ import app.readylytics.health.core.model.data.preferences.UnitSystem
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.data.device.HealthDeviceRepository
+import java.time.DayOfWeek
 import javax.inject.Inject
 
 internal class UIPreferences
@@ -179,5 +180,9 @@ internal class UIPreferences
                         },
                     ).build()
             }
+        }
+
+        suspend fun updateWeekStartDay(day: DayOfWeek) {
+            dataStore.updateData { it.toBuilder().setWeekStartDay(day.toProto()).build() }
         }
     }

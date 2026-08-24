@@ -48,6 +48,7 @@ class UISettingsViewModel
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
                         unitSystem = prefs.unitSystem,
+                        weekStartDay = prefs.weekStartDay,
                         isCustomPaletteEnabled = prefs.isCustomPaletteEnabled,
                         customSecondaryColor = prefs.customSecondaryColor,
                         customTertiaryColor = prefs.customTertiaryColor,
@@ -152,6 +153,8 @@ class UISettingsViewModel
                     }
                 is SettingsEvent.UnitSystemChanged ->
                     viewModelScope.launch { displaySettings.updateUnitSystem(unitSystem = event.unitSystem) }
+                is SettingsEvent.WeekStartDayChanged ->
+                    viewModelScope.launch { displaySettings.updateWeekStartDay(day = event.weekStartDay) }
                 is SettingsEvent.CustomPaletteEnabledChanged ->
                     viewModelScope.launch { displaySettings.updateCustomPaletteEnabled(enabled = event.enabled) }
                 is SettingsEvent.CustomSecondaryColorChanged ->

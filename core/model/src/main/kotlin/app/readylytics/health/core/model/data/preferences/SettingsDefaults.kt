@@ -19,6 +19,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfigura
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemConfiguration
 import app.readylytics.health.core.model.domain.workouts.detail.WorkoutDetailItemId
+import java.time.DayOfWeek
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -114,6 +115,7 @@ object SettingsDefaults {
     val STRAIN_LOAD_SOURCE_MODE = LoadSourceMode.WORKOUT_ONLY
     val RAS_SOURCE_MODE = LoadSourceMode.EVERYDAY_HEART_RATE
     val UNIT_SYSTEM = UnitSystem.METRIC
+    val WEEK_START_DAY = DayOfWeek.MONDAY
     const val BACKGROUND_SYNC_ENABLED = false
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
     const val DEVICE_CHANGE_NOTICE_DISMISSED = false

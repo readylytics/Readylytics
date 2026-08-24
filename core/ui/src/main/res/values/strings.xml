@@ -60,6 +60,7 @@
     <string name="unit_system_label">Unit system</string>
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
     <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
+    <string name="week_start_day_label">Start of week</string>
     <string name="accessibility_more_information">More information</string>
     <string name="accessibility_prev_day">Previous day</string>
 
