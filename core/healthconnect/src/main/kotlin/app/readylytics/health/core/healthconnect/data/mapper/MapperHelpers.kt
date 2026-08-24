@@ -30,25 +30,11 @@ object MapperHelpers {
         time.toEpochMilli()
 
     /**
-     * Safely extracts an optional device name field.
-     * Handles null cases and provides consistent defaulting logic.
-     */
-    fun extractDeviceNameOrNull(deviceName: String?): String? =
-        deviceName?.takeIf { it.isNotBlank() }
-
-    /**
      * Safely extracts a device name field, providing empty string as default.
      * Use when device name must never be null.
      */
     fun extractDeviceName(deviceName: String?): String =
         deviceName?.takeIf { it.isNotBlank() } ?: ""
-
-    /**
-     * Validates and converts an optional string value.
-     * Removes blank strings and returns null for empty input.
-     */
-    fun validateOptionalString(value: String?): String? =
-        value?.takeIf { it.isNotBlank() }
 
     /**
      * Generic list mapper wrapper that applies a mapper function to each element.
@@ -59,20 +45,6 @@ object MapperHelpers {
         mapper: (Input) -> Output,
     ): List<Output> =
         records.map { mapper(it) }
-
-    /**
-     * Extracts an integer value with a default fallback.
-     * Useful for fields that must have a value but may be missing.
-     */
-    fun extractIntWithDefault(value: Int?, default: Int = 0): Int =
-        value ?: default
-
-    /**
-     * Extracts a float value with a default fallback.
-     * Useful for measurement fields with sensible defaults.
-     */
-    fun extractFloatWithDefault(value: Float?, default: Float = 0f): Float =
-        value ?: default
 
     /**
      * Safely extracts a long value with a default fallback.
