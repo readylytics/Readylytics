@@ -46,8 +46,8 @@ internal fun resolveCurrentHrvBaseline(
         else -> null
     }
 
-internal fun isHrvOptimal(baseline: Float?, current: Float?, threshold: Float): Boolean =
-    baseline != null && baseline > 0f && current != null && current / baseline >= threshold
+internal fun isHrvOptimal(baseline: Float?, current: Float, threshold: Float): Boolean =
+    baseline != null && baseline > 0f && current / baseline >= threshold
 
 internal fun isRhrOptimal(baseline: Int, current: Int, threshold: Float): Boolean =
     baseline > 0 && current.toFloat() / baseline.toFloat() <= threshold
@@ -63,26 +63,30 @@ internal fun isPreviousHrvOptimal(
         prevHrv.toFloat() / yesterdayHrvBaseline >= threshold
 }
 
+internal data class HrvZScoreContext(
+    val sessionHrvSamples: List<Float>,
+    val currentHrvMean: Float,
+    val muHrvHistory: List<Float>,
+    val effectiveSigmaHistory: List<Float>,
+    val sigmaPrior: Float,
+    val frozenHrvMu: Float?,
+    val frozenHrvSigma: Float?,
+    val prefs: UserPreferences,
+)
+
 internal fun computeHrvZScore(
-    sessionHrvSamples: List<Float>,
-    currentHrvMean: Float?,
-    muHrvHistory: List<Float>,
-    effectiveSigmaHistory: List<Float>,
-    sigmaPrior: Float,
-    frozenHrvMu: Float?,
-    frozenHrvSigma: Float?,
-    prefs: UserPreferences,
+    ctx: HrvZScoreContext,
     scoringCalculator: ScoringCalculator,
 ): Float? {
-    if (sessionHrvSamples.isNotEmpty() && currentHrvMean != null) {
+    if (ctx.sessionHrvSamples.isNotEmpty()) {
         return scoringCalculator.computeHrvZScore(
-            currentHrvMean,
-            muHrvHistory,
-            effectiveSigmaHistory,
-            sigmaPrior,
-            baselineOverride = prefs.hrvBaselineOverride,
-            frozenLnMu = frozenHrvMu,
-            frozenLnSigma = frozenHrvSigma,
+            ctx.currentHrvMean,
+            ctx.muHrvHistory,
+            ctx.effectiveSigmaHistory,
+            ctx.sigmaPrior,
+            baselineOverride = ctx.prefs.hrvBaselineOverride,
+            frozenLnMu = ctx.frozenHrvMu,
+            frozenLnSigma = ctx.frozenHrvSigma,
         )
     }
     return null

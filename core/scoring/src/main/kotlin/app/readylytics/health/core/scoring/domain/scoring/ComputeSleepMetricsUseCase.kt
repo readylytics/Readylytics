@@ -265,14 +265,16 @@ class ComputeSleepMetricsUseCase
                     val nadirCtx = collaborators.nadirAnalyzer.analyze(session, historicalSessions, minHrTimestamp)
 
                     val zHrv = computeHrvZScore(
-                        sessionHrvSamples,
-                        currentHrvMean,
-                        muHrvHistory,
-                        effectiveSigmaHistory,
-                        sigmaPrior,
-                        frozenHrvMu,
-                        frozenHrvSigma,
-                        prefs,
+                        HrvZScoreContext(
+                            sessionHrvSamples = sessionHrvSamples,
+                            currentHrvMean = currentHrvMean,
+                            muHrvHistory = muHrvHistory,
+                            effectiveSigmaHistory = effectiveSigmaHistory,
+                            sigmaPrior = sigmaPrior,
+                            frozenHrvMu = frozenHrvMu,
+                            frozenHrvSigma = frozenHrvSigma,
+                            prefs = prefs,
+                        ),
                         collaborators.scoringCalculator,
                     )
                     val zRhr = collaborators.scoringCalculator.computeRhrZScore(
