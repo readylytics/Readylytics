@@ -36,7 +36,7 @@ import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 
-data class StatusItem(
+private data class StatusItem(
     val label: String,
     val color: Color,
 )

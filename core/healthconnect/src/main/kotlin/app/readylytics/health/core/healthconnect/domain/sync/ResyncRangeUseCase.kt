@@ -545,7 +545,9 @@ class ResyncRangeUseCase
                     // at the smallest chunk size" apart from other failures; WorkManager's normal
                     // backoff (Result.retry() in HealthResyncWorker) is still the right fallback --
                     // a later retry may find a less dense window or a recovered provider.
-                    logI(TELEMETRY_TAG) { "Resync failed: window read timed out even at the minimum chunk size" }
+                    logI(TELEMETRY_TAG) {
+                        "Resync failed: window read timed out even at the minimum chunk size (${e.message})"
+                    }
                     Result.failure("Full resync failed: window read timeout", "RESYNC_WINDOW_TIMEOUT")
                 } catch (e: Exception) {
                     logI(TELEMETRY_TAG) { "Resync failed with exception: ${e.message}" }

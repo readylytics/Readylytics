@@ -12,6 +12,7 @@ import app.readylytics.health.R
 import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
 import app.readylytics.health.core.model.domain.githubissue.IssueReportRequest
 import app.readylytics.health.core.model.domain.githubissue.ReportChannel
+import app.readylytics.health.core.model.domain.util.logW
 import java.io.File
 
 fun buildCrashReportShareIntent(
@@ -265,6 +266,7 @@ private fun appVersionInfo(context: Context): Pair<String, Long> {
                 context.packageManager.getPackageInfo(context.packageName, 0)
             }
         } catch (e: PackageManager.NameNotFoundException) {
+            logW("CrashReportShareIntent", e) { "Own package info unavailable" }
             return "(unknown)" to 0L
         }
     return (packageInfo.versionName ?: "(unknown)") to PackageInfoCompat.getLongVersionCode(packageInfo)

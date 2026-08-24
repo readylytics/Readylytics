@@ -106,13 +106,13 @@ class SqlCipherKeyManagerTest {
                     .name("test.db")
                     .callback(
                         object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(1) {
-                            override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {}
+                            override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = Unit
 
                             override fun onUpgrade(
                                 db: androidx.sqlite.db.SupportSQLiteDatabase,
                                 oldVersion: Int,
                                 newVersion: Int,
-                            ) {}
+                            ) = Unit
                         },
                     ).build()
             factory.create(configuration)

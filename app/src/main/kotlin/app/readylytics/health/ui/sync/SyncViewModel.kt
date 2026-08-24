@@ -202,7 +202,7 @@ class SyncViewModel
             } catch (e: HealthConnectPermissionRevokedException) {
                 app.readylytics.health.core.model.domain.util.logD(
                     "SyncViewModel",
-                ) { "Permissions revoked during check" }
+                ) { "Permissions revoked during check: ${e.message}" }
                 _uiState.update { SyncUiState.NeedsPermissions }
             } catch (e: CancellationException) {
                 throw e

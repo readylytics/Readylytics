@@ -2,8 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MatchingDeclarationName:CrashReportFormatter.kt$CrashReportMetadata</ID>
-    <ID>SwallowedException:ErrorBoundary.kt$e: Exception</ID>
     <ID>TooManyFunctions:DailyMetricsMapper.kt$DailyMetricsMapper</ID>
     <ID>TooManyFunctions:DateRangeService.kt$DateRangeService</ID>
     <ID>TooManyFunctions:FeatureSettingsPorts.kt$DisplaySettings</ID>

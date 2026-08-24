@@ -2,9 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>EmptyFunctionBlock:SqlCipherKeyManagerTest.kt$SqlCipherKeyManagerTest.&lt;no name provided&gt;${}</ID>
-    <ID>FunctionOnlyReturningConstant:GoldenFixtureWalkForwardTest.kt$GoldenFixtureWalkForwardTest$private fun goldenResourceRelativePath(): String</ID>
-    <ID>InvalidPackageDeclaration:SleepMetricsHelpersTest.kt$package app.readylytics.health.core.scoring.domain.scoring.sleep</ID>
     <ID>LargeClass:BackfillBaselinesUseCaseTest.kt$BackfillBaselinesUseCaseTest</ID>
     <ID>LongMethod:BaselineComputerWalkForwardEquivalenceTest.kt$BaselineComputerWalkForwardEquivalenceTest$@Before fun setup()</ID>
     <ID>LongMethod:GoldenFixtureDataBuilder.kt$GoldenFixtureDataBuilder$private fun addNight( sleepSessions: MutableList&lt;SleepSessionEntity&gt;, sleepStages: MutableList&lt;SleepStageEntity&gt;, heartRateRows: MutableList&lt;HeartRateRecordEntity&gt;, wakeDay: LocalDate, deviceName: String, stageLess: Boolean, )</ID>
@@ -16,7 +13,6 @@
     <ID>LongMethod:ScoringGoldenSnapshotTest.kt$ScoringGoldenSnapshotTest$@Test fun `case 2 - day with sleep spanning midnight`()</ID>
     <ID>LongMethod:ScoringGoldenSnapshotTest.kt$ScoringGoldenSnapshotTest$private fun createRepository(settingsRepository: SettingsRepository): ScoringRepositoryImpl</ID>
     <ID>LongMethod:ScoringRepositoryBiphasicIntegrationTest.kt$ScoringRepositoryBiphasicIntegrationTest$@Test fun `biphasic scoring aggregates sleep totals but keeps recovery inputs on core cluster`()</ID>
-    <ID>LongMethod:ScoringRepositoryImplTest.kt$ScoringRepositoryImplTest$@Test fun `computeDailySummary returns different baseline for consecutive days`()</ID>
     <ID>LongMethod:ScoringRepositoryN1Test.kt$ScoringRepositoryN1Test$@Before fun setUp()</ID>
     <ID>LongMethod:ScoringRepositoryN1Test.kt$ScoringRepositoryN1Test$@Test fun `profile differentiation produces different RAS gains`()</ID>
     <ID>LongMethod:ScoringSyncScopeOutputsDeterminismTest.kt$ScoringSyncScopeOutputsDeterminismTest$private suspend fun computeForScope( label: String, fixture: Fixture, scopeDays: Int?, existingTargetSummary: DailySummaryEntity? = null, ): ScopeResult</ID>
@@ -27,6 +23,5 @@
     <ID>ReturnCount:ReadinessSummaryCoordinator.kt$ReadinessSummaryCoordinator$suspend fun resolveSleepAggregation( targetDate: LocalDate, zoneId: ZoneId, prefs: UserPreferences, ): SleepAggregationContext?</ID>
     <ID>ReturnCount:ScoringDayDataLoader.kt$ScoringDayDataLoader$suspend fun loadMergedMinuteBuckets(dayStartMs: Long, dayEndMs: Long): List&lt;HrMinuteBucketRow&gt;</ID>
     <ID>ReturnCount:SqlCipherKeyManager.kt$SqlCipherKeyManager$fun migrateIfNeeded(dbFile: File)</ID>
-    <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule.Companion$(*DatabaseMigrations.all)</ID>
   </CurrentIssues>
 </SmellBaseline>

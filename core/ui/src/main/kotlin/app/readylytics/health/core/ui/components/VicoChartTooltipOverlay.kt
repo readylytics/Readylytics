@@ -25,7 +25,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
@@ -40,27 +39,6 @@ private data class TooltipOverlayParams(
     val containerHeightPx: Float,
     val pulseColor: Color,
 )
-
-/**
- * A custom invisible [CartesianMarker] that allows Vico to handle gestures, touch
- * tracking, zooming, and scrolling natively while rendering nothing itself.
- * The actual visual feedback is rendered using the standard Jetpack Compose Canvas overlay.
- */
-object InvisibleMarker : CartesianMarker {
-    override fun drawUnderLayers(
-        context: CartesianDrawingContext,
-        targets: List<CartesianMarker.Target>,
-    ) {
-        // Do nothing to keep the marker invisible.
-    }
-
-    override fun drawOverLayers(
-        context: CartesianDrawingContext,
-        targets: List<CartesianMarker.Target>,
-    ) {
-        // Do nothing to keep the marker invisible.
-    }
-}
 
 /**
  * A Compose helper to create and remember a [CartesianMarkerVisibilityListener].

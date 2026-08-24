@@ -68,7 +68,7 @@ class DailySyncUseCase
                     onProgress = onProgress,
                 )
             } catch (e: HealthConnectWindowTimeoutException) {
-                logE("DailySyncUseCase") {
+                logE("DailySyncUseCase", e) {
                     "Ingest segment $startMs..$endMs timed out; retrying with extended budget"
                 }
                 ingestionCoordinator.ingestWindow(

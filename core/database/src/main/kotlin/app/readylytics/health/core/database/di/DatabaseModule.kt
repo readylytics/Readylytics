@@ -39,6 +39,7 @@ abstract class DatabaseModule {
     companion object {
         @Provides
         @Singleton
+        @Suppress("SpreadOperator")
         fun provideDatabase(
             @ApplicationContext context: Context,
             sqlCipherKeyManager: SqlCipherKeyManager,

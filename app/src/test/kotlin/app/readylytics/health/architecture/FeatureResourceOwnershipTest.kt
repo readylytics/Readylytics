@@ -25,17 +25,22 @@ class FeatureResourceOwnershipTest {
     fun `string resources have one owning module`() {
         val declaration = Regex("""<string\s+name="([^"]+)"""")
         val owners = mutableMapOf<String, MutableSet<String>>()
-        modulePaths.forEach { module ->
-            val resDir = File(root, "$module/src/main/res")
-            if (resDir.exists()) {
-                resDir.walkTopDown().filter { it.isFile && it.extension == "xml" }.forEach { xml ->
-                    declaration.findAll(xml.readText()).forEach { match ->
-                        owners.getOrPut(match.groupValues[1]) { linkedSetOf() }.add(module)
-                    }
-                }
-            }
-        }
+        modulePaths.forEach { module -> collectStringOwners(module, declaration, owners) }
         val duplicates = owners.filterValues { it.size > 1 }
         assertTrue("String resources must have one owner: $duplicates", duplicates.isEmpty())
+    }
+
+    private fun collectStringOwners(
+        module: String,
+        declaration: Regex,
+        owners: MutableMap<String, MutableSet<String>>,
+    ) {
+        val resDir = File(root, "$module/src/main/res")
+        if (!resDir.exists()) return
+        resDir.walkTopDown().filter { it.isFile && it.extension == "xml" }.forEach { xml ->
+            declaration.findAll(xml.readText()).forEach { match ->
+                owners.getOrPut(match.groupValues[1]) { linkedSetOf() }.add(module)
+            }
+        }
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.logcat.LogcatCaptureStore
+import app.readylytics.health.core.model.domain.util.logW
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -40,6 +41,7 @@ class LogcatCaptureStoreImpl
                     file.writeText(logs)
                     logs
                 } catch (e: IOException) {
+                    logW("LogcatCaptureStore", e) { "Failed to persist captured logcat" }
                     null
                 }
             }

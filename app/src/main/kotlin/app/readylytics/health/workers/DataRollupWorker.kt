@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.core.database.data.local.DataRollupManager
 import app.readylytics.health.core.model.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.util.logE
 import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -31,6 +32,7 @@ class DataRollupWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                logE("DataRollupWorker", e) { "Data rollup failed" }
                 Result.retry()
             }
     }

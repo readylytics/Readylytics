@@ -498,7 +498,9 @@ private fun AcwrChart(
         val overlayState =
             selectedState?.let { s ->
                 val bounds = layerBounds
-                if (s.lineCanvasY == null && s.strainRatioValue != null && bounds != null && ratioAxisMax > 0.0) {
+                val needsPlacement =
+                    s.lineCanvasY == null && s.strainRatioValue != null && ratioAxisMax > 0.0
+                if (needsPlacement && bounds != null) {
                     val fraction = (1.0 - (s.strainRatioValue / ratioAxisMax)).coerceIn(0.0, 1.0)
                     s.copy(lineCanvasY = (bounds.top + fraction * bounds.height).toFloat())
                 } else {

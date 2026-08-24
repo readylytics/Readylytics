@@ -2,17 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>InvalidPackageDeclaration:DateSwitcher.kt$package app.readylytics.health.core.ui.dashboard</ID>
-    <ID>InvalidPackageDeclaration:HeightInputField.kt$package app.readylytics.health.core.ui.settings</ID>
-    <ID>InvalidPackageDeclaration:UnitSystemSelector.kt$package app.readylytics.health.core.ui.settings.common</ID>
-    <ID>MatchingDeclarationName:CanvasChartTooltip.kt$SegmentHitBox</ID>
-    <ID>MatchingDeclarationName:MetricStatus.kt$MetricContainerTone</ID>
-    <ID>MatchingDeclarationName:PeriodAverageSummaryGroup.kt$LabeledPeriodAverage</ID>
-    <ID>MatchingDeclarationName:StatusLegend.kt$StatusItem</ID>
-    <ID>MatchingDeclarationName:TrendPeriodAggregation.kt$PeriodAverageSummary</ID>
-    <ID>MatchingDeclarationName:VicoChartTooltipOverlay.kt$InvisibleMarker : CartesianMarker</ID>
     <ID>ReturnCount:DragController.kt$DragController$fun onDrag( delta: Offset, deleteZoneTop: Float?, )</ID>
-    <ID>SpreadOperator:UiText.kt$(id, *args.toTypedArray())</ID>
     <ID>TooManyFunctions:ChartDefaults.kt$ChartDefaults</ID>
     <ID>TooManyFunctions:TrendPeriodAggregation.kt$app.readylytics.health.core.ui.common.TrendPeriodAggregation.kt</ID>
   </CurrentIssues>

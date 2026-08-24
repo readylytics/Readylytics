@@ -271,13 +271,15 @@ class GoldenFixtureWalkForwardTest {
             val expectedJson = loadGoldenJsonOrNull()
             assertTrue(
                 expectedJson != null,
-                "No golden fixture found at ${goldenResourceRelativePath()}. Generate it first with " +
+                "No golden fixture found at ${GOLDEN_RESOURCE_RELATIVE_PATH}. Generate it first with " +
                     "-Dupdate.golden=true, inspect the diff, then commit it.",
             )
             kotlin.test.assertEquals(expectedJson, actualJson, "Walk-forward output diverged from the golden fixture")
         }
 
-    private fun goldenResourceRelativePath(): String = "golden/scoring_walk_forward_golden.json"
+    private companion object {
+        const val GOLDEN_RESOURCE_RELATIVE_PATH = "golden/scoring_walk_forward_golden.json"
+    }
 
     private fun goldenFileCandidates(): List<File> =
         listOf(
@@ -289,7 +291,7 @@ class GoldenFixtureWalkForwardTest {
         )
 
     private fun loadGoldenJsonOrNull(): String? {
-        javaClass.classLoader?.getResourceAsStream(goldenResourceRelativePath())?.use {
+        javaClass.classLoader?.getResourceAsStream(GOLDEN_RESOURCE_RELATIVE_PATH)?.use {
             return it.bufferedReader().readText()
         }
         return goldenFileCandidates().firstOrNull { it.exists() }?.readText()

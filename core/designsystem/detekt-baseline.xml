@@ -2,10 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:Theme.kt$@Composable fun FitDashboardTheme( appTheme: AppTheme = AppTheme.SYSTEM, dynamicColor: Boolean = true, fallbackThemeColor: FallbackThemeColor = FallbackThemeColor.GREEN_PERFORMANCE, isCustomPaletteEnabled: Boolean = false, customSecondaryColor: Long = 0L, customTertiaryColor: Long = 0L, customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR, content: @Composable () -&gt; Unit, )</ID>
     <ID>LongMethod:Theme.kt$@Composable fun FitDashboardTheme( appTheme: AppTheme = AppTheme.SYSTEM, dynamicColor: Boolean = true, fallbackThemeColor: FallbackThemeColor = FallbackThemeColor.GREEN_PERFORMANCE, isCustomPaletteEnabled: Boolean = false, customSecondaryColor: Long = 0L, customTertiaryColor: Long = 0L, customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR, content: @Composable () -&gt; Unit, )</ID>
-    <ID>LongMethod:ThemeColorUtils.kt$internal fun colorSchemeFromSeed( primarySeed: Color, secondarySeed: Color?, tertiarySeed: Color?, isDark: Boolean, ): ColorScheme</ID>
-    <ID>LongMethod:ThemeColorUtils.kt$internal fun mcuColorScheme( seedColor: Color, secondaryColor: Color?, tertiaryColor: Color?, isDark: Boolean, ): ColorScheme</ID>
     <ID>ReturnCount:ThemeColorUtils.kt$private fun hueToRgb( p: Float, q: Float, t: Float, ): Float</ID>
     <ID>TooManyFunctions:ThemeColorUtils.kt$app.readylytics.health.core.designsystem.ThemeColorUtils.kt</ID>
   </CurrentIssues>

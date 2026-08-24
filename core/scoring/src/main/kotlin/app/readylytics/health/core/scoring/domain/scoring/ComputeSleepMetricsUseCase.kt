@@ -154,7 +154,8 @@ class ComputeSleepMetricsUseCase
                         .atStartOfDay(zoneId)
                         .toInstant()
                         .toEpochMilli()
-                val yesterdaySummary = collaborators.scoringHistoryRepository.getDailySummaryByDate(yesterdayMidnightMs, zoneId)
+                val yesterdaySummary =
+                    collaborators.scoringHistoryRepository.getDailySummaryByDate(yesterdayMidnightMs, zoneId)
 
                 val hrvResult = collaborators.hrvResolver.resolve(session, currentSessionIds)
                 val sessionHrvSamples = hrvResult.samples
@@ -321,10 +322,14 @@ class ComputeSleepMetricsUseCase
                         )
 
                     val currentHrvBaseline = resolveCurrentHrvBaseline(frozenBaseline, frozenHrvMu, prefs, muHrvHistory)
-                    val isCurrentHrvOptimal = isHrvOptimal(currentHrvBaseline, currentHrvMean, prefs.hrvOptimalThreshold)
-                    val isCurrentRhrOptimal = isRhrOptimal(baselineRhrValue, currentNocturnalRhr, prefs.rhrOptimalThreshold)
-                    val yesterdayHrvBaseline = prefs.hrvBaselineOverride ?: yesterdaySummary?.hrvMuMssd?.let { exp(it) }
-                    val isPreviousHrvOptimal = isPreviousHrvOptimal(yesterdaySummary, yesterdayHrvBaseline, prefs.hrvOptimalThreshold)
+                    val isCurrentHrvOptimal =
+                        isHrvOptimal(currentHrvBaseline, currentHrvMean, prefs.hrvOptimalThreshold)
+                    val isCurrentRhrOptimal =
+                        isRhrOptimal(baselineRhrValue, currentNocturnalRhr, prefs.rhrOptimalThreshold)
+                    val yesterdayHrvBaseline =
+                        prefs.hrvBaselineOverride ?: yesterdaySummary?.hrvMuMssd?.let { exp(it) }
+                    val isPreviousHrvOptimal =
+                        isPreviousHrvOptimal(yesterdaySummary, yesterdayHrvBaseline, prefs.hrvOptimalThreshold)
 
                     val recoveryFlags =
                         collaborators.scoringCalculator.computeRecoveryFlags(
@@ -352,7 +357,12 @@ class ComputeSleepMetricsUseCase
                         )
 
                     readinessScore =
-                        collaborators.scoringCalculator.computeReadinessScore(sRest, sleepScore, loadScore, recoveryFlags)
+                        collaborators.scoringCalculator.computeReadinessScore(
+                            sRest,
+                            sleepScore,
+                            loadScore,
+                            recoveryFlags,
+                        )
                     readinessEverydayHr =
                         loadScoreEverydayHr?.let {
                             collaborators.scoringCalculator.computeReadinessScore(sRest, sleepScore, it, recoveryFlags)
