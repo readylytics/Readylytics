@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +36,7 @@ import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.dimens
 import app.readylytics.health.core.designsystem.spacing
 
-data class StatusItem(
+private data class StatusItem(
     val label: String,
     val color: Color,
 )
@@ -61,61 +62,75 @@ fun StatusLegend(modifier: Modifier = Modifier) {
                     horizontal = MaterialTheme.spacing.pageHorizontal,
                     vertical = MaterialTheme.spacing.pageSectionGapSmall,
                 ),
-        colors =
-            CardDefaults.outlinedCardColors(
-                containerColor = colorScheme.surfaceContainerLow,
-            ),
+        colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surfaceContainerLow),
     ) {
         Column(modifier = Modifier.animateContentSize()) {
-            // Header
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { isExpanded = !isExpanded }
-                        .padding(MaterialTheme.spacing.smallMedium),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
-                    tint = colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(MaterialTheme.spacing.small))
-                Text(
-                    text = "Status Guide",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = colorScheme.onSurface,
-                )
-                Spacer(Modifier.weight(1f))
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = colorScheme.onSurfaceVariant,
-                )
-            }
-
-            // Collapsible Content
+            StatusLegendHeader(
+                isExpanded = isExpanded,
+                colorScheme = colorScheme,
+                onToggle = { isExpanded = !isExpanded },
+            )
             if (isExpanded) {
-                HorizontalDivider(color = colorScheme.outlineVariant)
-                // Using a simpler layout to avoid FlowRow binary compatibility issues in some environments
-                Column(
-                    modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
-                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                ) {
-                    val chunks = items.chunked(2)
-                    chunks.forEach { chunk ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
-                        ) {
-                            chunk.forEach { item ->
-                                Box(modifier = Modifier.weight(1f)) {
-                                    LegendItemRow(item)
-                                }
-                            }
-                        }
+                StatusLegendExpandedContent(items = items, outlineVariant = colorScheme.outlineVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusLegendHeader(
+    isExpanded: Boolean,
+    colorScheme: ColorScheme,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(MaterialTheme.spacing.smallMedium),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Info,
+            contentDescription = null,
+            modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+            tint = colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(MaterialTheme.spacing.small))
+        Text(
+            text = "Status Guide",
+            style = MaterialTheme.typography.titleSmall,
+            color = colorScheme.onSurface,
+        )
+        Spacer(Modifier.weight(1f))
+        Icon(
+            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            tint = colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun StatusLegendExpandedContent(
+    items: List<StatusItem>,
+    outlineVariant: Color,
+) {
+    HorizontalDivider(color = outlineVariant)
+    Column(
+        modifier = Modifier.padding(MaterialTheme.spacing.smallMedium),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+    ) {
+        val chunks = items.chunked(2)
+        chunks.forEach { chunk ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smallMedium),
+            ) {
+                chunk.forEach { item ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        LegendItemRow(item)
                     }
                 }
             }

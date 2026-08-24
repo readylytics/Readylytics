@@ -100,13 +100,24 @@ class SleepMetricCardManagementDelegate(
 
     fun enterEditMode(currentConfigs: List<SleepMetricCardConfiguration>) =
         onEvent(SleepMetricCardManagementEvent.EnterEditMode(currentConfigs))
+
     fun saveChanges() = onEvent(SleepMetricCardManagementEvent.SaveChanges)
+
     fun cancelChanges() = onEvent(SleepMetricCardManagementEvent.CancelChanges)
+
     fun onResetToDefaults() = onEvent(SleepMetricCardManagementEvent.ResetToDefaults)
-    fun onToggleVisibility(currentConfigs: List<SleepMetricCardConfiguration>, cardId: SleepMetricCardId, visible: Boolean) =
-        onEvent(SleepMetricCardManagementEvent.ToggleVisibility(currentConfigs, cardId, visible))
-    fun onReorder(currentConfigs: List<SleepMetricCardConfiguration>, newOrder: List<SleepMetricCardConfiguration>) =
-        onEvent(SleepMetricCardManagementEvent.Reorder(currentConfigs, newOrder))
+
+    fun onToggleVisibility(
+        currentConfigs: List<SleepMetricCardConfiguration>,
+        cardId: SleepMetricCardId,
+        visible: Boolean,
+    ) = onEvent(SleepMetricCardManagementEvent.ToggleVisibility(currentConfigs, cardId, visible))
+
+    fun onReorder(
+        currentConfigs: List<SleepMetricCardConfiguration>,
+        newOrder: List<SleepMetricCardConfiguration>,
+    ) = onEvent(SleepMetricCardManagementEvent.Reorder(currentConfigs, newOrder))
+
     fun onDisplayModeChanged(cardId: SleepMetricCardId, mode: DashboardCardDisplayMode?) =
         onEvent(SleepMetricCardManagementEvent.DisplayModeChanged(cardId, mode))
 }

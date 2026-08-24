@@ -298,7 +298,6 @@ fun SleepTrendChart(
         }
 
     val labelComponent = ChartDefaults.labelTextComponent()
-    val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
 
     val remappedStartPoints =
@@ -620,7 +619,6 @@ fun SleepTrendChart(
                 selectedState = selectedState,
                 barColor = MaterialTheme.colorScheme.primary,
                 lineColor = MaterialTheme.colorScheme.tertiary,
-                layerBounds = layerBounds,
                 barThicknessDp = 8.dp,
                 chartHeight = chartHeight,
             )

@@ -36,26 +36,28 @@ class BmiService
             weight: Float,
             height: Float,
             units: UnitSystem,
-        ): Result<BmiData> {
-            if (weight <= 0f) return Result.Failure("Weight must be positive", Codes.WEIGHT_NOT_POSITIVE)
-            if (height <= 0f) return Result.Failure("Height must be positive", Codes.HEIGHT_NOT_POSITIVE)
-            if (weight > MAX_WEIGHT) return Result.Failure("Weight exceeds maximum", Codes.WEIGHT_TOO_HIGH)
-            if (height > MAX_HEIGHT) return Result.Failure("Height exceeds maximum", Codes.HEIGHT_TOO_HIGH)
-
-            val weightKg =
-                when (units) {
-                    UnitSystem.METRIC -> weight
-                    UnitSystem.IMPERIAL -> weight * LBS_TO_KG
+        ): Result<BmiData> =
+            when {
+                weight <= 0f -> Result.Failure("Weight must be positive", Codes.WEIGHT_NOT_POSITIVE)
+                height <= 0f -> Result.Failure("Height must be positive", Codes.HEIGHT_NOT_POSITIVE)
+                weight > MAX_WEIGHT -> Result.Failure("Weight exceeds maximum", Codes.WEIGHT_TOO_HIGH)
+                height > MAX_HEIGHT -> Result.Failure("Height exceeds maximum", Codes.HEIGHT_TOO_HIGH)
+                else -> {
+                    val weightKg =
+                        when (units) {
+                            UnitSystem.METRIC -> weight
+                            UnitSystem.IMPERIAL -> weight * LBS_TO_KG
+                        }
+                    val heightCm =
+                        when (units) {
+                            UnitSystem.METRIC -> height
+                            UnitSystem.IMPERIAL -> height * INCHES_TO_CM
+                        }
+                    val heightM = heightCm / CM_PER_M
+                    val bmi = weightKg / (heightM * heightM)
+                    Result.Success(BmiData(bmi = bmi, status = classify(bmi)))
                 }
-            val heightCm =
-                when (units) {
-                    UnitSystem.METRIC -> height
-                    UnitSystem.IMPERIAL -> height * INCHES_TO_CM
-                }
-            val heightM = heightCm / CM_PER_M
-            val bmi = weightKg / (heightM * heightM)
-            return Result.Success(BmiData(bmi = bmi, status = classify(bmi)))
-        }
+            }
 
         /** Classify a BMI value into a [BmiStatus] band. Delegates to [BodyCompositionAssessment]. */
         fun classify(bmi: Float): BmiStatus = BodyCompositionAssessment.assessBmi(bmi).status

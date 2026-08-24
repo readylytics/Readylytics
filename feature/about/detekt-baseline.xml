@@ -3,9 +3,5 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>LongMethod:ContributorsSection.kt$@Composable fun ContributorsSection()</ID>
-    <ID>MaxLineLength:AppInfoSection.kt$"This app turns the data your phone and wearables already collect — sleep, heart rate, and exercise — into three daily numbers that try to answer one question: **how is your body doing today, and what should you do with that information?**"</ID>
-    <ID>MaxLineLength:AppInfoSection.kt$"We try to be honest about what these numbers can and can't tell you. They are decision aids, not diagnoses. If something feels off in your body, trust your body over the score."</ID>
-    <ID>MaxLineLength:AppInfoSection.kt$"Wearables estimate sleep stages, HRV, and nocturnal physiology indirectly using probabilistic algorithms. These estimates may contain significant measurement error compared to clinical systems like polysomnography or ECG. The scores shown here are health tracking and recovery estimates, not clinical measurements."</ID>
-    <ID>MaxLineLength:AppInfoSection.kt$"You'll see all three on your dashboard once enough data has been collected. Until then, we'll show you what we have and explain what's missing."</ID>
   </CurrentIssues>
 </SmellBaseline>

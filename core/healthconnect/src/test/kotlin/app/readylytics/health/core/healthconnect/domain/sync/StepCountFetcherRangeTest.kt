@@ -72,7 +72,8 @@ class StepCountFetcherRangeTest {
             assertEquals(3, requestedWindows.size)
             assertEquals(
                 listOf(
-                    startDate.atStartOfDay(zoneId).toInstant() to startDate.plusDays(10).atStartOfDay(zoneId).toInstant(),
+                    startDate.atStartOfDay(zoneId).toInstant() to
+                        startDate.plusDays(10).atStartOfDay(zoneId).toInstant(),
                     startDate.plusDays(10).atStartOfDay(zoneId).toInstant() to
                         startDate.plusDays(20).atStartOfDay(zoneId).toInstant(),
                     startDate.plusDays(20).atStartOfDay(zoneId).toInstant() to

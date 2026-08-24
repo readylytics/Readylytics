@@ -104,7 +104,7 @@ inline fun <T> Result<T>.recoverWith(transform: (Result.Failure) -> Result<T>): 
 fun <T> Result<T>.getOrThrow(): T =
     when (this) {
         is Result.Success -> data
-        is Result.Failure -> throw Exception(reason)
+        is Result.Failure -> throw ResultFailureException(reason)
     }
 
 /** Side-effecting callback for successful results; returns the original [Result] unchanged. */

@@ -319,7 +319,6 @@ class DashboardViewModelTest {
 
     @Test
     fun toggleCardManagement_togglesState() {
-        val initialState = viewModel.isManagingCards.value
         viewModel.toggleCardManagement()
         // Note: would need stateflow emission to verify state changed
         // This is a basic structure test

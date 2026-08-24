@@ -32,18 +32,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.designsystem.spacing
-import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.ui.common.MetricCardSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.feature.vitals.R
+import app.readylytics.health.feature.vitals.common.formatDurationToMinutes
+import app.readylytics.health.feature.vitals.common.zoneColor
 import java.time.ZoneId
 import app.readylytics.health.core.ui.R as CoreUiR
 
@@ -57,8 +56,6 @@ fun HeartRateDetailRoute(
     HeartRateDetailScreen(
         uiState = uiState,
         onBack = onBack,
-        onPreviousDay = viewModel::onPreviousDay,
-        onNextDay = viewModel::onNextDay,
     )
 }
 
@@ -67,8 +64,6 @@ fun HeartRateDetailRoute(
 fun HeartRateDetailScreen(
     uiState: HeartRateDetailUiState,
     onBack: () -> Unit,
-    onPreviousDay: () -> Unit,
-    onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val today = uiState.today
@@ -302,15 +297,6 @@ private fun HrStatCard(
     }
 }
 
-internal fun metricStatusLabelRes(status: MetricStatus): Int =
-    when (status) {
-        MetricStatus.OPTIMAL -> CoreUiR.string.metric_status_optimal
-        MetricStatus.NEUTRAL -> CoreUiR.string.metric_status_neutral
-        MetricStatus.WARNING -> CoreUiR.string.metric_status_warning
-        MetricStatus.POOR -> CoreUiR.string.metric_status_poor
-        MetricStatus.NO_DATA, MetricStatus.CALIBRATING -> CoreUiR.string.metric_status_calibrating
-    }
-
 @Composable
 private fun ZoneRow(
     zoneNumber: Int,
@@ -318,9 +304,8 @@ private fun ZoneRow(
     range: String,
     total: ZoneTotal?,
 ) {
-    val zoneColor = zoneColor(zoneNumber)
-    // Allow-listed: time calculation (duration to minutes), not metric rounding
-    val minutes = total?.let { (it.durationMs / 60_000L).toInt() } ?: 0
+    val zoneColorValue = zoneColor(zoneNumber)
+    val minutes = total?.let { formatDurationToMinutes(it.durationMs) } ?: 0
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -330,7 +315,7 @@ private fun ZoneRow(
             modifier =
                 Modifier
                     .size(12.dp)
-                    .background(color = zoneColor, shape = CircleShape),
+                    .background(color = zoneColorValue, shape = CircleShape),
         )
         Spacer(Modifier.width(MaterialTheme.spacing.small))
         Column(modifier = Modifier.weight(1f)) {
@@ -360,19 +345,5 @@ private fun ZoneRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-@Composable
-private fun zoneColor(zone: Int): Color {
-    val cs = MaterialTheme.colorScheme
-    val ext = LocalExtendedColors.current
-    return when (zone) {
-        0 -> cs.surfaceVariant
-        1 -> cs.secondaryContainer
-        2 -> cs.primaryContainer
-        3 -> cs.tertiaryContainer
-        4 -> ext.warningContainer
-        else -> cs.errorContainer
     }
 }

@@ -322,7 +322,7 @@ object DataStoreModule {
                                 .build()
                         }
 
-                        override suspend fun cleanUp() {}
+                        override suspend fun cleanUp() = Unit
                     },
                     // Canonicalize removed profiles: stored PROFILE_GENERAL / PROFILE_SHIFT_WORKER are
                     // rewritten to PROFILE_ACTIVE so persisted storage matches the supported set.
@@ -338,7 +338,7 @@ object DataStoreModule {
                                 .setPhysiologyProfile(PhysiologyProfileProto.PROFILE_ACTIVE)
                                 .build()
 
-                        override suspend fun cleanUp() {}
+                        override suspend fun cleanUp() = Unit
                     },
                 ),
             produceFile = { context.dataStoreFile("user_preferences.pb") },

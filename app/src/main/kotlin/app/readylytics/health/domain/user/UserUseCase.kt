@@ -4,6 +4,7 @@ import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.domain.repository.ScoringRepository
 import app.readylytics.health.core.model.domain.user.UserProfileActions
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.model.workers.WorkerScheduler
 import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import kotlinx.coroutines.CancellationException
@@ -40,6 +41,7 @@ class UserUseCase
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                logE("UserUseCase", e) { "Failed to update birthday" }
                 Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")
             }
 
@@ -55,6 +57,7 @@ class UserUseCase
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                logE("UserUseCase", e) { "Failed to calculate max HR" }
                 Result.failure("Failed to calculate max HR", "MAX_HR_CALC_ERROR")
             }
 

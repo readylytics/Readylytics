@@ -6,8 +6,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.database.data.local.HealthDatabase
 import app.readylytics.health.core.database.data.local.RoomTransactionRunner
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
@@ -19,6 +21,7 @@ import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRe
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -46,7 +49,7 @@ import kotlin.test.assertEquals
  *
  * This is not a redundant restatement of the mock-level transaction-count tests: it is the only
  * check that exercises the walk-forward's read-after-write dependencies for real. Day N's
- * `totalRas*` sums days N-1..N-6 (`ScoringRepositoryImpl.sumRasLastSixDays`) and
+ * `totalRas*` sums days N-1..N-6 (`RasTotalsComputer.sumRasLastSixDays`) and
  * `ComputeSleepMetricsUseCase` reads day N-1, so any implementation that defers the writes past
  * the days that read them -- e.g. buffering the summaries and calling `upsertAll` after the loop --
  * silently produces different scores. Reads inside a transaction see that transaction's own
@@ -131,26 +134,34 @@ class WalkForwardTransactionEquivalenceTest {
                 ScoringDayDataLoader(
                     db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
                     db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
-                    db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(),
-                    db.bodyTemperatureRecordDao(),
+                    db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
                 )
+            val bodyMetricsDataLoader =
+                BodyMetricsDataLoader(
+                    db.weightRecordDao(), db.bodyFatRecordDao(), db.bloodPressureRecordDao(),
+                    db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
+                )
+            val seriesLoader = ScoringSeriesLoader(db.workoutDao(), db.dailySummaryDao())
             val sleepSessionRepository = SleepSessionRepositoryImpl(db.sleepSessionDao(), db.sleepStageDao())
             val circadianConsistencyRepository =
                 CircadianConsistencyRepository(sleepSessionRepository, settingsRepo, FakeEncryptionManager())
             val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
             val computeSleepMetricsUseCase =
                 ComputeSleepMetricsUseCase(
-                    baselineComputer = baselineComputer,
-                    scoringHistoryRepository = scoringHistoryRepository,
-                    scoringCalculator = scoringCalculator,
-                    scoringConfigFactory = scoringConfigFactory,
-                    encryptionManager = FakeEncryptionManager(),
-                    hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository),
-                    sleepPercentileRhrCalculator =
-                        SleepPercentileRhrCalculator(scoringHistoryRepository),
-                    nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator),
-                    coverageValidator = HrCoverageValidator(),
-                    sleepModifierResolver = sleepModifierResolver,
+                    collaborators =
+                        SleepMetricsCollaborators(
+                            baselineComputer = baselineComputer,
+                            scoringHistoryRepository = scoringHistoryRepository,
+                            scoringCalculator = scoringCalculator,
+                            scoringConfigFactory = scoringConfigFactory,
+                            encryptionManager = FakeEncryptionManager(),
+                            hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository),
+                            sleepPercentileRhrCalculator =
+                                SleepPercentileRhrCalculator(scoringHistoryRepository),
+                            nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator),
+                            coverageValidator = HrCoverageValidator(),
+                            sleepModifierResolver = sleepModifierResolver,
+                        ),
                 )
             val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
             val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
@@ -158,6 +169,7 @@ class WalkForwardTransactionEquivalenceTest {
             val readinessSummaryCoordinator =
                 ReadinessSummaryCoordinator(
                     dataLoader = dataLoader,
+                    seriesLoader = seriesLoader,
                     scoringHistoryRepository = scoringHistoryRepository,
                     baselineComputer = baselineComputer,
                     buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -169,6 +181,8 @@ class WalkForwardTransactionEquivalenceTest {
             val scoringRepository =
                 ScoringRepositoryImpl(
                     dataLoader = dataLoader,
+                    bodyMetricsDataLoader = bodyMetricsDataLoader,
+                    seriesLoader = seriesLoader,
                     settingsRepo = settingsRepo,
                     baselineComputer = baselineComputer,
                     scoringConfigFactory = scoringConfigFactory,

@@ -33,7 +33,16 @@ class SyncWorkoutRouteUseCaseTest {
             val result = useCase.invoke("missing-workout")
 
             assertTrue(result.isFailure)
-            coVerify(exactly = 0) { healthIngestionStore.persistSingleWorkoutRoute(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) {
+                healthIngestionStore.persistSingleWorkoutRoute(
+                    workoutId = any(),
+                    routePoints = any(),
+                    routeState = any(),
+                    totalDistanceMeters = any(),
+                    avgSpeedKmh = any(),
+                    elevationGainMeters = any(),
+                )
+            }
         }
 
     @Test

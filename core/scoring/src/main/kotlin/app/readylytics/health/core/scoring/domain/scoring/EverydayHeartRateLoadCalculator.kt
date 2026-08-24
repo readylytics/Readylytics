@@ -60,14 +60,13 @@ object EverydayHeartRateLoadCalculator {
         var coverageMinutes = 0
 
         for (bucket in input.hrBuckets) {
-            if (bucket.sampleCount <= 0) continue
-            if (bucket.bucketIndex < 0 || bucket.bucketIndex >= totalBuckets) continue
-
             val bucketStartMs = input.dayStartMs + bucket.bucketIndex * BUCKET_MS
             val bucketEndMs = bucketStartMs + BUCKET_MS
-
+            val outOfRange = bucket.bucketIndex < 0 || bucket.bucketIndex >= totalBuckets
             val isExcluded =
-                input.sleepIntervalsMs.any { overlaps(bucketStartMs, bucketEndMs, it) } ||
+                bucket.sampleCount <= 0 ||
+                    outOfRange ||
+                    input.sleepIntervalsMs.any { overlaps(bucketStartMs, bucketEndMs, it) } ||
                     input.workoutIntervalsMs.any { overlaps(bucketStartMs, bucketEndMs, it) }
             if (isExcluded) continue
 
@@ -75,11 +74,10 @@ object EverydayHeartRateLoadCalculator {
 
             val avgBpm = bucket.avgBpm.toFloat()
             val zone = HrZoneClassifier.classify(avgBpm.roundToInt(), input.prefs)
-            if (zone == 0) continue
-
-            validBucketCount++
-            nonWorkoutTrimp +=
-                RasCalculator.calculateDailyTrimp(
+            if (zone != 0) {
+                validBucketCount++
+                nonWorkoutTrimp +=
+                    RasCalculator.calculateDailyTrimp(
                     durationMinutes = 1f,
                     hrAvg = avgBpm,
                     rhrBaseline = input.rhrBaseline,
@@ -89,8 +87,9 @@ object EverydayHeartRateLoadCalculator {
                     banisterMultiplier = input.prefs.banisterMultiplier,
                     chengBeta = input.prefs.chengBeta,
                     itrimB = input.prefs.itrimB,
-                    ltBpm = input.prefs.zone3MaxBpm.toFloat(),
-                )
+                        ltBpm = input.prefs.zone3MaxBpm.toFloat(),
+                    )
+            }
         }
 
         val totalEverydayTrimp = input.workoutOnlyTrimp + nonWorkoutTrimp

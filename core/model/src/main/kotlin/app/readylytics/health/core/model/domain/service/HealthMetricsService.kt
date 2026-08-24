@@ -4,9 +4,9 @@ import app.readylytics.health.core.model.domain.model.BloodPressureStatus
 import app.readylytics.health.core.model.domain.model.BmiStatus
 import app.readylytics.health.core.model.domain.model.BodyCompositionAssessment
 import app.readylytics.health.core.model.domain.model.BodyFatStatus
+import app.readylytics.health.core.model.domain.model.HealthZone
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.Result
-import app.readylytics.health.core.model.domain.model.HealthZone
 import app.readylytics.health.core.model.domain.model.ZoneBand
 import app.readylytics.health.core.model.domain.preferences.Gender
 import app.readylytics.health.core.model.domain.preferences.PhysiologyProfile
@@ -24,12 +24,15 @@ class HealthMetricsService {
     fun calculateBmi(
         weightKg: Float,
         heightCm: Float,
-    ): Result<Float> {
-        if (weightKg <= 0f) return Result.Failure("Weight must be positive", Codes.INVALID_WEIGHT)
-        if (heightCm <= 0f) return Result.Failure("Height must be positive", Codes.INVALID_HEIGHT)
-        val heightM = heightCm / CM_PER_M
-        return Result.Success(weightKg / (heightM * heightM))
-    }
+    ): Result<Float> =
+        when {
+            weightKg <= 0f -> Result.Failure("Weight must be positive", Codes.INVALID_WEIGHT)
+            heightCm <= 0f -> Result.Failure("Height must be positive", Codes.INVALID_HEIGHT)
+            else -> {
+                val heightM = heightCm / CM_PER_M
+                Result.Success(weightKg / (heightM * heightM))
+            }
+        }
 
     /** Classify a BMI value into a [BmiStatus]. Delegates to [BodyCompositionAssessment]. */
     fun assessBmi(bmi: Float): BmiStatus = BodyCompositionAssessment.assessBmi(bmi).status
@@ -82,14 +85,14 @@ class HealthMetricsService {
     fun calculateDailyBpAverage(
         systolics: List<Int>,
         diastolics: List<Int>,
-    ): Result<Pair<Int, Int>> {
+    ): Result<Pair<Int, Int>> =
         if (systolics.isEmpty() || diastolics.isEmpty()) {
-            return Result.Failure("Empty blood pressure series", Codes.EMPTY_SERIES)
+            Result.Failure("Empty blood pressure series", Codes.EMPTY_SERIES)
+        } else {
+            Result.Success(
+                Pair(systolics.average().toInt(), diastolics.average().toInt()),
+            )
         }
-        return Result.Success(
-            Pair(systolics.average().toInt(), diastolics.average().toInt()),
-        )
-    }
 
     /** Mean of a list of integer values, or [Result.Failure] if empty. */
     fun mean(values: List<Int>): Result<Double> =
@@ -100,18 +103,20 @@ class HealthMetricsService {
         }
 
     /** Median of a list of integer values, or [Result.Failure] if empty. */
-    fun median(values: List<Int>): Result<Double> {
-        if (values.isEmpty()) return Result.Failure("Cannot compute median of empty list", Codes.EMPTY_SERIES)
-        val sorted = values.sorted()
-        val mid = sorted.size / 2
-        return Result.Success(
-            if (sorted.size % 2 == 0) {
-                (sorted[mid - 1] + sorted[mid]) / 2.0
-            } else {
-                sorted[mid].toDouble()
-            },
-        )
-    }
+    fun median(values: List<Int>): Result<Double> =
+        if (values.isEmpty()) {
+            Result.Failure("Cannot compute median of empty list", Codes.EMPTY_SERIES)
+        } else {
+            val sorted = values.sorted()
+            val mid = sorted.size / 2
+            Result.Success(
+                if (sorted.size % 2 == 0) {
+                    (sorted[mid - 1] + sorted[mid]) / 2.0
+                } else {
+                    sorted[mid].toDouble()
+                },
+            )
+        }
 
     private fun assessBloodPressureComponent(
         value: Int?,

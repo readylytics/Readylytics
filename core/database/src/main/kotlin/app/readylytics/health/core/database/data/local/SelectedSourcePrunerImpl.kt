@@ -1,14 +1,5 @@
 package app.readylytics.health.core.database.data.local
 
-import app.readylytics.health.core.databaseschema.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.BodyTemperatureRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.HeartRateDao
-import app.readylytics.health.core.databaseschema.data.local.dao.HrvDao
-import app.readylytics.health.core.databaseschema.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.SleepSessionDao
-import app.readylytics.health.core.databaseschema.data.local.dao.WeightRecordDao
-import app.readylytics.health.core.databaseschema.data.local.dao.WorkoutDao
 import app.readylytics.health.core.model.domain.model.HealthDataType
 import app.readylytics.health.core.model.domain.repository.TransactionRunner
 import app.readylytics.health.core.model.domain.sync.SelectedSourcePruner
@@ -22,15 +13,7 @@ class SelectedSourcePrunerImpl
     @Inject
     constructor(
         private val transactionRunner: TransactionRunner,
-        private val sleepSessionDao: SleepSessionDao,
-        private val heartRateDao: HeartRateDao,
-        private val hrvDao: HrvDao,
-        private val workoutDao: WorkoutDao,
-        private val weightRecordDao: WeightRecordDao,
-        private val bodyFatRecordDao: BodyFatRecordDao,
-        private val bloodPressureRecordDao: BloodPressureRecordDao,
-        private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
-        private val bodyTemperatureRecordDao: BodyTemperatureRecordDao,
+        private val daos: HealthRecordDaos,
     ) : SelectedSourcePruner {
         override suspend fun prune(
             start: LocalDate,
@@ -51,23 +34,23 @@ class SelectedSourcePrunerImpl
                     if (!deviceName.isNullOrBlank()) {
                         when (type) {
                             HealthDataType.SLEEP ->
-                                sleepSessionDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.sleepSessionDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.HEART_RATE ->
-                                heartRateDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.heartRateDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.HRV ->
-                                hrvDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.hrvDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.EXERCISE ->
-                                workoutDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.workoutDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.WEIGHT ->
-                                weightRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.weightRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.BODY_FAT ->
-                                bodyFatRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.bodyFatRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.BLOOD_PRESSURE ->
-                                bloodPressureRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.bloodPressureRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.OXYGEN_SATURATION ->
-                                oxygenSaturationRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.oxygenSaturationRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.BODY_TEMPERATURE ->
-                                bodyTemperatureRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
+                                daos.bodyTemperatureRecordDao.deleteRecordsNotMatchingDevice(fromMs, toMs, deviceName)
                             HealthDataType.STEPS -> {
                                 // Steps are in daily_summaries
                             }

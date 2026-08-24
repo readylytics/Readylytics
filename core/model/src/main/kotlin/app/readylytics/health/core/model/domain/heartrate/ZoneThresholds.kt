@@ -31,7 +31,7 @@ data class WorkoutMetrics(
 object ZoneThresholds {
     private val ZONE_WEIGHTS = floatArrayOf(1f, 2f, 3f, 4f, 5f)
 
-    fun zoneThresholds(
+    fun create(
         z1Min: Int = 95,
         z1Max: Int = 114,
         z2Max: Int = 133,

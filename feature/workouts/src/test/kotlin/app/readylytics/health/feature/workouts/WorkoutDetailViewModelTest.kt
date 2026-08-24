@@ -88,6 +88,85 @@ class WorkoutDetailViewModelTest {
         Dispatchers.resetMain()
     }
 
+    // Helper builders
+    private fun buildWorkout(
+        id: String,
+        durationMinutes: Int = 30,
+        exerciseType: String = "running",
+        trimp: Float = 60f,
+        avgHr: Float = 150f,
+        routeState: String = RouteState.NOT_AVAILABLE,
+        elevationGainMeters: Float? = null,
+        startMs: Long = System.currentTimeMillis(),
+    ): WorkoutData =
+        WorkoutData(
+            id = id,
+            startTime = startMs,
+            endTime = startMs + durationMinutes * 60 * 1000L,
+            exerciseType = exerciseType,
+            durationMinutes = durationMinutes,
+            zone1Minutes = 5f,
+            zone2Minutes = 10f,
+            zone3Minutes = 10f,
+            zone4Minutes = 5f,
+            zone5Minutes = 0f,
+            trimp = trimp,
+            avgHr = avgHr,
+            routeState = routeState,
+            elevationGainMeters = elevationGainMeters,
+        )
+
+    private fun buildRoutePoints(
+        workoutId: String,
+        count: Int = 3,
+        startMs: Long = System.currentTimeMillis(),
+    ): List<WorkoutRoutePoint> =
+        (0 until count).map { index ->
+            WorkoutRoutePoint(
+                workoutId = workoutId,
+                latitude = 52.5200 + (index * 0.001),
+                longitude = 13.4050 + (index * 0.001),
+                altitude = 45.0 + (index * 5.0),
+                timestampMs = startMs + (index * 10_000L),
+            )
+        }
+
+    private fun buildDisplayMetrics(
+        preciseTrimp: Float = 60f,
+        computedTrimp: Int = 60,
+        gainedStrain: Float = 0.2f,
+        classification: WorkoutLoadClassification? = null,
+    ): WorkoutDisplayMetrics =
+        WorkoutDisplayMetrics(
+            preciseTrimp = preciseTrimp,
+            computedTrimp = computedTrimp,
+            trimpDisplay = computedTrimp.toString(),
+            gainedStrain = gainedStrain,
+            gainedStrainDisplay = gainedStrain.toString(),
+            classification = classification,
+        )
+
+    private fun setupDefaultMocks(
+        workoutId: String,
+        workout: WorkoutData,
+        routePoints: List<WorkoutRoutePoint> = emptyList(),
+        hrSamples: List<HeartRateRecordData> = emptyList(),
+        displayMetrics: WorkoutDisplayMetrics = buildDisplayMetrics(),
+    ) {
+        coEvery { workoutRepository.getById(workoutId) } returns workout
+        coEvery { workoutRepository.getRoutePoints(workoutId) } returns routePoints
+        coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+        coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns hrSamples
+        coEvery { dailySummaryRepository.getByDate(any()) } returns null
+        coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+        coEvery {
+            getWorkoutDisplayMetricsUseCase.execute(
+                workout = workout,
+                samples = any(),
+            )
+        } returns displayMetrics
+    }
+
     @Test
     fun `detail state uses rounded load metrics from shared use case`() =
         runTest {
@@ -100,19 +179,12 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "run-1",
-                    startTime = startMs,
-                    endTime = startMs + 62 * 60 * 1000L,
-                    exerciseType = "running",
                     durationMinutes = 62,
-                    zone1Minutes = 0f,
-                    zone2Minutes = 10f,
-                    zone3Minutes = 20f,
-                    zone4Minutes = 32f,
-                    zone5Minutes = 0f,
                     trimp = 115.6f,
                     avgHr = 134f,
+                    startMs = startMs,
                 )
             val dbSamples =
                 listOf(
@@ -123,25 +195,11 @@ class WorkoutDetailViewModelTest {
                         recordType = "EXERCISE",
                     ),
                 )
-            coEvery { workoutRepository.getById("run-1") } returns workout
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns dbSamples
-            coEvery { dailySummaryRepository.getByDate(any()) } returns
-                DailySummary(date = date, trimpWorkoutOnly = 115.6f, rhrBpm = 52f, totalRasWorkoutOnly = 12f)
-            coEvery { dailySummaryRepository.getSince(any()) } returns
-                listOf(DailySummary(date = date, trimpWorkoutOnly = 115.6f, rhrBpm = 52f, rasWorkoutOnly = 12f))
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
+            val displayMetrics =
+                buildDisplayMetrics(
                     preciseTrimp = 115.6f,
                     computedTrimp = 116,
-                    trimpDisplay = "116",
                     gainedStrain = 0.37f,
-                    gainedStrainDisplay = "0.37",
                     classification =
                         WorkoutLoadClassification(
                             totalTrimp = 115.6,
@@ -152,6 +210,17 @@ class WorkoutDetailViewModelTest {
                             wasPromoted = true,
                         ),
                 )
+
+            setupDefaultMocks(
+                workoutId = "run-1",
+                workout = workout,
+                hrSamples = dbSamples,
+                displayMetrics = displayMetrics,
+            )
+            coEvery { dailySummaryRepository.getByDate(any()) } returns
+                DailySummary(date = date, trimpWorkoutOnly = 115.6f, rhrBpm = 52f, totalRasWorkoutOnly = 12f)
+            coEvery { dailySummaryRepository.getSince(any()) } returns
+                listOf(DailySummary(date = date, trimpWorkoutOnly = 115.6f, rhrBpm = 52f, rasWorkoutOnly = 12f))
 
             viewModel.loadWorkout("run-1")
             advanceUntilIdle()
@@ -191,39 +260,25 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "run-1",
-                    startTime = startMs,
-                    endTime = startMs + 62 * 60 * 1000L,
-                    exerciseType = "running",
                     durationMinutes = 62,
-                    zone1Minutes = 0f,
-                    zone2Minutes = 10f,
-                    zone3Minutes = 20f,
-                    zone4Minutes = 32f,
-                    zone5Minutes = 0f,
                     trimp = 115.6f,
                     avgHr = 134f,
+                    startMs = startMs,
                 )
-            coEvery { workoutRepository.getById("run-1") } returns workout
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryRepository.getByDate(any()) } returns null
-            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
+            val displayMetrics =
+                buildDisplayMetrics(
                     preciseTrimp = 115.6f,
                     computedTrimp = 116,
-                    trimpDisplay = "116",
                     gainedStrain = 0.37f,
-                    gainedStrainDisplay = "0.37",
-                    classification = null,
                 )
+
+            setupDefaultMocks(
+                workoutId = "run-1",
+                workout = workout,
+                displayMetrics = displayMetrics,
+            )
 
             // Recreate viewModel with pre-populated SavedStateHandle simulating process death recovery
             val restoredHandle = SavedStateHandle(mapOf("workoutId" to "run-1"))
@@ -382,66 +437,18 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "run-gps",
-                    startTime = startMs,
-                    endTime = startMs + 30 * 60 * 1000L,
-                    exerciseType = "running",
-                    durationMinutes = 30,
-                    zone1Minutes = 5f,
-                    zone2Minutes = 10f,
-                    zone3Minutes = 10f,
-                    zone4Minutes = 5f,
-                    zone5Minutes = 0f,
-                    trimp = 60f,
-                    avgHr = 150f,
                     routeState = RouteState.IMPORTED,
+                    startMs = startMs,
                 )
-            val routePoints =
-                listOf(
-                    WorkoutRoutePoint(
-                        workoutId = "run-gps",
-                        latitude = 52.5200,
-                        longitude = 13.4050,
-                        altitude = 45.0,
-                        timestampMs = startMs,
-                    ),
-                    WorkoutRoutePoint(
-                        workoutId = "run-gps",
-                        latitude = 52.5210,
-                        longitude = 13.4060,
-                        altitude = 50.0,
-                        timestampMs = startMs + 10_000L,
-                    ),
-                    WorkoutRoutePoint(
-                        workoutId = "run-gps",
-                        latitude = 52.5220,
-                        longitude = 13.4070,
-                        altitude = 55.0,
-                        timestampMs = startMs + 20_000L,
-                    ),
-                )
+            val routePoints = buildRoutePoints(workoutId = "run-gps", startMs = startMs)
 
-            coEvery { workoutRepository.getById("run-gps") } returns workout
-            coEvery { workoutRepository.getRoutePoints("run-gps") } returns routePoints
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryRepository.getByDate(any()) } returns null
-            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
-                    preciseTrimp = 60f,
-                    computedTrimp = 60,
-                    trimpDisplay = "60",
-                    gainedStrain = 0.2f,
-                    gainedStrainDisplay = "0.2",
-                    classification = null,
-                )
+            setupDefaultMocks(
+                workoutId = "run-gps",
+                workout = workout,
+                routePoints = routePoints,
+            )
 
             viewModel.loadWorkout("run-gps")
             advanceUntilIdle()
@@ -469,21 +476,11 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "run-filtered",
-                    startTime = startMs,
-                    endTime = startMs + 30 * 60 * 1000L,
-                    exerciseType = "running",
-                    durationMinutes = 30,
-                    zone1Minutes = 5f,
-                    zone2Minutes = 10f,
-                    zone3Minutes = 10f,
-                    zone4Minutes = 5f,
-                    zone5Minutes = 0f,
-                    trimp = 60f,
-                    avgHr = 150f,
                     elevationGainMeters = 1_000_000f,
                     routeState = RouteState.IMPORTED,
+                    startMs = startMs,
                 )
             val routePoints =
                 listOf(
@@ -517,26 +514,11 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
 
-            coEvery { workoutRepository.getById("run-filtered") } returns workout
-            coEvery { workoutRepository.getRoutePoints("run-filtered") } returns routePoints
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryRepository.getByDate(any()) } returns null
-            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
-                    preciseTrimp = 60f,
-                    computedTrimp = 60,
-                    trimpDisplay = "60",
-                    gainedStrain = 0.2f,
-                    gainedStrainDisplay = "0.2",
-                    classification = null,
-                )
+            setupDefaultMocks(
+                workoutId = "run-filtered",
+                workout = workout,
+                routePoints = routePoints,
+            )
 
             viewModel.loadWorkout("run-filtered")
             advanceUntilIdle()
@@ -560,21 +542,11 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "run-zeros",
-                    startTime = startMs,
-                    endTime = startMs + 30 * 60 * 1000L,
-                    exerciseType = "running",
-                    durationMinutes = 30,
-                    zone1Minutes = 5f,
-                    zone2Minutes = 10f,
-                    zone3Minutes = 10f,
-                    zone4Minutes = 5f,
-                    zone5Minutes = 0f,
-                    trimp = 60f,
-                    avgHr = 150f,
                     elevationGainMeters = 1_000_000f,
                     routeState = RouteState.IMPORTED,
+                    startMs = startMs,
                 )
             val routePoints =
                 listOf(
@@ -608,26 +580,11 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
 
-            coEvery { workoutRepository.getById("run-zeros") } returns workout
-            coEvery { workoutRepository.getRoutePoints("run-zeros") } returns routePoints
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryRepository.getByDate(any()) } returns null
-            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
-                    preciseTrimp = 60f,
-                    computedTrimp = 60,
-                    trimpDisplay = "60",
-                    gainedStrain = 0.2f,
-                    gainedStrainDisplay = "0.2",
-                    classification = null,
-                )
+            setupDefaultMocks(
+                workoutId = "run-zeros",
+                workout = workout,
+                routePoints = routePoints,
+            )
 
             viewModel.loadWorkout("run-zeros")
             advanceUntilIdle()
@@ -651,20 +608,14 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "ride-1",
-                    startTime = startMs,
-                    endTime = startMs + 60 * 60 * 1000L,
                     exerciseType = "cycling",
                     durationMinutes = 60,
-                    zone1Minutes = 10f,
-                    zone2Minutes = 20f,
-                    zone3Minutes = 20f,
-                    zone4Minutes = 10f,
-                    zone5Minutes = 0f,
                     trimp = 80f,
                     avgHr = 140f,
                     routeState = RouteState.IMPORTED,
+                    startMs = startMs,
                 )
             val routePoints =
                 listOf(
@@ -684,26 +635,17 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
 
-            coEvery { workoutRepository.getById("ride-1") } returns workout
-            coEvery { workoutRepository.getRoutePoints("ride-1") } returns routePoints
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryRepository.getByDate(any()) } returns null
-            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
-                    preciseTrimp = 80f,
-                    computedTrimp = 80,
-                    trimpDisplay = "80",
-                    gainedStrain = 0.3f,
-                    gainedStrainDisplay = "0.3",
-                    classification = null,
-                )
+            setupDefaultMocks(
+                workoutId = "ride-1",
+                workout = workout,
+                routePoints = routePoints,
+                displayMetrics =
+                    buildDisplayMetrics(
+                        preciseTrimp = 80f,
+                        computedTrimp = 80,
+                        gainedStrain = 0.3f,
+                    ),
+            )
 
             viewModel.loadWorkout("ride-1")
             advanceUntilIdle()
@@ -899,20 +841,10 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "run-granted-route",
-                    startTime = startMs,
-                    endTime = startMs + 30 * 60 * 1000L,
-                    exerciseType = "running",
-                    durationMinutes = 30,
-                    zone1Minutes = 5f,
-                    zone2Minutes = 10f,
-                    zone3Minutes = 10f,
-                    zone4Minutes = 5f,
-                    zone5Minutes = 0f,
-                    trimp = 60f,
-                    avgHr = 150f,
                     routeState = RouteState.PERMISSION_REQUIRED,
+                    startMs = startMs,
                 )
             val granted =
                 listOf(
@@ -926,26 +858,10 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
 
-            coEvery { workoutRepository.getById("run-granted-route") } returns workout
-            coEvery { workoutRepository.getRoutePoints("run-granted-route") } returns emptyList()
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryRepository.getByDate(any()) } returns null
-            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
-                    preciseTrimp = 60f,
-                    computedTrimp = 60,
-                    trimpDisplay = "60",
-                    gainedStrain = 0.2f,
-                    gainedStrainDisplay = "0.2",
-                    classification = null,
-                )
+            setupDefaultMocks(
+                workoutId = "run-granted-route",
+                workout = workout,
+            )
 
             viewModel.loadWorkout("run-granted-route")
             advanceUntilIdle()
@@ -1024,20 +940,10 @@ class WorkoutDetailViewModelTest {
                     .toInstant()
                     .toEpochMilli()
             val workout =
-                WorkoutData(
+                buildWorkout(
                     id = "run-precision",
-                    startTime = startMs,
-                    endTime = startMs + 30 * 60 * 1000L,
-                    exerciseType = "running",
-                    durationMinutes = 30,
-                    zone1Minutes = 5f,
-                    zone2Minutes = 10f,
-                    zone3Minutes = 10f,
-                    zone4Minutes = 5f,
-                    zone5Minutes = 0f,
-                    trimp = 60f,
-                    avgHr = 150f,
                     routeState = RouteState.IMPORTED,
+                    startMs = startMs,
                 )
             val routePoints =
                 listOf(
@@ -1064,26 +970,11 @@ class WorkoutDetailViewModelTest {
                     ),
                 )
 
-            coEvery { workoutRepository.getById("run-precision") } returns workout
-            coEvery { workoutRepository.getRoutePoints("run-precision") } returns routePoints
-            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
-            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryRepository.getByDate(any()) } returns null
-            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
-            coEvery {
-                getWorkoutDisplayMetricsUseCase.execute(
-                    workout = workout,
-                    samples = any(),
-                )
-            } returns
-                WorkoutDisplayMetrics(
-                    preciseTrimp = 60f,
-                    computedTrimp = 60,
-                    trimpDisplay = "60",
-                    gainedStrain = 0.2f,
-                    gainedStrainDisplay = "0.2",
-                    classification = null,
-                )
+            setupDefaultMocks(
+                workoutId = "run-precision",
+                workout = workout,
+                routePoints = routePoints,
+            )
 
             viewModel.loadWorkout("run-precision")
             advanceUntilIdle()

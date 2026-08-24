@@ -10,12 +10,6 @@ class TimeRangeTest {
     fun `SEVEN_DAYS fromMs should return timestamp for 6 days ago to include today as 7th day`() {
         val baseDate = LocalDate.of(2024, 5, 2)
         val zoneId = ZoneId.systemDefault()
-        val expectedStart =
-            baseDate
-                .minusDays(6)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
 
         // Current implementation:
         // return baseDate.atStartOfDay(zoneId).minusDays(days.toLong()).toInstant().toEpochMilli()

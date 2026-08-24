@@ -15,8 +15,8 @@ class BodyTemperatureBaselineCalculatorTest {
 
     @Test
     fun `exactly 14 non-null days returns their average`() {
-        val fourteenDays = List(14) { 36.5f } + List(0) { }
-        assertEquals(36.5f, calculator.calculateBaseline(List(14) { 36.5f })!!, 0.001f)
+        val fourteenDays = List(14) { 36.5f }
+        assertEquals(36.5f, calculator.calculateBaseline(fourteenDays)!!, 0.001f)
     }
 
     @Test

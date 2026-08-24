@@ -73,7 +73,8 @@ class GetDailyPromptDataUseCase
                 patternWorkouts.filter { it.startTime in todayMidnight until tomorrowMidnight }
             val todayCompletedWorkouts = todaysWorkouts.size
             val todayTrimp = todaysWorkouts.sumOf { it.trimp.toDouble() }.toFloat()
-            val todayTrainingMinutes = todaysWorkouts.sumOf { it.durationMinutes }.takeIf { todaysWorkouts.isNotEmpty() }
+            val todayTrainingMinutes =
+                todaysWorkouts.sumOf { it.durationMinutes }.takeIf { todaysWorkouts.isNotEmpty() }
             val dataCurrentUntil =
                 if (todaysWorkouts.isNotEmpty()) {
                     Instant.ofEpochMilli(todaysWorkouts.maxOf { it.endTime }).toString()
@@ -131,8 +132,16 @@ class GetDailyPromptDataUseCase
                 everydayLoadConfidence = todaySummary?.everydayLoadConfidence,
                 advisorDataConfidence = advisorConf,
                 today =
-                    todaySummary?.let { mapToday(it, sourceMode, todayCompletedWorkouts, todayTrimp, todayTrainingMinutes, dataCurrentUntil) }
-                        ?: TodayPromptData(
+                    todaySummary?.let {
+                        mapToday(
+                            summary = it,
+                            mode = sourceMode,
+                            todayCompletedWorkouts = todayCompletedWorkouts,
+                            todayTrimp = todayTrimp,
+                            todayTrainingMinutes = todayTrainingMinutes,
+                            dataCurrentUntil = dataCurrentUntil,
+                        )
+                    } ?: TodayPromptData(
                             readinessScore = null,
                             readinessBand = null,
                             restorationScore = null,

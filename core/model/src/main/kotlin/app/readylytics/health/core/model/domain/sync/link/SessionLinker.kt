@@ -36,13 +36,13 @@ object SessionLinker {
         sleepSessions: List<SessionSpan>,
         workoutSessions: List<SessionSpan>,
     ): SampleLink {
-        findContaining(sampleMs, sleepSessions)?.let {
-            return SampleLink(RecordType.SLEEP.name, it.id)
+        val sleepSpan = findContaining(sampleMs, sleepSessions)
+        val workoutSpan = findContaining(sampleMs, workoutSessions)
+        return when {
+            sleepSpan != null -> SampleLink(RecordType.SLEEP.name, sleepSpan.id)
+            workoutSpan != null -> SampleLink(RecordType.EXERCISE.name, workoutSpan.id)
+            else -> SampleLink(RecordType.RESTING.name, null)
         }
-        findContaining(sampleMs, workoutSessions)?.let {
-            return SampleLink(RecordType.EXERCISE.name, it.id)
-        }
-        return SampleLink(RecordType.RESTING.name, null)
     }
 
     private fun findContaining(

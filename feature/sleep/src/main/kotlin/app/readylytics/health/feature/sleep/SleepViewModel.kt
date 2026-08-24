@@ -1,7 +1,6 @@
 package app.readylytics.health.feature.sleep
 
 import androidx.compose.runtime.Immutable
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.model.data.preferences.SettingsDefaults
@@ -169,7 +168,6 @@ class SleepViewModel
         private val selectedDateRepository: SelectedDateStore,
         private val circadianRepo: CircadianConsistencyRepository,
         private val foregroundSyncController: ForegroundSyncGateway,
-        private val savedStateHandle: SavedStateHandle,
         private val sleepLayoutRepository: SleepLayoutRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,

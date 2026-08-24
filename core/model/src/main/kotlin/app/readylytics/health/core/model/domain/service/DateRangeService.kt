@@ -141,19 +141,19 @@ class DateRangeService(
     fun slidingWindows(
         range: DateRange,
         windowDays: Int,
-    ): Result<List<DateRange>> {
-        if (windowDays < 1) {
-            return Result.Failure("windowDays must be >= 1 (was $windowDays)", Codes.NON_POSITIVE_DAYS)
-        }
-        if (windowDays > range.days) return Result.Success(emptyList())
-        val starts = range.toDateList().dropLast(windowDays - 1)
-        val windows =
-            starts.mapNotNull { s ->
-                // DateRange.create only fails when end < start, which cannot happen here.
-                (DateRange.create(s, s.plusDays((windowDays - 1).toLong())) as? Result.Success)?.data
+    ): Result<List<DateRange>> =
+        when {
+            windowDays < 1 -> Result.Failure("windowDays must be >= 1 (was $windowDays)", Codes.NON_POSITIVE_DAYS)
+            windowDays > range.days -> Result.Success(emptyList())
+            else -> {
+                val starts = range.toDateList().dropLast(windowDays - 1)
+                val windows =
+                    starts.mapNotNull { s ->
+                        (DateRange.create(s, s.plusDays((windowDays - 1).toLong())) as? Result.Success)?.data
+                    }
+                Result.Success(windows)
             }
-        return Result.Success(windows)
-    }
+        }
 
     /** Stable [Result.Failure.code] values produced by this service. */
     object Codes {

@@ -26,8 +26,6 @@ import app.readylytics.health.core.model.domain.circadian.CircadianThresholdDefa
 import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.R as CoreUiR
 
-private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)
-
 @Composable
 fun CircadianThresholdSettingsSection(
     profile: PhysiologyProfile,

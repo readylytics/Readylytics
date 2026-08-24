@@ -64,7 +64,7 @@ class FileBackupStore(
     override suspend fun delete(location: BackupLocation) {
         val file = File(location.value.toUri().path ?: error("Invalid file location"))
         if (file.exists() && !file.delete()) {
-            throw IllegalStateException("Failed to delete local file")
+            error("Failed to delete local file")
         }
     }
 

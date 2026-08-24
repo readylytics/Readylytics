@@ -108,7 +108,7 @@ class SessionLinkReconcilerTest {
             val upsertSlot = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlot)) } returns Unit
 
-            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.create())
 
             val updated = upsertSlot.captured.associateBy { it.sourceRecordRef }
             assertEquals(RecordType.SLEEP.name, updated.getValue(1L).recordType)
@@ -137,7 +137,7 @@ class SessionLinkReconcilerTest {
             val upsertSlot = slot<List<HrvRecordEntity>>()
             coEvery { hrvDao.upsertAll(capture(upsertSlot)) } returns Unit
 
-            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.create())
 
             val updated = upsertSlot.captured.associateBy { it.sourceRecordRef }
             assertEquals(RecordType.SLEEP.name, updated.getValue(1L).recordType)
@@ -164,7 +164,7 @@ class SessionLinkReconcilerTest {
             val workoutUpsertSlot = slot<List<WorkoutRecordEntity>>()
             coEvery { workoutDao.upsertAll(capture(workoutUpsertSlot)) } returns Unit
 
-            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.create())
 
             val expected =
                 ZoneThresholds.computeMetrics(
@@ -176,7 +176,7 @@ class SessionLinkReconcilerTest {
                             hr3.beatsPerMinute,
                         ),
                     ),
-                    ZoneThresholds.zoneThresholds(),
+                    ZoneThresholds.create(),
                 )
             val updated = workoutUpsertSlot.captured.single { it.id == "workout_1" }
             assertEquals(expected.trimp, updated.trimp)
@@ -215,7 +215,7 @@ class SessionLinkReconcilerTest {
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, 2L, any()) } returns emptyList()
             val upsertSlotA = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotA)) } returns Unit
-            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.create())
             val upsertedA = if (upsertSlotA.isCaptured) upsertSlotA.captured else emptyList()
             val resultA =
                 (listOf(hr1A, hr2A).associateBy { it.sourceRecordRef } + upsertedA.associateBy { it.sourceRecordRef })
@@ -226,7 +226,7 @@ class SessionLinkReconcilerTest {
             coEvery { heartRateDao.getKeysetPage(0L, 20_000L, 4_500L, 2L, any()) } returns emptyList()
             val upsertSlotB = slot<List<HeartRateRecordEntity>>()
             coEvery { heartRateDao.upsertAll(capture(upsertSlotB)) } returns Unit
-            reconciler.reconcile(0L, 20_000L, ZoneThresholds.zoneThresholds())
+            reconciler.reconcile(0L, 20_000L, ZoneThresholds.create())
             val upsertedB = if (upsertSlotB.isCaptured) upsertSlotB.captured else emptyList()
             val resultB =
                 (listOf(hr1B, hr2B).associateBy { it.sourceRecordRef } + upsertedB.associateBy { it.sourceRecordRef })

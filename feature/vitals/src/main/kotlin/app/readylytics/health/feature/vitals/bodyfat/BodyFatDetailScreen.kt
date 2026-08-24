@@ -197,7 +197,6 @@ fun BodyFatDetailScreen(
                         points = uiState.dailyBodyFat,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
-                        metricName = "Body Fat",
                         baselineUnit = stringResource(CoreUiR.string.unit_percent),
                         baseline = uiState.averageBodyFat,
                         baselineLabel = stringResource(CoreUiR.string.label_average),

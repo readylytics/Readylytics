@@ -169,6 +169,9 @@ android {
             // SystemClock had already left HealthDeviceRepository's 5-minute TTL untested.
             unitTests.isReturnDefaultValues = false
             unitTests.isIncludeAndroidResources = true
+            // CleanArchTest parses every source file with the Kotlin PSI in a single forked JVM;
+            // the default heap OOMs at the current repo size.
+            unitTests.all { test -> test.maxHeapSize = "4g" }
         }
     }
 

@@ -41,20 +41,24 @@ class WorkoutModelTrimpIngestionDeterminismTest {
                 .build()
         store =
             RoomHealthIngestionStore(
-                sleepSessionDao = database.sleepSessionDao(),
-                sleepStageDao = database.sleepStageDao(),
-                heartRateDao = database.heartRateDao(),
-                hrvDao = database.hrvDao(),
-                workoutDao = database.workoutDao(),
-                workoutRoutePointDao = database.workoutRoutePointDao(),
-                weightRecordDao = database.weightRecordDao(),
-                bodyFatRecordDao = database.bodyFatRecordDao(),
-                bloodPressureRecordDao = database.bloodPressureRecordDao(),
-                oxygenSaturationRecordDao = database.oxygenSaturationRecordDao(),
-                bodyTemperatureRecordDao = database.bodyTemperatureRecordDao(),
-                stepRecordDao = database.stepRecordDao(),
+                daos =
+                    HealthRecordDaos(
+                        sleepSessionDao = database.sleepSessionDao(),
+                        sleepStageDao = database.sleepStageDao(),
+                        heartRateDao = database.heartRateDao(),
+                        hrvDao = database.hrvDao(),
+                        workoutDao = database.workoutDao(),
+                        workoutRoutePointDao = database.workoutRoutePointDao(),
+                        weightRecordDao = database.weightRecordDao(),
+                        bodyFatRecordDao = database.bodyFatRecordDao(),
+                        bloodPressureRecordDao = database.bloodPressureRecordDao(),
+                        oxygenSaturationRecordDao = database.oxygenSaturationRecordDao(),
+                        bodyTemperatureRecordDao = database.bodyTemperatureRecordDao(),
+                        stepRecordDao = database.stepRecordDao(),
+                        sourceRecordDao = database.sourceRecordDao(),
+                        minuteBucketDao = database.minuteBucketDao(),
+                    ),
                 dailySummaryDao = database.dailySummaryDao(),
-                sourceRecordDao = database.sourceRecordDao(),
                 transactionRunner = RoomTransactionRunner(database),
             )
     }

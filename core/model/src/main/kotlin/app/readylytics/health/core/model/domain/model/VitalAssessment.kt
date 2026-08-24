@@ -193,28 +193,40 @@ internal fun rhrZoneBandsForThresholds(
     poorMax: Double,
 ): List<ZoneBand> =
     listOf(
-        ZoneBand(
-            lowerBound = Double.NEGATIVE_INFINITY,
-            upperBound = optimalMax,
-            zone = HealthZone.OPTIMAL,
-            includesMaximum = true,
-        ),
-        ZoneBand(
-            lowerBound = optimalMax,
-            upperBound = warningMax,
-            zone = HealthZone.NEUTRAL,
-            includesMinimum = false,
-        ),
-        ZoneBand(
-            lowerBound = warningMax,
-            upperBound = poorMax,
-            zone = HealthZone.WARNING,
-        ),
-        ZoneBand(
-            lowerBound = poorMax,
-            upperBound = Double.POSITIVE_INFINITY,
-            zone = HealthZone.CRITICAL,
-        ),
+        createRhrOptimalBand(optimalMax),
+        createRhrNeutralBand(optimalMax, warningMax),
+        createRhrWarningBand(warningMax, poorMax),
+        createRhrCriticalBand(poorMax),
+    )
+
+private fun createRhrOptimalBand(optimalMax: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = Double.NEGATIVE_INFINITY,
+        upperBound = optimalMax,
+        zone = HealthZone.OPTIMAL,
+        includesMaximum = true,
+    )
+
+private fun createRhrNeutralBand(optimalMax: Double, warningMax: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = optimalMax,
+        upperBound = warningMax,
+        zone = HealthZone.NEUTRAL,
+        includesMinimum = false,
+    )
+
+private fun createRhrWarningBand(warningMax: Double, poorMax: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = warningMax,
+        upperBound = poorMax,
+        zone = HealthZone.WARNING,
+    )
+
+private fun createRhrCriticalBand(poorMax: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = poorMax,
+        upperBound = Double.POSITIVE_INFINITY,
+        zone = HealthZone.CRITICAL,
     )
 
 internal fun hrvZoneBandsForThresholds(
@@ -223,28 +235,40 @@ internal fun hrvZoneBandsForThresholds(
     poorMin: Double,
 ): List<ZoneBand> =
     listOf(
-        ZoneBand(
-            lowerBound = Double.NEGATIVE_INFINITY,
-            upperBound = poorMin,
-            zone = HealthZone.CRITICAL,
-        ),
-        ZoneBand(
-            lowerBound = poorMin,
-            upperBound = warningMin,
-            zone = HealthZone.WARNING,
-            includesMaximum = true,
-        ),
-        ZoneBand(
-            lowerBound = warningMin,
-            upperBound = optimalMin,
-            zone = HealthZone.NEUTRAL,
-            includesMinimum = false,
-        ),
-        ZoneBand(
-            lowerBound = optimalMin,
-            upperBound = Double.POSITIVE_INFINITY,
-            zone = HealthZone.OPTIMAL,
-        ),
+        createHrvCriticalBand(poorMin),
+        createHrvWarningBand(poorMin, warningMin),
+        createHrvNeutralBand(warningMin, optimalMin),
+        createHrvOptimalBand(optimalMin),
+    )
+
+private fun createHrvCriticalBand(poorMin: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = Double.NEGATIVE_INFINITY,
+        upperBound = poorMin,
+        zone = HealthZone.CRITICAL,
+    )
+
+private fun createHrvWarningBand(poorMin: Double, warningMin: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = poorMin,
+        upperBound = warningMin,
+        zone = HealthZone.WARNING,
+        includesMaximum = true,
+    )
+
+private fun createHrvNeutralBand(warningMin: Double, optimalMin: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = warningMin,
+        upperBound = optimalMin,
+        zone = HealthZone.NEUTRAL,
+        includesMinimum = false,
+    )
+
+private fun createHrvOptimalBand(optimalMin: Double): ZoneBand =
+    ZoneBand(
+        lowerBound = optimalMin,
+        upperBound = Double.POSITIVE_INFINITY,
+        zone = HealthZone.OPTIMAL,
     )
 
 internal fun spo2ReferenceZoneBands(): List<ZoneBand> =

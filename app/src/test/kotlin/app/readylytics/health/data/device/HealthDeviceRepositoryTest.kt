@@ -50,7 +50,6 @@ class HealthDeviceRepositoryTest {
     @Test
     fun `getAvailableDevices fetches and caches devices`() =
         runTest {
-            val dbDevices = listOf("Device1", "Device2")
             val expected = listOf("Device1", "Device2").sorted()
 
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")

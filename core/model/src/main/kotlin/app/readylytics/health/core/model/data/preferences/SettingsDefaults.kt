@@ -68,7 +68,7 @@ object SettingsDefaults {
     const val BIRTH_YEAR = 1994
     const val IS_BIRTHDAY_CONFIGURED = false
     val GENDER: String? = null
-    val HEIGHT_CM: Float? = 175f
+    const val HEIGHT_CM: Float = 175f
     const val HRV_OPTIMAL_THRESHOLD = 1.10f
     const val HRV_WARNING_THRESHOLD = 0.90f
     const val RHR_OPTIMAL_THRESHOLD = 0.90f
@@ -149,10 +149,30 @@ object SettingsDefaults {
 
     val DEFAULT_VITALS_CARDS =
         listOf(
-            CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 0, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
-            CardConfiguration(CardId.HRV, isVisible = true, position = 1, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
-            CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = false, position = 2, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
-            CardConfiguration(CardId.BODY_TEMPERATURE, isVisible = false, position = 3, requestedDisplayMode = DashboardCardDisplayMode.GAUGE),
+            CardConfiguration(
+                CardId.RESTING_HR,
+                isVisible = true,
+                position = 0,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.HRV,
+                isVisible = true,
+                position = 1,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.OXYGEN_SATURATION,
+                isVisible = false,
+                position = 2,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
+            CardConfiguration(
+                CardId.BODY_TEMPERATURE,
+                isVisible = false,
+                position = 3,
+                requestedDisplayMode = DashboardCardDisplayMode.GAUGE,
+            ),
         )
 
     val DEFAULT_VITALS_CHARTS =

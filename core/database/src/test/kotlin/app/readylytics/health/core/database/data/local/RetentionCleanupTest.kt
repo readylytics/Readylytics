@@ -56,18 +56,24 @@ class RetentionCleanupTest {
         retentionCleanup =
             RetentionCleanup(
                 transactionRunner = transactionRunner,
-                sleepDao = sleepDao,
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                workoutDao = workoutDao,
+                daos =
+                    HealthRecordDaos(
+                        sleepSessionDao = sleepDao,
+                        sleepStageDao = sleepStageDao,
+                        heartRateDao = heartRateDao,
+                        hrvDao = hrvDao,
+                        workoutDao = workoutDao,
+                        workoutRoutePointDao = database.workoutRoutePointDao(),
+                        weightRecordDao = weightDao,
+                        bodyFatRecordDao = bodyFatDao,
+                        bloodPressureRecordDao = bloodPressureDao,
+                        oxygenSaturationRecordDao = oxygenSaturationDao,
+                        bodyTemperatureRecordDao = bodyTemperatureDao,
+                        stepRecordDao = stepRecordDao,
+                        sourceRecordDao = database.sourceRecordDao(),
+                        minuteBucketDao = minuteBucketDao,
+                    ),
                 dailySummaryDao = dailySummaryDao,
-                weightDao = weightDao,
-                bodyFatDao = bodyFatDao,
-                bloodPressureDao = bloodPressureDao,
-                oxygenSaturationDao = oxygenSaturationDao,
-                bodyTemperatureDao = bodyTemperatureDao,
-                stepRecordDao = stepRecordDao,
-                minuteBucketDao = minuteBucketDao,
             )
     }
 

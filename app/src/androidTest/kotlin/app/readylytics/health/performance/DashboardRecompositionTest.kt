@@ -20,6 +20,7 @@ import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricCardSpec
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricPresentation
 import app.readylytics.health.core.ui.components.metriccard.UniversalMetricVisual
+import app.readylytics.health.feature.dashboard.DashboardNavigationCallbacks
 import app.readylytics.health.feature.dashboard.DashboardScreen
 import app.readylytics.health.feature.dashboard.DashboardUiState
 import org.junit.Assert.assertEquals
@@ -60,17 +61,21 @@ class DashboardRecompositionTest {
             DashboardScreen(
                 uiState = uiState.value,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
         composeRule.waitForIdle()
@@ -92,17 +97,21 @@ class DashboardRecompositionTest {
             DashboardScreen(
                 uiState = uiState.value,
                 snackbarHostState = SnackbarHostState(),
-                onRefresh = {},
                 onPreviousDay = {},
                 onNextDay = {},
-                onNavigateToSleep = {},
-                onNavigateToWorkouts = {},
-                onNavigateToRhr = {},
-                onNavigateToSteps = {},
+                navigationCallbacks =
+                    DashboardNavigationCallbacks(
+                        onNavigateToSleep = {},
+                        onNavigateToWorkouts = {},
+                        onNavigateToRhr = {},
+                        onNavigateToSteps = {},
+                    ),
                 onToggleCardManagement = {},
+                onCancelCardManagement = {},
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                onCardDisplayModeChanged = { _, _ -> },
             )
         }
         composeRule.waitForIdle()

@@ -87,72 +87,21 @@ class HealthChangeSynchronizerImpl
             for (dataType in HealthDataType.entries) {
                 val token = tokenStore.get(dataType)
                 if (token.isNullOrBlank()) {
-                    val typePermissions = recordClassesFor(dataType).map {
-                        HealthPermission.getReadPermission(it)
-                    }
-                    if (typePermissions.any { it in grantedPermissions }) {
-                        logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
-                        return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
-                    }
+                    val outcome = missingTokenOutcome(dataType, grantedPermissions)
+                    if (outcome != null) return outcome
                     logD("HealthChangeSynchronizer") { "Skipping $dataType: permission not granted" }
                     continue
                 }
 
-                try {
-                    var currentToken: String = token
-                    var hasMore = true
-                    while (hasMore) {
-                        val response = client.getChanges(currentToken)
-                        if (response.changesTokenExpired) {
-                            logD("HealthChangeSynchronizer") {
-                                "Token for $dataType is expired, requesting full resync"
-                            }
-                            return HealthChangeSyncOutcome(
-                                affectedDates = emptySet(),
-                                requiresFullResync = true,
-                            )
-                        }
-
-                        val selectedDevice = deviceByType[dataType.name]?.takeIf { it.isNotBlank() }
-
-                        // Apply this page of changes in a transaction
-                        transactionRunner.runInTransaction {
-                            processChangesPage(
-                                dataType = dataType,
-                                changes = response.changes,
-                                affectedDates = affectedDates,
-                                selectedDevice = selectedDevice,
-                                zoneId = zoneId,
-                                prefs = prefs,
-                            )
-                        }
-
-                        // Return candidate token only after Room transaction succeeds. The sync
-                        // coordinator persists candidates after derived summaries are durable.
-                        currentToken = response.nextChangesToken
-                        nextTokens[dataType] = currentToken
-                        hasMore = response.hasMore
-                    }
-                } catch (e: SecurityException) {
-                    logE("HealthChangeSynchronizer", e) {
-                        "SecurityException reading changes for $dataType"
-                    }
-                    return HealthChangeSyncOutcome(
-                        affectedDates = emptySet(),
-                        requiresFullResync = true,
-                    )
-                } catch (e: Exception) {
-                    if (isTokenExpiredException(e)) {
-                        logD("HealthChangeSynchronizer") {
-                            "Change token expired for $dataType"
-                        }
-                        return HealthChangeSyncOutcome(
-                            affectedDates = emptySet(),
-                            requiresFullResync = true,
-                        )
-                    }
-                    throw e
-                }
+                applyChangesForType(
+                    dataType = dataType,
+                    token = token,
+                    deviceByType = deviceByType,
+                    zoneId = zoneId,
+                    prefs = prefs,
+                    affectedDates = affectedDates,
+                    nextTokens = nextTokens,
+                )?.let { return it }
             }
 
             return HealthChangeSyncOutcome(
@@ -161,6 +110,89 @@ class HealthChangeSynchronizerImpl
                 nextTokens = nextTokens,
             )
         }
+
+        private fun missingTokenOutcome(
+            dataType: HealthDataType,
+            grantedPermissions: Set<String>,
+        ): HealthChangeSyncOutcome? {
+            val typePermissions = recordClassesFor(dataType).map {
+                HealthPermission.getReadPermission(it)
+            }
+            if (typePermissions.any { it in grantedPermissions }) {
+                logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
+                return HealthChangeSyncOutcome(emptySet(), requiresFullResync = true)
+            }
+            return null
+        }
+
+        private suspend fun applyChangesForType(
+            dataType: HealthDataType,
+            token: String,
+            deviceByType: Map<String, String>,
+            zoneId: ZoneId,
+            prefs: UserPreferences,
+            affectedDates: MutableSet<LocalDate>,
+            nextTokens: MutableMap<HealthDataType, String>,
+        ): HealthChangeSyncOutcome? =
+            try {
+                var currentToken: String = token
+                var hasMore = true
+                while (hasMore) {
+                    val response = client.getChanges(currentToken)
+                    if (response.changesTokenExpired) {
+                        logD("HealthChangeSynchronizer") {
+                            "Token for $dataType is expired, requesting full resync"
+                        }
+                        return HealthChangeSyncOutcome(
+                            affectedDates = emptySet(),
+                            requiresFullResync = true,
+                        )
+                    }
+
+                    val selectedDevice = deviceByType[dataType.name]?.takeIf { it.isNotBlank() }
+
+                    // Apply this page of changes in a transaction
+                    transactionRunner.runInTransaction {
+                        processChangesPage(
+                            dataType = dataType,
+                            changes = response.changes,
+                            affectedDates = affectedDates,
+                            selectedDevice = selectedDevice,
+                            zoneId = zoneId,
+                            prefs = prefs,
+                        )
+                    }
+
+                    // Return candidate token only after Room transaction succeeds. The sync
+                    // coordinator persists candidates after derived summaries are durable.
+                    currentToken = response.nextChangesToken
+                    nextTokens[dataType] = currentToken
+                    hasMore = response.hasMore
+                }
+                null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                logE("HealthChangeSynchronizer", e) {
+                    "SecurityException reading changes for $dataType"
+                }
+                HealthChangeSyncOutcome(
+                    affectedDates = emptySet(),
+                    requiresFullResync = true,
+                )
+            } catch (e: Exception) {
+                if (isTokenExpiredException(e)) {
+                    logD("HealthChangeSynchronizer") {
+                        "Change token expired for $dataType"
+                    }
+                    HealthChangeSyncOutcome(
+                        affectedDates = emptySet(),
+                        requiresFullResync = true,
+                    )
+                } else {
+                    throw e
+                }
+            }
 
         override suspend fun commitTokens(tokens: Map<HealthDataType, String>) {
             if (tokens.isNotEmpty()) {
@@ -292,7 +324,7 @@ class HealthChangeSynchronizerImpl
                     if (record is ExerciseSessionRecord) {
                         val domainExercise = record.toDomain()
                         val thresholds =
-                            ZoneThresholds.zoneThresholds(
+                            ZoneThresholds.create(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,

@@ -110,7 +110,9 @@ interface OxygenSaturationRecordDao {
     suspend fun deleteAll(): Int
 
     @Query(
-        "DELETE FROM oxygen_saturation_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+        "DELETE FROM oxygen_saturation_records " +
+            "WHERE timestampMs >= :fromMs AND timestampMs < :toMs " +
+            "AND (deviceName != :deviceName OR deviceName IS NULL)",
     )
     suspend fun deleteRecordsNotMatchingDevice(
         fromMs: Long,

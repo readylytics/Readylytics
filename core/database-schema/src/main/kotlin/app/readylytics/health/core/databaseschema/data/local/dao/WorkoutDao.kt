@@ -126,7 +126,8 @@ interface WorkoutDao {
     ): Int?
 
     @Query(
-        "SELECT SUM(avgHr * durationMinutes) / CAST(SUM(durationMinutes) AS FLOAT) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs AND durationMinutes > 0",
+        "SELECT SUM(avgHr * durationMinutes) / CAST(SUM(durationMinutes) AS FLOAT) " +
+            "FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs AND durationMinutes > 0",
     )
     suspend fun getWeightedAvgHr(
         fromMs: Long,
@@ -155,7 +156,8 @@ interface WorkoutDao {
     suspend fun getDistinctDeviceNames(): List<String>
 
     @Query(
-        "DELETE FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+        "DELETE FROM workout_records " +
+            "WHERE startTime >= :fromMs AND startTime < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
     )
     suspend fun deleteRecordsNotMatchingDevice(
         fromMs: Long,

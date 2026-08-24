@@ -19,6 +19,27 @@ plugins {
     jacoco
 }
 
+// Keep the whole material3 group aligned. Vico's transitive
+// org.jetbrains.compose.material3 redirect would otherwise leave the
+// androidx.compose.material3 atomic group on 1.5.0-alpha17, whose
+// OutlinedTextField CustomStyle API is binary-incompatible with foundation
+// 1.12.0 (AbstractMethodError mid-attach, half-attached nodes crash
+// composition teardown). Pin the group to the newest 1.5.0-alpha compiled
+// against foundation 1.12 (alpha25); older alphas predate the foundation
+// CustomStyle.applyStyle method and newer ones (alpha26+) drop
+// ExposedDropdownMenu, which the app still uses.
+val material3Version = libs.versions.material3.get()
+subprojects {
+    configurations.configureEach {
+        resolutionStrategy.force(
+            "androidx.compose.material3:material3:$material3Version",
+            "androidx.compose.material3:material3-android:$material3Version",
+            "androidx.compose.material3:material3-adaptive-navigation-suite:$material3Version",
+            "androidx.compose.material3:material3-adaptive-navigation-suite-android:$material3Version",
+        )
+    }
+}
+
 val coverageProjects = listOf(
     ":app",
     ":core:model", ":core:database-schema", ":core:scoring", ":core:database", ":core:healthconnect",

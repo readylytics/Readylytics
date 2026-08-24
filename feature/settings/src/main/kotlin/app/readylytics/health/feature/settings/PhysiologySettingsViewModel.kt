@@ -8,6 +8,7 @@ import app.readylytics.health.core.model.domain.preferences.PhysiologySettings
 import app.readylytics.health.core.model.domain.preferences.UserPreferencesReader
 import app.readylytics.health.core.model.domain.sync.HealthDataRefresh
 import app.readylytics.health.core.model.domain.user.UserProfileActions
+import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.validation.SettingsValidators
 import app.readylytics.health.core.model.domain.validation.ValidationResult
 import app.readylytics.health.core.scoring.domain.scoring.RasCalculator
@@ -64,6 +65,7 @@ class PhysiologySettingsViewModel
                             try {
                                 LocalDate.parse(it)
                             } catch (e: Exception) {
+                                logD("PhysiologySettings") { "Unparseable stored birth date: ${e.message}" }
                                 null
                             }
                         }

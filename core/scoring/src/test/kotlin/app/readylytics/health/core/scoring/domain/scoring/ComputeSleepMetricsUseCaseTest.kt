@@ -176,61 +176,65 @@ class ComputeSleepMetricsUseCaseTest {
     @Test
     fun invoke_rethrowsCancellationException() =
         runTest {
-            val baselineComputer = mockk<BaselineComputer>(relaxed = true)
             val scoringHistoryRepository = mockk<ScoringHistoryRepository>()
-            val scoringCalculator = mockk<ScoringCalculator>(relaxed = true)
-            val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
-            val encryptionManager = mockk<EncryptionManager>(relaxed = true)
-            val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
-            val currentNightHrvResolver = mockk<CurrentNightHrvResolver>(relaxed = true)
-            val sleepNadirAnalyzer = mockk<SleepNadirAnalyzer>(relaxed = true)
-            val hrCoverageValidator = mockk<HrCoverageValidator>(relaxed = true)
             val sleepModifierResolver = mockk<SleepModifierResolver>()
             coEvery { sleepModifierResolver.resolve(any(), any(), any(), any()) } returns SleepModifiers(null, null)
-
             coEvery { scoringHistoryRepository.getDailySummaryByDate(any(), any()) } throws
                 CancellationException("Test cancellation")
 
-            val useCase =
-                ComputeSleepMetricsUseCase(
-                    baselineComputer = baselineComputer,
-                    scoringHistoryRepository = scoringHistoryRepository,
-                    scoringCalculator = scoringCalculator,
-                    scoringConfigFactory = scoringConfigFactory,
-                    encryptionManager = encryptionManager,
-                    hrvResolver = currentNightHrvResolver,
-                    sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
-                    nadirAnalyzer = sleepNadirAnalyzer,
-                    coverageValidator = hrCoverageValidator,
-                    sleepModifierResolver = sleepModifierResolver,
-                )
-
-            val session =
-                SleepSession(
-                    id = "session-1",
-                    startTime = 1000L,
-                    endTime = 2000L,
-                    durationMinutes = 480,
-                    efficiency = 85f,
-                    deepSleepMinutes = 90,
-                    remSleepMinutes = 120,
-                    lightSleepMinutes = 270,
-                    awakeMinutes = 20,
-                )
+            val useCase = testComputeSleepMetricsUseCase(scoringHistoryRepository, sleepModifierResolver)
 
             assertFailsWith<CancellationException> {
-                useCase(
-                    session = session,
-                    dayMidnight = Instant.ofEpochMilli(0),
-                    targetDate = LocalDate.of(2026, 5, 31),
-                    prefs = UserPreferences(),
-                    summary = DailySummary(date = LocalDate.of(2026, 5, 31)),
-                    loadScore = 50f,
-                    loadScoreEverydayHr = null,
-                    zoneId = ZoneId.systemDefault(),
-                    rhrBaselineValue = 60f,
-                    dayEndMs = 86400000L,
-                )
+                useCase(cancellationTestRequest())
             }
         }
 }
+
+private fun testComputeSleepMetricsUseCase(
+    scoringHistoryRepository: ScoringHistoryRepository,
+    sleepModifierResolver: SleepModifierResolver,
+): ComputeSleepMetricsUseCase =
+    ComputeSleepMetricsUseCase(
+        collaborators =
+            SleepMetricsCollaborators(
+                baselineComputer = mockk<BaselineComputer>(relaxed = true),
+                scoringHistoryRepository = scoringHistoryRepository,
+                scoringCalculator = mockk<ScoringCalculator>(relaxed = true),
+                scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true),
+                encryptionManager = mockk<EncryptionManager>(relaxed = true),
+                hrvResolver = mockk<CurrentNightHrvResolver>(relaxed = true),
+                sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true),
+                nadirAnalyzer = mockk<SleepNadirAnalyzer>(relaxed = true),
+                coverageValidator = mockk<HrCoverageValidator>(relaxed = true),
+                sleepModifierResolver = sleepModifierResolver,
+            ),
+    )
+
+private fun cancellationTestRequest(): SleepMetricsRequest =
+    SleepMetricsRequest(
+        session = cancelledSession(),
+        dayMidnight = Instant.ofEpochMilli(0),
+        targetDate = LocalDate.of(2026, 5, 31),
+        prefs = UserPreferences(),
+        summary = DailySummary(date = LocalDate.of(2026, 5, 31)),
+        loadScore = 50f,
+        loadScoreEverydayHr = null,
+        zoneId = ZoneId.systemDefault(),
+        rhrBaselineValue = 60f,
+        dayEndMs = 86400000L,
+        currentSessionIds = emptySet(),
+        prefetchedSessions = null,
+    )
+
+private fun cancelledSession() =
+    SleepSession(
+        id = "session-1",
+        startTime = 1000L,
+        endTime = 2000L,
+        durationMinutes = 480,
+        efficiency = 85f,
+        deepSleepMinutes = 90,
+        remSleepMinutes = 120,
+        lightSleepMinutes = 270,
+        awakeMinutes = 20,
+    )

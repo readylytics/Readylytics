@@ -4,12 +4,9 @@
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
     <ID>CyclomaticComplexMethod:ResyncRangeUseCase.kt$ResyncRangeUseCase$suspend fun run( startDate: LocalDate, endDate: LocalDate, chunkDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, skipIngestAndPrune: Boolean = false, ): Result&lt;Unit&gt;</ID>
-    <ID>EmptyFunctionBlock:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest.RecordingHealthIngestionStore${}</ID>
-    <ID>InstanceOfCheckForException:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$e !is HealthConnectPermissionRevokedException</ID>
     <ID>LargeClass:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl : HealthConnectRepository</ID>
     <ID>LongMethod:DailySyncUseCase.kt$DailySyncUseCase$suspend fun run( windowDays: Int, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, ): Result&lt;Unit&gt;</ID>
     <ID>LongMethod:FirstSetupDummyIngestionFlowTest.kt$FirstSetupDummyIngestionFlowTest$@Test fun `daily sync persists deterministic dummy sleep workout hr and hrv batch`()</ID>
-    <ID>LongMethod:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
     <ID>LongMethod:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$private suspend fun upsertRecord( dataType: HealthDataType, record: Record, prefs: UserPreferences, )</ID>
     <ID>LongMethod:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$override suspend fun discoverDevices(windowDays: Int): List&lt;String&gt;</ID>
     <ID>LongMethod:HealthIngestionCoordinator.kt$HealthIngestionCoordinator$private suspend fun ingestWindowWithinBudget( windowStart: Instant, windowEnd: Instant, prefs: UserPreferences, windowBudgetMs: Long, onProgress: ((phase: ResyncPhase, current: Int, total: Int) -&gt; Unit)?, )</ID>
@@ -17,27 +14,9 @@
     <ID>LongParameterList:DailySyncUseCase.kt$DailySyncUseCase$( private val settingsRepo: SettingsRepository, private val sessionLinkReconciler: SessionLinkReconciler, private val rasSourceModeBootstrapUseCase: RasSourceModeBootstrapUseCase, private val changeSynchronizer: HealthChangeSynchronizer, private val healthIngestionStore: HealthIngestionStore, private val ingestionCoordinator: HealthIngestionCoordinator, private val stepCountFetcher: StepCountFetcher, private val recomputeSupport: DailyRecomputeSupport, private val walDiagnostics: WalDiagnostics, @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher, private val clock: Clock, )</ID>
     <ID>LongParameterList:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$( @param:ApplicationContext private val context: Context, private val tokenStore: HealthChangeTokenStore, private val settingsRepo: SettingsRepository, private val transactionRunner: TransactionRunner, private val sleepSessionDao: SleepSessionDao, private val sleepStageDao: SleepStageDao, private val heartRateDao: HeartRateDao, private val hrvDao: HrvDao, private val workoutDao: WorkoutDao, private val weightRecordDao: WeightRecordDao, private val bodyFatRecordDao: BodyFatRecordDao, private val bloodPressureRecordDao: BloodPressureRecordDao, private val oxygenSaturationRecordDao: OxygenSaturationRecordDao, private val bodyTemperatureRecordDao: BodyTemperatureRecordDao, private val stepRecordDao: StepRecordDao, private val sourceRecordDao: SourceRecordDao, )</ID>
     <ID>LongParameterList:ResyncRangeUseCase.kt$ResyncRangeUseCase$( private val settingsRepo: SettingsRepository, private val sessionLinkReconciler: SessionLinkReconciler, private val changeSynchronizer: HealthChangeSynchronizer, private val selectedSourcePruner: SelectedSourcePruner, private val checkpointStore: ResyncCheckpointStore, private val healthIngestionStore: HealthIngestionStore, private val ingestionCoordinator: HealthIngestionCoordinator, private val stepCountFetcher: StepCountFetcher, private val recomputeSupport: DailyRecomputeSupport, @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher, )</ID>
-    <ID>MaxLineLength:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$"Exercise session ${session.metadata.id} (${session.exerciseType}) route result: ${result.javaClass.simpleName}"</ID>
-    <ID>MaxLineLength:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$"Read single exercise session $id (${record.exerciseType}) route result: ${routeResult.javaClass.simpleName}"</ID>
-    <ID>MaxLineLength:HealthIngestionCoordinator.kt$HealthIngestionCoordinator$val exerciseRecords = retryWithBackoff { hcRepo.readExerciseSessions(windowStart, windowEnd, includeDetails = true) }</ID>
-    <ID>MaxLineLength:ResyncRangeUseCase.kt$ResyncRangeUseCase$"HeartRate: $hrBeforeResync -&gt; $hrBeforePrune (delta: ${hrBeforePrune - hrBeforeResync}), "</ID>
-    <ID>MaxLineLength:ResyncRangeUseCase.kt$ResyncRangeUseCase$"Sleep: $sleepBeforePrune -&gt; $sleepAfterPrune (pruned: ${sleepBeforePrune - sleepAfterPrune}), "</ID>
-    <ID>MaxLineLength:ResyncRangeUseCase.kt$ResyncRangeUseCase$"Sleep: $sleepBeforeResync -&gt; $sleepBeforePrune (delta: ${sleepBeforePrune - sleepBeforeResync}), "</ID>
-    <ID>MaxLineLength:ResyncRangeUseCase.kt$ResyncRangeUseCase$"Workout: $workoutBeforePrune -&gt; $workoutAfterPrune (pruned: ${workoutBeforePrune - workoutAfterPrune})"</ID>
-    <ID>MaxLineLength:ResyncRangeUseCase.kt$ResyncRangeUseCase$"Workout: $workoutBeforeResync -&gt; $workoutBeforePrune (delta: ${workoutBeforePrune - workoutBeforeResync})"</ID>
-    <ID>MaxLineLength:StepCountFetcherRangeTest.kt$StepCountFetcherRangeTest$startDate.atStartOfDay(zoneId).toInstant() to startDate.plusDays(10).atStartOfDay(zoneId).toInstant()</ID>
-    <ID>MaxLineLength:SyncWorkoutRouteUseCaseTest.kt$SyncWorkoutRouteUseCaseTest$coVerify(exactly = 0) { healthIngestionStore.persistSingleWorkoutRoute(any(), any(), any(), any(), any(), any()) }</ID>
-    <ID>NestedBlockDepth:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
     <ID>ReturnCount:DeviceLabel.kt$DeviceLabel$fun from( device: Device?, dataOrigin: DataOrigin, ): String</ID>
     <ID>ReturnCount:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl$override suspend fun applyPendingChanges(): HealthChangeSyncOutcome</ID>
     <ID>ReturnCount:StepCountFetcher.kt$StepCountFetcher$suspend fun fetchRange( startDate: LocalDate, endDate: LocalDate, chunkDays: Int, stepsDevice: String?, zoneId: ZoneId, ): Map&lt;LocalDate, Long&gt;</ID>
-    <ID>SwallowedException:DailySyncUseCase.kt$DailySyncUseCase$e: HealthConnectWindowTimeoutException</ID>
-    <ID>SwallowedException:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$e: Exception</ID>
-    <ID>SwallowedException:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$e: HealthConnectPermissionRevokedException</ID>
-    <ID>SwallowedException:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$e: SecurityException</ID>
-    <ID>SwallowedException:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$e: UnsupportedOperationException</ID>
-    <ID>SwallowedException:ResyncRangeUseCase.kt$ResyncRangeUseCase$e: HealthConnectWindowTimeoutException</ID>
-    <ID>ThrowsCount:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl$private suspend inline fun &lt;reified T : androidx.health.connect.client.records.Record&gt; readAllPagesStreaming( from: Instant, to: Instant, onPage: suspend (List&lt;T&gt;) -&gt; Unit, )</ID>
     <ID>TooManyFunctions:HealthChangeSynchronizerImpl.kt$HealthChangeSynchronizerImpl : HealthChangeSynchronizer</ID>
     <ID>TooManyFunctions:HealthConnectRecordConverters.kt$app.readylytics.health.core.healthconnect.data.healthconnect.HealthConnectRecordConverters.kt</ID>
     <ID>TooManyFunctions:HealthConnectRepositoryImpl.kt$HealthConnectRepositoryImpl : HealthConnectRepository</ID>

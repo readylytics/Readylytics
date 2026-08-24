@@ -8,6 +8,7 @@ import app.readylytics.health.core.database.data.local.RetentionCleanup
 import app.readylytics.health.core.model.domain.migration.DatabaseReadiness
 import app.readylytics.health.core.model.domain.migration.DatabaseReadinessInspector
 import app.readylytics.health.core.model.domain.util.RetentionBounds
+import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.Lazy
 import dagger.assisted.Assisted
@@ -41,6 +42,7 @@ class DataCleanupWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                logE("DataCleanupWorker", e) { "Data cleanup failed" }
                 Result.failure()
             }
         }

@@ -44,7 +44,6 @@ class GetDashboardDataUseCase
                     factory.build(
                         summary,
                         prefs,
-                        date,
                         lastSleepSession,
                         circadianResult,
                         heartRateSummary,

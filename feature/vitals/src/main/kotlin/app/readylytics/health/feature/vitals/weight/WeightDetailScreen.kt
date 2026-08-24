@@ -281,7 +281,6 @@ fun WeightDetailScreen(
                         points = uiState.dailyWeights,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
-                        metricName = "Weight",
                         baselineUnit = unitLabel,
                         baseline = uiState.averageWeight,
                         baselineLabel = stringResource(CoreUiR.string.label_average),

@@ -81,16 +81,17 @@ fun DailySummary.rhrStatus(
 fun DailySummary.restingHrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
-): MetricStatus {
-    restingHeartRate ?: return MetricStatus.CALIBRATING
-    restingHrRatio ?: return MetricStatus.CALIBRATING
-    return assessRhr(
-        value = restingHeartRate,
-        baseline = rhrBpm?.roundToInt(),
-        optimalRatio = optimalThreshold,
-        warningRatio = warningThreshold,
-    ).status
-}
+): MetricStatus =
+    if (restingHeartRate == null || restingHrRatio == null) {
+        MetricStatus.CALIBRATING
+    } else {
+        assessRhr(
+            value = restingHeartRate,
+            baseline = rhrBpm?.roundToInt(),
+            optimalRatio = optimalThreshold,
+            warningRatio = warningThreshold,
+        ).status
+    }
 
 fun DailySummary.hrvStatus(
     optimalThreshold: Float,

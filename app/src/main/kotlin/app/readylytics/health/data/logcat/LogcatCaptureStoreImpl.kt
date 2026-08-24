@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import app.readylytics.health.core.model.di.IoDispatcher
 import app.readylytics.health.core.model.domain.logcat.LogcatCaptureStore
+import app.readylytics.health.core.model.domain.util.logW
 import app.readylytics.health.di.ReleaseLogSink
 import app.readylytics.health.util.SecureFileLogSink
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,7 +23,7 @@ class LogcatCaptureStoreImpl
         @ReleaseLogSink private val logSink: SecureFileLogSink,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : LogcatCaptureStore {
-        internal var debugLogReader: suspend (Int) -> String? = ::readFromLogcat
+        internal var debugLogReader: suspend (Int) -> String? = { readFromLogcat() }
 
         override suspend fun capture(durationMinutes: Int): String? =
             withContext(ioDispatcher) {
@@ -40,6 +41,7 @@ class LogcatCaptureStoreImpl
                     file.writeText(logs)
                     logs
                 } catch (e: IOException) {
+                    logW("LogcatCaptureStore", e) { "Failed to persist captured logcat" }
                     null
                 }
             }
@@ -48,7 +50,7 @@ class LogcatCaptureStoreImpl
 
         private fun isDebugBuild(): Boolean = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
-        private fun readFromLogcat(durationMinutes: Int): String? {
+        private fun readFromLogcat(): String? {
             val process =
                 Runtime
                     .getRuntime()

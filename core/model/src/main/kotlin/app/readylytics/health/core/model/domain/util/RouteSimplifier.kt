@@ -13,8 +13,18 @@ object RouteSimplifier {
         if (points.size <= 2) return points
 
         val collinear = douglasPeucker(points, tolerance = 0.0)
-        if (collinear.size <= maxPoints) return collinear
+        return if (collinear.size <= maxPoints) {
+            collinear
+        } else {
+            val high = binarySearchTolerance(points, maxPoints)
+            douglasPeucker(points, high)
+        }
+    }
 
+    private fun binarySearchTolerance(
+        points: List<ProjectedPoint>,
+        maxPoints: Int,
+    ): Double {
         var low = 0.0
         var high = 2.0
         repeat(60) {
@@ -25,7 +35,7 @@ object RouteSimplifier {
                 low = mid
             }
         }
-        return douglasPeucker(points, high)
+        return high
     }
 
     private fun douglasPeucker(
@@ -68,9 +78,10 @@ object RouteSimplifier {
         val dx = (b.x - a.x).toDouble()
         val dy = (b.y - a.y).toDouble()
         val length = hypot(dx, dy)
-        if (length == 0.0) {
-            return hypot((p.x - a.x).toDouble(), (p.y - a.y).toDouble())
+        return if (length == 0.0) {
+            hypot((p.x - a.x).toDouble(), (p.y - a.y).toDouble())
+        } else {
+            abs(dy * (p.x - a.x) - dx * (p.y - a.y)) / length
         }
-        return abs(dy * (p.x - a.x) - dx * (p.y - a.y)) / length
     }
 }

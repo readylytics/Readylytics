@@ -46,6 +46,8 @@ import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
 import app.readylytics.health.feature.vitals.R
 import app.readylytics.health.feature.vitals.UniversalVitalsMetricCard
+import app.readylytics.health.feature.vitals.common.computeBloodPressureDelta
+import app.readylytics.health.feature.vitals.common.formatBloodPressureDelta
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -138,19 +140,8 @@ fun BloodPressureDetailScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val systolicDelta =
-                        if (uiState.latestSystolic != null) {
-                            val diff = (uiState.latestSystolic - 120)
-                            when {
-                                diff > 0 ->
-                                    stringResource(CoreUiR.string.delta_up) + " $diff " +
-                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
-                                diff < 0 ->
-                                    stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
-                                else -> stringResource(CoreUiR.string.delta_no_change)
-                            }
-                        } else {
-                            null
+                        computeBloodPressureDelta(uiState.latestSystolic, 120)?.let { diff ->
+                            formatBloodPressureDelta(diff)
                         }
 
                     UniversalVitalsMetricCard(
@@ -170,19 +161,8 @@ fun BloodPressureDetailScreen(
                     )
 
                     val diastolicDelta =
-                        if (uiState.latestDiastolic != null) {
-                            val diff = (uiState.latestDiastolic - 80)
-                            when {
-                                diff > 0 ->
-                                    stringResource(CoreUiR.string.delta_up) + " $diff " +
-                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
-                                diff < 0 ->
-                                    stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
-                                else -> stringResource(CoreUiR.string.delta_no_change)
-                            }
-                        } else {
-                            null
+                        computeBloodPressureDelta(uiState.latestDiastolic, 80)?.let { diff ->
+                            formatBloodPressureDelta(diff)
                         }
 
                     UniversalVitalsMetricCard(

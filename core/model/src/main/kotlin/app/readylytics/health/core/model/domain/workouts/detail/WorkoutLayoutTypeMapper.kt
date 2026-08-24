@@ -44,14 +44,17 @@ object WorkoutLayoutTypeMapper {
 
     fun fromExerciseType(raw: String): WorkoutLayoutType {
         val trimmed = raw.trim()
-        if (trimmed.isEmpty()) return WorkoutLayoutType.OTHER
-        BY_NUMERIC_ID[trimmed]?.let { return it }
+        val numericMatch = BY_NUMERIC_ID[trimmed]
         val normalized =
             trimmed
                 .removePrefix("EXERCISE_TYPE_")
                 .replace('_', ' ')
                 .trim()
                 .lowercase()
-        return BY_NAME[normalized] ?: WorkoutLayoutType.OTHER
+        return when {
+            trimmed.isEmpty() -> WorkoutLayoutType.OTHER
+            numericMatch != null -> numericMatch
+            else -> BY_NAME[normalized] ?: WorkoutLayoutType.OTHER
+        }
     }
 }

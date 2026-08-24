@@ -7,6 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
@@ -31,8 +32,10 @@ import app.readylytics.health.core.model.data.preferences.Gender
 import app.readylytics.health.core.model.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.model.domain.preferences.SettingsRepository
 import app.readylytics.health.core.model.data.preferences.UserPreferences
+import app.readylytics.health.core.database.data.repository.BodyMetricsDataLoader
 import app.readylytics.health.core.database.data.repository.ReadinessSummaryCoordinator
 import app.readylytics.health.core.database.data.repository.ScoringDayDataLoader
+import app.readylytics.health.core.database.data.repository.ScoringSeriesLoader
 import app.readylytics.health.core.database.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.core.database.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.core.database.data.repository.SleepSessionRepositoryImpl
@@ -182,16 +185,18 @@ class ScoringRepositoryN1Test {
             app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifiers(null, null)
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
-                baselineComputer,
-                scoringHistoryRepository,
-                scoringCalculator,
-                scoringConfigFactory,
-                encryptionManager,
-                hrvResolver,
-                sleepPercentileRhrCalculator,
-                nadirAnalyzer,
-                coverageValidator,
-                sleepModifierResolver,
+                SleepMetricsCollaborators(
+                    baselineComputer,
+                    scoringHistoryRepository,
+                    scoringCalculator,
+                    scoringConfigFactory,
+                    encryptionManager,
+                    hrvResolver,
+                    sleepPercentileRhrCalculator,
+                    nadirAnalyzer,
+                    coverageValidator,
+                    sleepModifierResolver,
+                ),
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
@@ -210,12 +215,22 @@ class ScoringRepositoryN1Test {
                 oxygenSaturationRecordDao,
                 bodyTemperatureRecordDao,
             )
+        val bodyMetricsDataLoader =
+            BodyMetricsDataLoader(
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
+            )
+        val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
         val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
         val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)
         val assembleDailySummaryUseCase = AssembleDailySummaryUseCase()
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader = dataLoader,
+                seriesLoader = seriesLoader,
                 scoringHistoryRepository = scoringHistoryRepository,
                 baselineComputer = baselineComputer,
                 buildLoadSeriesUseCase = buildLoadSeriesUseCase,
@@ -227,6 +242,8 @@ class ScoringRepositoryN1Test {
         repo =
             ScoringRepositoryImpl(
                 dataLoader = dataLoader,
+                bodyMetricsDataLoader = bodyMetricsDataLoader,
+                seriesLoader = seriesLoader,
                 settingsRepo = settingsRepo,
                 baselineComputer = baselineComputer,
                 scoringConfigFactory = scoringConfigFactory,

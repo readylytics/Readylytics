@@ -22,6 +22,8 @@ import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.model.Result
 import app.readylytics.health.core.model.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.core.model.domain.scoring.*
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsRequest
 import app.readylytics.health.core.scoring.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.CoroutineDispatcher
@@ -72,6 +74,15 @@ class ScoringRepositoryImplTest {
             oxygenSaturationRecordDao,
             bodyTemperatureRecordDao,
         )
+    private val bodyMetricsDataLoader =
+        BodyMetricsDataLoader(
+            weightRecordDao,
+            bodyFatRecordDao,
+            bloodPressureRecordDao,
+            oxygenSaturationRecordDao,
+            bodyTemperatureRecordDao,
+        )
+    private val seriesLoader = ScoringSeriesLoader(workoutDao, dailySummaryDao)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -79,6 +90,7 @@ class ScoringRepositoryImplTest {
         val readinessSummaryCoordinator =
             ReadinessSummaryCoordinator(
                 dataLoader,
+                seriesLoader,
                 scoringHistoryRepository,
                 baselineComputer,
                 BuildLoadSeriesUseCase(scoringCalculator),
@@ -88,6 +100,8 @@ class ScoringRepositoryImplTest {
             )
         return ScoringRepositoryImpl(
             dataLoader,
+            bodyMetricsDataLoader,
+            seriesLoader,
             settingsRepo,
             baselineComputer,
             scoringConfigFactory,
@@ -162,22 +176,11 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.getOverlapping(any(), any()) } returns listOf(mockSession)
 
             // Ensure use case returns different hrvMuMssd values based on date
+            val sleepMetricsSlot = slot<SleepMetricsRequest>()
             coEvery {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                computeSleepMetricsUseCase(capture(sleepMetricsSlot))
             } answers {
-                when (thirdArg<LocalDate>()) {
+                when (sleepMetricsSlot.captured.targetDate) {
                     today ->
                         Result.success(
                             DailySummaryMapper.toDomain(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f), zoneId),
@@ -217,19 +220,7 @@ class ScoringRepositoryImplTest {
 
             // Ensure use case returns success
             coEvery {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                computeSleepMetricsUseCase(any())
             } returns
                 Result
                     .success(DailySummaryMapper.toDomain(existingSummary, zoneId))
@@ -263,19 +254,7 @@ class ScoringRepositoryImplTest {
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                computeSleepMetricsUseCase(any())
             } returns
                 Result.success(
                     DailySummaryMapper.toDomain(
@@ -300,19 +279,7 @@ class ScoringRepositoryImplTest {
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                computeSleepMetricsUseCase(any())
             } returns
                 Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), ZoneId.systemDefault()))
 
@@ -353,18 +320,7 @@ class ScoringRepositoryImplTest {
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                computeSleepMetricsUseCase(any())
             } returns
                 Result
                     .success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
@@ -433,7 +389,7 @@ class ScoringRepositoryImplTest {
                 computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
             coEvery {
-                computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                computeSleepMetricsUseCase(any())
             } returns Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
 
             val workoutSlot = slot<List<WorkoutRecordEntity>>()
@@ -477,7 +433,7 @@ class ScoringRepositoryImplTest {
                 computeWorkoutTrimpUseCase.execute(any(), any(), any(), any(), any(), any(), any(), any())
             } returns Result.success(55f)
             coEvery {
-                computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                computeSleepMetricsUseCase(any())
             } returns Result.success(DailySummaryMapper.toDomain(DailySummaryEntity(0L), zoneId))
 
             repo.computeDailySummary(today)
@@ -515,19 +471,7 @@ class ScoringRepositoryImplTest {
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
-                computeSleepMetricsUseCase(
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                    any(),
-                )
+                computeSleepMetricsUseCase(any())
             } returns
                 Result.success(
                     DailySummaryMapper.toDomain(

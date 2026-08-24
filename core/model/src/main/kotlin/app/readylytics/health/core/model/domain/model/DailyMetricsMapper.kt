@@ -1,7 +1,8 @@
 package app.readylytics.health.core.model.domain.model
 
+import app.readylytics.health.core.model.data.preferences.UserPreferences
 import app.readylytics.health.core.model.domain.display.MetricFormatter
-import app.readylytics.health.core.model.domain.preferences.UserPreferences
+import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.util.UnitConverter
 import java.util.Locale
 import kotlin.math.abs
@@ -28,10 +29,29 @@ object DailyMetricsMapper {
         val rhrBaselineRounded = rhrBaselineRounded(summary, prefs)
         val hrvBaselineRoundedValue = hrvBaselineRounded(summary, prefs)
         val rhrSnapshotRaw = acceptedRhrSnapshotRaw(summary)
+        return buildDailyMetrics(
+            summary = summary,
+            prefs = prefs,
+            rhrBaselineRaw = rhrBaselineRaw,
+            rhrBaselineRounded = rhrBaselineRounded,
+            hrvBaselineRoundedValue = hrvBaselineRoundedValue,
+            rhrSnapshotRaw = rhrSnapshotRaw,
+        )
+    }
+
+    private fun buildDailyMetrics(
+        summary: DailySummary,
+        prefs: UserPreferences,
+        rhrBaselineRaw: Float?,
+        rhrBaselineRounded: Int?,
+        hrvBaselineRoundedValue: Int?,
+        rhrSnapshotRaw: Float?,
+    ): DailyMetrics {
+        val loadScoreMetrics = buildLoadScoreMetrics(summary, prefs)
+        val baselineComparisons = buildBaselineComparisons(summary, rhrBaselineRounded, hrvBaselineRoundedValue)
 
         return DailyMetrics(
             date = summary.date,
-            // Raw passthrough
             nocturnalRhrRaw = summary.restingHeartRate,
             nocturnalHrvRaw = summary.nocturnalHrv,
             rhrBaselineRaw = rhrBaselineRaw,
@@ -39,47 +59,100 @@ object DailyMetricsMapper {
             hrvBaselineSdRaw = summary.hrvSigmaMssd,
             rhrSnapshotRaw = rhrSnapshotRaw,
             strainRatioRaw = LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode),
-            // Rounded display ints
             nocturnalRhrRounded = summary.restingHeartRate,
             nocturnalHrvRounded = summary.nocturnalHrv,
             restingHeartRateRounded = summary.restingHeartRate,
             rhrBaselineRounded = rhrBaselineRounded,
             hrvBaselineRounded = hrvBaselineRoundedValue,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
-            readinessRounded = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt(),
-            loadScoreRounded = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt(),
+            readinessRounded = loadScoreMetrics.readiness,
+            loadScoreRounded = loadScoreMetrics.load,
             restorationRounded = summary.sRest?.roundToInt(),
-            trimpRounded = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt(),
-            rasRounded = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt(),
-            rasDayScoreRounded = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt(),
+            trimpRounded = loadScoreMetrics.trimp,
+            rasRounded = loadScoreMetrics.rasTotal,
+            rasDayScoreRounded = loadScoreMetrics.rasDay,
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
-            // Baseline diffs + arrows
-            rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
-            hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRoundedValue),
-            restingHrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
-            rhrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
-            hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRoundedValue),
-            restingHrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
-            // Display strings
+            rhrBaselineDiff = baselineComparisons.rhrDiff,
+            hrvBaselineDiff = baselineComparisons.hrvDiff,
+            restingHrBaselineDiff = baselineComparisons.rhrDiff,
+            rhrBaselineArrow = baselineComparisons.rhrArrow,
+            hrvBaselineArrow = baselineComparisons.hrvArrow,
+            restingHrBaselineArrow = baselineComparisons.rhrArrow,
             sleepDurationDisplay = formatSleepDuration(summary.sleepDurationMinutes),
-            weightKgDisplay = summary.weightKg?.let { format1(it) },
-            weightLbsDisplay = summary.weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) },
-            bodyFatDisplay = summary.bodyFatPercent?.let { "${format1(it)}%" },
-            strainRatioDisplay =
-                LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode)?.let {
-                    MetricFormatter.formatStrain(it)
-                },
+            weightKgDisplay = formatWeight(summary.weightKg),
+            weightLbsDisplay = formatWeightLbs(summary.weightKg),
+            bodyFatDisplay = formatBodyFatPercent(summary.bodyFatPercent),
+            strainRatioDisplay = formatStrainRatio(summary, prefs.strainLoadSourceMode),
             zLnHrvDisplay = summary.zLnHrv?.let { format2(it) },
             hrvSigmaDisplay = summary.hrvSigma?.let { format3(it) },
             bloodPressureDisplay = formatBloodPressure(summary.bloodPressureSystolic, summary.bloodPressureDiastolic),
-            deepSleepPercentDisplay = summary.deepSleepPercent?.let { "${it.roundToInt()}%" },
-            remSleepPercentDisplay = summary.remSleepPercent?.let { "${it.roundToInt()}%" },
+            deepSleepPercentDisplay = formatPercentDisplay(summary.deepSleepPercent),
+            remSleepPercentDisplay = formatPercentDisplay(summary.remSleepPercent),
             needsRecalc = LoadSourceSelector.needsRecalc(summary, prefs),
             readinessLowConfidence = LoadSourceSelector.readinessLowConfidence(summary, prefs),
             napDurationDisplay = summary.supplementalSleepDurationMinutes?.let(::formatSleepDuration),
             napCount = summary.napCount,
         )
     }
+
+    private data class BaselineComparisons(
+        val rhrDiff: Int?,
+        val hrvDiff: Int?,
+        val rhrArrow: BaselineArrow?,
+        val hrvArrow: BaselineArrow?,
+    )
+
+    private data class LoadScoreMetrics(
+        val readiness: Int?,
+        val load: Int?,
+        val trimp: Int?,
+        val rasTotal: Int?,
+        val rasDay: Int?,
+    )
+
+    private fun buildBaselineComparisons(
+        summary: DailySummary,
+        rhrBaselineRounded: Int?,
+        hrvBaselineRoundedValue: Int?,
+    ): BaselineComparisons {
+        val rhrDiff = diff(summary.restingHeartRate, rhrBaselineRounded)
+        val hrvDiff = diff(summary.nocturnalHrv, hrvBaselineRoundedValue)
+        val rhrArrow = arrow(summary.restingHeartRate, rhrBaselineRounded)
+        val hrvArrow = arrow(summary.nocturnalHrv, hrvBaselineRoundedValue)
+        return BaselineComparisons(rhrDiff, hrvDiff, rhrArrow, hrvArrow)
+    }
+
+    private fun buildLoadScoreMetrics(
+        summary: DailySummary,
+        prefs: UserPreferences,
+    ): LoadScoreMetrics {
+        val readiness = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt()
+        val load = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt()
+        val trimp = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt()
+        val rasTotal = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt()
+        val rasDay = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt()
+        return LoadScoreMetrics(readiness, load, trimp, rasTotal, rasDay)
+    }
+
+    private fun formatWeight(weightKg: Float?): String? =
+        weightKg?.let { format1(it) }
+
+    private fun formatWeightLbs(weightKg: Float?): String? =
+        weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) }
+
+    private fun formatBodyFatPercent(bodyFatPercent: Float?): String? =
+        bodyFatPercent?.let { "${format1(it)}%" }
+
+    private fun formatStrainRatio(
+        summary: DailySummary,
+        loadSourceMode: LoadSourceMode,
+    ): String? =
+        LoadSourceSelector.selectStrainRatio(summary, loadSourceMode)?.let {
+            MetricFormatter.formatStrain(it)
+        }
+
+    private fun formatPercentDisplay(percent: Float?): String? =
+        percent?.let { "${it.roundToInt()}%" }
 
     private fun deriveRhrBaselineRaw(
         summary: DailySummary,
@@ -162,9 +235,11 @@ object DailyMetricsMapper {
         systolic: Int?,
         diastolic: Int?,
     ): String? {
-        if (systolic == null || diastolic == null || systolic == 0 || diastolic == 0) return null
+        if (!isValidPressure(systolic) || !isValidPressure(diastolic)) return null
         return "$systolic/$diastolic"
     }
+
+    private fun isValidPressure(value: Int?): Boolean = value != null && value > 0
 
     private fun format1(value: Float): String = String.format(Locale.getDefault(), "%.1f", value)
 

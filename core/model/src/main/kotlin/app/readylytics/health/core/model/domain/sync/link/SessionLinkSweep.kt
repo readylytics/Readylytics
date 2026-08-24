@@ -20,9 +20,13 @@ class SessionLinkSweep(
     private val workoutCursor = SpanCursor(workoutSessions)
 
     fun resolve(sampleMs: Long): SampleLink {
-        sleepCursor.advanceTo(sampleMs)?.let { return SampleLink(RecordType.SLEEP.name, it.id) }
-        workoutCursor.advanceTo(sampleMs)?.let { return SampleLink(RecordType.EXERCISE.name, it.id) }
-        return SampleLink(RecordType.RESTING.name, null)
+        val sleepSpan = sleepCursor.advanceTo(sampleMs)
+        val workoutSpan = workoutCursor.advanceTo(sampleMs)
+        return when {
+            sleepSpan != null -> SampleLink(RecordType.SLEEP.name, sleepSpan.id)
+            workoutSpan != null -> SampleLink(RecordType.EXERCISE.name, workoutSpan.id)
+            else -> SampleLink(RecordType.RESTING.name, null)
+        }
     }
 
     /**

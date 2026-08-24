@@ -51,9 +51,9 @@ class LoadScoringStrategy
             frozenLnMu: Float? = null,
             frozenLnSigma: Float? = null,
         ): Float? {
-            if (currentRmssdMs <= 0f ||
-                (frozenLnMu == null && baselineOverride == null && muHistory.isEmpty())
-            ) {
+            val hasNoBaselineReference =
+                frozenLnMu == null && baselineOverride == null && muHistory.isEmpty()
+            if (currentRmssdMs <= 0f || hasNoBaselineReference) {
                 return null
             }
             val lnMuHistory = muHistory.map { ln(it.coerceAtLeast(0.001f)) }

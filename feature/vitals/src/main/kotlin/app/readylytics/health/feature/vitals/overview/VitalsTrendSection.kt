@@ -131,7 +131,6 @@ private fun HrvTrendChartBlock(
                     points = chartSeries.hrv,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_hrv),
                     baselineUnit = stringResource(CoreUiR.string.unit_ms),
                     modifier = Modifier.testTag("HrvTrendChart"),
                     baseline =
@@ -179,7 +178,6 @@ private fun RhrTrendChartBlock(
                     points = chartSeries.rhr,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_rhr),
                     baselineUnit = stringResource(CoreUiR.string.unit_bpm),
                     modifier = Modifier.testTag("RestingHeartRateTrendChart"),
                     baseline =
@@ -227,7 +225,6 @@ private fun Spo2TrendChartBlock(
                     points = chartSeries.spo2,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_spo2),
                     baselineUnit = stringResource(CoreUiR.string.unit_percent),
                     modifier = Modifier.testTag("OxygenSaturationTrendChart"),
                     baseline = 95f,
@@ -271,7 +268,6 @@ private fun BodyTempTrendChartBlock(
                     points = chartSeries.bodyTemp,
                     rangeStartMs = chartInputs.rangeStartMs,
                     rangeDays = chartInputs.selectedRange.days,
-                    metricName = stringResource(CoreUiR.string.label_body_temperature),
                     baselineUnit =
                         if (presentation.bodyTempUnitSystem == UnitSystem.IMPERIAL) {
                             stringResource(CoreUiR.string.unit_fahrenheit)

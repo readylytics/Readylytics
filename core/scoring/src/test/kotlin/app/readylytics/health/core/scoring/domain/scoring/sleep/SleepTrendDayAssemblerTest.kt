@@ -101,7 +101,10 @@ class SleepTrendDayAssemblerTest {
             policy(),
         )
 
-        assertEquals(listOf(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 3)), result.map { it.scoreDay })
+        assertEquals(
+            listOf(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 3)),
+            result.map { it.scoreDay },
+        )
         assertEquals(emptyList(), result[0].naps)
         assertEquals(null, result[2].coreStartTimeMs)
         assertEquals(listOf(earlier.startTimeMs, later.startTimeMs), result[1].naps.map { it.startTimeMs })
@@ -147,5 +150,11 @@ class SleepTrendDayAssemblerTest {
         light: Int = 0,
         durationMinutes: Int = Duration.between(start, end).toMinutes().toInt(),
     ): SleepDaySegment =
-        SleepDaySegment(id, start.toInstant().toEpochMilli(), end.toInstant().toEpochMilli(), durationMinutes, lightSleepMinutes = light)
+        SleepDaySegment(
+            stableId = id,
+            startTimeMs = start.toInstant().toEpochMilli(),
+            endTimeMs = end.toInstant().toEpochMilli(),
+            durationMinutes = durationMinutes,
+            lightSleepMinutes = light,
+        )
 }
