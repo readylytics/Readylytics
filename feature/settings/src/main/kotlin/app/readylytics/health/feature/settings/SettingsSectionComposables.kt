@@ -69,7 +69,7 @@ internal fun DataBackupSyncSection(
 @Composable
 internal fun BaselinesThresholdsSection(context: BaselinesThresholdsContext) {
     Column {
-        ActivityThresholdsSubsection(stepGoal = context.uiState.stepGoal, onUIEvent = context.onSleepEvent)
+        ActivityThresholdsSubsection(stepGoal = context.uiState.stepGoal, onUIEvent = context.onUIEvent)
         SleepThresholdsSubsection(
             sleepState = context.sleepState,
             onSleepEvent = context.onSleepEvent,

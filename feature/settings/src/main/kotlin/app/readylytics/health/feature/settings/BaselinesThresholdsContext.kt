@@ -13,6 +13,7 @@ internal data class BaselinesThresholdsContext(
     val controlsEnabled: Boolean,
     val onThresholdEvent: (SettingsEvent) -> Unit,
     val onSleepEvent: (SettingsEvent) -> Unit,
+    val onUIEvent: (SettingsEvent) -> Unit,
     val onPhysiologyEvent: (SettingsEvent) -> Unit,
     val onHeartRateEvent: (SettingsEvent) -> Unit,
 )

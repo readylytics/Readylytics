@@ -203,7 +203,7 @@ private fun migrateBirthdateFields(
         val clampedDay = day.coerceIn(1, daysInMonth)
         val birthDate = LocalDate.of(year, clampedMonth, clampedDay)
         if (birthDate > LocalDate.now()) null else birthDate.toString()
-    } catch (_: java.time.DateTimeException) {
+    } catch (_: Exception) {
         null
     }
 }

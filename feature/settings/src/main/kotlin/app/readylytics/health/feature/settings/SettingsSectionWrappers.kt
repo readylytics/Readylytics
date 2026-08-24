@@ -85,6 +85,7 @@ internal fun BaselinesThresholdsSectionWrapper(
                     controlsEnabled = controlsEnabled,
                     onThresholdEvent = intents.onThresholdEvent,
                     onSleepEvent = intents.onSleepEvent,
+                    onUIEvent = intents.onUIEvent,
                     onPhysiologyEvent = intents.onPhysiologyEvent,
                     onHeartRateEvent = intents.onHeartRateEvent,
                 ),

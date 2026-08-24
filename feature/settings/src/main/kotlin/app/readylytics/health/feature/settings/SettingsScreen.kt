@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -281,7 +282,7 @@ private fun SettingsScreenContent(
 }
 
 @Composable
-private fun SettingsContentScroll(context: SettingsContentScrollContext) {
+private fun ColumnScope.SettingsContentScroll(context: SettingsContentScrollContext) {
     Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
         Column(modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.pageSectionGapSmall)) {
                 SettingsSearchBar(searchQuery = context.searchQuery, onSearchQueryChanged = context.onSearchQueryChanged)

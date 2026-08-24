@@ -275,7 +275,7 @@ class ReadinessSummaryCoordinator
             base: ReadinessBaseInputs,
             context: CalibratedScoringContext,
             withLoadSummary: DailySummary,
-            loadSeries: BuildLoadSeriesUseCase.LoadSeries,
+            loadSeries: BuildLoadSeriesUseCase.LoadSeriesResult,
             computedHrvBaseline: Int?,
         ): DailySummary {
             val withHrvBaseline = withLoadSummary.copy(hrvBaseline = computedHrvBaseline)
