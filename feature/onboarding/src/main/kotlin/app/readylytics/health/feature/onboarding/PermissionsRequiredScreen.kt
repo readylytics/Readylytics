@@ -20,7 +20,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.feature.onboarding.R
-import app.readylytics.health.core.ui.R as CoreR
 
 @Composable
 fun PermissionsRequiredScreen(

@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.core.designsystem.spacing
@@ -34,13 +33,10 @@ import app.readylytics.health.core.scoring.domain.insights.InsightParams
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
-import app.readylytics.health.core.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
-import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.components.rememberManageLayoutState
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import app.readylytics.health.core.ui.R as CoreUiR
 
 internal data class ColoredSnackbarVisuals(
     override val message: String,
@@ -62,7 +58,6 @@ data class DashboardNavigationCallbacks(
     val onNavigateToBloodPressure: () -> Unit = {},
     val onNavigateToVitals: () -> Unit = {},
 )
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +81,6 @@ internal fun CardManagementSheet(
         )
     }
 }
-
 
 @Composable
 internal fun MetricGridSection(

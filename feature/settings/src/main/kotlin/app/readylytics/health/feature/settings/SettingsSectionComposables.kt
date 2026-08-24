@@ -22,18 +22,14 @@ import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.model.data.preferences.AppTheme
 import app.readylytics.health.core.model.domain.githubissue.GitHubIssueType
-import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
-import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.feature.settings.backup.LocalBackupSection
 import app.readylytics.health.feature.settings.common.CustomColorPicker
 import app.readylytics.health.feature.settings.data.DataManagementSection
-import app.readylytics.health.feature.settings.data.DataSourceSettingsSection
 import app.readylytics.health.feature.settings.data.SyncSettingsSection
-import app.readylytics.health.feature.settings.physiologyprofile.HeartRateZoneSection
 import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
@@ -102,7 +98,6 @@ internal fun BaselinesThresholdsSection(context: BaselinesThresholdsContext) {
     }
 }
 
-
 @Composable
 internal fun DisplaySettingsSection(
     uiState: UIState,
@@ -144,10 +139,11 @@ private fun DynamicColorSettings(
                 selectedColor = Color(uiState.customPrimaryColor),
                 onColorSelected = { onUIEvent(SettingsEvent.CustomPrimaryColorChanged(it.toArgb().toLong())) },
                 enabled = true,
-                modifier = Modifier.fillMaxWidth().padding(
-                    horizontal = MaterialTheme.spacing.pageHorizontal,
-                    vertical = MaterialTheme.spacing.small,
-                ),
+                modifier =
+                    Modifier.fillMaxWidth().padding(
+                        horizontal = MaterialTheme.spacing.pageHorizontal,
+                        vertical = MaterialTheme.spacing.small,
+                    ),
             )
             PaletteCustomizationSettings(uiState = uiState, onUIEvent = onUIEvent)
         }
@@ -166,29 +162,34 @@ private fun PaletteCustomizationSettings(
         onCheckedChange = { onUIEvent(SettingsEvent.CustomPaletteEnabledChanged(it)) },
     )
     val primarySeed = Color(uiState.customPrimaryColor)
-    val currentSecondary = if (uiState.isCustomPaletteEnabled) {
-        Color(uiState.customSecondaryColor)
-    } else {
-        calculateSecondarySeedColor(primarySeed)
-    }
-    val currentTertiary = if (uiState.isCustomPaletteEnabled) {
-        Color(uiState.customTertiaryColor)
-    } else {
-        calculateTertiarySeedColor(primarySeed)
-    }
+    val currentSecondary =
+        if (uiState.isCustomPaletteEnabled) {
+            Color(uiState.customSecondaryColor)
+        } else {
+            calculateSecondarySeedColor(primarySeed)
+        }
+    val currentTertiary =
+        if (uiState.isCustomPaletteEnabled) {
+            Color(uiState.customTertiaryColor)
+        } else {
+            calculateTertiarySeedColor(primarySeed)
+        }
     CustomColorPicker(
         label = stringResource(R.string.settings_secondary_color_label),
         selectedColor = currentSecondary,
         onColorSelected = { onUIEvent(SettingsEvent.CustomSecondaryColorChanged(it.toArgb().toLong())) },
         enabled = uiState.isCustomPaletteEnabled,
-        modifier = Modifier.fillMaxWidth().padding(
-            horizontal = MaterialTheme.spacing.pageHorizontal,
-            vertical = MaterialTheme.spacing.small,
-        ),
+        modifier =
+            Modifier.fillMaxWidth().padding(
+                horizontal = MaterialTheme.spacing.pageHorizontal,
+                vertical = MaterialTheme.spacing.small,
+            ),
         onReset = {
-            onUIEvent(SettingsEvent.CustomSecondaryColorChanged(
-                calculateSecondarySeedColor(primarySeed).toArgb().toLong(),
-            ))
+            onUIEvent(
+                SettingsEvent.CustomSecondaryColorChanged(
+                    calculateSecondarySeedColor(primarySeed).toArgb().toLong(),
+                ),
+            )
         },
         showPresets = false,
     )
@@ -197,23 +198,24 @@ private fun PaletteCustomizationSettings(
         selectedColor = currentTertiary,
         onColorSelected = { onUIEvent(SettingsEvent.CustomTertiaryColorChanged(it.toArgb().toLong())) },
         enabled = uiState.isCustomPaletteEnabled,
-        modifier = Modifier.fillMaxWidth().padding(
-            horizontal = MaterialTheme.spacing.pageHorizontal,
-            vertical = MaterialTheme.spacing.small,
-        ),
+        modifier =
+            Modifier.fillMaxWidth().padding(
+                horizontal = MaterialTheme.spacing.pageHorizontal,
+                vertical = MaterialTheme.spacing.small,
+            ),
         onReset = {
-            onUIEvent(SettingsEvent.CustomTertiaryColorChanged(
-                calculateTertiarySeedColor(primarySeed).toArgb().toLong(),
-            ))
+            onUIEvent(
+                SettingsEvent.CustomTertiaryColorChanged(
+                    calculateTertiarySeedColor(primarySeed).toArgb().toLong(),
+                ),
+            )
         },
         showPresets = false,
     )
 }
 
 @Composable
-internal fun IssueReportingSection(
-    onReportTypeSelected: (GitHubIssueType) -> Unit,
-) {
+internal fun IssueReportingSection(onReportTypeSelected: (GitHubIssueType) -> Unit) {
     Column {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),

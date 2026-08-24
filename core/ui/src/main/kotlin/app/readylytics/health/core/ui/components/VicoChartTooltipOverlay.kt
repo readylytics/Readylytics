@@ -208,8 +208,7 @@ private fun calculateTapYCoordinate(
     minY: Double?,
     maxY: Double?,
     containerHeightPx: Float,
-): Float? =
-    selectedPointOffset?.y ?: calculateYFromDataCoordinate(externalDataY, minY, maxY, containerHeightPx)
+): Float? = selectedPointOffset?.y ?: calculateYFromDataCoordinate(externalDataY, minY, maxY, containerHeightPx)
 
 @Composable
 private fun calculateYFromDataCoordinate(

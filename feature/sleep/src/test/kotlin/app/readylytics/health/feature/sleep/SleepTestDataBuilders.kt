@@ -5,10 +5,8 @@ import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import java.time.LocalDate
 import java.time.ZoneId
 
-/**
- * Test data builders for sleep feature tests.
- * Extracts builder helpers to reduce method length and improve testability.
- */
+// Test data builders for sleep feature tests.
+// Extracts builder helpers to reduce method length and improve testability.
 
 /**
  * Builds a standard sleep session with optional customization of sleep metrics.
@@ -89,22 +87,36 @@ fun buildOverlapTiebreakerSessions(
     selectedDate: LocalDate,
     zoneId: ZoneId,
 ): Pair<SleepSessionData, SleepSessionData> {
-    val earlierStart = selectedDate.minusDays(1).atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli()
-    val laterStart = selectedDate.minusDays(1).atTime(22, 30).atZone(zoneId).toInstant().toEpochMilli()
-    val stableIdWinnerWithoutSource = sleepSession(
-        id = "a-stable-id",
-        startTime = earlierStart,
-        endTime = earlierStart + 480 * 60_000L,
-        durationMinutes = 480,
-        deviceName = "z-source",
-    )
-    val sourceWinner = sleepSession(
-        id = "z-stable-id",
-        startTime = laterStart,
-        endTime = laterStart + 480 * 60_000L,
-        durationMinutes = 480,
-        deviceName = "a-source",
-    )
+    val earlierStart =
+        selectedDate
+            .minusDays(1)
+            .atTime(22, 0)
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+    val laterStart =
+        selectedDate
+            .minusDays(1)
+            .atTime(22, 30)
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+    val stableIdWinnerWithoutSource =
+        sleepSession(
+            id = "a-stable-id",
+            startTime = earlierStart,
+            endTime = earlierStart + 480 * 60_000L,
+            durationMinutes = 480,
+            deviceName = "z-source",
+        )
+    val sourceWinner =
+        sleepSession(
+            id = "z-stable-id",
+            startTime = laterStart,
+            endTime = laterStart + 480 * 60_000L,
+            durationMinutes = 480,
+            deviceName = "a-source",
+        )
     return stableIdWinnerWithoutSource to sourceWinner
 }
 

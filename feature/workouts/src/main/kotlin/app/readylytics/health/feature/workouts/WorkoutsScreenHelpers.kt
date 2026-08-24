@@ -12,9 +12,7 @@ import app.readylytics.health.core.ui.components.SectionHeader
  * Simple display helper for rendering section headers in workouts screens.
  */
 @Composable
-fun ChartsSectionHeader(
-    title: String,
-) {
+fun ChartsSectionHeader(title: String) {
     SectionHeader(
         title = title,
     )

@@ -163,14 +163,26 @@ class SleepViewModelTest {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = LocalDate.of(2026, 6, 11)
             val selectedMidnightMs = selectedDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val session = sleepSession(
-                id = "session_1",
-                startTime = selectedDate.minusDays(1).atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                endTime = selectedDate.atTime(6, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                durationMinutes = 510,
-                awakeMinutes = 30,
-                sleepScore = 85f,
-            )
+            val session =
+                sleepSession(
+                    id = "session_1",
+                    startTime =
+                        selectedDate
+                            .minusDays(1)
+                            .atTime(22, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    endTime =
+                        selectedDate
+                            .atTime(6, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 510,
+                    awakeMinutes = 30,
+                    sleepScore = 85f,
+                )
 
             coEvery { dailySummaryRepository.getByDate(selectedMidnightMs) } returns
                 DailySummary(date = selectedDate, sleepDurationMinutes = 480)
@@ -235,14 +247,27 @@ class SleepViewModelTest {
     fun `trend data points are correctly calculated from sleep sessions`() =
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
-            val session = sleepSession(
-                id = "session_1",
-                startTime = LocalDate.of(2026, 6, 10).atTime(22, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                endTime = LocalDate.of(2026, 6, 11).atTime(6, 0).atZone(zoneId).toInstant().toEpochMilli(),
-                durationMinutes = 480,
-                awakeMinutes = 30,
-                sleepScore = 85f,
-            )
+            val session =
+                sleepSession(
+                    id = "session_1",
+                    startTime =
+                        LocalDate
+                            .of(2026, 6, 10)
+                            .atTime(22, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    endTime =
+                        LocalDate
+                            .of(2026, 6, 11)
+                            .atTime(6, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 480,
+                    awakeMinutes = 30,
+                    sleepScore = 85f,
+                )
 
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(listOf(session))
 
@@ -582,8 +607,9 @@ class SleepViewModelTest {
         runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val selectedDate = selectedDateFlow.value
-            val session = buildSleepSessionWithHr(selectedDate, zoneId)
-                .copy(sleepScore = 85f)
+            val session =
+                buildSleepSessionWithHr(selectedDate, zoneId)
+                    .copy(sleepScore = 85f)
             every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
             every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
             every { heartRateRepository.observeSleepHrTimelineForSession(session.id) } returns flowOf(emptyList())

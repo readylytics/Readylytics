@@ -7,16 +7,17 @@ import app.readylytics.health.core.model.domain.repository.SleepSessionData
 import java.time.LocalDate
 import java.time.ZoneId
 
-/**
- * Reusable test fixtures for SleepViewModel tests.
- * Provides factory methods for common test data scenarios.
- */
+// Reusable test fixtures for SleepViewModel tests.
+// Provides factory methods for common test data scenarios.
 
 /**
  * Builds a prior session (3 days in the past from selected date).
  * Used for testing historical data in trend charts.
  */
-fun buildPriorSleepSession(selectedDate: LocalDate, zoneId: ZoneId): SleepSessionData =
+fun buildPriorSleepSession(
+    selectedDate: LocalDate,
+    zoneId: ZoneId,
+): SleepSessionData =
     SleepSessionData(
         id = "session_prior",
         deviceName = "SmartRing",
@@ -47,7 +48,10 @@ fun buildPriorSleepSession(selectedDate: LocalDate, zoneId: ZoneId): SleepSessio
  * Builds a core sleep session spanning midnight.
  * Used for core/main night sleep testing.
  */
-fun buildCoreSleepSession(selectedDate: LocalDate, zoneId: ZoneId): SleepSessionData =
+fun buildCoreSleepSession(
+    selectedDate: LocalDate,
+    zoneId: ZoneId,
+): SleepSessionData =
     sleepSession(
         id = "core",
         startTime =
@@ -70,7 +74,10 @@ fun buildCoreSleepSession(selectedDate: LocalDate, zoneId: ZoneId): SleepSession
  * Builds a nap session (short afternoon sleep).
  * Used for testing nap handling in trend calculations.
  */
-fun buildNapSession(selectedDate: LocalDate, zoneId: ZoneId): SleepSessionData =
+fun buildNapSession(
+    selectedDate: LocalDate,
+    zoneId: ZoneId,
+): SleepSessionData =
     sleepSession(
         id = "nap",
         startTime =
@@ -92,7 +99,10 @@ fun buildNapSession(selectedDate: LocalDate, zoneId: ZoneId): SleepSessionData =
  * Builds a short cutoff-boundary session (ends before 20-minute cutoff).
  * Used for testing session assignment at scoring day boundaries.
  */
-fun buildCutoffBoundarySession(selectedDate: LocalDate, zoneId: ZoneId): SleepSessionData =
+fun buildCutoffBoundarySession(
+    selectedDate: LocalDate,
+    zoneId: ZoneId,
+): SleepSessionData =
     sleepSession(
         id = "cutoff",
         startTime =
@@ -116,7 +126,10 @@ fun buildCutoffBoundarySession(selectedDate: LocalDate, zoneId: ZoneId): SleepSe
  * Builds a legacy zero-duration session that needs computation.
  * Used for testing duration derivation from start/end times.
  */
-fun buildLegacyZeroDurationSession(selectedDate: LocalDate, zoneId: ZoneId): SleepSessionData =
+fun buildLegacyZeroDurationSession(
+    selectedDate: LocalDate,
+    zoneId: ZoneId,
+): SleepSessionData =
     sleepSession(
         id = "legacy-zero-duration",
         startTime =
@@ -166,8 +179,9 @@ fun buildDailyMetrics(
  * Gets default sleep layout configurations for testing.
  * Mirrors production defaults.
  */
-fun getDefaultSleepLayoutConfigs() = Triple(
-    SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
-    SettingsDefaults.DEFAULT_SLEEP_CHARTS,
-    SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
-)
+fun getDefaultSleepLayoutConfigs() =
+    Triple(
+        SettingsDefaults.DEFAULT_SLEEP_TOP_CARDS,
+        SettingsDefaults.DEFAULT_SLEEP_CHARTS,
+        SettingsDefaults.DEFAULT_SLEEP_METRIC_CARDS,
+    )

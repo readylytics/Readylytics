@@ -1,8 +1,5 @@
 package app.readylytics.health.feature.settings
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.Modifier
-
 /**
  * Wrapper for settings content scroll context to reduce parameter list length.
  */

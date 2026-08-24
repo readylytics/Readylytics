@@ -1,6 +1,5 @@
 package app.readylytics.health.feature.settings
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -75,20 +74,21 @@ internal fun BaselinesThresholdsSectionWrapper(
             onExpandedChange = { onExpandStateChange(expandState.copy(collapseBaselinesThresholds = !it)) },
         ) {
             BaselinesThresholdsSection(
-                context = BaselinesThresholdsContext(
-                    thresholdState = states.thresholdState,
-                    sleepState = states.sleepState,
-                    physiologyState = states.physiologyState,
-                    heartRateState = states.heartRateState,
-                    uiState = states.uiState,
-                    isResyncing = states.syncState.isResyncing,
-                    controlsEnabled = controlsEnabled,
-                    onThresholdEvent = intents.onThresholdEvent,
-                    onSleepEvent = intents.onSleepEvent,
-                    onUIEvent = intents.onUIEvent,
-                    onPhysiologyEvent = intents.onPhysiologyEvent,
-                    onHeartRateEvent = intents.onHeartRateEvent,
-                ),
+                context =
+                    BaselinesThresholdsContext(
+                        thresholdState = states.thresholdState,
+                        sleepState = states.sleepState,
+                        physiologyState = states.physiologyState,
+                        heartRateState = states.heartRateState,
+                        uiState = states.uiState,
+                        isResyncing = states.syncState.isResyncing,
+                        controlsEnabled = controlsEnabled,
+                        onThresholdEvent = intents.onThresholdEvent,
+                        onSleepEvent = intents.onSleepEvent,
+                        onUIEvent = intents.onUIEvent,
+                        onPhysiologyEvent = intents.onPhysiologyEvent,
+                        onHeartRateEvent = intents.onHeartRateEvent,
+                    ),
             )
         }
         HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacing.small))

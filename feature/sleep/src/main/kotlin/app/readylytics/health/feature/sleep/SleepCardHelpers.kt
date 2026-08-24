@@ -2,22 +2,14 @@ package app.readylytics.health.feature.sleep
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
 import app.readylytics.health.core.model.domain.dashboard.ModeSpec
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.repository.SleepSessionData
-import app.readylytics.health.core.model.domain.sleep.SleepCardCatalog
-import app.readylytics.health.core.model.domain.sleep.SleepMetricCardConfiguration
-import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
-import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
-import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.core.scoring.domain.scoring.toStatus
 import app.readylytics.health.core.scoring.domain.scoring.toTimeString
 import app.readylytics.health.core.scoring.domain.util.roundToPercentInt
-import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.components.metriccard.UniversalCardDisplayMode
-import app.readylytics.health.core.ui.components.metriccard.toDashboardMode
 import app.readylytics.health.core.ui.components.metriccard.toUniversalMode
 import app.readylytics.health.feature.sleep.R
 import app.readylytics.health.core.ui.R as CoreUiR
@@ -33,8 +25,7 @@ internal fun supportedModes(spec: ModeSpec?): List<UniversalCardDisplayMode> =
  * Extract status determination for circadian consistency result.
  * Centralizes status logic used in metric card builders.
  */
-internal fun circadianCardStatus(circadianResult: CircadianConsistencyResult): MetricStatus =
-    circadianResult.toStatus()
+internal fun circadianCardStatus(circadianResult: CircadianConsistencyResult): MetricStatus = circadianResult.toStatus()
 
 /**
  * Builds circadian consistency display text from result.

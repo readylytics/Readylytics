@@ -7,7 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.model.domain.dashboard.DashboardCardDisplayMode
-import app.readylytics.health.core.model.domain.dashboard.ModeSpec
 import app.readylytics.health.core.model.domain.model.MetricStatus
 import app.readylytics.health.core.model.domain.model.deepSleepStatus
 import app.readylytics.health.core.model.domain.model.efficiencyStatus
@@ -20,9 +19,6 @@ import app.readylytics.health.core.model.domain.sleep.SleepMetricCardId
 import app.readylytics.health.core.model.domain.sleep.SleepTopCardConfiguration
 import app.readylytics.health.core.model.domain.sleep.SleepTopCardId
 import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.core.scoring.domain.scoring.toStatus
-import app.readylytics.health.core.scoring.domain.scoring.toTimeString
-import app.readylytics.health.core.scoring.domain.util.roundToPercentInt
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
