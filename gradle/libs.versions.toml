@@ -18,6 +18,7 @@ espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
 composeBom = "2026.08.00"
+material3 = "1.5.0-alpha25"
 healthConnect = "1.1.0"
 navigationCompose = "2.9.8"
 hiltNavigationCompose = "1.4.0"
@@ -46,7 +47,6 @@ playPublisher = "4.1.1"
 appcompat = "1.8.0"
 materialColorUtilities = "5.0.0"
 adaptive = "1.3.0"
-adaptiveNavigationSuite = "1.4.0"
 
 
 
@@ -111,7 +111,7 @@ androidx-test-rules = { group = "androidx.test", name = "rules", version = "1.7.
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 material = { group = "com.google.android.material", name = "material", version = "1.14.0" }
 material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities", version.ref = "materialColorUtilities" }
-androidx-compose-material3-adaptive-navigation = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "adaptiveNavigationSuite" }
+androidx-compose-material3-adaptive-navigation = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "material3" }
 androidx-compose-material3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive", version.ref = "adaptive" }
 
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
