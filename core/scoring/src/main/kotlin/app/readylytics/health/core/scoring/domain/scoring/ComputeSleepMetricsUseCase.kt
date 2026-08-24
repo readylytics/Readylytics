@@ -42,6 +42,18 @@ import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 
+internal fun isStagesSuspicious(
+    session: SleepSession,
+    validation: ScoringCalculator.NightValidationResult,
+): Boolean {
+    val hasNoStageBreakdown =
+        session.durationMinutes > 0 &&
+            session.deepSleepMinutes == 0 &&
+            session.remSleepMinutes == 0 &&
+            session.lightSleepMinutes == 0
+    return hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
+}
+
 data class SleepMetricsCollaborators
     @Inject
     constructor(
@@ -563,7 +575,7 @@ class ComputeSleepMetricsUseCase
             val rhrValues: List<Int>,
             val frozenRhrSigma: Float?,
             val session: SleepSession,
-            val validation: Any,
+            val validation: ScoringCalculator.NightValidationResult,
         )
 
         private data class BaselineMetricsResult(
@@ -632,19 +644,6 @@ class ComputeSleepMetricsUseCase
                 )
             }
             return null
-        }
-
-        private fun isStagesSuspicious(session: SleepSession, validation: Any): Boolean {
-            val hasNoStageBreakdown =
-                session.durationMinutes > 0 &&
-                    session.deepSleepMinutes == 0 &&
-                    session.remSleepMinutes == 0 &&
-                    session.lightSleepMinutes == 0
-            @Suppress("UNCHECKED_CAST")
-            val stagesValid = (validation as? Map<String, Any>)?.get("stagesValid") as? Boolean ?: true
-            @Suppress("UNCHECKED_CAST")
-            val stagesSuspiciousVal = (validation as? Map<String, Any>)?.get("stagesSuspicious") as? Boolean ?: false
-            return hasNoStageBreakdown || !stagesValid || stagesSuspiciousVal
         }
 
         // Extracted to reduce invoke() complexity - logs comprehensive debug metrics
