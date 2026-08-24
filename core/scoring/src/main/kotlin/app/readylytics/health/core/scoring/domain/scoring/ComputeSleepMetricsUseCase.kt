@@ -31,7 +31,6 @@ import app.readylytics.health.core.scoring.domain.util.HeartRateFormulas
 import app.readylytics.health.core.model.domain.util.logD
 import app.readylytics.health.core.model.domain.util.logE
 import app.readylytics.health.core.scoring.BuildConfig
-import app.readylytics.health.core.scoring.domain.util.stdev
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -41,18 +40,6 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
-
-internal fun isStagesSuspicious(
-    session: SleepSession,
-    validation: ScoringCalculator.NightValidationResult,
-): Boolean {
-    val hasNoStageBreakdown =
-        session.durationMinutes > 0 &&
-            session.deepSleepMinutes == 0 &&
-            session.remSleepMinutes == 0 &&
-            session.lightSleepMinutes == 0
-    return hasNoStageBreakdown || !validation.stagesValid || validation.stagesSuspicious
-}
 
 data class SleepMetricsCollaborators
     @Inject
@@ -251,6 +238,7 @@ class ComputeSleepMetricsUseCase
                             session = session,
                             validation = validation,
                         ),
+                        collaborators.scoringCalculator,
                     )
                 val effectiveSigmaHistory = baselineMetrics.effectiveSigmaHistory
                 val calculatedRhrSigma = baselineMetrics.calculatedRhrSigma
@@ -285,6 +273,7 @@ class ComputeSleepMetricsUseCase
                         frozenHrvMu,
                         frozenHrvSigma,
                         prefs,
+                        collaborators.scoringCalculator,
                     )
                     val zRhr = collaborators.scoringCalculator.computeRhrZScore(
                         currentNocturnalRhr.toFloat(),
@@ -566,86 +555,6 @@ class ComputeSleepMetricsUseCase
             }
         }
 
-        private data class BaselineMetricsInput(
-            val frozenBaseline: Boolean,
-            val frozenHrvSigma: Float?,
-            val sigmaHrvHistory: List<Float>,
-            val sigmaPrior: Float,
-            val sessionHrvSamples: List<Float>,
-            val rhrValues: List<Int>,
-            val frozenRhrSigma: Float?,
-            val session: SleepSession,
-            val validation: ScoringCalculator.NightValidationResult,
-        )
-
-        private data class BaselineMetricsResult(
-            val effectiveSigmaHistory: List<Float>,
-            val calculatedRhrSigma: Float?,
-            val effectiveRhrSigma: Float?,
-            val hrvSigma: Float?,
-            val stagesSuspicious: Boolean,
-        )
-
-        private fun resolveCurrentHrvBaseline(
-            frozenBaseline: Boolean,
-            frozenHrvMu: Float?,
-            prefs: UserPreferences,
-            muHrvHistory: List<Float>,
-        ): Float? =
-            when {
-                prefs.hrvBaselineOverride != null -> prefs.hrvBaselineOverride
-                frozenBaseline && frozenHrvMu != null -> exp(frozenHrvMu)
-                muHrvHistory.isNotEmpty() ->
-                    exp(
-                        muHrvHistory
-                            .map { ln(it.coerceAtLeast(0.001f)) }
-                            .average()
-                            .toFloat(),
-                    )
-                else -> null
-            }
-
-        private fun isHrvOptimal(baseline: Float?, current: Float?, threshold: Float): Boolean =
-            baseline != null && baseline > 0f && current != null && current / baseline >= threshold
-
-        private fun isRhrOptimal(baseline: Int, current: Int, threshold: Float): Boolean =
-            baseline > 0 && current.toFloat() / baseline.toFloat() <= threshold
-
-        private fun isPreviousHrvOptimal(
-            yesterdaySummary: DailySummary?,
-            yesterdayHrvBaseline: Float?,
-            threshold: Float,
-        ): Boolean {
-            val prevHrv = yesterdaySummary?.nocturnalHrv ?: return false
-            return yesterdayHrvBaseline != null &&
-                yesterdayHrvBaseline > 0f &&
-                prevHrv.toFloat() / yesterdayHrvBaseline >= threshold
-        }
-
-        private fun computeHrvZScore(
-            sessionHrvSamples: List<Float>,
-            currentHrvMean: Float?,
-            muHrvHistory: List<Float>,
-            effectiveSigmaHistory: List<Float>,
-            sigmaPrior: Float,
-            frozenHrvMu: Float?,
-            frozenHrvSigma: Float?,
-            prefs: UserPreferences,
-        ): Float? {
-            if (sessionHrvSamples.isNotEmpty() && currentHrvMean != null) {
-                return collaborators.scoringCalculator.computeHrvZScore(
-                    currentHrvMean,
-                    muHrvHistory,
-                    effectiveSigmaHistory,
-                    sigmaPrior,
-                    baselineOverride = prefs.hrvBaselineOverride,
-                    frozenLnMu = frozenHrvMu,
-                    frozenLnSigma = frozenHrvSigma,
-                )
-            }
-            return null
-        }
-
         // Extracted to reduce invoke() complexity - logs comprehensive debug metrics
         private fun logDebugScoringMetrics(
             targetDate: LocalDate,
@@ -713,54 +622,6 @@ class ComputeSleepMetricsUseCase
                 }
                 """.trimIndent()
             logD("ScoringDebug") { "\n$debugPayload" }
-        }
-
-        private fun computeBaselineMetrics(input: BaselineMetricsInput): BaselineMetricsResult {
-            val frozenBaseline = input.frozenBaseline
-            val frozenHrvSigma = input.frozenHrvSigma
-            val sigmaHrvHistory = input.sigmaHrvHistory
-            val sigmaPrior = input.sigmaPrior
-            val sessionHrvSamples = input.sessionHrvSamples
-            val rhrValues = input.rhrValues
-            val frozenRhrSigma = input.frozenRhrSigma
-            val session = input.session
-            val validation = input.validation
-            val effectiveSigmaHistory =
-                if (frozenBaseline && frozenHrvSigma != null) {
-                    listOf(frozenHrvSigma)
-                } else {
-                    sigmaHrvHistory
-                }
-
-            val calculatedRhrSigma =
-                if (!frozenBaseline && rhrValues.size > 1) {
-                    rhrValues.stdev().takeIf { it > 0f }
-                } else {
-                    null
-                }
-            val effectiveRhrSigma = frozenRhrSigma ?: calculatedRhrSigma
-
-            val hrvSigma =
-                if (sessionHrvSamples.isNotEmpty()) {
-                    if (frozenBaseline && frozenHrvSigma != null) {
-                        frozenHrvSigma
-                    } else {
-                        val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
-                        collaborators.scoringCalculator.hrvSigma(lnSigmaHistory, sigmaPrior)
-                    }
-                } else {
-                    null
-                }
-
-            val stagesSuspicious = isStagesSuspicious(session, validation)
-
-            return BaselineMetricsResult(
-                effectiveSigmaHistory = effectiveSigmaHistory,
-                calculatedRhrSigma = calculatedRhrSigma,
-                effectiveRhrSigma = effectiveRhrSigma,
-                hrvSigma = hrvSigma,
-                stagesSuspicious = stagesSuspicious,
-            )
         }
 
         private data class BaselineWindowResult(
