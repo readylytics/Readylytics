@@ -41,8 +41,9 @@ private fun buildSyncAndBaselines(prefs: UserPreferences): UserPreferencesBackup
 private fun buildZonesAndDemographics(
     base: UserPreferencesBackup,
     prefs: UserPreferences,
-): UserPreferencesBackup =
-    base.copy(
+): UserPreferencesBackup {
+    val birthDate = parseBirthDate(prefs.birthDate)
+    return base.copy(
         zone1MinPercent = prefs.zone1MinPercent,
         zone1MaxPercent = prefs.zone1MaxPercent,
         zone2MaxPercent = prefs.zone2MaxPercent,
@@ -55,12 +56,13 @@ private fun buildZonesAndDemographics(
         zone4MaxBpm = prefs.zone4MaxBpm,
         age = prefs.age,
         birthDate = prefs.birthDate,
-        birthDay = parseBirthDay(prefs.birthDate),
-        birthMonth = parseBirthMonth(prefs.birthDate),
-        birthYear = parseBirthYear(prefs.birthDate),
+        birthDay = birthDate?.dayOfMonth,
+        birthMonth = birthDate?.monthValue,
+        birthYear = birthDate?.year,
         gender = prefs.gender?.name,
         heightCm = prefs.heightCm,
     )
+}
 
 private fun buildThresholdsAndDisplay(
     base: UserPreferencesBackup,
@@ -143,28 +145,10 @@ internal data class BackupLayoutSnapshots(
     val workoutDetailLayouts: Map<String, List<WorkoutDetailItemConfiguration>>?,
 )
 
-private fun parseBirthDay(birthDate: String?): Int? =
+private fun parseBirthDate(birthDate: String?): LocalDate? =
     birthDate?.let {
         try {
-            LocalDate.parse(it).dayOfMonth
-        } catch (e: DateTimeParseException) {
-            null
-        }
-    }
-
-private fun parseBirthMonth(birthDate: String?): Int? =
-    birthDate?.let {
-        try {
-            LocalDate.parse(it).monthValue
-        } catch (e: DateTimeParseException) {
-            null
-        }
-    }
-
-private fun parseBirthYear(birthDate: String?): Int? =
-    birthDate?.let {
-        try {
-            LocalDate.parse(it).year
+            LocalDate.parse(it)
         } catch (e: DateTimeParseException) {
             null
         }
