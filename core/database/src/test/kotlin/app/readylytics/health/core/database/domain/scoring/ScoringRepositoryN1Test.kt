@@ -7,6 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
@@ -184,16 +185,18 @@ class ScoringRepositoryN1Test {
             app.readylytics.health.core.scoring.domain.scoring.sleep.SleepModifiers(null, null)
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
-                baselineComputer,
-                scoringHistoryRepository,
-                scoringCalculator,
-                scoringConfigFactory,
-                encryptionManager,
-                hrvResolver,
-                sleepPercentileRhrCalculator,
-                nadirAnalyzer,
-                coverageValidator,
-                sleepModifierResolver,
+                SleepMetricsCollaborators(
+                    baselineComputer,
+                    scoringHistoryRepository,
+                    scoringCalculator,
+                    scoringConfigFactory,
+                    encryptionManager,
+                    hrvResolver,
+                    sleepPercentileRhrCalculator,
+                    nadirAnalyzer,
+                    coverageValidator,
+                    sleepModifierResolver,
+                ),
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
         val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
@@ -206,6 +209,11 @@ class ScoringRepositoryN1Test {
                 dailySummaryDao,
                 heartRateDao,
                 minuteBucketDao,
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
             )
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(

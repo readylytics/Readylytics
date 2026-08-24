@@ -94,6 +94,11 @@ class ScoringDeterminismRegressionTest {
                 dailySummaryDao,
                 heartRateDao,
                 minuteBucketDao,
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
             )
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(

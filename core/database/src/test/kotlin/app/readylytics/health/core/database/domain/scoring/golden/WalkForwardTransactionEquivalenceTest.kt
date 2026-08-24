@@ -21,6 +21,7 @@ import app.readylytics.health.core.scoring.domain.scoring.CircadianConsistencyRe
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -132,7 +133,8 @@ class WalkForwardTransactionEquivalenceTest {
             val dataLoader =
                 ScoringDayDataLoader(
                     db.workoutDao(), db.sleepSessionDao(), db.dailySummaryDao(), db.heartRateDao(),
-                    db.minuteBucketDao(),
+                    db.minuteBucketDao(), db.weightRecordDao(), db.bodyFatRecordDao(),
+                    db.bloodPressureRecordDao(), db.oxygenSaturationRecordDao(), db.bodyTemperatureRecordDao(),
                 )
             val bodyMetricsDataLoader =
                 BodyMetricsDataLoader(
@@ -146,17 +148,20 @@ class WalkForwardTransactionEquivalenceTest {
             val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
             val computeSleepMetricsUseCase =
                 ComputeSleepMetricsUseCase(
-                    baselineComputer = baselineComputer,
-                    scoringHistoryRepository = scoringHistoryRepository,
-                    scoringCalculator = scoringCalculator,
-                    scoringConfigFactory = scoringConfigFactory,
-                    encryptionManager = FakeEncryptionManager(),
-                    hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository),
-                    sleepPercentileRhrCalculator =
-                        SleepPercentileRhrCalculator(scoringHistoryRepository),
-                    nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator),
-                    coverageValidator = HrCoverageValidator(),
-                    sleepModifierResolver = sleepModifierResolver,
+                    collaborators =
+                        SleepMetricsCollaborators(
+                            baselineComputer = baselineComputer,
+                            scoringHistoryRepository = scoringHistoryRepository,
+                            scoringCalculator = scoringCalculator,
+                            scoringConfigFactory = scoringConfigFactory,
+                            encryptionManager = FakeEncryptionManager(),
+                            hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository),
+                            sleepPercentileRhrCalculator =
+                                SleepPercentileRhrCalculator(scoringHistoryRepository),
+                            nadirAnalyzer = SleepNadirAnalyzer(scoringCalculator),
+                            coverageValidator = HrCoverageValidator(),
+                            sleepModifierResolver = sleepModifierResolver,
+                        ),
                 )
             val buildLoadSeriesUseCase = BuildLoadSeriesUseCase(scoringCalculator)
             val resolveDailyBaselinesUseCase = ResolveDailyBaselinesUseCase(baselineComputer)

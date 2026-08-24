@@ -7,6 +7,7 @@ import app.readylytics.health.core.scoring.domain.scoring.BuildLoadSeriesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.ComputeDailyTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ComputeSleepMetricsUseCase
+import app.readylytics.health.core.scoring.domain.scoring.SleepMetricsCollaborators
 import app.readylytics.health.core.scoring.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ResolveDailyBaselinesUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringConfigFactory
@@ -338,16 +339,19 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val sleepModifierResolver = SleepModifierResolver(sleepSessionRepository, circadianConsistencyRepository)
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
-                baselineComputer = baselineComputer,
-                scoringHistoryRepository = scoringHistoryRepository,
-                scoringCalculator = scoringCalculator,
-                scoringConfigFactory = scoringConfigFactory,
-                encryptionManager = encryptionManager,
-                hrvResolver = currentNightHrvResolver,
-                sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
-                nadirAnalyzer = sleepNadirAnalyzer,
-                coverageValidator = coverageValidator,
-                sleepModifierResolver = sleepModifierResolver,
+                collaborators =
+                    SleepMetricsCollaborators(
+                        baselineComputer = baselineComputer,
+                        scoringHistoryRepository = scoringHistoryRepository,
+                        scoringCalculator = scoringCalculator,
+                        scoringConfigFactory = scoringConfigFactory,
+                        encryptionManager = encryptionManager,
+                        hrvResolver = currentNightHrvResolver,
+                        sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
+                        nadirAnalyzer = sleepNadirAnalyzer,
+                        coverageValidator = coverageValidator,
+                        sleepModifierResolver = sleepModifierResolver,
+                    ),
             )
 
         val dataLoader =
@@ -357,6 +361,11 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 dailySummaryDao,
                 heartRateDao,
                 minuteBucketDao,
+                weightRecordDao,
+                bodyFatRecordDao,
+                bloodPressureRecordDao,
+                oxygenSaturationRecordDao,
+                bodyTemperatureRecordDao,
             )
         val bodyMetricsDataLoader =
             BodyMetricsDataLoader(
