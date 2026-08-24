@@ -14,7 +14,7 @@ class ZoneThresholdsTest {
             DomainHeartRateSample(Instant.ofEpochMilli(1000L), 100), // Zone 1 Min is 95
             DomainHeartRateSample(Instant.ofEpochMilli(31000L), 120), // Zone 2 Max is 133
         )
-        val thresholds = ZoneThresholds.zoneThresholds()
+        val thresholds = ZoneThresholds.create()
         val metrics = ZoneThresholds.computeMetrics(startMs, endMs, samples, thresholds)
         assertEquals(1, metrics.durationMinutes)
         assertEquals(110.0f, metrics.avgHr)

@@ -151,7 +151,7 @@ class ScoringWalkForwardBenchmark {
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        val zoneThresholds = ZoneThresholds.zoneThresholds(120, 140, 155, 168, 180)
+        val zoneThresholds = ZoneThresholds.create(120, 140, 155, 168, 180)
 
         benchmarkRule.measureRepeated {
             runBlocking { reconciler.reconcile(startMs, endMs, zoneThresholds) }

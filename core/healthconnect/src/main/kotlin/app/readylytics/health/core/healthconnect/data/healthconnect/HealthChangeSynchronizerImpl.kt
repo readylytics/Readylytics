@@ -292,7 +292,7 @@ class HealthChangeSynchronizerImpl
                     if (record is ExerciseSessionRecord) {
                         val domainExercise = record.toDomain()
                         val thresholds =
-                            ZoneThresholds.zoneThresholds(
+                            ZoneThresholds.create(
                                 prefs.zone1MinBpm,
                                 prefs.zone1MaxBpm,
                                 prefs.zone2MaxBpm,

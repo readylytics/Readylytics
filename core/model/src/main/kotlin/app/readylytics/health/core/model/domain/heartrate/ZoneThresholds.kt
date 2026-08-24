@@ -46,19 +46,6 @@ object ZoneThresholds {
             z4Max,
         )
 
-    @Deprecated(
-        message = "Use create() instead to avoid member name matching class name.",
-        replaceWith = ReplaceWith("create(z1Min, z1Max, z2Max, z3Max, z4Max)"),
-    )
-    @Suppress("MemberNameEqualsClassName")
-    fun zoneThresholds(
-        z1Min: Int = 95,
-        z1Max: Int = 114,
-        z2Max: Int = 133,
-        z3Max: Int = 152,
-        z4Max: Int = 171,
-    ): IntArray = create(z1Min, z1Max, z2Max, z3Max, z4Max)
-
     private fun zoneIndex(
         bpm: Int,
         thresholds: IntArray,

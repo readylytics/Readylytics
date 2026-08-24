@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 class WorkoutMapperIntensityTest {
     @Test
     fun computeMetrics_returns_valid_metrics() {
-        val thresholds = ZoneThresholds.zoneThresholds()
+        val thresholds = ZoneThresholds.create()
         val metrics = ZoneThresholds.computeMetrics(
             startMs = 0,
             endMs = 3600000L, // 60 minutes
@@ -19,7 +19,7 @@ class WorkoutMapperIntensityTest {
 
     @Test
     fun zoneThresholds_returns_correct_boundaries() {
-        val thresholds = ZoneThresholds.zoneThresholds()
+        val thresholds = ZoneThresholds.create()
         assertEquals(5, thresholds.size)
         assertEquals(95, thresholds[0]) // z1Min
         assertEquals(114, thresholds[1]) // z1Max

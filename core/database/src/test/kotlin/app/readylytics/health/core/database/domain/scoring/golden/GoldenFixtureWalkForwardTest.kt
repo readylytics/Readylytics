@@ -131,7 +131,7 @@ class GoldenFixtureWalkForwardTest {
             val buildResult = GoldenFixtureDataBuilder(zoneId).build(db, startDate, endDate)
 
             val zoneThresholds =
-                ZoneThresholds.zoneThresholds(
+                ZoneThresholds.create(
                     prefs.zone1MinBpm,
                     prefs.zone1MaxBpm,
                     prefs.zone2MaxBpm,
