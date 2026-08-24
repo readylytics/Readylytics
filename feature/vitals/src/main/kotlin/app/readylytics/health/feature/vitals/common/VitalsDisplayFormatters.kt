@@ -71,11 +71,13 @@ fun formatDurationToMinutes(durationMs: Long): Int = (durationMs / 60_000L).toIn
 fun formatBloodPressureDelta(diff: Int): String =
     when {
         diff > 0 ->
-            stringResource(CoreUiR.string.delta_up) + " $diff " +
-                stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
+            stringResource(CoreUiR.string.delta_up_with_unit, diff, stringResource(CoreUiR.string.unit_mmHg))
         diff < 0 ->
-            stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
+            stringResource(
+                CoreUiR.string.delta_down_with_unit,
+                kotlin.math.abs(diff),
+                stringResource(CoreUiR.string.unit_mmHg),
+            )
         else -> stringResource(CoreUiR.string.delta_no_change)
     }
 

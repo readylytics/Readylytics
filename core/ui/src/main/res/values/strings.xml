@@ -24,7 +24,9 @@
     <string name="restore_partial_success_message">Health data was restored, but settings could not be restored. Restart Readylytics, then run restore again if settings still look wrong.</string>
     <string name="delta_up">↑</string>
     <string name="delta_up_format">%1$s %2$s</string>
+    <string name="delta_up_with_unit">↑ %1$d %2$s</string>
     <string name="delta_down">↓</string>
+    <string name="delta_down_with_unit">↓ %1$d %2$s</string>
     <string name="delta_no_change">—</string>
 
 
