@@ -63,6 +63,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk=26, targetSd
 
 - **Tests:** Mirror source package structure. Must test boundary conditions and calculation logic. Zero Android dependencies in unit tests.
 - **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew detekt && ./gradlew testDebugUnitTest` (and run `./gradlew lintRelease` at the end after resolving all coding tasks)
+- **Detekt Discipline:** New implementations must never add new detekt issues. If you touch a file that already has detekt issues, refactor it and resolve those issues too (boyscout rule).
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
 
 ## Documentation Sync
