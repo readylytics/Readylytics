@@ -17,6 +17,11 @@ import javax.inject.Inject
  * Callers should fetch [workouts] with a single `WorkoutRepository.getInRange` query spanning
  * `WeekBounds.previousWeekFull(today, weekStartDay).start` through `today` (inclusive) — that one
  * range covers everything every result field needs.
+ *
+ * Week semantics: every previous-week figure ([WeeklyTrainingStats.previousWeek], `comparison`,
+ * `activityVolumes`, and the chart's previous-week line) covers the FULL previous configured week,
+ * so a "-10% vs last week" label agrees with the chart. Only the current side is truncated to
+ * `today` — future current-week days have no data yet.
  */
 class ComputeWeeklyTrainingStatsUseCase
     @Inject
@@ -28,27 +33,26 @@ class ComputeWeeklyTrainingStatsUseCase
             zoneId: ZoneId,
         ): WeeklyTrainingStats {
             val currentToDate = WeekBounds.currentWeekToDate(today, weekStartDay)
-            val previousToDate = WeekBounds.previousWeekToDate(today, weekStartDay)
             val currentFull = WeekBounds.currentWeekFull(today, weekStartDay)
             val previousFull = WeekBounds.previousWeekFull(today, weekStartDay)
 
             val datedWorkouts = workouts.map { it to workoutDate(it, zoneId) }
 
             val currentToDateWorkouts = datedWorkouts.filter { (_, date) -> currentToDate.contains(date) }
-            val previousToDateWorkouts = datedWorkouts.filter { (_, date) -> previousToDate.contains(date) }
+            val previousFullWorkouts = datedWorkouts.filter { (_, date) -> previousFull.contains(date) }
 
             val currentTotals = totalsFor(currentToDateWorkouts)
-            val previousTotals = totalsFor(previousToDateWorkouts)
+            val previousTotals = totalsFor(previousFullWorkouts)
 
             return WeeklyTrainingStats(
                 currentPeriod = currentToDate,
-                previousPeriod = previousToDate,
+                previousPeriod = previousFull,
                 currentWeek = currentTotals,
                 previousWeek = previousTotals,
                 comparison = comparisonFor(currentTotals, previousTotals),
                 cumulativeDailyTraining = buildDailyTraining(datedWorkouts, today, currentFull, previousFull),
                 activityVolumes =
-                    WeeklyActivityBreakdown.activityVolumes(currentToDateWorkouts, previousToDateWorkouts),
+                    WeeklyActivityBreakdown.activityVolumes(currentToDateWorkouts, previousFullWorkouts),
                 trainingMix =
                     WeeklyActivityBreakdown.trainingMix(currentToDateWorkouts, currentTotals.totalDurationMinutes),
             )

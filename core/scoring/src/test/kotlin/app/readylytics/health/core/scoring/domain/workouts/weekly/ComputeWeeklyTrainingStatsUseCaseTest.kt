@@ -104,6 +104,24 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
     }
 
     @Test
+    fun `previous-week totals use the full previous week including days after today's weekday`() {
+        // Today is Thursday; the previous week's Friday workout falls after today's weekday but
+        // must still count, matching the chart's full-length previous-week cumulative line.
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 6, 1), duration = 30), // current Mon
+                workoutOn(LocalDate.of(2026, 5, 25), duration = 30), // previous Mon
+                workoutOn(LocalDate.of(2026, 5, 29), duration = 60), // previous Fri
+            )
+
+        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+
+        assertEquals(90, result.previousWeek.totalDurationMinutes)
+        assertEquals(2, result.previousWeek.workoutCount)
+        assertEquals(-60, result.comparison.durationDeltaMinutes)
+    }
+
+    @Test
     fun `partial current week excludes workouts dated after today`() {
         val partialToday = LocalDate.of(2026, 6, 2) // Tuesday: second day of a Monday-start week.
         val workouts =
@@ -331,6 +349,24 @@ class ComputeWeeklyTrainingStatsUseCaseTest {
         assertEquals(95, result.currentWeek.totalDurationMinutes)
         assertEquals(result.currentWeek.totalDurationMinutes, mixTotal)
         assertEquals(result.currentWeek.totalDurationMinutes, finalCumulative)
+    }
+
+    @Test
+    fun `previous-week totals and the final cumulative day agree on the same total duration`() {
+        val workouts =
+            listOf(
+                workoutOn(LocalDate.of(2026, 5, 25), duration = 30),
+                workoutOn(LocalDate.of(2026, 5, 29), duration = 60), // Friday of the previous week.
+                workoutOn(LocalDate.of(2026, 6, 1), duration = 45),
+            )
+
+        val result = useCase.execute(workouts, today, DayOfWeek.MONDAY, ZoneOffset.UTC)
+
+        assertEquals(90, result.previousWeek.totalDurationMinutes)
+        assertEquals(
+            result.previousWeek.totalDurationMinutes,
+            result.cumulativeDailyTraining.last().previousWeekCumulativeMinutes,
+        )
     }
 
     // endregion
