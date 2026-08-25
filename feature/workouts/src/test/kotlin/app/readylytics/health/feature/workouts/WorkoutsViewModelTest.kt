@@ -19,6 +19,7 @@ import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetri
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
+import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
 import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -43,6 +44,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -182,6 +184,7 @@ class WorkoutsViewModelTest {
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
             getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
+            computeWeeklyTrainingStatsUseCase = ComputeWeeklyTrainingStatsUseCase(),
             foregroundSyncController = foregroundSyncController,
             workoutsLayoutRepository = workoutsLayoutRepository,
             savedStateHandle = savedStateHandle,
@@ -1005,4 +1008,94 @@ class WorkoutsViewModelTest {
 
             collectJob.cancel()
         }
+
+    @Test
+    fun `weekly training stats compare week-to-date against the like-for-like previous window`() =
+        runTest(testDispatcher) {
+            // Thursday 2026-06-04; Monday-start week = Jun 1..4, previous window = May 25..28.
+            selectedDateFlow.value = LocalDate.of(2026, 6, 4)
+            workouts.addAll(
+                listOf(
+                    workoutOnDate(LocalDate.of(2026, 6, 2), durationMinutes = 30),
+                    workoutOnDate(LocalDate.of(2026, 5, 26), durationMinutes = 60),
+                    workoutOnDate(LocalDate.of(2026, 5, 29), durationMinutes = 999), // prev Fri — outside window
+                ),
+            )
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+
+            val stats = viewModel.uiState.value.weeklyTraining!!
+            assertEquals(30, stats.currentWeek.totalDurationMinutes)
+            assertEquals(60, stats.previousWeek.totalDurationMinutes)
+            assertEquals(-30, stats.comparison.durationDeltaMinutes)
+            assertEquals(1, stats.currentWeek.workoutCount)
+            assertEquals(1, stats.currentWeek.activeDays)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `weekly training is null before any load completes`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+
+            assertNull(viewModel.uiState.value.weeklyTraining)
+        }
+
+    @Test
+    fun `weekly training updates when workout data refreshes`() =
+        runTest(testDispatcher) {
+            selectedDateFlow.value = LocalDate.of(2026, 6, 4)
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+            assertEquals(0, viewModel.uiState.value.weeklyTraining!!.currentWeek.workoutCount)
+
+            workouts.addAll(listOf(workoutOnDate(LocalDate.of(2026, 6, 2), durationMinutes = 30)))
+            summariesFlow.value = listOf(mockk<DailySummary>(relaxed = true))
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, viewModel.uiState.value.weeklyTraining!!.currentWeek.workoutCount)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `changing the week start day preference recomputes weekly training`() =
+        runTest(testDispatcher) {
+            // Thursday 2026-06-04. Sunday-start week contains Sun May 31; Monday-start does not.
+            selectedDateFlow.value = LocalDate.of(2026, 6, 4)
+            workouts.addAll(listOf(workoutOnDate(LocalDate.of(2026, 5, 31), durationMinutes = 60)))
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            testScheduler.advanceUntilIdle()
+            assertEquals(0, viewModel.uiState.value.weeklyTraining!!.currentWeek.totalDurationMinutes)
+
+            preferencesFlow.value = preferencesFlow.value.copy(weekStartDay = DayOfWeek.SUNDAY)
+            testScheduler.advanceUntilIdle()
+            assertEquals(60, viewModel.uiState.value.weeklyTraining!!.currentWeek.totalDurationMinutes)
+            collectJob.cancel()
+        }
+
+    private fun workoutOnDate(
+        date: LocalDate,
+        durationMinutes: Int,
+    ): WorkoutData {
+        val epochMillis =
+            date.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return WorkoutData(
+            id = "workout-$epochMillis-$durationMinutes",
+            startTime = epochMillis,
+            endTime = epochMillis + durationMinutes * 60_000L,
+            exerciseType = "running",
+            durationMinutes = durationMinutes,
+            zone1Minutes = 0f,
+            zone2Minutes = 0f,
+            zone3Minutes = 0f,
+            zone4Minutes = 0f,
+            zone5Minutes = 0f,
+            trimp = 50f,
+            avgHr = 130f,
+        )
+    }
 }

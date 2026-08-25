@@ -15,6 +15,7 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfigura
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
 import app.readylytics.health.core.scoring.domain.scoring.WorkoutLoadClassification
 import app.readylytics.health.core.scoring.domain.scoring.calculateDailyStrainIncrease
+import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.PeriodAverageSummary
 import app.readylytics.health.core.ui.common.TimeRange
@@ -54,6 +55,7 @@ data class WorkoutsUiState(
     val yesterdayStrainRatio: Float? = null,
     val yesterdayReadiness: Float? = null,
     val todayStrainIncrease: Float? = null,
+    val weeklyTraining: WeeklyTrainingStats? = null,
     val isRangeChanging: Boolean = false,
     val trimpPeriodSummary: PeriodAverageSummary? = null,
     val strainRatioPeriodSummary: PeriodAverageSummary? = null,
@@ -161,6 +163,7 @@ internal data class WorkoutsStateInputs(
     val earliestLocalDate: LocalDate?,
     val workoutOnlyGains: List<Float> = emptyList(),
     val todayStrainIncrease: Float? = null,
+    val weeklyTraining: WeeklyTrainingStats? = null,
 )
 
 internal fun buildWorkoutsState(inputs: WorkoutsStateInputs): WorkoutsUiState =
@@ -477,6 +480,7 @@ private fun assembleWorkoutsUiState(
             yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
             yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
             todayStrainIncrease = resolvedTodayStrainIncrease,
+            weeklyTraining = weeklyTraining,
             trimpPeriodSummary = series.trimpSummary,
             strainRatioPeriodSummary = series.strainSummary,
         )

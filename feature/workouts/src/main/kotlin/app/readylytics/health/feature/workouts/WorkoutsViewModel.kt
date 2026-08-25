@@ -23,6 +23,7 @@ import app.readylytics.health.core.model.domain.repository.WorkoutData
 import app.readylytics.health.core.model.domain.repository.WorkoutRepository
 import app.readylytics.health.core.model.domain.scoring.LoadSourceMode
 import app.readylytics.health.core.model.domain.sync.ForegroundSyncGateway
+import app.readylytics.health.core.model.domain.util.WeekBounds
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartConfiguration
 import app.readylytics.health.core.model.domain.workouts.WorkoutChartId
 import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryConfiguration
@@ -30,6 +31,8 @@ import app.readylytics.health.core.model.domain.workouts.WorkoutHistoryId
 import app.readylytics.health.core.model.domain.workouts.WorkoutsLayoutRepository
 import app.readylytics.health.core.scoring.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.core.scoring.domain.scoring.ScoringCalculator
+import app.readylytics.health.core.scoring.domain.workouts.weekly.ComputeWeeklyTrainingStatsUseCase
+import app.readylytics.health.core.scoring.domain.workouts.weekly.WeeklyTrainingStats
 import app.readylytics.health.core.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -49,6 +52,7 @@ import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -62,6 +66,7 @@ class WorkoutsViewModel
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
+        private val computeWeeklyTrainingStatsUseCase: ComputeWeeklyTrainingStatsUseCase,
         private val foregroundSyncController: ForegroundSyncGateway,
         private val workoutsLayoutRepository: WorkoutsLayoutRepository,
         private val savedStateHandle: SavedStateHandle,
@@ -219,6 +224,7 @@ class WorkoutsViewModel
 
                         val recentItems = loadRecentWorkouts(pageWorkouts, prefs, trimpSummaries)
                         val workoutOnlyGains = loadWorkoutOnlyGains(window, prefs, trimpSummaries)
+                        val weeklyTraining = loadWeeklyTraining(params.date, prefs, zoneId)
 
                         buildWorkoutsState(
                             WorkoutsStateInputs(
@@ -235,6 +241,7 @@ class WorkoutsViewModel
                                 totalPages = totalPages,
                                 earliestLocalDate = earliestLocalDate,
                                 workoutOnlyGains = workoutOnlyGains,
+                                weeklyTraining = weeklyTraining,
                             ),
                         )
                     }
@@ -314,6 +321,18 @@ class WorkoutsViewModel
                         historicalSummaries = trimpSummaries,
                     ).gainedStrain
             }
+        }
+
+        private suspend fun loadWeeklyTraining(
+            anchor: LocalDate,
+            prefs: UserPreferences,
+            zoneId: ZoneId,
+        ): WeeklyTrainingStats {
+            val fetchStart = WeekBounds.previousWeekFull(anchor, prefs.weekStartDay).start
+            val fromMs = fetchStart.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val toMs = anchor.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val workouts = workoutRepository.getInRange(fromMs, toMs)
+            return computeWeeklyTrainingStatsUseCase.execute(workouts, anchor, prefs.weekStartDay, zoneId)
         }
 
         fun onRangeSelected(range: TimeRange) {
