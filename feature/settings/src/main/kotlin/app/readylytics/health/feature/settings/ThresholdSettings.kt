@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -294,9 +295,10 @@ fun SleepSettingsSection(
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth(),
                 )
-                ExposedDropdownMenu(
+                DropdownMenu(
                     expanded = profileMenuExpanded && controlsEnabled,
                     onDismissRequest = { profileMenuExpanded = false },
+                    modifier = Modifier.exposedDropdownSize(),
                 ) {
                     SleepScoreWeightProfile.entries.forEach { profile ->
                         DropdownMenuItem(
